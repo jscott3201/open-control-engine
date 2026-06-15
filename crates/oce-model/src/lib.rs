@@ -59,6 +59,23 @@ pub enum ValueType {
     Enum(EnumClassId),
 }
 
+impl ValueType {
+    /// The type-appropriate zero used to seed connector values before the first tick
+    /// (`01-execution-model.md` §7 req 3): `Real(0.0)`, `Integer(0)`, `Boolean(false)`. `String`
+    /// seeds the empty string and `Enum` the first (1-based) ordinal — neither is a hot-path
+    /// signal (§7.8), but a total mapping keeps callers panic-free.
+    #[must_use]
+    pub fn zero_value(self) -> Value {
+        match self {
+            ValueType::Real => Value::Real(0.0),
+            ValueType::Integer => Value::Integer(0),
+            ValueType::Boolean => Value::Boolean(false),
+            ValueType::String => Value::String(Arc::from("")),
+            ValueType::Enum(class) => Value::Enum { class, ordinal: 1 },
+        }
+    }
+}
+
 /// Typed-accessor failure for a [`Value`] (never panics on the hot path).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct TypeError {
@@ -114,12 +131,28 @@ impl Value {
         }
     }
 
-    /// Bit-exact equality for the deterministic trace path (R2). `Real` compares by bits
-    /// (so `NaN == NaN` here, unlike `PartialEq`).
+    /// Bit-exact equality for the deterministic trace path (R2). `Real` compares **by bits**
+    /// (so `NaN == NaN` and `+0.0 != -0.0` here, unlike `PartialEq`); other variants compare
+    /// structurally. Differing variants are never equal.
     #[must_use]
-    pub fn bit_eq(&self, _other: &Value) -> bool {
-        // M0 scaffold: full per-variant bit comparison lands with the conformance harness.
-        unimplemented!("Value::bit_eq — M0 scaffold")
+    pub fn bit_eq(&self, other: &Value) -> bool {
+        match (self, other) {
+            (Value::Real(a), Value::Real(b)) => a.to_bits() == b.to_bits(),
+            (Value::Integer(a), Value::Integer(b)) => a == b,
+            (Value::Boolean(a), Value::Boolean(b)) => a == b,
+            (Value::String(a), Value::String(b)) => a == b,
+            (
+                Value::Enum {
+                    class: ca,
+                    ordinal: oa,
+                },
+                Value::Enum {
+                    class: cb,
+                    ordinal: ob,
+                },
+            ) => ca == cb && oa == ob,
+            _ => false,
+        }
     }
 }
 
@@ -228,5 +261,63 @@ impl ModelGraph {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bit_eq_real_is_by_bits() {
+        // NaN equals itself by bits; signed zeros are distinct by bits (unlike PartialEq).
+        assert!(Value::Real(f64::NAN).bit_eq(&Value::Real(f64::NAN)));
+        assert!(!Value::Real(0.0).bit_eq(&Value::Real(-0.0)));
+        assert!(Value::Real(1.5).bit_eq(&Value::Real(1.5)));
+        assert!(!Value::Real(1.5).bit_eq(&Value::Real(2.5)));
+    }
+
+    #[test]
+    fn bit_eq_other_variants_and_cross_type() {
+        assert!(Value::Integer(7).bit_eq(&Value::Integer(7)));
+        assert!(!Value::Integer(7).bit_eq(&Value::Integer(8)));
+        assert!(Value::Boolean(true).bit_eq(&Value::Boolean(true)));
+        assert!(!Value::Boolean(true).bit_eq(&Value::Boolean(false)));
+        assert!(Value::String(Arc::from("x")).bit_eq(&Value::String(Arc::from("x"))));
+        assert!(!Value::String(Arc::from("x")).bit_eq(&Value::String(Arc::from("y"))));
+        // Differing variants are never equal (no cross-type coercion).
+        assert!(!Value::Real(1.0).bit_eq(&Value::Integer(1)));
+        let c = EnumClassId(3);
+        assert!(
+            Value::Enum {
+                class: c,
+                ordinal: 2
+            }
+            .bit_eq(&Value::Enum {
+                class: c,
+                ordinal: 2
+            })
+        );
+        assert!(
+            !Value::Enum {
+                class: c,
+                ordinal: 2
+            }
+            .bit_eq(&Value::Enum {
+                class: c,
+                ordinal: 1
+            })
+        );
+    }
+
+    #[test]
+    fn zero_value_matches_signal_subset() {
+        assert!(ValueType::Real.zero_value().bit_eq(&Value::Real(0.0)));
+        assert!(ValueType::Integer.zero_value().bit_eq(&Value::Integer(0)));
+        assert!(
+            ValueType::Boolean
+                .zero_value()
+                .bit_eq(&Value::Boolean(false))
+        );
     }
 }
