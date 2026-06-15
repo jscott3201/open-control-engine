@@ -101,7 +101,7 @@ adapter behind the `oce-store` port.
 
 ## Development
 
-Install the shared git hooks once after cloning (fast format/lint/seam gates on commit and push):
+Install the shared git hooks once after cloning (fast format/lint/no-DB gates on commit and push):
 
 ```bash
 bash scripts/install-hooks.sh
