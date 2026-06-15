@@ -17,7 +17,16 @@
 //! Status: **M0 scaffold.** The type *shapes* match the spec; bodies are stubs
 //! (`unimplemented!()`) and land in M0 (the hand-built-graph exit criteria) and M1.
 
+use std::fmt;
+
+use oce_blocks::Block;
 use oce_model::{BlockId, ConnectorId, Model, ModelGraph, Value};
+
+mod build;
+mod topo;
+
+pub use build::{FeedthroughDag, build_feedthrough_dag};
+pub use topo::topo_sort;
 
 /// The frozen per-tick evaluation order, computed once in BUILD and reused every tick (`01` §6.2).
 #[derive(Clone, Debug, Default)]
@@ -57,33 +66,85 @@ pub struct RunState {
     pub t: f64,
 }
 
+/// A human-readable dotted instance/connector path used in BUILD diagnostics (e.g. the members of
+/// a [`BuildError::AlgebraicLoop`]). At M0 it is rendered from the block class IRI and the dense
+/// block/connector ids (`<class-iri>#b<block>.<dir>#c<conn>`); CXF ingest (M1) will enrich it with
+/// the source instance names.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ConnectorPath(pub String);
+
+impl fmt::Display for ConnectorPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl fmt::Debug for ConnectorPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Render as the bare quoted path so `{members:?}` on the error reads cleanly.
+        write!(f, "{:?}", self.0)
+    }
+}
+
 /// A BUILD-phase error (typed; never a panic).
 #[derive(Clone, Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum BuildError {
     /// One or more connection cycles are not broken by a state-holding block. CDL §7.16 forbids
-    /// algebraic loops; the canonical remedy is to insert a `Pre`/`UnitDelay`/integrator into the
-    /// loop. Carries the dotted instance/connector paths of the cycle members for diagnostics.
+    /// algebraic loops. Carries the dotted connector paths of one concrete cycle (a single
+    /// back-edge path from a deterministic DFS over the residual subgraph) for actionable
+    /// diagnostics.
     #[error(
         "algebraic loop detected: {} connector(s) form a cycle not broken by a state-holding \
-         block (Pre/UnitDelay/integrator). CDL §7.16 forbids algebraic loops.",
+         block. CDL §7.16 forbids algebraic loops. Remedy: insert a delay block (CDL.Logical.Pre, \
+         CDL.Discrete.UnitDelay) or an integrator into the loop, since their outputs do not depend \
+         directly on the current input. Cycle members: {members:?}",
         .members.len()
     )]
     AlgebraicLoop {
-        /// Human-readable dotted connector paths participating in the cycle.
-        members: Vec<String>,
+        /// The dotted connector paths participating in one concrete cycle.
+        members: Vec<ConnectorPath>,
+    },
+
+    /// The connector feedthrough graph is acyclic, but **atomic block firing** (one `emit` call
+    /// produces all of a block's outputs, `01` §9) still cannot schedule the model: the block-level
+    /// *emit-before* graph has a cycle. This arises when a stateful multi-output block's state-only
+    /// (cut) output feeds a path that returns to one of its own feedthrough inputs — there is no
+    /// single position at which the block can emit all its outputs consistently. Same remedy as a
+    /// connector-level loop. Carries the dotted block paths of one concrete cycle.
+    #[error(
+        "block-granularity algebraic loop: {} block(s) form a feedthrough cycle that single-pass \
+         atomic block firing cannot schedule (a stateful multi-output block whose state-only \
+         output feeds back into one of its feedthrough inputs). CDL §7.16 forbids algebraic loops. \
+         Remedy: insert a delay block (CDL.Logical.Pre, CDL.Discrete.UnitDelay) or an integrator \
+         into the loop. Cycle members: {members:?}",
+        .members.len()
+    )]
+    BlockAlgebraicLoop {
+        /// The dotted block paths participating in one concrete block-level feedthrough cycle.
+        members: Vec<ConnectorPath>,
     },
 }
 
-/// BUILD: compile a flattened, validated [`ModelGraph`] into a frozen [`Schedule`] (own Kahn
-/// sort, declaration-order tie-break, algebraic-loop rejection; `01` §4–§6). Runs once per load,
-/// off the tick.
+/// BUILD: compile a flattened, validated [`Model`] into a frozen [`Schedule`] — build the
+/// direct-feedthrough DAG ([`build_feedthrough_dag`]), then run the deterministic own Kahn sort
+/// with a declaration-order tie-break and algebraic-loop rejection ([`topo_sort`]); `01` §4–§6.
+/// Runs once per load, off the tick.
+///
+/// `blocks[i]` is the instantiated, parameter-resolved block impl for `BlockId(i)` (index equals
+/// `BlockId.0`); the feedthrough oracle is queried on these instances, never the bare class.
+///
+/// State allocation (`01` §7, [`allocate_state`]) is a sibling BUILD step the engine invokes
+/// alongside `compile`; it is kept separate so the frozen [`Schedule`] stays a shareable,
+/// state-free value.
 ///
 /// # Errors
 /// Returns [`BuildError::AlgebraicLoop`] if the direct-feedthrough graph contains a cycle that no
-/// loop-breaker block cuts.
-pub fn compile(_model: &ModelGraph) -> Result<Schedule, BuildError> {
-    unimplemented!("oce-graph::compile — M0 scaffold (DAG + Kahn sort land with the M0 graph)")
+/// loop-breaker block cuts, or [`BuildError::BlockAlgebraicLoop`] if the connector graph is acyclic
+/// but atomic block firing still cannot schedule it (`01` §9).
+pub fn compile(model: &Model, blocks: &[Box<dyn Block>]) -> Result<Schedule, BuildError> {
+    let dag = build_feedthrough_dag(model, blocks);
+    topo_sort(&dag, model, blocks)
 }
 
 /// Allocate the mutable [`RunState`] for a model: one fixed-size state slot per `[S]` block,
@@ -108,3 +169,6 @@ pub fn eval_tick(state: &mut RunState, _schedule: &Schedule, _model: &Model, t_n
 
 /// Public alias for [`eval_tick`] used by `06`/`08` (`01` §6.2: the same function).
 pub use eval_tick as run_tick;
+
+#[cfg(test)]
+mod tests;
