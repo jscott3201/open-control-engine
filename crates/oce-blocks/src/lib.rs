@@ -2,13 +2,15 @@
 //! `oce-blocks` — the native CDL elementary-block library and the [`Block`] trait for the
 //! Open Control Engine (`03-block-library.md`).
 //!
-//! Every elementary block (CDL §7.6) is a Rust state struct implementing [`Block`], classified
-//! statically as stateless `[A]` ([`BlockKind::Algebraic`]) or stateful `[S]`
-//! ([`BlockKind::Stateful`]). The split between [`Block::output`] (compute from prior state) and
-//! [`Block::update_state`] is what lets `oce-graph` evaluate a tick in topological order and cut
-//! algebraic loops at non-feedthrough stateful blocks. This crate is **Group A**: no store, no
-//! database (D-OWNER-1); it carries behavior + per-instance state only, never non-computational
-//! metadata (CDL §7.17).
+//! Every elementary block (CDL §7.6) implements [`Block`], classified statically as stateless
+//! `[A]` ([`BlockKind::Algebraic`]) or stateful `[S]` ([`BlockKind::Stateful`]). Per the **arena
+//! model** (`01` §7/§9) a block object is an *immutable* description (class + resolved
+//! parameters); all mutable `[S]` state lives in an engine-owned `RunState.words` region, never in
+//! the block struct. The split between [`Block::emit_from_state`] (emit from **prior** state) and
+//! [`Block::update_state`] (advance state after) is what lets `oce-graph` evaluate a tick in
+//! topological order and cut algebraic loops at non-feedthrough stateful blocks. This crate is
+//! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
+//! in the struct, never non-computational metadata (CDL §7.17).
 //!
 //! Status: **M0 scaffold.** The trait surface and a handful of starter blocks are sketched here;
 //! block bodies are stubs (`unimplemented!()`). The full ~130-block catalog is phased across
@@ -62,9 +64,14 @@ pub trait Diagnostics {
     fn warn(&self, source: &str, message: &str, t: Time);
 }
 
-/// The core elementary-block contract (CDL §7.6). `output` computes outputs from
-/// `(p, t, u(t), x(t))` without advancing committed state; `update_state` advances
-/// `x(t) → x'(t)` once per tick after all `output` calls have settled (`03` §2.2).
+/// The core elementary-block contract (CDL §7.6) — the **arena model** (`01` §7/§9, the binding
+/// FRAME Block-trait resolution). A block object is an *immutable* description (class + parameters
+/// resolved at construction); all mutable per-instance `[S]` state lives in an engine-owned flat
+/// region (`RunState.words`), never in the block struct. This keeps the frozen schedule shareable
+/// and the tick zero-allocation (`01` §7 req 4, §9 req 4), so every method takes `&self`.
+///
+/// `[A]` blocks override [`Block::step_algebraic`]. `[S]` blocks set [`Block::state_len`], seed via
+/// [`Block::init_state`], and override [`Block::emit_from_state`] + [`Block::update_state`].
 pub trait Block {
     /// Class-level interface descriptor. Drives buffer sizing and the DAG.
     fn signature(&self) -> &'static BlockSignature;
@@ -78,17 +85,34 @@ pub trait Block {
     /// (`01` §4.2; `03` §3). Loop-breaker `[S]` blocks return `false` for the state-bearing path.
     fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool;
 
-    /// Initialize/re-initialize state from parameters (CDL has no `start` attribute; the initial
-    /// state seeds from a parameter — §7.4, R-TRAIT-4). `[A]` blocks: no-op.
-    fn init_state(&mut self, _params: &ParamTable, _t0: Time) {}
+    /// Word count of this block's `[S]` state region within `RunState.words` (0 for `[A]`). Fixed
+    /// at BUILD; the tick never resizes it (`01` §7 req 1).
+    fn state_len(&self) -> usize {
+        0
+    }
 
-    /// Compute outputs from `(p, t, u(t), x(t))` without mutating committed state. For `[A]`
-    /// blocks this is the whole computation; for `[S]` blocks it reads prior state (R-TRAIT-1).
-    fn output(&self, inputs: &[Value], t: Time, out: &mut Vec<Value>);
+    /// Seed the `[S]` state `region` from resolved parameters (CDL has no `start` attribute; the
+    /// initial state seeds from a parameter — §7.4, R-TRAIT-4 / `01` §7 req 2). `[A]` blocks: no-op.
+    fn init_state(&self, _region: &mut [u64], _params: &ParamTable) {}
 
-    /// Advance state using this tick's inputs/time. Called exactly once per block per tick, after
-    /// all `output` calls of the tick are done (R-TRAIT-2). `[A]` blocks: empty default.
-    fn update_state(&mut self, _inputs: &[Value], _t: Time) {}
+    /// `[A]` output: `y = f(p, t, u)`. Emit each output by port index via `emit` (R-TRAIT-1).
+    /// `[S]` blocks leave this as the default no-op — their output is [`Block::emit_from_state`].
+    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {}
+
+    /// `[S]` output pass: emit outputs from **prior** state — `region` is read-only here — before
+    /// any state update this tick (`01` §9 req 2, R-TRAIT-1). `[A]` blocks: default no-op.
+    fn emit_from_state(
+        &self,
+        _inputs: &[Value],
+        _t: Time,
+        _region: &[u64],
+        _emit: &mut dyn FnMut(usize, Value),
+    ) {
+    }
+
+    /// `[S]` state pass: advance `x(t) → x'(t)` into the mutable `region`, exactly once per tick,
+    /// after [`Block::emit_from_state`] (`01` §9 req 2, R-TRAIT-2). `[A]` blocks: default no-op.
+    fn update_state(&self, _inputs: &[Value], _t: Time, _region: &mut [u64]) {}
 }
 
 /// `CDL.Reals.Sources.Constant` — the only truly stateless source: `y = k` (`03` §4.1).
@@ -113,8 +137,8 @@ impl Block for Constant {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false // no inputs — pure source root
     }
-    fn output(&self, _inputs: &[Value], _t: Time, _out: &mut Vec<Value>) {
-        unimplemented!("Constant::output — M0 scaffold")
+    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {
+        unimplemented!("Constant::step_algebraic — M0 scaffold (lands in PR-2)")
     }
 }
 
@@ -137,18 +161,16 @@ impl Block for Add {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn output(&self, _inputs: &[Value], _t: Time, _out: &mut Vec<Value>) {
-        unimplemented!("Add::output — M0 scaffold")
+    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {
+        unimplemented!("Add::step_algebraic — M0 scaffold (lands in PR-2)")
     }
 }
 
 /// `CDL.Logical.Pre` — `y = pre(u)`, the canonical algebraic-loop breaker (`03` §4.3): stateful,
-/// with `feeds_through == false` so it cuts the direct-feedthrough DAG.
+/// with `feeds_through == false` so it cuts the direct-feedthrough DAG. Per the arena model the
+/// one-tick boolean memory lives in the `[S]` state region (one word), not in the struct.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Pre {
-    /// The one-tick-delayed boolean memory (seeded from a parameter in `init_state`).
-    prev: bool,
-}
+pub struct Pre;
 
 impl Block for Pre {
     fn signature(&self) -> &'static BlockSignature {
@@ -165,12 +187,25 @@ impl Block for Pre {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false // THE loop cut: output is the prior input, not the current one
     }
-    fn output(&self, _inputs: &[Value], _t: Time, _out: &mut Vec<Value>) {
-        let _ = self.prev;
-        unimplemented!("Pre::output — M0 scaffold")
+    fn state_len(&self) -> usize {
+        1 // one word holds the one-tick-delayed boolean
     }
-    fn update_state(&mut self, _inputs: &[Value], _t: Time) {
-        unimplemented!("Pre::update_state — M0 scaffold")
+    fn init_state(&self, _region: &mut [u64], _params: &ParamTable) {
+        unimplemented!(
+            "Pre::init_state — M0 scaffold (seed from the `pre`/`y_start` param in PR-2)"
+        )
+    }
+    fn emit_from_state(
+        &self,
+        _inputs: &[Value],
+        _t: Time,
+        _region: &[u64],
+        _emit: &mut dyn FnMut(usize, Value),
+    ) {
+        unimplemented!("Pre::emit_from_state — M0 scaffold (emit the prior boolean in PR-2)")
+    }
+    fn update_state(&self, _inputs: &[Value], _t: Time, _region: &mut [u64]) {
+        unimplemented!("Pre::update_state — M0 scaffold (latch the current input in PR-2)")
     }
 }
 
