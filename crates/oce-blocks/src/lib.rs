@@ -12,11 +12,22 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M0 scaffold.** The trait surface and a handful of starter blocks are sketched here;
-//! block bodies are stubs (`unimplemented!()`). The full ~130-block catalog is phased across
-//! M0–M2 per `03` §7.
+//! Status: **M0 starter catalog.** The trait surface and the M0 starter blocks (`03` §7 Phase 1
+//! core: arithmetic, comparison, logical, switch, and the two loop-breakers `Pre`/`UnitDelay`) are
+//! implemented on the arena trait, with a static class-path registry. The full ~130-block catalog
+//! is phased across M0–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
+
+mod discrete;
+mod logical;
+mod reals;
+mod registry;
+
+pub use discrete::UnitDelay;
+pub use logical::{And, Not, Pre};
+pub use reals::{Add, Constant, Greater, Limiter, MultiplyByParameter, Subtract, Switch};
+pub use registry::lookup;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
 pub type Time = f64;
@@ -115,102 +126,7 @@ pub trait Block {
     fn update_state(&self, _inputs: &[Value], _t: Time, _region: &mut [u64]) {}
 }
 
-/// `CDL.Reals.Sources.Constant` — the only truly stateless source: `y = k` (`03` §4.1).
-#[derive(Clone, Copy, Debug)]
-pub struct Constant {
-    /// The constant output value `k`.
-    pub k: f64,
-}
-
-impl Block for Constant {
-    fn signature(&self) -> &'static BlockSignature {
-        &BlockSignature {
-            class_path: "CDL.Reals.Sources.Constant",
-            inputs: &[],
-            outputs: &[PortKind::Real],
-            stateful: false,
-        }
-    }
-    fn kind(&self) -> BlockKind {
-        BlockKind::Algebraic
-    }
-    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
-        false // no inputs — pure source root
-    }
-    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {
-        unimplemented!("Constant::step_algebraic — M0 scaffold (lands in PR-2)")
-    }
-}
-
-/// `CDL.Reals.Add` — `y = u1 + u2` (stateless, full feedthrough; `03` §4.1).
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Add;
-
-impl Block for Add {
-    fn signature(&self) -> &'static BlockSignature {
-        &BlockSignature {
-            class_path: "CDL.Reals.Add",
-            inputs: &[PortKind::Real, PortKind::Real],
-            outputs: &[PortKind::Real],
-            stateful: false,
-        }
-    }
-    fn kind(&self) -> BlockKind {
-        BlockKind::Algebraic
-    }
-    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
-        true
-    }
-    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {
-        unimplemented!("Add::step_algebraic — M0 scaffold (lands in PR-2)")
-    }
-}
-
-/// `CDL.Logical.Pre` — `y = pre(u)`, the canonical algebraic-loop breaker (`03` §4.3): stateful,
-/// with `feeds_through == false` so it cuts the direct-feedthrough DAG. Per the arena model the
-/// one-tick boolean memory lives in the `[S]` state region (one word), not in the struct.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Pre;
-
-impl Block for Pre {
-    fn signature(&self) -> &'static BlockSignature {
-        &BlockSignature {
-            class_path: "CDL.Logical.Pre",
-            inputs: &[PortKind::Boolean],
-            outputs: &[PortKind::Boolean],
-            stateful: true,
-        }
-    }
-    fn kind(&self) -> BlockKind {
-        BlockKind::Stateful
-    }
-    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
-        false // THE loop cut: output is the prior input, not the current one
-    }
-    fn state_len(&self) -> usize {
-        1 // one word holds the one-tick-delayed boolean
-    }
-    fn init_state(&self, _region: &mut [u64], _params: &ParamTable) {
-        unimplemented!(
-            "Pre::init_state — M0 scaffold (seed from the `pre`/`y_start` param in PR-2)"
-        )
-    }
-    fn emit_from_state(
-        &self,
-        _inputs: &[Value],
-        _t: Time,
-        _region: &[u64],
-        _emit: &mut dyn FnMut(usize, Value),
-    ) {
-        unimplemented!("Pre::emit_from_state — M0 scaffold (emit the prior boolean in PR-2)")
-    }
-    fn update_state(&self, _inputs: &[Value], _t: Time, _region: &mut [u64]) {
-        unimplemented!("Pre::update_state — M0 scaffold (latch the current input in PR-2)")
-    }
-}
-
-/// A `&'static` registry entry mapping a class path to its block constructor (R-IMPL-2). The
-/// full static catalog lands as the block library grows (M0–M2).
+/// A `&'static` registry entry mapping a class path to its block constructor (R-IMPL-2).
 pub struct RegistryEntry {
     /// Canonical (or accepted-alias) class path.
     pub class_path: &'static str,
@@ -218,9 +134,36 @@ pub struct RegistryEntry {
     pub make: fn(&ParamTable) -> Box<dyn Block>,
 }
 
-/// Look up an elementary-block constructor by class path. Unknown class paths surface as
-/// unresolved externals (extension blocks), never panics (R-IMPL-2).
+// ---- shared hot-path value readers (used by block impls) ------------------------------------
+//
+// Inputs are gathered from typed connector values that `oce-validate` has already type-checked
+// (CDL forbids implicit coercion, §7.10/A.9), so a wrong variant here is a build/validation bug,
+// not a runtime condition. The readers never panic on the tick: they `debug_assert` the type and
+// fall back to the type's zero in release so a mis-wired model degrades rather than aborting.
+
+/// Read input `i` as a `Real`, defaulting to `0.0` on a (validation-prevented) type mismatch.
 #[must_use]
-pub fn lookup(_class_path: &str) -> Option<&'static RegistryEntry> {
-    unimplemented!("oce-blocks::lookup — M0 scaffold (static registry lands with the catalog)")
+pub(crate) fn read_real(inputs: &[Value], i: usize) -> f64 {
+    match inputs.get(i) {
+        Some(Value::Real(x)) => *x,
+        other => {
+            debug_assert!(false, "expected Real input at {i}, found {other:?}");
+            0.0
+        }
+    }
 }
+
+/// Read input `i` as a `Boolean`, defaulting to `false` on a (validation-prevented) type mismatch.
+#[must_use]
+pub(crate) fn read_bool(inputs: &[Value], i: usize) -> bool {
+    match inputs.get(i) {
+        Some(Value::Boolean(b)) => *b,
+        other => {
+            debug_assert!(false, "expected Boolean input at {i}, found {other:?}");
+            false
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;
