@@ -1,0 +1,65 @@
+# cargo-deny baseline for open-control.
+#
+# Posture mirrors the selene-db substrate (which open-control consumes only behind the
+# `selene` feature at M3, tracking its `development` branch and inheriting its transitive
+# tree). At M0 the default build pulls only serde/serde_json/thiserror from crates.io, so
+# the allow-list below is deliberately broad enough to cover the substrate's tree for when
+# the `selene` feature is enabled later.
+#   - dual MIT OR Apache-2.0 project license; permissive allow-list for transitive deps
+#   - crates.io is the only registry today; once the `selene` feature lands (M3), the
+#     selene-db `development` git source is added to [sources].allow-git, pinned to a sha.
+
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+version = 2
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+# Documented advisory ignores must carry reason + owner.
+ignore = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.93
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "CC0-1.0",
+  "Zlib",
+  "BSL-1.0",
+  # MPL-2.0: file-level copyleft (NOT infectious to dependents). Reaches the tree via
+  # imbl (through the selene-db path, once the `selene` feature is enabled at M3).
+  # open-control itself stays dual MIT/Apache-2.0.
+  "MPL-2.0",
+]
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+# The internal `oce-*` crates carry an explicit `version` alongside their `path` (see the root
+# Cargo.toml), so they are not wildcard deps; this keeps `wildcards = "deny"` meaningful for any
+# real crates.io wildcard requirement.
+wildcards = "deny"
+highlight = "all"
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# At M0 no git sources are allowed; every dependency resolves from crates.io. When the
+# `selene` feature is introduced at M3 (D8), add the selene-db `development` git source
+# here, pinned to a known-good sha:
+#   allow-git = ["https://github.com/jscott3201/selene-db"]
+allow-git = []

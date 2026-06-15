@@ -1,0 +1,106 @@
+# Open Control Engine — workspace root.
+#
+# A high-performance, embeddable Rust control engine that natively executes the
+# OBC/LBL Control Description Language (CDL) for smart-building equipment.
+#
+# The dependency direction is intentional and acyclic, organized around the CDL
+# §7.17 non-computational seam:
+#   GROUP A — execution core (NO store, NO selene-db):
+#     oce-model -> {oce-expr, oce-blocks, oce-flatten, oce-validate, oce-graph,
+#                   oce-cxf, oce-semantics}
+#   STORAGE PORTS (traits only, NO selene-db):
+#     oce-store -> {oce-store-mem (default), oce-store-selene (feature-gated)}
+#   GROUP C — verification / externals / host facade:
+#     oce-conformance, oce-extension, oce-docs, oce-api (the single public surface)
+#
+# Only `oce-store-selene` may ever name a selene-db type, and only behind the
+# `selene` feature (default OFF). The default build links no database and no async
+# runtime. CI gates (.github/scripts/check-seam.sh, check-default-no-db.sh) enforce
+# this structurally.
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95.0"
+authors = ["Justin Scott"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/jscott3201/open-control-engine"
+homepage = "https://github.com/jscott3201/open-control-engine"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "deny"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+todo = "deny"
+dbg_macro = "deny"
+print_stderr = "warn"
+print_stdout = "warn"
+
+[workspace.dependencies]
+# --- Shared infra pins (mirror the selene-db / aionforge-memory substrate exactly
+# so the dependency trees agree when the `selene` feature later pulls selene-db). ---
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+thiserror = "2.0"
+
+# --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
+# version (matching workspace.package.version) keeps these from reading as wildcard deps and makes
+# them publish-ready; the path wins for in-workspace builds. ---
+oce-model = { path = "crates/oce-model", version = "0.0.0" }
+oce-expr = { path = "crates/oce-expr", version = "0.0.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.0.0" }
+oce-flatten = { path = "crates/oce-flatten", version = "0.0.0" }
+oce-validate = { path = "crates/oce-validate", version = "0.0.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.0.0" }
+oce-cxf = { path = "crates/oce-cxf", version = "0.0.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.0.0" }
+oce-store = { path = "crates/oce-store", version = "0.0.0" }
+oce-store-mem = { path = "crates/oce-store-mem", version = "0.0.0" }
+oce-store-selene = { path = "crates/oce-store-selene", version = "0.0.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.0.0" }
+oce-extension = { path = "crates/oce-extension", version = "0.0.0" }
+oce-docs = { path = "crates/oce-docs", version = "0.0.0" }
+oce-api = { path = "crates/oce-api", version = "0.0.0" }
+
+# --- selene-db substrate (INACTIVE at M0 — DO NOT ENABLE). -------------------------
+# Per FRAME D-OWNER-1 the execution core must build and run with NO database, and per
+# the roadmap (09 §1) selene-db is introduced ONLY at M3, behind the `selene` feature,
+# inside the single crate `oce-store-selene`. At M3 these lines move INTO
+# `oce-store-selene/Cargo.toml` (the only crate permitted to name selene-db), as git
+# dependencies tracking the `development` branch with a pinned `rev` (D8 / D-OWNER-2):
+#
+#   selene-core       = { package = "selene-db-core",       git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-graph      = { package = "selene-db-graph",      git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-persist    = { package = "selene-db-persist",    git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-gql        = { package = "selene-db-gql",        git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-algorithms = { package = "selene-db-algorithms", git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#
+# All five lines MUST share one git source + rev so Cargo unifies them to one checkout.
+# Commit Cargo.lock so rev bumps stay deliberate (`cargo update -p selene-db-*`); switch
+# to `version = "1.3"` once selene-db 1.3.0 ships. For local co-development, add (do NOT
+# commit uncommented) a patch to the side-by-side checkout, keyed by the published
+# PACKAGE names (the crates.io/git source), not our alias keys:
+#
+#   [patch."https://github.com/jscott3201/selene-db"]
+#   selene-db-core       = { path = "/Users/justin/Development/selene-db/crates/selene-core" }
+#   selene-db-graph      = { path = "/Users/justin/Development/selene-db/crates/selene-graph" }
+#   selene-db-persist    = { path = "/Users/justin/Development/selene-db/crates/selene-persist" }
+#   selene-db-gql        = { path = "/Users/justin/Development/selene-db/crates/selene-gql" }
+#   selene-db-algorithms = { path = "/Users/justin/Development/selene-db/crates/selene-algorithms" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+
+[profile.dev]
+debug = "line-tables-only"
+incremental = true

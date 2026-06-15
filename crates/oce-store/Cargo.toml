@@ -1,0 +1,18 @@
+[package]
+name = "oce-store"
+description = "THE SEAM: selene-free Store ports (ModelStore/PointStore/SemanticStore) + DTOs for the Open Control Engine. No DB types."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-model = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

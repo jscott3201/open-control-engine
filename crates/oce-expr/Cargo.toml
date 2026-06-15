@@ -1,0 +1,17 @@
+[package]
+name = "oce-expr"
+description = "CDL §7.7.2 binding-expression parser and evaluator for the Open Control Engine (Group A; no store, no selene-db)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-model = { workspace = true }
+thiserror = { workspace = true }

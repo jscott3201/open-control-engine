@@ -1,0 +1,17 @@
+[package]
+name = "oce-store-mem"
+description = "The default in-memory Store backend for the Open Control Engine — lets the engine run with no database (D-OWNER-1)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-store = { workspace = true }
+oce-model = { workspace = true }

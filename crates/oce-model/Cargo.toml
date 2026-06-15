@@ -1,0 +1,15 @@
+[package]
+name = "oce-model"
+description = "Pure CDL value/connector/instance/connection types for the Open Control Engine (Group A; no store, no selene-db)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

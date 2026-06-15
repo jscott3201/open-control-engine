@@ -1,0 +1,172 @@
+# CI for open-control (the Open Control Engine) — runs on PRs into `development`.
+#
+# Workflow model: every logical change opens a PR into `development` behind this gate; releases
+# batch `development` -> `main`, and a version tag drives the gated publish.
+#
+# Because this is a small, fresh repo, the per-PR gate runs the FULL compile-requiring set
+# (clippy -D warnings + a workspace build) in addition to the near-instant gates — there is not
+# yet a separate heavyweight release matrix to defer them to, and the build is fast. As the repo
+# grows, the heavy suite can move to a development -> main release gate (as in the substrate),
+# leaving the cheap gates here.
+#
+# Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
+# clippy -D warnings (default + --features selene), a workspace build (default + --features
+# selene), and the two SEAM gates
+# (seam-gate: Group A / store ports stay selene-free; default-no-db: the default build links no
+# selene-db / tokio / async-std). When dependency manifests change, cargo-deny runs too.
+#
+# Deferred until first publish: the cargo-about THIRDPARTY.md attribution-currency gate (plus
+# about.toml/about.hbs) is intentionally NOT wired yet — attribution hygiene is most valuable near
+# crates.io publish, which is deferred. The deny.toml license allow-list already covers the future
+# selene-db tree, so license posture is not unguarded. Restore the gate before the first publish.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: ci
+
+on:
+  pull_request:
+    branches: [development]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+permissions:
+  contents: read
+  # dorny/paths-filter calls the PR Files API to compute which paths changed.
+  pull-requests: read
+
+jobs:
+  changes:
+    name: detect changes
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      deps: ${{ steps.filter.outputs.deps }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            deps:
+              - 'Cargo.lock'
+              - 'Cargo.toml'
+              - 'crates/*/Cargo.toml'
+              - 'deny.toml'
+
+  fmt:
+    name: fmt
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  file-size-cap:
+    name: file-size cap (700 LOC)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-file-size.sh
+
+  no-secret-scan:
+    name: no-secret scan
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-no-secrets.sh
+
+  seam-gate:
+    name: seam gate (Group A / store ports selene-free)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-seam.sh
+
+  default-no-db:
+    name: default build links no selene-db / tokio / async-std
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - run: bash .github/scripts/check-default-no-db.sh
+
+  clippy:
+    name: clippy (-D warnings)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: clippy (default — no DB)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: clippy (--features selene)
+        run: cargo clippy --workspace --all-targets --features selene --locked -- -D warnings
+
+  build:
+    name: build (default + selene)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo build (default — no DB)
+        run: cargo build --workspace --locked
+      - name: cargo build (--features selene — still no selene-db at M0)
+        run: cargo build --workspace --features selene --locked
+
+  rustdoc:
+    name: rustdoc (-D warnings)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo doc — libs (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+      # No binary targets exist at M0 (every oce-* crate is a library), so this pass docs nothing
+      # today — it future-proofs the -D warnings doc gate so a later CLI / conformance-runner bin
+      # cannot ship undocced.
+      - name: cargo doc — bins (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --bins --document-private-items --locked
+
+  deny:
+    name: cargo-deny
+    needs: changes
+    if: |
+      (github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch')
+      && needs.changes.outputs.deps == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check bans licenses sources
