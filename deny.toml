@@ -1,13 +1,11 @@
 # cargo-deny baseline for open-control.
 #
-# Posture mirrors the selene-db substrate (which open-control consumes only behind the
-# `selene` feature at M3, tracking its `development` branch and inheriting its transitive
-# tree). At M0 the default build pulls only serde/serde_json/thiserror from crates.io, so
-# the allow-list below is deliberately broad enough to cover the substrate's tree for when
-# the `selene` feature is enabled later.
+# The library ships no first-party database; its build pulls only serde/serde_json/thiserror
+# from crates.io (D-OWNER-1). The allow-list below is kept deliberately broad so common
+# permissive licenses in any future transitive tree pass without churn.
 #   - dual MIT OR Apache-2.0 project license; permissive allow-list for transitive deps
-#   - crates.io is the only registry today; once the `selene` feature lands (M3), the
-#     selene-db `development` git source is added to [sources].allow-git, pinned to a sha.
+#   - crates.io is the only registry; the library declares no git sources. A consuming
+#     application that wires a git-sourced store adapter manages that in its own deny config.
 
 [graph]
 all-features = false
@@ -36,9 +34,9 @@ allow = [
   "CC0-1.0",
   "Zlib",
   "BSL-1.0",
-  # MPL-2.0: file-level copyleft (NOT infectious to dependents). Reaches the tree via
-  # imbl (through the selene-db path, once the `selene` feature is enabled at M3).
-  # open-control itself stays dual MIT/Apache-2.0.
+  # MPL-2.0: file-level copyleft (NOT infectious to dependents). Retained on the allow-list
+  # as a permissive-enough license a downstream store adapter might pull (e.g. via imbl);
+  # open-control itself stays dual MIT/Apache-2.0 and pulls no MPL code.
   "MPL-2.0",
 ]
 exceptions = []
@@ -58,8 +56,7 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-# At M0 no git sources are allowed; every dependency resolves from crates.io. When the
-# `selene` feature is introduced at M3 (D8), add the selene-db `development` git source
-# here, pinned to a known-good sha:
-#   allow-git = ["https://github.com/jscott3201/selene-db"]
+# No git sources are allowed; every dependency resolves from crates.io. The library ships no
+# first-party database, so it declares no git source. A consuming application that wires a
+# git-sourced store adapter pins that source in its own workspace's deny config.
 allow-git = []

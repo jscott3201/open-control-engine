@@ -7,7 +7,7 @@
 //! the store projects (point type AI/AO/DI/DO/Mode, hardwired flag, trend interval with the
 //! `interval=0` on-change sentinel, quantity/unit, description). Propagation resolves
 //! higher-overrides-lower over dotted paths. This is **non-computational** data (CDL §7.17): it
-//! is never read on the tick. The crate is **Group A** (no store, no selene-db).
+//! is never read on the tick. The crate is **Group A** (no store, no database).
 //!
 //! Status: **M0 scaffold.** The annotation resolver lands in M1/M3.
 

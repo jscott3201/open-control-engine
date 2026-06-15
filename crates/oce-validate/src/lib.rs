@@ -4,7 +4,7 @@
 //! Enforces the CDL subset at load: subset-restriction rejection, single-assignment /
 //! in-degree-1 on input connectors (§7.10), structural Real/Integer/Boolean type matching, the
 //! §7.10 attribute-unification rule, and the two-tier `shall`(error)/`should`(warning)
-//! diagnostic model (CDL Ch. 2). It is **Group A** (no store, no selene-db) and reads the
+//! diagnostic model (CDL Ch. 2). It is **Group A** (no store, no database) and reads the
 //! `oce-blocks` feedthrough oracle only to classify connectors, never to compute signals.
 //!
 //! Status: **M0 scaffold.** The checks land in M1.

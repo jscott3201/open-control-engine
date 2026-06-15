@@ -1,6 +1,6 @@
 [package]
 name = "oce-cxf"
-description = "CXF (Control eXchange Format) JSON-LD import/export for the Open Control Engine (Group A; no store, no selene-db)."
+description = "CXF (Control eXchange Format) JSON-LD import/export for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

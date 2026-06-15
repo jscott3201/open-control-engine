@@ -6,7 +6,7 @@
 //! ~1:1 to the `oce-model` graph. The importer uses lossless "Layer A" serde DTOs (untagged
 //! value sums, flatten-passthrough) plus a Layer A→B resolver that indexes `@graph` by `@id` and
 //! joins instances to their block class by class IRI. This crate is **Group A** (no store, no
-//! selene-db); it depends on `serde`/`serde_json` only.
+//! database); it depends on `serde`/`serde_json` only.
 //!
 //! Status: **M0 scaffold.** The importer/exporter land in M1.
 

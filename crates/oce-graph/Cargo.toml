@@ -1,6 +1,6 @@
 [package]
 name = "oce-graph"
-description = "The deterministic dataflow scheduler/executor (own Kahn sort, tick loop) for the Open Control Engine (Group A; no store, no selene-db)."
+description = "The deterministic dataflow scheduler/executor (own Kahn sort, tick loop) for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

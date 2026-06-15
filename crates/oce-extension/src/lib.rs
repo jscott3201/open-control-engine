@@ -4,7 +4,7 @@
 //! FMI/FMU runtime and native-handler execution are deferred to the post-v1 "later" band
 //! (FRAME §7; roadmap `09` §2 "later"). In v1 an extension block is surfaced as an **unresolved
 //! external**: it has no executable handler, only an optional FMU path. This crate is **Group A**
-//! (no store, no selene-db).
+//! (no store, no database).
 //!
 //! Status: **M0 scaffold.** The boundary surface is sketched; execution is out of v1 scope.
 

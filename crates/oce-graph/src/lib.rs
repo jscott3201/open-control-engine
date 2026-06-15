@@ -7,8 +7,8 @@
 //! topological sort with declaration-order tie-break (FRAME D6), and allocate `[S]` state
 //! seeded from parameters. **TICK** (the hot path): evaluate the frozen [`Schedule`] over flat
 //! arrays — no graph walks, no hashing, no allocation, no IO, no store. This crate is
-//! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem`/`oce-store-selene` or any
-//! selene crate (D-OWNER-1; `01` §10) — enforced by the CI seam gate.
+//! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem` or any store/database
+//! crate (D-OWNER-1; `01` §10).
 //!
 //! Public API names (normative, `01` §6.2): the frozen schedule is [`Schedule`] (alias
 //! [`CompiledSchedule`]); BUILD entry point is [`compile`]; TICK entry point is [`eval_tick`]

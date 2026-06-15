@@ -1,6 +1,6 @@
 [package]
 name = "oce-expr"
-description = "CDL §7.7.2 binding-expression parser and evaluator for the Open Control Engine (Group A; no store, no selene-db)."
+description = "CDL §7.7.2 binding-expression parser and evaluator for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

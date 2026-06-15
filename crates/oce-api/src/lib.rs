@@ -12,9 +12,9 @@
 //! # The store seam
 //!
 //! [`Engine`] is generic over a `Store`, defaulting to `oce_store_mem::MemStore` so the **default
-//! build has no database and no selene-db** (D-OWNER-1). The `selene` cargo feature changes
-//! *construction only* — it wires the optional `oce-store-selene` adapter (an empty stub at M0;
-//! selene-db arrives at M3). selene-db types never escape this facade (R-API-8).
+//! (and only) build has no database** (D-OWNER-1). The library ships no first-party database and no
+//! DB-gated feature; a durable/queryable backend is an app-side adapter the host wires behind the
+//! `oce-store` port. No store-backend-specific type ever escapes this facade (R-API-8).
 //!
 //! Status: **M0 scaffold.** The `Engine` *shape* and `OcError` match the spec; load/tick/simulate
 //! bodies are stubs (`unimplemented!()`) and land in M0/M1.
@@ -33,7 +33,7 @@ pub struct Engine<S: Store = MemStore> {
     store: Arc<S>,
     /// The flat executable truth (D1), frozen at load.
     model: Arc<ModelGraph>,
-    /// The frozen Kahn schedule (D6; selene-free).
+    /// The frozen Kahn schedule (D6; store-free).
     schedule: Schedule,
     /// The sole mutable per-tick structure (`01` §8).
     state: RunState,
@@ -42,7 +42,7 @@ pub struct Engine<S: Store = MemStore> {
 }
 
 impl Engine<MemStore> {
-    /// Default constructor — **no DB, no selene-db** (D-OWNER-1). The full load → tick → simulate
+    /// Default constructor — **no database** (D-OWNER-1). The full load → tick → simulate
     /// loop works on this.
     #[must_use]
     pub fn in_memory() -> Self {
@@ -93,9 +93,9 @@ impl<S: Store> Engine<S> {
 
 /// The unified, typed facade error. Never panics on host input (R-ERR-1); `#[non_exhaustive]` so
 /// variants evolve additively (R-ERR-2). It wraps Group A errors and the store's `StoreError`,
-/// and — critically — **never wraps a selene-db error type directly**: those are already
-/// flattened to `StoreError::Backend(String)` inside the adapter (R-ERR-3), so the error surface
-/// is byte-identical in shape whether or not the `selene` feature is on.
+/// and — critically — **never wraps a backend-specific error type directly**: any durable-store
+/// adapter flattens its errors to `StoreError::Backend(String)` at the seam (R-ERR-3), so the
+/// facade error surface is identical in shape regardless of which `Store` backend is wired.
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
 pub enum OcError {
@@ -125,7 +125,7 @@ pub enum OcError {
         /// The previous tick's time.
         prev: f64,
     },
-    /// A store-seam failure — the only path any backend (including selene) reaches the error type.
+    /// A store-seam failure — the only path any `Store` backend reaches the error type.
     #[error("store error: {0}")]
     Store(#[from] oce_store::StoreError),
 }
@@ -133,25 +133,13 @@ pub enum OcError {
 /// Convenience result alias for facade operations.
 pub type OcResult<T> = Result<T, OcError>;
 
-/// Open an engine backed by the selene-db adapter (the only selene touch point). Available only
-/// under `--features selene`. At M0 the adapter is an empty stub; the real opener lands at M3.
-#[cfg(feature = "selene")]
-#[must_use]
-pub fn selene_feature_enabled() -> bool {
-    // Placeholder under the `selene` feature so the feature is exercised by the build at M0.
-    // The real `open_selene(dir, cfg) -> Result<Engine<SeleneStore>, OcError>` lands at M3, when
-    // oce-store-selene gains its (git, branch = "development") selene-db dependency.
-    let () = oce_store_selene::PLACEHOLDER;
-    true
-}
-
 // Keep a reference to a DomainKey-using path so the re-exported store types are linked even in
-// the M0 scaffold (documents that oce-api re-exports the oce-store seam, never selene-db types).
+// the M0 scaffold (documents that oce-api re-exports the oce-store seam, never store-backend types).
 #[doc(hidden)]
 pub fn _doc_link_domain_key(k: DomainKey) -> DomainKey {
     k
 }
 
-/// Re-export of the selene-free store seam DTOs/traits (08 §11 R-PUB-1). No selene-db type is
+/// Re-export of the store seam DTOs/traits (08 §11 R-PUB-1). No store-backend-specific type is
 /// ever re-exported here.
 pub use oce_store;

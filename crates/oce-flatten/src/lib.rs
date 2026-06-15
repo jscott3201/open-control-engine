@@ -6,7 +6,7 @@
 //! to the post-v1 "later" band (FRAME D2). In v1 this crate is a thin **CXF-resolution shim**:
 //! CXF arrives already flattened/monomorphic, so the work is array normalization
 //! (`A[1]`→`A_1`, 1-based CDL → 0-based internal) and ground-parameter binding via `oce-expr`.
-//! It is **Group A** (no store, no selene-db).
+//! It is **Group A** (no store, no database).
 //!
 //! Status: **M0 scaffold.** The shim lands in M1.
 

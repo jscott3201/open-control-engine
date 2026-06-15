@@ -5,7 +5,7 @@
 //! Reimplements the `funnel`-style L1 tolerance band (per-signal absolute/relative tolerance +
 //! time tolerance), a golden-trace driver, indicator/don't-care masking, and conformance
 //! Tier 0–4 scaffolding. It is the substrate for the determinism contract (CDL §7.16): identical
-//! inputs/params ⇒ identical traces. It is **Group A**-adjacent (no store, no selene-db) and
+//! inputs/params ⇒ identical traces. It is **Group A**-adjacent (no store, no database) and
 //! drives `oce-graph`/`oce-blocks` directly.
 //!
 //! Status: **M0 scaffold.** The tolerance band + golden driver land at M2.

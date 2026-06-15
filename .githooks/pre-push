@@ -17,7 +17,7 @@ else
   echo "[pre-push] (no Cargo.toml yet — skipping clippy)"
 fi
 
-echo "[pre-push] default-no-db gate (default build links no selene-db / tokio / async-std)"
+echo "[pre-push] default-no-db gate (build links no database / tokio / async-std)"
 bash .github/scripts/check-default-no-db.sh
 
 echo "[pre-push] ok"

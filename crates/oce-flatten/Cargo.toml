@@ -1,6 +1,6 @@
 [package]
 name = "oce-flatten"
-description = "CDL elaboration / CXF-path resolution for the Open Control Engine (Group A; no store, no selene-db)."
+description = "CDL elaboration / CXF-path resolution for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

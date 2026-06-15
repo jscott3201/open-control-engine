@@ -2,12 +2,12 @@
 //! `oce-store-mem` — the **default** in-memory [`oce_store::Store`] backend for the Open Control
 //! Engine, so the engine runs with no database (FRAME D-OWNER-1).
 //!
-//! It is selene-free (R-SEAM-1), depends only on `oce-store` + std, and is the reference
+//! It is database-free (R-SEAM-1), depends only on `oce-store` + std, and is the reference
 //! implementation used in unit tests and fuzzing. It is **not** a database: no WAL, no fsync, no
 //! ANN index — an in-process `HashMap`/`Vec` projection that satisfies the trait contracts just
 //! enough that the engine's load → flatten → validate → schedule → tick → simulate loop works
-//! end to end. It mirrors the selene adapter's *read discipline* (acquire one snapshot per tick,
-//! O(1) reads), not its cost, so swapping `MemStore` ↔ `SeleneStore` changes no engine code.
+//! end to end. It mirrors a durable adapter's *read discipline* (acquire one snapshot per tick,
+//! O(1) reads), not its cost, so swapping `MemStore` for any other `Store` changes no engine code.
 //!
 //! Status: **M0 scaffold.** The storage maps are wired; method bodies are stubs
 //! (`unimplemented!()`) and land in M0/M1.

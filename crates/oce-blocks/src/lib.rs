@@ -7,7 +7,7 @@
 //! ([`BlockKind::Stateful`]). The split between [`Block::output`] (compute from prior state) and
 //! [`Block::update_state`] is what lets `oce-graph` evaluate a tick in topological order and cut
 //! algebraic loops at non-feedthrough stateful blocks. This crate is **Group A**: no store, no
-//! selene-db (D-OWNER-1); it carries behavior + per-instance state only, never non-computational
+//! database (D-OWNER-1); it carries behavior + per-instance state only, never non-computational
 //! metadata (CDL §7.17).
 //!
 //! Status: **M0 scaffold.** The trait surface and a handful of starter blocks are sketched here;
@@ -56,7 +56,7 @@ pub struct BlockSignature {
 }
 
 /// A diagnostics sink for `Utilities.Assert` and unit warnings — injected by the scheduler,
-/// never a global, to keep the crate selene-free and side-effect-explicit (`03` §2.4).
+/// never a global, to keep the crate store-free and side-effect-explicit (`03` §2.4).
 pub trait Diagnostics {
     /// Emit a warning attributed to `source` at model time `t`.
     fn warn(&self, source: &str, message: &str, t: Time);

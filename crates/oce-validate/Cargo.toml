@@ -1,6 +1,6 @@
 [package]
 name = "oce-validate"
-description = "Loader conformance / subset rejection / single-assignment checks for the Open Control Engine (Group A; no store, no selene-db)."
+description = "Loader conformance / subset rejection / single-assignment checks for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -6,7 +6,7 @@
 //! (literals, identifier references, arithmetic/relational/boolean operators, the §7.7.2
 //! built-in function set, array literals/comprehensions). `oce-expr` parses opaque CDL binding
 //! text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground value. It is
-//! **Group A** (no store, no selene-db), pure, total, and never reads the clock, connectors,
+//! **Group A** (no store, no database), pure, total, and never reads the clock, connectors,
 //! or computation-affecting attributes (R11).
 //!
 //! Status: **M0 scaffold.** The grammar/evaluator land in M1; the public surface below is the

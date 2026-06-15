@@ -1,19 +1,19 @@
 #![forbid(unsafe_code)]
-//! `oce-store` — **THE SEAM** (FRAME D-OWNER-1). The selene-free storage ports the Open Control
+//! `oce-store` — **THE SEAM** (FRAME D-OWNER-1). The database-free storage ports the Open Control
 //! Engine reaches a durable/queryable backend through (`06-storage-abstraction-and-selene-adapter.md`
 //! Part 1).
 //!
 //! This crate defines three object-safe port traits — [`ModelStore`], [`PointStore`],
 //! [`SemanticStore`] — an umbrella [`Store`] trait, the plain-Rust DTOs they exchange, and a
 //! typed [`StoreError`]. **No type defined here exposes, embeds, or refers to a database type**
-//! (R-SEAM-1): the word `selene` must never appear in this crate. The execution core never calls
+//! (R-SEAM-1): no database type name appears in this crate. The execution core never calls
 //! these traits on the tick; they are off-tick ports (except [`PointSnapshot::read_resolved`],
 //! the single permitted hot-path read). The DTOs derive `serde::{Serialize, Deserialize}` so any
 //! adapter may pick a serde codec; the runtime-value enum is kept small and `Copy`-friendly.
 //!
 //! Status: **M0 scaffold.** The trait *surface* and DTO *shapes* match the spec; method bodies
-//! live in the adapter crates (`oce-store-mem` default; `oce-store-selene` behind the `selene`
-//! feature).
+//! live in the adapter crates (`oce-store-mem` is the in-memory default; a durable/queryable
+//! backend is an app-side adapter behind this port).
 
 use serde::{Deserialize, Serialize};
 

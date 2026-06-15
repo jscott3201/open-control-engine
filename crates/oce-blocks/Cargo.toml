@@ -1,6 +1,6 @@
 [package]
 name = "oce-blocks"
-description = "The CDL elementary-block library and Block trait for the Open Control Engine (Group A; no store, no selene-db)."
+description = "The CDL elementary-block library and Block trait for the Open Control Engine (Group A; no store, no database)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

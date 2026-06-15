@@ -4,7 +4,7 @@
 #
 # .githooks/ is version-controlled (unlike .git/hooks/), so the team shares the same gates.
 # Mirrors the CI split:
-#   pre-commit -> cargo fmt --check + file-size + no-secret + seam gate         (fast)
+#   pre-commit -> cargo fmt --check + file-size + no-secret                     (fast)
 #   pre-push   -> cargo clippy -D warnings + default-no-db gate                 (fast)
 #
 # Escape hatches: `git commit/push --no-verify` (once) or
@@ -17,6 +17,6 @@ chmod +x .githooks/pre-commit .githooks/pre-push 2>/dev/null || true
 chmod +x .github/scripts/*.sh 2>/dev/null || true
 
 echo "core.hooksPath -> .githooks"
-echo "  pre-commit: cargo fmt --check + file-size cap + no-secret scan + seam gate"
+echo "  pre-commit: cargo fmt --check + file-size cap + no-secret scan"
 echo "  pre-push:   cargo clippy -D warnings + default-no-db gate"
 echo "Skip once: --no-verify   |   skip session: export OCE_SKIP_HOOKS=1"

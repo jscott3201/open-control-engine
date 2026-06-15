@@ -2,7 +2,7 @@
 //! `oce-model` — the pure value, connector, instance, and connection types that are the
 //! shared, executable truth of the Open Control Engine (FRAME decision D1).
 //!
-//! This crate is **Group A**: it has zero dependency on `selene-db` or any store
+//! This crate is **Group A**: it has zero dependency on any store or database
 //! (D-OWNER-1), and it carries only the *computational* payload of a CDL model. The
 //! non-computational metadata seam (CDL §7.17) lives in `oce-semantics`/`oce-store`,
 //! never here on the hot path.
@@ -145,12 +145,12 @@ pub struct Attrs {
 }
 
 /// Stable, dense, 0-based index of a block instance within the flattened model's arena.
-/// **Not** a selene `NodeId` — purely an in-memory `oce-model` position.
+/// **Not** a store/DB node id — purely an in-memory `oce-model` position.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct BlockId(pub u32);
 
 /// Stable, dense, 0-based index of a connector instance (one per block, connector,
-/// array element). Purely in-memory (not a selene id).
+/// array element). Purely in-memory (not a store/DB id).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct ConnectorId(pub u32);
 
