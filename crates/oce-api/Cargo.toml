@@ -1,0 +1,41 @@
+# NOTE: the package is named `oce-api` to match the spec's crate map (FRAME 00 §5). The
+# embeddable host facade is PUBLISHED under the umbrella name `open-control-engine` — the single
+# recommended dependency for embedders — without changing this surface (08 §11 R-PUB-4).
+[package]
+name = "oce-api"
+description = "The embeddable host facade for the Open Control Engine: Engine<S: Store = MemStore>. Published under the umbrella name open-control-engine."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# Default build = engine + in-memory store. NO database, NO selene-db, NO async runtime
+# (FRAME §6, D-OWNER-1). The `mem` feature is on by default and wires oce-store-mem as the
+# default `Store` backend.
+default = ["mem"]
+mem = []
+# The `selene` feature wires the optional oce-store-selene adapter. At M0 oce-store-selene is an
+# EMPTY stub that pulls NO selene-db, so `--features selene` still builds and links no database;
+# selene-db arrives inside oce-store-selene only at M3 (D-OWNER-1; roadmap 09 §2).
+selene = ["dep:oce-store-selene"]
+
+[dependencies]
+oce-model = { workspace = true }
+oce-graph = { workspace = true }
+oce-blocks = { workspace = true }
+oce-cxf = { workspace = true }
+oce-validate = { workspace = true }
+oce-flatten = { workspace = true }
+oce-semantics = { workspace = true }
+oce-store = { workspace = true }
+oce-store-mem = { workspace = true }
+thiserror = { workspace = true }
+# Optional: the selene adapter, wired only behind the `selene` feature (the single optional dep).
+oce-store-selene = { workspace = true, optional = true }

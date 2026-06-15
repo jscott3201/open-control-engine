@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# open-control pre-push gate — FAST lint/build guard only.
+#
+# The full test suite intentionally does NOT run here. Keeping pre-push to a fast clippy + the
+# default-no-db tree check lets per-change pushes to `development` stay quick; the heavyweight
+# matrix runs at the development -> main release gate and inside agent workflows.
+# Skip once:    git push --no-verify
+# Skip session: export OCE_SKIP_HOOKS=1
+set -euo pipefail
+[ -n "${OCE_SKIP_HOOKS:-}" ] && { echo "[pre-push] skipped (OCE_SKIP_HOOKS)"; exit 0; }
+cd "$(git rev-parse --show-toplevel)"
+
+if [ -f Cargo.toml ]; then
+  echo "[pre-push] cargo clippy --workspace --locked -- -D warnings"
+  cargo clippy --workspace --locked -- -D warnings
+else
+  echo "[pre-push] (no Cargo.toml yet — skipping clippy)"
+fi
+
+echo "[pre-push] default-no-db gate (default build links no selene-db / tokio / async-std)"
+bash .github/scripts/check-default-no-db.sh
+
+echo "[pre-push] ok"

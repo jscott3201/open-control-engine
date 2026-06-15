@@ -1,0 +1,17 @@
+[package]
+name = "oce-docs"
+description = "Sequence-spec (Word/HTML) and point-list document export for the Open Control Engine."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+oce-store = { workspace = true }
+oce-model = { workspace = true }

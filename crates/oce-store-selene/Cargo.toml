@@ -1,0 +1,41 @@
+[package]
+name = "oce-store-selene"
+description = "The (M3) selene-db Store adapter for the Open Control Engine — the ONLY crate that may name selene-db. EMPTY feature-gated stub at M0 (no selene-db dependency yet)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+# ── M0: this crate is an EMPTY stub. It carries NO selene-db dependency yet. ──
+# selene-db is introduced ONLY at M3 (FRAME D-OWNER-1; roadmap 09 §1, §2 M3), behind the
+# `selene` feature, and this is the SOLE crate permitted to name selene-db types (R-SEAM-2).
+#
+# At M3 these dependency lines arrive (D8 / D-OWNER-2 / 06 Part 2): git, branch = "development",
+# `package = "selene-db-*"` aliases, a pinned `rev`, Cargo.lock committed. All five MUST share one
+# git source + rev so Cargo unifies them to a single checkout:
+#
+#   selene-core       = { package = "selene-db-core",       git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-graph      = { package = "selene-db-graph",      git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-persist    = { package = "selene-db-persist",    git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-gql        = { package = "selene-db-gql",        git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#   selene-algorithms = { package = "selene-db-algorithms", git = "https://github.com/jscott3201/selene-db", branch = "development", rev = "<pin>" }
+#
+# For local co-development against the side-by-side checkout, add (do NOT commit uncommented) a
+# patch keyed by the published PACKAGE names (D8 / 06 Part 2):
+#
+#   [patch."https://github.com/jscott3201/selene-db"]
+#   selene-db-core       = { path = "/Users/justin/Development/selene-db/crates/selene-core" }
+#   selene-db-graph      = { path = "/Users/justin/Development/selene-db/crates/selene-graph" }
+#   selene-db-persist    = { path = "/Users/justin/Development/selene-db/crates/selene-persist" }
+#   selene-db-gql        = { path = "/Users/justin/Development/selene-db/crates/selene-gql" }
+#   selene-db-algorithms = { path = "/Users/justin/Development/selene-db/crates/selene-algorithms" }
+
+[dependencies]
+oce-store = { workspace = true }
+oce-model = { workspace = true }
