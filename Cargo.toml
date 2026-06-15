@@ -89,11 +89,11 @@ oce-api = { path = "crates/oce-api", version = "0.0.0" }
 # PACKAGE names (the crates.io/git source), not our alias keys:
 #
 #   [patch."https://github.com/jscott3201/selene-db"]
-#   selene-db-core       = { path = "/Users/justin/Development/selene-db/crates/selene-core" }
-#   selene-db-graph      = { path = "/Users/justin/Development/selene-db/crates/selene-graph" }
-#   selene-db-persist    = { path = "/Users/justin/Development/selene-db/crates/selene-persist" }
-#   selene-db-gql        = { path = "/Users/justin/Development/selene-db/crates/selene-gql" }
-#   selene-db-algorithms = { path = "/Users/justin/Development/selene-db/crates/selene-algorithms" }
+#   selene-db-core       = { path = "../selene-db/crates/selene-core" }
+#   selene-db-graph      = { path = "../selene-db/crates/selene-graph" }
+#   selene-db-persist    = { path = "../selene-db/crates/selene-persist" }
+#   selene-db-gql        = { path = "../selene-db/crates/selene-gql" }
+#   selene-db-algorithms = { path = "../selene-db/crates/selene-algorithms" }
 
 [profile.release]
 opt-level = 3

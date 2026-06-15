@@ -11,7 +11,7 @@ the **OBC / LBL Control Description Language (CDL)**:
 
 It is built to be the **core engine under the hood** for future Aionforge projects, so the public
 API and core semantics must stay embeddable and stable. It integrates the in-house graph database
-**selene-db** (local: `/Users/justin/Development/selene-db`).
+**selene-db** (https://github.com/jscott3201/selene-db).
 
 ---
 
@@ -23,13 +23,11 @@ decisions, rationale, open work, and handoffs — not these MD files.
 
 **On entering this repo, before substantial work:**
 
-1. **Read the project identity.** `claude-id.json` (git-ignored, machine-local) holds the
-   **dedicated** Aionforge identity for this project:
-   - `agent_id = 1d908dfb-f290-4be9-bf6c-0f570d868511`
-   - `namespace = agent:1d908dfb-f290-4be9-bf6c-0f570d868511`
-   - Pass it as `principal.agent_id` (and `viewer`) on every memory call.
-   - ⛔ **Do NOT** use the env `AIONFORGE_AGENT_ID` (`f2b763c1-…`) — that is a shared steward
-     identity and is **off-limits** for open-control memory.
+1. **Read the project identity.** The project's **dedicated** Aionforge identity (`agent_id`
+   and `namespace`) lives in `claude-id.json` (git-ignored, machine-local). Load it from there —
+   never hardcode it — and pass it as `principal.agent_id` (and `viewer`) on every memory call.
+   ⛔ Do **not** use the shared steward identity from the environment for project memory; it is
+   **off-limits** for open-control.
 2. **Recall first.** `search` for relevant prior decisions/preferences/failures and `work_query`
    (status `todo` / `in_progress`) for open work. Recall again when new files, errors, or
    subsystem names appear.
@@ -46,9 +44,10 @@ The `aionforge-memory` plugin skills (`memory-loop`, `memory-recall`, `memory-ca
 `/aionforge-memory:memory-handoff`) encode this cadence. A SessionStart hook re-seeds it after a
 fresh context, resume, or compaction.
 
-- **Private namespace** `agent:1d908dfb-…` → open-control project working memory.
-- **Shared namespace** `team:aionforge-memory-team` → cross-project Aionforge Memory dogfooding
-  feedback **only** (pass `teams: ["aionforge-memory-team"]`). Keep project internals out of it.
+- **Private namespace** — the project's own `agent:` namespace (from `claude-id.json`) →
+  open-control project working memory.
+- **Shared namespace** — the Aionforge Memory dogfooding team → cross-project dogfooding feedback
+  **only**. Keep project internals out of it.
 
 ---
 

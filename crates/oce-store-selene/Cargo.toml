@@ -30,11 +30,11 @@ workspace = true
 # patch keyed by the published PACKAGE names (D8 / 06 Part 2):
 #
 #   [patch."https://github.com/jscott3201/selene-db"]
-#   selene-db-core       = { path = "/Users/justin/Development/selene-db/crates/selene-core" }
-#   selene-db-graph      = { path = "/Users/justin/Development/selene-db/crates/selene-graph" }
-#   selene-db-persist    = { path = "/Users/justin/Development/selene-db/crates/selene-persist" }
-#   selene-db-gql        = { path = "/Users/justin/Development/selene-db/crates/selene-gql" }
-#   selene-db-algorithms = { path = "/Users/justin/Development/selene-db/crates/selene-algorithms" }
+#   selene-db-core       = { path = "../selene-db/crates/selene-core" }
+#   selene-db-graph      = { path = "../selene-db/crates/selene-graph" }
+#   selene-db-persist    = { path = "../selene-db/crates/selene-persist" }
+#   selene-db-gql        = { path = "../selene-db/crates/selene-gql" }
+#   selene-db-algorithms = { path = "../selene-db/crates/selene-algorithms" }
 
 [dependencies]
 oce-store = { workspace = true }

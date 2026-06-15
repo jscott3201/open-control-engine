@@ -18,7 +18,7 @@
 //!   share one git source + rev so Cargo unifies them to a single checkout. `Cargo.lock` is
 //!   committed so rev bumps stay deliberate; switch to `version = "1.3"` once selene-db 1.3.0
 //!   ships. A `[patch."https://github.com/jscott3201/selene-db"]` keyed by the published package
-//!   names overrides to the local `/Users/justin/Development/selene-db` checkout for co-development.
+//!   names overrides to a local side-by-side `selene-db` checkout (`../selene-db`) for co-development.
 //! - **Mapping (D5):** block instances → `CdlBlock` nodes, classes → `BlockClass` nodes,
 //!   connectors → `Point` **nodes** (per-connector metadata must be indexable; selene indexes
 //!   nodes only — D-OWNER-3), parameters → typed `CdlBlock` properties.
