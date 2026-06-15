@@ -1,0 +1,28 @@
+# --- Machine-local agent identity (Aionforge Memory) — never commit ---
+claude-id.json
+codex-id.json
+*-id.json
+
+# --- Rust ---
+/target
+**/target
+*.rs.bk
+*.pdb
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Working / scratch folders (underscore-prefixed) — never commit ---
+# _spec, _research, _scratch, _briefs, _design, etc. are local working areas.
+# The durable record of decisions/research lives in Aionforge Memory.
+_*/
+**/_*/
+
+# --- macOS / editors ---
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
