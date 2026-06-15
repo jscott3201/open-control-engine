@@ -26,7 +26,6 @@ dependencies = [
  "oce-semantics",
  "oce-store",
  "oce-store-mem",
- "oce-store-selene",
  "oce-validate",
  "thiserror",
 ]
@@ -122,14 +121,6 @@ dependencies = [
 
 [[package]]
 name = "oce-store-mem"
-version = "0.0.0"
-dependencies = [
- "oce-model",
- "oce-store",
-]
-
-[[package]]
-name = "oce-store-selene"
 version = "0.0.0"
 dependencies = [
  "oce-model",

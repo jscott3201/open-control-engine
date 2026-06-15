@@ -1,7 +1,7 @@
 # Fetch any git dependencies with the system `git` binary so Cargo uses the same
 # credential helper, proxy, and certificate settings as the developer's shell.
-# At M0 the dependency tree resolves entirely from crates.io (the default build pulls
-# no git deps); this is the safe default for when the `selene` feature later adds the
-# selene-db git dependency on the `development` branch (D8). No secrets live here.
+# The library's dependency tree resolves entirely from crates.io (it ships no first-party
+# database and pulls no git deps); this remains a safe default if a consuming application
+# later adds a git-sourced store adapter in its own workspace. No secrets live here.
 [net]
 git-fetch-with-cli = true

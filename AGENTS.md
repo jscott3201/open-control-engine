@@ -10,8 +10,10 @@ the **OBC / LBL Control Description Language (CDL)**:
 - https://obc.lbl.gov/specification/index.html
 
 It is built to be the **core engine under the hood** for future Aionforge projects, so the public
-API and core semantics must stay embeddable and stable. It integrates the in-house graph database
-**selene-db** (https://github.com/jscott3201/selene-db).
+API and core semantics must stay embeddable and stable. The library ships **no first-party
+database** — it is database-free, full stop; durable/queryable backends (e.g. the in-house graph
+database **selene-db**, https://github.com/jscott3201/selene-db) are the consuming application's
+responsibility, authored app-side behind the storage port.
 
 ---
 
@@ -58,15 +60,6 @@ fresh context, resume, or compaction.
 | `_research/`  | Research findings (`cdl/`, `selene-db/`). Inputs to the spec.              |
 | `_spec/`      | Architecture & engine specification (the design of record before code).    |
 | `claude-id.json` | Machine-local Aionforge identity (git-ignored).                         |
-
----
-
-## 🔗 selene-db dependency policy
-
-- Track the selene-db **`development`** branch for now to stay current, **until `1.3.0`** ships;
-  then pin to the release. (Latest tag as of 2026-06-15: `v1.2.0`.)
-- selene-db is a Rust workspace (`crates/`); prefer a path/git dependency on `development` during
-  research and early development.
 
 ---
 

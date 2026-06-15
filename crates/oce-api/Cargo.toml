@@ -16,15 +16,12 @@ homepage.workspace = true
 workspace = true
 
 [features]
-# Default build = engine + in-memory store. NO database, NO selene-db, NO async runtime
-# (FRAME §6, D-OWNER-1). The `mem` feature is on by default and wires oce-store-mem as the
-# default `Store` backend.
+# Default build = engine + in-memory store. NO database, NO async runtime (FRAME §6,
+# D-OWNER-1). The `mem` feature is on by default and wires oce-store-mem as the default
+# `Store` backend. The library ships no first-party database and no DB-gated feature;
+# durable backends are app-side adapters the host wires behind the `oce-store` port.
 default = ["mem"]
 mem = []
-# The `selene` feature wires the optional oce-store-selene adapter. At M0 oce-store-selene is an
-# EMPTY stub that pulls NO selene-db, so `--features selene` still builds and links no database;
-# selene-db arrives inside oce-store-selene only at M3 (D-OWNER-1; roadmap 09 §2).
-selene = ["dep:oce-store-selene"]
 
 [dependencies]
 oce-model = { workspace = true }
@@ -37,5 +34,3 @@ oce-semantics = { workspace = true }
 oce-store = { workspace = true }
 oce-store-mem = { workspace = true }
 thiserror = { workspace = true }
-# Optional: the selene adapter, wired only behind the `selene` feature (the single optional dep).
-oce-store-selene = { workspace = true, optional = true }

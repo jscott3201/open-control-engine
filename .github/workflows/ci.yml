@@ -10,15 +10,13 @@
 # leaving the cheap gates here.
 #
 # Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
-# clippy -D warnings (default + --features selene), a workspace build (default + --features
-# selene), and the two SEAM gates
-# (seam-gate: Group A / store ports stay selene-free; default-no-db: the default build links no
-# selene-db / tokio / async-std). When dependency manifests change, cargo-deny runs too.
+# clippy -D warnings, a workspace build, and the default-no-db gate (the default — and only —
+# build links no database / tokio / async-std). When dependency manifests change, cargo-deny runs
+# too.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md attribution-currency gate (plus
 # about.toml/about.hbs) is intentionally NOT wired yet — attribution hygiene is most valuable near
-# crates.io publish, which is deferred. The deny.toml license allow-list already covers the future
-# selene-db tree, so license posture is not unguarded. Restore the gate before the first publish.
+# crates.io publish, which is deferred. Restore the gate before the first publish.
 #
 # Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
 
@@ -90,16 +88,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash .github/scripts/check-no-secrets.sh
 
-  seam-gate:
-    name: seam gate (Group A / store ports selene-free)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: bash .github/scripts/check-seam.sh
-
   default-no-db:
-    name: default build links no selene-db / tokio / async-std
+    name: default build links no database / async runtime
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -120,11 +110,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: clippy (default — no DB)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: clippy (--features selene)
-        run: cargo clippy --workspace --all-targets --features selene --locked -- -D warnings
 
   build:
-    name: build (default + selene)
+    name: build
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -133,8 +121,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
-      - name: cargo build (--features selene — still no selene-db at M0)
-        run: cargo build --workspace --features selene --locked
 
   rustdoc:
     name: rustdoc (-D warnings)

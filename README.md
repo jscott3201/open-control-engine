@@ -16,8 +16,8 @@ continuous functional verification.
 > in this repository is the **M0 scaffold** — the Cargo workspace, the public type/trait surfaces
 > for the execution core and the storage seam, CI, and git hooks are in place, with method bodies
 > filled in across subsequent milestones (M1: CXF ingest + a trivial sequence end-to-end; M2:
-> ASHRAE Guideline 36 block-library breadth + a conformance harness; M3: the optional selene-db
-> adapter).
+> ASHRAE Guideline 36 block-library breadth + a conformance harness; M3: durability through the
+> `oce-store` port against an in-tree reference adapter).
 
 ## The architectural spine: the CDL §7.17 non-computational seam
 
@@ -30,8 +30,9 @@ the cleanest seam in the system, and the engine is built around it:
   database.
 - A **storage layer behind a trait** — everything the evaluator must *not* read (equipment
   topology, points, instance structure, parameters, trends, semantic triples) plus durable
-  persistence and retrieval — reached only through selene-free port traits, with the database as
-  an **optional, swappable, default-off** backend.
+  persistence and retrieval — reached only through the `oce-store` port traits. The library ships
+  **no first-party database**; durable/queryable backends are **app-side adapters** behind the
+  port, with an in-memory default (`oce-store-mem`).
 
 A downstream project can embed the engine for *load → flatten → validate → schedule → tick →
 simulate* with no database at all.
@@ -72,7 +73,6 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | --- | --- |
 | `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` traits + DTOs. No database types. |
 | `oce-store-mem` | The default in-memory backend, so the engine runs with no database. |
-| `oce-store-selene` | The optional selene-db adapter — the **only** crate that may name a database type, reached only behind the `selene` feature (arrives at a later milestone). |
 
 **Verification, externals & host facade (Group C):**
 
@@ -85,24 +85,19 @@ The dependency direction is intentional and acyclic, organized around the seam a
 
 ## Build & feature flags
 
-The **default build is the engine only — no database, no async runtime**:
+The build is the engine only — **no database, no async runtime** (the library is database-free,
+full stop):
 
 ```bash
 cargo build --workspace
 ```
 
-The optional `selene` feature wires the `oce-store-selene` adapter. (At the current milestone the
-adapter is an empty stub, so this still links no database; the selene-db dependency arrives with
-the adapter at a later milestone.)
-
-```bash
-cargo build --workspace --features selene
-```
-
 `oce-api` exposes the features:
 
 - `default = ["mem"]` — wires the in-memory store as the default `Store` backend.
-- `selene` — wires the optional selene-db adapter (`dep:oce-store-selene`).
+
+Durable/queryable backends are the consuming application's responsibility, authored app-side as an
+adapter behind the `oce-store` port.
 
 ## Development
 
@@ -118,8 +113,7 @@ The local gates mirror CI:
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo build --workspace --locked
-bash .github/scripts/check-seam.sh           # Group A / store ports stay selene-free
-bash .github/scripts/check-default-no-db.sh   # default build links no selene-db / tokio / async-std
+bash .github/scripts/check-default-no-db.sh   # build links no database / tokio / async-std
 ```
 
 Escape hatches for the hooks: `git commit/push --no-verify` (once) or
