@@ -203,3 +203,15 @@ fn real_param_promotes_integer_to_real() {
         "Integer(5) y_start must seed the initial output to 5.0, not silently default to 0.0"
     );
 }
+
+/// Compile-time guard (R-API-PY-2): the `Block` trait object is `Send + Sync`, localized to
+/// oce-blocks' own boundary. The `Block: Send + Sync` supertrait already forces every `impl Block`
+/// to be `Send + Sync` at its impl site, so a future non-`Send` block class fails to compile; this
+/// also pins the **trait object** (`dyn Block` / `Box<dyn Block>`) so the engine's
+/// `Vec<Box<dyn Block>>` stays shareable. Never called — its compilation IS the assertion.
+#[allow(dead_code)]
+fn _assert_block_object_send_sync() {
+    fn needs<T: Send + Sync + ?Sized>() {}
+    needs::<dyn Block>();
+    needs::<Box<dyn Block>>();
+}

@@ -83,7 +83,13 @@ pub trait Diagnostics {
 ///
 /// `[A]` blocks override [`Block::step_algebraic`]. `[S]` blocks set [`Block::state_len`], seed via
 /// [`Block::init_state`], and override [`Block::emit_from_state`] + [`Block::update_state`].
-pub trait Block {
+///
+/// The trait is **`Send + Sync`** (R-API-PY-2 / `08` R-ENG-1): a block holds only resolved
+/// parameters — plain owned `f64`/`bool` data, no `Rc`/`RefCell`/raw pointers (per-instance mutable
+/// `[S]` state lives in the engine's `RunState`, never here) — so `Box<dyn Block>` is `Send + Sync`
+/// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
+/// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile (M1-PR-12).
+pub trait Block: Send + Sync {
     /// Class-level interface descriptor. Drives buffer sizing and the DAG.
     fn signature(&self) -> &'static BlockSignature;
 

@@ -19,9 +19,8 @@ use oce_model::{
 use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel};
 
 use super::{
-    AssertEvent, CollectSpec, Engine, InputSource, IoClass, IoInventory, IoSummary, LoadReport,
-    OcError, OutputTrace, Outputs, PhysicalKind, PointInfo, RunMode, SemanticQuery, SimMetrics,
-    SimSpec, StepReport, TemplateRef,
+    CollectSpec, Engine, InputSource, IoClass, OcError, PhysicalKind, RunMode, SemanticQuery,
+    SimSpec, TemplateRef,
 };
 use oce_store_mem::MemStore;
 
@@ -369,64 +368,14 @@ fn free_add_model() -> ModelGraph {
     mb.finish()
 }
 
-// ---- R-PUB-7: compile-shaped frozen-signature guards (fail to compile on any drift) ----
-
-// The fn-pointer types here are deliberately verbose — they pin the exact frozen signatures.
-#[allow(dead_code, clippy::type_complexity)]
-fn _frozen_signature_guards() {
-    let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;
-    let _: fn(Arc<MemStore>) -> Engine<MemStore> = Engine::<MemStore>::with_store;
-    let _: fn(&mut Engine<MemStore>, &[u8]) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_cxf;
-    let _: fn(&mut Engine<MemStore>, &TemplateRef, &SemanticQuery) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_from_semantic;
-    let _: fn(&mut Engine<MemStore>, &std::path::Path) -> Result<LoadReport, OcError> =
-        Engine::<MemStore>::load_modelica;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<&Outputs, OcError> = Engine::<MemStore>::tick;
-    let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
-        Engine::<MemStore>::set_input;
-    let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
-    let _: fn(&mut Engine<MemStore>, &SimSpec) -> Result<SimMetrics, OcError> =
-        Engine::<MemStore>::simulate;
-    let _: fn(&mut Engine<MemStore>, f64) -> Result<StepReport, OcError> =
-        Engine::<MemStore>::step_realtime;
-    let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_param;
-    let _: fn(&Engine<MemStore>) -> &super::ParamTable = Engine::<MemStore>::params;
-    let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
-        Engine::<MemStore>::set_param;
-    let _: fn(&mut Engine<MemStore>) -> Result<(), OcError> = Engine::<MemStore>::halt;
-    let _: fn(&mut Engine<MemStore>) -> Result<(), OcError> = Engine::<MemStore>::resume;
-    let _: fn(&Engine<MemStore>) -> RunMode = Engine::<MemStore>::mode;
-    let _: fn(&Engine<MemStore>) -> &IoInventory = Engine::<MemStore>::io;
-    let _: fn(&Engine<MemStore>) -> IoSummary = Engine::<MemStore>::io_summary;
-    let _: fn(&Engine<MemStore>, Option<&str>) -> Result<Vec<PointInfo>, OcError> =
-        Engine::<MemStore>::point_list;
-    // R-PUB-6 owned-snapshot accessors with concrete return types.
-    let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
-    let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;
-    let _: fn(&super::ParamTable) -> Vec<(String, Value, super::ParamAttrs)> =
-        super::ParamTable::to_vec;
-    // R-PUB-1: the oce-model value/IO types + the diagnostic type are nameable through the facade.
-    let _: Option<super::Value> = None;
-    let _: Option<super::ValueType> = None;
-    let _: Option<super::ConnectorId> = None;
-    let _: Option<super::Diagnostic> = None;
-}
-
-// NOTE: `Engine<S>: Send + Sync` is NOT yet assertable — `Box<dyn Block>` is not `Send` until the
-// `Block: Send + Sync` bound lands in M1-PR-12 (M1 plan, critic finding 9). The compile-shaped
-// thread-safety guard is a PR-12 deliverable, deliberately omitted here.
-
+// ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,
+// Clone family, owned-snapshot enumeration, and the Engine<MemStore>: Send + Sync assertion) live in
+// the NON-test module `crate::guards` (M1-PR-12) so a drift fails the per-PR `cargo build`, not only
+// this release-gate test target. This smoke test documents that intent; the real enforcement is that
+// `guards.rs` compiles.
 #[test]
-fn frozen_owned_types_are_clone() {
-    fn assert_clone<T: Clone>() {}
-    assert_clone::<LoadReport>();
-    assert_clone::<IoSummary>();
-    assert_clone::<PointInfo>();
-    assert_clone::<StepReport>();
-    assert_clone::<AssertEvent>();
-    assert_clone::<OutputTrace>();
-    assert_clone::<oce_diag::Diagnostic>();
+fn frozen_surface_guards_compile() {
+    // Intentionally empty — the assertions are compile-time in `crate::guards`.
 }
 
 // ---- non-panicking on adversarial / empty input (every path is a typed error) ----

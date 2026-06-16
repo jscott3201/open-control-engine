@@ -19,11 +19,13 @@ use crate::params::{ParamTable, RunMode};
 use crate::sim::Outputs;
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB, D-OWNER-1).
-/// Not `Clone` (it owns mutable run state); intended to be shared across threads as
-/// `Arc<Engine<S>>`. (Full `Send + Sync` lands with the `Block: Send + Sync` bound + a compile-shaped
-/// assertion in M1-PR-12; today `Box<dyn Block>` is not yet `Send`.) Fields are `pub(crate)`: the
-/// split-out method modules (`params`/`sim`/`io`/`loading`) and the in-crate test harness read
-/// engine state directly, but nothing escapes the crate.
+/// Not `Clone` (it owns mutable run state); intended to be shared across threads as `Arc<Engine<S>>`.
+/// `Engine<S>` **is** `Send + Sync` for every `S: Store` (`08` R-ENG-1 / R-API-PY-2): `Arc<S>` and
+/// the load-frozen `Arc<ModelGraph>` are `Send + Sync`, `blocks: Vec<Box<dyn Block>>` is `Send + Sync`
+/// now that `oce-blocks` declares `Block: Send + Sync`, and every other field is plain owned data —
+/// no `unsafe`, no raw pointers (R-API-3). CI-asserted by `guards::_assert_engine_send_sync`
+/// (M1-PR-12). Fields are `pub(crate)`: the split-out method modules (`params`/`sim`/`io`/`loading`)
+/// and the in-crate test harness read engine state directly, but nothing escapes the crate.
 pub struct Engine<S: Store = MemStore> {
     pub(crate) store: Arc<S>,
     /// The flat executable truth (D1), frozen at load.
