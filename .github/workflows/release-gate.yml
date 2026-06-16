@@ -1,0 +1,171 @@
+# Release gate for open-control (the Open Control Engine) — runs on `development` -> `main`
+# release PRs (base branch: main) plus manual dispatch.
+#
+# DISJOINT from ci.yml by base branch. GitHub keys `pull_request: branches:` on the PR's BASE
+# (target) branch, so:
+#   * a feature -> `development` PR matches ci.yml ONLY (the light per-change gate), and
+#   * a `development` -> `main` release PR matches THIS workflow ONLY.
+# The two never both fire on one PR; there is no double-run.
+#
+# `main` does not exist yet — it is created at the first release — so until then
+# `workflow_dispatch` is the only way to exercise this gate (run it manually on the branch to
+# confirm green before cutting the first release). The `|| github.event_name ==
+# 'workflow_dispatch'` clause in each `if:` makes that intent explicit; it is belt-and-suspenders,
+# not load-bearing — on dispatch `github.event.pull_request.draft` is `null`, and GitHub coerces
+# `null == false` to true, so the first clause already passes. Keeping the clause documents the
+# manual-run path and is robust to that coercion changing.
+#
+# WHAT RUNS HERE vs. ci.yml:
+#   * NEW value — the FULL test suite. ci.yml runs NO tests, so this gate is the first and only
+#     place behavioral tests execute in CI:
+#       - `cargo nextest run` for every unit + integration test in the workspace, and
+#       - `cargo test --doc`  for doctests (nextest cannot run doctests).
+#     `--no-tests=fail` is explicit: a run that discovers zero tests HARD-FAILS, catching the
+#     regression where tests silently stop compiling or being discovered. (Today: all unit
+#     tests across the workspace; there are no integration-test targets or doctests yet —
+#     `crates/oce-cxf/tests/` holds only `fixtures/`. The command needs no change as those land.)
+#   * Re-run of the light correctness gates against the RELEASE TIP. A `development` -> `main`
+#     PR matches no other workflow, so without these the release PR would be ENTIRELY ungated.
+#     `development` also drifts between the last per-PR run and the release cut, and the merge
+#     commit landing on `main` is the shipped artifact — re-validating the exact tip is correct,
+#     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
+#     workspace build, rustdoc -D warnings.
+#   * cargo-deny runs UNCONDITIONALLY here (no paths-filter gating, unlike ci.yml) and adds
+#     `advisories` — a release warrants a full advisories/bans/licenses/sources sweep.
+#
+# Deferred until first publish (matches ci.yml header): the cargo-about THIRDPARTY.md
+# attribution-currency gate — its natural home is this release gate; restore it before the
+# first crates.io publish.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: release-gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  test-suite:
+    name: full test suite (nextest + doctests)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.133
+      # Unit + integration tests. `--no-tests=fail` makes the hard-fail-on-empty intent
+      # explicit (nextest's default is `auto`, which only *happens* to resolve to fail for a
+      # whole-workspace run — pinning it keeps the gate correct if the invocation ever narrows).
+      - name: cargo nextest run (unit + integration)
+        run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
+      # Doctests — the second mandatory step, since nextest does not run doctests.
+      - name: cargo test --doc (doctests)
+        run: cargo test --workspace --doc --locked
+
+  fmt:
+    name: fmt
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  file-size-cap:
+    name: file-size cap (700 LOC)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-file-size.sh
+
+  no-secret-scan:
+    name: no-secret scan
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/check-no-secrets.sh
+
+  default-no-db:
+    name: default build links no database / async runtime
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - run: bash .github/scripts/check-default-no-db.sh
+
+  clippy:
+    name: clippy (-D warnings)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: clippy (default — no DB)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  build:
+    name: build
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo build (default — no DB)
+        run: cargo build --workspace --locked
+
+  rustdoc:
+    name: rustdoc (-D warnings)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo doc — libs (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+      - name: cargo doc — bins (deny warnings)
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc --no-deps --workspace --bins --document-private-items --locked
+
+  deny:
+    name: cargo-deny (full)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check bans licenses sources advisories

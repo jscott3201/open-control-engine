@@ -1,0 +1,53 @@
+# .config/nextest.toml — cargo-nextest configuration for the open-control workspace.
+#
+# Schema verified against nextest 0.9.133 (the pinned CI + local version). nextest is the
+# test runner for unit + integration tests, locally and in CI. Doctests run SEPARATELY via
+# `cargo test --doc` — nextest cannot run doctests (a stable-Rust limitation, not a config
+# switch), so any CI/local test pass is two commands, never one.
+#
+# Profiles:
+#   default — local dev: fast, fail-fast feedback (`cargo nextest run`).
+#   ci      — the `development` -> `main` release gate
+#             (`cargo nextest run --workspace --locked --profile ci --no-tests=fail`):
+#             no fail-fast (one run reports every failure), no retries (never mask a flake),
+#             immediate+final failure output, and a slow-test guard that kills hung tests.
+#
+# For a deterministic, safety-critical control engine the gate must be reproducible: no
+# retries, no flake-tolerance, hard-fail if zero tests are discovered (see release-gate.yml's
+# explicit `--no-tests=fail`, which catches "tests silently stopped compiling / being found").
+
+[profile.default]
+# These match nextest's built-in defaults; stated explicitly to document the local-dev
+# contract (a tight, fail-fast loop) rather than to change behavior.
+fail-fast = true
+
+[profile.ci]
+# Run the whole suite even when something fails, so a single run reports every failure
+# instead of stopping at the first.
+fail-fast = false
+
+# Deterministic gate: no retries. The release gate must never hide a flaky test behind a
+# silent re-run — a flake on a control engine is a defect to surface, not to paper over.
+retries = 0
+
+# Show each failure's output inline as it happens, then a consolidated block at the end.
+# Valid values: immediate | immediate-final | final | never  (default: immediate).
+failure-output = "immediate-final"
+
+# Keep passing-test output out of the log.
+# Valid values: immediate | immediate-final | final | never  (default: never).
+success-output = "never"
+
+# Per-test status lines WHILE running: only print failures, to keep CI logs small and
+# consistent with `success-output = "never"`. Incremental set:
+#   none, fail, retry, slow, leak, pass, skip, all  (default: pass).
+status-level = "fail"
+
+# End-of-run summary. Incremental set:
+#   none, fail, flaky, slow, skip, leak, pass, all  (default: flaky).
+# "slow" includes fail + flaky and also surfaces slow tests in the summary.
+final-status-level = "slow"
+
+# Flag any test slower than 60s; terminate a test still running after 2 periods (120s) so a
+# hung test cannot burn the whole CI timeout. grace-period defaults to 10s.
+slow-timeout = { period = "60s", terminate-after = 2 }
