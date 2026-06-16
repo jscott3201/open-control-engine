@@ -340,6 +340,14 @@ pub enum CxfValue {
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
+    /// A JSON array of element value-literals — the **preserved** array-parameter encoding (§3.6.1,
+    /// M1-PR-9). Each element is itself a [`CxfValue`] (typically a bare/typed literal); the resolver
+    /// grounds them per-element into the canonical per-element-scalar params (`k_1`, `k_2`, …). A
+    /// JSON array matches none of the scalar/object/string arms above, so this is the only arm an
+    /// array value can take (variant order vs `Expr` is immaterial — a string never matches a `Vec`).
+    /// Array *expression* values (`fill(...)`, comprehensions) arrive as [`CxfValue::Expr`] and are
+    /// rejected as `grounding-failed` in M1 (array `oce-expr` builtins are M2).
+    List(Vec<CxfValue>),
     /// An unevaluated CDL/Modelica expression string, or a fully-qualified enumeration value.
     Expr(String),
 }
