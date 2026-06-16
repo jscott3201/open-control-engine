@@ -471,8 +471,11 @@ pub trait PointStore: Send + Sync {
     /// Returns [`StoreError`] on backend failure.
     fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>>;
 
-    /// Batch-write runtime point samples off-tick, honoring [`Durability`]. Returns the count
-    /// durably committed.
+    /// Batch-write runtime point samples off-tick, honoring [`Durability`]. Returns the count of
+    /// samples accepted into the durable path — for [`Durability::Critical`], the count made durable
+    /// on return; for [`Durability::Telemetry`], the count accepted pending the next `flush`/`commit`
+    /// (§4.1 "Durability ordering"). The in-memory default accepts all and durabilizes none (§5 R-6),
+    /// so it returns the full batch length.
     ///
     /// # Errors
     /// Returns [`StoreError::Durability`] if a critical write is not durably committed.
@@ -532,6 +535,44 @@ pub trait SemanticStore: Send + Sync {
     fn match_template(&self, required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>>;
 }
 
-/// The umbrella the engine is generic over. A backend implements all three ports.
-pub trait Store: ModelStore + PointStore + SemanticStore + Send + Sync {}
-impl<T> Store for T where T: ModelStore + PointStore + SemanticStore + Send + Sync {}
+/// Crash-safety hooks a durable adapter implements; the in-memory default no-ops them (`06` §4.1,
+/// D4 / D7). All hooks are **off-tick** — the control tick never calls them — and DB-free (no
+/// backend type appears). The library prescribes only this contract + the per-write [`Durability`]
+/// intent; *how* durability is achieved (WAL, snapshot cadence, fsync, lost-write window) is wholly
+/// the adapter's concern.
+///
+/// **Durability ordering (normative, `06` §4.1):** `write_points` with [`Durability::Critical`] is
+/// self-durabilizing (durable the instant it returns `Ok`); [`Durability::Telemetry`] samples and
+/// all model/semantic mutations are accepted on the call but become durable only at the next
+/// `flush` (telemetry tier) or `commit` (the full set + atomic-visibility barrier).
+pub trait Durable: Send + Sync {
+    /// Make every write accepted since the last `commit` durable and atomically visible (the model
+    /// writes, the semantic mutations, and any not-yet-flushed `Telemetry` samples). `Critical`
+    /// samples are already durable from `write_points`. The in-memory default returns `Ok(())`.
+    ///
+    /// # Errors
+    /// Returns [`StoreError::Durability`] / [`StoreError::Backend`] if the durable commit fails.
+    fn commit(&self) -> StoreResult<()>;
+
+    /// Flush only the pending group-committed (`Telemetry`) point writes to stable storage now.
+    /// `Critical` writes are already durable on return from `write_points`. The in-memory default
+    /// no-ops.
+    ///
+    /// # Errors
+    /// Returns [`StoreError::Durability`] / [`StoreError::Backend`] if the flush fails.
+    fn flush(&self) -> StoreResult<()>;
+
+    /// Recover durable state on (re)open: rehydrate persisted models, the `domain_key → handle`
+    /// map, and the last durable runtime point state, then truncate/replay any uncommitted tail per
+    /// the adapter's policy. Runs once before the first tick. The in-memory default returns `Ok(())`
+    /// (there is no persistent state — the live maps are the only state).
+    ///
+    /// # Errors
+    /// Returns [`StoreError::Backend`] if recovery fails.
+    fn recover(&self) -> StoreResult<()>;
+}
+
+/// The umbrella the engine is generic over. A backend implements all three ports + the durability
+/// hooks; the blanket impl makes any type satisfying the parts a `Store` automatically.
+pub trait Store: ModelStore + PointStore + SemanticStore + Durable + Send + Sync {}
+impl<T> Store for T where T: ModelStore + PointStore + SemanticStore + Durable + Send + Sync {}
