@@ -28,6 +28,9 @@ oce-model = { workspace = true }
 oce-graph = { workspace = true }
 oce-blocks = { workspace = true }
 oce-cxf = { workspace = true }
+# The shared diagnostic vocabulary (AD-4): LoadReport.warnings surfaces oce-cxf/oce-validate
+# diagnostics in one shape, so a host never juggles two dialects.
+oce-diag = { workspace = true }
 oce-validate = { workspace = true }
 oce-flatten = { workspace = true }
 oce-semantics = { workspace = true }

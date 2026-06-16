@@ -20,6 +20,7 @@ version = "0.0.0"
 dependencies = [
  "oce-blocks",
  "oce-cxf",
+ "oce-diag",
  "oce-flatten",
  "oce-graph",
  "oce-model",

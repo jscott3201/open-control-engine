@@ -201,14 +201,41 @@ pub(crate) fn resolve(
                 ""
             }
         };
-        if !class_path.is_empty() && oce_blocks::lookup(class_path).is_none() {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::ClassNotFound,
-                    format!("no registered block class for `{class_path}`"),
-                )
-                .with_subject(child.to_owned()),
-            );
+        if !class_path.is_empty() {
+            match oce_blocks::lookup(class_path) {
+                None => diags.push(
+                    Diagnostic::error(
+                        DiagCode::ClassNotFound,
+                        format!("no registered block class for `{class_path}`"),
+                    )
+                    .with_subject(child.to_owned()),
+                ),
+                Some(entry) => {
+                    // Arity check (closes the unowned gap the PR-6 review found): the document's
+                    // declared interface must match the class signature, or the engine's
+                    // emit-by-port-index would later index past `outputs`/`inputs` and PANIC on the
+                    // tick (a malformed model would otherwise load, then crash). The block signature
+                    // is param-independent, so a default-param instance reads it safely. (Connector
+                    // value_type ↔ PortKind agreement is the deeper §7.10 check, owned by PR-8.)
+                    let probe = (entry.make)(&ParamTable::default());
+                    let sig = probe.signature();
+                    let (got_in, got_out) = (node.has_input.len(), node.has_output.len());
+                    let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
+                    if got_in != want_in || got_out != want_out {
+                        diags.push(
+                            Diagnostic::error(
+                                DiagCode::MalformedDocument,
+                                format!(
+                                    "block interface mismatch for `{class_path}`: declared \
+                                     {got_in} input(s)/{got_out} output(s), class requires \
+                                     {want_in}/{want_out}"
+                                ),
+                            )
+                            .with_subject(child.to_owned()),
+                        );
+                    }
+                }
+            }
         }
         insts.push(Inst {
             id,
