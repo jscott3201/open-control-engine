@@ -7,8 +7,8 @@ use std::sync::Arc;
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Add, And, Block, BlockKind, Constant, Greater, Limiter, MultiplyByParameter, Not, Pre,
-    Subtract, Switch, UnitDelay, lookup,
+    Add, And, Block, BlockKind, Constant, Edge, Greater, Limiter, MultiplyByParameter, Not, Pre,
+    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup,
 };
 
 /// Run an `[A]` block's `step_algebraic` and collect outputs in port-index order.
@@ -29,6 +29,39 @@ fn emit(b: &dyn Block, inputs: &[Value], region: &[u64]) -> Vec<Value> {
         v.push(val);
     });
     v
+}
+
+/// Drive an `[S]` block across a sequence of `(inputs, t)` ticks, returning the single-output
+/// Boolean trace. Mirrors the engine's per-tick order exactly (`01` §9): `emit_from_state` reads the
+/// **prior** state, then `update_state` advances it. The block seeds its own state via `init_state`
+/// (Edge from `pre_u_start`, SampleTrigger to `last_k = -1`), so the `ParamTable` is unused here.
+fn drive_bool(b: &dyn Block, steps: &[(Vec<Value>, Time)]) -> Vec<bool> {
+    let mut region = vec![0u64; b.state_len()];
+    b.init_state(&mut region, &ParamTable::default());
+    let mut trace = Vec::with_capacity(steps.len());
+    for (inputs, t) in steps {
+        let mut out = None;
+        b.emit_from_state(inputs, *t, &region, &mut |idx, val| {
+            assert_eq!(idx, 0, "single-output block emits only port 0");
+            match val {
+                Value::Boolean(x) => out = Some(x),
+                other => panic!("expected Boolean output, got {other:?}"),
+            }
+        });
+        b.update_state(inputs, *t, &mut region);
+        trace.push(out.expect("block must emit its output each tick"));
+    }
+    trace
+}
+
+/// A SampleTrigger source has no inputs; each tick is just a model time.
+fn ticks(times: &[Time]) -> Vec<(Vec<Value>, Time)> {
+    times.iter().map(|t| (Vec::new(), *t)).collect()
+}
+
+/// A single-input Boolean block driven at `t = 0` for every tick (Edge is time-independent).
+fn bool_ticks(us: &[bool]) -> Vec<(Vec<Value>, Time)> {
+    us.iter().map(|u| (vec![Value::Boolean(*u)], 0.0)).collect()
 }
 
 #[test]
@@ -52,6 +85,17 @@ fn feedthrough_classification_matches_spec() {
     assert!(!Constant { k: 0.0 }.feeds_through(0, 0)); // no inputs
     assert!(!Pre::default().feeds_through(0, 0)); // THE cut
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
+
+    // Edge is stateful (owns `prev`) but FEEDS THROUGH on the current `u` — the edge is a function
+    // of the current input vs the prior bit, so it is NOT a loop cut (`01` §11.2 req 3). Getting
+    // this backwards would let the DAG scheduler treat it as a cut and corrupt the schedule.
+    assert!(Edge::default().feeds_through(0, 0));
+    assert_eq!(Edge::default().kind(), BlockKind::Stateful);
+    // SampleTrigger is a stateful source: no inputs, so it does not feed through (Constant convention).
+    assert!(!SampleTrigger::default().feeds_through(0, 0));
+    assert_eq!(SampleTrigger::default().kind(), BlockKind::Stateful);
+    assert!(SampleTrigger::default().signature().inputs.is_empty());
+
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
     assert_eq!(Add.kind(), BlockKind::Algebraic);
@@ -147,6 +191,8 @@ fn registry_resolves_canonical_paths() {
         "CDL.Logical.And",
         "CDL.Logical.Not",
         "CDL.Logical.Pre",
+        "CDL.Logical.Edge",
+        "CDL.Logical.Sources.SampleTrigger",
         "CDL.Discrete.UnitDelay",
     ];
     for path in PATHS {
@@ -201,6 +247,191 @@ fn real_param_promotes_integer_to_real() {
     assert!(
         emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(5.0)),
         "Integer(5) y_start must seed the initial output to 5.0, not silently default to 0.0"
+    );
+}
+
+// ---- Edge (rising-edge detector, `01` §11.2) -----------------------------------------------
+
+#[test]
+fn edge_detects_rising_edges_golden() {
+    // pre_u_start defaults to false, so a `u` already true on tick 0 IS a rising edge (`01` §11.2
+    // req 2). Golden output trace for a hand-traced input sequence.
+    let edge = Edge::default();
+    let trace = drive_bool(
+        &edge,
+        &bool_ticks(&[false, true, true, false, true, false, false, true]),
+    );
+    //                          F->T            F->T              F->T
+    assert_eq!(
+        trace,
+        vec![false, true, false, false, true, false, false, true]
+    );
+
+    // u already true on tick 0, default seed false => edge on tick 0.
+    assert_eq!(
+        drive_bool(&Edge::default(), &bool_ticks(&[true])),
+        vec![true]
+    );
+}
+
+#[test]
+fn edge_seed_suppresses_initial_edge() {
+    // pre_u_start = true means the prior bit is already true, so a true on tick 0 is NOT a new edge.
+    let edge = Edge { pre_u_start: true };
+    let trace = drive_bool(&edge, &bool_ticks(&[true, true, false, true]));
+    //                                          held    fall   F->T
+    assert_eq!(trace, vec![false, false, false, true]);
+}
+
+#[test]
+fn edge_emit_is_pure_with_respect_to_state() {
+    // emit_from_state must NOT mutate the region (`01` §9 req 2): two emits with no update between
+    // are identical. This is what keeps the two-pass tick correct for a feedthrough `[S]` block.
+    let edge = Edge::default();
+    let mut region = vec![0u64; edge.state_len()];
+    edge.init_state(&mut region, &ParamTable::default());
+    let a = emit(&edge, &[Value::Boolean(true)], &region);
+    let b = emit(&edge, &[Value::Boolean(true)], &region);
+    assert!(a[0].bit_eq(&b[0]) && a[0].bit_eq(&Value::Boolean(true)));
+}
+
+// ---- SampleTrigger (periodic sample clock, `01` §11.1) -------------------------------------
+
+#[test]
+fn sample_trigger_fires_on_each_period_boundary_golden() {
+    // period = 2, shift = 0, host cadence == period: fire at every even instant.
+    let st = SampleTrigger {
+        period: 2.0,
+        shift: 0.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]));
+    assert_eq!(trace, vec![true, false, true, false, true, false, true]);
+}
+
+#[test]
+fn sample_trigger_finer_cadence_fires_only_on_crossing() {
+    // Host cadence finer than period: fire only on the tick that crosses a new boundary, not every
+    // tick (`01` §11.1 req 1).
+    let st = SampleTrigger {
+        period: 2.0,
+        shift: 0.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]));
+    assert_eq!(trace, vec![true, false, false, false, true, false, false]);
+}
+
+#[test]
+fn sample_trigger_coarse_tick_fires_once_and_snaps_to_latest() {
+    // A single coarse tick spanning several boundaries fires ONCE and snaps `last_k` to the current
+    // k — no sub-tick replay (`01` §11.1 req 2).
+    let st = SampleTrigger {
+        period: 1.0,
+        shift: 0.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 5.0, 5.5, 6.0]));
+    //                              k0   k5(snap) hold  k6
+    assert_eq!(trace, vec![true, true, false, true]);
+}
+
+#[test]
+fn sample_trigger_respects_shift_and_never_fires_before_it() {
+    // period = 2, shift = 1: no sample before t = 1; first fire at t = 1 (k = 0), next at t = 3.
+    let st = SampleTrigger {
+        period: 2.0,
+        shift: 1.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 0.5, 1.0, 2.0, 3.0]));
+    assert_eq!(trace, vec![false, false, true, false, true]);
+}
+
+#[test]
+fn sample_trigger_epsilon_makes_boundaries_deterministic() {
+    // period = 0.1: 0.3 is not exactly representable — 0.3/0.1 == 2.9999999999999996, so a bare floor
+    // yields k=2 and the t=0.3 sample would be silently skipped (a safety-critical wrong-value class).
+    // The fixed boundary epsilon (`01` §11.1 req 3) lifts it to k=3. (0.2/0.1 == exactly 2.0, so the
+    // t=0.2 sample needs no rescue.) Must be all-true.
+    let st = SampleTrigger {
+        period: 0.1,
+        shift: 0.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 0.1, 0.2, 0.3]));
+    assert_eq!(
+        trace,
+        vec![true, true, true, true],
+        "boundary epsilon must catch every instant despite f64 rounding"
+    );
+}
+
+#[test]
+fn sample_trigger_saturates_at_extreme_horizon_without_panic() {
+    // At an out-of-range horizon the period-normalized floor exceeds i64 range; the `f64 -> i64` cast
+    // SATURATES to i64::MAX (no UB, no panic). The trigger fires once at the first saturated tick,
+    // then never again — every further instant collapses to the same un-representable index.
+    let st = SampleTrigger {
+        period: 1.0,
+        shift: 0.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 1e30, 1e31]));
+    assert_eq!(trace, vec![true, true, false]);
+}
+
+#[test]
+fn sample_trigger_degrades_safely_on_nonpositive_or_nan_period() {
+    // `period > 0` is required by CDL but not yet enforced by oce-validate; a non-positive or NaN
+    // period must NOT panic (period is input-derived; exit #6) and must degrade deterministically to
+    // "one sample at/after shift, then never". This exercises the assert-free degraded branch.
+    for bad_period in [0.0, -1.0, f64::NAN] {
+        let st = SampleTrigger {
+            period: bad_period,
+            shift: 0.0,
+        };
+        assert_eq!(
+            drive_bool(&st, &ticks(&[0.0, 1.0, 2.0])),
+            vec![true, false, false],
+            "degraded period={bad_period} must fire once at/after shift then never, panic-free"
+        );
+    }
+}
+
+#[test]
+fn sample_trigger_is_deterministic_across_runs() {
+    // Determinism golden: two independent drives over the same time sequence are bit-identical
+    // (TESTING.md determinism standard) and match the expected trace.
+    let st = SampleTrigger {
+        period: 2.0,
+        shift: 0.0,
+    };
+    let seq = ticks(&[0.0, 1.0, 2.0, 3.0, 4.0]);
+    let run1 = drive_bool(&st, &seq);
+    let run2 = drive_bool(&st, &seq);
+    assert_eq!(
+        run1, run2,
+        "SampleTrigger must be bit-identical across runs"
+    );
+    assert_eq!(run1, vec![true, false, true, false, true]);
+}
+
+#[test]
+fn registry_constructs_edge_and_sample_trigger_with_params() {
+    // Edge: pre_u_start latches the seed, suppressing the tick-0 edge for a u already true.
+    let edge_hi = (lookup("CDL.Logical.Edge").unwrap().make)(&ParamTable {
+        values: vec![(Arc::from("pre_u_start"), Value::Boolean(true))],
+    });
+    assert_eq!(
+        drive_bool(edge_hi.as_ref(), &bool_ticks(&[true, false, true])),
+        vec![false, false, true]
+    );
+
+    // SampleTrigger: period/shift resolve from the ParamTable; period=2, shift=1 first fires at t=1.
+    let st = (lookup("CDL.Logical.Sources.SampleTrigger").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("period"), Value::Real(2.0)),
+            (Arc::from("shift"), Value::Real(1.0)),
+        ],
+    });
+    assert_eq!(
+        drive_bool(st.as_ref(), &ticks(&[0.0, 1.0, 2.0, 3.0])),
+        vec![false, true, false, true]
     );
 }
 

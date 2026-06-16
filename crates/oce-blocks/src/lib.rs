@@ -25,7 +25,7 @@ mod reals;
 mod registry;
 
 pub use discrete::UnitDelay;
-pub use logical::{And, Not, Pre};
+pub use logical::{And, Edge, Not, Pre, SampleTrigger};
 pub use reals::{Add, Constant, Greater, Limiter, MultiplyByParameter, Subtract, Switch};
 pub use registry::lookup;
 

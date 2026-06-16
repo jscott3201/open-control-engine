@@ -7,8 +7,8 @@
 use oce_model::{ParamTable, Value};
 
 use crate::{
-    Add, And, Block, Constant, Greater, Limiter, MultiplyByParameter, Not, Pre, RegistryEntry,
-    Subtract, Switch, UnitDelay,
+    Add, And, Block, Constant, Edge, Greater, Limiter, MultiplyByParameter, Not, Pre,
+    RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -59,6 +59,14 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Pre",
         make: make_pre,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Edge",
+        make: make_edge,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Sources.SampleTrigger",
+        make: make_sample_trigger,
     },
     RegistryEntry {
         class_path: "CDL.Discrete.UnitDelay",
@@ -145,6 +153,22 @@ fn make_not(_p: &ParamTable) -> Box<dyn Block> {
 fn make_pre(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Pre {
         y_start: bool_param(p, "pre_u_start", false),
+    })
+}
+
+fn make_edge(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Edge {
+        pre_u_start: bool_param(p, "pre_u_start", false),
+    })
+}
+
+fn make_sample_trigger(p: &ParamTable) -> Box<dyn Block> {
+    // `period` defaults to 1.0 only for a param-less construction; a resolved model carries the
+    // author's value (CDL requires `period > 0`; the oce-validate rule enforcing it is pending —
+    // SampleTrigger degrades safely until then). `shift` defaults to 0.0.
+    Box::new(SampleTrigger {
+        period: real_param(p, "period", 1.0),
+        shift: real_param(p, "shift", 0.0),
     })
 }
 
