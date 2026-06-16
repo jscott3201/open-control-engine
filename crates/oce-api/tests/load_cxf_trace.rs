@@ -8,8 +8,9 @@
 //! The sum `add.y(k) = 2 + 0.5·add.y(k-1)` has fixpoint 4.0, with `add.y(k) = 4 − 2^(1−k)` — all
 //! dyadic, hence f64-exact — so the trace is checked by `to_bits`, never `==`/epsilon.
 
-use oce_api::{Engine, OcError};
-use oce_model::{ConnectorId, Value};
+// Reach the value/IO types through the facade re-export (R-PUB-1: `oce-api` is the single public
+// surface) — an external binder names `oce_api::Value`/`ConnectorId`, never a direct oce-model dep.
+use oce_api::{ConnectorId, Engine, OcError, Value};
 
 // One source of truth for the canonical fixture (PR-4 authored it; PR-6/PR-11 exercise it).
 const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
