@@ -12,20 +12,22 @@
 //!
 //! Public API names (normative, `01` §6.2): the frozen schedule is [`Schedule`] (alias
 //! [`CompiledSchedule`]); BUILD entry point is [`compile`]; TICK entry point is [`eval_tick`]
-//! (alias [`run_tick`]).
+//! (alias [`run_tick`]) operating on an [`EvalContext`].
 //!
-//! Status: **M0 scaffold.** The type *shapes* match the spec; bodies are stubs
-//! (`unimplemented!()`) and land in M0 (the hand-built-graph exit criteria) and M1.
+//! Status: **M0.** BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation +
+//! the two-pass eval loop) are implemented; the catalog and CXF ingest grow across M0–M2.
 
 use std::fmt;
 
 use oce_blocks::Block;
-use oce_model::{BlockId, ConnectorId, Model, ModelGraph, Value};
+use oce_model::{BlockId, ConnectorId, Model, Value};
 
 mod build;
+mod tick;
 mod topo;
 
-pub use build::{FeedthroughDag, build_feedthrough_dag};
+pub use build::{FeedthroughDag, build_driver_of, build_feedthrough_dag};
+pub use tick::{EvalContext, allocate_state, eval_tick, run_tick};
 pub use topo::topo_sort;
 
 /// The frozen per-tick evaluation order, computed once in BUILD and reused every tick (`01` §6.2).
@@ -35,6 +37,10 @@ pub struct Schedule {
     pub order: Vec<BlockId>,
     /// The underlying connector-level toposort, retained for trace tooling/debugging.
     pub connector_order: Vec<ConnectorId>,
+    /// Alias/gather map (`01` §9 note (i)): `driver_of[input] = output` for every connection target,
+    /// `driver_of[c] = c` otherwise. `gather_inputs` reads `values[driver_of[input]]`, so no per-tick
+    /// connection copies are needed. Built in BUILD; indexed by `ConnectorId.0`.
+    pub driver_of: Vec<ConnectorId>,
 }
 
 /// Public alias for [`Schedule`] used by `06`/`08` (`01` §6.2: the same type).
@@ -60,8 +66,15 @@ pub struct RunState {
     pub values: Vec<Value>,
     /// Flat per-`[S]`-block state words (reinterpreted per block: `f64::to_bits`, bools, counters).
     pub words: Vec<u64>,
-    /// Slot directory (immutable after BUILD).
+    /// Slot directory (immutable after BUILD): one [`StateSlot`] per `[S]` block.
     pub slots: Vec<StateSlot>,
+    /// `BlockId.0` → index into [`RunState::slots`] for that block's state region, or `usize::MAX`
+    /// for an `[A]` (stateless) block. Lets the tick find a block's region in O(1) (immutable after
+    /// BUILD).
+    pub slot_of: Vec<usize>,
+    /// Preallocated per-tick input-gather scratch, sized at BUILD to the maximum block input arity.
+    /// Reused every tick so the hot path performs zero heap allocation (`01` §9 req 4).
+    pub scratch: Vec<Value>,
     /// Current model time `t` (seconds); advanced by the host, read by elementary blocks (`01` §8).
     pub t: f64,
 }
@@ -144,31 +157,10 @@ pub enum BuildError {
 /// but atomic block firing still cannot schedule it (`01` §9).
 pub fn compile(model: &Model, blocks: &[Box<dyn Block>]) -> Result<Schedule, BuildError> {
     let dag = build_feedthrough_dag(model, blocks);
-    topo_sort(&dag, model, blocks)
+    let mut schedule = topo_sort(&dag, model, blocks)?;
+    schedule.driver_of = build_driver_of(model);
+    Ok(schedule)
 }
-
-/// Allocate the mutable [`RunState`] for a model: one fixed-size state slot per `[S]` block,
-/// seeded from parameters (CDL has no `start` attribute; `01` §7). Connector values are seeded so
-/// constant/source outputs hold their value before the first tick.
-#[must_use]
-pub fn allocate_state(_model: &ModelGraph) -> RunState {
-    unimplemented!("oce-graph::allocate_state — M0 scaffold")
-}
-
-/// TICK: evaluate exactly one tick at absolute time `t_now` (seconds, monotonic non-decreasing).
-/// External/host-driven inputs must already be staged into `state.values`. `[S]` blocks emit
-/// output from prior state then update state; `[A]` blocks compute `y = f(p, t, u)`. The hot path
-/// is allocation/IO/hashing/store-free (`01` §9).
-///
-/// `model` is the scheduler-facing [`Model`] view of the same in-memory artifact `schedule` was
-/// compiled from.
-pub fn eval_tick(state: &mut RunState, _schedule: &Schedule, _model: &Model, t_now: f64) {
-    state.t = t_now;
-    unimplemented!("oce-graph::eval_tick — M0 scaffold (eval loop lands with the M0 graph)")
-}
-
-/// Public alias for [`eval_tick`] used by `06`/`08` (`01` §6.2: the same function).
-pub use eval_tick as run_tick;
 
 #[cfg(test)]
 mod tests;

@@ -75,9 +75,12 @@ pub fn topo_sort(
 ) -> Result<Schedule, BuildError> {
     let connector_order = connector_order_kahn(dag, model)?;
     let order = block_order_kahn(model, blocks)?;
+    // `driver_of` (the gather/alias map) is a separate BUILD step filled by `compile`; the sort
+    // itself produces only the orderings.
     Ok(Schedule {
         order,
         connector_order,
+        driver_of: Vec::new(),
     })
 }
 
