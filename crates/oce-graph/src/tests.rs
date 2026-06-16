@@ -103,13 +103,13 @@ impl ModelBuilder {
         let id = BlockId(self.model.blocks.len() as u32);
         let push_conn = |this: &mut Self, dir: Dir| {
             let cid = ConnectorId(this.next_conn);
-            this.model.connectors.push(Connector {
-                id: cid,
-                block: id,
+            this.model.connectors.push(Connector::new(
+                cid,
+                id,
                 dir,
-                value_type: ValueType::Real,
-                decl_order: this.next_conn,
-            });
+                ValueType::Real,
+                this.next_conn,
+            ));
             this.next_conn += 1;
             cid
         };
@@ -122,6 +122,7 @@ impl ModelBuilder {
             outputs: outputs.clone(),
             params: ParamTable::default(),
             decl_order: id.0,
+            instance_iri: None,
         });
         self.blocks.push(Box::new(TestBlock { ft, stateful }));
         (id, inputs, outputs)
@@ -139,13 +140,9 @@ impl ModelBuilder {
                 PortKind::Integer => ValueType::Integer,
                 PortKind::Boolean => ValueType::Boolean,
             };
-            this.model.connectors.push(Connector {
-                id: cid,
-                block: id,
-                dir,
-                value_type,
-                decl_order: this.next_conn,
-            });
+            this.model
+                .connectors
+                .push(Connector::new(cid, id, dir, value_type, this.next_conn));
             this.next_conn += 1;
             cid
         };
@@ -162,6 +159,7 @@ impl ModelBuilder {
             outputs: outputs.clone(),
             params: ParamTable::default(),
             decl_order: id.0,
+            instance_iri: None,
         });
         self.blocks.push(blk);
         (id, inputs, outputs)
