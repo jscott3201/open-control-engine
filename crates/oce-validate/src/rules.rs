@@ -358,7 +358,7 @@ fn read_display_unit(c: &Connector) -> Option<Arc<str>> {
 /// source — itself a load-failing `DirectionMismatch`) can place one connector in two clusters; even
 /// there the `is_none` no-overwrite guard prevents any double-write and the pinned ascending
 /// `roots.sort_unstable()` keeps the outcome **deterministic** (the transitive propagation is then
-/// sort-ordered rather than confluent, but such a graph never passes [`validate`]).
+/// sort-ordered rather than confluent, but such a graph never passes [`validate`](crate::validate)).
 /// Equality is **exact** (text by content, `Real` bounds by `to_bits`) — a deliberate tripwire
 /// (`"K"` ≠ `"K "`). `displayUnit` divergence is the advisory R13.3 warning only (never an error,
 /// never propagated). `nominal`/`unbounded` are **not** unified (R13.4) — those are the *only* two
