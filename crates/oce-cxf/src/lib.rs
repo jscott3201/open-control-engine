@@ -4,20 +4,26 @@
 //!
 //! CXF is the v1 ingest format (FRAME D2): it arrives already flattened/monomorphic and maps
 //! ~1:1 to the `oce-model` graph. The importer uses lossless "Layer A" serde DTOs (untagged
-//! value sums, flatten-passthrough) plus a Layer A→B resolver that indexes `@graph` by `@id` and
-//! joins instances to their block class by class IRI. This crate is **Group A** (no store, no
-//! database); it depends on `serde`/`serde_json`/`oce-diag` only.
+//! value sums, flatten-passthrough) plus a resolver that lowers `@graph` **directly** to the flat
+//! `oce_model::ModelGraph` (AD-1), joining instances to their block class by class IRI. This crate
+//! is **Group A** (no store, no database); it depends on `serde`/`serde_json`/`oce-diag` plus
+//! `oce-blocks` (the registry, for class resolution) and `oce-expr` (Ground-mode bindings).
 //!
-//! Status: **M1.** The lossless Layer-A DTO ([`dto`]) and [`parse_document`] land in M1-PR-4; the
-//! §7.1 resolver (`import_cxf`) and exporter land in M1-PR-5.
+//! Status: **M1.** The lossless Layer-A DTO ([`dto`]) and [`parse_document`] landed in M1-PR-4; the
+//! §7.1 resolver ([`import_cxf`]) lands in M1-PR-5. The exporter ([`export`]) is **deferred past
+//! the M1 12-PR sequence** (OQ-3) and currently panics if called — it is never on a load path.
 
 use oce_model::ModelGraph;
 
+mod bridge;
 pub mod dto;
+mod ground;
+mod resolve;
 #[cfg(test)]
 mod tests;
 
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
+pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 
 /// A CXF import/export error (typed; never a panic). Variants follow doc 04 §5; the resolver
 /// adds `Resolve`/`Expr` in M1-PR-5 (kept `#[non_exhaustive]` so that is not a breaking change).
@@ -54,13 +60,24 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
     Ok(serde_json::to_vec(doc)?)
 }
 
-/// Import a CXF JSON-LD document into the in-memory [`ModelGraph`] (Layer A DTOs → §7.1 Layer-B
-/// resolver).
+/// Import a CXF JSON-LD document into the flat [`ModelGraph`] (D1's executable truth), lowering the
+/// lossless Layer-A DTO directly via the §7.1 resolver (`_spec/11-m1-cxf-plan.md` AD-1). Ground
+/// mode only in M1: every parameter binding is evaluated to a ground literal.
+///
+/// Returns `Ok((graph, report))` where `report` carries `Warning`/`Info` diagnostics only (zero
+/// errors). On any [`oce_diag::Severity::Error`] diagnostic — or any `Warning` when
+/// [`ResolveOptions::deny_warnings`] is set — returns [`CxfError::Validation`] instead, with the
+/// graph withheld because it may be structurally unsound.
 ///
 /// # Errors
-/// Returns [`CxfError`] on malformed JSON or invalid CXF structure.
-pub fn import(_bytes: &[u8]) -> Result<ModelGraph, CxfError> {
-    unimplemented!("oce-cxf::import — Layer A/B resolver lands in M1-PR-5 (renamed import_cxf)")
+/// - [`CxfError::Json`] if `bytes` is not valid JSON in the CXF document shape.
+/// - [`CxfError::Validation`] if resolution produced at least one error diagnostic.
+pub fn import_cxf(
+    bytes: &[u8],
+    opts: &ResolveOptions,
+) -> Result<(ModelGraph, ValidationReport), CxfError> {
+    let doc = parse_document(bytes)?;
+    resolve::resolve(&doc, opts)
 }
 
 /// Export a [`ModelGraph`] back to a CXF JSON-LD document.

@@ -175,3 +175,31 @@ fn registry_make_resolves_parameters() {
     delay.init_state(&mut region, &delay_params);
     assert!(emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(1.25)));
 }
+
+#[test]
+fn real_param_promotes_integer_to_real() {
+    // Modelica/CDL Int→Real promotion: an integer literal bound to a `Real` parameter is its real
+    // value, NOT silently dropped to the constructor default. CXF can carry a bare integer for a
+    // Real parameter (no `isOfDataType` re-types it), so a non-zero integer `y_start`/`k` must reach
+    // the block. Tripwire for the silent-wrong-initial-state hole (M1-PR-5 review C-3).
+    let k_int = ParamTable {
+        values: vec![(Arc::from("k"), Value::Integer(5))],
+    };
+    let constant = (lookup("CDL.Reals.Sources.Constant").unwrap().make)(&k_int);
+    assert!(
+        outs(constant.as_ref(), &[])[0].bit_eq(&Value::Real(5.0)),
+        "Integer(5) bound to Real param k must promote to 5.0, not default to 0.0"
+    );
+
+    // A non-zero integer UnitDelay.y_start must seed the loop-breaker's initial output to 5.0.
+    let y_int = ParamTable {
+        values: vec![(Arc::from("y_start"), Value::Integer(5))],
+    };
+    let delay = (lookup("CDL.Discrete.UnitDelay").unwrap().make)(&y_int);
+    let mut region = vec![0u64; delay.state_len()];
+    delay.init_state(&mut region, &y_int);
+    assert!(
+        emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(5.0)),
+        "Integer(5) y_start must seed the initial output to 5.0, not silently default to 0.0"
+    );
+}

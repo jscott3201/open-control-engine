@@ -314,7 +314,10 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for OneOrMany<T> {
 /// The `S231:value`/`min`/`max` sum type (§3.5, R-5). **Untagged**; the variant order is
 /// load-bearing (serde tries top-down): `false`→`Bool`, `0`→`Int`, `1.5`→`Float`, a
 /// `{@value,@type}` object→`Typed`, and any remaining string→`Expr`. (A JSON integer matches
-/// `Int` before `Float`; the resolver re-types against `isOfDataType` in §7.4.)
+/// `Int` before `Float`.) The resolver grounds each variant **literal-natural** (a bare `Int`
+/// becomes `Value::Integer`); it does **not** re-type against the parameter's declared type — the
+/// block constructor performs Modelica `Int→Real` promotion (`oce-blocks` `real_param`) when a
+/// `Real` parameter receives an integer literal.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum CxfValue {

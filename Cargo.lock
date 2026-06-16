@@ -51,7 +51,9 @@ dependencies = [
 name = "oce-cxf"
 version = "0.0.0"
 dependencies = [
+ "oce-blocks",
  "oce-diag",
+ "oce-expr",
  "oce-model",
  "serde",
  "serde_json",
