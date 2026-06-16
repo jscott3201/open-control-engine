@@ -1,0 +1,30 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#U",
+      "@type": "S231:Block",
+      "S231:label": "U",
+      "S231:containsBlock": [ { "@id": "http://example.org#U.pid" } ],
+      "S231:hasOutput": { "@id": "http://example.org#U.yOut" }
+    },
+
+    {
+      "@id": "http://example.org#U.pid",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Continuous.PID",
+      "S231:label": "pid",
+      "S231:hasOutput": { "@id": "http://example.org#U.pid.y" }
+    },
+    { "@id": "http://example.org#U.pid.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#U.yOut" } },
+
+    { "@id": "http://example.org#U.yOut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" } }
+  ]
+}

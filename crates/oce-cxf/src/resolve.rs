@@ -26,10 +26,11 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_expr::EvalResult;
 use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
-    ValueType,
+    Attrs, BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, IntAttrs, ModelGraph,
+    ParamTable, RealAttrs, Value, ValueType,
 };
 
+use crate::arrays::expand_array_param;
 use crate::dto::{CxfDocument, CxfValue, Node};
 use crate::ground::{ParamScope, ground_value};
 use crate::{CxfError, bridge};
@@ -99,238 +100,161 @@ fn term_of(iri: &str) -> &str {
 /// e.g. `http://example.org#MinLoop.con.k` → `k`. This is the parameter key the block registry
 /// looks up (`oce_blocks` reads `real_param(p, "k", …)`), so it MUST be the bare member name, not
 /// the dotted path — a wrong name would silently fall back to the block's default value.
-fn local_name(iri: &str) -> &str {
+pub(crate) fn local_name(iri: &str) -> &str {
     iri.rsplit('.').next().unwrap_or(iri)
 }
 
-/// Strip a trailing array-decoration `[...]` from a local name: `k[2]` → `k`, `k` → `k`. Total —
-/// used so the preserved encoding's decorated base (`k[2]`) yields the same `k` base the flattened
-/// encoding's element `@id`s (`…k_1`) reduce to via [`local_name`] (M1-PR-9, doc 04 §3.6.1).
-fn strip_array_label(name: &str) -> &str {
-    match name.split_once('[') {
-        Some((base, _)) => base,
-        None => name,
-    }
-}
-
-/// Parse a CXF `S231:sizeOfDimensions` string `"(d1, d2, …)"` into per-dimension sizes (doc 04
-/// §3.6.1). Each `di` is a non-negative integer literal, or a symbolic expression evaluated against
-/// `scope` to an `Integer` (so `"(nin)"` resolves when `nin` is a ground *earlier* parameter — the
-/// same forward-reference limitation Step 7 already has for scalar `Expr` bindings). Returns the
-/// dimension sizes in declared order, or a human message for a `MalformedDocument`. Total; never
-/// panics (no `unwrap`/index on input text — the C1 type-domain discipline).
-fn parse_size_dims(
-    size: &str,
-    n_dims: Option<i64>,
-    scope: &dyn oce_expr::Scope,
-) -> Result<Vec<usize>, String> {
-    let inner = size
-        .trim()
-        .strip_prefix('(')
-        .and_then(|s| s.strip_suffix(')'))
-        .ok_or_else(|| format!("sizeOfDimensions {size:?} is not parenthesized"))?;
-    let mut dims: Vec<usize> = Vec::new();
-    for part in inner.split(',') {
-        let term = part.trim();
-        if term.is_empty() {
-            return Err(format!(
-                "empty array dimension in sizeOfDimensions {size:?}"
-            ));
-        }
-        // A bare non-negative integer literal first; else evaluate the term symbolically.
-        let n: i64 = if let Ok(lit) = term.parse::<i64>() {
-            lit
-        } else {
-            match oce_expr::eval_str(term, scope) {
-                Ok(EvalResult::Scalar(Value::Integer(v))) => v,
-                Ok(_) => {
-                    return Err(format!(
-                        "array dimension {term:?} did not evaluate to an Integer"
-                    ));
-                }
-                Err(e) => return Err(format!("array dimension {term:?} did not evaluate: {e}")),
-            }
-        };
-        if n < 0 {
-            return Err(format!(
-                "negative array dimension {n} in sizeOfDimensions {size:?}"
-            ));
-        }
-        dims.push(n as usize);
-    }
-    if let Some(nd) = n_dims
-        && (nd < 0 || nd as usize != dims.len())
-    {
-        return Err(format!(
-            "numberDimensions {nd} disagrees with sizeOfDimensions arity {}",
-            dims.len()
-        ));
-    }
-    Ok(dims)
-}
-
-/// Maximum number of elements one array parameter may expand to in M1 — a DoS / OOM-abort guard.
-/// The element count is purely input-derived from untrusted CXF; without a ceiling a single
-/// `sizeOfDimensions "(2000000000)"` (or a symbolic dimension resolving to a huge earlier param)
-/// would drive a multi-gigabyte `Vec::with_capacity` that aborts the (embeddable, safety-critical)
-/// process *uncatchably*, defeating the panic-free typed-`OcError` contract (M1 exit #6). `1 << 20`
-/// is far beyond any realistic equipment-scale parameter array; revisit in M2 if a legitimate model
-/// ever approaches it (doc 04 §3.6.1).
-const MAX_ARRAY_ELEMENTS: usize = 1 << 20;
-
-/// Enumerate the 1-based row-major element names of an array `base` with the given per-dimension
-/// sizes (doc 04 §3.6.1): `("k", &[2])` → `["k_1","k_2"]`; `("B", &[2,2])` →
-/// `["B_1_1","B_1_2","B_2_1","B_2_2"]` (last index varies fastest). Empty when any dimension is 0
-/// (a legal empty array). Returns `Err(msg)` (→ `MalformedDocument`) when the element count
-/// overflows `usize` **or** exceeds [`MAX_ARRAY_ELEMENTS`] — the ceiling is checked *before* any
-/// allocation, so a hostile dimension can never drive an OOM abort. Pure function of `base` + `dims`
-/// — never map order, so deterministic.
-fn array_element_names(base: &str, dims: &[usize]) -> Result<Vec<String>, String> {
-    let mut count: usize = 1;
-    for &d in dims {
-        count = count
-            .checked_mul(d)
-            .ok_or_else(|| "array element count overflows usize".to_owned())?;
-    }
-    if count > MAX_ARRAY_ELEMENTS {
-        return Err(format!(
-            "array element count {count} exceeds the maximum supported ({MAX_ARRAY_ELEMENTS})"
-        ));
-    }
-    let mut names = Vec::with_capacity(count);
-    let mut idx = vec![1usize; dims.len()]; // odometer of 1-based indices
-    for _ in 0..count {
-        let mut name = String::from(base);
-        for &i in &idx {
-            name.push('_');
-            name.push_str(&i.to_string());
-        }
-        names.push(name);
-        // Increment the odometer from the last (fastest) dimension.
-        for d in (0..dims.len()).rev() {
-            idx[d] += 1;
-            if idx[d] <= dims[d] {
-                break;
-            }
-            idx[d] = 1;
-        }
-    }
-    Ok(names)
-}
-
-/// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
-/// owning instance's `table`/`scope_entries`, in 1-based row-major order (doc 04 §3.6.1, M1-PR-9).
-/// The flattened encoding (separate `k_1`/`k_2` scalar nodes) needs no expansion — it is the
-/// convergence target — so both encodings yield the identical ordered `ParamTable`.
+/// Parse a connector node's declared §7.4.1 attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`)
+/// into the `Attrs` variant matching its [`ValueType`] (doc 02 §3.3). `Real` carries unit/quantity/
+/// displayUnit + numeric bounds; `Integer` carries only integer bounds; `Boolean`/`String`/`Enum`
+/// carry none (the type system forbids it). `nominal`/`unbounded` are not parsed (R13.4 excludes
+/// them from §7.10).
 ///
-/// Value rule: the binding must be a [`CxfValue::List`] of element literals; `m == N` is positional
-/// (including the empty `0 == 0` case), `m == 1` broadcasts the single value to all `N` **when
-/// `N >= 1`** (the structural `fill(value, N)` equivalent). A non-empty list against a declared
-/// *empty* (size-0) array — or any other length — is `GroundingFailed`; broadcasting one value into
-/// a zero-element array would otherwise silently drop it (even a malformed value), accepting broken
-/// input as valid. An array *expression* (`fill(...)`) arrives as [`CxfValue::Expr`] (not a `List`)
-/// and is rejected `GroundingFailed` — array `oce-expr` is M2.
-/// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
-#[allow(clippy::too_many_arguments)]
-fn expand_array_param(
-    piri: &str,
-    pnode: &Node,
-    cxf_val: &CxfValue,
-    param_iris: &[&str],
-    table: &mut Vec<(Arc<str>, Value)>,
-    scope_entries: &mut Vec<(Arc<str>, EvalResult)>,
-    diags: &mut Vec<Diagnostic>,
-) {
-    let base = strip_array_label(local_name(piri));
-    let Some(size) = pnode.size_dims.as_deref() else {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::MalformedDocument,
-                "array parameter (isArray) lacks sizeOfDimensions",
-            )
-            .with_subject(piri.to_owned()),
-        );
-        return;
-    };
-    let dims = match parse_size_dims(size, pnode.n_dims, &ParamScope::new(&scope_entries[..])) {
-        Ok(d) => d,
-        Err(msg) => {
-            diags.push(
-                Diagnostic::error(DiagCode::MalformedDocument, msg).with_subject(piri.to_owned()),
-            );
-            return;
+/// ## No silent failure (M1-PR-11)
+/// Every malformed declaration surfaces a typed diagnostic into `diags` rather than vanishing:
+/// - A **present** `S231:min`/`max` that fails to ground (or grounds to a non-number) is a
+///   `GroundingFailed`/`MalformedDocument` with the connector IRI as subject — it is **not**
+///   silently treated as unset, mirroring Step 7's parameter grounding. Bounds ground against an
+///   **empty** scope (they are constants in M1); a *symbolic* connector bound therefore reports
+///   grounding-failed (symbolic connector bounds are M2).
+/// - A unit/quantity/displayUnit/min/max declared on a **non-numeric** (`Boolean`/`String`/`Enum`)
+///   connector — which CDL §7.4.1.3–.5 forbid — is a `MalformedDocument`, not a silent drop.
+fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagnostic>) -> Attrs {
+    let subject = node.id.as_str();
+    match vt {
+        ValueType::Real => Attrs::Real(RealAttrs {
+            quantity: term_attr(node.quantity.as_ref(), "quantity", subject, diags),
+            unit: term_attr(node.unit.as_ref(), "unit", subject, diags),
+            display_unit: term_attr(node.display_unit.as_ref(), "displayUnit", subject, diags),
+            min: real_connector_bound(node.min.as_ref(), "min", subject, diags),
+            max: real_connector_bound(node.max.as_ref(), "max", subject, diags),
+            nominal: None,
+            unbounded: None,
+        }),
+        ValueType::Integer => Attrs::Integer(IntAttrs {
+            min: int_connector_bound(node.min.as_ref(), "min", subject, diags),
+            max: int_connector_bound(node.max.as_ref(), "max", subject, diags),
+        }),
+        // Boolean / String / Enumeration carry no §7.4.1 attributes (CDL §7.4.1.3–.5). A declared
+        // attribute on such a connector is a malformed model — surface it, never silently drop it.
+        other => {
+            if node.unit.is_some()
+                || node.quantity.is_some()
+                || node.display_unit.is_some()
+                || node.min.is_some()
+                || node.max.is_some()
+            {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::MalformedDocument,
+                        format!(
+                            "§7.4.1 attribute (unit/quantity/displayUnit/min/max) declared on a \
+                             {other:?} connector, which permits none"
+                        ),
+                    )
+                    .with_subject(subject.to_owned()),
+                );
+            }
+            Attrs::default_for(other)
         }
-    };
-    let names = match array_element_names(base, &dims) {
-        Ok(n) => n,
-        Err(msg) => {
-            diags.push(
-                Diagnostic::error(DiagCode::MalformedDocument, msg).with_subject(piri.to_owned()),
-            );
-            return;
-        }
-    };
-    // Preserved per-element values are a JSON list; an array EXPRESSION (fill/comprehension) is M2.
-    let CxfValue::List(elems) = cxf_val else {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::GroundingFailed,
-                "array parameter value must be a JSON list of element literals \
-                 (array expressions such as fill(...) are M2)",
-            )
-            .with_subject(piri.to_owned()),
-        );
-        return;
-    };
-    let n = names.len();
-    let m = elems.len();
-    // Positional (m == n, incl. the empty 0 == 0 case) or broadcast (one value to N >= 1 elements).
-    // A non-empty list against a declared empty (size-0) array is NOT a broadcast — the value would
-    // be silently dropped — so it falls through to this GroundingFailed length error.
-    if !(m == n || (m == 1 && n >= 1)) {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::GroundingFailed,
-                format!(
-                    "array value list has {m} element(s) but the declared dimensions imply {n}"
-                ),
-            )
-            .with_subject(piri.to_owned()),
-        );
-        return;
     }
-    // Sibling local-names (every OTHER param node on this instance) for the minted-name collision
-    // check. Lookup-only set — never iterated into a model id/vector order (determinism contract).
-    // M1 scope: flat single-level instances (no hasInstance nesting); revisit name scoping in M2.
-    let siblings: HashSet<&str> = param_iris
-        .iter()
-        .filter(|&&p| p != piri)
-        .map(|&p| local_name(p))
-        .collect();
-    for (k, ename) in names.iter().enumerate() {
-        if siblings.contains(ename.as_str()) {
+}
+
+/// Extract a declared §7.4.1 term attribute (`unit`/`quantity`/`displayUnit`) as an `Arc<str>`. An
+/// **absent** attr is `None`; a **present** attr in a malformed JSON shape ([`crate::dto::TermAttr::Other`]
+/// — a number/array/bool or a partial object) has no lexical term, so it pushes a `MalformedDocument`
+/// with the connector IRI and returns `None` (never a silent drop — a malformed attr must not sink
+/// the whole document *nor* vanish, M1-PR-11). `which` is the predicate name for the message.
+fn term_attr(
+    t: Option<&crate::dto::TermAttr>,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> Option<Arc<str>> {
+    match t?.as_term() {
+        Some(s) => Some(Arc::from(s)),
+        None => {
             diags.push(
                 Diagnostic::error(
-                    DiagCode::ArrayFlattenCollision,
+                    DiagCode::MalformedDocument,
                     format!(
-                        "array element {ename:?} collides with an existing sibling parameter of the same name"
+                        "S231:{which} is not a string, typed literal, or IRI node — malformed term"
                     ),
                 )
-                .with_subject(piri.to_owned()),
+                .with_subject(subject.to_owned()),
             );
-            continue;
+            None
         }
-        let elem = if m == 1 { &elems[0] } else { &elems[k] };
-        match ground_value(elem, &ParamScope::new(&scope_entries[..])) {
-            Ok(v) => {
-                let key: Arc<str> = Arc::from(ename.as_str());
-                scope_entries.push((Arc::clone(&key), EvalResult::Scalar(v.clone())));
-                table.push((key, v));
-            }
-            Err(e) => diags.push(
-                Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                    .with_subject(piri.to_owned()),
-            ),
+    }
+}
+
+/// Ground a declared `S231:min`/`max` on a **Real** connector. An **absent** bound is `None`; a
+/// **present** bound that fails to ground, or grounds to a non-number, pushes a typed diagnostic and
+/// returns `None` (never a silent drop). A bare integer literal is a legal Real bound (Modelica
+/// Int→Real promotion). `which` is `"min"`/`"max"` for the message; `subject` is the connector IRI.
+fn real_connector_bound(
+    v: Option<&CxfValue>,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> Option<f64> {
+    let v = v?;
+    match ground_value(v, &ParamScope::new(&[])) {
+        Ok(Value::Real(r)) => Some(r),
+        Ok(Value::Integer(i)) => Some(i as f64),
+        Ok(_) => {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!("S231:{which} on a Real connector did not ground to a number"),
+                )
+                .with_subject(subject.to_owned()),
+            );
+            None
+        }
+        Err(e) => {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::GroundingFailed,
+                    format!("S231:{which} connector bound failed to ground: {e}"),
+                )
+                .with_subject(subject.to_owned()),
+            );
+            None
+        }
+    }
+}
+
+/// Ground a declared `S231:min`/`max` on an **Integer** connector — like [`real_connector_bound`]
+/// but only an Integer literal is legal (a Real bound on an Integer connector is `MalformedDocument`).
+fn int_connector_bound(
+    v: Option<&CxfValue>,
+    which: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> Option<i64> {
+    let v = v?;
+    match ground_value(v, &ParamScope::new(&[])) {
+        Ok(Value::Integer(i)) => Some(i),
+        Ok(_) => {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!("S231:{which} on an Integer connector did not ground to an integer"),
+                )
+                .with_subject(subject.to_owned()),
+            );
+            None
+        }
+        Err(e) => {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::GroundingFailed,
+                    format!("S231:{which} connector bound failed to ground: {e}"),
+                )
+                .with_subject(subject.to_owned()),
+            );
+            None
         }
     }
 }
@@ -550,8 +474,10 @@ pub(crate) fn resolve(
     }
 
     // --- Step 6: build connectors in ConnectorId order (value_type from isOfDataType, falling back
-    // to the @type port term; dir/owner from Step 5b). Default attrs — §7.10 unit unification is
-    // oce-validate's job (AD-8).
+    // to the @type port term; dir/owner from Step 5b). The resolver PARSES each connector's declared
+    // §7.4.1 attributes (unit/quantity/displayUnit/min/max) onto `Connector.attrs` so the §7.10 deep
+    // gate (oce-validate) has something to *unify* — unification is oce-validate's job (AD-8), but the
+    // declared attrs must flow from CXF first or the gate is dead on real input.
     let mut connectors: Vec<Connector> = Vec::with_capacity(conn_nodes.len());
     for (i, &node) in conn_nodes.iter().enumerate() {
         let vt = derive_value_type(node, &mut diags);
@@ -565,13 +491,9 @@ pub(crate) fn resolve(
             );
             (BlockId(0), Dir::In)
         });
-        connectors.push(Connector::new(
-            ConnectorId(i as u32),
-            block,
-            dir,
-            vt,
-            i as u32,
-        ));
+        let mut c = Connector::new(ConnectorId(i as u32), block, dir, vt, i as u32);
+        c.attrs = connector_attrs(node, vt, &mut diags);
+        connectors.push(c);
     }
 
     // --- Step 7: ground parameters (Ground mode) in hasParameter/hasConstant array order. A later

@@ -427,14 +427,114 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
     );
 }
 
+#[test]
+fn malformed_connector_bound_is_grounding_failure_not_silent_drop() {
+    // M1-PR-11 (NO-SILENT-FAILURE): a PRESENT S231:min/max that fails to ground must surface a
+    // diagnostic, never be silently dropped to "unset" (which would mask an R13.1 BoundMismatch the
+    // §7.10 gate exists to catch). A garbage typed-literal double bound fails to ground.
+    let mut doc = base();
+    node_mut(&mut doc, "M.c1.y")["S231:min"] =
+        json!({ "@value": "not-a-number", "@type": "http://www.w3.org/2001/XMLSchema#double" });
+    let diags = assert_error_code(&doc, DiagCode::GroundingFailed);
+    assert!(
+        diags.iter().any(|d| d.code == DiagCode::GroundingFailed
+            && d.message
+                .contains("S231:min connector bound failed to ground")),
+        "the malformed bound must surface its own GroundingFailed, got {diags:#?}"
+    );
+}
+
+#[test]
+fn symbolic_connector_bound_is_grounding_failure_not_silent_drop() {
+    // A symbolic (expression) connector bound grounds against an EMPTY scope in M1 and so fails to
+    // ground — it must report grounding-failed (symbolic connector bounds are M2), never vanish.
+    let mut doc = base();
+    node_mut(&mut doc, "M.c1.y")["S231:max"] = json!("someUnboundParam + 1");
+    assert_error_code(&doc, DiagCode::GroundingFailed);
+}
+
+#[test]
+fn attribute_on_non_numeric_connector_is_malformed_not_silent_drop() {
+    // M1-PR-11 (NO-SILENT-FAILURE): a §7.4.1 attribute on a Boolean/String/Enum connector — which
+    // CDL §7.4.1.3–.5 forbid — must surface, not be silently dropped as the default-attrs path did.
+    // Retype c1.y Boolean and declare a unit on it; assert the specific "permits none" diagnostic
+    // (other errors such as the resulting Boolean→Real TypeMismatch may also fire — we assert on the
+    // exact diagnostic the non-numeric-attr path is responsible for).
+    let mut doc = base();
+    let y = node_mut(&mut doc, "M.c1.y");
+    y["@type"] = json!("S231:BooleanOutput");
+    y["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+    y["S231:unit"] = json!("K");
+    let diags = assert_error_code(&doc, DiagCode::MalformedDocument);
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.code == DiagCode::MalformedDocument && d.message.contains("permits none")),
+        "a unit on a Boolean connector must surface its own MalformedDocument, got {diags:#?}"
+    );
+}
+
+#[test]
+fn malformed_unit_shape_is_targeted_diagnostic_not_a_document_sink() {
+    // M1-PR-11: a unit/quantity/displayUnit in a non-string/non-IRI shape (here a bare number) is
+    // malformed per S231P, but must NOT sink the WHOLE document with a coarse CxfError::Json — it
+    // deserializes into TermAttr::Other and the resolver surfaces a TARGETED MalformedDocument
+    // carrying the connector IRI. Reaching `Validation` (not `Json`) is the proof it did not sink.
+    let mut doc = base();
+    node_mut(&mut doc, "M.c1.y")["S231:unit"] = json!(5);
+    let diags = assert_error_code(&doc, DiagCode::MalformedDocument);
+    assert!(
+        diags.iter().any(|d| d.code == DiagCode::MalformedDocument
+            && d.message.contains("malformed term")
+            && d.subject.as_deref().is_some_and(|s| s.ends_with("c1.y"))),
+        "a malformed unit shape must surface a per-connector MalformedDocument, got {diags:#?}"
+    );
+}
+
+#[test]
+fn partial_typed_literal_unit_is_targeted_diagnostic_not_a_document_sink() {
+    // The other TermAttr::Other case: a partial object `{"@value":"K"}` missing `@type` matches
+    // neither Typed nor Iri, so it must fall to Other and surface a targeted MalformedDocument
+    // rather than a whole-document Json error.
+    let mut doc = base();
+    node_mut(&mut doc, "M.c1.y")["S231:displayUnit"] = json!({ "@value": "K" });
+    let diags = assert_error_code(&doc, DiagCode::MalformedDocument);
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.code == DiagCode::MalformedDocument && d.message.contains("malformed term")),
+        "a partial typed-literal must surface a targeted MalformedDocument, got {diags:#?}"
+    );
+}
+
+#[test]
+fn real_bound_on_integer_connector_is_malformed() {
+    // The Integer connector-bound path (`int_connector_bound`): a Real-valued bound on an Integer
+    // connector is malformed. No M1 *block* has Integer ports, but a connector typed `S231:Integer`
+    // still classifies as `ValueType::Integer`, so the path is reachable. Retype the model output
+    // c2.y2 Integer and give it a Real (1.5) min — assert the Integer-bound diagnostic fires.
+    let mut doc = base();
+    let y = node_mut(&mut doc, "M.c2.y2");
+    y["@type"] = json!("S231:IntegerOutput");
+    y["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
+    y["S231:min"] = json!(1.5);
+    let diags = assert_error_code(&doc, DiagCode::MalformedDocument);
+    assert!(
+        diags.iter().any(|d| d.code == DiagCode::MalformedDocument
+            && d.message.contains("did not ground to an integer")),
+        "a Real bound on an Integer connector must surface its own MalformedDocument, got {diags:#?}"
+    );
+}
+
 // ---- file-based rejection corpus (crates/oce-cxf/tests/fixtures/invalid/) -------------------
 
 /// The `double_driven.jsonld` fixture (two distinct constant outputs both driving `add.u1`) is
 /// rejected at ingest with a single-assignment error. This is the **file-based** complement to
 /// `doubly_driven_input_is_single_assignment` above (which duplicates one edge); here two separate
 /// drivers exercise the in-degree gate through the real `include_str!` byte path. The sibling
-/// `unit_mismatch` / `one_sided_unit` / `display_unit_divergence` fixtures are deferred until the
-/// resolver extracts §7.10 attributes — see `fixtures/invalid/README.md`.
+/// §7.10 fixtures (`unit_mismatch` / `one_sided_unit` / `display_unit_divergence` / `bound_mismatch`)
+/// are now driven **end-to-end** through the full pipeline in `oce-api`'s `conformance.rs` (M1-PR-11
+/// wired the resolver's §7.4.1 attribute extraction) — see `fixtures/invalid/README.md`.
 #[test]
 fn double_driven_fixture_is_rejected() {
     let doc: Value = serde_json::from_str(include_str!("fixtures/invalid/double_driven.jsonld"))

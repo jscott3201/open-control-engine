@@ -1,0 +1,9 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#A.con")
+    inputs=[] outputs=["ConnectorId(0)"]
+    param k=Real(0x4000000000000000)
+connectors: 1
+  C0 block=B0 dir=Out type=Real decl=0 iri=None
+    attrs=Real(unit=Some("K") quantity=Some("ThermodynamicTemperature") display_unit=Some("degC") min=0x0000000000000000 max=0x4075e00000000000 nominal=- unbounded=None)
+connections: 0
+external_inputs: []
