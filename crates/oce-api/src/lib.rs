@@ -34,6 +34,9 @@
 
 mod engine;
 mod error;
+/// Compile-time PyO3 binding-shape guards (R-API-PY-1..8, exit #7). A non-test module so a frozen
+/// surface drift fails the per-PR `cargo build`, not only the release-gate test run.
+mod guards;
 mod io;
 mod loading;
 mod params;
