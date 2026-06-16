@@ -1,52 +1,120 @@
 #![forbid(unsafe_code)]
-//! `oce-validate` — loader conformance for the Open Control Engine.
+// Bit-exact is the law here (exit #4): §7.10 numeric-bound agreement compares `f64` by `to_bits`,
+// never by `==`/ε. `clippy::float_cmp` is pedantic-tier (not in the workspace `-D warnings` set), so
+// without this deny a regression from `to_bits` to `==` would silently flip `-0.0`/`+0.0` to
+// "agree" and `NaN`/`NaN` to "conflict" — and pass every test + the default clippy gate. Deny it so
+// any raw `f64` comparison in this gate is a build error, not just a missed test (M1-PR-8 review).
+#![deny(clippy::float_cmp)]
+//! `oce-validate` — the authoritative **deep load-conformance gate** for the Open Control Engine.
 //!
-//! Enforces the CDL subset at load: subset-restriction rejection, single-assignment /
-//! in-degree-1 on input connectors (§7.10), structural Real/Integer/Boolean type matching, the
-//! §7.10 attribute-unification rule, and the two-tier `shall`(error)/`should`(warning)
-//! diagnostic model (CDL Ch. 2). It is **Group A** (no store, no database) and reads the
-//! `oce-blocks` feedthrough oracle only to classify connectors, never to compute signals.
+//! After the `oce-cxf` resolver's minimal structural fail-fast (duplicate `@id`, unresolved
+//! endpoints, arity-vs-registry) and `oce-flatten`'s array normalization, this crate is the gate
+//! that decides whether a flattened [`ModelGraph`] may be built and ticked. It enforces:
 //!
-//! Status: **M0 scaffold.** The checks land in M1.
+//! 1. **Boundary-aware single assignment** (§7.10 / §9.1.5): every `In` connector has in-degree
+//!    exactly 1, except a declared external boundary input (`ModelGraph::external_inputs`, the AD-2
+//!    elision), which legally has in-degree 0.
+//! 2. **Per-connection direction + value type** (§9.1.6): `from` is an output, `to` an input, and
+//!    the two share a [`oce_model::ValueType`] (CDL forbids implicit coercion).
+//! 3. **Connector type ↔ block-signature port-kind** agreement (AD-8, §7.8): a connector's declared
+//!    value type must match the native block class's port kind — the reason this crate depends on
+//!    `oce-blocks`. Without it a mistyped connector would reach the hot-path readers and silently
+//!    coerce to a type-zero (a safety-critical silent wrong value).
+//! 4. **§7.10 attribute unification** (doc 02 §9 R13.1–R13.4): the unified attributes
+//!    (`quantity`, `unit`, `min`, `max`) must agree across a connected cluster (`shall`-error on
+//!    conflict — [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`]
+//!    — and propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
+//!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
+//!
+//! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
+//! [`oce_diag::Diagnostic`] the resolver emits — so `oce-api`'s `LoadReport.warnings` is one
+//! uniform stream with no dialect translation. It is **Group A** (no store, no database) and reads
+//! the `oce-blocks` registry only to classify connectors, never to compute signals.
+//!
+//! # API shape
+//!
+//! - [`validate`] — a **pure** checker: reads the graph, returns `should`-warnings on success or a
+//!   [`ValidationError`] of `shall`-errors on failure. Never mutates.
+//! - [`unify_attributes`] — runs §7.10 unification, which **mutates** the graph (R13.2 propagates a
+//!   one-sided unit/quantity to its unset peers). Returns warnings / [`ValidationError`] likewise.
+//! - [`unify_and_validate`] — the `oce-api` entry point: unify (so propagation lands before the
+//!   structural checks read the graph), then validate, concatenating the warning streams.
+//!
+//! Status: **M1-PR-8.** The deep gate is implemented against hand-built and CXF-resolved graphs.
+//! (The resolver does not yet *extract* unit/quantity attributes from the CXF source — it emits
+//! defaults — so via `load_cxf` the unification pass is currently a no-op; it is exercised directly
+//! on hand-built graphs and lands end-to-end when resolver attribute extraction is added.)
 
+use oce_diag::Diagnostic;
 use oce_model::ModelGraph;
 
-/// Diagnostic severity — the two-tier `shall`/`should` model (CDL Ch. 2).
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Severity {
-    /// `shall`-level: a hard load error.
-    Shall,
-    /// `should`-level: a non-fatal warning.
-    Should,
-}
+mod rules;
 
-/// A single validation diagnostic.
-#[derive(Clone, Debug)]
-pub struct Diagnostic {
-    /// Severity (error vs warning).
-    pub severity: Severity,
-    /// Human-readable message; cites the governing CDL section where one applies.
-    pub message: String,
-}
+#[cfg(test)]
+mod tests;
 
-/// A validation failure carrying the `shall`-level diagnostics that blocked the load.
+/// A validation failure carrying the `shall`-level (error-severity) [`oce_diag::Diagnostic`]s that
+/// blocked the load. Warnings, when present, are returned on the success path instead.
 #[derive(Clone, Debug, thiserror::Error)]
 #[error("validation failed with {} shall-level diagnostic(s)", .diagnostics.len())]
 pub struct ValidationError {
-    /// The `shall`-level diagnostics.
+    /// The `shall`-level (error) diagnostics, in the pinned deterministic order.
     pub diagnostics: Vec<Diagnostic>,
 }
 
-/// Validate a flattened model. Returns `should`-level warnings on success; a [`ValidationError`]
-/// carrying `shall`-level diagnostics on failure.
+/// Validate a flattened model **without mutating it** (rules 1–3 above; structural + type gates).
+///
+/// Returns the `should`-level warnings on success, or a [`ValidationError`] of the `shall`-level
+/// diagnostics on failure. Total and panic-free on any graph (`08` R-ERR-1).
 ///
 /// # Errors
 /// Returns [`ValidationError`] if any `shall`-level rule is violated.
-pub fn validate(_model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
-    // M1-PR-6: trivial pass so the end-to-end load pipeline is green standalone. The `oce-cxf`
-    // resolver already performed structural fail-fast (single-assignment, direction, type,
-    // ClassNotFound) at ingest. The authoritative DEEP gate — boundary-aware single-assignment plus
-    // §7.10 unit/quantity attribute unification, and the reconciliation of this crate's diagnostics
-    // onto the shared `oce-diag` vocabulary (AD-4) — lands in M1-PR-8.
-    Ok(Vec::new())
+pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
+    let mut diags = Vec::new();
+    rules::check_single_assignment(model, &mut diags);
+    rules::check_connections(model, &mut diags);
+    rules::check_port_types(model, &mut diags);
+    finish(model, diags)
+}
+
+/// Run §7.10 unit/quantity attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to
+/// propagate a one-sided unit/quantity to its unset cluster peers (R13.2).
+///
+/// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
+/// [`ValidationError`] of unit/quantity conflicts (R13.1) on failure. Order-independent (a
+/// gather-then-decide cluster algorithm) and panic-free on any graph.
+///
+/// # Errors
+/// Returns [`ValidationError`] if any cluster declares conflicting unit/quantity values (R13.1).
+pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
+    let mut diags = Vec::new();
+    rules::unify_clusters(model, &mut diags);
+    finish(model, diags)
+}
+
+/// The `oce-api` load entry point: [`unify_attributes`] (propagation lands first), then
+/// [`validate`], concatenating the warning streams (unification warnings first, then structural).
+/// Short-circuits to the first failing stage's [`ValidationError`].
+///
+/// # Errors
+/// Returns [`ValidationError`] from whichever stage first finds a `shall`-level violation.
+pub fn unify_and_validate(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
+    let mut warnings = unify_attributes(model)?;
+    let validate_warnings = validate(model)?;
+    warnings.extend(validate_warnings);
+    Ok(warnings)
+}
+
+/// Sort `diags` into the pinned deterministic order, then partition: any error fails the load
+/// (returning only the errors, for a correct `shall`-count), otherwise the (all-warning) stream is
+/// the success value.
+fn finish(model: &ModelGraph, diags: Vec<Diagnostic>) -> Result<Vec<Diagnostic>, ValidationError> {
+    let conn_of_iri = rules::conn_of_iri(model);
+    let diags = rules::finalize_diags(diags, &conn_of_iri);
+    if oce_diag::has_errors(&diags) {
+        let diagnostics = diags.into_iter().filter(Diagnostic::is_error).collect();
+        Err(ValidationError { diagnostics })
+    } else {
+        Ok(diags)
+    }
 }

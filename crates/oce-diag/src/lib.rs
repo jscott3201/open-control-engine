@@ -98,8 +98,16 @@ pub enum DiagCode {
     DirectionMismatch,
     /// A connection joined connectors of different value types — no implicit coercion (§9.1.6).
     TypeMismatch,
+    /// A connector's declared value type disagrees with its block class's signature port kind
+    /// (§7.8 / AD-8) — distinct from [`DiagCode::TypeMismatch`] (which is connection-endpoint
+    /// scoped): this is a connector-vs-block-signature mismatch the resolver cannot catch because
+    /// it derives the connector type independently of the class.
+    PortKindMismatch,
     /// Two connected connectors both declared a unit/quantity and they differ — §7.10 hard error.
     UnitQuantityMismatch,
+    /// Two connected connectors both declared a `min`/`max` bound and they differ — §7.10 R13.1
+    /// hard error (the bound analogue of [`DiagCode::UnitQuantityMismatch`]).
+    BoundMismatch,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected connectors declared divergent `displayUnit`s — non-computational, warning only
@@ -130,7 +138,9 @@ impl DiagCode {
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
+            DiagCode::PortKindMismatch => "port-kind-mismatch",
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
+            DiagCode::BoundMismatch => "bound-mismatch",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
@@ -249,7 +259,9 @@ mod tests {
             DiagCode::SingleAssignment,
             DiagCode::DirectionMismatch,
             DiagCode::TypeMismatch,
+            DiagCode::PortKindMismatch,
             DiagCode::UnitQuantityMismatch,
+            DiagCode::BoundMismatch,
             DiagCode::DisplayUnitDivergence,
             DiagCode::AnalogCoercedToReal,
             DiagCode::MissingFmuPath,

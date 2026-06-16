@@ -193,8 +193,11 @@ impl<S: Store> Engine<S> {
     /// 1. [`oce_cxf::import_cxf`] (Ground mode) lowers the CXF JSON-LD directly to a flat, ground
     ///    [`ModelGraph`] plus a warning-only `ValidationReport` (any error → [`OcError::Cxf`]).
     /// 2. [`oce_flatten::flatten`] — scalar identity in M1 (array normalization lands in PR-9).
-    /// 3. [`oce_validate::validate`] — trivial pass in M1 (the deep gate lands in PR-8); a future
-    ///    `shall`-violation → [`OcError::Validate`].
+    /// 3. [`oce_validate::unify_and_validate`] — the deep gate (M1-PR-8): §7.10 unit/quantity
+    ///    attribute unification (which may **mutate** the graph to propagate one-sided units) then
+    ///    boundary-aware single-assignment, per-connection direction/type, and connector↔signature
+    ///    port-kind agreement. A `shall`-violation → [`OcError::Validate`]; `should`-warnings join
+    ///    the report.
     /// 4. [`Engine::build_model_in_memory`] — registry resolution, BUILD (loop-rejecting Kahn
     ///    schedule), state allocation, output snapshot, and `store.recover()`.
     ///
@@ -206,9 +209,10 @@ impl<S: Store> Engine<S> {
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
         // 2. Flatten (scalar identity in M1; array normalization in PR-9).
-        let model = oce_flatten::flatten(model)?;
-        // 3. Deep validation (trivial pass in M1; PR-8 fills it). Propagates a shall-violation.
-        let _validate_warnings = oce_validate::validate(&model)?;
+        let mut model = oce_flatten::flatten(model)?;
+        // 3. Deep gate (M1-PR-8): §7.10 unification (mutates the graph to propagate one-sided
+        //    units) then the structural/type rules. A shall-violation propagates as OcError::Validate.
+        let validate_warnings = oce_validate::unify_and_validate(&mut model)?;
         // 4. Shared BUILD tail: registry → schedule → state → outputs → store.recover.
         self.build_model_in_memory(model)?;
         let stateful_blocks = self
@@ -216,8 +220,12 @@ impl<S: Store> Engine<S> {
             .iter()
             .filter(|b| b.kind() == BlockKind::Stateful)
             .count();
+        // One uniform `oce-diag` stream (AD-4): resolver `should`-warnings first, then the deep
+        // gate's — each already internally sorted; no global re-sort across the seam.
+        let mut warnings = report.diagnostics;
+        warnings.extend(validate_warnings);
         Ok(LoadReport {
-            warnings: report.diagnostics,
+            warnings,
             block_count: self.model.blocks.len(),
             stateful_blocks,
         })
