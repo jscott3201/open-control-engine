@@ -3,11 +3,13 @@
 # Workflow model: every logical change opens a PR into `development` behind this gate; releases
 # batch `development` -> `main`, and a version tag drives the gated publish.
 #
-# Because this is a small, fresh repo, the per-PR gate runs the FULL compile-requiring set
-# (clippy -D warnings + a workspace build) in addition to the near-instant gates — there is not
-# yet a separate heavyweight release matrix to defer them to, and the build is fast. As the repo
-# grows, the heavy suite can move to a development -> main release gate (as in the substrate),
-# leaving the cheap gates here.
+# This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
+# (clippy -D warnings) and a workspace build. It runs NO tests — keeping per-change PRs into
+# `development` fast. The heavy test suite (cargo nextest run for unit + integration tests, and
+# cargo test --doc for doctests — nextest cannot run doctests) lives in the development -> main
+# release gate at .github/workflows/release-gate.yml, which fires only on PRs whose base is
+# `main`. That gate also re-runs these light correctness gates against the release tip and runs
+# cargo-deny unconditionally, since a `development` -> `main` PR matches no other workflow.
 #
 # Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
 # clippy -D warnings, a workspace build, and the default-no-db gate (the default — and only —

@@ -69,3 +69,17 @@ fresh context, resume, or compaction.
   cap concurrency at **5–10 agents** at a time to avoid API rate-limiting (owner directive).
 - Spec before code: land architecture decisions in `_spec/` (and Aionforge Memory) before
   scaffolding crates.
+- **Testing standard (safety-critical):** this engine controls real equipment — a wrong result
+  is a physical hazard, so testing is a **first-class deliverable, not an afterthought**. Every
+  PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
+  bit-exactly), oracle cross-checks, and determinism goldens** per `TESTING.md`. Thin coverage
+  is a **blocking review defect**. See `TESTING.md` for the full standard.
+- **Testing & the CI gate split:** **cargo-nextest is the test runner**, locally and in CI. Run
+  `cargo nextest run` for unit + integration tests and `cargo test --doc` for doctests (nextest
+  cannot run doctests). Config lives at `.config/nextest.toml` (`default` profile = fast local
+  fail-fast; `ci` profile = the release gate). CI is **dev-light / release-heavy**: per-PR gates
+  into `development` (`ci.yml`) run fmt/clippy/build/rustdoc/file-size/no-secret/default-no-db
+  (+ cargo-deny on manifest change) but **no tests**; the **full test suite runs only on
+  `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the light
+  gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
+  git hooks — keep commits and pushes fast.
