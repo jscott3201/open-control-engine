@@ -55,6 +55,7 @@ thiserror = "2.0"
 # them publish-ready; the path wins for in-workspace builds. ---
 oce-model = { path = "crates/oce-model", version = "0.0.0" }
 oce-expr = { path = "crates/oce-expr", version = "0.0.0" }
+oce-diag = { path = "crates/oce-diag", version = "0.0.0" }
 oce-blocks = { path = "crates/oce-blocks", version = "0.0.0" }
 oce-flatten = { path = "crates/oce-flatten", version = "0.0.0" }
 oce-validate = { path = "crates/oce-validate", version = "0.0.0" }
