@@ -19,6 +19,8 @@ use oce_model::{ModelGraph, Value};
 
 const FIXTURE: &str = include_str!("fixtures/minimal_loop.jsonld");
 const GOLDEN_REL: &str = "tests/fixtures/golden/minimal_loop.modelgraph.txt";
+const ATTRS_RICH: &str = include_str!("fixtures/connector_attrs.jsonld");
+const ATTRS_GOLDEN_REL: &str = "tests/fixtures/golden/connector_attrs.modelgraph.txt";
 
 /// Deterministic, human-diffable, bit-exact rendering of a `ModelGraph`. Vectors are printed in
 /// index order (`BlockId.0` / `ConnectorId.0`), exactly the order the resolver builds them; floats
@@ -57,6 +59,9 @@ fn render(g: &ModelGraph) -> String {
             c.decl_order,
             c.iri.as_deref()
         );
+        // The parsed §7.4.1 attrs are locked bit-exactly (M1-PR-11): a unit/quantity/displayUnit
+        // mis-parse, a dropped bound, or a one-ULP bound drift fails the golden loudly.
+        let _ = writeln!(s, "    attrs={}", render_attrs(&c.attrs));
     }
     let _ = writeln!(s, "connections: {}", g.connections.len());
     for c in &g.connections {
@@ -82,6 +87,36 @@ fn render_value(v: &Value) -> String {
         Value::Boolean(b) => format!("Boolean({b})"),
         Value::String(s) => format!("String({s:?})"),
         Value::Enum { class, ordinal } => format!("Enum(class={},ordinal={})", class.0, ordinal),
+    }
+}
+
+/// A bit-exact rendering of a connector's parsed [`oce_model::Attrs`]. `Real` bounds are printed by
+/// `to_bits()` (a one-ULP drift fails loudly); unit/quantity/displayUnit by their string form.
+fn render_attrs(a: &oce_model::Attrs) -> String {
+    use oce_model::Attrs;
+    match a {
+        Attrs::Real(r) => format!(
+            "Real(unit={:?} quantity={:?} display_unit={:?} min={} max={} nominal={} unbounded={:?})",
+            r.unit.as_deref(),
+            r.quantity.as_deref(),
+            r.display_unit.as_deref(),
+            render_opt_bits(r.min),
+            render_opt_bits(r.max),
+            render_opt_bits(r.nominal),
+            r.unbounded,
+        ),
+        Attrs::Integer(i) => format!("Integer(min={:?} max={:?})", i.min, i.max),
+        Attrs::Boolean(_) => "Boolean".to_owned(),
+        Attrs::String(_) => "String".to_owned(),
+        Attrs::Enum(_) => "Enum".to_owned(),
+    }
+}
+
+/// An optional `f64` rendered by its IEEE-754 bits (or `-` when unset) — the determinism contract.
+fn render_opt_bits(v: Option<f64>) -> String {
+    match v {
+        Some(x) => format!("0x{:016x}", x.to_bits()),
+        None => "-".to_owned(),
     }
 }
 
@@ -283,5 +318,67 @@ fn unit_delay_bare_int_grounds_to_integer_not_real() {
         del_params[0].1.bit_eq(&Value::Integer(0)),
         "bare-Int param grounds to Integer, not Real: got {:?}",
         del_params[0].1
+    );
+}
+
+#[test]
+fn golden_connector_attrs_modelgraph() {
+    // Bit-exact golden for the parsed §7.4.1 connector attrs (M1-PR-11): unit/quantity/displayUnit
+    // in their three legal JSON-LD wire shapes + numeric bounds by `to_bits()`. Re-bless with
+    // `OCE_BLESS=1 cargo test -p oce-cxf --test resolve_golden golden_connector_attrs_modelgraph`.
+    let g = import_ok(ATTRS_RICH);
+    let actual = render(&g);
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(ATTRS_GOLDEN_REL);
+    if std::env::var_os("OCE_BLESS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &actual).unwrap();
+        return;
+    }
+    let expected = std::fs::read_to_string(&path)
+        .expect("golden snapshot missing — regenerate with OCE_BLESS=1");
+    assert_eq!(
+        actual, expected,
+        "connector_attrs graph diverged from golden"
+    );
+}
+
+#[test]
+fn resolver_carries_declared_connector_attrs() {
+    // The resolver PARSES each connector's declared §7.4.1 attributes onto `Connector.attrs`, so
+    // oce-validate's §7.10 deep gate has something to unify — without this the gate is dead on real
+    // CXF input (regression guard for M1-PR-11). Each of the THREE new typed fields is asserted
+    // independently (a regression dropping any one would otherwise pass), across all three legal
+    // wire shapes: `unit` bare-string "K", `quantity` typed-literal, `displayUnit` IRI-node — plus
+    // the numeric bounds, compared by bits. (Resolver layer: §7.10 is NOT run here, so it resolves
+    // cleanly.)
+    let g = import_ok(ATTRS_RICH);
+    let attrs = g
+        .connectors
+        .iter()
+        .find_map(|c| match &c.attrs {
+            oce_model::Attrs::Real(a) if a.unit.is_some() => Some(a.clone()),
+            _ => None,
+        })
+        .expect("the con.y Real connector must carry parsed attrs");
+    assert_eq!(attrs.unit.as_deref(), Some("K"), "bare-string unit");
+    assert_eq!(
+        attrs.quantity.as_deref(),
+        Some("ThermodynamicTemperature"),
+        "typed-literal quantity carries its @value"
+    );
+    assert_eq!(
+        attrs.display_unit.as_deref(),
+        Some("degC"),
+        "IRI-node displayUnit carries its @id"
+    );
+    assert_eq!(
+        attrs.min.map(f64::to_bits),
+        Some(0.0_f64.to_bits()),
+        "S231:min grounds onto RealAttrs.min (bit-exact)"
+    );
+    assert_eq!(
+        attrs.max.map(f64::to_bits),
+        Some(350.0_f64.to_bits()),
+        "S231:max grounds onto RealAttrs.max (bit-exact)"
     );
 }

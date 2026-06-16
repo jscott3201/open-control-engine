@@ -5,7 +5,8 @@
 //! round-trip export must not drop cosmetic or unknown keys. This is achieved with a
 //! `#[serde(flatten)] other` map on both [`CxfDocument`] and [`Node`] (R-8), capturing every key
 //! not explicitly modeled (`icon`/`diagram`/`graphics`/`documentation`/`qudt:*`/`cdlLineNum*`/
-//! `quantity`/`unit`/`displayUnit`/`redeclare`/… ).
+//! `redeclare`/… ). (`S231:unit`/`quantity`/`displayUnit` are **modeled** typed fields, not
+//! passthrough — see [`Node::unit`] — so the §7.10 deep gate can read them; M1-PR-11.)
 //!
 //! Layer A assigns **no meaning** — it is a dumb mirror. All interpretation (classification,
 //! library join, overlay merge, connections, grounding) happens in the resolver (§7, M1-PR-5).
@@ -152,6 +153,32 @@ pub struct Node {
     /// `S231:max` — upper-bound binding.
     #[serde(rename = "S231:max", default, skip_serializing_if = "Option::is_none")]
     pub max: Option<CxfValue>,
+    /// `S231:unit` — the connector/variable **computation** unit (§7.4.1). Carried onto
+    /// `Connector.attrs` by the resolver so the §7.10 deep gate (oce-validate) can unify it; never
+    /// read on the tick (R1). A [`TermAttr`] so all three legal JSON-LD wire shapes deserialize —
+    /// bare string `"K"`, typed literal `{"@value":"K","@type":…}`, or the S231P-canonical IRI node
+    /// `{"@id":"unit:K"}` (sh:class qudt:Unit) — rather than a bare `String` that would hard-fail the
+    /// whole document on the non-string forms (M1-PR-11). Previously fell through `other`, defeating
+    /// unit unification on CXF.
+    #[serde(rename = "S231:unit", default, skip_serializing_if = "Option::is_none")]
+    pub unit: Option<TermAttr>,
+    /// `S231:quantity` — the physical quantity kind (§7.4.1), e.g. `"ThermodynamicTemperature"` or
+    /// the S231P-canonical IRI node `{"@id":"…QuantityKind"}` (sh:class qudt:QuantityKind). A
+    /// [`TermAttr`] for the same wire-shape-tolerance reason as [`Node::unit`].
+    #[serde(
+        rename = "S231:quantity",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub quantity: Option<TermAttr>,
+    /// `S231:displayUnit` — the **presentation** unit (§7.4.1 / §7.17); divergence is a should-warning
+    /// only and it **never** affects computation. A [`TermAttr`] (see [`Node::unit`]).
+    #[serde(
+        rename = "S231:displayUnit",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub display_unit: Option<TermAttr>,
     /// `S231:isFinal` — whether an overlay value is final.
     #[serde(
         rename = "S231:isFinal",
@@ -211,8 +238,9 @@ pub struct Node {
     )]
     pub is_replaceable: Option<bool>,
 
-    /// Everything else (icon/diagram/graphics/documentation/`qudt:*`/`cdlLineNum*`/quantity/
-    /// unit/displayUnit/redeclare/…) — opaque passthrough for lossless round-trip (R-8).
+    /// Everything else (icon/diagram/graphics/documentation/`qudt:*`/`cdlLineNum*`/redeclare/…) —
+    /// opaque passthrough for lossless round-trip (R-8). (`S231:unit`/`quantity`/`displayUnit` are
+    /// modeled typed fields above, not passthrough — M1-PR-11.)
     #[serde(flatten)]
     pub other: BTreeMap<String, serde_json::Value>,
 }
@@ -350,4 +378,74 @@ pub enum CxfValue {
     List(Vec<CxfValue>),
     /// An unevaluated CDL/Modelica expression string, or a fully-qualified enumeration value.
     Expr(String),
+}
+
+/// A §7.4.1 **term** attribute (`S231:unit` / `S231:quantity` / `S231:displayUnit`) as it appears on
+/// the wire. JSON-LD admits three encodings for these string-/IRI-ranged properties, and a robust
+/// ingest must accept **all** of them rather than hard-fail the entire document on an
+/// unexpected-but-legal shape (M1-PR-11): a bare string (`"K"`), a typed literal
+/// (`{"@value":"K","@type":"…#string"}`), or an IRI-node reference (`{"@id":"unit:K"}` — the
+/// S231P SHACL range for unit/displayUnit is `sh:class qudt:Unit` and for quantity
+/// `sh:class qudt:QuantityKind`, i.e. an IRI node). The lexical term is recovered with [`as_term`]
+/// (which returns `None` for the `Other` arm).
+///
+/// Variant order is load-bearing for `#[serde(untagged)]`: `Bare` (a string) must precede the two
+/// object arms, which are themselves disjoint (`Typed` requires `@value`+`@type`; `Iri` requires
+/// `@id`). Each object arm keeps a flattened `extra` map so unknown JSON-LD keys (`@language`,
+/// `@index`, …) still round-trip losslessly (R-8).
+///
+/// `Other` is a **last-resort catch-all** (it matches any JSON, so it must be the final arm): a
+/// `unit`/`quantity`/`displayUnit` in some other shape (a bare number, an array, or a partial object
+/// like `{"@value":"K"}` missing `@type`) is malformed per S231P, but it must **not** sink the whole
+/// document with a coarse `serde` error — it deserializes into `Other` (round-tripping verbatim, R-8)
+/// and the resolver turns the missing term into a *targeted* `MalformedDocument` carrying the
+/// connector IRI (the same NO-SILENT-FAILURE discipline as a malformed bound; M1-PR-11).
+///
+/// [`as_term`]: TermAttr::as_term
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum TermAttr {
+    /// A bare string term, e.g. `"K"`.
+    Bare(String),
+    /// A typed literal `{"@value": "...", "@type": "..."}`.
+    Typed {
+        /// The literal lexical form (the term).
+        #[serde(rename = "@value")]
+        value: String,
+        /// The XSD datatype IRI.
+        #[serde(rename = "@type")]
+        datatype: String,
+        /// Any other keys on the typed-literal object, preserved for lossless round-trip (R-8).
+        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+        extra: BTreeMap<String, serde_json::Value>,
+    },
+    /// An IRI-node reference `{"@id": "..."}` (the S231P-canonical qudt:Unit / qudt:QuantityKind form).
+    Iri {
+        /// The referenced IRI — used verbatim as the term in M1 (IRI/CURIE normalization is M2).
+        #[serde(rename = "@id")]
+        id: String,
+        /// Any other keys on the reference object, preserved for lossless round-trip (R-8).
+        #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
+        extra: BTreeMap<String, serde_json::Value>,
+    },
+    /// Any other (malformed-per-S231P) JSON shape — a number/array/bool or a partial object. Kept
+    /// verbatim for lossless round-trip (R-8); [`as_term`](TermAttr::as_term) returns `None` and the
+    /// resolver surfaces a targeted `MalformedDocument`. **Must be the last arm** (it matches any JSON).
+    Other(serde_json::Value),
+}
+
+impl TermAttr {
+    /// The lexical term: the bare string, the typed literal's `@value`, or the IRI node's `@id`;
+    /// `None` for the malformed `Other` arm. This is the string the §7.10 deep gate unifies on. In M1
+    /// an IRI-node term is the raw IRI (e.g. `"unit:K"`); cross-form unit equivalence (IRI ⇔
+    /// bare-string ⇔ CURIE normalization) is an M2 concern — M1 compares terms by exact string equality.
+    #[must_use]
+    pub fn as_term(&self) -> Option<&str> {
+        match self {
+            TermAttr::Bare(s) => Some(s),
+            TermAttr::Typed { value, .. } => Some(value),
+            TermAttr::Iri { id, .. } => Some(id),
+            TermAttr::Other(_) => None,
+        }
+    }
 }

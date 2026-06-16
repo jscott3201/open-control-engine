@@ -15,6 +15,7 @@
 
 use oce_model::ModelGraph;
 
+mod arrays;
 mod bridge;
 pub mod dto;
 mod ground;
@@ -22,7 +23,7 @@ mod resolve;
 #[cfg(test)]
 mod tests;
 
-pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
+pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 
 /// A CXF import/export error (typed; never a panic). Variants follow doc 04 §5; the resolver
