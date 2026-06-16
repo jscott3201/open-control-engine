@@ -8,7 +8,12 @@
 //! (`A[1]`→`A_1`, 1-based CDL → 0-based internal) and ground-parameter binding via `oce-expr`.
 //! It is **Group A** (no store, no database).
 //!
-//! Status: **M0 scaffold.** The shim lands in M1.
+//! Status: **M1 (scalar).** As-built, the `oce-cxf` resolver already grounds parameters inline (it
+//! owns the per-instance parameter scope), so this shim's M1 role narrows to **array normalization**
+//! — which lands in M1-PR-9. For a **scalar** model (the M1-PR-6 path) there is nothing left to
+//! elaborate, so [`flatten`] is an identity passthrough. The seam stays in the pipeline
+//! (`import_cxf → flatten → build`) so PR-9 can add array normalization here without touching
+//! `Engine::load_cxf`.
 
 use oce_model::ModelGraph;
 
@@ -22,11 +27,17 @@ pub enum FlattenError {
 }
 
 /// Resolve a CXF-derived model into the flattened, monomorphic [`ModelGraph`] the scheduler
-/// consumes (array normalization + ground-parameter binding). At M0 this is a no-op passthrough
-/// of an already-resolved model.
+/// consumes.
+///
+/// **M1 scalar path (identity).** The `oce-cxf` resolver already emits a flat, ground, scalar
+/// `ModelGraph` — composites are flattened away and parameters are ground there. The remaining
+/// elaboration is **array normalization** (both CXF array encodings → canonical per-element-scalar
+/// connectors/params), which lands in M1-PR-9 and will transform the model here. Until then a
+/// scalar model passes through unchanged.
 ///
 /// # Errors
-/// Returns [`FlattenError`] if a binding cannot be resolved.
-pub fn flatten(_model: ModelGraph) -> Result<ModelGraph, FlattenError> {
-    unimplemented!("oce-flatten::flatten — M0 scaffold (CXF-resolution shim lands in M1)")
+/// Returns [`FlattenError`] if a binding cannot be resolved (no scalar model triggers this in M1;
+/// array-normalization failures land with PR-9).
+pub fn flatten(model: ModelGraph) -> Result<ModelGraph, FlattenError> {
+    Ok(model)
 }

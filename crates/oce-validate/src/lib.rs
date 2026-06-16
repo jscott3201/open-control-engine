@@ -43,5 +43,10 @@ pub struct ValidationError {
 /// # Errors
 /// Returns [`ValidationError`] if any `shall`-level rule is violated.
 pub fn validate(_model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
-    unimplemented!("oce-validate::validate — M0 scaffold (conformance checks land in M1)")
+    // M1-PR-6: trivial pass so the end-to-end load pipeline is green standalone. The `oce-cxf`
+    // resolver already performed structural fail-fast (single-assignment, direction, type,
+    // ClassNotFound) at ingest. The authoritative DEEP gate — boundary-aware single-assignment plus
+    // §7.10 unit/quantity attribute unification, and the reconciliation of this crate's diagnostics
+    // onto the shared `oce-diag` vocabulary (AD-4) — lands in M1-PR-8.
+    Ok(Vec::new())
 }

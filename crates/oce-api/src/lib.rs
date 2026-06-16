@@ -16,12 +16,14 @@
 //! DB-gated feature; a durable/queryable backend is an app-side adapter the host wires behind the
 //! `oce-store` port. No store-backend-specific type ever escapes this facade (R-API-8).
 //!
-//! Status: **M0 scaffold.** The `Engine` *shape* and `OcError` match the spec; load/tick/simulate
-//! bodies are stubs (`unimplemented!()`) and land in M0/M1.
+//! Status: **M1.** The full `build_model_in_memory` → `tick` loop works (M0), and
+//! [`Engine::load_cxf`] now runs the end-to-end CXF ingest pipeline (resolve → flatten → validate →
+//! BUILD) returning a [`LoadReport`] — **M1 exit #1**. `simulate` / `step_realtime` and the IO
+//! inventory remain stubs that land with the frozen-surface fill in M1-PR-10.
 
 use std::sync::Arc;
 
-use oce_blocks::{Block, lookup};
+use oce_blocks::{Block, BlockKind, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::{DomainKey, PointHandle, Store};
@@ -60,6 +62,25 @@ impl Outputs {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
+}
+
+/// The result of a successful load (`08` R-PUB-5 / R-LOAD-1). Carries the `should`-level
+/// diagnostics (the load succeeded; these are advisory — e.g. an `Analog→Real` coercion) plus
+/// summary counts for the loaded model.
+///
+/// `#[non_exhaustive]`: the frozen `08` shape additionally carries `model_id: DomainKey` and
+/// `io: IoSummary` (the §5 IO inventory). Those land with the IO-inventory work in **M1-PR-10**
+/// (the surface is baselined by `cargo public-api` in **M1-PR-12**, so growing it until then is
+/// non-breaking). `Clone` is required by the PyO3 surface contract (`10` R-PY).
+#[derive(Clone, Debug, Default)]
+#[non_exhaustive]
+pub struct LoadReport {
+    /// `should`-level diagnostics from ingest + validation (the shared `oce-diag` vocabulary, AD-4).
+    pub warnings: Vec<oce_diag::Diagnostic>,
+    /// Number of (elementary) block instances in the loaded model.
+    pub block_count: usize,
+    /// Number of stateful `[S]` block instances — a state-footprint signal (`08` §5).
+    pub stateful_blocks: usize,
 }
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB,
@@ -163,21 +184,43 @@ impl<S: Store> Engine<S> {
         Ok(())
     }
 
-    /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (oce-cxf → oce-flatten
-    /// → oce-validate → oce-semantics), builds the `oce-graph` schedule, projects into the store,
-    /// and pre-resolves hot point handles.
+    /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline
+    /// (`oce-cxf` resolve → `oce-flatten` → `oce-validate`), builds the `oce-graph` schedule via the
+    /// shared [`Engine::build_model_in_memory`] tail, and returns a [`LoadReport`]. Replaces all
+    /// per-run state, so calling it again reloads a fresh model.
+    ///
+    /// Pipeline (M1):
+    /// 1. [`oce_cxf::import_cxf`] (Ground mode) lowers the CXF JSON-LD directly to a flat, ground
+    ///    [`ModelGraph`] plus a warning-only `ValidationReport` (any error → [`OcError::Cxf`]).
+    /// 2. [`oce_flatten::flatten`] — scalar identity in M1 (array normalization lands in PR-9).
+    /// 3. [`oce_validate::validate`] — trivial pass in M1 (the deep gate lands in PR-8); a future
+    ///    `shall`-violation → [`OcError::Validate`].
+    /// 4. [`Engine::build_model_in_memory`] — registry resolution, BUILD (loop-rejecting Kahn
+    ///    schedule), state allocation, output snapshot, and `store.recover()`.
     ///
     /// # Errors
-    /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1).
-    pub fn load_cxf(&mut self, _bytes: &[u8]) -> Result<(), OcError> {
-        let _ = (
-            &self.store,
-            &self.model,
-            &self.schedule,
-            &self.state,
-            &self.handles,
-        );
-        unimplemented!("Engine::load_cxf — M0 scaffold (end-to-end ingest lands in M1)")
+    /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
+    /// [`OcError::Cxf`], [`OcError::Flatten`], [`OcError::Validate`], [`OcError::Build`],
+    /// [`OcError::Load`], or [`OcError::Store`].
+    pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
+        // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
+        let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
+        // 2. Flatten (scalar identity in M1; array normalization in PR-9).
+        let model = oce_flatten::flatten(model)?;
+        // 3. Deep validation (trivial pass in M1; PR-8 fills it). Propagates a shall-violation.
+        let _validate_warnings = oce_validate::validate(&model)?;
+        // 4. Shared BUILD tail: registry → schedule → state → outputs → store.recover.
+        self.build_model_in_memory(model)?;
+        let stateful_blocks = self
+            .blocks
+            .iter()
+            .filter(|b| b.kind() == BlockKind::Stateful)
+            .count();
+        Ok(LoadReport {
+            warnings: report.diagnostics,
+            block_count: self.model.blocks.len(),
+            stateful_blocks,
+        })
     }
 
     /// Advance to absolute model time `t_now` (seconds; finite, monotonic non-decreasing), evaluate

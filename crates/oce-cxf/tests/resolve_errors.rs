@@ -352,6 +352,20 @@ fn deny_warnings_turns_the_analog_warning_into_a_failure() {
 }
 
 #[test]
+fn block_interface_arity_mismatch_is_malformed() {
+    // PR-6 review [CRITICAL]: a block declaring fewer/more ports than its class signature requires
+    // must be rejected at RESOLVE — otherwise it loads and the engine's emit-by-port-index panics
+    // on the first tick (index out of bounds). Remove c2's output (MultiplyByParameter requires
+    // exactly one output).
+    let mut doc = base();
+    node_mut(&mut doc, "M.c2")
+        .as_object_mut()
+        .unwrap()
+        .remove("S231:hasOutput");
+    assert_error_code(&doc, DiagCode::MalformedDocument);
+}
+
+#[test]
 fn multiple_top_composites_is_malformed_document() {
     // C-6: the resolver's only defense against two containsBlock roots. A regression that picked
     // composites[0] would silently flatten the wrong sub-model.
