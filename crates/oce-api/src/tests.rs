@@ -46,13 +46,7 @@ impl Mb {
         let bid = BlockId(self.m.blocks.len() as u32);
         let push_conn = |m: &mut ModelGraph, dir: Dir, vt: ValueType| {
             let id = ConnectorId(m.connectors.len() as u32);
-            m.connectors.push(Connector {
-                id,
-                block: bid,
-                dir,
-                value_type: vt,
-                decl_order: id.0,
-            });
+            m.connectors.push(Connector::new(id, bid, dir, vt, id.0));
             id
         };
         let in_ids: Vec<ConnectorId> = ins
@@ -70,6 +64,7 @@ impl Mb {
             outputs: out_ids.clone(),
             params: ParamTable { values: params },
             decl_order: bid.0,
+            instance_iri: None,
         });
         (bid, in_ids, out_ids)
     }

@@ -165,16 +165,153 @@ pub enum Dir {
     Out,
 }
 
-/// The attribute set carried alongside a declared variable (CDL §7.4.1). Metadata only —
-/// `step()` must never branch on it (R1). Full per-type structs land in M1; the M0 scaffold
-/// keeps the tag enum so signatures elsewhere can name it.
-#[derive(Clone, Debug, Default)]
-#[non_exhaustive]
-pub struct Attrs {
-    /// Physical quantity (Real only), e.g. `"ThermodynamicTemperature"`; `None` = default `""`.
+/// Attributes for a `Real` variable (CDL §7.4.1.1 / §3.3). Each `Option` distinguishes
+/// **unset/default** from an explicit value — §7.10 attribute unification needs to tell a default
+/// from a declared non-default. Metadata only: `step()` never branches on it (R1).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RealAttrs {
+    /// Physical quantity (e.g. `"ThermodynamicTemperature"`); `None` ⇒ default `""`.
     pub quantity: Option<Arc<str>>,
-    /// Computation unit (Real only); `None` = default `""`. UI-only `displayUnit` is separate.
+    /// The *computation* unit; `None` ⇒ default `""`.
     pub unit: Option<Arc<str>>,
+    /// UI-only display unit; `None` ⇒ default `""`. Never on the tick.
+    pub display_unit: Option<Arc<str>>,
+    /// Lower validation bound; `None` ⇒ `-∞`.
+    pub min: Option<f64>,
+    /// Upper validation bound; `None` ⇒ `+∞`.
+    pub max: Option<f64>,
+    /// Tolerance-scaling nominal; `None` ⇒ `1.0`.
+    pub nominal: Option<f64>,
+    /// Whether the variable is unbounded; `None` ⇒ `false`.
+    pub unbounded: Option<bool>,
+}
+
+impl RealAttrs {
+    /// The computation unit, or `""` if unset.
+    #[must_use]
+    pub fn unit(&self) -> &str {
+        self.unit.as_deref().unwrap_or("")
+    }
+    /// The physical quantity, or `""` if unset.
+    #[must_use]
+    pub fn quantity(&self) -> &str {
+        self.quantity.as_deref().unwrap_or("")
+    }
+    /// The display unit, or `""` if unset.
+    #[must_use]
+    pub fn display_unit(&self) -> &str {
+        self.display_unit.as_deref().unwrap_or("")
+    }
+    /// The lower validation bound, or `-∞` if unset.
+    #[must_use]
+    pub fn min(&self) -> f64 {
+        self.min.unwrap_or(f64::NEG_INFINITY)
+    }
+    /// The upper validation bound, or `+∞` if unset.
+    #[must_use]
+    pub fn max(&self) -> f64 {
+        self.max.unwrap_or(f64::INFINITY)
+    }
+    /// The nominal value, or `1.0` if unset.
+    #[must_use]
+    pub fn nominal(&self) -> f64 {
+        self.nominal.unwrap_or(1.0)
+    }
+    /// Whether the variable is unbounded, or `false` if unset.
+    #[must_use]
+    pub fn unbounded(&self) -> bool {
+        self.unbounded.unwrap_or(false)
+    }
+}
+
+/// Attributes for an `Integer` variable (CDL §7.4.1.2 / §3.3). No unit/quantity (§3.1 matrix).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct IntAttrs {
+    /// Lower validation bound; `None` ⇒ the CDL Integer minimum (−2_147_483_648).
+    pub min: Option<i64>,
+    /// Upper validation bound; `None` ⇒ the CDL Integer maximum (+2_147_483_647).
+    pub max: Option<i64>,
+}
+
+impl IntAttrs {
+    /// The lower validation bound, or the CDL Integer minimum if unset.
+    #[must_use]
+    pub fn min(&self) -> i64 {
+        self.min.unwrap_or(-2_147_483_648)
+    }
+    /// The upper validation bound, or the CDL Integer maximum if unset.
+    #[must_use]
+    pub fn max(&self) -> i64 {
+        self.max.unwrap_or(2_147_483_647)
+    }
+}
+
+/// `Boolean`, `String`, and `Enumeration` carry **no** attributes (CDL §7.4.1.3–.5). The unit
+/// struct makes the type system forbid attaching any.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct NoAttrs;
+
+/// The attribute set carried alongside a connector, tagged to **match** the connector's
+/// [`ValueType`] (R5). Metadata only — `step()` never branches on it (CDL §7.17 / R1). Build the
+/// empty default for a type with [`Attrs::default_for`].
+#[derive(Clone, Debug, PartialEq)]
+pub enum Attrs {
+    /// Attributes for a `Real` variable.
+    Real(RealAttrs),
+    /// Attributes for an `Integer` variable.
+    Integer(IntAttrs),
+    /// `Boolean` — no attributes.
+    Boolean(NoAttrs),
+    /// `String` — no attributes.
+    String(NoAttrs),
+    /// `Enumeration` — no attributes.
+    Enum(NoAttrs),
+}
+
+impl Attrs {
+    /// The empty/default attribute set for `value_type` (R5: the returned variant matches the
+    /// type, so a connector built with it always satisfies the tag invariant).
+    #[must_use]
+    pub fn default_for(value_type: ValueType) -> Self {
+        match value_type {
+            ValueType::Real => Attrs::Real(RealAttrs::default()),
+            ValueType::Integer => Attrs::Integer(IntAttrs::default()),
+            ValueType::Boolean => Attrs::Boolean(NoAttrs),
+            ValueType::String => Attrs::String(NoAttrs),
+            ValueType::Enum(_) => Attrs::Enum(NoAttrs),
+        }
+    }
+
+    /// The `RealAttrs` if this is a `Real` attribute set (for §7.10 unit/quantity unification).
+    #[must_use]
+    pub fn as_real(&self) -> Option<&RealAttrs> {
+        match self {
+            Attrs::Real(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The `IntAttrs` if this is an `Integer` attribute set.
+    #[must_use]
+    pub fn as_integer(&self) -> Option<&IntAttrs> {
+        match self {
+            Attrs::Integer(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// Whether this attribute set's variant matches `value_type` (the R5 tag invariant).
+    #[must_use]
+    pub fn matches(&self, value_type: ValueType) -> bool {
+        matches!(
+            (self, value_type),
+            (Attrs::Real(_), ValueType::Real)
+                | (Attrs::Integer(_), ValueType::Integer)
+                | (Attrs::Boolean(_), ValueType::Boolean)
+                | (Attrs::String(_), ValueType::String)
+                | (Attrs::Enum(_), ValueType::Enum(_))
+        )
+    }
 }
 
 /// Stable, dense, 0-based index of a block instance within the flattened model's arena.
@@ -199,8 +336,70 @@ pub struct Connector {
     pub dir: Dir,
     /// Signal value type (Real | Integer | Boolean | Enum; String is metadata-only).
     pub value_type: ValueType,
+    /// Per-type attribute set (metadata only; never on the tick). Its variant **matches**
+    /// `value_type` (R5); `oce-validate` reads it for §7.10 unit/quantity unification.
+    pub attrs: Attrs,
     /// Position in the source declaration — the tie-break key for the deterministic sort (D6).
     pub decl_order: u32,
+    /// Source IRI of this connector in the originating CXF document, if any — used for
+    /// diagnostics and boundary-input identity. `None` for hand-built models.
+    pub iri: Option<Arc<str>>,
+}
+
+/// The R5 tag-invariant violation returned by [`Connector::with_attrs`] when an attribute set's
+/// variant does not match the connector's [`ValueType`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct AttrTypeMismatch {
+    /// The connector's declared value type — the attribute variant that *should* have been given.
+    pub value_type: ValueType,
+}
+
+impl Connector {
+    /// A connector with the **default** (empty) attributes for `value_type` and no source IRI —
+    /// the common case for the resolver and hand-built models. Use [`Connector::with_attrs`] /
+    /// [`Connector::with_iri`] to populate them.
+    #[must_use]
+    pub fn new(
+        id: ConnectorId,
+        block: BlockId,
+        dir: Dir,
+        value_type: ValueType,
+        decl_order: u32,
+    ) -> Self {
+        Self {
+            id,
+            block,
+            dir,
+            value_type,
+            attrs: Attrs::default_for(value_type),
+            decl_order,
+            iri: None,
+        }
+    }
+
+    /// Replace the attribute set (builder style), **checking** the R5 tag invariant: the `attrs`
+    /// variant must match this connector's `value_type`. This makes a tag mismatch
+    /// unconstructible through the builder path (doc 02 R5: "only checked constructors").
+    ///
+    /// # Errors
+    /// Returns [`AttrTypeMismatch`] when `attrs`'s variant disagrees with `self.value_type`.
+    pub fn with_attrs(mut self, attrs: Attrs) -> Result<Self, AttrTypeMismatch> {
+        if attrs.matches(self.value_type) {
+            self.attrs = attrs;
+            Ok(self)
+        } else {
+            Err(AttrTypeMismatch {
+                value_type: self.value_type,
+            })
+        }
+    }
+
+    /// Attach the source IRI (builder style).
+    #[must_use]
+    pub fn with_iri(mut self, iri: impl Into<Arc<str>>) -> Self {
+        self.iri = Some(iri.into());
+        self
+    }
 }
 
 /// A resolved, ground parameter/constant table for one block instance (D5: parameters are
@@ -227,6 +426,10 @@ pub struct BlockInstance {
     pub params: ParamTable,
     /// Declaration order of the instance — the tie-break key for the deterministic sort (D6).
     pub decl_order: u32,
+    /// Source IRI — the `@id` — of this *instance* in the originating CXF document, if any.
+    /// Named to contrast with `class_iri` (its `@type`/class), so the two IRIs never get
+    /// confused at call sites. `None` for hand-built models.
+    pub instance_iri: Option<Arc<str>>,
 }
 
 /// A single-assignment connection: exactly one output drives one input element (§7.10).
@@ -251,6 +454,11 @@ pub struct ModelGraph {
     pub connectors: Vec<Connector>,
     /// Output→input dataflow edges.
     pub connections: Vec<Connection>,
+    /// Input connectors driven from **outside** the model — top-composite boundary inputs, elided
+    /// per the M1 boundary-input rule (`_spec/11-m1-cxf-plan.md` AD-2). These legally have
+    /// in-degree 0; `oce-validate` treats an in-degree-0 input that is **not** listed here as a
+    /// single-assignment error. Empty for a fully-internal hand-built model.
+    pub external_inputs: Vec<ConnectorId>,
 }
 
 /// Short alias for the scheduler-facing view of [`ModelGraph`] (`01` §3). Same in-memory type.
@@ -319,5 +527,104 @@ mod tests {
                 .zero_value()
                 .bit_eq(&Value::Boolean(false))
         );
+    }
+
+    #[test]
+    fn real_attrs_accessor_defaults() {
+        let a = RealAttrs::default();
+        assert_eq!(a.unit(), "");
+        assert_eq!(a.quantity(), "");
+        assert_eq!(a.display_unit(), "");
+        // Exact float comparison via bit pattern (the crate convention; avoids float_cmp).
+        assert_eq!(a.min().to_bits(), f64::NEG_INFINITY.to_bits());
+        assert_eq!(a.max().to_bits(), f64::INFINITY.to_bits());
+        assert_eq!(a.nominal().to_bits(), 1.0_f64.to_bits());
+
+        let b = RealAttrs {
+            unit: Some(Arc::from("K")),
+            min: Some(0.0),
+            ..RealAttrs::default()
+        };
+        assert_eq!(b.unit(), "K");
+        assert_eq!(b.min().to_bits(), 0.0_f64.to_bits());
+        assert_eq!(b.max().to_bits(), f64::INFINITY.to_bits()); // still default
+    }
+
+    #[test]
+    fn int_attrs_accessor_defaults() {
+        let a = IntAttrs::default();
+        assert_eq!(a.min(), -2_147_483_648);
+        assert_eq!(a.max(), 2_147_483_647);
+        let b = IntAttrs {
+            min: Some(1),
+            max: Some(10),
+        };
+        assert_eq!((b.min(), b.max()), (1, 10));
+    }
+
+    #[test]
+    fn attrs_default_for_matches_value_type() {
+        for vt in [
+            ValueType::Real,
+            ValueType::Integer,
+            ValueType::Boolean,
+            ValueType::String,
+            ValueType::Enum(EnumClassId(0)),
+        ] {
+            assert!(
+                Attrs::default_for(vt).matches(vt),
+                "default mismatch for {vt:?}"
+            );
+        }
+        // Cross-type tag mismatch is rejected.
+        assert!(!Attrs::default_for(ValueType::Real).matches(ValueType::Integer));
+        assert!(Attrs::default_for(ValueType::Real).as_real().is_some());
+        assert!(
+            Attrs::default_for(ValueType::Integer)
+                .as_integer()
+                .is_some()
+        );
+        assert!(Attrs::default_for(ValueType::Boolean).as_real().is_none());
+    }
+
+    #[test]
+    fn connector_new_defaults_and_builders() {
+        let c = Connector::new(ConnectorId(3), BlockId(1), Dir::In, ValueType::Real, 3);
+        assert_eq!(c.id, ConnectorId(3));
+        assert_eq!(c.decl_order, 3);
+        assert!(c.attrs.matches(ValueType::Real));
+        assert_eq!(c.iri, None);
+
+        let c2 = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Integer, 0)
+            .with_attrs(Attrs::Integer(IntAttrs {
+                min: Some(0),
+                max: Some(5),
+            }))
+            .expect("matching Integer attrs must be accepted")
+            .with_iri("http://example.org#Seq.b.y");
+        assert_eq!(c2.attrs.as_integer().and_then(|a| a.max), Some(5));
+        assert_eq!(c2.iri.as_deref(), Some("http://example.org#Seq.b.y"));
+    }
+
+    #[test]
+    fn connector_with_attrs_rejects_tag_mismatch() {
+        // R5: attaching a mismatched-variant attr set through the builder path is rejected.
+        let real = Connector::new(ConnectorId(0), BlockId(0), Dir::In, ValueType::Real, 0);
+        assert!(
+            real.clone()
+                .with_attrs(Attrs::Real(RealAttrs::default()))
+                .is_ok()
+        );
+        let err = real
+            .with_attrs(Attrs::Integer(IntAttrs::default()))
+            .unwrap_err();
+        assert_eq!(err.value_type, ValueType::Real);
+    }
+
+    #[test]
+    fn model_graph_external_inputs_defaults_empty() {
+        let m = ModelGraph::new();
+        assert!(m.external_inputs.is_empty());
+        assert!(m.blocks.is_empty() && m.connectors.is_empty() && m.connections.is_empty());
     }
 }
