@@ -55,6 +55,11 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: short
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  # SINGLE SOURCE OF TRUTH for the gate-only nightly (one leg of the COMPAT TRIPLE pinned in
+  # crates/oce-api/Cargo.toml). Consumed below by the install step (as `$NIGHTLY`) and by the
+  # surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so the two cannot drift. A plain
+  # workflow env var, not `github.event.*` — safe to read inside `run:`. Bump here + re-bless.
+  NIGHTLY: nightly-2026-05-01
 
 permissions:
   contents: read
@@ -67,6 +72,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.95.0
+      # Gate-only nightly for the `cargo public-api` surface snapshot (crates/oce-api/tests/
+      # public_api.rs, exit #7). Installed but NOT made the default — the workspace still builds on
+      # 1.95.0 above; the test shells out to THIS exact toolchain to emit rustdoc JSON. It is one leg
+      # of the (public-api, rustdoc-json, nightly) COMPAT TRIPLE pinned in crates/oce-api/Cargo.toml
+      # (a format_version skew fails the JSON parse); bump `$NIGHTLY` (above) + all three together
+      # and re-bless the baseline.
+      - name: install gate-only nightly (cargo public-api)
+        run: rustup toolchain install "$NIGHTLY" --profile minimal --no-self-update
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
@@ -74,11 +87,34 @@ jobs:
       # Unit + integration tests. `--no-tests=fail` makes the hard-fail-on-empty intent
       # explicit (nextest's default is `auto`, which only *happens* to resolve to fail for a
       # whole-workspace run — pinning it keeps the gate correct if the invocation ever narrows).
+      # The public-api snapshot test SKIPS here (unarmed) — it gets its own step below.
       - name: cargo nextest run (unit + integration)
         run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
       # Doctests — the second mandatory step, since nextest does not run doctests.
       - name: cargo test --doc (doctests)
         run: cargo test --workspace --doc --locked
+      # Public-API surface gate (exit #7 surface-enumeration). Runs as its OWN step under the
+      # dedicated `public-api` nextest profile (.config/nextest.toml) — a long slow-timeout so the
+      # nested cold `cargo +nightly rustdoc` build is not killed by the `ci` profile's 120s
+      # terminate-after, while `--no-tests=fail` HARD-FAILS if the test ever vanishes (rename /
+      # delete / #[ignore] / filter-miss), which a raw `cargo test` would let pass silently green.
+      #
+      # ARMING (B3 — the gate's highest-stakes property), two interlocking env vars, DO NOT REMOVE:
+      #   * OCE_PUBLIC_API_NIGHTLY — names the nightly to shell out to (= the single-source `$NIGHTLY`
+      #     installed above), and ARMS the snapshot; unset, the test skips.
+      #   * OCE_REQUIRE_SURFACE_CHECK=1 — makes a missing/empty nightly a HARD PANIC, not a silent
+      #     skip. So dropping the arming env from THIS step turns the gate RED, never green. It is set
+      #     only here, so the workspace-wide nextest step above still skips this test unarmed.
+      # The test fails hard on any tooling error and diffs oce_api's public surface against the
+      # blessed crates/oce-api/tests/public-api.txt.
+      - name: cargo public-api surface gate
+        env:
+          OCE_PUBLIC_API_NIGHTLY: ${{ env.NIGHTLY }}
+          OCE_REQUIRE_SURFACE_CHECK: "1"
+        run: >-
+          cargo nextest run -p oce-api
+          -E 'test(public_api_surface_matches_blessed_baseline)'
+          --profile public-api --locked --no-tests=fail
 
   fmt:
     name: fmt
