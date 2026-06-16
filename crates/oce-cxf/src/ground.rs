@@ -38,7 +38,9 @@ pub(crate) enum GroundErr {
     UnknownDatatype(String),
     /// An `Expr` binding failed to evaluate to a ground value (unbound symbol, type error, …).
     Expr(oce_expr::ExprError),
-    /// An `Expr` evaluated to a non-scalar (reserved; the scalar M1 subset never produces this).
+    /// The binding did not ground to a scalar — either an `Expr` that evaluated to a non-scalar
+    /// (reserved; the scalar M1 subset never produces this) or a `List` (array) value on a
+    /// non-array parameter node.
     NonScalar,
 }
 
@@ -55,7 +57,7 @@ impl fmt::Display for GroundErr {
             ),
             GroundErr::UnknownDatatype(dt) => write!(f, "unknown XSD datatype {dt}"),
             GroundErr::Expr(e) => write!(f, "expression binding did not ground: {e}"),
-            GroundErr::NonScalar => f.write_str("expression bound to a non-scalar value"),
+            GroundErr::NonScalar => f.write_str("binding did not ground to a scalar value"),
         }
     }
 }
@@ -84,6 +86,10 @@ pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value,
             Ok(_) => Err(GroundErr::NonScalar),
             Err(e) => Err(GroundErr::Expr(e)),
         },
+        // A `List` is an array value. The resolver decodes an array-parameter's `List` per-element
+        // (M1-PR-9, §3.6.1) BEFORE calling this — so a `List` reaching here is an array value on a
+        // non-array (scalar) parameter node: a malformed binding, reported as a typed failure.
+        CxfValue::List(_) => Err(GroundErr::NonScalar),
     }
 }
 

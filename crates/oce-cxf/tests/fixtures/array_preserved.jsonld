@@ -1,0 +1,40 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#A",
+      "@type": "S231:Block",
+      "S231:label": "A",
+      "S231:containsBlock": [ { "@id": "http://example.org#A.con" } ],
+      "S231:hasOutput": { "@id": "http://example.org#A.yOut" }
+    },
+
+    {
+      "@id": "http://example.org#A.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#A.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#A.con.y" }
+    },
+    { "@id": "http://example.org#A.con.k",
+      "S231:label": "k[2]",
+      "S231:isArray": true,
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(2)",
+      "S231:value": [
+        { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+        { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+      ] },
+    { "@id": "http://example.org#A.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#A.yOut" } },
+
+    { "@id": "http://example.org#A.yOut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" } }
+  ]
+}
