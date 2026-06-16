@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 /// A stable, content-addressable domain key for any storable element — the IRI/dotted-path
 /// identity from CDL/CXF (FRAME §2). It **never** carries an adapter handle (Part 1 §1).
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub struct DomainKey(pub Box<str>);
 
 impl DomainKey {
