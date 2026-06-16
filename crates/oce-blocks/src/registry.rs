@@ -79,6 +79,13 @@ fn find<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
 fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
     match find(params, name) {
         Some(Value::Real(x)) => *x,
+        // Modelica/CDL Int→Real promotion (§7.3.4): an integer literal bound to a `Real` parameter
+        // is its real value. CXF may carry a bare integer (e.g. `y_start: 0`) for a Real parameter
+        // when no `isOfDataType` re-types it; WITHOUT this arm such a binding would silently fall
+        // through to `default`, discarding the author's value (a safety-critical silent wrong value
+        // — e.g. a non-zero `UnitDelay.y_start` initial state). `i64 as f64` is the lossless/CDL
+        // promotion for the ±2³¹ Integer domain.
+        Some(Value::Integer(i)) => *i as f64,
         _ => default,
     }
 }
