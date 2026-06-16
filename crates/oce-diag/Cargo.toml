@@ -1,0 +1,15 @@
+[package]
+name = "oce-diag"
+description = "Shared diagnostic vocabulary (Severity, DiagCode, Diagnostic) for the Open Control Engine's CXF resolver and validator (Group A; no store, no database, zero dependencies)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
