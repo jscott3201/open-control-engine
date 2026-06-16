@@ -1,0 +1,113 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#MinLoop",
+      "@type": "S231:Block",
+      "S231:label": "MinLoop",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#MinLoop.con" },
+        { "@id": "http://example.org#MinLoop.add" },
+        { "@id": "http://example.org#MinLoop.del" },
+        { "@id": "http://example.org#MinLoop.gain" },
+        { "@id": "http://example.org#MinLoop.gt" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#MinLoop.uSet" },
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.yAlarm" },
+      "cdlLineNumStart": 1
+    },
+
+    {
+      "@id": "http://example.org#MinLoop.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#MinLoop.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.con.y" }
+    },
+    { "@id": "http://example.org#MinLoop.con.k",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#MinLoop.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#MinLoop.add.u1" } },
+
+    {
+      "@id": "http://example.org#MinLoop.add",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#MinLoop.add.u1" },
+        { "@id": "http://example.org#MinLoop.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.add.y" }
+    },
+    { "@id": "http://example.org#MinLoop.add.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.add.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#MinLoop.del.u" } },
+
+    {
+      "@id": "http://example.org#MinLoop.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "del",
+      "S231:hasParameter": { "@id": "http://example.org#MinLoop.del.y_start" },
+      "S231:hasInput": { "@id": "http://example.org#MinLoop.del.u" },
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.del.y" }
+    },
+    { "@id": "http://example.org#MinLoop.del.y_start", "S231:value": 0 },
+    { "@id": "http://example.org#MinLoop.del.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.del.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#MinLoop.gain.u" },
+        { "@id": "http://example.org#MinLoop.gt.u1" }
+      ] },
+
+    {
+      "@id": "http://example.org#MinLoop.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasParameter": { "@id": "http://example.org#MinLoop.gain.k" },
+      "S231:hasInput": { "@id": "http://example.org#MinLoop.gain.u" },
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.gain.y" }
+    },
+    { "@id": "http://example.org#MinLoop.gain.k",
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#MinLoop.gain.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#MinLoop.add.u2" } },
+
+    {
+      "@id": "http://example.org#MinLoop.gt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "gt",
+      "S231:hasInput": [
+        { "@id": "http://example.org#MinLoop.gt.u1" },
+        { "@id": "http://example.org#MinLoop.gt.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#MinLoop.gt.y" }
+    },
+    { "@id": "http://example.org#MinLoop.gt.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.gt.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#MinLoop.gt.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#MinLoop.yAlarm" } },
+
+    { "@id": "http://example.org#MinLoop.uSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#MinLoop.gt.u2" } },
+    { "@id": "http://example.org#MinLoop.yAlarm",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } }
+  ]
+}
