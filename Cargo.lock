@@ -140,6 +140,7 @@ name = "oce-validate"
 version = "0.0.0"
 dependencies = [
  "oce-blocks",
+ "oce-diag",
  "oce-model",
  "thiserror",
 ]

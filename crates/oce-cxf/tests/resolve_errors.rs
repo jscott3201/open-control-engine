@@ -426,3 +426,18 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
         "IRI-less structural diagnostics must sort by ascending ConnectorId, not lexically"
     );
 }
+
+// ---- file-based rejection corpus (crates/oce-cxf/tests/fixtures/invalid/) -------------------
+
+/// The `double_driven.jsonld` fixture (two distinct constant outputs both driving `add.u1`) is
+/// rejected at ingest with a single-assignment error. This is the **file-based** complement to
+/// `doubly_driven_input_is_single_assignment` above (which duplicates one edge); here two separate
+/// drivers exercise the in-degree gate through the real `include_str!` byte path. The sibling
+/// `unit_mismatch` / `one_sided_unit` / `display_unit_divergence` fixtures are deferred until the
+/// resolver extracts §7.10 attributes — see `fixtures/invalid/README.md`.
+#[test]
+fn double_driven_fixture_is_rejected() {
+    let doc: Value = serde_json::from_str(include_str!("fixtures/invalid/double_driven.jsonld"))
+        .expect("fixture is valid JSON");
+    assert_error_code(&doc, DiagCode::SingleAssignment);
+}

@@ -1,0 +1,63 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#U",
+      "@type": "S231:Block",
+      "S231:label": "U",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#U.con" },
+        { "@id": "http://example.org#U.add" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#U.uIn" },
+      "S231:hasOutput": { "@id": "http://example.org#U.yOut" }
+    },
+
+    {
+      "@id": "http://example.org#U.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#U.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#U.con.y" }
+    },
+    { "@id": "http://example.org#U.con.k",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#U.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": { "@id": "http://example.org#U.add.u1" } },
+
+    {
+      "@id": "http://example.org#U.add",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#U.add.u1" },
+        { "@id": "http://example.org#U.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#U.add.y" }
+    },
+    { "@id": "http://example.org#U.add.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "degC" },
+    { "@id": "http://example.org#U.add.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#U.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#U.yOut" } },
+
+    { "@id": "http://example.org#U.uIn",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#U.add.u2" } },
+    { "@id": "http://example.org#U.yOut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" } }
+  ]
+}
