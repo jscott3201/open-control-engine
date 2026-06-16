@@ -21,10 +21,46 @@
 
 use std::sync::Arc;
 
-use oce_graph::{RunState, Schedule};
-use oce_model::ModelGraph;
+use oce_blocks::{Block, lookup};
+use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
+use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::{DomainKey, PointHandle, Store};
 use oce_store_mem::MemStore;
+
+/// An owned, enumerable snapshot of the model's **output** connector values after a tick (`08`
+/// R-API-4a). Refreshed in place each [`Engine::tick`]; no store-backend type ever appears here.
+#[derive(Clone, Debug, Default)]
+pub struct Outputs {
+    entries: Vec<(ConnectorId, Value)>,
+}
+
+impl Outputs {
+    /// The current value of output connector `c`, if it is an output of the loaded model.
+    ///
+    /// M0 does a linear scan (output sets are small); a dense-index lookup is a perf revision for
+    /// the hot read path (`08` §8) once large models exercise it.
+    #[must_use]
+    pub fn get(&self, c: ConnectorId) -> Option<&Value> {
+        self.entries.iter().find(|(id, _)| *id == c).map(|(_, v)| v)
+    }
+
+    /// Iterate `(connector, value)` for every output connector, in declaration order.
+    pub fn iter(&self) -> impl Iterator<Item = (ConnectorId, &Value)> {
+        self.entries.iter().map(|(id, v)| (*id, v))
+    }
+
+    /// Number of output connectors.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Whether the model has no output connectors.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB,
 /// D-OWNER-1). Not `Clone` (it owns mutable run state); shared across threads as
@@ -35,8 +71,14 @@ pub struct Engine<S: Store = MemStore> {
     model: Arc<ModelGraph>,
     /// The frozen Kahn schedule (D6; store-free).
     schedule: Schedule,
+    /// Instantiated, parameter-resolved block impls, indexed by `BlockId.0` (frozen at load).
+    blocks: Vec<Box<dyn Block>>,
     /// The sole mutable per-tick structure (`01` §8).
     state: RunState,
+    /// Snapshot of the model's output connector values, refreshed each [`Engine::tick`].
+    outputs: Outputs,
+    /// Previous tick's absolute model time — enforces the monotonic-`t_now` contract (CDL §7.16).
+    prev_t: Option<f64>,
     /// Hot point handles, pre-resolved at load (FRAME §3.3) — opaque, no DB type.
     handles: Vec<PointHandle>,
 }
@@ -59,9 +101,66 @@ impl<S: Store> Engine<S> {
             store,
             model: Arc::new(ModelGraph::new()),
             schedule: Schedule::default(),
+            blocks: Vec::new(),
             state: RunState::default(),
+            outputs: Outputs::default(),
+            prev_t: None,
             handles: Vec::new(),
         }
+    }
+
+    /// Load a **hand-built**, already-flattened [`ModelGraph`] directly — the M0 path with **no
+    /// parser** (CXF ingest in [`Engine::load_cxf`] will share this tail once it lands in M1).
+    ///
+    /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
+    /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
+    /// algebraic loops per CDL §7.16), allocates the parameter-seeded run state, snapshots the
+    /// output connectors, and opens the store's durability lifecycle (`recover`). Replaces all
+    /// per-run state, so calling it again reloads a fresh model.
+    ///
+    /// # Structural invariant
+    /// `model` must be a **flattened, structurally-valid** graph — dense in-range connector/block
+    /// ids and per-block input/output arities matching the registry impl's signature. M0's
+    /// hand-built path supplies this by construction; from M1 it is the loader/`oce-validate`
+    /// contract (CXF ingest). A structurally-malformed model is *not* host input this method
+    /// guards — id-range/arity validation is the loader's job, not re-checked on the BUILD hot path.
+    ///
+    /// # Errors
+    /// [`OcError::Load`] if a block's `class_iri` is not in the registry; [`OcError::Build`] if the
+    /// graph has an algebraic loop (connector- or block-granularity); [`OcError::Store`] if the
+    /// store's `recover` fails. Never panics on a structurally-valid model (R-ERR-1).
+    pub fn build_model_in_memory(&mut self, model: ModelGraph) -> Result<(), OcError> {
+        // Resolve every block instance to its native impl up front — an unknown class is a typed
+        // load error, never a panic (R-IMPL-2 / R-ERR-1).
+        let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(model.blocks.len());
+        for blk in &model.blocks {
+            let entry = lookup(&blk.class_iri).ok_or_else(|| OcError::Load {
+                detail: format!("unknown block class: {}", blk.class_iri),
+            })?;
+            blocks.push((entry.make)(&blk.params));
+        }
+        // BUILD (off the tick): schedule + state. A `?` on `compile` maps `BuildError` → `OcError`.
+        let schedule = compile(&model, &blocks)?;
+        let state = allocate_state(&model, &blocks);
+        // Snapshot the output connectors (declaration order is connector order in the arena).
+        let entries = model
+            .connectors
+            .iter()
+            .filter(|c| c.dir == Dir::Out)
+            .map(|c| (c.id, state.values[c.id.0 as usize].clone()))
+            .collect();
+        // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
+        self.store.recover()?;
+        self.model = Arc::new(model);
+        self.blocks = blocks;
+        self.schedule = schedule;
+        self.state = state;
+        self.outputs = Outputs { entries };
+        self.prev_t = None;
+        // M0 stages no store-backed inputs, so this path resolves no hot point handles; clear any
+        // from a prior load so a reload never carries stale handles (populated by `load_cxf`, M1).
+        self.handles = Vec::new();
+        Ok(())
     }
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (oce-cxf → oce-flatten
@@ -81,13 +180,64 @@ impl<S: Store> Engine<S> {
         unimplemented!("Engine::load_cxf — M0 scaffold (end-to-end ingest lands in M1)")
     }
 
-    /// Advance to absolute model time `t_now` (seconds; monotonic non-decreasing), apply staged
-    /// inputs, and evaluate one tick of the frozen schedule. The host owns cadence.
+    /// Advance to absolute model time `t_now` (seconds; finite, monotonic non-decreasing), evaluate
+    /// one tick of the frozen schedule, and refresh the [`Outputs`] snapshot. The host owns cadence.
+    ///
+    /// Returns a borrow of the refreshed outputs so a host can read results without a second call.
+    ///
+    /// **M0 scope:** no store-backed inputs are read yet, so this body does not acquire the
+    /// per-tick `store.snapshot()` nor stage handles (`08` §6.1 R-HOT-1) — input staging lands with
+    /// the IO inventory in M1. Today it only gathers connector values and evaluates the schedule.
     ///
     /// # Errors
-    /// Returns [`OcError::TimeRegression`] if `t_now` decreases, or a store error.
-    pub fn tick(&mut self, _t_now: f64) -> Result<(), OcError> {
-        unimplemented!("Engine::tick — M0 scaffold (hot-path tick lands with the M0 graph)")
+    /// Returns [`OcError::NonFiniteTime`] if `t_now` is NaN or infinite, or
+    /// [`OcError::TimeRegression`] if `t_now` is less than the previous tick's time (CDL §7.16
+    /// monotonic time). A rejected tick does not advance the model. Never panics (R-ERR-1).
+    pub fn tick(&mut self, t_now: f64) -> Result<&Outputs, OcError> {
+        // Reject non-finite time first: `NaN < prev` is always false, so a NaN would otherwise slip
+        // past the monotonic check, corrupt `state.t`/`prev_t`, and silently disable the guard.
+        if !t_now.is_finite() {
+            return Err(OcError::NonFiniteTime { now: t_now });
+        }
+        if let Some(prev) = self.prev_t
+            && t_now < prev
+        {
+            return Err(OcError::TimeRegression { now: t_now, prev });
+        }
+        // Scope the EvalContext so its borrows of `model`/`schedule`/`blocks`/`state` end before we
+        // mutate `prev_t`/`outputs` (disjoint fields, but the context holds three of them at once).
+        {
+            let mut ctx = EvalContext {
+                model: &self.model,
+                schedule: &self.schedule,
+                blocks: &self.blocks,
+                state: &mut self.state,
+            };
+            eval_tick(&mut ctx, t_now);
+        }
+        self.prev_t = Some(t_now);
+        for (id, value) in &mut self.outputs.entries {
+            *value = self.state.values[id.0 as usize].clone();
+        }
+        Ok(&self.outputs)
+    }
+
+    /// The frozen schedule (for trace tooling / determinism assertions; D6).
+    #[must_use]
+    pub fn schedule(&self) -> &Schedule {
+        &self.schedule
+    }
+
+    /// The most recent output-connector snapshot (also returned by [`Engine::tick`]).
+    #[must_use]
+    pub fn outputs(&self) -> &Outputs {
+        &self.outputs
+    }
+
+    /// Borrow the wired store backend (e.g. for model round-trips or durability hooks).
+    #[must_use]
+    pub fn store(&self) -> &S {
+        &self.store
     }
 }
 
@@ -117,6 +267,12 @@ pub enum OcError {
         /// Human-readable detail.
         detail: String,
     },
+    /// `t_now` was NaN or infinite (host error; CDL §7.16 time is a finite real).
+    #[error("non-finite tick time: t_now={now}")]
+    NonFiniteTime {
+        /// The supplied (non-finite) time.
+        now: f64,
+    },
     /// `t_now` went backwards (host error; CDL §7.16 monotonic time).
     #[error("time regression: t_now={now} < previous {prev}")]
     TimeRegression {
@@ -143,3 +299,6 @@ pub fn _doc_link_domain_key(k: DomainKey) -> DomainKey {
 /// Re-export of the store seam DTOs/traits (08 §11 R-PUB-1). No store-backend-specific type is
 /// ever re-exported here.
 pub use oce_store;
+
+#[cfg(test)]
+mod tests;
