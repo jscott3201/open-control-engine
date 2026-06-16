@@ -11,6 +11,21 @@
 use oce_blocks::Block;
 use oce_model::{ConnectorId, Model};
 
+/// Build the alias/gather map (`01` §9 note (i)): `driver_of[input] = output` for every connection
+/// target (single assignment guarantees one driver per input), and `driver_of[c] = c` for every
+/// undriven connector (outputs and host-staged external inputs read their own slot). The tick's
+/// `gather_inputs` then reads `values[driver_of[input]]` — no per-tick connection copies.
+#[must_use]
+pub fn build_driver_of(model: &Model) -> Vec<ConnectorId> {
+    let mut driver_of: Vec<ConnectorId> = (0..model.connectors.len() as u32)
+        .map(ConnectorId)
+        .collect();
+    for c in &model.connections {
+        driver_of[c.to.0 as usize] = c.from;
+    }
+    driver_of
+}
+
 /// The direct-feedthrough dependency graph over connector vertices (`01` §4.4), held as adjacency
 /// lists in dense `ConnectorId` space (0-based). An edge `u → v` means **`u` must be finalized
 /// before `v`**, so `v` depends on `u`.

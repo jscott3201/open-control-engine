@@ -4,13 +4,16 @@
 
 use std::sync::Arc;
 
-use oce_blocks::{Block, BlockKind, BlockSignature};
+use oce_blocks::{Block, BlockKind, BlockSignature, PortKind, lookup};
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, Model, ModelGraph, ParamTable,
-    ValueType,
+    Value, ValueType,
 };
 
-use crate::{BuildError, FeedthroughDag, Schedule, build_feedthrough_dag, compile};
+use crate::{
+    BuildError, EvalContext, FeedthroughDag, RunState, Schedule, allocate_state,
+    build_feedthrough_dag, compile, eval_tick,
+};
 
 // ---- test fixtures --------------------------------------------------------------------------
 
@@ -124,9 +127,78 @@ impl ModelBuilder {
         (id, inputs, outputs)
     }
 
+    /// Add a block from a real `oce-blocks` impl, deriving the connector arity and value types from
+    /// its signature (used by the TICK tests, which need real `step`/`emit`/`update` bodies).
+    fn block_real(&mut self, blk: Box<dyn Block>) -> (BlockId, Vec<ConnectorId>, Vec<ConnectorId>) {
+        let sig = blk.signature(); // &'static — does not borrow blk
+        let id = BlockId(self.model.blocks.len() as u32);
+        let push = |this: &mut Self, kind: PortKind, dir: Dir| {
+            let cid = ConnectorId(this.next_conn);
+            let value_type = match kind {
+                PortKind::Real => ValueType::Real,
+                PortKind::Integer => ValueType::Integer,
+                PortKind::Boolean => ValueType::Boolean,
+            };
+            this.model.connectors.push(Connector {
+                id: cid,
+                block: id,
+                dir,
+                value_type,
+                decl_order: this.next_conn,
+            });
+            this.next_conn += 1;
+            cid
+        };
+        let inputs: Vec<ConnectorId> = sig.inputs.iter().map(|&k| push(self, k, Dir::In)).collect();
+        let outputs: Vec<ConnectorId> = sig
+            .outputs
+            .iter()
+            .map(|&k| push(self, k, Dir::Out))
+            .collect();
+        self.model.blocks.push(BlockInstance {
+            id,
+            class_iri: Arc::from(sig.class_path),
+            inputs: inputs.clone(),
+            outputs: outputs.clone(),
+            params: ParamTable::default(),
+            decl_order: id.0,
+        });
+        self.blocks.push(blk);
+        (id, inputs, outputs)
+    }
+
     fn connect(&mut self, from: ConnectorId, to: ConnectorId) {
         self.model.connections.push(Connection { from, to });
     }
+}
+
+/// Construct a real block via the `oce-blocks` registry from a class path + named parameters.
+fn make(class: &str, params: &[(&str, Value)]) -> Box<dyn Block> {
+    let table = ParamTable {
+        values: params
+            .iter()
+            .map(|(n, v)| (Arc::from(*n), v.clone()))
+            .collect(),
+    };
+    let entry = lookup(class).unwrap_or_else(|| panic!("no registry entry for {class}"));
+    (entry.make)(&table)
+}
+
+/// Evaluate one tick (scopes the [`EvalContext`] so `state` is readable afterwards).
+fn tick_once(
+    model: &Model,
+    schedule: &Schedule,
+    blocks: &[Box<dyn Block>],
+    state: &mut RunState,
+    t: f64,
+) {
+    let mut ctx = EvalContext {
+        model,
+        schedule,
+        blocks,
+        state,
+    };
+    eval_tick(&mut ctx, t);
 }
 
 // ---- reference oracle (D6 (c), in-tree, no external graph crate) ---------------------------
@@ -333,6 +405,139 @@ fn output_less_sink_fires_after_its_inputs() {
     assert_eq!(sched.order.len(), 2);
     let pos = |id: BlockId| sched.order.iter().position(|&x| x == id).unwrap();
     assert!(pos(sink) > pos(src), "sink fires after its input source");
+}
+
+// ---- TICK tests (real blocks; the M0 determinism-harness preview) ---------------------------
+
+#[test]
+fn tick_feedforward_add_and_source_seed() {
+    let mut b = ModelBuilder::default();
+    let (_c0, _, o0) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(2.0))],
+    ));
+    let (_c1, _, o1) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(5.0))],
+    ));
+    let (_add, add_in, add_out) = b.block_real(make("CDL.Reals.Add", &[]));
+    b.connect(o0[0], add_in[0]);
+    b.connect(o1[0], add_in[1]);
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let mut state = allocate_state(&b.model, &b.blocks);
+    // Constant outputs are seeded before the first tick (§7 req 3).
+    assert!(state.values[o0[0].0 as usize].bit_eq(&Value::Real(2.0)));
+
+    tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
+    assert!(state.values[add_out[0].0 as usize].bit_eq(&Value::Real(7.0)));
+}
+
+/// Build the `S(t) = 1 + S(t-1)` UnitDelay feedback loop and return `add.out` after each of
+/// `n` ticks. With the seed `y_start = 0`, the correct one-tick-delay sequence is `1, 2, 3, …`.
+fn unit_delay_loop_sequence(n: usize) -> Vec<Value> {
+    let mut b = ModelBuilder::default();
+    let (_gen, _, g) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (_add, add_in, add_out) = b.block_real(make("CDL.Reals.Add", &[]));
+    let (_ud, ud_in, ud_out) = b.block_real(make(
+        "CDL.Discrete.UnitDelay",
+        &[("y_start", Value::Real(0.0))],
+    ));
+    b.connect(g[0], add_in[0]);
+    b.connect(ud_out[0], add_in[1]);
+    b.connect(add_out[0], ud_in[0]);
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let mut state = allocate_state(&b.model, &b.blocks);
+    (0..n)
+        .map(|k| {
+            tick_once(&b.model, &sched, &b.blocks, &mut state, k as f64);
+            state.values[add_out[0].0 as usize].clone()
+        })
+        .collect()
+}
+
+#[test]
+fn tick_unit_delay_feedback_is_a_one_tick_delay() {
+    // Proves the two-pass eval: an inline per-block update would give a TWO-tick delay here.
+    let seq = unit_delay_loop_sequence(4);
+    for (k, got) in seq.iter().enumerate() {
+        let want = Value::Real((k + 1) as f64);
+        assert!(got.bit_eq(&want), "tick {k}: got {got:?}, want {want:?}");
+    }
+}
+
+#[test]
+fn tick_is_deterministic_across_runs() {
+    let first = unit_delay_loop_sequence(6);
+    let second = unit_delay_loop_sequence(6);
+    assert_eq!(first.len(), second.len());
+    for (x, y) in first.iter().zip(&second) {
+        assert!(x.bit_eq(y), "non-deterministic: {x:?} vs {y:?}");
+    }
+}
+
+#[test]
+fn tick_loop_breaker_scheduled_before_its_producer() {
+    // Declare the UnitDelay FIRST so it sorts to the very front of `order` (its cut input gives it
+    // no emit-before edge) — i.e. the loop-breaker fires before its producer Add. The separate
+    // update pass must still yield the correct one-tick delay (S(t) = 1 + S(t-1)).
+    let mut b = ModelBuilder::default();
+    let (ud, ud_in, ud_out) = b.block_real(make(
+        "CDL.Discrete.UnitDelay",
+        &[("y_start", Value::Real(0.0))],
+    ));
+    let (_gen, _, g) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (add, add_in, add_out) = b.block_real(make("CDL.Reals.Add", &[]));
+    b.connect(g[0], add_in[0]);
+    b.connect(ud_out[0], add_in[1]);
+    b.connect(add_out[0], ud_in[0]);
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let pos = |id: BlockId| sched.order.iter().position(|&x| x == id).unwrap();
+    assert!(
+        pos(ud) < pos(add),
+        "the loop-breaker is scheduled before its producer"
+    );
+
+    let mut state = allocate_state(&b.model, &b.blocks);
+    for k in 0..4u32 {
+        tick_once(&b.model, &sched, &b.blocks, &mut state, f64::from(k));
+        let want = Value::Real(f64::from(k + 1));
+        let got = &state.values[add_out[0].0 as usize];
+        assert!(got.bit_eq(&want), "tick {k}: got {got:?}, want {want:?}");
+    }
+}
+
+#[test]
+fn tick_pre_boolean_toggle_loop() {
+    // pre.out → not.in ; not.out → pre.in. Pre cuts the loop; seed false → output toggles.
+    let mut b = ModelBuilder::default();
+    let (_pre, pre_in, pre_out) = b.block_real(make(
+        "CDL.Logical.Pre",
+        &[("pre_u_start", Value::Boolean(false))],
+    ));
+    let (_not, not_in, not_out) = b.block_real(make("CDL.Logical.Not", &[]));
+    b.connect(pre_out[0], not_in[0]);
+    b.connect(not_out[0], pre_in[0]);
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let mut state = allocate_state(&b.model, &b.blocks);
+    let expected = [false, true, false, true];
+    for (k, exp) in expected.iter().enumerate() {
+        tick_once(&b.model, &sched, &b.blocks, &mut state, k as f64);
+        let got = &state.values[pre_out[0].0 as usize];
+        assert!(
+            got.bit_eq(&Value::Boolean(*exp)),
+            "tick {k}: got {got:?}, want {exp}"
+        );
+    }
 }
 
 #[test]
