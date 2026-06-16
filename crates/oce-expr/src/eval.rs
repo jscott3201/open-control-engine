@@ -1,0 +1,358 @@
+//! Tree-walking evaluator for the scalar CDL binding subset (`02` §7).
+//!
+//! Pure and total: every path returns `Ok` or a typed [`ExprError`] — never a panic, never an
+//! `unwrap` on a value. Integer arithmetic is checked (overflow → [`ExprError::DomainError`]
+//! rather than a debug-mode panic or a release-mode silent wrap). CDL numeric promotion (§7.1):
+//! `Integer op Integer → Integer` for `+ - *`; `/` is always `Real`; any `Real` operand promotes.
+
+use oce_model::Value;
+
+use crate::{BinOp, Builtin, BuiltinConst, EvalResult, ExprAst, ExprError, Scope, UnOp};
+
+/// A numeric operand — Integer or Real — extracted from a [`Value`] for arithmetic.
+#[derive(Clone, Copy)]
+enum Num {
+    /// An integer operand.
+    I(i64),
+    /// A real operand.
+    R(f64),
+}
+
+impl Num {
+    fn as_f64(self) -> f64 {
+        match self {
+            Num::I(v) => v as f64,
+            Num::R(v) => v,
+        }
+    }
+}
+
+/// The static type name of a [`Value`], for [`ExprError::TypeError`] reporting.
+fn type_name(v: &Value) -> &'static str {
+    match v {
+        Value::Real(_) => "Real",
+        Value::Integer(_) => "Integer",
+        Value::Boolean(_) => "Boolean",
+        Value::String(_) => "String",
+        Value::Enum { .. } => "Enumeration",
+    }
+}
+
+/// Extract a numeric operand, or a `TypeError` expecting a number.
+fn num_of(v: &Value) -> Result<Num, ExprError> {
+    match v {
+        Value::Real(r) => Ok(Num::R(*r)),
+        Value::Integer(i) => Ok(Num::I(*i)),
+        other => Err(ExprError::TypeError {
+            expected: "Real or Integer",
+            found: type_name(other),
+        }),
+    }
+}
+
+/// Extract a boolean operand, or a `TypeError` expecting a Boolean.
+fn bool_of(v: &Value) -> Result<bool, ExprError> {
+    match v {
+        Value::Boolean(b) => Ok(*b),
+        other => Err(ExprError::TypeError {
+            expected: "Boolean",
+            found: type_name(other),
+        }),
+    }
+}
+
+/// Ground value of a named CDL constant (Buildings `CDL.Constants`; see [`BuiltinConst`]).
+fn const_value(c: BuiltinConst) -> f64 {
+    match c {
+        // 2·asin(1.0) is π to f64; use the library constant for bit-exactness.
+        BuiltinConst::Pi => std::f64::consts::PI,
+        BuiltinConst::Eps => 1e-15,
+        BuiltinConst::Small => 1e-60,
+        BuiltinConst::Inf => 1e60,
+    }
+}
+
+/// Evaluate `ast` to a scalar [`EvalResult`].
+pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    Ok(EvalResult::Scalar(eval_value(ast, scope)?))
+}
+
+/// Evaluate `ast` to a ground [`Value`].
+fn eval_value(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
+    match ast {
+        ExprAst::Real(r) => Ok(Value::Real(*r)),
+        ExprAst::Int(i) => Ok(Value::Integer(*i)),
+        ExprAst::Bool(b) => Ok(Value::Boolean(*b)),
+        ExprAst::Str(s) => Ok(Value::String(s.clone())),
+        ExprAst::Const(c) => Ok(Value::Real(const_value(*c))),
+        ExprAst::Ident(name) => match scope.lookup(name) {
+            Some(EvalResult::Scalar(v)) => Ok(v.clone()),
+            None => Err(ExprError::UnknownIdent(name.to_string())),
+        },
+        ExprAst::Unary(op, e) => eval_unary(*op, &eval_value(e, scope)?),
+        ExprAst::Binary(op, a, b) => {
+            eval_binary(*op, &eval_value(a, scope)?, &eval_value(b, scope)?)
+        }
+        ExprAst::Call(b, args) => eval_call(*b, args, scope),
+    }
+}
+
+fn eval_unary(op: UnOp, v: &Value) -> Result<Value, ExprError> {
+    match op {
+        UnOp::Neg => match num_of(v)? {
+            Num::I(i) => Ok(Value::Integer(
+                i.checked_neg()
+                    .ok_or(ExprError::DomainError("integer overflow in unary minus"))?,
+            )),
+            Num::R(r) => Ok(Value::Real(-r)),
+        },
+        UnOp::Not => Ok(Value::Boolean(!bool_of(v)?)),
+    }
+}
+
+fn eval_binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, ExprError> {
+    match op {
+        BinOp::Add | BinOp::Sub | BinOp::Mul => arith(op, num_of(a)?, num_of(b)?),
+        // The `/` operator always yields Real (§6.1); IEEE semantics for a zero divisor (the
+        // `div`/`mod`/`rem` built-ins are the ones that raise DivisionByZero).
+        BinOp::Div => Ok(Value::Real(num_of(a)?.as_f64() / num_of(b)?.as_f64())),
+        BinOp::Gt | BinOp::Ge | BinOp::Lt | BinOp::Le => {
+            Ok(Value::Boolean(compare_rel(op, num_of(a)?, num_of(b)?)))
+        }
+        BinOp::Eq | BinOp::Ne => {
+            let equal = values_equal(a, b)?;
+            Ok(Value::Boolean(if op == BinOp::Eq { equal } else { !equal }))
+        }
+        BinOp::And => Ok(Value::Boolean(bool_of(a)? && bool_of(b)?)),
+        BinOp::Or => Ok(Value::Boolean(bool_of(a)? || bool_of(b)?)),
+    }
+}
+
+/// Relational comparison (`> >= < <=`). Integer/Integer compares **exactly** as `i64`; any Real
+/// operand promotes both to `f64` (an `i64 as f64` of both operands would lose precision above
+/// 2^53, silently mis-ordering large integers — see the C1 regression test).
+fn compare_rel(op: BinOp, a: Num, b: Num) -> bool {
+    match (a, b) {
+        (Num::I(x), Num::I(y)) => match op {
+            BinOp::Gt => x > y,
+            BinOp::Ge => x >= y,
+            BinOp::Lt => x < y,
+            _ => x <= y,
+        },
+        _ => {
+            let (x, y) = (a.as_f64(), b.as_f64());
+            match op {
+                BinOp::Gt => x > y,
+                BinOp::Ge => x >= y,
+                BinOp::Lt => x < y,
+                _ => x <= y,
+            }
+        }
+    }
+}
+
+/// `+ - *` with CDL promotion: `Integer op Integer → Integer` (checked); any Real → Real.
+fn arith(op: BinOp, a: Num, b: Num) -> Result<Value, ExprError> {
+    match (a, b) {
+        (Num::I(x), Num::I(y)) => {
+            let r = match op {
+                BinOp::Add => x.checked_add(y),
+                BinOp::Sub => x.checked_sub(y),
+                _ => x.checked_mul(y),
+            };
+            Ok(Value::Integer(
+                r.ok_or(ExprError::DomainError("integer overflow"))?,
+            ))
+        }
+        _ => {
+            let (x, y) = (a.as_f64(), b.as_f64());
+            Ok(Value::Real(match op {
+                BinOp::Add => x + y,
+                BinOp::Sub => x - y,
+                _ => x * y,
+            }))
+        }
+    }
+}
+
+/// Equality for `==`/`<>`. Integer/Integer and String/String compare exactly; Booleans compare
+/// directly; a mixed numeric pair (Real with Integer or Real) compares by promoted `f64` value;
+/// any other pairing is a `TypeError`. Exact float comparison is intended — these are ground
+/// binding values, not measured signals (Enumeration equality lands with enum refs, M1-PR-9).
+#[allow(clippy::float_cmp)]
+fn values_equal(a: &Value, b: &Value) -> Result<bool, ExprError> {
+    match (a, b) {
+        (Value::Integer(x), Value::Integer(y)) => Ok(x == y),
+        (Value::Boolean(x), Value::Boolean(y)) => Ok(x == y),
+        (Value::String(x), Value::String(y)) => Ok(x == y),
+        (Value::Real(_) | Value::Integer(_), Value::Real(_) | Value::Integer(_)) => {
+            Ok(num_of(a)?.as_f64() == num_of(b)?.as_f64())
+        }
+        _ => Err(ExprError::TypeError {
+            expected: "two numbers, two Booleans, or two Strings",
+            found: type_name(a),
+        }),
+    }
+}
+
+/// Evaluate a built-in call. Arity is already checked by the parser; the slice patterns below
+/// keep evaluation panic-free even so (a mismatch yields a typed error, never an index panic).
+fn eval_call(b: Builtin, args: &[ExprAst], scope: &dyn Scope) -> Result<Value, ExprError> {
+    let vals: Vec<Value> = args
+        .iter()
+        .map(|a| eval_value(a, scope))
+        .collect::<Result<_, _>>()?;
+    match (b, vals.as_slice()) {
+        (Builtin::Abs, [v]) => builtin_abs(v),
+        (Builtin::Sign, [v]) => Ok(Value::Integer(builtin_sign(num_of(v)?))),
+        (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
+        (Builtin::Floor, [v]) => Ok(Value::Real(num_of(v)?.as_f64().floor())),
+        (Builtin::Ceil, [v]) => Ok(Value::Real(num_of(v)?.as_f64().ceil())),
+        (Builtin::Integer, [v]) => Ok(Value::Integer(builtin_integer(num_of(v)?))),
+        (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
+        (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
+        (Builtin::Rem, [x, y]) => builtin_rem(num_of(x)?, num_of(y)?),
+        (Builtin::MinScalar, [x, y]) => Ok(min_max(num_of(x)?, num_of(y)?, true)),
+        (Builtin::MaxScalar, [x, y]) => Ok(min_max(num_of(x)?, num_of(y)?, false)),
+        _ => Err(ExprError::DomainError(
+            "built-in called with the wrong arity",
+        )),
+    }
+}
+
+fn builtin_abs(v: &Value) -> Result<Value, ExprError> {
+    match num_of(v)? {
+        Num::I(i) => Ok(Value::Integer(
+            i.checked_abs()
+                .ok_or(ExprError::DomainError("integer overflow in abs"))?,
+        )),
+        Num::R(r) => Ok(Value::Real(r.abs())),
+    }
+}
+
+/// `sign(v)` is **always Integer** (R10.3a) and `sign(0) == 0` — note `f64::signum(0.0) == 1.0`,
+/// so the zero case is handled explicitly rather than via `signum`.
+fn builtin_sign(n: Num) -> i64 {
+    let f = n.as_f64();
+    if f > 0.0 {
+        1
+    } else if f < 0.0 {
+        -1
+    } else {
+        0
+    }
+}
+
+fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
+    let f = n.as_f64();
+    if f < 0.0 {
+        Err(ExprError::DomainError("sqrt of a negative value"))
+    } else {
+        Ok(Value::Real(f.sqrt()))
+    }
+}
+
+/// `integer(x)` = `floor(x)` cast to Integer (R10.1). `as i64` saturates (never panics) on
+/// out-of-range or NaN.
+fn builtin_integer(n: Num) -> i64 {
+    match n {
+        Num::I(i) => i,
+        Num::R(r) => r.floor() as i64,
+    }
+}
+
+/// `div(x, y)` — truncate toward zero; Integer iff both operands Integer (R10.1/R10.3b).
+fn builtin_div(x: Num, y: Num) -> Result<Value, ExprError> {
+    match (x, y) {
+        (Num::I(a), Num::I(b)) => {
+            if b == 0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            a.checked_div(b)
+                .map(Value::Integer)
+                .ok_or(ExprError::DomainError("integer overflow in div"))
+        }
+        _ => {
+            let (a, b) = (x.as_f64(), y.as_f64());
+            if b == 0.0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            Ok(Value::Real((a / b).trunc()))
+        }
+    }
+}
+
+/// `mod(x, y)` = `x - floor(x/y)*y`, result has the sign of `y` (R10.2).
+fn builtin_mod(x: Num, y: Num) -> Result<Value, ExprError> {
+    match (x, y) {
+        (Num::I(a), Num::I(b)) => {
+            if b == 0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            // The intermediate `q*b` can overflow `i64` even when the true `mod` fits (e.g.
+            // `mod(i64::MIN, 3)`), so compute in `i128`; `|result| < |b| <= i64::MAX` always
+            // fits back into `i64`.
+            let (a, b) = (i128::from(a), i128::from(b));
+            let q = ifloordiv_i128(a, b);
+            Ok(Value::Integer((a - q * b) as i64))
+        }
+        _ => {
+            let (a, b) = (x.as_f64(), y.as_f64());
+            if b == 0.0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            Ok(Value::Real(a - (a / b).floor() * b))
+        }
+    }
+}
+
+/// `rem(x, y)` = `x - div(x,y)*y`, result has the sign of `x`, with `div(x,y)*y + rem == x`
+/// (R10.2). For integers this is Rust's `%` (dividend-signed remainder).
+fn builtin_rem(x: Num, y: Num) -> Result<Value, ExprError> {
+    match (x, y) {
+        (Num::I(a), Num::I(b)) => {
+            if b == 0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            a.checked_rem(b)
+                .map(Value::Integer)
+                .ok_or(ExprError::DomainError("integer overflow in rem"))
+        }
+        _ => {
+            let (a, b) = (x.as_f64(), y.as_f64());
+            if b == 0.0 {
+                return Err(ExprError::DivisionByZero);
+            }
+            Ok(Value::Real(a - (a / b).trunc() * b))
+        }
+    }
+}
+
+/// Integer floor division `floor(x / y)` in `i128` (caller guarantees `y != 0`). Differs from
+/// the `/` truncate-toward-zero quotient when the operands have opposite signs and the division
+/// is inexact. `i128` avoids any intermediate overflow over the `i64` operand range.
+fn ifloordiv_i128(x: i128, y: i128) -> i128 {
+    let q = x / y;
+    let r = x % y;
+    if r != 0 && ((r < 0) != (y < 0)) {
+        q - 1
+    } else {
+        q
+    }
+}
+
+/// Scalar `min`/`max`: Integer iff both Integer, else Real (promoted). `want_min` selects min.
+///
+/// A NaN operand (only reachable via a scope identifier already bound to `Real(NaN)`) follows
+/// `f64::min`/`f64::max`, which return the non-NaN operand — total and deterministic, never a
+/// panic. The same total/deterministic policy holds for NaN flowing through `floor`/`ceil` and
+/// the relational operators; ground binding values are not normally NaN.
+fn min_max(x: Num, y: Num, want_min: bool) -> Value {
+    match (x, y) {
+        (Num::I(a), Num::I(b)) => Value::Integer(if want_min { a.min(b) } else { a.max(b) }),
+        _ => {
+            let (a, b) = (x.as_f64(), y.as_f64());
+            Value::Real(if want_min { a.min(b) } else { a.max(b) })
+        }
+    }
+}
