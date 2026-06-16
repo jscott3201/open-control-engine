@@ -1,0 +1,950 @@
+#[non_exhaustive] pub enum oce_api::InputSource
+#[non_exhaustive] pub enum oce_api::OcError
+#[non_exhaustive] pub struct oce_api::LoadReport
+#[non_exhaustive] pub struct oce_api::TemplateRef
+impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::InputSource
+impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::OcError
+impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::SimSpec
+impl !core::panic::unwind_safe::UnwindSafe for oce_api::InputSource
+impl !core::panic::unwind_safe::UnwindSafe for oce_api::OcError
+impl !core::panic::unwind_safe::UnwindSafe for oce_api::SimSpec
+impl core::clone::Clone for oce_api::AssertEvent
+impl core::clone::Clone for oce_api::AssertLevel
+impl core::clone::Clone for oce_api::CollectSpec
+impl core::clone::Clone for oce_api::IoClass
+impl core::clone::Clone for oce_api::IoInventory
+impl core::clone::Clone for oce_api::IoSummary
+impl core::clone::Clone for oce_api::LoadReport
+impl core::clone::Clone for oce_api::OutputTrace
+impl core::clone::Clone for oce_api::Outputs
+impl core::clone::Clone for oce_api::ParamAttrs
+impl core::clone::Clone for oce_api::ParamTable
+impl core::clone::Clone for oce_api::PhysicalKind
+impl core::clone::Clone for oce_api::PointInfo
+impl core::clone::Clone for oce_api::RunMode
+impl core::clone::Clone for oce_api::SimMetrics
+impl core::clone::Clone for oce_api::StepReport
+impl core::clone::Clone for oce_api::TemplateRef
+impl core::clone::Clone for oce_api::TrendCfg
+impl core::cmp::Eq for oce_api::AssertLevel
+impl core::cmp::Eq for oce_api::IoClass
+impl core::cmp::Eq for oce_api::IoSummary
+impl core::cmp::Eq for oce_api::PhysicalKind
+impl core::cmp::Eq for oce_api::RunMode
+impl core::cmp::Eq for oce_api::TemplateRef
+impl core::cmp::Eq for oce_api::TrendCfg
+impl core::cmp::PartialEq for oce_api::AssertLevel
+impl core::cmp::PartialEq for oce_api::IoClass
+impl core::cmp::PartialEq for oce_api::IoSummary
+impl core::cmp::PartialEq for oce_api::ParamAttrs
+impl core::cmp::PartialEq for oce_api::PhysicalKind
+impl core::cmp::PartialEq for oce_api::PointInfo
+impl core::cmp::PartialEq for oce_api::RunMode
+impl core::cmp::PartialEq for oce_api::TemplateRef
+impl core::cmp::PartialEq for oce_api::TrendCfg
+impl core::convert::From<oce_cxf::CxfError> for oce_api::OcError
+impl core::convert::From<oce_flatten::FlattenError> for oce_api::OcError
+impl core::convert::From<oce_graph::BuildError> for oce_api::OcError
+impl core::convert::From<oce_store::StoreError> for oce_api::OcError
+impl core::convert::From<oce_validate::ValidationError> for oce_api::OcError
+impl core::default::Default for oce_api::AssertLevel
+impl core::default::Default for oce_api::IoInventory
+impl core::default::Default for oce_api::IoSummary
+impl core::default::Default for oce_api::LoadReport
+impl core::default::Default for oce_api::OutputTrace
+impl core::default::Default for oce_api::Outputs
+impl core::default::Default for oce_api::ParamTable
+impl core::default::Default for oce_api::RunMode
+impl core::default::Default for oce_api::SimMetrics
+impl core::default::Default for oce_api::StepReport
+impl core::error::Error for oce_api::OcError
+impl core::fmt::Debug for oce_api::AssertEvent
+impl core::fmt::Debug for oce_api::AssertLevel
+impl core::fmt::Debug for oce_api::CollectSpec
+impl core::fmt::Debug for oce_api::InputSource
+impl core::fmt::Debug for oce_api::IoClass
+impl core::fmt::Debug for oce_api::IoInventory
+impl core::fmt::Debug for oce_api::IoSummary
+impl core::fmt::Debug for oce_api::LoadReport
+impl core::fmt::Debug for oce_api::OcError
+impl core::fmt::Debug for oce_api::OutputTrace
+impl core::fmt::Debug for oce_api::Outputs
+impl core::fmt::Debug for oce_api::ParamAttrs
+impl core::fmt::Debug for oce_api::ParamTable
+impl core::fmt::Debug for oce_api::PhysicalKind
+impl core::fmt::Debug for oce_api::PointInfo
+impl core::fmt::Debug for oce_api::RunMode
+impl core::fmt::Debug for oce_api::SimMetrics
+impl core::fmt::Debug for oce_api::SimSpec
+impl core::fmt::Debug for oce_api::StepReport
+impl core::fmt::Debug for oce_api::TemplateRef
+impl core::fmt::Debug for oce_api::TrendCfg
+impl core::fmt::Display for oce_api::OcError
+impl core::hash::Hash for oce_api::TemplateRef
+impl core::marker::Copy for oce_api::AssertLevel
+impl core::marker::Copy for oce_api::IoClass
+impl core::marker::Copy for oce_api::IoSummary
+impl core::marker::Copy for oce_api::PhysicalKind
+impl core::marker::Copy for oce_api::RunMode
+impl core::marker::Copy for oce_api::TrendCfg
+impl core::marker::Freeze for oce_api::AssertEvent
+impl core::marker::Freeze for oce_api::AssertLevel
+impl core::marker::Freeze for oce_api::CollectSpec
+impl core::marker::Freeze for oce_api::InputSource
+impl core::marker::Freeze for oce_api::IoClass
+impl core::marker::Freeze for oce_api::IoInventory
+impl core::marker::Freeze for oce_api::IoSummary
+impl core::marker::Freeze for oce_api::LoadReport
+impl core::marker::Freeze for oce_api::OcError
+impl core::marker::Freeze for oce_api::OutputTrace
+impl core::marker::Freeze for oce_api::Outputs
+impl core::marker::Freeze for oce_api::ParamAttrs
+impl core::marker::Freeze for oce_api::ParamTable
+impl core::marker::Freeze for oce_api::PhysicalKind
+impl core::marker::Freeze for oce_api::PointInfo
+impl core::marker::Freeze for oce_api::RunMode
+impl core::marker::Freeze for oce_api::SimMetrics
+impl core::marker::Freeze for oce_api::SimSpec
+impl core::marker::Freeze for oce_api::StepReport
+impl core::marker::Freeze for oce_api::TemplateRef
+impl core::marker::Freeze for oce_api::TrendCfg
+impl core::marker::Send for oce_api::AssertEvent
+impl core::marker::Send for oce_api::AssertLevel
+impl core::marker::Send for oce_api::CollectSpec
+impl core::marker::Send for oce_api::InputSource
+impl core::marker::Send for oce_api::IoClass
+impl core::marker::Send for oce_api::IoInventory
+impl core::marker::Send for oce_api::IoSummary
+impl core::marker::Send for oce_api::LoadReport
+impl core::marker::Send for oce_api::OcError
+impl core::marker::Send for oce_api::OutputTrace
+impl core::marker::Send for oce_api::Outputs
+impl core::marker::Send for oce_api::ParamAttrs
+impl core::marker::Send for oce_api::ParamTable
+impl core::marker::Send for oce_api::PhysicalKind
+impl core::marker::Send for oce_api::PointInfo
+impl core::marker::Send for oce_api::RunMode
+impl core::marker::Send for oce_api::SimMetrics
+impl core::marker::Send for oce_api::SimSpec
+impl core::marker::Send for oce_api::StepReport
+impl core::marker::Send for oce_api::TemplateRef
+impl core::marker::Send for oce_api::TrendCfg
+impl core::marker::StructuralPartialEq for oce_api::AssertLevel
+impl core::marker::StructuralPartialEq for oce_api::IoClass
+impl core::marker::StructuralPartialEq for oce_api::IoSummary
+impl core::marker::StructuralPartialEq for oce_api::ParamAttrs
+impl core::marker::StructuralPartialEq for oce_api::PhysicalKind
+impl core::marker::StructuralPartialEq for oce_api::PointInfo
+impl core::marker::StructuralPartialEq for oce_api::RunMode
+impl core::marker::StructuralPartialEq for oce_api::TemplateRef
+impl core::marker::StructuralPartialEq for oce_api::TrendCfg
+impl core::marker::Sync for oce_api::AssertEvent
+impl core::marker::Sync for oce_api::AssertLevel
+impl core::marker::Sync for oce_api::CollectSpec
+impl core::marker::Sync for oce_api::InputSource
+impl core::marker::Sync for oce_api::IoClass
+impl core::marker::Sync for oce_api::IoInventory
+impl core::marker::Sync for oce_api::IoSummary
+impl core::marker::Sync for oce_api::LoadReport
+impl core::marker::Sync for oce_api::OcError
+impl core::marker::Sync for oce_api::OutputTrace
+impl core::marker::Sync for oce_api::Outputs
+impl core::marker::Sync for oce_api::ParamAttrs
+impl core::marker::Sync for oce_api::ParamTable
+impl core::marker::Sync for oce_api::PhysicalKind
+impl core::marker::Sync for oce_api::PointInfo
+impl core::marker::Sync for oce_api::RunMode
+impl core::marker::Sync for oce_api::SimMetrics
+impl core::marker::Sync for oce_api::SimSpec
+impl core::marker::Sync for oce_api::StepReport
+impl core::marker::Sync for oce_api::TemplateRef
+impl core::marker::Sync for oce_api::TrendCfg
+impl core::marker::Unpin for oce_api::AssertEvent
+impl core::marker::Unpin for oce_api::AssertLevel
+impl core::marker::Unpin for oce_api::CollectSpec
+impl core::marker::Unpin for oce_api::InputSource
+impl core::marker::Unpin for oce_api::IoClass
+impl core::marker::Unpin for oce_api::IoInventory
+impl core::marker::Unpin for oce_api::IoSummary
+impl core::marker::Unpin for oce_api::LoadReport
+impl core::marker::Unpin for oce_api::OcError
+impl core::marker::Unpin for oce_api::OutputTrace
+impl core::marker::Unpin for oce_api::Outputs
+impl core::marker::Unpin for oce_api::ParamAttrs
+impl core::marker::Unpin for oce_api::ParamTable
+impl core::marker::Unpin for oce_api::PhysicalKind
+impl core::marker::Unpin for oce_api::PointInfo
+impl core::marker::Unpin for oce_api::RunMode
+impl core::marker::Unpin for oce_api::SimMetrics
+impl core::marker::Unpin for oce_api::SimSpec
+impl core::marker::Unpin for oce_api::StepReport
+impl core::marker::Unpin for oce_api::TemplateRef
+impl core::marker::Unpin for oce_api::TrendCfg
+impl core::marker::UnsafeUnpin for oce_api::AssertEvent
+impl core::marker::UnsafeUnpin for oce_api::AssertLevel
+impl core::marker::UnsafeUnpin for oce_api::CollectSpec
+impl core::marker::UnsafeUnpin for oce_api::InputSource
+impl core::marker::UnsafeUnpin for oce_api::IoClass
+impl core::marker::UnsafeUnpin for oce_api::IoInventory
+impl core::marker::UnsafeUnpin for oce_api::IoSummary
+impl core::marker::UnsafeUnpin for oce_api::LoadReport
+impl core::marker::UnsafeUnpin for oce_api::OcError
+impl core::marker::UnsafeUnpin for oce_api::OutputTrace
+impl core::marker::UnsafeUnpin for oce_api::Outputs
+impl core::marker::UnsafeUnpin for oce_api::ParamAttrs
+impl core::marker::UnsafeUnpin for oce_api::ParamTable
+impl core::marker::UnsafeUnpin for oce_api::PhysicalKind
+impl core::marker::UnsafeUnpin for oce_api::PointInfo
+impl core::marker::UnsafeUnpin for oce_api::RunMode
+impl core::marker::UnsafeUnpin for oce_api::SimMetrics
+impl core::marker::UnsafeUnpin for oce_api::SimSpec
+impl core::marker::UnsafeUnpin for oce_api::StepReport
+impl core::marker::UnsafeUnpin for oce_api::TemplateRef
+impl core::marker::UnsafeUnpin for oce_api::TrendCfg
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertEvent
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoClass
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoSummary
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadReport
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::OutputTrace
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::Outputs
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ParamAttrs
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ParamTable
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PhysicalKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::PointInfo
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::RunMode
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::SimMetrics
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::StepReport
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TemplateRef
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TrendCfg
+impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertEvent
+impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertLevel
+impl core::panic::unwind_safe::UnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::UnwindSafe for oce_api::IoClass
+impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
+impl core::panic::unwind_safe::UnwindSafe for oce_api::IoSummary
+impl core::panic::unwind_safe::UnwindSafe for oce_api::LoadReport
+impl core::panic::unwind_safe::UnwindSafe for oce_api::OutputTrace
+impl core::panic::unwind_safe::UnwindSafe for oce_api::Outputs
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ParamAttrs
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ParamTable
+impl core::panic::unwind_safe::UnwindSafe for oce_api::PhysicalKind
+impl core::panic::unwind_safe::UnwindSafe for oce_api::PointInfo
+impl core::panic::unwind_safe::UnwindSafe for oce_api::RunMode
+impl core::panic::unwind_safe::UnwindSafe for oce_api::SimMetrics
+impl core::panic::unwind_safe::UnwindSafe for oce_api::StepReport
+impl core::panic::unwind_safe::UnwindSafe for oce_api::TemplateRef
+impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
+impl oce_api::Engine<oce_store_mem::MemStore>
+impl oce_api::IoInventory
+impl oce_api::OutputTrace
+impl oce_api::Outputs
+impl oce_api::ParamTable
+impl oce_api::TemplateRef
+impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S> !core::panic::unwind_safe::RefUnwindSafe for oce_api::Engine<S>
+impl<S> !core::panic::unwind_safe::UnwindSafe for oce_api::Engine<S>
+impl<S> core::marker::Freeze for oce_api::Engine<S>
+impl<S> core::marker::Send for oce_api::Engine<S>
+impl<S> core::marker::Sync for oce_api::Engine<S>
+impl<S> core::marker::Unpin for oce_api::Engine<S>
+impl<S> core::marker::UnsafeUnpin for oce_api::Engine<S>
+impl<T, U> core::convert::Into<U> for oce_api::AssertEvent where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::AssertLevel where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::CollectSpec where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::Engine<S> where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::IoClass where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::IoInventory where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::IoSummary where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::LoadReport where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::OcError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::OutputTrace where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::Outputs where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ParamAttrs where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ParamTable where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::PhysicalKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::PointInfo where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::RunMode where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::SimMetrics where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::SimSpec where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::StepReport where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::TemplateRef where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::TrendCfg where U: core::convert::From<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::AssertEvent where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::AssertLevel where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::CollectSpec where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::Engine<S> where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::IoClass where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::IoInventory where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::IoSummary where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReport where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::OcError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::OutputTrace where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::Outputs where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ParamAttrs where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ParamTable where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::PhysicalKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::PointInfo where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::RunMode where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::SimMetrics where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::SimSpec where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::StepReport where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::TemplateRef where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::TrendCfg where U: core::convert::Into<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::AssertEvent where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::AssertLevel where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::CollectSpec where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::Engine<S> where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::IoClass where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::IoInventory where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::IoSummary where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::LoadReport where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::OcError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::OutputTrace where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::Outputs where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ParamAttrs where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ParamTable where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::PhysicalKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::PointInfo where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::RunMode where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::SimMetrics where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::SimSpec where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::StepReport where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::TemplateRef where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::TrendCfg where U: core::convert::TryFrom<T>
+impl<T> alloc::borrow::ToOwned for oce_api::AssertEvent where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::IoClass where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::IoInventory where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::IoSummary where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::LoadReport where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::OutputTrace where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::Outputs where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ParamAttrs where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::ParamTable where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::PhysicalKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::PointInfo where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::RunMode where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::SimMetrics where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::StepReport where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::TemplateRef where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::TrendCfg where T: core::clone::Clone
+impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::CollectSpec where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::Engine<S> where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::IoClass where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::IoInventory where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::IoSummary where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::LoadReport where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::OcError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::OutputTrace where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::Outputs where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ParamAttrs where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ParamTable where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::PhysicalKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::PointInfo where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::RunMode where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::SimMetrics where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::SimSpec where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::StepReport where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::TemplateRef where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::TrendCfg where T: 'static + ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::AssertEvent where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::Engine<S> where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::IoClass where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::IoInventory where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::IoSummary where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::LoadReport where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::OcError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::OutputTrace where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::Outputs where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ParamTable where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::PointInfo where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::RunMode where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::SimMetrics where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::SimSpec where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::StepReport where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::TemplateRef where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::TrendCfg where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::AssertEvent where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::AssertLevel where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::Engine<S> where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::IoClass where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::IoInventory where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::IoSummary where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReport where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::OcError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::OutputTrace where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::Outputs where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ParamAttrs where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ParamTable where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::PhysicalKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::PointInfo where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::RunMode where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::SimMetrics where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::SimSpec where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::StepReport where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::TemplateRef where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::TrendCfg where T: ?core::marker::Sized
+impl<T> core::clone::CloneToUninit for oce_api::AssertEvent where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::AssertLevel where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::CollectSpec where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::IoClass where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::IoInventory where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::IoSummary where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::LoadReport where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::OutputTrace where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::Outputs where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ParamAttrs where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::ParamTable where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::PhysicalKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::PointInfo where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::RunMode where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::SimMetrics where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::StepReport where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::TemplateRef where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::TrendCfg where T: core::clone::Clone
+impl<T> core::convert::From<T> for oce_api::AssertEvent
+impl<T> core::convert::From<T> for oce_api::AssertLevel
+impl<T> core::convert::From<T> for oce_api::CollectSpec
+impl<T> core::convert::From<T> for oce_api::Engine<S>
+impl<T> core::convert::From<T> for oce_api::InputSource
+impl<T> core::convert::From<T> for oce_api::IoClass
+impl<T> core::convert::From<T> for oce_api::IoInventory
+impl<T> core::convert::From<T> for oce_api::IoSummary
+impl<T> core::convert::From<T> for oce_api::LoadReport
+impl<T> core::convert::From<T> for oce_api::OcError
+impl<T> core::convert::From<T> for oce_api::OutputTrace
+impl<T> core::convert::From<T> for oce_api::Outputs
+impl<T> core::convert::From<T> for oce_api::ParamAttrs
+impl<T> core::convert::From<T> for oce_api::ParamTable
+impl<T> core::convert::From<T> for oce_api::PhysicalKind
+impl<T> core::convert::From<T> for oce_api::PointInfo
+impl<T> core::convert::From<T> for oce_api::RunMode
+impl<T> core::convert::From<T> for oce_api::SimMetrics
+impl<T> core::convert::From<T> for oce_api::SimSpec
+impl<T> core::convert::From<T> for oce_api::StepReport
+impl<T> core::convert::From<T> for oce_api::TemplateRef
+impl<T> core::convert::From<T> for oce_api::TrendCfg
+pub enum oce_api::AssertLevel
+pub enum oce_api::CollectSpec
+pub enum oce_api::IoClass
+pub enum oce_api::PhysicalKind
+pub enum oce_api::RunMode
+pub fn oce_api::AssertEvent::borrow(&self) -> &T
+pub fn oce_api::AssertEvent::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::AssertEvent::clone(&self) -> oce_api::AssertEvent
+pub fn oce_api::AssertEvent::clone_into(&self, &mut T)
+pub fn oce_api::AssertEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::AssertEvent::from(T) -> T
+pub fn oce_api::AssertEvent::into(self) -> U
+pub fn oce_api::AssertEvent::to_owned(&self) -> T
+pub fn oce_api::AssertEvent::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::AssertEvent::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::AssertEvent::type_id(&self) -> core::any::TypeId
+pub fn oce_api::AssertLevel::borrow(&self) -> &T
+pub fn oce_api::AssertLevel::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::AssertLevel::clone(&self) -> oce_api::AssertLevel
+pub fn oce_api::AssertLevel::clone_into(&self, &mut T)
+pub fn oce_api::AssertLevel::default() -> oce_api::AssertLevel
+pub fn oce_api::AssertLevel::eq(&self, &oce_api::AssertLevel) -> bool
+pub fn oce_api::AssertLevel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::AssertLevel::from(T) -> T
+pub fn oce_api::AssertLevel::into(self) -> U
+pub fn oce_api::AssertLevel::to_owned(&self) -> T
+pub fn oce_api::AssertLevel::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::AssertLevel::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::AssertLevel::type_id(&self) -> core::any::TypeId
+pub fn oce_api::CollectSpec::borrow(&self) -> &T
+pub fn oce_api::CollectSpec::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::CollectSpec::clone(&self) -> oce_api::CollectSpec
+pub fn oce_api::CollectSpec::clone_into(&self, &mut T)
+pub fn oce_api::CollectSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::CollectSpec::from(T) -> T
+pub fn oce_api::CollectSpec::into(self) -> U
+pub fn oce_api::CollectSpec::to_owned(&self) -> T
+pub fn oce_api::CollectSpec::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::CollectSpec::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::CollectSpec::type_id(&self) -> core::any::TypeId
+pub fn oce_api::Engine<S>::borrow(&self) -> &T
+pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::Engine<S>::build_model_in_memory(&mut self, oce_model::ModelGraph) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::from(T) -> T
+pub fn oce_api::Engine<S>::get_output(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
+pub fn oce_api::Engine<S>::get_param(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
+pub fn oce_api::Engine<S>::halt(&mut self) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::into(self) -> U
+pub fn oce_api::Engine<S>::io(&self) -> &oce_api::IoInventory
+pub fn oce_api::Engine<S>::io_summary(&self) -> oce_api::IoSummary
+pub fn oce_api::Engine<S>::load_cxf(&mut self, &[u8]) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::load_from_semantic(&mut self, &oce_api::TemplateRef, &oce_store::SemanticQuery) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::load_modelica(&mut self, &std::path::Path) -> core::result::Result<oce_api::LoadReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
+pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
+pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
+pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>
+pub fn oce_api::Engine<S>::resume(&mut self) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::schedule(&self) -> &oce_graph::Schedule
+pub fn oce_api::Engine<S>::set_input(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::set_param(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::simulate(&mut self, &oce_api::SimSpec) -> core::result::Result<oce_api::SimMetrics, oce_api::OcError>
+pub fn oce_api::Engine<S>::step_realtime(&mut self, f64) -> core::result::Result<oce_api::StepReport, oce_api::OcError>
+pub fn oce_api::Engine<S>::store(&self) -> &S
+pub fn oce_api::Engine<S>::tick(&mut self, f64) -> core::result::Result<&oce_api::Outputs, oce_api::OcError>
+pub fn oce_api::Engine<S>::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::Engine<S>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::Engine<S>::type_id(&self) -> core::any::TypeId
+pub fn oce_api::Engine<S>::with_store(alloc::sync::Arc<S>) -> Self
+pub fn oce_api::Engine<oce_store_mem::MemStore>::in_memory() -> Self
+pub fn oce_api::InputSource::borrow(&self) -> &T
+pub fn oce_api::InputSource::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::InputSource::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::InputSource::from(T) -> T
+pub fn oce_api::InputSource::into(self) -> U
+pub fn oce_api::InputSource::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::InputSource::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::InputSource::type_id(&self) -> core::any::TypeId
+pub fn oce_api::IoClass::borrow(&self) -> &T
+pub fn oce_api::IoClass::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::IoClass::clone(&self) -> oce_api::IoClass
+pub fn oce_api::IoClass::clone_into(&self, &mut T)
+pub fn oce_api::IoClass::eq(&self, &oce_api::IoClass) -> bool
+pub fn oce_api::IoClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::IoClass::from(T) -> T
+pub fn oce_api::IoClass::into(self) -> U
+pub fn oce_api::IoClass::to_owned(&self) -> T
+pub fn oce_api::IoClass::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::IoClass::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::IoClass::type_id(&self) -> core::any::TypeId
+pub fn oce_api::IoInventory::borrow(&self) -> &T
+pub fn oce_api::IoInventory::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::IoInventory::clone(&self) -> oce_api::IoInventory
+pub fn oce_api::IoInventory::clone_into(&self, &mut T)
+pub fn oce_api::IoInventory::default() -> oce_api::IoInventory
+pub fn oce_api::IoInventory::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::IoInventory::from(T) -> T
+pub fn oce_api::IoInventory::get(&self, usize) -> core::option::Option<&oce_api::PointInfo>
+pub fn oce_api::IoInventory::into(self) -> U
+pub fn oce_api::IoInventory::is_empty(&self) -> bool
+pub fn oce_api::IoInventory::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = oce_api::PointInfo> + '_
+pub fn oce_api::IoInventory::len(&self) -> usize
+pub fn oce_api::IoInventory::to_owned(&self) -> T
+pub fn oce_api::IoInventory::to_vec(&self) -> alloc::vec::Vec<oce_api::PointInfo>
+pub fn oce_api::IoInventory::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::IoInventory::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::IoInventory::type_id(&self) -> core::any::TypeId
+pub fn oce_api::IoSummary::borrow(&self) -> &T
+pub fn oce_api::IoSummary::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::IoSummary::clone(&self) -> oce_api::IoSummary
+pub fn oce_api::IoSummary::clone_into(&self, &mut T)
+pub fn oce_api::IoSummary::default() -> oce_api::IoSummary
+pub fn oce_api::IoSummary::eq(&self, &oce_api::IoSummary) -> bool
+pub fn oce_api::IoSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::IoSummary::from(T) -> T
+pub fn oce_api::IoSummary::into(self) -> U
+pub fn oce_api::IoSummary::to_owned(&self) -> T
+pub fn oce_api::IoSummary::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::IoSummary::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::IoSummary::type_id(&self) -> core::any::TypeId
+pub fn oce_api::LoadReport::borrow(&self) -> &T
+pub fn oce_api::LoadReport::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::LoadReport::clone(&self) -> oce_api::LoadReport
+pub fn oce_api::LoadReport::clone_into(&self, &mut T)
+pub fn oce_api::LoadReport::default() -> oce_api::LoadReport
+pub fn oce_api::LoadReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::LoadReport::from(T) -> T
+pub fn oce_api::LoadReport::into(self) -> U
+pub fn oce_api::LoadReport::to_owned(&self) -> T
+pub fn oce_api::LoadReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::LoadReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::LoadReport::type_id(&self) -> core::any::TypeId
+pub fn oce_api::OcError::borrow(&self) -> &T
+pub fn oce_api::OcError::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::OcError::from(T) -> T
+pub fn oce_api::OcError::from(oce_cxf::CxfError) -> Self
+pub fn oce_api::OcError::from(oce_flatten::FlattenError) -> Self
+pub fn oce_api::OcError::from(oce_graph::BuildError) -> Self
+pub fn oce_api::OcError::from(oce_store::StoreError) -> Self
+pub fn oce_api::OcError::from(oce_validate::ValidationError) -> Self
+pub fn oce_api::OcError::into(self) -> U
+pub fn oce_api::OcError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+pub fn oce_api::OcError::to_string(&self) -> alloc::string::String
+pub fn oce_api::OcError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::OcError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::OcError::type_id(&self) -> core::any::TypeId
+pub fn oce_api::OutputTrace::borrow(&self) -> &T
+pub fn oce_api::OutputTrace::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::OutputTrace::clone(&self) -> oce_api::OutputTrace
+pub fn oce_api::OutputTrace::clone_into(&self, &mut T)
+pub fn oce_api::OutputTrace::column(&self, usize) -> core::option::Option<&[oce_model::Value]>
+pub fn oce_api::OutputTrace::columns(&self) -> &[alloc::string::String]
+pub fn oce_api::OutputTrace::default() -> oce_api::OutputTrace
+pub fn oce_api::OutputTrace::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::OutputTrace::from(T) -> T
+pub fn oce_api::OutputTrace::into(self) -> U
+pub fn oce_api::OutputTrace::rows(&self) -> usize
+pub fn oce_api::OutputTrace::times(&self) -> &[f64]
+pub fn oce_api::OutputTrace::to_owned(&self) -> T
+pub fn oce_api::OutputTrace::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::OutputTrace::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::OutputTrace::type_id(&self) -> core::any::TypeId
+pub fn oce_api::Outputs::borrow(&self) -> &T
+pub fn oce_api::Outputs::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::Outputs::clone(&self) -> oce_api::Outputs
+pub fn oce_api::Outputs::clone_into(&self, &mut T)
+pub fn oce_api::Outputs::default() -> oce_api::Outputs
+pub fn oce_api::Outputs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::Outputs::from(T) -> T
+pub fn oce_api::Outputs::get(&self, oce_model::ConnectorId) -> core::option::Option<&oce_model::Value>
+pub fn oce_api::Outputs::into(self) -> U
+pub fn oce_api::Outputs::is_empty(&self) -> bool
+pub fn oce_api::Outputs::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (oce_model::ConnectorId, &oce_model::Value)>
+pub fn oce_api::Outputs::len(&self) -> usize
+pub fn oce_api::Outputs::to_map(&self) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)>
+pub fn oce_api::Outputs::to_owned(&self) -> T
+pub fn oce_api::Outputs::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::Outputs::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::Outputs::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ParamAttrs::borrow(&self) -> &T
+pub fn oce_api::ParamAttrs::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ParamAttrs::clone(&self) -> oce_api::ParamAttrs
+pub fn oce_api::ParamAttrs::clone_into(&self, &mut T)
+pub fn oce_api::ParamAttrs::eq(&self, &oce_api::ParamAttrs) -> bool
+pub fn oce_api::ParamAttrs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ParamAttrs::from(T) -> T
+pub fn oce_api::ParamAttrs::into(self) -> U
+pub fn oce_api::ParamAttrs::to_owned(&self) -> T
+pub fn oce_api::ParamAttrs::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ParamAttrs::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ParamAttrs::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ParamTable::borrow(&self) -> &T
+pub fn oce_api::ParamTable::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ParamTable::clone(&self) -> oce_api::ParamTable
+pub fn oce_api::ParamTable::clone_into(&self, &mut T)
+pub fn oce_api::ParamTable::default() -> oce_api::ParamTable
+pub fn oce_api::ParamTable::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ParamTable::from(T) -> T
+pub fn oce_api::ParamTable::into(self) -> U
+pub fn oce_api::ParamTable::is_empty(&self) -> bool
+pub fn oce_api::ParamTable::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (alloc::string::String, oce_model::Value, oce_api::ParamAttrs)> + '_
+pub fn oce_api::ParamTable::len(&self) -> usize
+pub fn oce_api::ParamTable::to_owned(&self) -> T
+pub fn oce_api::ParamTable::to_vec(&self) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value, oce_api::ParamAttrs)>
+pub fn oce_api::ParamTable::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ParamTable::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ParamTable::type_id(&self) -> core::any::TypeId
+pub fn oce_api::PhysicalKind::borrow(&self) -> &T
+pub fn oce_api::PhysicalKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::PhysicalKind::clone(&self) -> oce_api::PhysicalKind
+pub fn oce_api::PhysicalKind::clone_into(&self, &mut T)
+pub fn oce_api::PhysicalKind::eq(&self, &oce_api::PhysicalKind) -> bool
+pub fn oce_api::PhysicalKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::PhysicalKind::from(T) -> T
+pub fn oce_api::PhysicalKind::into(self) -> U
+pub fn oce_api::PhysicalKind::to_owned(&self) -> T
+pub fn oce_api::PhysicalKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::PhysicalKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::PhysicalKind::type_id(&self) -> core::any::TypeId
+pub fn oce_api::PointInfo::borrow(&self) -> &T
+pub fn oce_api::PointInfo::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::PointInfo::clone(&self) -> oce_api::PointInfo
+pub fn oce_api::PointInfo::clone_into(&self, &mut T)
+pub fn oce_api::PointInfo::eq(&self, &oce_api::PointInfo) -> bool
+pub fn oce_api::PointInfo::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::PointInfo::from(T) -> T
+pub fn oce_api::PointInfo::into(self) -> U
+pub fn oce_api::PointInfo::to_owned(&self) -> T
+pub fn oce_api::PointInfo::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::PointInfo::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::PointInfo::type_id(&self) -> core::any::TypeId
+pub fn oce_api::RunMode::borrow(&self) -> &T
+pub fn oce_api::RunMode::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::RunMode::clone(&self) -> oce_api::RunMode
+pub fn oce_api::RunMode::clone_into(&self, &mut T)
+pub fn oce_api::RunMode::default() -> oce_api::RunMode
+pub fn oce_api::RunMode::eq(&self, &oce_api::RunMode) -> bool
+pub fn oce_api::RunMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::RunMode::from(T) -> T
+pub fn oce_api::RunMode::into(self) -> U
+pub fn oce_api::RunMode::to_owned(&self) -> T
+pub fn oce_api::RunMode::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::RunMode::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::RunMode::type_id(&self) -> core::any::TypeId
+pub fn oce_api::SimMetrics::borrow(&self) -> &T
+pub fn oce_api::SimMetrics::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::SimMetrics::clone(&self) -> oce_api::SimMetrics
+pub fn oce_api::SimMetrics::clone_into(&self, &mut T)
+pub fn oce_api::SimMetrics::default() -> oce_api::SimMetrics
+pub fn oce_api::SimMetrics::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::SimMetrics::from(T) -> T
+pub fn oce_api::SimMetrics::into(self) -> U
+pub fn oce_api::SimMetrics::to_owned(&self) -> T
+pub fn oce_api::SimMetrics::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::SimMetrics::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::SimMetrics::type_id(&self) -> core::any::TypeId
+pub fn oce_api::SimSpec::borrow(&self) -> &T
+pub fn oce_api::SimSpec::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::SimSpec::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::SimSpec::from(T) -> T
+pub fn oce_api::SimSpec::into(self) -> U
+pub fn oce_api::SimSpec::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::SimSpec::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::SimSpec::type_id(&self) -> core::any::TypeId
+pub fn oce_api::StepReport::borrow(&self) -> &T
+pub fn oce_api::StepReport::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::StepReport::clone(&self) -> oce_api::StepReport
+pub fn oce_api::StepReport::clone_into(&self, &mut T)
+pub fn oce_api::StepReport::default() -> oce_api::StepReport
+pub fn oce_api::StepReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::StepReport::from(T) -> T
+pub fn oce_api::StepReport::into(self) -> U
+pub fn oce_api::StepReport::to_owned(&self) -> T
+pub fn oce_api::StepReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::StepReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::StepReport::type_id(&self) -> core::any::TypeId
+pub fn oce_api::TemplateRef::borrow(&self) -> &T
+pub fn oce_api::TemplateRef::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::TemplateRef::clone(&self) -> oce_api::TemplateRef
+pub fn oce_api::TemplateRef::clone_into(&self, &mut T)
+pub fn oce_api::TemplateRef::eq(&self, &oce_api::TemplateRef) -> bool
+pub fn oce_api::TemplateRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::TemplateRef::from(T) -> T
+pub fn oce_api::TemplateRef::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_api::TemplateRef::into(self) -> U
+pub fn oce_api::TemplateRef::iri(&self) -> &str
+pub fn oce_api::TemplateRef::new(impl core::convert::Into<alloc::sync::Arc<str>>) -> Self
+pub fn oce_api::TemplateRef::to_owned(&self) -> T
+pub fn oce_api::TemplateRef::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::TemplateRef::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::TemplateRef::type_id(&self) -> core::any::TypeId
+pub fn oce_api::TrendCfg::borrow(&self) -> &T
+pub fn oce_api::TrendCfg::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::TrendCfg::clone(&self) -> oce_api::TrendCfg
+pub fn oce_api::TrendCfg::clone_into(&self, &mut T)
+pub fn oce_api::TrendCfg::eq(&self, &oce_api::TrendCfg) -> bool
+pub fn oce_api::TrendCfg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::TrendCfg::from(T) -> T
+pub fn oce_api::TrendCfg::into(self) -> U
+pub fn oce_api::TrendCfg::to_owned(&self) -> T
+pub fn oce_api::TrendCfg::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::TrendCfg::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::TrendCfg::type_id(&self) -> core::any::TypeId
+pub mod oce_api
+pub oce_api::AssertEvent::block: alloc::string::String
+pub oce_api::AssertEvent::level: oce_api::AssertLevel
+pub oce_api::AssertEvent::message: alloc::string::String
+pub oce_api::AssertEvent::t: f64
+pub oce_api::AssertLevel::Error
+pub oce_api::AssertLevel::Warning
+pub oce_api::CollectSpec::All
+pub oce_api::CollectSpec::All::stride: usize
+pub oce_api::CollectSpec::Named
+pub oce_api::CollectSpec::Named::points: alloc::vec::Vec<alloc::string::String>
+pub oce_api::CollectSpec::Named::stride: usize
+pub oce_api::CollectSpec::None
+pub oce_api::InputSource::Closure(alloc::boxed::Box<(dyn core::ops::function::Fn(f64) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)> + core::marker::Send + core::marker::Sync)>)
+pub oce_api::InputSource::Constant(alloc::vec::Vec<(alloc::string::String, oce_model::Value)>)
+pub oce_api::InputSource::Csv
+pub oce_api::InputSource::Csv::bindings: alloc::vec::Vec<(alloc::string::String, usize)>
+pub oce_api::InputSource::Csv::path: std::path::PathBuf
+pub oce_api::InputSource::None
+pub oce_api::IoClass::AnalogInput
+pub oce_api::IoClass::AnalogOutput
+pub oce_api::IoClass::DigitalInput
+pub oce_api::IoClass::DigitalOutput
+pub oce_api::IoClass::Network
+pub oce_api::IoSummary::analog_inputs: usize
+pub oce_api::IoSummary::analog_outputs: usize
+pub oce_api::IoSummary::digital_inputs: usize
+pub oce_api::IoSummary::digital_outputs: usize
+pub oce_api::IoSummary::network: usize
+pub oce_api::IoSummary::total: usize
+pub oce_api::LoadReport::block_count: usize
+pub oce_api::LoadReport::io: oce_api::IoSummary
+pub oce_api::LoadReport::model_id: oce_store::DomainKey
+pub oce_api::LoadReport::stateful_blocks: usize
+pub oce_api::LoadReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
+pub oce_api::OcError::Build(oce_graph::BuildError)
+pub oce_api::OcError::Cxf(oce_cxf::CxfError)
+pub oce_api::OcError::Flatten(oce_flatten::FlattenError)
+pub oce_api::OcError::InputType(alloc::string::String)
+pub oce_api::OcError::Load
+pub oce_api::OcError::Load::detail: alloc::string::String
+pub oce_api::OcError::NonFiniteTime
+pub oce_api::OcError::NonFiniteTime::now: f64
+pub oce_api::OcError::ParamRange
+pub oce_api::OcError::ParamRange::path: alloc::string::String
+pub oce_api::OcError::ParamStructural
+pub oce_api::OcError::ParamStructural::path: alloc::string::String
+pub oce_api::OcError::ParamType
+pub oce_api::OcError::ParamType::path: alloc::string::String
+pub oce_api::OcError::ParamWhileRunning
+pub oce_api::OcError::ParamWhileRunning::path: alloc::string::String
+pub oce_api::OcError::Store(oce_store::StoreError)
+pub oce_api::OcError::TimeRegression
+pub oce_api::OcError::TimeRegression::now: f64
+pub oce_api::OcError::TimeRegression::prev: f64
+pub oce_api::OcError::UnknownPoint(alloc::string::String)
+pub oce_api::OcError::Validate(oce_validate::ValidationError)
+pub oce_api::ParamAttrs::max: core::option::Option<f64>
+pub oce_api::ParamAttrs::min: core::option::Option<f64>
+pub oce_api::ParamAttrs::quantity: core::option::Option<alloc::string::String>
+pub oce_api::ParamAttrs::unit: core::option::Option<alloc::string::String>
+pub oce_api::ParamAttrs::value_type: oce_model::ValueType
+pub oce_api::PhysicalKind::Actuator
+pub oce_api::PhysicalKind::Sensor
+pub oce_api::PhysicalKind::SoftwarePoint
+pub oce_api::PointInfo::direction: oce_store::PointDirection
+pub oce_api::PointInfo::display_unit: core::option::Option<alloc::string::String>
+pub oce_api::PointInfo::hardwired: bool
+pub oce_api::PointInfo::in_pointlist: bool
+pub oce_api::PointInfo::io_class: oce_api::IoClass
+pub oce_api::PointInfo::max: core::option::Option<f64>
+pub oce_api::PointInfo::min: core::option::Option<f64>
+pub oce_api::PointInfo::path: alloc::string::String
+pub oce_api::PointInfo::physical: oce_api::PhysicalKind
+pub oce_api::PointInfo::quantity: core::option::Option<alloc::string::String>
+pub oce_api::PointInfo::trend: core::option::Option<oce_api::TrendCfg>
+pub oce_api::PointInfo::unit: core::option::Option<alloc::string::String>
+pub oce_api::PointInfo::value_type: oce_store::PointValueType
+pub oce_api::RunMode::Halted
+pub oce_api::RunMode::Running
+pub oce_api::SimMetrics::max_tick_nanos: u64
+pub oce_api::SimMetrics::ticks: u64
+pub oce_api::SimMetrics::trace: oce_api::OutputTrace
+pub oce_api::SimMetrics::wall_nanos: u64
+pub oce_api::SimSpec::collect: oce_api::CollectSpec
+pub oce_api::SimSpec::inputs: oce_api::InputSource
+pub oce_api::SimSpec::step: f64
+pub oce_api::SimSpec::t_start: f64
+pub oce_api::SimSpec::t_stop: f64
+pub oce_api::StepReport::asserts: alloc::vec::Vec<oce_api::AssertEvent>
+pub oce_api::StepReport::tick_nanos: u64
+pub oce_api::StepReport::written: usize
+pub oce_api::TrendCfg::enabled: bool
+pub oce_api::TrendCfg::interval: oce_store::TrendInterval
+pub struct oce_api::AssertEvent
+pub struct oce_api::Engine<S: oce_store::Store>
+pub struct oce_api::IoInventory
+pub struct oce_api::IoSummary
+pub struct oce_api::OutputTrace
+pub struct oce_api::Outputs
+pub struct oce_api::ParamAttrs
+pub struct oce_api::ParamTable
+pub struct oce_api::PointInfo
+pub struct oce_api::SimMetrics
+pub struct oce_api::SimSpec
+pub struct oce_api::StepReport
+pub struct oce_api::TrendCfg
+pub type oce_api::AssertEvent::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::AssertEvent::Error = core::convert::Infallible
+pub type oce_api::AssertEvent::Owned = T
+pub type oce_api::AssertLevel::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::AssertLevel::Error = core::convert::Infallible
+pub type oce_api::AssertLevel::Owned = T
+pub type oce_api::CollectSpec::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::CollectSpec::Error = core::convert::Infallible
+pub type oce_api::CollectSpec::Owned = T
+pub type oce_api::Engine<S>::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::Engine<S>::Error = core::convert::Infallible
+pub type oce_api::InputSource::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::InputSource::Error = core::convert::Infallible
+pub type oce_api::IoClass::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::IoClass::Error = core::convert::Infallible
+pub type oce_api::IoClass::Owned = T
+pub type oce_api::IoInventory::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::IoInventory::Error = core::convert::Infallible
+pub type oce_api::IoInventory::Owned = T
+pub type oce_api::IoSummary::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::IoSummary::Error = core::convert::Infallible
+pub type oce_api::IoSummary::Owned = T
+pub type oce_api::LoadReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::LoadReport::Error = core::convert::Infallible
+pub type oce_api::LoadReport::Owned = T
+pub type oce_api::OcError::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::OcError::Error = core::convert::Infallible
+pub type oce_api::OcResult<T> = core::result::Result<T, oce_api::OcError>
+pub type oce_api::OutputTrace::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::OutputTrace::Error = core::convert::Infallible
+pub type oce_api::OutputTrace::Owned = T
+pub type oce_api::Outputs::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::Outputs::Error = core::convert::Infallible
+pub type oce_api::Outputs::Owned = T
+pub type oce_api::ParamAttrs::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ParamAttrs::Error = core::convert::Infallible
+pub type oce_api::ParamAttrs::Owned = T
+pub type oce_api::ParamTable::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ParamTable::Error = core::convert::Infallible
+pub type oce_api::ParamTable::Owned = T
+pub type oce_api::PhysicalKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::PhysicalKind::Error = core::convert::Infallible
+pub type oce_api::PhysicalKind::Owned = T
+pub type oce_api::PointInfo::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::PointInfo::Error = core::convert::Infallible
+pub type oce_api::PointInfo::Owned = T
+pub type oce_api::RunMode::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::RunMode::Error = core::convert::Infallible
+pub type oce_api::RunMode::Owned = T
+pub type oce_api::SimMetrics::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::SimMetrics::Error = core::convert::Infallible
+pub type oce_api::SimMetrics::Owned = T
+pub type oce_api::SimSpec::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::SimSpec::Error = core::convert::Infallible
+pub type oce_api::StepReport::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::StepReport::Error = core::convert::Infallible
+pub type oce_api::StepReport::Owned = T
+pub type oce_api::TemplateRef::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::TemplateRef::Error = core::convert::Infallible
+pub type oce_api::TemplateRef::Owned = T
+pub type oce_api::TrendCfg::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::TrendCfg::Error = core::convert::Infallible
+pub type oce_api::TrendCfg::Owned = T
+pub unsafe fn oce_api::AssertEvent::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::AssertLevel::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::CollectSpec::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::IoClass::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::IoInventory::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::IoSummary::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::LoadReport::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::OutputTrace::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::Outputs::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ParamAttrs::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::ParamTable::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::PhysicalKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::PointInfo::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::RunMode::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::SimMetrics::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::StepReport::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::TemplateRef::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::TrendCfg::clone_to_uninit(&self, *mut u8)
+pub use oce_api::ConnectorId
+pub use oce_api::Diagnostic
+pub use oce_api::PointDirection
+pub use oce_api::PointValueType
+pub use oce_api::SemanticQuery
+pub use oce_api::TrendInterval
+pub use oce_api::Value
+pub use oce_api::ValueType
+pub use oce_api::oce_store
