@@ -82,8 +82,8 @@ impl<S: Store> Engine<S> {
         }
     }
 
-    /// Load a **hand-built**, already-flattened [`ModelGraph`] directly — the M0 path with **no
-    /// parser** (CXF ingest in [`Engine::load_cxf`] shares this tail).
+    /// Load a **hand-built**, already-flattened [`ModelGraph`] directly inside the crate — the M0 path
+    /// with **no parser** (CXF ingest in [`Engine::load_cxf`] shares this tail).
     ///
     /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
     /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
@@ -93,16 +93,19 @@ impl<S: Store> Engine<S> {
     /// fresh model.
     ///
     /// # Structural invariant
-    /// `model` must be a **flattened, structurally-valid** graph — dense in-range connector/block
-    /// ids and per-block input/output arities matching the registry impl's signature. M0's
-    /// hand-built path supplies this by construction; from M1 it is the loader/`oce-validate`
-    /// contract.
+    /// `model` must be flattened before this tail. The tail runs the pure `oce-validate` structural
+    /// gate before `oce-graph` consumes the graph, so malformed hand-built graphs become typed
+    /// [`OcError::Validate`] failures instead of reaching hot-path arena indexing.
     ///
     /// # Errors
-    /// [`OcError::Load`] if a block's `class_iri` is not in the registry; [`OcError::Build`] if the
-    /// graph has an algebraic loop; [`OcError::Store`] if the store's `recover` fails. Never panics
-    /// on a structurally-valid model (R-ERR-1).
-    pub fn build_model_in_memory(&mut self, model: ModelGraph) -> Result<(), OcError> {
+    /// [`OcError::Validate`] if the graph is malformed; [`OcError::Load`] if a block's `class_iri` is
+    /// not in the registry; [`OcError::Build`] if the graph has an algebraic loop; [`OcError::Store`]
+    /// if the store's `recover` fails. Never panics on host input covered by the validation seam
+    /// (R-ERR-1).
+    pub(crate) fn build_model_in_memory(&mut self, model: ModelGraph) -> Result<(), OcError> {
+        // Defense in depth for every in-crate caller: `oce-graph` assumes a validated graph and keeps
+        // the tick/build arenas lean, so malformed hand-built graphs stop here as typed diagnostics.
+        let _validate_warnings = oce_validate::validate(&model)?;
         // Resolve every block instance to its native impl up front — an unknown class is a typed
         // load error, never a panic (R-IMPL-2 / R-ERR-1).
         let blocks = instantiate_blocks(&model)?;
@@ -131,9 +134,9 @@ impl<S: Store> Engine<S> {
     }
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve →
-    /// `oce-flatten` → `oce-validate`), builds the `oce-graph` schedule via the shared
-    /// [`Engine::build_model_in_memory`] tail, and returns a [`LoadReport`]. Replaces all per-run
-    /// state, so calling it again reloads a fresh model.
+    /// `oce-flatten` → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
+    /// build tail, and returns a [`LoadReport`]. Replaces all per-run state, so calling it again
+    /// reloads a fresh model.
     ///
     /// # Errors
     /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
@@ -148,6 +151,9 @@ impl<S: Store> Engine<S> {
         //    then the structural/type rules. A shall-violation propagates as OcError::Validate.
         let validate_warnings = oce_validate::unify_and_validate(&mut model)?;
         // 4. Shared BUILD tail: registry → schedule → state → outputs → io → params → store.recover.
+        //    This intentionally re-runs pure `validate`: `load_cxf` needs `unify_and_validate` above to
+        //    capture warnings after §7.10 propagation, while the shared tail must defend every caller
+        //    against malformed hand-built graphs before `oce-graph` indexes raw arenas.
         self.build_model_in_memory(model)?;
         let stateful_blocks = self
             .blocks

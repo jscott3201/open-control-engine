@@ -234,12 +234,13 @@ fn t13_unknown_class_skips_rule3_silently() {
     );
 }
 
-// ---- T23 / T25: panic-free on malformed hand-built graphs (structural ids) ------------------
+// ---- T23 / T25 / T39–T43: panic-free on malformed hand-built graphs ---------------------------
 
 #[test]
 fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
     // Connection references ids beyond the connector arena — must report, never index OOB.
     let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![conn_edge(0, 9)], // 9 is out of range
         ..ModelGraph::new()
@@ -261,8 +262,48 @@ fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
 }
 
 #[test]
+fn t39_connector_block_out_of_range_is_malformed() {
+    // A connector whose owning BlockId is outside the block arena would panic in topo decl_key.
+    let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![conn(0, 7, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("connector must reference an in-range block");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("out-of-range block id 7")
+    );
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#0"));
+}
+
+#[test]
+fn t40_connector_block_at_blocks_len_boundary_is_malformed() {
+    // The exact off-by-one boundary (`block == blocks.len()`) is out of range.
+    let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![conn(0, 1, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("connector block id equal to blocks.len() must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("out-of-range block id 1"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#0"));
+}
+
+#[test]
 fn t25_block_port_out_of_range_connector_is_malformed() {
-    // A block whose port list references a non-existent connector id → Rule 3 reports, no panic.
+    // A block whose port list references a non-existent connector id → arena rule reports, no panic.
     let m = ModelGraph {
         blocks: vec![block(0, "CDL.Reals.Add", &[0, 7], &[1])], // 7 is out of range
         connectors: vec![
@@ -274,6 +315,56 @@ fn t25_block_port_out_of_range_connector_is_malformed() {
     };
     let err = validate(&m).expect_err("out-of-range port connector must fail");
     assert!(codes(&err.diagnostics).contains(&DiagCode::MalformedDocument));
+}
+
+#[test]
+fn t41_block_ids_must_be_dense_unique_arena_indices() {
+    // A block id that is in range but not equal to its arena index would panic in BUILD when the
+    // feedthrough pass indexes instantiated blocks by `BlockId.0`.
+    let m = ModelGraph {
+        blocks: vec![block(1, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("block id must equal arena index");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("block id invariant"));
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#1"));
+
+    let duplicate = ModelGraph {
+        blocks: vec![
+            block(0, "unknown.Class", &[], &[]),
+            block(0, "unknown.Class", &[], &[]),
+        ],
+        ..ModelGraph::new()
+    };
+    let err = validate(&duplicate).expect_err("duplicate block id must fail density");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("arena index 1"));
+}
+
+#[test]
+fn t42_block_port_ids_are_bounded_before_signature_lookup() {
+    // The arena rule must be self-sufficient even when Rule 3 skips an unknown block class.
+    let m = ModelGraph {
+        blocks: vec![block(0, "unknown.Class", &[7], &[8])],
+        connectors: vec![],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("block port connector ids must be bounded unconditionally");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MalformedDocument, DiagCode::MalformedDocument]
+    );
+    assert!(err.diagnostics[0].message.contains("input port 0"));
+    assert!(err.diagnostics[1].message.contains("output port 0"));
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|d| d.subject.as_deref() == Some("block#0"))
+    );
 }
 
 // ---- T30: Rule 3 OUTPUT-port branch ----------------------------------------------------------
@@ -296,4 +387,72 @@ fn t30_output_port_mistyped_against_signature_is_port_kind_mismatch() {
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::PortKindMismatch]);
     assert!(err.diagnostics[0].message.contains("output port"));
     assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#2"));
+}
+
+#[test]
+fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
+    // CXF resolve already rejects these shapes for documents. The pure validate seam must also reject
+    // hand-built ModelGraph callers before oce-graph reaches emit/gather by port index.
+    let cases = [
+        (
+            "missing input",
+            block(0, "CDL.Reals.Add", &[0], &[1]),
+            vec![
+                conn(0, 0, Dir::In, ValueType::Real),
+                conn(1, 0, Dir::Out, ValueType::Real),
+            ],
+            vec![ConnectorId(0)],
+        ),
+        (
+            "missing output",
+            block(0, "CDL.Reals.Add", &[0, 1], &[]),
+            vec![
+                conn(0, 0, Dir::In, ValueType::Real),
+                conn(1, 0, Dir::In, ValueType::Real),
+            ],
+            vec![ConnectorId(0), ConnectorId(1)],
+        ),
+        (
+            "extra input",
+            block(0, "CDL.Reals.Add", &[0, 1, 2], &[3]),
+            vec![
+                conn(0, 0, Dir::In, ValueType::Real),
+                conn(1, 0, Dir::In, ValueType::Real),
+                conn(2, 0, Dir::In, ValueType::Real),
+                conn(3, 0, Dir::Out, ValueType::Real),
+            ],
+            vec![ConnectorId(0), ConnectorId(1), ConnectorId(2)],
+        ),
+        (
+            "extra output",
+            block(0, "CDL.Reals.Add", &[0, 1], &[2, 3]),
+            vec![
+                conn(0, 0, Dir::In, ValueType::Real),
+                conn(1, 0, Dir::In, ValueType::Real),
+                conn(2, 0, Dir::Out, ValueType::Real),
+                conn(3, 0, Dir::Out, ValueType::Real),
+            ],
+            vec![ConnectorId(0), ConnectorId(1)],
+        ),
+    ];
+
+    for (label, block, connectors, external_inputs) in cases {
+        let m = ModelGraph {
+            blocks: vec![block],
+            connectors,
+            connections: vec![],
+            external_inputs,
+        };
+        let err = match validate(&m) {
+            Err(err) => err,
+            Ok(_) => panic!("{label} Add arity must fail before BUILD"),
+        };
+        assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+        assert!(
+            err.diagnostics[0].message.contains("interface mismatch"),
+            "{label}: unexpected diagnostic: {:?}",
+            err.diagnostics
+        );
+        assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#0"));
+    }
 }

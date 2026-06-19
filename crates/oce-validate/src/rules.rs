@@ -3,7 +3,7 @@
 //! Every check here is **total and panic-free** on *any* [`ModelGraph`] — including a
 //! structurally-malformed, hand-built one whose ids are out of range or whose [`Attrs`] variant
 //! violates the R5 tag invariant (a public struct literal can do this, bypassing the checked
-//! [`oce_model::Connector::with_attrs`] constructor). Every connector/connection index is
+//! [`oce_model::Connector::with_attrs`] constructor). Every block/connector/connection index is
 //! bounds-checked before use and every `Real`-attribute read goes through
 //! [`oce_model::Attrs::as_real`] (which yields `None` on a mismatched tag) rather than an unwrap.
 //! A malformed graph yields a [`DiagCode::MalformedDocument`] diagnostic, never an abort
@@ -62,6 +62,79 @@ fn in_degrees(model: &ModelGraph) -> Vec<u32> {
         }
     }
     deg
+}
+
+// ---- Rule 0: arena id integrity -------------------------------------------------------------
+
+/// Every block and connector must reference the dense arenas the executor indexes by raw id:
+///
+/// - `model.blocks[i].id.0 == i` for every block (dense + unique [`oce_model::BlockId`] space).
+/// - `connector.block.0 < model.blocks.len()` for every connector.
+/// - every `BlockInstance.inputs` / `BlockInstance.outputs` [`ConnectorId`] is in range.
+///
+/// These are malformed-document errors because `oce-graph` intentionally keeps BUILD/tick arena
+/// indexing lean and assumes validation has already proven these invariants.
+pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+    let block_count = model.blocks.len();
+    let connector_count = model.connectors.len();
+
+    for (index, blk) in model.blocks.iter().enumerate() {
+        let id = blk.id.0 as usize;
+        if id != index {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block id invariant violated: block at arena index {index} has BlockId({}); \
+                         expected a dense unique BlockId equal to its arena index and < blocks={block_count}",
+                        blk.id.0
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+        }
+        check_block_port_ids(blk, "input", &blk.inputs, connector_count, diags);
+        check_block_port_ids(blk, "output", &blk.outputs, connector_count, diags);
+    }
+
+    for c in &model.connectors {
+        if c.block.0 as usize >= block_count {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "connector id {} references an out-of-range block id {} (blocks={block_count})",
+                        c.id.0, c.block.0
+                    ),
+                )
+                .with_subject(subject_of(c)),
+            );
+        }
+    }
+}
+
+fn check_block_port_ids(
+    blk: &oce_model::BlockInstance,
+    label: &str,
+    ports: &[ConnectorId],
+    connector_count: usize,
+    diags: &mut Vec<Diagnostic>,
+) {
+    for (port_idx, cid) in ports.iter().enumerate() {
+        if cid.0 as usize >= connector_count {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block id {} {label} port {port_idx} references an out-of-range \
+                         connector id {} (connectors={connector_count})",
+                        blk.id.0, cid.0
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+        }
+    }
 }
 
 // ---- Rule 1: boundary-aware single assignment (§7.10 / §9.1.5) ------------------------------
@@ -163,20 +236,20 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>)
     }
 }
 
-// ---- Rule 3: connector value-type ↔ block-signature port-kind (AD-8, §7.8) ------------------
+// ---- Rule 3: block interface ↔ block-signature agreement (AD-8, §7.8) -----------------------
 
-/// Each block port's connector [`ValueType`] must agree with the native block class's
-/// [`oce_blocks::BlockSignature`] port [`PortKind`]. This is the **reason `oce-validate` depends on
-/// `oce-blocks`** (AD-8): the resolver derives a connector's value type from the CXF
-/// `isOfDataType`, *independently* of the block class, so a document could type an input of
-/// `CDL.Reals.Add` as `Boolean` — the resolver would record it, and the `read_real` hot-path reader
-/// would then silently coerce it to `0.0` in release (a safety-critical silent wrong value). This
-/// gate rejects that mismatch at load.
+/// Each block's port arity and connector [`ValueType`] must agree with the native block class's
+/// [`oce_blocks::BlockSignature`]. This is the **reason `oce-validate` depends on `oce-blocks`**
+/// (AD-8): the resolver derives a connector's value type from the CXF `isOfDataType`,
+/// *independently* of the block class, so a document could type an input of `CDL.Reals.Add` as
+/// `Boolean` — the resolver would record it, and the `read_real` hot-path reader would then silently
+/// coerce it to `0.0` in release (a safety-critical silent wrong value). A hand-built graph can also
+/// omit or add ports and would otherwise reach emit/gather by port index. This gate rejects those
+/// mismatches at load.
 ///
 /// An **unknown** class path is skipped (it is `oce-api`'s `OcError::Load` to report, R-IMPL-2).
-/// Arity (port count vs signature) is the **resolver's** responsibility (AD-8, M1-PR-6), so this
-/// only compares ports present in *both* the block's port list and the signature — extra/missing
-/// ports are not re-reported here. Out-of-range port connector ids are a `MalformedDocument`.
+/// Out-of-range port connector ids are reported by [`check_arena_ids`]; this rule still bounds them
+/// before indexing so the validator remains panic-free even if rules are refactored later.
 pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
     let n = model.connectors.len() as u32;
     for blk in &model.blocks {
@@ -185,6 +258,21 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
         };
         let probe = (entry.make)(&blk.params);
         let sig = probe.signature();
+        let (got_in, got_out) = (blk.inputs.len(), blk.outputs.len());
+        let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
+        if got_in != want_in || got_out != want_out {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block interface mismatch for `{}`: declared {got_in} input(s)/{got_out} \
+                         output(s), class requires {want_in}/{want_out}",
+                        blk.class_iri
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+        }
         check_ports_dir(
             model,
             diags,
@@ -206,6 +294,13 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
     }
 }
 
+fn block_subject_of(blk: &oce_model::BlockInstance) -> Arc<str> {
+    match &blk.instance_iri {
+        Some(iri) => Arc::clone(iri),
+        None => Arc::from(format!("block#{}", blk.id.0)),
+    }
+}
+
 /// Compare one direction's worth of a block's port connectors against the signature port kinds.
 fn check_ports_dir(
     model: &ModelGraph,
@@ -218,17 +313,10 @@ fn check_ports_dir(
 ) {
     for (port_idx, cid) in ports.iter().enumerate() {
         if cid.0 >= n {
-            diags.push(Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "block class {class_iri} {label} port {port_idx} references an out-of-range \
-                     connector id {}",
-                    cid.0
-                ),
-            ));
             continue;
         }
-        // Ports beyond the signature arity are the resolver's concern (AD-8); skip silently.
+        // Arity diagnostics are shared by resolver and `oce-validate` (AD-8). Once the block-level
+        // arity diagnostic is emitted above, extra ports have no signature slot to compare.
         let Some(kind) = kinds.get(port_idx) else {
             continue;
         };
@@ -573,11 +661,12 @@ fn warn_display_unit_divergence(model: &ModelGraph, members: &[u32], diags: &mut
 
 // ---- deterministic diagnostic ordering ------------------------------------------------------
 
-/// Sort diagnostics into the pinned deterministic order: by the subject's `ConnectorId.0` ascending
-/// (connector subjects first), then by `DiagCode` string, then message. Non-connector subjects sort
-/// after all connectors (`u32::MAX`) by their raw subject string — total and panic-free. **Ported
-/// from `oce-cxf` `resolve.rs`** so the resolver's and the validator's diagnostic streams use one
-/// ordering discipline (`_spec/11-m1-cxf-plan.md` §2 determinism rule).
+/// Sort diagnostics into the pinned deterministic order: connector subjects by `ConnectorId.0`,
+/// then block subjects by `BlockId.0`, then other subjects, followed by `DiagCode` string and
+/// message tie-breakers. Synthetic `connector#N` and `block#N` subjects are parsed numerically so
+/// IRI-less structural diagnostics never sort lexicographically (`#10` before `#3`). **Ported from
+/// `oce-cxf` `resolve.rs`** for connector subjects so the resolver's and the validator's diagnostic
+/// streams use one ordering discipline (`_spec/11-m1-cxf-plan.md` §2 determinism rule).
 pub(crate) fn finalize_diags(
     mut diags: Vec<Diagnostic>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
@@ -587,20 +676,30 @@ pub(crate) fn finalize_diags(
     // map to the numeric id so the structural diagnostics (single-assignment / direction / type) —
     // which are IRI-less in practice — sort by ascending `ConnectorId.0` per the pinned rule, not
     // by lexicographic string order (where `connector#10` would precede `connector#3`).
-    let key_cid = |d: &Diagnostic| -> u32 {
-        d.subject
-            .as_deref()
-            .and_then(|s| {
-                conn_of_iri.get(s).map(|c| c.0).or_else(|| {
-                    s.strip_prefix("connector#")
-                        .and_then(|num| num.parse::<u32>().ok())
-                })
-            })
-            .unwrap_or(u32::MAX)
+    let subject_key = |d: &Diagnostic| -> (u8, u32) {
+        let Some(s) = d.subject.as_deref() else {
+            return (2, u32::MAX);
+        };
+        if let Some(c) = conn_of_iri.get(s) {
+            return (0, c.0);
+        }
+        if let Some(id) = s
+            .strip_prefix("connector#")
+            .and_then(|num| num.parse::<u32>().ok())
+        {
+            return (0, id);
+        }
+        if let Some(id) = s
+            .strip_prefix("block#")
+            .and_then(|num| num.parse::<u32>().ok())
+        {
+            return (1, id);
+        }
+        (2, u32::MAX)
     };
     diags.sort_by(|a, b| {
-        key_cid(a)
-            .cmp(&key_cid(b))
+        subject_key(a)
+            .cmp(&subject_key(b))
             .then_with(|| a.subject.as_deref().cmp(&b.subject.as_deref()))
             .then_with(|| a.code.as_str().cmp(b.code.as_str()))
             .then_with(|| a.message.cmp(&b.message))
