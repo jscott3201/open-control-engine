@@ -8,6 +8,10 @@
 #     application that wires a git-sourced store adapter manages that in its own deny config.
 
 [graph]
+# WI-9 bans intentionally evaluate the default-feature graph. This is safe by the
+# no-feature-gated-dependency convention: the only workspace `[features]` block is
+# `oce-api`'s `mem = []`, which gates zero dependencies, so a banned crate cannot hide behind a
+# feature without first changing that convention.
 all-features = false
 no-default-features = false
 
@@ -48,7 +52,74 @@ multiple-versions = "warn"
 # real crates.io wildcard requirement.
 wildcards = "deny"
 highlight = "all"
-deny = []
+# DB-free/async-runtime-free hardening (WI-9).
+#
+# Load-bearing invariant: Open Control Engine links no first-party database by construction, and the
+# `oce-api` default build stays embeddable with no async runtime. The fast shell gate
+# (`check-default-no-db.sh`) proves that core default-tree assertion for every workspace member.
+#
+# This cargo-deny list is a curated breadth canary for common DB / ORM / embedded-KV crates and
+# async runtime families across the dependency graph. It is intentionally best-effort: new database
+# crates can appear, so this list is not a completeness proof. It keeps the obvious families out of
+# the lockfile while the architecture and shell gate carry the guarantee.
+deny = [
+  # SQL / ORM / database drivers.
+  { name = "sqlx" },
+  { name = "diesel" },
+  { name = "sea-orm" },
+  { name = "rusqlite" },
+  { name = "libsqlite3-sys" },
+  { name = "postgres" },
+  { name = "tokio-postgres" },
+  { name = "mysql" },
+  { name = "mysql_async" },
+  { name = "mongodb" },
+  { name = "redis" },
+  { name = "surrealdb" },
+  { name = "duckdb" },
+  { name = "tiberius" },
+  { name = "turbosql" },
+  { name = "sqlite" },
+  { name = "sqlite3" },
+
+  # Connection pools are a strong database-usage signal even when the driver is indirect.
+  { name = "r2d2" },
+  { name = "bb8" },
+  { name = "deadpool" },
+  { name = "mobc" },
+
+  # Embedded KV stores / local database engines.
+  { name = "sled" },
+  { name = "redb" },
+  { name = "rocksdb" },
+  { name = "librocksdb-sys" },
+  { name = "heed" },
+  { name = "lmdb-rkv" },
+  { name = "persy" },
+  { name = "fjall" },
+  { name = "rkv" },
+  { name = "jammdb" },
+
+  # Non-tokio async runtimes / executors that would compromise the embeddable sync core.
+  { name = "async-std" },
+  { name = "smol" },
+  { name = "async-io" },
+  { name = "async-global-executor" },
+  { name = "embassy-executor" },
+  { name = "glommio" },
+  { name = "monoio" },
+
+  # Selene DB family canaries. cargo-deny crate specs are exact names in 0.19.x; the shell gate
+  # remains the family-pattern check for `selene-db*` / `selene_*` in the default tree.
+  { name = "selene-db" },
+  { name = "selene-db-core" },
+  { name = "selene-db-graph" },
+  { name = "selene-db-storage" },
+  { name = "selene_db" },
+  { name = "selene_db_core" },
+  { name = "selene_db_graph" },
+  { name = "selene_db_storage" },
+]
 skip = []
 skip-tree = []
 

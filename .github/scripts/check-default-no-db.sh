@@ -15,6 +15,12 @@
 # and rayon's work-stealing parallelism would make schedules/traces non-bit-stable — the determinism
 # contract (CDL §7.16) bans it from the engine, not just from the hot path.
 #
+# This shell regex intentionally stays narrow: it is the fast every-PR default-tree canary for the
+# core embeddability invariant, not an exhaustive DB-family catalogue. The broader curated family
+# list lives in cargo-deny `[bans].deny` (manifest-change CI + release gate). That list is a
+# best-effort canary, not a proof; the load-bearing guarantee is architectural: the engine links no
+# DB by construction and the `oce-api` facade default build links no async runtime.
+#
 # Runs from repo root; macOS bash 3.x compatible.
 
 set -euo pipefail
