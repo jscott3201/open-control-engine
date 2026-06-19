@@ -2,7 +2,7 @@
 
 use oce_model::{ParamTable, Value};
 
-use crate::{Block, BlockKind, BlockSignature, PortKind, Time, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_real};
 
 /// `CDL.Discrete.UnitDelay` — `y(k) = u(k−1)`, a one-sample `Real` delay and a discrete
 /// loop-breaker (`03` §4.6): stateful with `feeds_through == false`, so it cuts the
@@ -37,14 +37,14 @@ impl Block for UnitDelay {
     }
     fn emit_from_state(
         &self,
+        _ctx: &Ctx<'_>,
         _inputs: &[Value],
-        _t: Time,
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
         emit(0, Value::Real(f64::from_bits(region[0]))); // the prior sample, held since last tick
     }
-    fn update_state(&self, inputs: &[Value], _t: Time, region: &mut [u64]) {
+    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         region[0] = read_real(inputs, 0).to_bits(); // latch the current input for next tick
     }
 }

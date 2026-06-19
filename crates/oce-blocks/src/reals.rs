@@ -2,7 +2,7 @@
 
 use oce_model::Value;
 
-use crate::{Block, BlockKind, BlockSignature, PortKind, Time, read_bool, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
 
 /// `CDL.Reals.Sources.Constant` — the only truly stateless source: `y = k` (`03` §4.1).
 #[derive(Clone, Copy, Debug)]
@@ -26,7 +26,12 @@ impl Block for Constant {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false // no inputs — pure source root
     }
-    fn step_algebraic(&self, _inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(
+        &self,
+        _ctx: &Ctx<'_>,
+        _inputs: &[Value],
+        emit: &mut dyn FnMut(usize, Value),
+    ) {
         emit(0, Value::Real(self.k));
     }
 }
@@ -51,7 +56,7 @@ impl Block for Add {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Real(read_real(inputs, 0) + read_real(inputs, 1)));
     }
 }
@@ -76,7 +81,7 @@ impl Block for Subtract {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Real(read_real(inputs, 0) - read_real(inputs, 1)));
     }
 }
@@ -103,7 +108,7 @@ impl Block for MultiplyByParameter {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Real(self.k * read_real(inputs, 0)));
     }
 }
@@ -133,7 +138,7 @@ impl Block for Limiter {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let y = read_real(inputs, 0).max(self.u_min).min(self.u_max);
         emit(0, Value::Real(y));
     }
@@ -161,7 +166,7 @@ impl Block for Greater {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(
             0,
             Value::Boolean(read_real(inputs, 0) > read_real(inputs, 1)),
@@ -190,7 +195,7 @@ impl Block for Switch {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let y = if read_bool(inputs, 1) {
             read_real(inputs, 0)
         } else {

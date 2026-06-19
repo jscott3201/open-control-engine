@@ -75,6 +75,39 @@ pub trait Diagnostics {
     fn warn(&self, source: &str, message: &str, t: Time);
 }
 
+/// Per-tick block execution context. The scheduler owns the diagnostics sink and supplies the
+/// model time; blocks read time through [`Ctx::t`] and report warnings through [`Ctx::warn`].
+pub struct Ctx<'a> {
+    t: Time,
+    diag: &'a dyn Diagnostics,
+}
+
+impl<'a> Ctx<'a> {
+    /// Build a per-tick context from scheduler-owned time and diagnostics sink.
+    #[must_use]
+    pub fn new(t: Time, diag: &'a dyn Diagnostics) -> Self {
+        Self { t, diag }
+    }
+
+    /// Current model time in seconds.
+    #[must_use]
+    pub fn t(&self) -> Time {
+        self.t
+    }
+
+    /// Emit a warning at this context's model time.
+    pub fn warn(&self, source: &str, message: &str) {
+        self.diag.warn(source, message, self.t);
+    }
+}
+
+/// Zero-size diagnostics sink used where assertions are intentionally dropped.
+pub struct NoopDiagnostics;
+
+impl Diagnostics for NoopDiagnostics {
+    fn warn(&self, _source: &str, _message: &str, _t: Time) {}
+}
+
 /// The core elementary-block contract (CDL §7.6) — the **arena model** (`01` §7/§9, the binding
 /// FRAME Block-trait resolution). A block object is an *immutable* description (class + parameters
 /// resolved at construction); all mutable per-instance `[S]` state lives in an engine-owned flat
@@ -114,14 +147,20 @@ pub trait Block: Send + Sync {
 
     /// `[A]` output: `y = f(p, t, u)`. Emit each output by port index via `emit` (R-TRAIT-1).
     /// `[S]` blocks leave this as the default no-op — their output is [`Block::emit_from_state`].
-    fn step_algebraic(&self, _inputs: &[Value], _t: Time, _emit: &mut dyn FnMut(usize, Value)) {}
+    fn step_algebraic(
+        &self,
+        _ctx: &Ctx<'_>,
+        _inputs: &[Value],
+        _emit: &mut dyn FnMut(usize, Value),
+    ) {
+    }
 
     /// `[S]` output pass: emit outputs from **prior** state — `region` is read-only here — before
     /// any state update this tick (`01` §9 req 2, R-TRAIT-1). `[A]` blocks: default no-op.
     fn emit_from_state(
         &self,
+        _ctx: &Ctx<'_>,
         _inputs: &[Value],
-        _t: Time,
         _region: &[u64],
         _emit: &mut dyn FnMut(usize, Value),
     ) {
@@ -129,7 +168,7 @@ pub trait Block: Send + Sync {
 
     /// `[S]` state pass: advance `x(t) → x'(t)` into the mutable `region`, exactly once per tick,
     /// after [`Block::emit_from_state`] (`01` §9 req 2, R-TRAIT-2). `[A]` blocks: default no-op.
-    fn update_state(&self, _inputs: &[Value], _t: Time, _region: &mut [u64]) {}
+    fn update_state(&self, _ctx: &Ctx<'_>, _inputs: &[Value], _region: &mut [u64]) {}
 }
 
 /// A `&'static` registry entry mapping a class path to its block constructor (R-IMPL-2).

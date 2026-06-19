@@ -267,8 +267,10 @@ fn param_plumbing_oracle_via_oce_blocks() {
     // con = Constant(k=2.0): algebraic, emits y = k.
     let con = oce_blocks::lookup(&g.blocks[0].class_iri).expect("Constant must be registered");
     let con = (con.make)(&g.blocks[0].params);
+    let diag = oce_blocks::NoopDiagnostics;
+    let cx = oce_blocks::Ctx::new(0.0, &diag);
     let mut y = None;
-    con.step_algebraic(&[], 0.0, &mut |idx, v| {
+    con.step_algebraic(&cx, &[], &mut |idx, v| {
         if idx == 0 {
             y = Some(v);
         }
@@ -283,7 +285,7 @@ fn param_plumbing_oracle_via_oce_blocks() {
     let gain = oce_blocks::lookup(&g.blocks[3].class_iri).expect("MultiplyByParameter registered");
     let gain = (gain.make)(&g.blocks[3].params);
     let mut gy = None;
-    gain.step_algebraic(&[Value::Real(2.0)], 0.0, &mut |idx, v| {
+    gain.step_algebraic(&cx, &[Value::Real(2.0)], &mut |idx, v| {
         if idx == 0 {
             gy = Some(v);
         }

@@ -9,7 +9,7 @@
 //! loop-breaker scheduled before its input's producer latch the *previous* tick's input, yielding a
 //! two-tick delay instead of one for the canonical `Pre`/`UnitDelay` feedback loop.)
 
-use oce_blocks::{Block, BlockKind};
+use oce_blocks::{Block, BlockKind, Ctx, NoopDiagnostics};
 use oce_model::{BlockInstance, Model, Value};
 
 use crate::{RunState, Schedule, StateSlot};
@@ -24,6 +24,8 @@ pub struct EvalContext<'a> {
     pub schedule: &'a Schedule,
     /// Instantiated, parameter-resolved block impls, indexed by `BlockId.0`.
     pub blocks: &'a [Box<dyn Block>],
+    /// Scheduler-owned diagnostics sink borrowed into block contexts.
+    pub diagnostics: &'a dyn oce_blocks::Diagnostics,
     /// The sole mutable per-tick structure.
     pub state: &'a mut RunState,
 }
@@ -82,10 +84,12 @@ fn init_values(model: &Model, blocks: &[Box<dyn Block>]) -> Vec<Value> {
         .map(|c| c.value_type.zero_value())
         .collect();
 
+    let noop = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &noop);
     for blk in &model.blocks {
         let blk_impl = blocks[blk.id.0 as usize].as_ref();
         if blk_impl.kind() == BlockKind::Algebraic && blk.inputs.is_empty() {
-            blk_impl.step_algebraic(&[], 0.0, &mut |o, v| {
+            blk_impl.step_algebraic(&cx, &[], &mut |o, v| {
                 debug_assert!(
                     o < blk.outputs.len(),
                     "source emitted out-of-range output {o}"
@@ -113,6 +117,7 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
     let model = ctx.model;
     let schedule = ctx.schedule;
     let blocks = ctx.blocks;
+    let diag = ctx.diagnostics;
     let RunState {
         values,
         words,
@@ -122,6 +127,7 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
         t,
     } = &mut *ctx.state;
     *t = t_now;
+    let cx = Ctx::new(t_now, diag);
     // The schedule must be tick-ready: `compile` fills `driver_of` (a bare `topo_sort` result does
     // not). Caught in debug so a direct `topo_sort` → `eval_tick` misuse fails loudly, not via an
     // out-of-range gather.
@@ -139,7 +145,7 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
         let blk_impl = blocks[bid.0 as usize].as_ref();
         match blk_impl.kind() {
             BlockKind::Algebraic => {
-                blk_impl.step_algebraic(inputs, t_now, &mut |o, v| {
+                blk_impl.step_algebraic(&cx, inputs, &mut |o, v| {
                     debug_assert!(
                         o < blk.outputs.len(),
                         "block emitted out-of-range output {o}"
@@ -150,7 +156,7 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
             BlockKind::Stateful => {
                 let slot = slots[slot_of[bid.0 as usize]];
                 let region = &words[slot.offset..slot.offset + slot.len];
-                blk_impl.emit_from_state(inputs, t_now, region, &mut |o, v| {
+                blk_impl.emit_from_state(&cx, inputs, region, &mut |o, v| {
                     debug_assert!(
                         o < blk.outputs.len(),
                         "block emitted out-of-range output {o}"
@@ -172,7 +178,7 @@ pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
         let inputs = &scratch[..blk.inputs.len()];
         let slot = slots[slot_of[bid.0 as usize]];
         let region = &mut words[slot.offset..slot.offset + slot.len];
-        blk_impl.update_state(inputs, t_now, region);
+        blk_impl.update_state(&cx, inputs, region);
     }
 }
 

@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use oce_blocks::{Block, BlockKind, BlockSignature, PortKind, lookup};
+use oce_blocks::{Block, BlockKind, BlockSignature, NoopDiagnostics, PortKind, lookup};
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, Model, ModelGraph, ParamTable,
     Value, ValueType,
@@ -190,10 +190,12 @@ fn tick_once(
     state: &mut RunState,
     t: f64,
 ) {
+    let diag = NoopDiagnostics;
     let mut ctx = EvalContext {
         model,
         schedule,
         blocks,
+        diagnostics: &diag,
         state,
     };
     eval_tick(&mut ctx, t);
