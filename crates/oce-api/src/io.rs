@@ -205,16 +205,19 @@ impl IoInventory {
         }
     }
 
-    /// Resolve any point path to its model [`ConnectorId`] (direction-agnostic).
-    pub(crate) fn resolve(&self, path: &str) -> Option<ConnectorId> {
-        self.by_path.get(path).map(|&i| self.conn_id[i])
-    }
-
     /// Resolve a point path to its [`ConnectorId`] **only if it is an input** (the `set_input`
     /// staging target).
     pub(crate) fn resolve_input(&self, path: &str) -> Option<ConnectorId> {
         self.by_path.get(path).and_then(|&i| {
             (self.points[i].direction == PointDirection::In).then_some(self.conn_id[i])
+        })
+    }
+
+    /// Resolve a point path to its [`ConnectorId`] **only if it is an output** (the `get_output`
+    /// and `CollectSpec::Named` recording target).
+    pub(crate) fn resolve_output(&self, path: &str) -> Option<ConnectorId> {
+        self.by_path.get(path).and_then(|&i| {
+            (self.points[i].direction == PointDirection::Out).then_some(self.conn_id[i])
         })
     }
 

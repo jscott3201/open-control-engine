@@ -393,11 +393,12 @@ impl<S: Store> Engine<S> {
     /// Read an output connector value by point path after a tick (host-facing).
     ///
     /// # Errors
-    /// [`OcError::UnknownPoint`] if `point` is not in the inventory. Never panics (R-ERR-1).
+    /// [`OcError::UnknownPoint`] if `point` is not an OUTPUT connector in the inventory. Never
+    /// panics (R-ERR-1).
     pub fn get_output(&self, point: &str) -> Result<Value, OcError> {
         let cid = self
             .io
-            .resolve(point)
+            .resolve_output(point)
             .ok_or_else(|| OcError::UnknownPoint(point.to_string()))?;
         Ok(self.state.values[cid.0 as usize].clone())
     }
@@ -425,7 +426,8 @@ impl<S: Store> Engine<S> {
     }
 
     /// Resolve a [`CollectSpec`] to the `(path, ConnectorId)` columns to record. `Named` names that
-    /// are not in the inventory are an [`OcError::UnknownPoint`] (fail-fast, before any tick).
+    /// are not OUTPUT connectors in the inventory are an [`OcError::UnknownPoint`] (fail-fast, before
+    /// any tick).
     pub(crate) fn resolve_collect(
         &self,
         c: &CollectSpec,
@@ -437,7 +439,7 @@ impl<S: Store> Engine<S> {
                 .iter()
                 .map(|name| {
                     self.io
-                        .resolve(name)
+                        .resolve_output(name)
                         .map(|cid| (name.clone(), cid))
                         .ok_or_else(|| OcError::UnknownPoint(name.clone()))
                 })
