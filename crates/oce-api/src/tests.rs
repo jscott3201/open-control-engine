@@ -19,8 +19,8 @@ use oce_model::{
 use oce_store::{DomainKey, Durable, ModelStore, ResolvedModel};
 
 use super::{
-    CollectSpec, Engine, InputSource, IoClass, OcError, PhysicalKind, RunMode, SemanticQuery,
-    SimSpec, TemplateRef,
+    CollectSpec, Engine, InputSource, IoClass, OcError, PhysicalKind, PointDirection, RunMode,
+    SemanticQuery, SimSpec, TemplateRef,
 };
 use oce_store_mem::MemStore;
 
@@ -398,27 +398,42 @@ fn empty_engine_surface_is_inert_not_panicking() {
 
 #[test]
 fn set_input_resolves_validates_and_rejects() {
-    let mut eng = loaded_accumulator();
-    // conn#1 = Add.u1 (Real input). A wrong-typed value is a typed error — no coercion.
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(free_add_model()).unwrap();
+    // conn#0 = Add.u0 (Real input). A wrong-typed value is a typed error — no coercion.
     assert!(matches!(
-        eng.set_input("conn#1", Value::Boolean(true)),
+        eng.set_input("conn#0", Value::Boolean(true)),
         Err(OcError::InputType(_))
     ));
-    eng.set_input("conn#1", Value::Real(5.0))
-        .expect("a correctly-typed real input stages");
-    // Prove the staged value reached the resolved slot (read it back before any tick overwrites a
-    // driven input from its connection).
+    eng.set_input("conn#0", Value::Real(5.0))
+        .expect("a correctly-typed real input stages on u0");
+    eng.set_input("conn#1", Value::Real(2.0))
+        .expect("a correctly-typed real input stages on u1");
+    eng.tick(0.0).unwrap();
+    // Prove the staged values reached the resolved slots through the block output, without reading an
+    // input through `get_output`.
     assert!(
-        eng.get_output("conn#1").unwrap().bit_eq(&Value::Real(5.0)),
-        "the staged value must land in the resolved connector slot"
+        eng.get_output("conn#2").unwrap().bit_eq(&Value::Real(7.0)),
+        "staged input values must propagate to the Add output"
     );
     assert!(matches!(
         eng.set_input("nope", Value::Real(1.0)),
         Err(OcError::UnknownPoint(_))
     ));
-    // conn#0 is an OUTPUT, so set_input must reject it as an unknown *input*.
+    // conn#2 is an OUTPUT, so set_input must reject it as an unknown *input*.
     assert!(matches!(
-        eng.set_input("conn#0", Value::Real(1.0)),
+        eng.set_input("conn#2", Value::Real(1.0)),
+        Err(OcError::UnknownPoint(_))
+    ));
+}
+
+#[test]
+fn get_output_on_input_point_is_unknown_point() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.set_input("conn#0", Value::Real(5.0)).unwrap();
+    assert!(matches!(
+        eng.get_output("conn#0"),
         Err(OcError::UnknownPoint(_))
     ));
 }
@@ -499,23 +514,47 @@ fn param_lifecycle_halt_set_resume_refolds() {
 #[test]
 fn simulate_runs_horizon_and_collects_named_trace() {
     let mut eng = loaded_accumulator();
-    // Record just add_out (conn#3) over [0,3] step 1 ⇒ 4 rows [1,2,3,4].
+    // Record add_out (conn#3) + limiter_out (conn#11) over [0,3] step 1.
     let spec = sim_spec(
         0.0,
         3.0,
         1.0,
         CollectSpec::Named {
-            points: vec!["conn#3".to_string()],
+            points: vec!["conn#3".to_string(), "conn#11".to_string()],
             stride: 1,
         },
     );
     let m = eng.simulate(&spec).unwrap();
     assert_eq!(m.ticks, 4);
     assert_eq!(m.trace.rows(), 4);
-    assert_eq!(m.trace.columns(), ["conn#3".to_string()]);
-    let col = m.trace.column(0).unwrap();
-    for (i, e) in [1.0_f64, 2.0, 3.0, 4.0].into_iter().enumerate() {
-        assert!(col[i].bit_eq(&Value::Real(e)), "row {i}: {:?}", col[i]);
+    assert_eq!(
+        m.trace.columns(),
+        ["conn#3".to_string(), "conn#11".to_string()]
+    );
+    for column in m.trace.columns() {
+        let info = eng
+            .io()
+            .iter()
+            .find(|p| p.path == *column)
+            .expect("trace column must be present in the IO inventory");
+        assert_eq!(
+            info.direction,
+            PointDirection::Out,
+            "CollectSpec::Named must record only outputs: {column}"
+        );
+    }
+    for (j, expected) in [[1.0_f64, 2.0, 3.0, 4.0], [1.0_f64, 2.0, 3.0, 3.0]]
+        .into_iter()
+        .enumerate()
+    {
+        let col = m.trace.column(j).unwrap();
+        for (i, e) in expected.into_iter().enumerate() {
+            assert!(
+                col[i].bit_eq(&Value::Real(e)),
+                "col {j} row {i}: {:?}",
+                col[i]
+            );
+        }
     }
     let times: Vec<u64> = m.trace.times().iter().map(|t| t.to_bits()).collect();
     let want: Vec<u64> = [0.0_f64, 1.0, 2.0, 3.0]
@@ -598,6 +637,33 @@ fn simulate_rejects_bad_spec_without_panicking() {
         eng.simulate(&bad_named),
         Err(OcError::UnknownPoint(_))
     ));
+}
+
+#[test]
+fn collect_named_rejects_input_point() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(free_add_model()).unwrap();
+    let spec = SimSpec {
+        t_start: 0.0,
+        t_stop: 1.0,
+        step: 1.0,
+        inputs: InputSource::None,
+        collect: CollectSpec::Named {
+            points: vec!["conn#0".to_string()],
+            stride: 1,
+        },
+    };
+    assert!(matches!(eng.simulate(&spec), Err(OcError::UnknownPoint(_))));
+}
+
+#[test]
+fn get_output_on_valid_output_returns_bit_exact_value() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.set_input("conn#0", Value::Real(3.0)).unwrap();
+    eng.set_input("conn#1", Value::Real(4.0)).unwrap();
+    eng.tick(0.0).unwrap();
+    assert!(eng.get_output("conn#2").unwrap().bit_eq(&Value::Real(7.0)));
 }
 
 #[test]
