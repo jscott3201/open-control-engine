@@ -376,6 +376,24 @@ fn pre_breaks_the_feedback_loop() {
 }
 
 #[test]
+fn stateful_reals_comparator_does_not_break_feedback_loop() {
+    // R-REALS-1 trap: `Greater(h>0)` is stateful but direct-feedthrough, so it cannot cut a
+    // feedback loop the way `Pre`/`UnitDelay` do.
+    let mut b = ModelBuilder::default();
+    let (_gt, gt_in, gt_out) = b.block_real(make("CDL.Reals.Greater", &[("h", Value::Real(1.0))]));
+    b.connect(gt_out[0], gt_in[0]);
+
+    let err = compile(&b.model, &b.blocks).expect_err("stateful comparator must not cut the loop");
+    assert!(
+        matches!(
+            err,
+            BuildError::AlgebraicLoop { .. } | BuildError::BlockAlgebraicLoop { .. }
+        ),
+        "expected algebraic loop rejection, got {err:?}"
+    );
+}
+
+#[test]
 fn algebraic_loop_is_rejected_with_cycle_members() {
     // Same topology as the Pre test, but the loop element feeds through (an [A] passthrough), so
     // the feedback is a true algebraic loop and BUILD must reject it.
