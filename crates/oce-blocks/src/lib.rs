@@ -12,9 +12,10 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A1 scalar Reals).** The trait surface, A0 per-tick context seam,
-//! starter blocks, and A1 scalar Reals algebraic core are implemented on the arena trait, with a
-//! static class-path registry. The full ~130-block catalog is phased across M1–M2 per `03` §7.
+//! Status: **M2 in progress (A2 Reals comparators).** The trait surface, A0 per-tick context seam,
+//! starter blocks, A1 scalar Reals algebraic core, and A2 param-dependent comparator state are
+//! implemented on the arena trait, with a static class-path registry. The full ~130-block catalog
+//! is phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
@@ -26,8 +27,8 @@ mod registry;
 pub use discrete::UnitDelay;
 pub use logical::{And, Edge, Not, Pre, SampleTrigger};
 pub use reals::{
-    Abs, Add, AddParameter, Constant, Divide, Greater, Limiter, Line, Max, Min, Multiply,
-    MultiplyByParameter, Subtract, Switch,
+    Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
+    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
 };
 pub use registry::lookup;
 
@@ -66,7 +67,8 @@ pub struct BlockSignature {
     pub inputs: &'static [PortKind],
     /// Output port kinds in declaration order (index = port index).
     pub outputs: &'static [PortKind],
-    /// `[S]` if stateful, `[A]` if stateless.
+    /// Static class-level state hint. For parameter-dependent classes, use [`Block::kind`] on the
+    /// resolved instance for the authoritative `[A]`/`[S]` allocation decision.
     pub stateful: bool,
 }
 

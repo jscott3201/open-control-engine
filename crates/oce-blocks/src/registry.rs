@@ -7,9 +7,9 @@
 use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::{
-    Abs, Add, AddParameter, And, Block, Constant, Divide, Edge, Greater, Limiter, Line, Max, Min,
-    Multiply, MultiplyByParameter, Not, Pre, RegistryEntry, SampleTrigger, Subtract, Switch,
-    UnitDelay,
+    Abs, Add, AddParameter, And, Block, Constant, Divide, Edge, Greater, GreaterThreshold,
+    Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Not,
+    Pre, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -72,6 +72,22 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Greater",
         make: make_greater,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.GreaterThreshold",
+        make: make_greater_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Hysteresis",
+        make: make_hysteresis,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Less",
+        make: make_less,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.LessThreshold",
+        make: make_less_threshold,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Switch",
@@ -229,8 +245,42 @@ fn make_line(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Line)
 }
 
-fn make_greater(_p: &ParamTable) -> Box<dyn Block> {
-    Box::new(Greater)
+fn make_greater(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Greater {
+        h: real_param(p, "h", 0.0),
+        pre_y_start: bool_param(p, "pre_y_start", false),
+    })
+}
+
+fn make_greater_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(GreaterThreshold {
+        t: real_param(p, "t", 0.0),
+        h: real_param(p, "h", 0.0),
+        pre_y_start: bool_param(p, "pre_y_start", false),
+    })
+}
+
+fn make_hysteresis(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Hysteresis {
+        u_low: real_param(p, "uLow", 0.0),
+        u_high: real_param(p, "uHigh", 1.0),
+        pre_y_start: bool_param(p, "pre_y_start", false),
+    })
+}
+
+fn make_less(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Less {
+        h: real_param(p, "h", 0.0),
+        pre_y_start: bool_param(p, "pre_y_start", false),
+    })
+}
+
+fn make_less_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(LessThreshold {
+        t: real_param(p, "t", 0.0),
+        h: real_param(p, "h", 0.0),
+        pre_y_start: bool_param(p, "pre_y_start", false),
+    })
 }
 
 fn make_switch(_p: &ParamTable) -> Box<dyn Block> {

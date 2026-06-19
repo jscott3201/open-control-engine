@@ -9,8 +9,9 @@ use oce_model::{ParamTable, Value};
 
 use super::{
     Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
-    Greater, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pre,
-    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
+    Greater, GreaterThreshold, Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Multiply,
+    MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time,
+    UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]
@@ -137,7 +138,23 @@ fn feedthrough_classification_matches_spec() {
             && Line.feeds_through(3, 0)
             && Line.feeds_through(4, 0)
     );
-    assert!(Greater.feeds_through(0, 0) && Greater.feeds_through(1, 0));
+    assert!(Greater::default().feeds_through(0, 0) && Greater::default().feeds_through(1, 0));
+    assert!(
+        Greater {
+            h: 1.0,
+            pre_y_start: false
+        }
+        .feeds_through(0, 0)
+            && Greater {
+                h: 1.0,
+                pre_y_start: false
+            }
+            .feeds_through(1, 0)
+    );
+    assert!(Less::default().feeds_through(0, 0) && Less::default().feeds_through(1, 0));
+    assert!(GreaterThreshold::default().feeds_through(0, 0));
+    assert!(LessThreshold::default().feeds_through(0, 0));
+    assert!(Hysteresis::default().feeds_through(0, 0));
     assert!(And.feeds_through(0, 0) && And.feeds_through(1, 0));
     assert!(Not.feeds_through(0, 0));
     assert!(Switch.feeds_through(0, 0) && Switch.feeds_through(1, 0) && Switch.feeds_through(2, 0));
@@ -155,6 +172,16 @@ fn feedthrough_classification_matches_spec() {
     assert!(!SampleTrigger::default().feeds_through(0, 0));
     assert_eq!(SampleTrigger::default().kind(), BlockKind::Stateful);
     assert!(SampleTrigger::default().signature().inputs.is_empty());
+    assert_eq!(
+        Greater {
+            h: 1.0,
+            pre_y_start: false
+        }
+        .kind(),
+        BlockKind::Stateful
+    );
+    assert_eq!(Greater::default().kind(), BlockKind::Algebraic);
+    assert_eq!(Hysteresis::default().kind(), BlockKind::Stateful);
 
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
@@ -209,9 +236,39 @@ fn limiter_clips_and_tolerates_inverted_bounds() {
 
 #[test]
 fn comparison_and_logical_blocks() {
-    assert!(outs(&Greater, &[Value::Real(3.0), Value::Real(2.0)])[0].bit_eq(&Value::Boolean(true)));
     assert!(
-        outs(&Greater, &[Value::Real(2.0), Value::Real(2.0)])[0].bit_eq(&Value::Boolean(false))
+        outs(&Greater::default(), &[Value::Real(3.0), Value::Real(2.0)])[0]
+            .bit_eq(&Value::Boolean(true))
+    );
+    assert!(
+        outs(&Greater::default(), &[Value::Real(2.0), Value::Real(2.0)])[0]
+            .bit_eq(&Value::Boolean(false))
+    );
+    assert!(
+        outs(&Less::default(), &[Value::Real(2.0), Value::Real(3.0)])[0]
+            .bit_eq(&Value::Boolean(true))
+    );
+    assert!(
+        outs(
+            &GreaterThreshold {
+                t: 2.5,
+                h: 0.0,
+                pre_y_start: false
+            },
+            &[Value::Real(2.5)]
+        )[0]
+        .bit_eq(&Value::Boolean(false))
+    );
+    assert!(
+        outs(
+            &LessThreshold {
+                t: 2.5,
+                h: 0.0,
+                pre_y_start: false
+            },
+            &[Value::Real(2.4)]
+        )[0]
+        .bit_eq(&Value::Boolean(true))
     );
     assert!(
         outs(&And, &[Value::Boolean(true), Value::Boolean(false)])[0]
@@ -277,6 +334,10 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Limiter",
         "CDL.Reals.Line",
         "CDL.Reals.Greater",
+        "CDL.Reals.GreaterThreshold",
+        "CDL.Reals.Hysteresis",
+        "CDL.Reals.Less",
+        "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
         "CDL.Logical.And",
         "CDL.Logical.Not",
@@ -316,6 +377,26 @@ fn registry_make_resolves_parameters() {
     let mut region = vec![0u64; delay.state_len()];
     delay.init_state(&mut region, &delay_params);
     assert!(emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(1.25)));
+
+    let greater_h = (lookup("CDL.Reals.Greater").unwrap().make)(&ParamTable {
+        values: vec![(Arc::from("h"), Value::Real(1.0))],
+    });
+    assert_eq!(greater_h.kind(), BlockKind::Stateful);
+    assert_eq!(greater_h.state_len(), 1);
+
+    let hysteresis = (lookup("CDL.Reals.Hysteresis").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("uLow"), Value::Real(2.0)),
+            (Arc::from("uHigh"), Value::Real(5.0)),
+            (Arc::from("pre_y_start"), Value::Boolean(true)),
+        ],
+    });
+    assert_eq!(hysteresis.kind(), BlockKind::Stateful);
+    assert_eq!(
+        drive_bool(hysteresis.as_ref(), &[(vec![Value::Real(3.0)], 0.0)]),
+        vec![true],
+        "pre_y_start=true must seed the initial hold state"
+    );
 }
 
 #[test]

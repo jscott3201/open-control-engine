@@ -18,6 +18,8 @@ use crate::{
     build_feedthrough_dag, compile, eval_tick,
 };
 
+mod feedthrough_stateful;
+
 // ---- test fixtures --------------------------------------------------------------------------
 
 /// Feedthrough spec for a [`TestBlock`]: either a uniform answer for every port pair, or an
@@ -372,6 +374,24 @@ fn pre_breaks_the_feedback_loop() {
     assert_eq!(
         reference_order(&dag, &b.model).unwrap(),
         sched.connector_order
+    );
+}
+
+#[test]
+fn stateful_reals_comparator_does_not_break_feedback_loop() {
+    // R-REALS-1 trap: `Greater(h>0)` is stateful but direct-feedthrough, so it cannot cut a
+    // feedback loop the way `Pre`/`UnitDelay` do.
+    let mut b = ModelBuilder::default();
+    let (_gt, gt_in, gt_out) = b.block_real(make("CDL.Reals.Greater", &[("h", Value::Real(1.0))]));
+    b.connect(gt_out[0], gt_in[0]);
+
+    let err = compile(&b.model, &b.blocks).expect_err("stateful comparator must not cut the loop");
+    assert!(
+        matches!(
+            err,
+            BuildError::AlgebraicLoop { .. } | BuildError::BlockAlgebraicLoop { .. }
+        ),
+        "expected algebraic loop rejection, got {err:?}"
     );
 }
 
