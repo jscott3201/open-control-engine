@@ -11,7 +11,7 @@ fn t26_diagnostics_are_deterministic_and_id_sorted() {
     // Several violations across connectors at different ids; the stream must be byte-identical
     // across runs and ordered by ascending ConnectorId.0 (synthetic connector#N parsed numerically).
     let make = || ModelGraph {
-        blocks: vec![],
+        blocks: vec![block(0, "unknown.Class", &[0, 1, 2], &[])],
         connectors: vec![
             conn(0, 0, Dir::In, ValueType::Real), // undriven non-external → single-assignment
             conn(1, 0, Dir::In, ValueType::Real), // undriven non-external → single-assignment
@@ -114,6 +114,7 @@ fn t32_same_code_and_subject_sort_by_message() {
     // Two out-of-range connections → two MalformedDocument diagnostics, both subject=None (key_cid
     // u32::MAX), same code → the MESSAGE tie-breaker decides. Messages embed the connection index.
     let make = || ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![conn_edge(0, 8), conn_edge(0, 9)], // both `to` out of range
         ..ModelGraph::new()
@@ -130,6 +131,44 @@ fn t32_same_code_and_subject_sort_by_message() {
         "message tie-breaker: #0 before #1"
     );
     assert!(d1[1].message.contains("#1"));
+}
+
+#[test]
+fn t35_block_subjects_sort_by_numeric_block_id() {
+    // Arity diagnostics use synthetic block#N subjects for hand-built graphs. The finalizer must
+    // parse N numerically, otherwise block#10 sorts before block#3 lexicographically.
+    let make = || {
+        let mut blocks: Vec<BlockInstance> = (0..=10)
+            .map(|id| block(id, "unknown.Class", &[], &[]))
+            .collect();
+        blocks[3] = block(3, "CDL.Reals.Add", &[0], &[1]);
+        blocks[10] = block(10, "CDL.Reals.Add", &[2], &[3]);
+        ModelGraph {
+            blocks,
+            connectors: vec![
+                conn(0, 3, Dir::In, ValueType::Real),
+                conn(1, 3, Dir::Out, ValueType::Real),
+                conn(2, 10, Dir::In, ValueType::Real),
+                conn(3, 10, Dir::Out, ValueType::Real),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+        }
+    };
+
+    let d1 = validate(&make())
+        .expect_err("two block arity diagnostics")
+        .diagnostics;
+    let d2 = validate(&make())
+        .expect_err("two block arity diagnostics")
+        .diagnostics;
+    assert_eq!(d1, d2, "block-subject sorting must be deterministic");
+    assert_eq!(
+        codes(&d1),
+        vec![DiagCode::MalformedDocument, DiagCode::MalformedDocument]
+    );
+    let subjects: Vec<&str> = d1.iter().filter_map(|x| x.subject.as_deref()).collect();
+    assert_eq!(subjects, vec!["block#3", "block#10"]);
 }
 
 // ---- T33: chained / cross-cluster transitive propagation + confluence -----------------------

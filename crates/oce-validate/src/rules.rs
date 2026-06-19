@@ -3,7 +3,7 @@
 //! Every check here is **total and panic-free** on *any* [`ModelGraph`] — including a
 //! structurally-malformed, hand-built one whose ids are out of range or whose [`Attrs`] variant
 //! violates the R5 tag invariant (a public struct literal can do this, bypassing the checked
-//! [`oce_model::Connector::with_attrs`] constructor). Every connector/connection index is
+//! [`oce_model::Connector::with_attrs`] constructor). Every block/connector/connection index is
 //! bounds-checked before use and every `Real`-attribute read goes through
 //! [`oce_model::Attrs::as_real`] (which yields `None` on a mismatched tag) rather than an unwrap.
 //! A malformed graph yields a [`DiagCode::MalformedDocument`] diagnostic, never an abort
@@ -62,6 +62,51 @@ fn in_degrees(model: &ModelGraph) -> Vec<u32> {
         }
     }
     deg
+}
+
+// ---- Rule 0: arena id integrity -------------------------------------------------------------
+
+/// Every block and connector must reference the dense arenas the executor indexes by raw id:
+///
+/// - `model.blocks[i].id.0 == i` for every block (dense + unique [`oce_model::BlockId`] space).
+/// - `connector.block.0 < model.blocks.len()` for every connector.
+///
+/// These are malformed-document errors because `oce-graph` intentionally keeps BUILD/tick arena
+/// indexing lean and assumes validation has already proven these invariants.
+pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+    let block_count = model.blocks.len();
+
+    for (index, blk) in model.blocks.iter().enumerate() {
+        let id = blk.id.0 as usize;
+        if id != index || id >= block_count {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block id invariant violated: block at arena index {index} has BlockId({}); \
+                         expected a dense unique BlockId equal to its arena index and < blocks={block_count}",
+                        blk.id.0
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+        }
+    }
+
+    for c in &model.connectors {
+        if c.block.0 as usize >= block_count {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "connector id {} references an out-of-range block id {} (blocks={block_count})",
+                        c.id.0, c.block.0
+                    ),
+                )
+                .with_subject(subject_of(c)),
+            );
+        }
+    }
 }
 
 // ---- Rule 1: boundary-aware single assignment (§7.10 / §9.1.5) ------------------------------
@@ -594,11 +639,12 @@ fn warn_display_unit_divergence(model: &ModelGraph, members: &[u32], diags: &mut
 
 // ---- deterministic diagnostic ordering ------------------------------------------------------
 
-/// Sort diagnostics into the pinned deterministic order: by the subject's `ConnectorId.0` ascending
-/// (connector subjects first), then by `DiagCode` string, then message. Non-connector subjects sort
-/// after all connectors (`u32::MAX`) by their raw subject string — total and panic-free. **Ported
-/// from `oce-cxf` `resolve.rs`** so the resolver's and the validator's diagnostic streams use one
-/// ordering discipline (`_spec/11-m1-cxf-plan.md` §2 determinism rule).
+/// Sort diagnostics into the pinned deterministic order: connector subjects by `ConnectorId.0`,
+/// then block subjects by `BlockId.0`, then other subjects, followed by `DiagCode` string and
+/// message tie-breakers. Synthetic `connector#N` and `block#N` subjects are parsed numerically so
+/// IRI-less structural diagnostics never sort lexicographically (`#10` before `#3`). **Ported from
+/// `oce-cxf` `resolve.rs`** for connector subjects so the resolver's and the validator's diagnostic
+/// streams use one ordering discipline (`_spec/11-m1-cxf-plan.md` §2 determinism rule).
 pub(crate) fn finalize_diags(
     mut diags: Vec<Diagnostic>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
@@ -608,20 +654,30 @@ pub(crate) fn finalize_diags(
     // map to the numeric id so the structural diagnostics (single-assignment / direction / type) —
     // which are IRI-less in practice — sort by ascending `ConnectorId.0` per the pinned rule, not
     // by lexicographic string order (where `connector#10` would precede `connector#3`).
-    let key_cid = |d: &Diagnostic| -> u32 {
-        d.subject
-            .as_deref()
-            .and_then(|s| {
-                conn_of_iri.get(s).map(|c| c.0).or_else(|| {
-                    s.strip_prefix("connector#")
-                        .and_then(|num| num.parse::<u32>().ok())
-                })
-            })
-            .unwrap_or(u32::MAX)
+    let subject_key = |d: &Diagnostic| -> (u8, u32) {
+        let Some(s) = d.subject.as_deref() else {
+            return (2, u32::MAX);
+        };
+        if let Some(c) = conn_of_iri.get(s) {
+            return (0, c.0);
+        }
+        if let Some(id) = s
+            .strip_prefix("connector#")
+            .and_then(|num| num.parse::<u32>().ok())
+        {
+            return (0, id);
+        }
+        if let Some(id) = s
+            .strip_prefix("block#")
+            .and_then(|num| num.parse::<u32>().ok())
+        {
+            return (1, id);
+        }
+        (2, u32::MAX)
     };
     diags.sort_by(|a, b| {
-        key_cid(a)
-            .cmp(&key_cid(b))
+        subject_key(a)
+            .cmp(&subject_key(b))
             .then_with(|| a.subject.as_deref().cmp(&b.subject.as_deref()))
             .then_with(|| a.code.as_str().cmp(b.code.as_str()))
             .then_with(|| a.message.cmp(&b.message))

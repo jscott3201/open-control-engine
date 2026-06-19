@@ -240,6 +240,7 @@ fn t13_unknown_class_skips_rule3_silently() {
 fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
     // Connection references ids beyond the connector arena — must report, never index OOB.
     let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![conn_edge(0, 9)], // 9 is out of range
         ..ModelGraph::new()
@@ -261,6 +262,25 @@ fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
 }
 
 #[test]
+fn t24_connector_block_out_of_range_is_malformed() {
+    // A connector whose owning BlockId is outside the block arena would panic in topo decl_key.
+    let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![conn(0, 7, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("connector must reference an in-range block");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("out-of-range block id 7")
+    );
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#0"));
+}
+
+#[test]
 fn t25_block_port_out_of_range_connector_is_malformed() {
     // A block whose port list references a non-existent connector id → Rule 3 reports, no panic.
     let m = ModelGraph {
@@ -274,6 +294,33 @@ fn t25_block_port_out_of_range_connector_is_malformed() {
     };
     let err = validate(&m).expect_err("out-of-range port connector must fail");
     assert!(codes(&err.diagnostics).contains(&DiagCode::MalformedDocument));
+}
+
+#[test]
+fn t29_block_ids_must_be_dense_unique_arena_indices() {
+    // A block id that is in range but not equal to its arena index would panic in BUILD when the
+    // feedthrough pass indexes instantiated blocks by `BlockId.0`.
+    let m = ModelGraph {
+        blocks: vec![block(1, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = validate(&m).expect_err("block id must equal arena index");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("block id invariant"));
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#1"));
+
+    let duplicate = ModelGraph {
+        blocks: vec![
+            block(0, "unknown.Class", &[], &[]),
+            block(0, "unknown.Class", &[], &[]),
+        ],
+        ..ModelGraph::new()
+    };
+    let err = validate(&duplicate).expect_err("duplicate block id must fail density");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("arena index 1"));
 }
 
 // ---- T30: Rule 3 OUTPUT-port branch ----------------------------------------------------------
