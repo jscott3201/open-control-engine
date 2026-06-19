@@ -33,7 +33,6 @@ oce-cxf = { workspace = true }
 oce-diag = { workspace = true }
 oce-validate = { workspace = true }
 oce-flatten = { workspace = true }
-oce-semantics = { workspace = true }
 oce-store = { workspace = true }
 oce-store-mem = { workspace = true }
 thiserror = { workspace = true }

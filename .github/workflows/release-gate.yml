@@ -1,5 +1,6 @@
 # Release gate for open-control (the Open Control Engine) — runs on `development` -> `main`
-# release PRs (base branch: main) plus manual dispatch.
+# release PRs (base branch: main), manual dispatch, and a daily scheduled run against the
+# `development` tip.
 #
 # DISJOINT from ci.yml by base branch. GitHub keys `pull_request: branches:` on the PR's BASE
 # (target) branch, so:
@@ -7,18 +8,16 @@
 #   * a `development` -> `main` release PR matches THIS workflow ONLY.
 # The two never both fire on one PR; there is no double-run.
 #
-# `main` does not exist yet — it is created at the first release — so until then
-# `workflow_dispatch` is the only way to exercise this gate (run it manually on the branch to
-# confirm green before cutting the first release). The `|| github.event_name ==
-# 'workflow_dispatch'` clause in each `if:` makes that intent explicit; it is belt-and-suspenders,
-# not load-bearing — on dispatch `github.event.pull_request.draft` is `null`, and GitHub coerces
-# `null == false` to true, so the first clause already passes. Keeping the clause documents the
-# manual-run path and is robust to that coercion changing.
+# Until the first `main` release PR exists, `workflow_dispatch` and the daily cron exercise this gate.
+# Scheduled and manually-dispatched runs explicitly checkout `development`, so they continue to test
+# the integration tip even after `main` becomes the default branch. The explicit `|| github.event_name
+# == ...` clauses in each `if:` document the non-PR paths and avoid relying on GitHub's null coercion.
 #
 # WHAT RUNS HERE vs. ci.yml:
 #   * NEW value — the FULL test suite. ci.yml runs NO tests, so this gate is the first and only
 #     place behavioral tests execute in CI:
-#       - `cargo nextest run` for every unit + integration test in the workspace, and
+#       - `cargo nextest run` for every unit + integration test in the workspace,
+#       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
 #       - `cargo test --doc`  for doctests (nextest cannot run doctests).
 #     `--no-tests=fail` is explicit: a run that discovers zero tests HARD-FAILS, catching the
 #     regression where tests silently stop compiling or being discovered. (Today: all unit
@@ -29,7 +28,7 @@
 #     `development` also drifts between the last per-PR run and the release cut, and the merge
 #     commit landing on `main` is the shipped artifact — re-validating the exact tip is correct,
 #     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
-#     workspace build, rustdoc -D warnings.
+#     workspace build, rustdoc -D warnings, cargo-machete, and gate-script behavior fixtures.
 #   * cargo-deny runs UNCONDITIONALLY here (no paths-filter gating, unlike ci.yml) and adds
 #     `advisories` — a release warrants a full advisories/bans/licenses/sources sweep.
 #
@@ -45,6 +44,10 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    # Daily development-tip heavy gate. GitHub schedules run on the default branch, so checkout below
+    # pins scheduled jobs back to `development`.
+    - cron: "17 8 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -60,6 +63,7 @@ env:
   # surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so the two cannot drift. A plain
   # workflow env var, not `github.event.*` — safe to read inside `run:`. Bump here + re-bless.
   NIGHTLY: nightly-2026-05-01
+  CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
 permissions:
   contents: read
@@ -67,10 +71,12 @@ permissions:
 jobs:
   test-suite:
     name: full test suite (nextest + doctests)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
       # Gate-only nightly for the `cargo public-api` surface snapshot (crates/oce-api/tests/
       # public_api.rs, exit #7). Installed but NOT made the default — the workspace still builds on
@@ -90,6 +96,10 @@ jobs:
       # The public-api snapshot test SKIPS here (unarmed) — it gets its own step below.
       - name: cargo nextest run (unit + integration)
         run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
+      # Same suite under release codegen. The `ci` nextest profile is only a runner profile; this
+      # explicit cargo profile is what strips debug_assert paths and exercises release panic-freedom.
+      - name: cargo nextest run --release (unit + integration)
+        run: cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail
       # Doctests — the second mandatory step, since nextest does not run doctests.
       - name: cargo test --doc (doctests)
         run: cargo test --workspace --doc --locked
@@ -118,10 +128,12 @@ jobs:
 
   fmt:
     name: fmt
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt
@@ -129,36 +141,73 @@ jobs:
 
   file-size-cap:
     name: file-size cap (700 LOC)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - run: bash .github/scripts/check-file-size.sh
 
   no-secret-scan:
     name: no-secret scan
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - run: bash .github/scripts/check-no-secrets.sh
+
+  gate-fixtures:
+    name: gate behavior fixtures
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - name: no-db gate fixtures
+        run: bash .github/scripts/test-check-default-no-db.sh
+      - name: workflow gate fixtures
+        run: bash .github/scripts/test-workflow-gates.sh
+      - name: real workflow smoke
+        run: bash .github/scripts/check-workflow-gates.sh
+
+  unused-deps:
+    name: unused dependency gate (cargo-machete)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - run: cargo machete
 
   default-no-db:
     name: default build links no database / async runtime
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash .github/scripts/check-default-no-db.sh
 
   clippy:
     name: clippy (-D warnings)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: clippy
@@ -168,10 +217,12 @@ jobs:
 
   build:
     name: build
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
       - name: cargo build (default — no DB)
@@ -179,10 +230,12 @@ jobs:
 
   rustdoc:
     name: rustdoc (-D warnings)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
       - name: cargo doc — libs (deny warnings)
@@ -196,10 +249,12 @@ jobs:
 
   deny:
     name: cargo-deny (full)
-    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: taiki-e/install-action@v2
         with:

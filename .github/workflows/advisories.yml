@@ -1,0 +1,38 @@
+# Advisory/yanked dependency gate for open-control (the Open Control Engine).
+#
+# The light per-PR gate runs cargo-deny bans/licenses/sources only when manifests change, and the
+# release gate runs the full cargo-deny suite. This workflow closes advisory dormancy: RustSec/yanked
+# checks run daily against the default branch and can be dispatched manually.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: advisories
+
+on:
+  schedule:
+    - cron: "43 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: advisories-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  advisories:
+    name: cargo-deny advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - run: cargo deny check advisories
