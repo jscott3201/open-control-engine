@@ -72,23 +72,46 @@ fn a1_reals_feedthrough_perturbation_matches_declared_contract() {
 }
 
 #[test]
+fn multiply_edges_are_ieee_and_panic_free() {
+    assert_real_bits(&Multiply, &[0.0, f64::INFINITY], 0x7ff8000000000000);
+    assert_real_bits(&Multiply, &[f64::MAX, f64::MAX], f64::INFINITY.to_bits());
+    assert_real_bits(&Multiply, &[1.0, f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(&Multiply, &[-0.0, 1.0], (-0.0f64).to_bits());
+}
+
+#[test]
 fn divide_edges_are_ieee_and_panic_free() {
     assert_real_bits(&Divide, &[1.0, 0.0], f64::INFINITY.to_bits());
     assert_real_bits(&Divide, &[1.0, -0.0], f64::NEG_INFINITY.to_bits());
     assert_real_bits(&Divide, &[1.0, f64::INFINITY], 0.0f64.to_bits());
     assert_real_bits(&Divide, &[-1.0, f64::INFINITY], (-0.0f64).to_bits());
+    assert_real_bits(&Divide, &[1.0, f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(&Divide, &[0.0, 0.0], 0x7ff8000000000000);
+    assert_real_bits(&Divide, &[f64::INFINITY, f64::INFINITY], 0x7ff8000000000000);
+    assert_real_bits(&Divide, &[-0.0, -0.0], 0x7ff8000000000000);
+}
 
-    let nan_divisor = real_out(&Divide, &[Value::Real(1.0), Value::Real(f64::NAN)]);
-    assert!(nan_divisor.is_nan());
-    let zero_over_zero = real_out(&Divide, &[Value::Real(0.0), Value::Real(0.0)]);
-    assert!(zero_over_zero.is_nan());
+#[test]
+fn add_parameter_edges_are_ieee_and_panic_free() {
+    assert_real_bits(
+        &AddParameter { p: f64::MAX },
+        &[f64::MAX],
+        f64::INFINITY.to_bits(),
+    );
+    assert_real_bits(&AddParameter { p: 1.0 }, &[f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(
+        &AddParameter { p: f64::INFINITY },
+        &[1.0],
+        f64::INFINITY.to_bits(),
+    );
 }
 
 #[test]
 fn abs_edges_preserve_specified_ieee_behavior() {
     assert_real_bits(&Abs, &[-0.0], 0.0f64.to_bits());
-    let y = real_out(&Abs, &[Value::Real(f64::NAN)]);
-    assert!(y.is_nan());
+    assert_real_bits(&Abs, &[f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(&Abs, &[f64::INFINITY], f64::INFINITY.to_bits());
+    assert_real_bits(&Abs, &[f64::NEG_INFINITY], f64::INFINITY.to_bits());
 }
 
 #[test]
@@ -97,6 +120,18 @@ fn min_max_edges_follow_scalar_expression_policy() {
     assert_real_bits(&Min, &[2.0, f64::NAN], 2.0f64.to_bits());
     assert_real_bits(&Max, &[f64::NAN, 2.0], 2.0f64.to_bits());
     assert_real_bits(&Max, &[2.0, f64::NAN], 2.0f64.to_bits());
+    assert_real_bits(&Min, &[f64::NAN, f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(&Max, &[f64::NAN, f64::NAN], 0x7ff8000000000000);
+    assert_real_bits(
+        &Min,
+        &[f64::INFINITY, f64::NEG_INFINITY],
+        f64::NEG_INFINITY.to_bits(),
+    );
+    assert_real_bits(
+        &Max,
+        &[f64::INFINITY, f64::NEG_INFINITY],
+        f64::INFINITY.to_bits(),
+    );
 
     assert_real_bits(&Min, &[-0.0, 0.0], (-0.0f64).to_bits());
     assert_real_bits(&Min, &[0.0, -0.0], (-0.0f64).to_bits());
@@ -124,6 +159,17 @@ fn line_clamps_at_breakpoints_and_degrades_on_degenerate_domain() {
         ],
     );
     assert!(degenerate.is_nan());
+}
+
+#[test]
+fn line_pins_current_endpoint_nan_and_inverted_domain_behavior() {
+    // Pins the current slope-intercept endpoint behavior pending the M2-PR-G1 canonical-form decision.
+    let non_power_two = |u| [0.0, 0.1, 3.0, 1.1, u];
+    assert_real_bits(&Line, &non_power_two(-1.0), 0x3fb99999999999a0);
+    assert_real_bits(&Line, &non_power_two(4.0), 1.1f64.to_bits());
+    assert_real_bits(&Line, &non_power_two(f64::NAN), 0x3fb99999999999a0);
+
+    assert_real_bits(&Line, &[5.0, 0.0, 2.0, 10.0, 3.0], 10.0f64.to_bits());
 }
 
 #[test]

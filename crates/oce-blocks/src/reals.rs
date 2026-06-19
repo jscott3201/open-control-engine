@@ -1,4 +1,7 @@
 //! `CDL.Reals` starter blocks (`03` §4.1) — all stateless `[A]`, full feedthrough on the math path.
+//! Non-finite policy is intentionally local for M2: `Min`/`Max` absorb a single NaN operand to match
+//! `oce-expr`, while `Divide` and the `Line` slope/intercept arithmetic preserve IEEE NaN/±Inf
+//! behavior. Centralized non-finite validation/diagnostics is deferred to the future seam.
 
 use oce_model::Value;
 
@@ -309,6 +312,7 @@ impl Block for Limiter {
 /// `CDL.Reals.Line` — line through `(x1,f1),(x2,f2)` evaluated at `u`, with `u` clamped into
 /// `[x1,x2]` before interpolation (`03` §4.1). Stateless `[A]`, full feedthrough. A degenerate
 /// `x1 == x2` follows the same `f64` formula and degrades to IEEE NaN/Inf rather than panicking.
+/// A NaN `u` takes the lower-clamp path; an inverted `x1 > x2` domain collapses to `f2`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Line;
 
@@ -342,6 +346,7 @@ impl Block for Line {
         let u = read_real(inputs, 4);
         let x_lim = u.max(x1).min(x2);
         let b = (f2 - f1) / (x2 - x1);
+        // M2-PR-G1 will choose the canonical point-slope vs slope-intercept form.
         let a = f2 - b * x2;
         emit(0, Value::Real(a + b * x_lim));
     }
