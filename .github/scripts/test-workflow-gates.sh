@@ -45,7 +45,11 @@ jobs:
       - run: cargo test --workspace --doc --locked
       - env:
           OCE_REQUIRE_SURFACE_CHECK: "1"
-        run: cargo nextest run -p oce-api --profile public-api --locked --no-tests=fail
+        run: cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api --locked --no-tests=fail
+      - name: cargo public-api surface gate (oce-store)
+        env:
+          OCE_REQUIRE_SURFACE_CHECK: "1"
+        run: cargo nextest run -p oce-store -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api --locked --no-tests=fail
   unused-deps:
     steps:
       - uses: taiki-e/install-action@v2
@@ -185,11 +189,19 @@ remove_stale_status_gate() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+remove_store_surface_gate() {
+  dir="$1"
+  _deny="$2"
+  grep -v -- '-p oce-store' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest
 run_case seeded-advisory-ignore fail seed_advisory_ignore
 run_case garbled-workflow fail garble_release_workflow
 run_case missing-stale-status-gate fail remove_stale_status_gate
 run_case empty-bans-deny fail empty_bans_deny
+run_case missing-store-surface-gate fail remove_store_surface_gate
 
 echo "OK: workflow gate fixtures passed."

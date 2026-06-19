@@ -55,6 +55,10 @@ require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci 
   'release-codegen nextest with hard-fail-on-zero-tests'
 require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate'
 require_pattern "$release" 'OCE_REQUIRE_SURFACE_CHECK:[[:space:]]*"1"' 'armed public-api surface gate'
+require_pattern "$release" 'cargo public-api surface gate \(oce-store\)' \
+  'dedicated oce-store public-api surface gate step'
+require_pattern "$release" 'cargo nextest run -p oce-store' \
+  'oce-store public-api surface gate package selector'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
 require_pattern "$release" 'test-check-stale-crate-status\.sh' \

@@ -18,7 +18,8 @@
 #     place behavioral tests execute in CI:
 #       - `cargo nextest run` for every unit + integration test in the workspace,
 #       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
-#       - `cargo test --doc`  for doctests (nextest cannot run doctests).
+#       - `cargo test --doc`  for doctests (nextest cannot run doctests),
+#       - two armed per-crate public-API surface snapshots (`oce-api` and `oce-store`).
 #     `--no-tests=fail` is explicit: a run that discovers zero tests HARD-FAILS, catching the
 #     regression where tests silently stop compiling or being discovered. (Today: all unit
 #     tests across the workspace; there are no integration-test targets or doctests yet —
@@ -60,9 +61,10 @@ env:
   RUST_BACKTRACE: short
   CARGO_NET_GIT_FETCH_WITH_CLI: "true"
   # SINGLE SOURCE OF TRUTH for the gate-only nightly (one leg of the COMPAT TRIPLE pinned in
-  # crates/oce-api/Cargo.toml). Consumed below by the install step (as `$NIGHTLY`) and by the
-  # surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so the two cannot drift. A plain
-  # workflow env var, not `github.event.*` — safe to read inside `run:`. Bump here + re-bless.
+  # crates/oce-api/Cargo.toml and crates/oce-store/Cargo.toml). Consumed below by the install step
+  # (as `$NIGHTLY`) and by each surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so
+  # the steps cannot drift. A plain workflow env var, not `github.event.*` — safe to read inside
+  # `run:`. Bump here + re-bless.
   NIGHTLY: nightly-2026-05-01
   CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
@@ -79,12 +81,12 @@ jobs:
         with:
           ref: ${{ env.CHECKOUT_REF }}
       - uses: dtolnay/rust-toolchain@1.95.0
-      # Gate-only nightly for the `cargo public-api` surface snapshot (crates/oce-api/tests/
-      # public_api.rs, exit #7). Installed but NOT made the default — the workspace still builds on
-      # 1.95.0 above; the test shells out to THIS exact toolchain to emit rustdoc JSON. It is one leg
-      # of the (public-api, rustdoc-json, nightly) COMPAT TRIPLE pinned in crates/oce-api/Cargo.toml
-      # (a format_version skew fails the JSON parse); bump `$NIGHTLY` (above) + all three together
-      # and re-bless the baseline.
+      # Gate-only nightly for the `cargo public-api` surface snapshots (crates/oce-api/tests/
+      # public_api.rs and crates/oce-store/tests/public_api.rs, exit #7). Installed but NOT made the
+      # default — the workspace still builds on 1.95.0 above; each test shells out to THIS exact
+      # toolchain to emit rustdoc JSON. It is one leg of the (public-api, rustdoc-json, nightly)
+      # COMPAT TRIPLE pinned in both crates' Cargo.toml files (a format_version skew fails the JSON
+      # parse); bump `$NIGHTLY` (above) + all three together and re-bless the baselines.
       - name: install gate-only nightly (cargo public-api)
         run: rustup toolchain install "$NIGHTLY" --profile minimal --no-self-update
       - uses: Swatinem/rust-cache@v2
@@ -104,26 +106,39 @@ jobs:
       # Doctests — the second mandatory step, since nextest does not run doctests.
       - name: cargo test --doc (doctests)
         run: cargo test --workspace --doc --locked
-      # Public-API surface gate (exit #7 surface-enumeration). Runs as its OWN step under the
-      # dedicated `public-api` nextest profile (.config/nextest.toml) — a long slow-timeout so the
+      # Public-API surface gates (exit #7 surface-enumeration). Each crate runs as its OWN step under
+      # the dedicated `public-api` nextest profile (.config/nextest.toml) — a long slow-timeout so the
       # nested cold `cargo +nightly rustdoc` build is not killed by the `ci` profile's 120s
-      # terminate-after, while `--no-tests=fail` HARD-FAILS if the test ever vanishes (rename /
-      # delete / #[ignore] / filter-miss), which a raw `cargo test` would let pass silently green.
+      # terminate-after, while `--no-tests=fail` HARD-FAILS if that crate's test ever vanishes
+      # (rename / delete / #[ignore] / filter-miss), which a raw `cargo test` would let pass silently
+      # green. Do NOT merge the two package selectors into one step: one surviving crate would hide
+      # the other vanished test and turn a B3 false-green.
       #
       # ARMING (B3 — the gate's highest-stakes property), two interlocking env vars, DO NOT REMOVE:
       #   * OCE_PUBLIC_API_NIGHTLY — names the nightly to shell out to (= the single-source `$NIGHTLY`
       #     installed above), and ARMS the snapshot; unset, the test skips.
       #   * OCE_REQUIRE_SURFACE_CHECK=1 — makes a missing/empty nightly a HARD PANIC, not a silent
-      #     skip. So dropping the arming env from THIS step turns the gate RED, never green. It is set
-      #     only here, so the workspace-wide nextest step above still skips this test unarmed.
-      # The test fails hard on any tooling error and diffs oce_api's public surface against the
+      #     skip. So dropping the arming env from either surface step turns the gate RED, never green.
+      #     It is set only on these surface steps, so the workspace-wide nextest step above still
+      #     skips this test unarmed.
+      # The oce-api test fails hard on any tooling error and diffs oce_api's public surface against the
       # blessed crates/oce-api/tests/public-api.txt.
-      - name: cargo public-api surface gate
+      - name: cargo public-api surface gate (oce-api)
         env:
           OCE_PUBLIC_API_NIGHTLY: ${{ env.NIGHTLY }}
           OCE_REQUIRE_SURFACE_CHECK: "1"
         run: >-
           cargo nextest run -p oce-api
+          -E 'test(public_api_surface_matches_blessed_baseline)'
+          --profile public-api --locked --no-tests=fail
+      # Separate step for oce-store's own baseline. Keeping the package selector isolated preserves
+      # vanish->RED for this re-exported port surface.
+      - name: cargo public-api surface gate (oce-store)
+        env:
+          OCE_PUBLIC_API_NIGHTLY: ${{ env.NIGHTLY }}
+          OCE_REQUIRE_SURFACE_CHECK: "1"
+        run: >-
+          cargo nextest run -p oce-store
           -E 'test(public_api_surface_matches_blessed_baseline)'
           --profile public-api --locked --no-tests=fail
 
