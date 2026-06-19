@@ -18,6 +18,8 @@ use crate::{
     build_feedthrough_dag, compile, eval_tick,
 };
 
+mod feedthrough_stateful;
+
 // ---- test fixtures --------------------------------------------------------------------------
 
 /// Feedthrough spec for a [`TestBlock`]: either a uniform answer for every port pair, or an
