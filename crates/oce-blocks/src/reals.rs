@@ -86,6 +86,85 @@ impl Block for Subtract {
     }
 }
 
+/// `CDL.Reals.Multiply` — `y = u1·u2` (`03` §4.1). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Multiply;
+
+impl Block for Multiply {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Multiply",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(0, Value::Real(read_real(inputs, 0) * read_real(inputs, 1)));
+    }
+}
+
+/// `CDL.Reals.Divide` — `y = u1/u2` (`03` §4.1). Stateless `[A]`, full feedthrough; divide-by-zero
+/// follows IEEE-754 `f64` semantics and never panics.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Divide;
+
+impl Block for Divide {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Divide",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(0, Value::Real(read_real(inputs, 0) / read_real(inputs, 1)));
+    }
+}
+
+/// `CDL.Reals.AddParameter` — `y = u + p`, offset `p` (`03` §4.1). Stateless `[A]`, full
+/// feedthrough.
+#[derive(Clone, Copy, Debug)]
+pub struct AddParameter {
+    pub(crate) p: f64,
+}
+
+impl Block for AddParameter {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.AddParameter",
+            inputs: &[PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(0, Value::Real(read_real(inputs, 0) + self.p));
+    }
+}
+
 /// `CDL.Reals.MultiplyByParameter` — `y = k·u`, gain `k` (`03` §4.1).
 #[derive(Clone, Copy, Debug)]
 pub struct MultiplyByParameter {
@@ -110,6 +189,89 @@ impl Block for MultiplyByParameter {
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Real(self.k * read_real(inputs, 0)));
+    }
+}
+
+/// `CDL.Reals.Abs` — `y = |u|` (`03` §4.1). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Abs;
+
+impl Block for Abs {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Abs",
+            inputs: &[PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(0, Value::Real(read_real(inputs, 0).abs()));
+    }
+}
+
+/// `CDL.Reals.Min` — `y = min(u1,u2)` (`03` §4.1). Stateless `[A]`, full feedthrough. NaN handling
+/// follows the scalar expression evaluator: `f64::min` returns the non-NaN operand.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Min;
+
+impl Block for Min {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Min",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Real(read_real(inputs, 0).min(read_real(inputs, 1))),
+        );
+    }
+}
+
+/// `CDL.Reals.Max` — `y = max(u1,u2)` (`03` §4.1). Stateless `[A]`, full feedthrough. NaN handling
+/// follows the scalar expression evaluator: `f64::max` returns the non-NaN operand.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Max;
+
+impl Block for Max {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Max",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Real(read_real(inputs, 0).max(read_real(inputs, 1))),
+        );
     }
 }
 
@@ -141,6 +303,47 @@ impl Block for Limiter {
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let y = read_real(inputs, 0).max(self.u_min).min(self.u_max);
         emit(0, Value::Real(y));
+    }
+}
+
+/// `CDL.Reals.Line` — line through `(x1,f1),(x2,f2)` evaluated at `u`, with `u` clamped into
+/// `[x1,x2]` before interpolation (`03` §4.1). Stateless `[A]`, full feedthrough. A degenerate
+/// `x1 == x2` follows the same `f64` formula and degrades to IEEE NaN/Inf rather than panicking.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Line;
+
+impl Block for Line {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Line",
+            inputs: &[
+                PortKind::Real,
+                PortKind::Real,
+                PortKind::Real,
+                PortKind::Real,
+                PortKind::Real,
+            ],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let x1 = read_real(inputs, 0);
+        let f1 = read_real(inputs, 1);
+        let x2 = read_real(inputs, 2);
+        let f2 = read_real(inputs, 3);
+        let u = read_real(inputs, 4);
+        let x_lim = u.max(x1).min(x2);
+        let b = (f2 - f1) / (x2 - x1);
+        let a = f2 - b * x2;
+        emit(0, Value::Real(a + b * x_lim));
     }
 }
 

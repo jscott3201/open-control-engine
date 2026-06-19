@@ -8,9 +8,9 @@ use std::sync::Arc;
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Add, And, Block, BlockKind, Constant, Ctx, Diagnostics, Edge, Greater, Limiter,
-    MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time,
-    UnitDelay, lookup, read_int,
+    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
+    Greater, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pre,
+    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]
@@ -116,13 +116,26 @@ fn feedthrough_classification_matches_spec() {
     // [A] math/logic blocks feed through every (in, out) pair; the two loop-breakers cut.
     assert!(Add.feeds_through(0, 0) && Add.feeds_through(1, 0));
     assert!(Subtract.feeds_through(0, 0) && Subtract.feeds_through(1, 0));
+    assert!(Multiply.feeds_through(0, 0) && Multiply.feeds_through(1, 0));
+    assert!(Divide.feeds_through(0, 0) && Divide.feeds_through(1, 0));
+    assert!(AddParameter { p: 0.0 }.feeds_through(0, 0));
     assert!(MultiplyByParameter { k: 1.0 }.feeds_through(0, 0));
+    assert!(Abs.feeds_through(0, 0));
+    assert!(Min.feeds_through(0, 0) && Min.feeds_through(1, 0));
+    assert!(Max.feeds_through(0, 0) && Max.feeds_through(1, 0));
     assert!(
         Limiter {
             u_min: 0.0,
             u_max: 1.0
         }
         .feeds_through(0, 0)
+    );
+    assert!(
+        Line.feeds_through(0, 0)
+            && Line.feeds_through(1, 0)
+            && Line.feeds_through(2, 0)
+            && Line.feeds_through(3, 0)
+            && Line.feeds_through(4, 0)
     );
     assert!(Greater.feeds_through(0, 0) && Greater.feeds_through(1, 0));
     assert!(And.feeds_through(0, 0) && And.feeds_through(1, 0));
@@ -153,8 +166,27 @@ fn arithmetic_blocks() {
     assert!(outs(&Constant { k: 3.5 }, &[])[0].bit_eq(&Value::Real(3.5)));
     assert!(outs(&Add, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(7.0)));
     assert!(outs(&Subtract, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(-3.0)));
+    assert!(outs(&Multiply, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(10.0)));
+    assert!(outs(&Divide, &[Value::Real(10.0), Value::Real(4.0)])[0].bit_eq(&Value::Real(2.5)));
+    assert!(outs(&AddParameter { p: 3.0 }, &[Value::Real(4.0)])[0].bit_eq(&Value::Real(7.0)));
     assert!(
         outs(&MultiplyByParameter { k: 2.0 }, &[Value::Real(4.0)])[0].bit_eq(&Value::Real(8.0))
+    );
+    assert!(outs(&Abs, &[Value::Real(-3.0)])[0].bit_eq(&Value::Real(3.0)));
+    assert!(outs(&Min, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(2.0)));
+    assert!(outs(&Max, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(5.0)));
+    assert!(
+        outs(
+            &Line,
+            &[
+                Value::Real(0.0),
+                Value::Real(2.0),
+                Value::Real(4.0),
+                Value::Real(10.0),
+                Value::Real(1.5),
+            ],
+        )[0]
+        .bit_eq(&Value::Real(5.0))
     );
 }
 
@@ -235,8 +267,15 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Sources.Constant",
         "CDL.Reals.Add",
         "CDL.Reals.Subtract",
+        "CDL.Reals.Multiply",
+        "CDL.Reals.Divide",
+        "CDL.Reals.AddParameter",
         "CDL.Reals.MultiplyByParameter",
+        "CDL.Reals.Abs",
+        "CDL.Reals.Min",
+        "CDL.Reals.Max",
         "CDL.Reals.Limiter",
+        "CDL.Reals.Line",
         "CDL.Reals.Greater",
         "CDL.Reals.Switch",
         "CDL.Logical.And",
@@ -263,6 +302,12 @@ fn registry_make_resolves_parameters() {
     };
     let constant = (lookup("CDL.Reals.Sources.Constant").unwrap().make)(&params);
     assert!(outs(constant.as_ref(), &[])[0].bit_eq(&Value::Real(4.0)));
+
+    let add_params = ParamTable {
+        values: vec![(Arc::from("p"), Value::Real(2.5))],
+    };
+    let add_param = (lookup("CDL.Reals.AddParameter").unwrap().make)(&add_params);
+    assert!(outs(add_param.as_ref(), &[Value::Real(1.5)])[0].bit_eq(&Value::Real(4.0)));
 
     let delay_params = ParamTable {
         values: vec![(Arc::from("y_start"), Value::Real(1.25))],

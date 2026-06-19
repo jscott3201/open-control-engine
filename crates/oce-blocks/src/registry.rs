@@ -7,8 +7,9 @@
 use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::{
-    Add, And, Block, Constant, Edge, Greater, Limiter, MultiplyByParameter, Not, Pre,
-    RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
+    Abs, Add, AddParameter, And, Block, Constant, Divide, Edge, Greater, Limiter, Line, Max, Min,
+    Multiply, MultiplyByParameter, Not, Pre, RegistryEntry, SampleTrigger, Subtract, Switch,
+    UnitDelay,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -18,7 +19,7 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
     CATALOG.iter().find(|e| e.class_path == class_path)
 }
 
-/// The M0 starter catalog (`03` §7 Phase-1 core + the two loop-breakers).
+/// The native catalog registered so far (`03` §7 Phase-1 core plus M2 Lane A additions).
 static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.Constant",
@@ -33,12 +34,40 @@ static CATALOG: &[RegistryEntry] = &[
         make: make_subtract,
     },
     RegistryEntry {
+        class_path: "CDL.Reals.Multiply",
+        make: make_multiply,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Divide",
+        make: make_divide,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.AddParameter",
+        make: make_add_parameter,
+    },
+    RegistryEntry {
         class_path: "CDL.Reals.MultiplyByParameter",
         make: make_multiply_by_parameter,
     },
     RegistryEntry {
+        class_path: "CDL.Reals.Abs",
+        make: make_abs,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Min",
+        make: make_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Max",
+        make: make_max,
+    },
+    RegistryEntry {
         class_path: "CDL.Reals.Limiter",
         make: make_limiter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Line",
+        make: make_line,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Greater",
@@ -157,10 +186,36 @@ fn make_subtract(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Subtract)
 }
 
+fn make_multiply(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Multiply)
+}
+
+fn make_divide(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Divide)
+}
+
+fn make_add_parameter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(AddParameter {
+        p: real_param(p, "p", 0.0),
+    })
+}
+
 fn make_multiply_by_parameter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MultiplyByParameter {
         k: real_param(p, "k", 1.0),
     })
+}
+
+fn make_abs(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Abs)
+}
+
+fn make_min(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Min)
+}
+
+fn make_max(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Max)
 }
 
 fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
@@ -168,6 +223,10 @@ fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
         u_min: real_param(p, "uMin", f64::NEG_INFINITY),
         u_max: real_param(p, "uMax", f64::INFINITY),
     })
+}
+
+fn make_line(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Line)
 }
 
 fn make_greater(_p: &ParamTable) -> Box<dyn Block> {
