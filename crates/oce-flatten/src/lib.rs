@@ -4,8 +4,9 @@
 //! Full Modelica elaboration (parameter propagation, expression folding, conditional-instance
 //! removal, `replaceable`/`redeclare`/`extends`) is the largest correctness risk and is deferred
 //! to the post-v1 "later" band (FRAME D2). In v1 this crate is a thin **CXF-resolution shim**:
-//! CXF arrives already flattened/monomorphic, so the work is array normalization
-//! (`A[1]`→`A_1`, 1-based CDL → 0-based internal) and ground-parameter binding via `oce-expr`.
+//! CXF arrives already flattened/monomorphic, so the M1 responsibility is to preserve the seam after
+//! resolver-owned array normalization (`A[1]`→`A_1`, 1-based CDL → 0-based internal) and
+//! ground-parameter binding.
 //! It is **Group A** (no store, no database).
 //!
 //! Status: **M1 (identity passthrough).** As-built, the `oce-cxf` resolver owns *all* M1

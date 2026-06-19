@@ -25,6 +25,8 @@ jobs:
   gate-fixtures:
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
+      - run: bash .github/scripts/test-check-stale-crate-status.sh
+      - run: bash .github/scripts/check-stale-crate-status.sh
       - run: bash .github/scripts/check-workflow-gates.sh
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
@@ -50,6 +52,10 @@ jobs:
         with:
           tool: cargo-machete
       - run: cargo machete
+  gate-fixtures:
+    steps:
+      - run: bash .github/scripts/test-check-stale-crate-status.sh
+      - run: bash .github/scripts/check-stale-crate-status.sh
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -147,9 +153,17 @@ garble_release_workflow() {
   printf '%s\n' 'not: [a usable gate]' > "$dir/release-gate.yml"
 }
 
+remove_stale_status_gate() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'check-stale-crate-status' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest
 run_case seeded-advisory-ignore fail seed_advisory_ignore
 run_case garbled-workflow fail garble_release_workflow
+run_case missing-stale-status-gate fail remove_stale_status_gate
 
 echo "OK: workflow gate fixtures passed."

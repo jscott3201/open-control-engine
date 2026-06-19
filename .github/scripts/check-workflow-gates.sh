@@ -39,6 +39,8 @@ require_file "$DENY_TOML"
 require_pattern "$ci" 'cargo-machete' 'install cargo-machete'
 require_pattern "$ci" 'cargo machete' 'run cargo machete'
 require_pattern "$ci" 'test-check-default-no-db\.sh' 'run default-no-db fixture tests'
+require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-status fixture tests'
+require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
@@ -55,6 +57,9 @@ require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate
 require_pattern "$release" 'OCE_REQUIRE_SURFACE_CHECK:[[:space:]]*"1"' 'armed public-api surface gate'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
+require_pattern "$release" 'test-check-stale-crate-status\.sh' \
+  'release gate runs stale crate-status fixture tests'
+require_pattern "$release" 'check-stale-crate-status\.sh' 'release gate runs stale crate-status smoke'
 
 # Daily advisory/yanked gate and deny.toml discipline.
 require_pattern "$advisories" 'schedule:' 'scheduled advisory gate'

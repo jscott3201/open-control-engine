@@ -6,7 +6,8 @@
 //! point list from the resolved model + effective metadata read through the `oce-store` seam.
 //! Word/HTML export and CXF export are two separate output paths from the same model.
 //!
-//! Status: **M0 scaffold.** The exporters land at M4.
+//! Status: **Deferred to M4.** The public document-export seam is reserved; the exporters land with
+//! the M4 reporting milestone.
 
 use oce_store::PointListRow;
 
@@ -14,5 +15,5 @@ use oce_store::PointListRow;
 /// to HTML.
 #[must_use]
 pub fn point_list_html(_rows: &[PointListRow]) -> String {
-    unimplemented!("oce-docs::point_list_html — M0 scaffold (exporters land at M4)")
+    unimplemented!("oce-docs::point_list_html — deferred to M4 exporters")
 }

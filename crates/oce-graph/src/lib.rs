@@ -14,8 +14,9 @@
 //! [`CompiledSchedule`]); BUILD entry point is [`compile`]; TICK entry point is [`eval_tick`]
 //! (alias [`run_tick`]) operating on an [`EvalContext`].
 //!
-//! Status: **M0.** BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation +
-//! the two-pass eval loop) are implemented; the catalog and CXF ingest grow across M0–M2.
+//! Status: **M1 as-built.** BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state
+//! allocation + the two-pass eval loop) are implemented; the catalog and CXF ingest grow across
+//! M1–M2.
 
 use std::fmt;
 

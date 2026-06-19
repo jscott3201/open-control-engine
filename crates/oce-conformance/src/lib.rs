@@ -5,10 +5,12 @@
 //! Reimplements the `funnel`-style L1 tolerance band (per-signal absolute/relative tolerance +
 //! time tolerance), a golden-trace driver, indicator/don't-care masking, and conformance
 //! Tier 0–4 scaffolding. It is the substrate for the determinism contract (CDL §7.16): identical
-//! inputs/params ⇒ identical traces. It is **Group A**-adjacent (no store, no database) and
-//! drives `oce-graph`/`oce-blocks` directly.
+//! inputs/params ⇒ identical traces. It is **Group A**-adjacent (no store, no database); the M2
+//! runner will bind this tolerance logic through the public engine facade rather than direct graph
+//! or block dependencies.
 //!
-//! Status: **M0 scaffold.** The tolerance band + golden driver land at M2.
+//! Status: **Deferred to M2.** The tolerance-band DTOs are in place; `compare` and the golden driver
+//! land with the M2 conformance harness.
 
 /// A per-signal L1 tolerance band (`07` §3/§8).
 #[derive(Clone, Copy, Debug)]
@@ -37,5 +39,5 @@ pub fn compare(
     _golden: &[(f64, f64)],
     _band: ToleranceBand,
 ) -> ConformanceResult {
-    unimplemented!("oce-conformance::compare — M0 scaffold (L1 funnel band lands at M2)")
+    unimplemented!("oce-conformance::compare — deferred to M2 conformance harness")
 }

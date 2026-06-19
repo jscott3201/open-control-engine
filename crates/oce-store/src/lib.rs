@@ -11,9 +11,11 @@
 //! the single permitted hot-path read). The DTOs derive `serde::{Serialize, Deserialize}` so any
 //! adapter may pick a serde codec; the runtime-value enum is kept small and `Copy`-friendly.
 //!
-//! Status: **M0 scaffold.** The trait *surface* and DTO *shapes* match the spec; method bodies
-//! live in the adapter crates (`oce-store-mem` is the in-memory default; a durable/queryable
-//! backend is an app-side adapter behind this port).
+//!
+//! Status: **M1 as-built.** The trait surface, DTO shapes, typed error seam, and default in-memory
+//! adapter are active; the frozen `oce-api` surface is filled with non-panicking bodies as of
+//! `_spec/08` §11.2 (line 800). Durable/queryable backends remain app-side adapters behind these
+//! ports.
 
 use serde::{Deserialize, Serialize};
 
@@ -419,6 +421,9 @@ pub enum StoreError {
     /// A backend error, flattened to a string (never a DB type).
     #[error("backend error: {0}")]
     Backend(String),
+    /// The backend does not support this store operation.
+    #[error("operation unsupported by this backend: {0}")]
+    Unsupported(&'static str),
     /// The backend does not support the requested retrieval.
     #[error("retrieval unsupported by this backend: {0}")]
     RetrievalUnsupported(&'static str),
@@ -495,31 +500,31 @@ pub trait SemanticStore: Send + Sync {
     /// Upsert an equipment/zone subject node.
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot store semantic graph nodes.
     fn upsert_equipment(&self, eq: &EquipmentDto) -> StoreResult<()>;
 
     /// Add a directed relationship.
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot store semantic graph edges.
     fn add_relation(&self, rel: &RelationDto) -> StoreResult<()>;
 
     /// Store a raw semantic payload for lossless re-emit.
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot store semantic payloads.
     fn put_semantic_payload(&self, p: &SemanticPayloadDto) -> StoreResult<()>;
 
     /// Fetch all semantic payloads for a subject.
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot query semantic payloads.
     fn get_semantic_payloads(&self, subject: &DomainKey) -> StoreResult<Vec<SemanticPayloadDto>>;
 
     /// §7.7.5 point list — a graph traversal (Equipment -HAS_POINT-> Point WHERE in_pointlist).
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot serve the point-list traversal.
     fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>>;
 
     /// Off-tick retrieval (tag containment / fuzzy text / vector).
@@ -531,7 +536,7 @@ pub trait SemanticStore: Send + Sync {
     /// Ch.13 reverse flow: find equipment whose point signature matches a template signature.
     ///
     /// # Errors
-    /// Returns [`StoreError`] on backend failure.
+    /// Returns [`StoreError::Unsupported`] if the backend cannot serve template matching.
     fn match_template(&self, required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>>;
 }
 

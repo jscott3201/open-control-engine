@@ -9,7 +9,8 @@
 //! higher-overrides-lower over dotted paths. This is **non-computational** data (CDL §7.17): it
 //! is never read on the tick. The crate is **Group A** (no store, no database).
 //!
-//! Status: **M0 scaffold.** The annotation resolver lands in M1/M3.
+//! Status: **Deferred to M3.** The metadata enums and error seam are reserved; the annotation
+//! resolver lands with the semantic projection milestone.
 
 use oce_model::ModelGraph;
 
@@ -40,10 +41,10 @@ pub enum SemanticsError {
 }
 
 /// Resolve a model's vendor annotations into effective per-point metadata (resolved once at
-/// ingest; never resolved on read — Integration Brief §1.3). At M0 this is a no-op.
+/// ingest; never resolved on read — Integration Brief §1.3). Deferred to M3.
 ///
 /// # Errors
 /// Returns [`SemanticsError`] if an annotation is malformed.
 pub fn resolve(_model: &ModelGraph) -> Result<(), SemanticsError> {
-    unimplemented!("oce-semantics::resolve — M0 scaffold (annotation resolver lands in M1/M3)")
+    unimplemented!("oce-semantics::resolve — deferred to M3 semantic projection")
 }

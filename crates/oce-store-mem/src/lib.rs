@@ -9,9 +9,12 @@
 //! end to end. It mirrors a durable adapter's *read discipline* (acquire one snapshot per tick,
 //! O(1) reads), not its cost, so swapping `MemStore` for any other `Store` changes no engine code.
 //!
-//! Status: **M0.** The model round-trip ([`oce_store::ModelStore`]), runtime point path
-//! ([`oce_store::PointStore`]), and the no-op durability hooks ([`oce_store::Durable`]) are
-//! implemented. The semantic-graph methods ([`oce_store::SemanticStore`]) remain M1 scaffold.
+//!
+//! Status: **M1 as-built.** The model round-trip ([`oce_store::ModelStore`]), runtime point path
+//! ([`oce_store::PointStore`]), and no-op durability hooks ([`oce_store::Durable`]) are implemented
+//! with non-panicking bodies (`_spec/08` §11.2, line 800). Semantic graph operations are deliberate
+//! typed deferrals until M3: they return [`oce_store::StoreError::Unsupported`] or
+//! [`oce_store::StoreError::RetrievalUnsupported`], never silent success.
 
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -27,9 +30,6 @@ use oce_store::{
 pub struct MemStore {
     models: RwLock<HashMap<DomainKey, ResolvedModel>>,
     points: RwLock<MemPointState>,
-    equipment: RwLock<HashMap<DomainKey, EquipmentDto>>,
-    relations: RwLock<Vec<RelationDto>>,
-    payloads: RwLock<HashMap<DomainKey, Vec<SemanticPayloadDto>>>,
 }
 
 /// Runtime point state: a dense `by_handle` array (the handle is its index) plus the
@@ -64,6 +64,9 @@ impl MemStore {
 fn backend_err(e: impl std::fmt::Display) -> StoreError {
     StoreError::Backend(e.to_string())
 }
+
+const SEMANTIC_GRAPH_DEFERRED: &str = "MemStore: semantic graph operations deferred to M3";
+const SEMANTIC_RETRIEVAL_DEFERRED: &str = "MemStore: semantic retrieval deferred to M3";
 
 /// An immutable point-state snapshot handed to the hot read path.
 struct MemSnapshot {
@@ -142,28 +145,27 @@ impl PointStore for MemStore {
 
 impl SemanticStore for MemStore {
     fn upsert_equipment(&self, _eq: &EquipmentDto) -> StoreResult<()> {
-        let _ = &self.equipment;
-        unimplemented!("MemStore::upsert_equipment — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
     fn add_relation(&self, _rel: &RelationDto) -> StoreResult<()> {
-        let _ = &self.relations;
-        unimplemented!("MemStore::add_relation — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
     fn put_semantic_payload(&self, _p: &SemanticPayloadDto) -> StoreResult<()> {
-        let _ = &self.payloads;
-        unimplemented!("MemStore::put_semantic_payload — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
     fn get_semantic_payloads(&self, _subject: &DomainKey) -> StoreResult<Vec<SemanticPayloadDto>> {
-        unimplemented!("MemStore::get_semantic_payloads — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
     fn point_list(&self, _controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
-        unimplemented!("MemStore::point_list — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
     fn retrieve(&self, _q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
-        unimplemented!("MemStore::retrieve — M1 semantic-graph scaffold")
+        Err(StoreError::RetrievalUnsupported(
+            SEMANTIC_RETRIEVAL_DEFERRED,
+        ))
     }
     fn match_template(&self, _required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>> {
-        unimplemented!("MemStore::match_template — M1 semantic-graph scaffold")
+        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
 }
 
@@ -184,7 +186,9 @@ impl Durable for MemStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oce_store::{Durability, OcValue, PointStatus, Store};
+    use oce_store::{
+        Durability, OcValue, PointDirection, PointStatus, PointValueType, RelationKind, Store,
+    };
 
     fn model(id: &str) -> ResolvedModel {
         ResolvedModel {
@@ -294,5 +298,76 @@ mod tests {
         store.recover().unwrap();
         store.commit().unwrap();
         store.flush().unwrap();
+    }
+
+    #[test]
+    fn semantic_store_methods_return_typed_deferral_errors() {
+        let store = MemStore::new();
+        let equipment = EquipmentDto {
+            key: DomainKey::new("equip:ahu"),
+            subtype: Some("AHU".to_owned()),
+            tags_json: "{}".to_owned(),
+            embedding: None,
+        };
+        let upsert_err = store.upsert_equipment(&equipment).unwrap_err();
+        assert_eq!(
+            upsert_err.to_string(),
+            "operation unsupported by this backend: MemStore: semantic graph operations deferred to M3"
+        );
+        assert!(matches!(
+            upsert_err,
+            StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED)
+        ));
+
+        let relation = RelationDto {
+            src: DomainKey::new("equip:ahu"),
+            dst: DomainKey::new("point:sat"),
+            kind: RelationKind::HasPoint,
+        };
+        assert!(matches!(
+            store.add_relation(&relation),
+            Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+        ));
+
+        let payload = SemanticPayloadDto {
+            subject: DomainKey::new("equip:ahu"),
+            language: "Brick".to_owned(),
+            mime: "application/ld+json".to_owned(),
+            version: Some("1.3".to_owned()),
+            payload: "{}".to_owned(),
+        };
+        assert!(matches!(
+            store.put_semantic_payload(&payload),
+            Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+        ));
+        assert!(matches!(
+            store.get_semantic_payloads(&payload.subject),
+            Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+        ));
+        assert!(matches!(
+            store.point_list(Some("ahu")),
+            Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+        ));
+
+        let query = SemanticQuery::FuzzyText {
+            query: "supply air temperature".to_owned(),
+            k: 3,
+        };
+        assert!(matches!(
+            store.retrieve(&query),
+            Err(StoreError::RetrievalUnsupported(
+                SEMANTIC_RETRIEVAL_DEFERRED
+            ))
+        ));
+
+        let required = [TemplatePointReq {
+            quantity: Some("Temperature".to_owned()),
+            value_type: PointValueType::Real,
+            direction: PointDirection::Out,
+        }];
+        assert!(matches!(
+            store.match_template(&required),
+            Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+        ));
     }
 }

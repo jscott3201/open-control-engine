@@ -12,10 +12,10 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M0 starter catalog.** The trait surface and the M0 starter blocks (`03` §7 Phase 1
+//! Status: **M1 as-built (starter catalog).** The trait surface and starter blocks (`03` §7 Phase 1
 //! core: arithmetic, comparison, logical, switch, and the two loop-breakers `Pre`/`UnitDelay`) are
 //! implemented on the arena trait, with a static class-path registry. The full ~130-block catalog
-//! is phased across M0–M2 per `03` §7.
+//! is phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
