@@ -2,19 +2,36 @@
 //! table, algebraic step semantics, the loop-breakers' emit-then-latch cycle, and registry
 //! resolution.
 
+use std::cell::RefCell;
 use std::sync::Arc;
 
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Add, And, Block, BlockKind, Constant, Edge, Greater, Limiter, MultiplyByParameter, Not, Pre,
-    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup,
+    Add, And, Block, BlockKind, Constant, Ctx, Diagnostics, Edge, Greater, Limiter,
+    MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time,
+    UnitDelay, lookup, read_int,
 };
+
+#[derive(Default)]
+struct CapturingDiagnostics {
+    events: RefCell<Vec<(String, String, Time)>>,
+}
+
+impl Diagnostics for CapturingDiagnostics {
+    fn warn(&self, source: &str, message: &str, t: Time) {
+        self.events
+            .borrow_mut()
+            .push((source.to_string(), message.to_string(), t));
+    }
+}
 
 /// Run an `[A]` block's `step_algebraic` and collect outputs in port-index order.
 fn outs(b: &dyn Block, inputs: &[Value]) -> Vec<Value> {
     let mut v = Vec::new();
-    b.step_algebraic(inputs, 0.0, &mut |idx, val| {
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    b.step_algebraic(&cx, inputs, &mut |idx, val| {
         assert_eq!(idx, v.len(), "outputs must be emitted in port-index order");
         v.push(val);
     });
@@ -24,7 +41,9 @@ fn outs(b: &dyn Block, inputs: &[Value]) -> Vec<Value> {
 /// Run an `[S]` block's `emit_from_state` and collect outputs.
 fn emit(b: &dyn Block, inputs: &[Value], region: &[u64]) -> Vec<Value> {
     let mut v = Vec::new();
-    b.emit_from_state(inputs, 0.0, region, &mut |idx, val| {
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    b.emit_from_state(&cx, inputs, region, &mut |idx, val| {
         assert_eq!(idx, v.len());
         v.push(val);
     });
@@ -39,16 +58,18 @@ fn drive_bool(b: &dyn Block, steps: &[(Vec<Value>, Time)]) -> Vec<bool> {
     let mut region = vec![0u64; b.state_len()];
     b.init_state(&mut region, &ParamTable::default());
     let mut trace = Vec::with_capacity(steps.len());
+    let diag = NoopDiagnostics;
     for (inputs, t) in steps {
+        let cx = Ctx::new(*t, &diag);
         let mut out = None;
-        b.emit_from_state(inputs, *t, &region, &mut |idx, val| {
+        b.emit_from_state(&cx, inputs, &region, &mut |idx, val| {
             assert_eq!(idx, 0, "single-output block emits only port 0");
             match val {
                 Value::Boolean(x) => out = Some(x),
                 other => panic!("expected Boolean output, got {other:?}"),
             }
         });
-        b.update_state(inputs, *t, &mut region);
+        b.update_state(&cx, inputs, &mut region);
         trace.push(out.expect("block must emit its output each tick"));
     }
     trace
@@ -62,6 +83,32 @@ fn ticks(times: &[Time]) -> Vec<(Vec<Value>, Time)> {
 /// A single-input Boolean block driven at `t = 0` for every tick (Edge is time-independent).
 fn bool_ticks(us: &[bool]) -> Vec<(Vec<Value>, Time)> {
     us.iter().map(|u| (vec![Value::Boolean(*u)], 0.0)).collect()
+}
+
+#[test]
+fn ctx_warn_uses_scheduler_time_not_block_fabricated_time() {
+    let diag = CapturingDiagnostics::default();
+    let cx = Ctx::new(3.0, &diag);
+    cx.warn("test.assert", "tripped");
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, "test.assert");
+    assert_eq!(events[0].1, "tripped");
+    assert_eq!(events[0].2.to_bits(), 3.0f64.to_bits());
+}
+
+#[test]
+fn read_int_reads_integer_and_release_degrades_to_zero() {
+    assert_eq!(read_int(&[Value::Integer(42)], 0), 42);
+    assert_eq!(read_int(&[Value::Integer(-7)], 0), -7);
+    if cfg!(debug_assertions) {
+        assert!(
+            std::panic::catch_unwind(|| read_int(&[Value::Real(1.0)], 0)).is_err(),
+            "debug builds must trip the validation-bug assertion"
+        );
+    } else {
+        assert_eq!(read_int(&[Value::Real(1.0)], 0), 0);
+    }
 }
 
 #[test]
@@ -161,7 +208,9 @@ fn pre_emits_prior_then_latches_current() {
 
     // Emit returns the prior (seed) value before any update this tick.
     assert!(emit(&pre, &[Value::Boolean(false)], &region)[0].bit_eq(&Value::Boolean(true)));
-    pre.update_state(&[Value::Boolean(false)], 0.0, &mut region);
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    pre.update_state(&cx, &[Value::Boolean(false)], &mut region);
     // Next tick: the latched `false` is emitted.
     assert!(emit(&pre, &[Value::Boolean(true)], &region)[0].bit_eq(&Value::Boolean(false)));
 }
@@ -174,7 +223,9 @@ fn unit_delay_holds_prior_sample() {
     ud.init_state(&mut region, &ParamTable::default());
 
     assert!(emit(&ud, &[Value::Real(99.0)], &region)[0].bit_eq(&Value::Real(2.5))); // seed
-    ud.update_state(&[Value::Real(99.0)], 0.0, &mut region);
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    ud.update_state(&cx, &[Value::Real(99.0)], &mut region);
     assert!(emit(&ud, &[Value::Real(7.0)], &region)[0].bit_eq(&Value::Real(99.0))); // prior sample
 }
 

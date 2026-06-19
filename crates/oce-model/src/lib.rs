@@ -19,6 +19,37 @@ use std::sync::Arc;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct EnumClassId(pub u32);
 
+/// CDL `Types.SimpleController` enumeration (`03` §4.9).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SimpleController {
+    /// Proportional.
+    P,
+    /// Proportional-integral.
+    Pi,
+    /// Proportional-derivative.
+    Pd,
+    /// Proportional-integral-derivative.
+    Pid,
+}
+
+impl SimpleController {
+    /// Parse a CXF-qualified `CDL.Types.SimpleController.*` value by its trailing member.
+    #[must_use]
+    pub fn from_qualified(s: &str) -> Option<Self> {
+        let (prefix, member) = s.rsplit_once('.')?;
+        if prefix.is_empty() || member.is_empty() {
+            return None;
+        }
+        match member {
+            "P" => Some(Self::P),
+            "PI" => Some(Self::Pi),
+            "PD" => Some(Self::Pd),
+            "PID" => Some(Self::Pid),
+            _ => None,
+        }
+    }
+}
+
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and
 /// never travel on the hot path (CDL §7.17).
 ///
@@ -528,6 +559,44 @@ mod tests {
                 .zero_value()
                 .bit_eq(&Value::Boolean(false))
         );
+    }
+
+    #[test]
+    fn simple_controller_from_qualified_parses_known_members() {
+        let prefix = "Buildings.Controls.OBC.CDL.Types.SimpleController";
+        assert_eq!(
+            SimpleController::from_qualified(&format!("{prefix}.P")),
+            Some(SimpleController::P)
+        );
+        assert_eq!(
+            SimpleController::from_qualified(&format!("{prefix}.PI")),
+            Some(SimpleController::Pi)
+        );
+        assert_eq!(
+            SimpleController::from_qualified(&format!("{prefix}.PD")),
+            Some(SimpleController::Pd)
+        );
+        assert_eq!(
+            SimpleController::from_qualified(&format!("{prefix}.PID")),
+            Some(SimpleController::Pid)
+        );
+    }
+
+    #[test]
+    fn simple_controller_from_qualified_rejects_adversarial_inputs() {
+        for raw in [
+            "Buildings.Controls.OBC.CDL.Types.SimpleController.X",
+            "",
+            "PID",
+            ".PID",
+            "Buildings.Controls.OBC.CDL.Types.SimpleController.",
+        ] {
+            assert_eq!(
+                SimpleController::from_qualified(raw),
+                None,
+                "{raw:?} must be rejected without panicking"
+            );
+        }
     }
 
     #[test]

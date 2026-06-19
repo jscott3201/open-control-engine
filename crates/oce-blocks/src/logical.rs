@@ -4,7 +4,7 @@
 
 use oce_model::{ParamTable, Value};
 
-use crate::{Block, BlockKind, BlockSignature, PortKind, Time, read_bool};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, read_bool};
 
 /// `CDL.Logical.And` — `y = u1 ∧ u2` (`03` §4.3).
 #[derive(Clone, Copy, Debug, Default)]
@@ -26,7 +26,7 @@ impl Block for And {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(
             0,
             Value::Boolean(read_bool(inputs, 0) && read_bool(inputs, 1)),
@@ -54,7 +54,7 @@ impl Block for Not {
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         true
     }
-    fn step_algebraic(&self, inputs: &[Value], _t: Time, emit: &mut dyn FnMut(usize, Value)) {
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Boolean(!read_bool(inputs, 0)));
     }
 }
@@ -92,14 +92,14 @@ impl Block for Pre {
     }
     fn emit_from_state(
         &self,
+        _ctx: &Ctx<'_>,
         _inputs: &[Value],
-        _t: Time,
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
         emit(0, Value::Boolean(region[0] != 0)); // the prior input, held since last tick
     }
-    fn update_state(&self, inputs: &[Value], _t: Time, region: &mut [u64]) {
+    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         region[0] = u64::from(read_bool(inputs, 0)); // latch the current input for next tick
     }
 }
@@ -140,8 +140,8 @@ impl Block for Edge {
     }
     fn emit_from_state(
         &self,
+        _ctx: &Ctx<'_>,
         inputs: &[Value],
-        _t: Time,
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
@@ -149,7 +149,7 @@ impl Block for Edge {
         let u = read_bool(inputs, 0);
         emit(0, Value::Boolean(u && !prev)); // rising edge: current true, prior false
     }
-    fn update_state(&self, inputs: &[Value], _t: Time, region: &mut [u64]) {
+    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         region[0] = u64::from(read_bool(inputs, 0)); // latch current input as next tick's prev
     }
 }
@@ -247,17 +247,17 @@ impl Block for SampleTrigger {
     }
     fn emit_from_state(
         &self,
+        ctx: &Ctx<'_>,
         _inputs: &[Value],
-        t: Time,
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let last_k = region[0].cast_signed();
-        emit(0, Value::Boolean(self.sample_index(t) > last_k)); // true iff a new boundary reached
+        emit(0, Value::Boolean(self.sample_index(ctx.t()) > last_k)); // true iff a new boundary reached
     }
-    fn update_state(&self, _inputs: &[Value], t: Time, region: &mut [u64]) {
+    fn update_state(&self, ctx: &Ctx<'_>, _inputs: &[Value], region: &mut [u64]) {
         let last_k = region[0].cast_signed();
-        let k = self.sample_index(t);
+        let k = self.sample_index(ctx.t());
         if k > last_k {
             region[0] = k.cast_unsigned(); // snap to the latest crossed boundary (fire-once)
         }

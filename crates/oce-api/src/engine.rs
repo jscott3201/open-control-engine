@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use oce_blocks::{Block, BlockKind, lookup};
+use oce_blocks::{Block, BlockKind, NoopDiagnostics, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
 use oce_model::{Dir, ModelGraph};
 use oce_store::{PointHandle, Store};
@@ -184,6 +184,15 @@ impl<S: Store> Engine<S> {
     /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time). A rejected tick
     /// does not advance the model. Never panics (R-ERR-1).
     pub fn tick(&mut self, t_now: f64) -> Result<&Outputs, OcError> {
+        let diag = NoopDiagnostics;
+        self.tick_with(t_now, &diag)
+    }
+
+    pub(crate) fn tick_with(
+        &mut self,
+        t_now: f64,
+        diag: &dyn oce_blocks::Diagnostics,
+    ) -> Result<&Outputs, OcError> {
         // Reject non-finite time first: `NaN < prev` is always false, so a NaN would otherwise slip
         // past the monotonic check, corrupt `state.t`/`prev_t`, and silently disable the guard.
         if !t_now.is_finite() {
@@ -199,6 +208,7 @@ impl<S: Store> Engine<S> {
                 model: &self.model,
                 schedule: &self.schedule,
                 blocks: &self.blocks,
+                diagnostics: diag,
                 state: &mut self.state,
             };
             eval_tick(&mut ctx, t_now);

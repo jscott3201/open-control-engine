@@ -6,8 +6,10 @@
 //! Timing uses [`std::time::Instant`] (a monotonic timer, never a wall clock — no `Date`/`SystemTime`
 //! dependency, no determinism hazard: timing is reported, never fed back into the model).
 
+use std::cell::RefCell;
 use std::time::Instant;
 
+use oce_blocks::Diagnostics;
 use oce_graph::RunState;
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::Store;
@@ -278,6 +280,22 @@ pub enum AssertLevel {
     Error,
 }
 
+#[derive(Default)]
+struct AssertCollector {
+    events: RefCell<Vec<AssertEvent>>,
+}
+
+impl Diagnostics for AssertCollector {
+    fn warn(&self, source: &str, message: &str, t: f64) {
+        self.events.borrow_mut().push(AssertEvent {
+            block: source.to_string(),
+            message: message.to_string(),
+            t,
+            level: AssertLevel::default(),
+        });
+    }
+}
+
 impl<S: Store> Engine<S> {
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
     /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params ⇒ identical
@@ -357,13 +375,14 @@ impl<S: Store> Engine<S> {
     /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write. Never panics.
     pub fn step_realtime(&mut self, t_now: f64) -> Result<StepReport, OcError> {
         let t0 = Instant::now();
-        self.tick(t_now)?;
+        let collector = AssertCollector::default();
+        self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
         // M1 stages no store-backed point projection yet, so the batched write is empty (0 written);
         // the seam is exercised so the contract is real. The annotation fixes `&[]` inference.
         let written = self.store.write_points(&[] as &[oce_store::PointWrite])?;
         Ok(StepReport {
-            asserts: Vec::new(),
+            asserts: collector.events.into_inner(),
             written,
             tick_nanos,
         })
