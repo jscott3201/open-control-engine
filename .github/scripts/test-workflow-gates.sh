@@ -71,6 +71,12 @@ EOF
 [advisories]
 yanked = "deny"
 ignore = []
+
+[bans]
+deny = [
+  { name = "sqlx" },
+  { name = "sled" },
+]
 EOF
 }
 
@@ -144,6 +150,25 @@ seed_advisory_ignore() {
 [advisories]
 yanked = "deny"
 ignore = ["RUSTSEC-2099-0001"]
+
+[bans]
+deny = [
+  { name = "sqlx" },
+  { name = "sled" },
+]
+EOF
+}
+
+empty_bans_deny() {
+  _dir="$1"
+  deny="$2"
+  cat > "$deny" <<'EOF'
+[advisories]
+yanked = "deny"
+ignore = []
+
+[bans]
+deny = []
 EOF
 }
 
@@ -165,5 +190,6 @@ run_case missing-release-nextest fail remove_release_nextest
 run_case seeded-advisory-ignore fail seed_advisory_ignore
 run_case garbled-workflow fail garble_release_workflow
 run_case missing-stale-status-gate fail remove_stale_status_gate
+run_case empty-bans-deny fail empty_bans_deny
 
 echo "OK: workflow gate fixtures passed."

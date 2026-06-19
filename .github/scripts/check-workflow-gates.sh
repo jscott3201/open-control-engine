@@ -67,5 +67,11 @@ require_pattern "$advisories" 'workflow_dispatch:' 'manual advisory gate'
 require_pattern "$advisories" 'cargo deny check advisories' 'advisory-only cargo-deny command'
 require_pattern "$DENY_TOML" '^[[:space:]]*yanked[[:space:]]*=[[:space:]]*"deny"' 'yanked = "deny"'
 require_pattern "$DENY_TOML" '^[[:space:]]*ignore[[:space:]]*=[[:space:]]*\[\][[:space:]]*$' 'empty advisory ignore list'
+# Non-empty sentinel only: this proves representative sqlx/sled bans remain, not that the curated
+# family list is complete. A list gutted to only these two entries would still pass by design.
+require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:space:]]*"sqlx"[[:space:]]*\}' \
+  'cargo-deny bans include representative SQL/ORM crate sqlx'
+require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:space:]]*"sled"[[:space:]]*\}' \
+  'cargo-deny bans include representative embedded-KV crate sled'
 
 echo "OK: workflow gate smoke passed."
