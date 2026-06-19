@@ -11,8 +11,9 @@
 //! endpoints, CXF interface arity) and `oce-flatten`'s array normalization, this crate is the gate
 //! that decides whether a flattened [`ModelGraph`] may be built and ticked. It enforces:
 //!
-//! 1. **Arena id integrity**: every `BlockId` is dense/unique and every connector's owning block id
-//!    is in range before `oce-graph` indexes block arenas by raw `BlockId.0`.
+//! 1. **Arena id integrity**: every `BlockId` is dense/unique, every connector's owning block id is
+//!    in range, and every block input/output connector id is in range before `oce-graph` indexes
+//!    arenas by raw ids.
 //! 2. **Boundary-aware single assignment** (§7.10 / §9.1.5): every `In` connector has in-degree
 //!    exactly 1, except a declared external boundary input (`ModelGraph::external_inputs`, the AD-2
 //!    elision), which legally has in-degree 0.

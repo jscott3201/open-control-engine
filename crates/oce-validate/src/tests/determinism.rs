@@ -134,7 +134,7 @@ fn t32_same_code_and_subject_sort_by_message() {
 }
 
 #[test]
-fn t35_block_subjects_sort_by_numeric_block_id() {
+fn t44_block_subjects_sort_by_numeric_block_id() {
     // Arity diagnostics use synthetic block#N subjects for hand-built graphs. The finalizer must
     // parse N numerically, otherwise block#10 sorts before block#3 lexicographically.
     let make = || {

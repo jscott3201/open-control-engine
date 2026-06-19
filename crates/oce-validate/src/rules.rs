@@ -70,15 +70,17 @@ fn in_degrees(model: &ModelGraph) -> Vec<u32> {
 ///
 /// - `model.blocks[i].id.0 == i` for every block (dense + unique [`oce_model::BlockId`] space).
 /// - `connector.block.0 < model.blocks.len()` for every connector.
+/// - every `BlockInstance.inputs` / `BlockInstance.outputs` [`ConnectorId`] is in range.
 ///
 /// These are malformed-document errors because `oce-graph` intentionally keeps BUILD/tick arena
 /// indexing lean and assumes validation has already proven these invariants.
 pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
     let block_count = model.blocks.len();
+    let connector_count = model.connectors.len();
 
     for (index, blk) in model.blocks.iter().enumerate() {
         let id = blk.id.0 as usize;
-        if id != index || id >= block_count {
+        if id != index {
             diags.push(
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
@@ -91,6 +93,8 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
                 .with_subject(block_subject_of(blk)),
             );
         }
+        check_block_port_ids(blk, "input", &blk.inputs, connector_count, diags);
+        check_block_port_ids(blk, "output", &blk.outputs, connector_count, diags);
     }
 
     for c in &model.connectors {
@@ -104,6 +108,30 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
                     ),
                 )
                 .with_subject(subject_of(c)),
+            );
+        }
+    }
+}
+
+fn check_block_port_ids(
+    blk: &oce_model::BlockInstance,
+    label: &str,
+    ports: &[ConnectorId],
+    connector_count: usize,
+    diags: &mut Vec<Diagnostic>,
+) {
+    for (port_idx, cid) in ports.iter().enumerate() {
+        if cid.0 as usize >= connector_count {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block id {} {label} port {port_idx} references an out-of-range \
+                         connector id {} (connectors={connector_count})",
+                        blk.id.0, cid.0
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
             );
         }
     }
@@ -220,7 +248,8 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>)
 /// mismatches at load.
 ///
 /// An **unknown** class path is skipped (it is `oce-api`'s `OcError::Load` to report, R-IMPL-2).
-/// Out-of-range port connector ids are a `MalformedDocument`.
+/// Out-of-range port connector ids are reported by [`check_arena_ids`]; this rule still bounds them
+/// before indexing so the validator remains panic-free even if rules are refactored later.
 pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
     let n = model.connectors.len() as u32;
     for blk in &model.blocks {
@@ -284,17 +313,10 @@ fn check_ports_dir(
 ) {
     for (port_idx, cid) in ports.iter().enumerate() {
         if cid.0 >= n {
-            diags.push(Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "block class {class_iri} {label} port {port_idx} references an out-of-range \
-                     connector id {}",
-                    cid.0
-                ),
-            ));
             continue;
         }
-        // Ports beyond the signature arity are the resolver's concern (AD-8); skip silently.
+        // Arity diagnostics are shared by resolver and `oce-validate` (AD-8). Once the block-level
+        // arity diagnostic is emitted above, extra ports have no signature slot to compare.
         let Some(kind) = kinds.get(port_idx) else {
             continue;
         };

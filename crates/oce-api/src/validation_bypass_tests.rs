@@ -100,6 +100,24 @@ fn build_model_in_memory_rejects_out_of_range_connector_block_without_panic() {
 }
 
 #[test]
+fn build_model_in_memory_rejects_connector_block_at_blocks_len_boundary_without_panic() {
+    let model = ModelGraph {
+        blocks: vec![raw_block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        connectors: vec![raw_conn(0, 1, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("out-of-range block id 1"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
 fn build_model_in_memory_rejects_non_dense_block_id_without_panic() {
     let model = ModelGraph {
         blocks: vec![raw_block(1, "CDL.Reals.Sources.Constant", &[], &[0])],
@@ -110,6 +128,23 @@ fn build_model_in_memory_rejects_non_dense_block_id_without_panic() {
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
     assert!(
         err.diagnostics[0].message.contains("block id invariant"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn build_model_in_memory_rejects_duplicate_block_id_without_panic() {
+    let model = ModelGraph {
+        blocks: vec![
+            raw_block(0, "unknown.Class", &[], &[]),
+            raw_block(0, "unknown.Class", &[], &[]),
+        ],
+        ..ModelGraph::new()
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("arena index 1"),
         "unexpected diagnostic: {:?}",
         err.diagnostics
     );
@@ -159,7 +194,7 @@ fn build_model_in_memory_rejects_port_kind_mismatch_without_wrong_value() {
 }
 
 #[test]
-fn build_model_in_memory_rejects_block_signature_arity_mismatch_without_panic() {
+fn build_model_in_memory_rejects_missing_input_arity_without_panic() {
     let model = ModelGraph {
         blocks: vec![raw_block(0, "CDL.Reals.Add", &[0], &[1])],
         connectors: vec![
@@ -168,6 +203,67 @@ fn build_model_in_memory_rejects_block_signature_arity_mismatch_without_panic() 
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("interface mismatch"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn build_model_in_memory_rejects_missing_output_arity_without_release_panic() {
+    let model = ModelGraph {
+        blocks: vec![raw_block(0, "CDL.Reals.Add", &[0, 1], &[])],
+        connectors: vec![
+            raw_conn(0, 0, Dir::In, ValueType::Real),
+            raw_conn(1, 0, Dir::In, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("interface mismatch"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn build_model_in_memory_rejects_extra_input_arity_without_panic() {
+    let model = ModelGraph {
+        blocks: vec![raw_block(0, "CDL.Reals.Add", &[0, 1, 2], &[3])],
+        connectors: vec![
+            raw_conn(0, 0, Dir::In, ValueType::Real),
+            raw_conn(1, 0, Dir::In, ValueType::Real),
+            raw_conn(2, 0, Dir::In, ValueType::Real),
+            raw_conn(3, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0), ConnectorId(1), ConnectorId(2)],
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("interface mismatch"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn build_model_in_memory_rejects_extra_output_arity_without_panic() {
+    let model = ModelGraph {
+        blocks: vec![raw_block(0, "CDL.Reals.Add", &[0, 1], &[2, 3])],
+        connectors: vec![
+            raw_conn(0, 0, Dir::In, ValueType::Real),
+            raw_conn(1, 0, Dir::In, ValueType::Real),
+            raw_conn(2, 0, Dir::Out, ValueType::Real),
+            raw_conn(3, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0), ConnectorId(1)],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
     assert!(

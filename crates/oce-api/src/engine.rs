@@ -151,6 +151,9 @@ impl<S: Store> Engine<S> {
         //    then the structural/type rules. A shall-violation propagates as OcError::Validate.
         let validate_warnings = oce_validate::unify_and_validate(&mut model)?;
         // 4. Shared BUILD tail: registry → schedule → state → outputs → io → params → store.recover.
+        //    This intentionally re-runs pure `validate`: `load_cxf` needs `unify_and_validate` above to
+        //    capture warnings after §7.10 propagation, while the shared tail must defend every caller
+        //    against malformed hand-built graphs before `oce-graph` indexes raw arenas.
         self.build_model_in_memory(model)?;
         let stateful_blocks = self
             .blocks
