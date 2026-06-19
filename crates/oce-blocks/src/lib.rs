@@ -12,10 +12,9 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M1 as-built (starter catalog).** The trait surface and starter blocks (`03` §7 Phase 1
-//! core: arithmetic, comparison, logical, switch, and the two loop-breakers `Pre`/`UnitDelay`) are
-//! implemented on the arena trait, with a static class-path registry. The full ~130-block catalog
-//! is phased across M1–M2 per `03` §7.
+//! Status: **M2 in progress (A1 scalar Reals).** The trait surface, A0 per-tick context seam,
+//! starter blocks, and A1 scalar Reals algebraic core are implemented on the arena trait, with a
+//! static class-path registry. The full ~130-block catalog is phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
@@ -26,7 +25,10 @@ mod registry;
 
 pub use discrete::UnitDelay;
 pub use logical::{And, Edge, Not, Pre, SampleTrigger};
-pub use reals::{Add, Constant, Greater, Limiter, MultiplyByParameter, Subtract, Switch};
+pub use reals::{
+    Abs, Add, AddParameter, Constant, Divide, Greater, Limiter, Line, Max, Min, Multiply,
+    MultiplyByParameter, Subtract, Switch,
+};
 pub use registry::lookup;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -231,3 +233,6 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod reals_tests;
