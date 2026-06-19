@@ -1,0 +1,1230 @@
+#[non_exhaustive] pub enum oce_store::StoreError
+impl core::clone::Clone for oce_store::BlockClassDto
+impl core::clone::Clone for oce_store::BlockInstanceDto
+impl core::clone::Clone for oce_store::BlockKind
+impl core::clone::Clone for oce_store::ConnectionDto
+impl core::clone::Clone for oce_store::DomainKey
+impl core::clone::Clone for oce_store::Durability
+impl core::clone::Clone for oce_store::ElementKind
+impl core::clone::Clone for oce_store::EquipmentDto
+impl core::clone::Clone for oce_store::OcValue
+impl core::clone::Clone for oce_store::PointDirection
+impl core::clone::Clone for oce_store::PointDto
+impl core::clone::Clone for oce_store::PointHandle
+impl core::clone::Clone for oce_store::PointListRow
+impl core::clone::Clone for oce_store::PointSample
+impl core::clone::Clone for oce_store::PointStatus
+impl core::clone::Clone for oce_store::PointType
+impl core::clone::Clone for oce_store::PointValueType
+impl core::clone::Clone for oce_store::PointWrite
+impl core::clone::Clone for oce_store::RelationDto
+impl core::clone::Clone for oce_store::RelationKind
+impl core::clone::Clone for oce_store::ResolvedModel
+impl core::clone::Clone for oce_store::RetrievalHit
+impl core::clone::Clone for oce_store::SemanticPayloadDto
+impl core::clone::Clone for oce_store::SemanticQuery
+impl core::clone::Clone for oce_store::TemplatePointReq
+impl core::clone::Clone for oce_store::TrendInterval
+impl core::cmp::Eq for oce_store::BlockKind
+impl core::cmp::Eq for oce_store::DomainKey
+impl core::cmp::Eq for oce_store::Durability
+impl core::cmp::Eq for oce_store::ElementKind
+impl core::cmp::Eq for oce_store::PointDirection
+impl core::cmp::Eq for oce_store::PointHandle
+impl core::cmp::Eq for oce_store::PointStatus
+impl core::cmp::Eq for oce_store::PointType
+impl core::cmp::Eq for oce_store::PointValueType
+impl core::cmp::Eq for oce_store::RelationKind
+impl core::cmp::Eq for oce_store::TrendInterval
+impl core::cmp::PartialEq for oce_store::BlockKind
+impl core::cmp::PartialEq for oce_store::DomainKey
+impl core::cmp::PartialEq for oce_store::Durability
+impl core::cmp::PartialEq for oce_store::ElementKind
+impl core::cmp::PartialEq for oce_store::OcValue
+impl core::cmp::PartialEq for oce_store::PointDirection
+impl core::cmp::PartialEq for oce_store::PointHandle
+impl core::cmp::PartialEq for oce_store::PointStatus
+impl core::cmp::PartialEq for oce_store::PointType
+impl core::cmp::PartialEq for oce_store::PointValueType
+impl core::cmp::PartialEq for oce_store::RelationKind
+impl core::cmp::PartialEq for oce_store::TrendInterval
+impl core::default::Default for oce_store::DomainKey
+impl core::error::Error for oce_store::StoreError
+impl core::fmt::Debug for oce_store::BlockClassDto
+impl core::fmt::Debug for oce_store::BlockInstanceDto
+impl core::fmt::Debug for oce_store::BlockKind
+impl core::fmt::Debug for oce_store::ConnectionDto
+impl core::fmt::Debug for oce_store::DomainKey
+impl core::fmt::Debug for oce_store::Durability
+impl core::fmt::Debug for oce_store::ElementKind
+impl core::fmt::Debug for oce_store::EquipmentDto
+impl core::fmt::Debug for oce_store::OcValue
+impl core::fmt::Debug for oce_store::PointDirection
+impl core::fmt::Debug for oce_store::PointDto
+impl core::fmt::Debug for oce_store::PointHandle
+impl core::fmt::Debug for oce_store::PointListRow
+impl core::fmt::Debug for oce_store::PointSample
+impl core::fmt::Debug for oce_store::PointStatus
+impl core::fmt::Debug for oce_store::PointType
+impl core::fmt::Debug for oce_store::PointValueType
+impl core::fmt::Debug for oce_store::PointWrite
+impl core::fmt::Debug for oce_store::RelationDto
+impl core::fmt::Debug for oce_store::RelationKind
+impl core::fmt::Debug for oce_store::ResolvedModel
+impl core::fmt::Debug for oce_store::RetrievalHit
+impl core::fmt::Debug for oce_store::SemanticPayloadDto
+impl core::fmt::Debug for oce_store::SemanticQuery
+impl core::fmt::Debug for oce_store::StoreError
+impl core::fmt::Debug for oce_store::TemplatePointReq
+impl core::fmt::Debug for oce_store::TrendInterval
+impl core::fmt::Display for oce_store::StoreError
+impl core::hash::Hash for oce_store::DomainKey
+impl core::hash::Hash for oce_store::ElementKind
+impl core::marker::Copy for oce_store::BlockKind
+impl core::marker::Copy for oce_store::Durability
+impl core::marker::Copy for oce_store::ElementKind
+impl core::marker::Copy for oce_store::PointDirection
+impl core::marker::Copy for oce_store::PointHandle
+impl core::marker::Copy for oce_store::PointStatus
+impl core::marker::Copy for oce_store::PointType
+impl core::marker::Copy for oce_store::PointValueType
+impl core::marker::Copy for oce_store::RelationKind
+impl core::marker::Copy for oce_store::TrendInterval
+impl core::marker::Freeze for oce_store::BlockClassDto
+impl core::marker::Freeze for oce_store::BlockInstanceDto
+impl core::marker::Freeze for oce_store::BlockKind
+impl core::marker::Freeze for oce_store::ConnectionDto
+impl core::marker::Freeze for oce_store::DomainKey
+impl core::marker::Freeze for oce_store::Durability
+impl core::marker::Freeze for oce_store::ElementKind
+impl core::marker::Freeze for oce_store::EquipmentDto
+impl core::marker::Freeze for oce_store::OcValue
+impl core::marker::Freeze for oce_store::PointDirection
+impl core::marker::Freeze for oce_store::PointDto
+impl core::marker::Freeze for oce_store::PointHandle
+impl core::marker::Freeze for oce_store::PointListRow
+impl core::marker::Freeze for oce_store::PointSample
+impl core::marker::Freeze for oce_store::PointStatus
+impl core::marker::Freeze for oce_store::PointType
+impl core::marker::Freeze for oce_store::PointValueType
+impl core::marker::Freeze for oce_store::PointWrite
+impl core::marker::Freeze for oce_store::RelationDto
+impl core::marker::Freeze for oce_store::RelationKind
+impl core::marker::Freeze for oce_store::ResolvedModel
+impl core::marker::Freeze for oce_store::RetrievalHit
+impl core::marker::Freeze for oce_store::SemanticPayloadDto
+impl core::marker::Freeze for oce_store::SemanticQuery
+impl core::marker::Freeze for oce_store::StoreError
+impl core::marker::Freeze for oce_store::TemplatePointReq
+impl core::marker::Freeze for oce_store::TrendInterval
+impl core::marker::Send for oce_store::BlockClassDto
+impl core::marker::Send for oce_store::BlockInstanceDto
+impl core::marker::Send for oce_store::BlockKind
+impl core::marker::Send for oce_store::ConnectionDto
+impl core::marker::Send for oce_store::DomainKey
+impl core::marker::Send for oce_store::Durability
+impl core::marker::Send for oce_store::ElementKind
+impl core::marker::Send for oce_store::EquipmentDto
+impl core::marker::Send for oce_store::OcValue
+impl core::marker::Send for oce_store::PointDirection
+impl core::marker::Send for oce_store::PointDto
+impl core::marker::Send for oce_store::PointHandle
+impl core::marker::Send for oce_store::PointListRow
+impl core::marker::Send for oce_store::PointSample
+impl core::marker::Send for oce_store::PointStatus
+impl core::marker::Send for oce_store::PointType
+impl core::marker::Send for oce_store::PointValueType
+impl core::marker::Send for oce_store::PointWrite
+impl core::marker::Send for oce_store::RelationDto
+impl core::marker::Send for oce_store::RelationKind
+impl core::marker::Send for oce_store::ResolvedModel
+impl core::marker::Send for oce_store::RetrievalHit
+impl core::marker::Send for oce_store::SemanticPayloadDto
+impl core::marker::Send for oce_store::SemanticQuery
+impl core::marker::Send for oce_store::StoreError
+impl core::marker::Send for oce_store::TemplatePointReq
+impl core::marker::Send for oce_store::TrendInterval
+impl core::marker::StructuralPartialEq for oce_store::BlockKind
+impl core::marker::StructuralPartialEq for oce_store::DomainKey
+impl core::marker::StructuralPartialEq for oce_store::Durability
+impl core::marker::StructuralPartialEq for oce_store::ElementKind
+impl core::marker::StructuralPartialEq for oce_store::OcValue
+impl core::marker::StructuralPartialEq for oce_store::PointDirection
+impl core::marker::StructuralPartialEq for oce_store::PointHandle
+impl core::marker::StructuralPartialEq for oce_store::PointStatus
+impl core::marker::StructuralPartialEq for oce_store::PointType
+impl core::marker::StructuralPartialEq for oce_store::PointValueType
+impl core::marker::StructuralPartialEq for oce_store::RelationKind
+impl core::marker::StructuralPartialEq for oce_store::TrendInterval
+impl core::marker::Sync for oce_store::BlockClassDto
+impl core::marker::Sync for oce_store::BlockInstanceDto
+impl core::marker::Sync for oce_store::BlockKind
+impl core::marker::Sync for oce_store::ConnectionDto
+impl core::marker::Sync for oce_store::DomainKey
+impl core::marker::Sync for oce_store::Durability
+impl core::marker::Sync for oce_store::ElementKind
+impl core::marker::Sync for oce_store::EquipmentDto
+impl core::marker::Sync for oce_store::OcValue
+impl core::marker::Sync for oce_store::PointDirection
+impl core::marker::Sync for oce_store::PointDto
+impl core::marker::Sync for oce_store::PointHandle
+impl core::marker::Sync for oce_store::PointListRow
+impl core::marker::Sync for oce_store::PointSample
+impl core::marker::Sync for oce_store::PointStatus
+impl core::marker::Sync for oce_store::PointType
+impl core::marker::Sync for oce_store::PointValueType
+impl core::marker::Sync for oce_store::PointWrite
+impl core::marker::Sync for oce_store::RelationDto
+impl core::marker::Sync for oce_store::RelationKind
+impl core::marker::Sync for oce_store::ResolvedModel
+impl core::marker::Sync for oce_store::RetrievalHit
+impl core::marker::Sync for oce_store::SemanticPayloadDto
+impl core::marker::Sync for oce_store::SemanticQuery
+impl core::marker::Sync for oce_store::StoreError
+impl core::marker::Sync for oce_store::TemplatePointReq
+impl core::marker::Sync for oce_store::TrendInterval
+impl core::marker::Unpin for oce_store::BlockClassDto
+impl core::marker::Unpin for oce_store::BlockInstanceDto
+impl core::marker::Unpin for oce_store::BlockKind
+impl core::marker::Unpin for oce_store::ConnectionDto
+impl core::marker::Unpin for oce_store::DomainKey
+impl core::marker::Unpin for oce_store::Durability
+impl core::marker::Unpin for oce_store::ElementKind
+impl core::marker::Unpin for oce_store::EquipmentDto
+impl core::marker::Unpin for oce_store::OcValue
+impl core::marker::Unpin for oce_store::PointDirection
+impl core::marker::Unpin for oce_store::PointDto
+impl core::marker::Unpin for oce_store::PointHandle
+impl core::marker::Unpin for oce_store::PointListRow
+impl core::marker::Unpin for oce_store::PointSample
+impl core::marker::Unpin for oce_store::PointStatus
+impl core::marker::Unpin for oce_store::PointType
+impl core::marker::Unpin for oce_store::PointValueType
+impl core::marker::Unpin for oce_store::PointWrite
+impl core::marker::Unpin for oce_store::RelationDto
+impl core::marker::Unpin for oce_store::RelationKind
+impl core::marker::Unpin for oce_store::ResolvedModel
+impl core::marker::Unpin for oce_store::RetrievalHit
+impl core::marker::Unpin for oce_store::SemanticPayloadDto
+impl core::marker::Unpin for oce_store::SemanticQuery
+impl core::marker::Unpin for oce_store::StoreError
+impl core::marker::Unpin for oce_store::TemplatePointReq
+impl core::marker::Unpin for oce_store::TrendInterval
+impl core::marker::UnsafeUnpin for oce_store::BlockClassDto
+impl core::marker::UnsafeUnpin for oce_store::BlockInstanceDto
+impl core::marker::UnsafeUnpin for oce_store::BlockKind
+impl core::marker::UnsafeUnpin for oce_store::ConnectionDto
+impl core::marker::UnsafeUnpin for oce_store::DomainKey
+impl core::marker::UnsafeUnpin for oce_store::Durability
+impl core::marker::UnsafeUnpin for oce_store::ElementKind
+impl core::marker::UnsafeUnpin for oce_store::EquipmentDto
+impl core::marker::UnsafeUnpin for oce_store::OcValue
+impl core::marker::UnsafeUnpin for oce_store::PointDirection
+impl core::marker::UnsafeUnpin for oce_store::PointDto
+impl core::marker::UnsafeUnpin for oce_store::PointHandle
+impl core::marker::UnsafeUnpin for oce_store::PointListRow
+impl core::marker::UnsafeUnpin for oce_store::PointSample
+impl core::marker::UnsafeUnpin for oce_store::PointStatus
+impl core::marker::UnsafeUnpin for oce_store::PointType
+impl core::marker::UnsafeUnpin for oce_store::PointValueType
+impl core::marker::UnsafeUnpin for oce_store::PointWrite
+impl core::marker::UnsafeUnpin for oce_store::RelationDto
+impl core::marker::UnsafeUnpin for oce_store::RelationKind
+impl core::marker::UnsafeUnpin for oce_store::ResolvedModel
+impl core::marker::UnsafeUnpin for oce_store::RetrievalHit
+impl core::marker::UnsafeUnpin for oce_store::SemanticPayloadDto
+impl core::marker::UnsafeUnpin for oce_store::SemanticQuery
+impl core::marker::UnsafeUnpin for oce_store::StoreError
+impl core::marker::UnsafeUnpin for oce_store::TemplatePointReq
+impl core::marker::UnsafeUnpin for oce_store::TrendInterval
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::BlockClassDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::BlockInstanceDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::BlockKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::ConnectionDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::DomainKey
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::Durability
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::ElementKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::EquipmentDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::OcValue
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointDirection
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointHandle
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointListRow
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointSample
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointStatus
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointType
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointValueType
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::PointWrite
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::RelationDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::RelationKind
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::ResolvedModel
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::RetrievalHit
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::SemanticPayloadDto
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::SemanticQuery
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::StoreError
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::TemplatePointReq
+impl core::panic::unwind_safe::RefUnwindSafe for oce_store::TrendInterval
+impl core::panic::unwind_safe::UnwindSafe for oce_store::BlockClassDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::BlockInstanceDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::BlockKind
+impl core::panic::unwind_safe::UnwindSafe for oce_store::ConnectionDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::DomainKey
+impl core::panic::unwind_safe::UnwindSafe for oce_store::Durability
+impl core::panic::unwind_safe::UnwindSafe for oce_store::ElementKind
+impl core::panic::unwind_safe::UnwindSafe for oce_store::EquipmentDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::OcValue
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointDirection
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointHandle
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointListRow
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointSample
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointStatus
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointType
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointValueType
+impl core::panic::unwind_safe::UnwindSafe for oce_store::PointWrite
+impl core::panic::unwind_safe::UnwindSafe for oce_store::RelationDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::RelationKind
+impl core::panic::unwind_safe::UnwindSafe for oce_store::ResolvedModel
+impl core::panic::unwind_safe::UnwindSafe for oce_store::RetrievalHit
+impl core::panic::unwind_safe::UnwindSafe for oce_store::SemanticPayloadDto
+impl core::panic::unwind_safe::UnwindSafe for oce_store::SemanticQuery
+impl core::panic::unwind_safe::UnwindSafe for oce_store::StoreError
+impl core::panic::unwind_safe::UnwindSafe for oce_store::TemplatePointReq
+impl core::panic::unwind_safe::UnwindSafe for oce_store::TrendInterval
+impl oce_store::DomainKey
+impl serde_core::ser::Serialize for oce_store::BlockClassDto
+impl serde_core::ser::Serialize for oce_store::BlockInstanceDto
+impl serde_core::ser::Serialize for oce_store::BlockKind
+impl serde_core::ser::Serialize for oce_store::ConnectionDto
+impl serde_core::ser::Serialize for oce_store::DomainKey
+impl serde_core::ser::Serialize for oce_store::Durability
+impl serde_core::ser::Serialize for oce_store::ElementKind
+impl serde_core::ser::Serialize for oce_store::EquipmentDto
+impl serde_core::ser::Serialize for oce_store::OcValue
+impl serde_core::ser::Serialize for oce_store::PointDirection
+impl serde_core::ser::Serialize for oce_store::PointDto
+impl serde_core::ser::Serialize for oce_store::PointSample
+impl serde_core::ser::Serialize for oce_store::PointStatus
+impl serde_core::ser::Serialize for oce_store::PointType
+impl serde_core::ser::Serialize for oce_store::PointValueType
+impl serde_core::ser::Serialize for oce_store::RelationDto
+impl serde_core::ser::Serialize for oce_store::RelationKind
+impl serde_core::ser::Serialize for oce_store::ResolvedModel
+impl serde_core::ser::Serialize for oce_store::SemanticPayloadDto
+impl serde_core::ser::Serialize for oce_store::TrendInterval
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::BlockClassDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::BlockInstanceDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::BlockKind
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::ConnectionDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::DomainKey
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::Durability
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::ElementKind
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::EquipmentDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::OcValue
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointDirection
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointSample
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointStatus
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointType
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::PointValueType
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::RelationDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::RelationKind
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::ResolvedModel
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::SemanticPayloadDto
+impl<'de> serde_core::de::Deserialize<'de> for oce_store::TrendInterval
+impl<T, U> core::convert::Into<U> for oce_store::BlockClassDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::BlockInstanceDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::BlockKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::ConnectionDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::DomainKey where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::Durability where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::ElementKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::EquipmentDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::OcValue where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointDirection where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointHandle where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointListRow where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointSample where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointStatus where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointType where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointValueType where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::PointWrite where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::RelationDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::RelationKind where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::ResolvedModel where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::RetrievalHit where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::SemanticPayloadDto where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::SemanticQuery where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::StoreError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::TemplatePointReq where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_store::TrendInterval where U: core::convert::From<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::BlockClassDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::BlockInstanceDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::BlockKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::ConnectionDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::DomainKey where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::Durability where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::ElementKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::EquipmentDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::OcValue where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointDirection where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointHandle where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointListRow where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointSample where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointStatus where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointType where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointValueType where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::PointWrite where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::RelationDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::RelationKind where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::ResolvedModel where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::RetrievalHit where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::SemanticPayloadDto where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::SemanticQuery where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::StoreError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::TemplatePointReq where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_store::TrendInterval where U: core::convert::Into<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::BlockClassDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::BlockInstanceDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::BlockKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::ConnectionDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::DomainKey where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::Durability where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::ElementKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::EquipmentDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::OcValue where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointDirection where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointHandle where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointListRow where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointSample where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointStatus where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointType where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointValueType where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::PointWrite where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::RelationDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::RelationKind where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::ResolvedModel where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::RetrievalHit where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::SemanticPayloadDto where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::SemanticQuery where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::StoreError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::TemplatePointReq where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_store::TrendInterval where U: core::convert::TryFrom<T>
+impl<T> alloc::borrow::ToOwned for oce_store::BlockClassDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::BlockInstanceDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::BlockKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::ConnectionDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::DomainKey where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::Durability where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::ElementKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::EquipmentDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::OcValue where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointDirection where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointHandle where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointListRow where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointSample where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointStatus where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointType where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointValueType where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::PointWrite where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::RelationDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::RelationKind where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::ResolvedModel where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::RetrievalHit where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::SemanticPayloadDto where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::SemanticQuery where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::TemplatePointReq where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_store::TrendInterval where T: core::clone::Clone
+impl<T> alloc::string::ToString for oce_store::StoreError where T: core::fmt::Display + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::BlockClassDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::BlockInstanceDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::BlockKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::ConnectionDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::DomainKey where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::Durability where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::ElementKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::EquipmentDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::OcValue where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointDirection where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointHandle where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointListRow where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointSample where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointStatus where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointType where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointValueType where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::PointWrite where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::RelationDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::RelationKind where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::ResolvedModel where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::RetrievalHit where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::SemanticPayloadDto where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::SemanticQuery where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::StoreError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::TemplatePointReq where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_store::TrendInterval where T: 'static + ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::BlockClassDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::BlockInstanceDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::BlockKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::ConnectionDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::DomainKey where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::Durability where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::ElementKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::EquipmentDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::OcValue where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointDirection where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointHandle where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointListRow where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointSample where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointStatus where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointType where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointValueType where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::PointWrite where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::RelationDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::RelationKind where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::ResolvedModel where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::RetrievalHit where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::SemanticPayloadDto where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::SemanticQuery where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::StoreError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::TemplatePointReq where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_store::TrendInterval where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::BlockClassDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::BlockInstanceDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::BlockKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::ConnectionDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::DomainKey where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::Durability where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::ElementKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::EquipmentDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::OcValue where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointDirection where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointHandle where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointListRow where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointSample where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointStatus where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointType where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointValueType where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::PointWrite where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::RelationDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::RelationKind where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::ResolvedModel where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::RetrievalHit where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::SemanticPayloadDto where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::SemanticQuery where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::StoreError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::TemplatePointReq where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_store::TrendInterval where T: ?core::marker::Sized
+impl<T> core::clone::CloneToUninit for oce_store::BlockClassDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::BlockInstanceDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::BlockKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::ConnectionDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::DomainKey where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::Durability where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::ElementKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::EquipmentDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::OcValue where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointDirection where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointHandle where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointListRow where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointSample where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointStatus where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointType where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointValueType where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::PointWrite where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::RelationDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::RelationKind where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::ResolvedModel where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::RetrievalHit where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::SemanticPayloadDto where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::SemanticQuery where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::TemplatePointReq where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_store::TrendInterval where T: core::clone::Clone
+impl<T> core::convert::From<T> for oce_store::BlockClassDto
+impl<T> core::convert::From<T> for oce_store::BlockInstanceDto
+impl<T> core::convert::From<T> for oce_store::BlockKind
+impl<T> core::convert::From<T> for oce_store::ConnectionDto
+impl<T> core::convert::From<T> for oce_store::DomainKey
+impl<T> core::convert::From<T> for oce_store::Durability
+impl<T> core::convert::From<T> for oce_store::ElementKind
+impl<T> core::convert::From<T> for oce_store::EquipmentDto
+impl<T> core::convert::From<T> for oce_store::OcValue
+impl<T> core::convert::From<T> for oce_store::PointDirection
+impl<T> core::convert::From<T> for oce_store::PointDto
+impl<T> core::convert::From<T> for oce_store::PointHandle
+impl<T> core::convert::From<T> for oce_store::PointListRow
+impl<T> core::convert::From<T> for oce_store::PointSample
+impl<T> core::convert::From<T> for oce_store::PointStatus
+impl<T> core::convert::From<T> for oce_store::PointType
+impl<T> core::convert::From<T> for oce_store::PointValueType
+impl<T> core::convert::From<T> for oce_store::PointWrite
+impl<T> core::convert::From<T> for oce_store::RelationDto
+impl<T> core::convert::From<T> for oce_store::RelationKind
+impl<T> core::convert::From<T> for oce_store::ResolvedModel
+impl<T> core::convert::From<T> for oce_store::RetrievalHit
+impl<T> core::convert::From<T> for oce_store::SemanticPayloadDto
+impl<T> core::convert::From<T> for oce_store::SemanticQuery
+impl<T> core::convert::From<T> for oce_store::StoreError
+impl<T> core::convert::From<T> for oce_store::TemplatePointReq
+impl<T> core::convert::From<T> for oce_store::TrendInterval
+impl<T> oce_store::Store for T where T: oce_store::ModelStore + oce_store::PointStore + oce_store::SemanticStore + oce_store::Durable + core::marker::Send + core::marker::Sync
+impl<T> serde_core::de::DeserializeOwned for oce_store::BlockClassDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::BlockInstanceDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::BlockKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::ConnectionDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::DomainKey where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::Durability where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::ElementKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::EquipmentDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::OcValue where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointDirection where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointSample where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointStatus where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointType where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::PointValueType where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::RelationDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::RelationKind where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::ResolvedModel where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::SemanticPayloadDto where T: for<'de> serde_core::de::Deserialize<'de>
+impl<T> serde_core::de::DeserializeOwned for oce_store::TrendInterval where T: for<'de> serde_core::de::Deserialize<'de>
+pub enum oce_store::BlockKind
+pub enum oce_store::Durability
+pub enum oce_store::ElementKind
+pub enum oce_store::OcValue
+pub enum oce_store::PointDirection
+pub enum oce_store::PointStatus
+pub enum oce_store::PointType
+pub enum oce_store::PointValueType
+pub enum oce_store::RelationKind
+pub enum oce_store::SemanticQuery
+pub enum oce_store::TrendInterval
+pub fn oce_store::BlockClassDto::borrow(&self) -> &T
+pub fn oce_store::BlockClassDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::BlockClassDto::clone(&self) -> oce_store::BlockClassDto
+pub fn oce_store::BlockClassDto::clone_into(&self, &mut T)
+pub fn oce_store::BlockClassDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::BlockClassDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::BlockClassDto::from(T) -> T
+pub fn oce_store::BlockClassDto::into(self) -> U
+pub fn oce_store::BlockClassDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::BlockClassDto::to_owned(&self) -> T
+pub fn oce_store::BlockClassDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::BlockClassDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::BlockClassDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::BlockInstanceDto::borrow(&self) -> &T
+pub fn oce_store::BlockInstanceDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::BlockInstanceDto::clone(&self) -> oce_store::BlockInstanceDto
+pub fn oce_store::BlockInstanceDto::clone_into(&self, &mut T)
+pub fn oce_store::BlockInstanceDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::BlockInstanceDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::BlockInstanceDto::from(T) -> T
+pub fn oce_store::BlockInstanceDto::into(self) -> U
+pub fn oce_store::BlockInstanceDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::BlockInstanceDto::to_owned(&self) -> T
+pub fn oce_store::BlockInstanceDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::BlockInstanceDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::BlockInstanceDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::BlockKind::borrow(&self) -> &T
+pub fn oce_store::BlockKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::BlockKind::clone(&self) -> oce_store::BlockKind
+pub fn oce_store::BlockKind::clone_into(&self, &mut T)
+pub fn oce_store::BlockKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::BlockKind::eq(&self, &oce_store::BlockKind) -> bool
+pub fn oce_store::BlockKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::BlockKind::from(T) -> T
+pub fn oce_store::BlockKind::into(self) -> U
+pub fn oce_store::BlockKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::BlockKind::to_owned(&self) -> T
+pub fn oce_store::BlockKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::BlockKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::BlockKind::type_id(&self) -> core::any::TypeId
+pub fn oce_store::ConnectionDto::borrow(&self) -> &T
+pub fn oce_store::ConnectionDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::ConnectionDto::clone(&self) -> oce_store::ConnectionDto
+pub fn oce_store::ConnectionDto::clone_into(&self, &mut T)
+pub fn oce_store::ConnectionDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::ConnectionDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::ConnectionDto::from(T) -> T
+pub fn oce_store::ConnectionDto::into(self) -> U
+pub fn oce_store::ConnectionDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::ConnectionDto::to_owned(&self) -> T
+pub fn oce_store::ConnectionDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::ConnectionDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::ConnectionDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::DomainKey::as_str(&self) -> &str
+pub fn oce_store::DomainKey::borrow(&self) -> &T
+pub fn oce_store::DomainKey::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::DomainKey::clone(&self) -> oce_store::DomainKey
+pub fn oce_store::DomainKey::clone_into(&self, &mut T)
+pub fn oce_store::DomainKey::default() -> oce_store::DomainKey
+pub fn oce_store::DomainKey::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::DomainKey::eq(&self, &oce_store::DomainKey) -> bool
+pub fn oce_store::DomainKey::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::DomainKey::from(T) -> T
+pub fn oce_store::DomainKey::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_store::DomainKey::into(self) -> U
+pub fn oce_store::DomainKey::new(impl core::convert::Into<alloc::boxed::Box<str>>) -> Self
+pub fn oce_store::DomainKey::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::DomainKey::to_owned(&self) -> T
+pub fn oce_store::DomainKey::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::DomainKey::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::DomainKey::type_id(&self) -> core::any::TypeId
+pub fn oce_store::Durability::borrow(&self) -> &T
+pub fn oce_store::Durability::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::Durability::clone(&self) -> oce_store::Durability
+pub fn oce_store::Durability::clone_into(&self, &mut T)
+pub fn oce_store::Durability::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::Durability::eq(&self, &oce_store::Durability) -> bool
+pub fn oce_store::Durability::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::Durability::from(T) -> T
+pub fn oce_store::Durability::into(self) -> U
+pub fn oce_store::Durability::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::Durability::to_owned(&self) -> T
+pub fn oce_store::Durability::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::Durability::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::Durability::type_id(&self) -> core::any::TypeId
+pub fn oce_store::Durable::commit(&self) -> oce_store::StoreResult<()>
+pub fn oce_store::Durable::flush(&self) -> oce_store::StoreResult<()>
+pub fn oce_store::Durable::recover(&self) -> oce_store::StoreResult<()>
+pub fn oce_store::ElementKind::borrow(&self) -> &T
+pub fn oce_store::ElementKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::ElementKind::clone(&self) -> oce_store::ElementKind
+pub fn oce_store::ElementKind::clone_into(&self, &mut T)
+pub fn oce_store::ElementKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::ElementKind::eq(&self, &oce_store::ElementKind) -> bool
+pub fn oce_store::ElementKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::ElementKind::from(T) -> T
+pub fn oce_store::ElementKind::hash<__H: core::hash::Hasher>(&self, &mut __H)
+pub fn oce_store::ElementKind::into(self) -> U
+pub fn oce_store::ElementKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::ElementKind::to_owned(&self) -> T
+pub fn oce_store::ElementKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::ElementKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::ElementKind::type_id(&self) -> core::any::TypeId
+pub fn oce_store::EquipmentDto::borrow(&self) -> &T
+pub fn oce_store::EquipmentDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::EquipmentDto::clone(&self) -> oce_store::EquipmentDto
+pub fn oce_store::EquipmentDto::clone_into(&self, &mut T)
+pub fn oce_store::EquipmentDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::EquipmentDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::EquipmentDto::from(T) -> T
+pub fn oce_store::EquipmentDto::into(self) -> U
+pub fn oce_store::EquipmentDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::EquipmentDto::to_owned(&self) -> T
+pub fn oce_store::EquipmentDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::EquipmentDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::EquipmentDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::ModelStore::delete_model(&self, &oce_store::DomainKey) -> oce_store::StoreResult<()>
+pub fn oce_store::ModelStore::list_models(&self) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::DomainKey>>
+pub fn oce_store::ModelStore::load_model(&self, &oce_store::DomainKey) -> oce_store::StoreResult<oce_store::ResolvedModel>
+pub fn oce_store::ModelStore::save_model(&self, &oce_store::ResolvedModel) -> oce_store::StoreResult<()>
+pub fn oce_store::OcValue::borrow(&self) -> &T
+pub fn oce_store::OcValue::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::OcValue::clone(&self) -> oce_store::OcValue
+pub fn oce_store::OcValue::clone_into(&self, &mut T)
+pub fn oce_store::OcValue::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::OcValue::eq(&self, &oce_store::OcValue) -> bool
+pub fn oce_store::OcValue::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::OcValue::from(T) -> T
+pub fn oce_store::OcValue::into(self) -> U
+pub fn oce_store::OcValue::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::OcValue::to_owned(&self) -> T
+pub fn oce_store::OcValue::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::OcValue::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::OcValue::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointDirection::borrow(&self) -> &T
+pub fn oce_store::PointDirection::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointDirection::clone(&self) -> oce_store::PointDirection
+pub fn oce_store::PointDirection::clone_into(&self, &mut T)
+pub fn oce_store::PointDirection::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointDirection::eq(&self, &oce_store::PointDirection) -> bool
+pub fn oce_store::PointDirection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointDirection::from(T) -> T
+pub fn oce_store::PointDirection::into(self) -> U
+pub fn oce_store::PointDirection::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointDirection::to_owned(&self) -> T
+pub fn oce_store::PointDirection::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointDirection::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointDirection::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointDto::borrow(&self) -> &T
+pub fn oce_store::PointDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointDto::clone(&self) -> oce_store::PointDto
+pub fn oce_store::PointDto::clone_into(&self, &mut T)
+pub fn oce_store::PointDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointDto::from(T) -> T
+pub fn oce_store::PointDto::into(self) -> U
+pub fn oce_store::PointDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointDto::to_owned(&self) -> T
+pub fn oce_store::PointDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointHandle::borrow(&self) -> &T
+pub fn oce_store::PointHandle::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointHandle::clone(&self) -> oce_store::PointHandle
+pub fn oce_store::PointHandle::clone_into(&self, &mut T)
+pub fn oce_store::PointHandle::eq(&self, &oce_store::PointHandle) -> bool
+pub fn oce_store::PointHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointHandle::from(T) -> T
+pub fn oce_store::PointHandle::into(self) -> U
+pub fn oce_store::PointHandle::to_owned(&self) -> T
+pub fn oce_store::PointHandle::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointHandle::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointHandle::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointListRow::borrow(&self) -> &T
+pub fn oce_store::PointListRow::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointListRow::clone(&self) -> oce_store::PointListRow
+pub fn oce_store::PointListRow::clone_into(&self, &mut T)
+pub fn oce_store::PointListRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointListRow::from(T) -> T
+pub fn oce_store::PointListRow::into(self) -> U
+pub fn oce_store::PointListRow::to_owned(&self) -> T
+pub fn oce_store::PointListRow::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointListRow::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointListRow::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointSample::borrow(&self) -> &T
+pub fn oce_store::PointSample::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointSample::clone(&self) -> oce_store::PointSample
+pub fn oce_store::PointSample::clone_into(&self, &mut T)
+pub fn oce_store::PointSample::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointSample::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointSample::from(T) -> T
+pub fn oce_store::PointSample::into(self) -> U
+pub fn oce_store::PointSample::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointSample::to_owned(&self) -> T
+pub fn oce_store::PointSample::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointSample::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointSample::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointSnapshot::read_by_key(&self, &oce_store::DomainKey) -> core::option::Option<oce_store::PointSample>
+pub fn oce_store::PointSnapshot::read_resolved(&self, oce_store::PointHandle) -> core::option::Option<oce_store::PointSample>
+pub fn oce_store::PointStatus::borrow(&self) -> &T
+pub fn oce_store::PointStatus::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointStatus::clone(&self) -> oce_store::PointStatus
+pub fn oce_store::PointStatus::clone_into(&self, &mut T)
+pub fn oce_store::PointStatus::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointStatus::eq(&self, &oce_store::PointStatus) -> bool
+pub fn oce_store::PointStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointStatus::from(T) -> T
+pub fn oce_store::PointStatus::into(self) -> U
+pub fn oce_store::PointStatus::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointStatus::to_owned(&self) -> T
+pub fn oce_store::PointStatus::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointStatus::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointStatus::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointStore::resolve_points(&self, &[oce_store::DomainKey]) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::PointHandle>>
+pub fn oce_store::PointStore::snapshot(&self) -> oce_store::StoreResult<alloc::boxed::Box<dyn oce_store::PointSnapshot>>
+pub fn oce_store::PointStore::write_points(&self, &[oce_store::PointWrite]) -> oce_store::StoreResult<usize>
+pub fn oce_store::PointType::borrow(&self) -> &T
+pub fn oce_store::PointType::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointType::clone(&self) -> oce_store::PointType
+pub fn oce_store::PointType::clone_into(&self, &mut T)
+pub fn oce_store::PointType::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointType::eq(&self, &oce_store::PointType) -> bool
+pub fn oce_store::PointType::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointType::from(T) -> T
+pub fn oce_store::PointType::into(self) -> U
+pub fn oce_store::PointType::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointType::to_owned(&self) -> T
+pub fn oce_store::PointType::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointType::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointType::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointValueType::borrow(&self) -> &T
+pub fn oce_store::PointValueType::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointValueType::clone(&self) -> oce_store::PointValueType
+pub fn oce_store::PointValueType::clone_into(&self, &mut T)
+pub fn oce_store::PointValueType::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::PointValueType::eq(&self, &oce_store::PointValueType) -> bool
+pub fn oce_store::PointValueType::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointValueType::from(T) -> T
+pub fn oce_store::PointValueType::into(self) -> U
+pub fn oce_store::PointValueType::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::PointValueType::to_owned(&self) -> T
+pub fn oce_store::PointValueType::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointValueType::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointValueType::type_id(&self) -> core::any::TypeId
+pub fn oce_store::PointWrite::borrow(&self) -> &T
+pub fn oce_store::PointWrite::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::PointWrite::clone(&self) -> oce_store::PointWrite
+pub fn oce_store::PointWrite::clone_into(&self, &mut T)
+pub fn oce_store::PointWrite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::PointWrite::from(T) -> T
+pub fn oce_store::PointWrite::into(self) -> U
+pub fn oce_store::PointWrite::to_owned(&self) -> T
+pub fn oce_store::PointWrite::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::PointWrite::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::PointWrite::type_id(&self) -> core::any::TypeId
+pub fn oce_store::RelationDto::borrow(&self) -> &T
+pub fn oce_store::RelationDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::RelationDto::clone(&self) -> oce_store::RelationDto
+pub fn oce_store::RelationDto::clone_into(&self, &mut T)
+pub fn oce_store::RelationDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::RelationDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::RelationDto::from(T) -> T
+pub fn oce_store::RelationDto::into(self) -> U
+pub fn oce_store::RelationDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::RelationDto::to_owned(&self) -> T
+pub fn oce_store::RelationDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::RelationDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::RelationDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::RelationKind::borrow(&self) -> &T
+pub fn oce_store::RelationKind::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::RelationKind::clone(&self) -> oce_store::RelationKind
+pub fn oce_store::RelationKind::clone_into(&self, &mut T)
+pub fn oce_store::RelationKind::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::RelationKind::eq(&self, &oce_store::RelationKind) -> bool
+pub fn oce_store::RelationKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::RelationKind::from(T) -> T
+pub fn oce_store::RelationKind::into(self) -> U
+pub fn oce_store::RelationKind::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::RelationKind::to_owned(&self) -> T
+pub fn oce_store::RelationKind::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::RelationKind::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::RelationKind::type_id(&self) -> core::any::TypeId
+pub fn oce_store::ResolvedModel::borrow(&self) -> &T
+pub fn oce_store::ResolvedModel::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::ResolvedModel::clone(&self) -> oce_store::ResolvedModel
+pub fn oce_store::ResolvedModel::clone_into(&self, &mut T)
+pub fn oce_store::ResolvedModel::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::ResolvedModel::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::ResolvedModel::from(T) -> T
+pub fn oce_store::ResolvedModel::into(self) -> U
+pub fn oce_store::ResolvedModel::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::ResolvedModel::to_owned(&self) -> T
+pub fn oce_store::ResolvedModel::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::ResolvedModel::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::ResolvedModel::type_id(&self) -> core::any::TypeId
+pub fn oce_store::RetrievalHit::borrow(&self) -> &T
+pub fn oce_store::RetrievalHit::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::RetrievalHit::clone(&self) -> oce_store::RetrievalHit
+pub fn oce_store::RetrievalHit::clone_into(&self, &mut T)
+pub fn oce_store::RetrievalHit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::RetrievalHit::from(T) -> T
+pub fn oce_store::RetrievalHit::into(self) -> U
+pub fn oce_store::RetrievalHit::to_owned(&self) -> T
+pub fn oce_store::RetrievalHit::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::RetrievalHit::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::RetrievalHit::type_id(&self) -> core::any::TypeId
+pub fn oce_store::SemanticPayloadDto::borrow(&self) -> &T
+pub fn oce_store::SemanticPayloadDto::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::SemanticPayloadDto::clone(&self) -> oce_store::SemanticPayloadDto
+pub fn oce_store::SemanticPayloadDto::clone_into(&self, &mut T)
+pub fn oce_store::SemanticPayloadDto::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::SemanticPayloadDto::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::SemanticPayloadDto::from(T) -> T
+pub fn oce_store::SemanticPayloadDto::into(self) -> U
+pub fn oce_store::SemanticPayloadDto::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::SemanticPayloadDto::to_owned(&self) -> T
+pub fn oce_store::SemanticPayloadDto::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::SemanticPayloadDto::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::SemanticPayloadDto::type_id(&self) -> core::any::TypeId
+pub fn oce_store::SemanticQuery::borrow(&self) -> &T
+pub fn oce_store::SemanticQuery::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::SemanticQuery::clone(&self) -> oce_store::SemanticQuery
+pub fn oce_store::SemanticQuery::clone_into(&self, &mut T)
+pub fn oce_store::SemanticQuery::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::SemanticQuery::from(T) -> T
+pub fn oce_store::SemanticQuery::into(self) -> U
+pub fn oce_store::SemanticQuery::to_owned(&self) -> T
+pub fn oce_store::SemanticQuery::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::SemanticQuery::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::SemanticQuery::type_id(&self) -> core::any::TypeId
+pub fn oce_store::SemanticStore::add_relation(&self, &oce_store::RelationDto) -> oce_store::StoreResult<()>
+pub fn oce_store::SemanticStore::get_semantic_payloads(&self, &oce_store::DomainKey) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::SemanticPayloadDto>>
+pub fn oce_store::SemanticStore::match_template(&self, &[oce_store::TemplatePointReq]) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::DomainKey>>
+pub fn oce_store::SemanticStore::point_list(&self, core::option::Option<&str>) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::PointListRow>>
+pub fn oce_store::SemanticStore::put_semantic_payload(&self, &oce_store::SemanticPayloadDto) -> oce_store::StoreResult<()>
+pub fn oce_store::SemanticStore::retrieve(&self, &oce_store::SemanticQuery) -> oce_store::StoreResult<alloc::vec::Vec<oce_store::RetrievalHit>>
+pub fn oce_store::SemanticStore::upsert_equipment(&self, &oce_store::EquipmentDto) -> oce_store::StoreResult<()>
+pub fn oce_store::StoreError::borrow(&self) -> &T
+pub fn oce_store::StoreError::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::StoreError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::StoreError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::StoreError::from(T) -> T
+pub fn oce_store::StoreError::into(self) -> U
+pub fn oce_store::StoreError::to_string(&self) -> alloc::string::String
+pub fn oce_store::StoreError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::StoreError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::StoreError::type_id(&self) -> core::any::TypeId
+pub fn oce_store::TemplatePointReq::borrow(&self) -> &T
+pub fn oce_store::TemplatePointReq::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::TemplatePointReq::clone(&self) -> oce_store::TemplatePointReq
+pub fn oce_store::TemplatePointReq::clone_into(&self, &mut T)
+pub fn oce_store::TemplatePointReq::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::TemplatePointReq::from(T) -> T
+pub fn oce_store::TemplatePointReq::into(self) -> U
+pub fn oce_store::TemplatePointReq::to_owned(&self) -> T
+pub fn oce_store::TemplatePointReq::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::TemplatePointReq::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::TemplatePointReq::type_id(&self) -> core::any::TypeId
+pub fn oce_store::TrendInterval::borrow(&self) -> &T
+pub fn oce_store::TrendInterval::borrow_mut(&mut self) -> &mut T
+pub fn oce_store::TrendInterval::clone(&self) -> oce_store::TrendInterval
+pub fn oce_store::TrendInterval::clone_into(&self, &mut T)
+pub fn oce_store::TrendInterval::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+pub fn oce_store::TrendInterval::eq(&self, &oce_store::TrendInterval) -> bool
+pub fn oce_store::TrendInterval::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_store::TrendInterval::from(T) -> T
+pub fn oce_store::TrendInterval::into(self) -> U
+pub fn oce_store::TrendInterval::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+pub fn oce_store::TrendInterval::to_owned(&self) -> T
+pub fn oce_store::TrendInterval::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_store::TrendInterval::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_store::TrendInterval::type_id(&self) -> core::any::TypeId
+pub mod oce_store
+pub oce_store::BlockClassDto::class_iri: alloc::string::String
+pub oce_store::BlockClassDto::is_library: bool
+pub oce_store::BlockClassDto::kind: oce_store::BlockKind
+pub oce_store::BlockClassDto::shape_json: alloc::string::String
+pub oce_store::BlockInstanceDto::class_iri: alloc::string::String
+pub oce_store::BlockInstanceDto::config_json: alloc::string::String
+pub oce_store::BlockInstanceDto::key: oce_store::DomainKey
+pub oce_store::BlockInstanceDto::params: alloc::vec::Vec<(alloc::string::String, oce_store::OcValue)>
+pub oce_store::BlockKind::Composite
+pub oce_store::BlockKind::Elementary
+pub oce_store::BlockKind::Extension
+pub oce_store::ConnectionDto::from_point: oce_store::DomainKey
+pub oce_store::ConnectionDto::to_point: oce_store::DomainKey
+pub oce_store::Durability::Critical
+pub oce_store::Durability::Telemetry
+pub oce_store::ElementKind::BlockClass
+pub oce_store::ElementKind::CdlBlock
+pub oce_store::ElementKind::Equipment
+pub oce_store::ElementKind::Package
+pub oce_store::ElementKind::Point
+pub oce_store::ElementKind::Zone
+pub oce_store::EquipmentDto::embedding: core::option::Option<alloc::vec::Vec<f32>>
+pub oce_store::EquipmentDto::key: oce_store::DomainKey
+pub oce_store::EquipmentDto::subtype: core::option::Option<alloc::string::String>
+pub oce_store::EquipmentDto::tags_json: alloc::string::String
+pub oce_store::OcValue::Bool(bool)
+pub oce_store::OcValue::Decimal(alloc::string::String)
+pub oce_store::OcValue::Enum
+pub oce_store::OcValue::Enum::literal: alloc::string::String
+pub oce_store::OcValue::Enum::type_iri: alloc::string::String
+pub oce_store::OcValue::Int(i64)
+pub oce_store::OcValue::Real(f64)
+pub oce_store::OcValue::String(alloc::string::String)
+pub oce_store::PointDirection::In
+pub oce_store::PointDirection::Out
+pub oce_store::PointDto::controlled_device: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::description: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::direction: oce_store::PointDirection
+pub oce_store::PointDto::display_unit: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::embedding: core::option::Option<alloc::vec::Vec<f32>>
+pub oce_store::PointDto::hardwired: bool
+pub oce_store::PointDto::in_pointlist: bool
+pub oce_store::PointDto::key: oce_store::DomainKey
+pub oce_store::PointDto::owner_block: oce_store::DomainKey
+pub oce_store::PointDto::point_type: oce_store::PointType
+pub oce_store::PointDto::quantity: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::search_text: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::tags_json: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::trend_enable: bool
+pub oce_store::PointDto::trend_interval_s: oce_store::TrendInterval
+pub oce_store::PointDto::unit: core::option::Option<alloc::string::String>
+pub oce_store::PointDto::value_type: oce_store::PointValueType
+pub oce_store::PointListRow::controlled_device: core::option::Option<alloc::string::String>
+pub oce_store::PointListRow::description: core::option::Option<alloc::string::String>
+pub oce_store::PointListRow::hardwired: bool
+pub oce_store::PointListRow::name: alloc::string::String
+pub oce_store::PointListRow::point: oce_store::DomainKey
+pub oce_store::PointListRow::point_type: oce_store::PointType
+pub oce_store::PointListRow::trend_interval_s: oce_store::TrendInterval
+pub oce_store::PointSample::at_unix_nanos: u64
+pub oce_store::PointSample::status: oce_store::PointStatus
+pub oce_store::PointSample::value: oce_store::OcValue
+pub oce_store::PointStatus::Fault
+pub oce_store::PointStatus::Ok
+pub oce_store::PointStatus::Override
+pub oce_store::PointStatus::Stale
+pub oce_store::PointStatus::Uninitialized
+pub oce_store::PointType::Ai
+pub oce_store::PointType::Ao
+pub oce_store::PointType::Di
+pub oce_store::PointType::Do
+pub oce_store::PointType::Mode
+pub oce_store::PointValueType::Bool
+pub oce_store::PointValueType::Int
+pub oce_store::PointValueType::Real
+pub oce_store::PointWrite::durability: oce_store::Durability
+pub oce_store::PointWrite::key: oce_store::DomainKey
+pub oce_store::PointWrite::sample: oce_store::PointSample
+pub oce_store::RelationDto::dst: oce_store::DomainKey
+pub oce_store::RelationDto::kind: oce_store::RelationKind
+pub oce_store::RelationDto::src: oce_store::DomainKey
+pub oce_store::RelationKind::ConnectedTo
+pub oce_store::RelationKind::Contains
+pub oce_store::RelationKind::Controls
+pub oce_store::RelationKind::Exposes
+pub oce_store::RelationKind::Feeds
+pub oce_store::RelationKind::HasPoint
+pub oce_store::ResolvedModel::blocks: alloc::vec::Vec<oce_store::BlockInstanceDto>
+pub oce_store::ResolvedModel::classes: alloc::vec::Vec<oce_store::BlockClassDto>
+pub oce_store::ResolvedModel::connections: alloc::vec::Vec<oce_store::ConnectionDto>
+pub oce_store::ResolvedModel::containment: alloc::vec::Vec<(oce_store::DomainKey, oce_store::DomainKey)>
+pub oce_store::ResolvedModel::model_id: oce_store::DomainKey
+pub oce_store::ResolvedModel::points: alloc::vec::Vec<oce_store::PointDto>
+pub oce_store::ResolvedModel::schema_rev: u32
+pub oce_store::RetrievalHit::key: oce_store::DomainKey
+pub oce_store::RetrievalHit::score: f64
+pub oce_store::SemanticPayloadDto::language: alloc::string::String
+pub oce_store::SemanticPayloadDto::mime: alloc::string::String
+pub oce_store::SemanticPayloadDto::payload: alloc::string::String
+pub oce_store::SemanticPayloadDto::subject: oce_store::DomainKey
+pub oce_store::SemanticPayloadDto::version: core::option::Option<alloc::string::String>
+pub oce_store::SemanticQuery::Embedding
+pub oce_store::SemanticQuery::Embedding::k: usize
+pub oce_store::SemanticQuery::Embedding::query: alloc::vec::Vec<f32>
+pub oce_store::SemanticQuery::FuzzyText
+pub oce_store::SemanticQuery::FuzzyText::k: usize
+pub oce_store::SemanticQuery::FuzzyText::query: alloc::string::String
+pub oce_store::SemanticQuery::TagContains
+pub oce_store::SemanticQuery::TagContains::containment_json: alloc::string::String
+pub oce_store::StoreError::Backend(alloc::string::String)
+pub oce_store::StoreError::Durability(alloc::string::String)
+pub oce_store::StoreError::ModelNotLoaded(oce_store::DomainKey)
+pub oce_store::StoreError::NotFound(oce_store::DomainKey)
+pub oce_store::StoreError::RetrievalUnsupported(&'static str)
+pub oce_store::StoreError::Unsupported(&'static str)
+pub oce_store::StoreError::Validation(alloc::string::String)
+pub oce_store::TemplatePointReq::direction: oce_store::PointDirection
+pub oce_store::TemplatePointReq::quantity: core::option::Option<alloc::string::String>
+pub oce_store::TemplatePointReq::value_type: oce_store::PointValueType
+pub oce_store::TrendInterval::EverySeconds(u32)
+pub oce_store::TrendInterval::OnChange
+pub struct oce_store::BlockClassDto
+pub struct oce_store::BlockInstanceDto
+pub struct oce_store::ConnectionDto
+pub struct oce_store::DomainKey(pub alloc::boxed::Box<str>)
+pub struct oce_store::EquipmentDto
+pub struct oce_store::PointDto
+pub struct oce_store::PointHandle(pub u64)
+pub struct oce_store::PointListRow
+pub struct oce_store::PointSample
+pub struct oce_store::PointWrite
+pub struct oce_store::RelationDto
+pub struct oce_store::ResolvedModel
+pub struct oce_store::RetrievalHit
+pub struct oce_store::SemanticPayloadDto
+pub struct oce_store::TemplatePointReq
+pub trait oce_store::Durable: core::marker::Send + core::marker::Sync
+pub trait oce_store::ModelStore: core::marker::Send + core::marker::Sync
+pub trait oce_store::PointSnapshot: core::marker::Send
+pub trait oce_store::PointStore: core::marker::Send + core::marker::Sync
+pub trait oce_store::SemanticStore: core::marker::Send + core::marker::Sync
+pub trait oce_store::Store: oce_store::ModelStore + oce_store::PointStore + oce_store::SemanticStore + oce_store::Durable + core::marker::Send + core::marker::Sync
+pub type oce_store::BlockClassDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::BlockClassDto::Error = core::convert::Infallible
+pub type oce_store::BlockClassDto::Owned = T
+pub type oce_store::BlockInstanceDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::BlockInstanceDto::Error = core::convert::Infallible
+pub type oce_store::BlockInstanceDto::Owned = T
+pub type oce_store::BlockKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::BlockKind::Error = core::convert::Infallible
+pub type oce_store::BlockKind::Owned = T
+pub type oce_store::ConnectionDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::ConnectionDto::Error = core::convert::Infallible
+pub type oce_store::ConnectionDto::Owned = T
+pub type oce_store::DomainKey::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::DomainKey::Error = core::convert::Infallible
+pub type oce_store::DomainKey::Owned = T
+pub type oce_store::Durability::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::Durability::Error = core::convert::Infallible
+pub type oce_store::Durability::Owned = T
+pub type oce_store::ElementKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::ElementKind::Error = core::convert::Infallible
+pub type oce_store::ElementKind::Owned = T
+pub type oce_store::EquipmentDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::EquipmentDto::Error = core::convert::Infallible
+pub type oce_store::EquipmentDto::Owned = T
+pub type oce_store::OcValue::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::OcValue::Error = core::convert::Infallible
+pub type oce_store::OcValue::Owned = T
+pub type oce_store::PointDirection::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointDirection::Error = core::convert::Infallible
+pub type oce_store::PointDirection::Owned = T
+pub type oce_store::PointDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointDto::Error = core::convert::Infallible
+pub type oce_store::PointDto::Owned = T
+pub type oce_store::PointHandle::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointHandle::Error = core::convert::Infallible
+pub type oce_store::PointHandle::Owned = T
+pub type oce_store::PointListRow::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointListRow::Error = core::convert::Infallible
+pub type oce_store::PointListRow::Owned = T
+pub type oce_store::PointSample::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointSample::Error = core::convert::Infallible
+pub type oce_store::PointSample::Owned = T
+pub type oce_store::PointStatus::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointStatus::Error = core::convert::Infallible
+pub type oce_store::PointStatus::Owned = T
+pub type oce_store::PointType::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointType::Error = core::convert::Infallible
+pub type oce_store::PointType::Owned = T
+pub type oce_store::PointValueType::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointValueType::Error = core::convert::Infallible
+pub type oce_store::PointValueType::Owned = T
+pub type oce_store::PointWrite::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::PointWrite::Error = core::convert::Infallible
+pub type oce_store::PointWrite::Owned = T
+pub type oce_store::RelationDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::RelationDto::Error = core::convert::Infallible
+pub type oce_store::RelationDto::Owned = T
+pub type oce_store::RelationKind::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::RelationKind::Error = core::convert::Infallible
+pub type oce_store::RelationKind::Owned = T
+pub type oce_store::ResolvedModel::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::ResolvedModel::Error = core::convert::Infallible
+pub type oce_store::ResolvedModel::Owned = T
+pub type oce_store::RetrievalHit::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::RetrievalHit::Error = core::convert::Infallible
+pub type oce_store::RetrievalHit::Owned = T
+pub type oce_store::SemanticPayloadDto::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::SemanticPayloadDto::Error = core::convert::Infallible
+pub type oce_store::SemanticPayloadDto::Owned = T
+pub type oce_store::SemanticQuery::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::SemanticQuery::Error = core::convert::Infallible
+pub type oce_store::SemanticQuery::Owned = T
+pub type oce_store::StoreError::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::StoreError::Error = core::convert::Infallible
+pub type oce_store::StoreResult<T> = core::result::Result<T, oce_store::StoreError>
+pub type oce_store::TemplatePointReq::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::TemplatePointReq::Error = core::convert::Infallible
+pub type oce_store::TemplatePointReq::Owned = T
+pub type oce_store::TrendInterval::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_store::TrendInterval::Error = core::convert::Infallible
+pub type oce_store::TrendInterval::Owned = T
+pub unsafe fn oce_store::BlockClassDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::BlockInstanceDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::BlockKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::ConnectionDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::DomainKey::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::Durability::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::ElementKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::EquipmentDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::OcValue::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointDirection::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointHandle::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointListRow::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointSample::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointStatus::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointType::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointValueType::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::PointWrite::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::RelationDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::RelationKind::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::ResolvedModel::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::RetrievalHit::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::SemanticPayloadDto::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::SemanticQuery::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::TemplatePointReq::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_store::TrendInterval::clone_to_uninit(&self, *mut u8)

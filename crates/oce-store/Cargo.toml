@@ -15,3 +15,24 @@ workspace = true
 [dependencies]
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+# Gate-only public-API surface enumeration for the re-exported store seam (R-PUB-3 / exit #7).
+# These are DEV-dependencies — they never enter the shipped library or its dependents. The snapshot
+# test (tests/public_api.rs) runs only when armed by OCE_PUBLIC_API_NIGHTLY (release-gate.yml
+# installs the pinned nightly); the workspace itself stays on stable 1.95.0.
+#
+# COMPAT TRIPLE (M3) — the three are pinned together and must move together: public-api 0.52.x
+# depends on rustdoc-types ^0.57 (FORMAT_VERSION = 57), which is exactly what nightly-2026-05-01
+# (rustc 1.97.0-nightly, 2026-04-30) emits. A format_version skew is caught because the
+# rustdoc-types `Crate` shape changes between versions, so the JSON fails to deserialize (a serde
+# parse error) — the exact pins, not an explicit version assertion, are what keep the triple aligned.
+# Bumping any one requires re-blessing tests/public-api.txt under the matching nightly.
+#
+# `default-features = false` on public-api drops its default `snapshot-testing` feature: that feature
+# only gates `PublicApi::assert_eq_or_update`, which this crate's test does NOT use (it snapshots via
+# `expect_test::expect_file!`). Dropping it removes the `snapshot-testing` crate (license `Unlicense`,
+# not on deny.toml's allow-list) from the dev tree entirely — keeping the license surface explicit.
+[dev-dependencies]
+public-api = { version = "=0.52.1", default-features = false }
+rustdoc-json = "=0.9.10"
+expect-test = "1.5"

@@ -201,6 +201,9 @@ dependencies = [
 name = "oce-store"
 version = "0.0.0"
 dependencies = [
+ "expect-test",
+ "public-api",
+ "rustdoc-json",
  "serde",
  "thiserror",
 ]

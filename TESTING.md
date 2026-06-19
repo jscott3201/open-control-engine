@@ -133,7 +133,7 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
 | `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
-| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, armed public-api surface snapshot, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
@@ -143,6 +143,8 @@ cargo nextest run --workspace            # unit + integration tests (the whole w
 cargo nextest run --profile ci           # reproduce the release gate's profile locally
 cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
 cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
+OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-api --test public_api --locked
+OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-store --test public_api --locked
 ```
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
@@ -156,3 +158,8 @@ Profiles live in [`.config/nextest.toml`](.config/nextest.toml): `default` for a
 fail-fast loop, `ci` for the gate (no fail-fast, no retries, slow-test guard). The release gate
 passes `--no-tests=fail`, so a run that discovers **zero** tests hard-fails — catching the
 regression where tests silently stop compiling or being discovered.
+
+The armed public-API baselines are per crate. `oce-api` pins the embeddable facade, and `oce-store`
+pins the re-exported storage port surface that the facade baseline sees only as an opaque
+`pub use oce_api::oce_store` line. The release gate runs them as separate `cargo nextest` steps so a
+renamed, ignored, or deleted test in either crate discovers zero tests and fails that crate's gate.
