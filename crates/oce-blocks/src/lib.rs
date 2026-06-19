@@ -210,5 +210,24 @@ pub(crate) fn read_bool(inputs: &[Value], i: usize) -> bool {
     }
 }
 
+/// Read input `i` as an `Integer`, defaulting to `0` on a (validation-prevented) type mismatch.
+#[must_use]
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "M2-PR-A0 lands the integer accessor before later Lane A integer blocks consume it"
+    )
+)]
+pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
+    match inputs.get(i) {
+        Some(Value::Integer(n)) => *n,
+        other => {
+            debug_assert!(false, "expected Integer input at {i}, found {other:?}");
+            0
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;

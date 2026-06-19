@@ -2,14 +2,29 @@
 //! table, algebraic step semantics, the loop-breakers' emit-then-latch cycle, and registry
 //! resolution.
 
+use std::cell::RefCell;
 use std::sync::Arc;
 
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Add, And, Block, BlockKind, Constant, Ctx, Edge, Greater, Limiter, MultiplyByParameter,
-    NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup,
+    Add, And, Block, BlockKind, Constant, Ctx, Diagnostics, Edge, Greater, Limiter,
+    MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time,
+    UnitDelay, lookup, read_int,
 };
+
+#[derive(Default)]
+struct CapturingDiagnostics {
+    events: RefCell<Vec<(String, String, Time)>>,
+}
+
+impl Diagnostics for CapturingDiagnostics {
+    fn warn(&self, source: &str, message: &str, t: Time) {
+        self.events
+            .borrow_mut()
+            .push((source.to_string(), message.to_string(), t));
+    }
+}
 
 /// Run an `[A]` block's `step_algebraic` and collect outputs in port-index order.
 fn outs(b: &dyn Block, inputs: &[Value]) -> Vec<Value> {
@@ -68,6 +83,32 @@ fn ticks(times: &[Time]) -> Vec<(Vec<Value>, Time)> {
 /// A single-input Boolean block driven at `t = 0` for every tick (Edge is time-independent).
 fn bool_ticks(us: &[bool]) -> Vec<(Vec<Value>, Time)> {
     us.iter().map(|u| (vec![Value::Boolean(*u)], 0.0)).collect()
+}
+
+#[test]
+fn ctx_warn_uses_scheduler_time_not_block_fabricated_time() {
+    let diag = CapturingDiagnostics::default();
+    let cx = Ctx::new(3.0, &diag);
+    cx.warn("test.assert", "tripped");
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, "test.assert");
+    assert_eq!(events[0].1, "tripped");
+    assert_eq!(events[0].2.to_bits(), 3.0f64.to_bits());
+}
+
+#[test]
+fn read_int_reads_integer_and_release_degrades_to_zero() {
+    assert_eq!(read_int(&[Value::Integer(42)], 0), 42);
+    assert_eq!(read_int(&[Value::Integer(-7)], 0), -7);
+    if cfg!(debug_assertions) {
+        assert!(
+            std::panic::catch_unwind(|| read_int(&[Value::Real(1.0)], 0)).is_err(),
+            "debug builds must trip the validation-bug assertion"
+        );
+    } else {
+        assert_eq!(read_int(&[Value::Real(1.0)], 0), 0);
+    }
 }
 
 #[test]

@@ -4,7 +4,7 @@
 //! `Reals`/`Integers`/`Logical` class paths; resolving deprecated `Continuous.*` aliases to these
 //! is `oce-validate`/`oce-cxf`'s job (M1, `03` §4), not a second alias table here.
 
-use oce_model::{ParamTable, Value};
+use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::{
     Add, And, Block, Constant, Edge, Greater, Limiter, MultiplyByParameter, Not, Pre,
@@ -105,6 +105,42 @@ fn bool_param(params: &ParamTable, name: &str, default: bool) -> bool {
     }
 }
 
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "M2-PR-A0 lands the integer param accessor before later Lane A integer blocks consume it"
+    )
+)]
+fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
+    match find(params, name) {
+        Some(Value::Integer(n)) => *n,
+        _ => default,
+    }
+}
+
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "M2-PR-A0 lands the controller enum accessor before later Lane A controller blocks consume it"
+    )
+)]
+fn controller_type_param(
+    params: &ParamTable,
+    name: &str,
+    default: SimpleController,
+) -> SimpleController {
+    match find(params, name) {
+        Some(Value::Enum { ordinal: 1, .. }) => SimpleController::P,
+        Some(Value::Enum { ordinal: 2, .. }) => SimpleController::Pi,
+        Some(Value::Enum { ordinal: 3, .. }) => SimpleController::Pd,
+        Some(Value::Enum { .. }) => SimpleController::Pid,
+        Some(Value::String(s)) => SimpleController::from_qualified(s).unwrap_or(default),
+        _ => default,
+    }
+}
+
 // ---- constructors (one per catalog entry) ---------------------------------------------------
 
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
@@ -176,4 +212,81 @@ fn make_unit_delay(p: &ParamTable) -> Box<dyn Block> {
     Box::new(UnitDelay {
         y_start: real_param(p, "y_start", 0.0),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use oce_model::{EnumClassId, SimpleController, Value};
+
+    use super::{controller_type_param, int_param};
+    use crate::ParamTable;
+
+    #[test]
+    fn int_param_reads_integer_without_real_promotion() {
+        let params = ParamTable {
+            values: vec![
+                (Arc::from("n"), Value::Integer(7)),
+                (Arc::from("real"), Value::Real(7.0)),
+            ],
+        };
+        assert_eq!(int_param(&params, "n", -1), 7);
+        assert_eq!(
+            int_param(&params, "real", -1),
+            -1,
+            "Integer params must not accept Int->Real promotion in reverse"
+        );
+        assert_eq!(int_param(&params, "missing", 42), 42);
+    }
+
+    #[test]
+    fn controller_type_param_reads_grounded_enum_ordinals() {
+        let class = EnumClassId(9);
+        let cases = [
+            (1, SimpleController::P),
+            (2, SimpleController::Pi),
+            (3, SimpleController::Pd),
+            (4, SimpleController::Pid),
+            (99, SimpleController::Pid),
+        ];
+        for (ordinal, want) in cases {
+            let params = ParamTable {
+                values: vec![(Arc::from("controllerType"), Value::Enum { class, ordinal })],
+            };
+            assert_eq!(
+                controller_type_param(&params, "controllerType", SimpleController::P),
+                want
+            );
+        }
+    }
+
+    #[test]
+    fn controller_type_param_accepts_qualified_string_fallback() {
+        let params = ParamTable {
+            values: vec![(
+                Arc::from("controllerType"),
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PID",
+                )),
+            )],
+        };
+        assert_eq!(
+            controller_type_param(&params, "controllerType", SimpleController::P),
+            SimpleController::Pid
+        );
+
+        let unknown = ParamTable {
+            values: vec![(
+                Arc::from("controllerType"),
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.SimpleController.X",
+                )),
+            )],
+        };
+        assert_eq!(
+            controller_type_param(&unknown, "controllerType", SimpleController::Pd),
+            SimpleController::Pd
+        );
+    }
 }

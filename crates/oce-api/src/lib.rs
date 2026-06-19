@@ -77,6 +77,8 @@ pub fn _doc_link_domain_key(k: oce_store::DomainKey) -> oce_store::DomainKey {
 }
 
 #[cfg(test)]
+mod assert_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod validation_bypass_tests;

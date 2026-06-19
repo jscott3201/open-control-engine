@@ -2,9 +2,12 @@
 //! rejection, and the D6 (c) cross-check against a self-contained reference oracle (no external
 //! graph crate enters the dependency tree — the oracle is a naïve in-tree re-implementation).
 
+use std::cell::RefCell;
 use std::sync::Arc;
 
-use oce_blocks::{Block, BlockKind, BlockSignature, NoopDiagnostics, PortKind, lookup};
+use oce_blocks::{
+    Block, BlockKind, BlockSignature, Ctx, Diagnostics, NoopDiagnostics, PortKind, lookup,
+};
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, Model, ModelGraph, ParamTable,
     Value, ValueType,
@@ -53,6 +56,47 @@ impl Block for TestBlock {
             Ft::Uniform(b) => *b,
             Ft::Pairs(pairs) => pairs.contains(&(in_idx, out_idx)),
         }
+    }
+}
+
+#[derive(Default)]
+struct CapturingDiagnostics {
+    events: RefCell<Vec<(String, String, f64)>>,
+}
+
+impl Diagnostics for CapturingDiagnostics {
+    fn warn(&self, source: &str, message: &str, t: f64) {
+        self.events
+            .borrow_mut()
+            .push((source.to_string(), message.to_string(), t));
+    }
+}
+
+struct WarningSource;
+
+impl Block for WarningSource {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "test.WarningSource",
+            inputs: &[],
+            outputs: &[],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        false
+    }
+    fn step_algebraic(
+        &self,
+        ctx: &Ctx<'_>,
+        _inputs: &[Value],
+        _emit: &mut dyn FnMut(usize, Value),
+    ) {
+        ctx.warn("test.WarningSource", "init and tick warning");
     }
 }
 
@@ -196,6 +240,24 @@ fn tick_once(
         schedule,
         blocks,
         diagnostics: &diag,
+        state,
+    };
+    eval_tick(&mut ctx, t);
+}
+
+fn tick_with_diag(
+    model: &Model,
+    schedule: &Schedule,
+    blocks: &[Box<dyn Block>],
+    state: &mut RunState,
+    t: f64,
+    diagnostics: &dyn Diagnostics,
+) {
+    let mut ctx = EvalContext {
+        model,
+        schedule,
+        blocks,
+        diagnostics,
         state,
     };
     eval_tick(&mut ctx, t);
@@ -431,6 +493,87 @@ fn tick_feedforward_add_and_source_seed() {
 
     tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
     assert!(state.values[add_out[0].0 as usize].bit_eq(&Value::Real(7.0)));
+}
+
+#[test]
+fn init_warning_source_uses_noop_diagnostics_and_tick_delivers_to_sink() {
+    let mut b = ModelBuilder::default();
+    b.block_real(Box::new(WarningSource));
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let diag = CapturingDiagnostics::default();
+
+    let mut state = allocate_state(&b.model, &b.blocks);
+    assert!(
+        diag.events.borrow().is_empty(),
+        "init_values must use NoopDiagnostics and drop source warnings"
+    );
+
+    tick_with_diag(&b.model, &sched, &b.blocks, &mut state, 3.0, &diag);
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, "test.WarningSource");
+    assert_eq!(events[0].1, "init and tick warning");
+    assert_eq!(events[0].2.to_bits(), 3.0f64.to_bits());
+}
+
+fn run_m1_stateful_blocks_for(times: &[f64]) -> RunState {
+    let mut b = ModelBuilder::default();
+    let (_one, _, one_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (_delay, delay_in, _) = b.block_real(make(
+        "CDL.Discrete.UnitDelay",
+        &[("y_start", Value::Real(0.0))],
+    ));
+    b.connect(one_out[0], delay_in[0]);
+
+    let (_hi, _, hi_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(2.0))],
+    ));
+    let (_lo, _, lo_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (_gt, gt_in, gt_out) = b.block_real(make("CDL.Reals.Greater", &[]));
+    b.connect(hi_out[0], gt_in[0]);
+    b.connect(lo_out[0], gt_in[1]);
+
+    let (_pre, pre_in, _) = b.block_real(make(
+        "CDL.Logical.Pre",
+        &[("pre_u_start", Value::Boolean(false))],
+    ));
+    let (_edge, edge_in, _) = b.block_real(make(
+        "CDL.Logical.Edge",
+        &[("pre_u_start", Value::Boolean(false))],
+    ));
+    b.connect(gt_out[0], pre_in[0]);
+    b.connect(gt_out[0], edge_in[0]);
+
+    let _sample = b.block_real(make(
+        "CDL.Logical.Sources.SampleTrigger",
+        &[("period", Value::Real(2.0)), ("shift", Value::Real(0.0))],
+    ));
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let mut state = allocate_state(&b.model, &b.blocks);
+    for &t in times {
+        tick_once(&b.model, &sched, &b.blocks, &mut state, t);
+    }
+    state
+}
+
+#[test]
+fn m1_stateful_blocks_are_run_twice_deterministic() {
+    let times = [0.0, 1.0, 2.0, 3.0, 4.0];
+    let first = run_m1_stateful_blocks_for(&times);
+    let second = run_m1_stateful_blocks_for(&times);
+    assert_eq!(first.values.len(), second.values.len());
+    for (idx, (a, b)) in first.values.iter().zip(&second.values).enumerate() {
+        assert!(a.bit_eq(b), "state.values[{idx}] diverged: {a:?} vs {b:?}");
+    }
+    assert_eq!(first.words, second.words, "state words diverged");
 }
 
 /// Build the `S(t) = 1 + S(t-1)` UnitDelay feedback loop and return `add.out` after each of
