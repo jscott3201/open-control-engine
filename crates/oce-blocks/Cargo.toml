@@ -14,4 +14,3 @@ workspace = true
 
 [dependencies]
 oce-model = { workspace = true }
-oce-expr = { workspace = true }

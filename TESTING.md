@@ -132,14 +132,16 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **No** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, default-no-db (+ cargo-deny on manifest change). |
-| `release-gate.yml` (heavy) | PRs `development -> main` | **Yes** — the full suite, plus a re-run of the light gates against the release tip and an unconditional cargo-deny. |
+| `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, gate-fixture smoke (+ cargo-deny on manifest change). |
+| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, armed public-api surface snapshot, plus a re-run of the light gates and an unconditional cargo-deny. |
+| `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
 
 ```bash
 cargo nextest run --workspace            # unit + integration tests (the whole workspace)
 cargo nextest run --profile ci           # reproduce the release gate's profile locally
+cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
 cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
 ```
 
@@ -147,7 +149,8 @@ cargo test --workspace --doc             # doctests — nextest CANNOT run these
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
-Run the suite on demand when you touch behavior; the release gate is the enforcement point.
+Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are
+the enforcement points.
 
 Profiles live in [`.config/nextest.toml`](.config/nextest.toml): `default` for a fast local
 fail-fast loop, `ci` for the gate (no fail-fast, no retries, slow-test guard). The release gate

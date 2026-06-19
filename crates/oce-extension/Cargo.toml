@@ -11,6 +11,3 @@ homepage.workspace = true
 
 [lints]
 workspace = true
-
-[dependencies]
-oce-model = { workspace = true }

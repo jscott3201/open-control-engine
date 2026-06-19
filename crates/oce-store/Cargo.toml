@@ -13,6 +13,5 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
-oce-model = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

@@ -11,8 +11,3 @@ homepage.workspace = true
 
 [lints]
 workspace = true
-
-[dependencies]
-oce-model = { workspace = true }
-oce-graph = { workspace = true }
-oce-blocks = { workspace = true }

@@ -113,7 +113,6 @@ dependencies = [
  "oce-flatten",
  "oce-graph",
  "oce-model",
- "oce-semantics",
  "oce-store",
  "oce-store-mem",
  "oce-validate",
@@ -126,18 +125,12 @@ dependencies = [
 name = "oce-blocks"
 version = "0.0.0"
 dependencies = [
- "oce-expr",
  "oce-model",
 ]
 
 [[package]]
 name = "oce-conformance"
 version = "0.0.0"
-dependencies = [
- "oce-blocks",
- "oce-graph",
- "oce-model",
-]
 
 [[package]]
 name = "oce-cxf"
@@ -160,7 +153,6 @@ version = "0.0.0"
 name = "oce-docs"
 version = "0.0.0"
 dependencies = [
- "oce-model",
  "oce-store",
 ]
 
@@ -175,15 +167,11 @@ dependencies = [
 [[package]]
 name = "oce-extension"
 version = "0.0.0"
-dependencies = [
- "oce-model",
-]
 
 [[package]]
 name = "oce-flatten"
 version = "0.0.0"
 dependencies = [
- "oce-expr",
  "oce-model",
  "thiserror",
 ]
@@ -213,7 +201,6 @@ dependencies = [
 name = "oce-store"
 version = "0.0.0"
 dependencies = [
- "oce-model",
  "serde",
  "thiserror",
 ]
@@ -222,7 +209,6 @@ dependencies = [
 name = "oce-store-mem"
 version = "0.0.0"
 dependencies = [
- "oce-model",
  "oce-store",
 ]
 

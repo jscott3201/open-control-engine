@@ -14,4 +14,3 @@ workspace = true
 
 [dependencies]
 oce-store = { workspace = true }
-oce-model = { workspace = true }

@@ -4,17 +4,19 @@
 # batch `development` -> `main`, and a version tag drives the gated publish.
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
-# (clippy -D warnings) and a workspace build. It runs NO tests — keeping per-change PRs into
-# `development` fast. The heavy test suite (cargo nextest run for unit + integration tests, and
-# cargo test --doc for doctests — nextest cannot run doctests) lives in the development -> main
-# release gate at .github/workflows/release-gate.yml, which fires only on PRs whose base is
-# `main`. That gate also re-runs these light correctness gates against the release tip and runs
-# cargo-deny unconditionally, since a `development` -> `main` PR matches no other workflow.
+# (clippy -D warnings), a workspace build, cargo-machete unused-dependency detection, and gate-script
+# behavior fixtures. It runs NO engine tests — keeping per-change PRs into `development` fast. The
+# heavy test suite (cargo nextest run for unit + integration tests, cargo nextest run with release
+# codegen for panic-freedom regressions, and cargo test --doc for doctests — nextest cannot run
+# doctests) lives in the development -> main release gate at .github/workflows/release-gate.yml.
+# That gate also runs daily against the `development` tip so regressions surface before the next
+# release PR. It re-runs these light correctness gates against the release tip and runs cargo-deny
+# unconditionally, since a `development` -> `main` PR matches no other workflow.
 #
 # Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
-# clippy -D warnings, a workspace build, and the default-no-db gate (the default — and only —
-# build links no database / tokio / async-std). When dependency manifests change, cargo-deny runs
-# too.
+# clippy -D warnings, a workspace build, cargo-machete, gate-script fixtures, and the default-no-db
+# gate (the default — and only — build links no database / tokio / async-std anywhere in the
+# workspace). When dependency manifests change, cargo-deny runs too.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md attribution-currency gate (plus
 # about.toml/about.hbs) is intentionally NOT wired yet — attribution hygiene is most valuable near
@@ -99,6 +101,31 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash .github/scripts/check-default-no-db.sh
+
+  gate-fixtures:
+    name: gate behavior fixtures
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no-db gate fixtures
+        run: bash .github/scripts/test-check-default-no-db.sh
+      - name: workflow gate fixtures
+        run: bash .github/scripts/test-workflow-gates.sh
+      - name: real workflow smoke
+        run: bash .github/scripts/check-workflow-gates.sh
+
+  unused-deps:
+    name: unused dependency gate (cargo-machete)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - run: cargo machete
 
   clippy:
     name: clippy (-D warnings)
