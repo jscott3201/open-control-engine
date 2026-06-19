@@ -157,7 +157,9 @@ fn build_algebraic_loop_model() -> ModelGraph {
     );
     mb.connect(a_out[0], b_in[0]);
     mb.connect(b_out[0], a_in[0]);
-    mb.finish()
+    let mut model = mb.finish();
+    model.external_inputs = vec![a_in[1], b_in[1]];
+    model
 }
 
 #[test]
@@ -359,13 +361,15 @@ fn sim_spec(t_start: f64, t_stop: f64, step: f64, collect: CollectSpec) -> SimSp
 /// values flow through to an output (the accumulator's inputs are all internally driven).
 fn free_add_model() -> ModelGraph {
     let mut mb = Mb::new();
-    mb.block(
+    let (_, inputs, _) = mb.block(
         "CDL.Reals.Add",
         &[ValueType::Real, ValueType::Real],
         &[ValueType::Real],
         vec![],
     );
-    mb.finish()
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
 }
 
 // ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,

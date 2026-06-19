@@ -163,20 +163,19 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>)
     }
 }
 
-// ---- Rule 3: connector value-type ↔ block-signature port-kind (AD-8, §7.8) ------------------
+// ---- Rule 3: block interface ↔ block-signature agreement (AD-8, §7.8) -----------------------
 
-/// Each block port's connector [`ValueType`] must agree with the native block class's
-/// [`oce_blocks::BlockSignature`] port [`PortKind`]. This is the **reason `oce-validate` depends on
-/// `oce-blocks`** (AD-8): the resolver derives a connector's value type from the CXF
-/// `isOfDataType`, *independently* of the block class, so a document could type an input of
-/// `CDL.Reals.Add` as `Boolean` — the resolver would record it, and the `read_real` hot-path reader
-/// would then silently coerce it to `0.0` in release (a safety-critical silent wrong value). This
-/// gate rejects that mismatch at load.
+/// Each block's port arity and connector [`ValueType`] must agree with the native block class's
+/// [`oce_blocks::BlockSignature`]. This is the **reason `oce-validate` depends on `oce-blocks`**
+/// (AD-8): the resolver derives a connector's value type from the CXF `isOfDataType`,
+/// *independently* of the block class, so a document could type an input of `CDL.Reals.Add` as
+/// `Boolean` — the resolver would record it, and the `read_real` hot-path reader would then silently
+/// coerce it to `0.0` in release (a safety-critical silent wrong value). A hand-built graph can also
+/// omit or add ports and would otherwise reach emit/gather by port index. This gate rejects those
+/// mismatches at load.
 ///
 /// An **unknown** class path is skipped (it is `oce-api`'s `OcError::Load` to report, R-IMPL-2).
-/// Arity (port count vs signature) is the **resolver's** responsibility (AD-8, M1-PR-6), so this
-/// only compares ports present in *both* the block's port list and the signature — extra/missing
-/// ports are not re-reported here. Out-of-range port connector ids are a `MalformedDocument`.
+/// Out-of-range port connector ids are a `MalformedDocument`.
 pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
     let n = model.connectors.len() as u32;
     for blk in &model.blocks {
@@ -185,6 +184,21 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
         };
         let probe = (entry.make)(&blk.params);
         let sig = probe.signature();
+        let (got_in, got_out) = (blk.inputs.len(), blk.outputs.len());
+        let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
+        if got_in != want_in || got_out != want_out {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "block interface mismatch for `{}`: declared {got_in} input(s)/{got_out} \
+                         output(s), class requires {want_in}/{want_out}",
+                        blk.class_iri
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
+        }
         check_ports_dir(
             model,
             diags,
@@ -203,6 +217,13 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
             sig.outputs,
             "output",
         );
+    }
+}
+
+fn block_subject_of(blk: &oce_model::BlockInstance) -> Arc<str> {
+    match &blk.instance_iri {
+        Some(iri) => Arc::clone(iri),
+        None => Arc::from(format!("block#{}", blk.id.0)),
     }
 }
 

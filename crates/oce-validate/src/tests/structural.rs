@@ -297,3 +297,22 @@ fn t30_output_port_mistyped_against_signature_is_port_kind_mismatch() {
     assert!(err.diagnostics[0].message.contains("output port"));
     assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#2"));
 }
+
+#[test]
+fn t33_block_interface_arity_mismatch_is_malformed() {
+    // CXF resolve already rejects this shape for documents. The pure validate seam must also reject
+    // it for hand-built ModelGraph callers before oce-graph reaches emit/gather by port index.
+    let m = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Add", &[0], &[1])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+    };
+    let err = validate(&m).expect_err("wrong Add arity must fail before BUILD");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("interface mismatch"));
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#0"));
+}

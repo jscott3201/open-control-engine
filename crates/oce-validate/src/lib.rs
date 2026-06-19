@@ -8,7 +8,7 @@
 //! `oce-validate` — the authoritative **deep load-conformance gate** for the Open Control Engine.
 //!
 //! After the `oce-cxf` resolver's minimal structural fail-fast (duplicate `@id`, unresolved
-//! endpoints, arity-vs-registry) and `oce-flatten`'s array normalization, this crate is the gate
+//! endpoints, CXF interface arity) and `oce-flatten`'s array normalization, this crate is the gate
 //! that decides whether a flattened [`ModelGraph`] may be built and ticked. It enforces:
 //!
 //! 1. **Boundary-aware single assignment** (§7.10 / §9.1.5): every `In` connector has in-degree
@@ -16,10 +16,10 @@
 //!    elision), which legally has in-degree 0.
 //! 2. **Per-connection direction + value type** (§9.1.6): `from` is an output, `to` an input, and
 //!    the two share a [`oce_model::ValueType`] (CDL forbids implicit coercion).
-//! 3. **Connector type ↔ block-signature port-kind** agreement (AD-8, §7.8): a connector's declared
-//!    value type must match the native block class's port kind — the reason this crate depends on
-//!    `oce-blocks`. Without it a mistyped connector would reach the hot-path readers and silently
-//!    coerce to a type-zero (a safety-critical silent wrong value).
+//! 3. **Block interface arity + connector type ↔ block-signature port-kind** agreement (AD-8, §7.8):
+//!    a block's port counts and each connector's declared value type must match the native block
+//!    class signature — the reason this crate depends on `oce-blocks`. Without it a malformed graph
+//!    could reach the hot-path readers/emitters and panic or silently coerce to a type-zero.
 //! 4. **§7.10 attribute unification** (doc 02 §9 R13.1–R13.4): the unified attributes
 //!    (`quantity`, `unit`, `min`, `max`) must agree across a connected cluster (`shall`-error on
 //!    conflict — [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`]

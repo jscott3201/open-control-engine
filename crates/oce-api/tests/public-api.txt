@@ -488,7 +488,6 @@ pub fn oce_api::CollectSpec::try_into(self) -> core::result::Result<U, <U as cor
 pub fn oce_api::CollectSpec::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
-pub fn oce_api::Engine<S>::build_model_in_memory(&mut self, oce_model::ModelGraph) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::from(T) -> T
 pub fn oce_api::Engine<S>::get_output(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
 pub fn oce_api::Engine<S>::get_param(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
