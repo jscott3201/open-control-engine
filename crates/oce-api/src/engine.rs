@@ -127,8 +127,9 @@ impl<S: Store> Engine<S> {
         self.mode = RunMode::Running;
         self.params_dirty = false;
         self.prev_t = None;
-        // M0 stages no store-backed inputs, so this path resolves no hot point handles; clear any
-        // from a prior load so a reload never carries stale handles (populated by `load_cxf`, M1).
+        // M1 stages no store-backed inputs through either `load_cxf` or this shared tail, so no hot
+        // point handles are resolved yet; clear any from a prior/future load so reloads never carry
+        // stale handles.
         self.handles = Vec::new();
         Ok(())
     }

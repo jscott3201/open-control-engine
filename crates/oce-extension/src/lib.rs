@@ -6,7 +6,8 @@
 //! external**: it has no executable handler, only an optional FMU path. This crate is **Group A**
 //! (no store, no database).
 //!
-//! Status: **M0 scaffold.** The boundary surface is sketched; execution is out of v1 scope.
+//! Status: **Deferred beyond v1.** The boundary DTO is reserved; FMI/native execution is out of
+//! v1 scope.
 
 /// A v1 extension/FMI block surfaced as an unresolved external (FRAME §7; `04` §3.7).
 #[derive(Clone, Debug, Default)]

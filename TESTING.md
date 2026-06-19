@@ -74,8 +74,8 @@ re-derived expectation — otherwise we are grading our own homework.
 
 - Oracle vectors **will live** in the `oce-conformance` crate — its planned role as the home for
   reference traces and the CDL §7.7.2 expression-semantics vectors (R10.x). (Today that crate is
-  an M0 scaffold: `compare()` is not yet implemented and it holds no vectors — this standard is
-  what it gets built out to satisfy.)
+  deferred: `compare()` is not yet implemented and it holds no vectors — this standard is what it
+  gets built out to satisfy.)
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
@@ -132,8 +132,8 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, gate-fixture smoke (+ cargo-deny on manifest change). |
-| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, armed public-api surface snapshot, plus a re-run of the light gates and an unconditional cargo-deny. |
+| `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
+| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, armed public-api surface snapshot, plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).

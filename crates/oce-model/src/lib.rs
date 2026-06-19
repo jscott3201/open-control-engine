@@ -7,9 +7,10 @@
 //! non-computational metadata seam (CDL §7.17) lives in `oce-semantics`/`oce-store`,
 //! never here on the hot path.
 //!
-//! Status: **M0 scaffold.** The public type *shapes* below match the spec
-//! (`02-type-system-and-values.md` §2.3, `01-execution-model.md` §3); method bodies are
-//! stubs (`unimplemented!()`) to be filled in M0/M1.
+//!
+//! Status: **M1 as-built.** The public type shapes and helper bodies below are implemented and
+//! tested; they back the filled, non-panicking frozen facade described in `_spec/08` §11.2
+//! (line 800).
 
 use std::sync::Arc;
 
@@ -403,7 +404,7 @@ impl Connector {
 }
 
 /// A resolved, ground parameter/constant table for one block instance (D5: parameters are
-/// typed properties on the block). M0 scaffold holds name → ground [`Value`] pairs.
+/// typed properties on the block). M1 stores name → ground [`Value`] pairs.
 #[derive(Clone, Debug, Default)]
 pub struct ParamTable {
     /// Ground (fully evaluated) parameter values, keyed by parameter name.
