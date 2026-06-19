@@ -11,3 +11,7 @@ homepage.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+oce-model = { workspace = true }
+ryu = "1.0"
