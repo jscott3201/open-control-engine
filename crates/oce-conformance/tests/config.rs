@@ -1,8 +1,8 @@
 //! VerifyConfig serde and semantic validation coverage.
 
 use oce_conformance::{
-    ConfigError, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec, Tolerances,
-    VerifyConfig,
+    ConfigError, IndicatorPattern, OutputPattern, PartialTolerances, PointEnd, PointMapEntry,
+    ReferenceSpec, Tolerances, VerifyConfig,
 };
 
 fn valid_config_json() -> &'static str {
@@ -18,13 +18,21 @@ fn verify_config_round_trips_with_point_mapping_masks_and_tolerances() {
         "TSupSet.y"
     );
     assert_eq!(
-        config.indicators.get("TSupSet.*"),
-        Some(&vec!["fanSta.y".to_string()])
+        config.indicators,
+        vec![IndicatorPattern {
+            pattern: "TSupSet.*".to_string(),
+            signals: vec!["fanSta.y".to_string()]
+        }]
     );
     let overridden = config.tolerance_for_exact_output("TSupSet.*");
     assert_eq!(overridden.atoly.to_bits(), 0.1f64.to_bits());
     assert_eq!(overridden.rtoly.to_bits(), 0.01f64.to_bits());
     assert_eq!(overridden.atolx.to_bits(), 10.0f64.to_bits());
+    let regex_overridden = config
+        .tolerance_for_output("TSupSet.y")
+        .expect("regex pattern compiles");
+    assert_eq!(regex_overridden.atoly.to_bits(), 0.1f64.to_bits());
+    assert_eq!(regex_overridden.rtoly.to_bits(), 0.01f64.to_bits());
 
     let text = config.to_json_string_pretty().expect("serialize config");
     let reparsed = VerifyConfig::from_json_str(&text).expect("reparse serialized config");
@@ -108,8 +116,8 @@ fn verify_config_rejects_nonfinite_tolerances_through_struct_path() {
             atoly: f64::INFINITY,
             ..Tolerances::default()
         },
-        outputs: Default::default(),
-        indicators: Default::default(),
+        outputs: Vec::new(),
+        indicators: Vec::new(),
         sampling: Some(60.0),
         run_controller: true,
     };
@@ -132,14 +140,13 @@ fn verify_config_rejects_nonfinite_tolerances_through_struct_path() {
         matches!(err, ConfigError::Invalid(ref message) if message.contains("tolerances.atoly"))
     );
 
-    let mut outputs = std::collections::BTreeMap::new();
-    outputs.insert(
-        "TSupSet.*".to_string(),
-        PartialTolerances {
+    let outputs = vec![OutputPattern {
+        pattern: "TSupSet.*".to_string(),
+        tolerances: PartialTolerances {
             atoly: Some(f64::INFINITY),
             ..PartialTolerances::default()
         },
-    );
+    }];
     let config = VerifyConfig {
         tolerances: Tolerances::default(),
         outputs,
@@ -151,14 +158,13 @@ fn verify_config_rejects_nonfinite_tolerances_through_struct_path() {
     assert!(matches!(err, ConfigError::Invalid(ref message)
             if message.contains("outputs[\"TSupSet.*\"].atoly")));
 
-    let mut outputs = std::collections::BTreeMap::new();
-    outputs.insert(
-        "TSupSet.*".to_string(),
-        PartialTolerances {
+    let outputs = vec![OutputPattern {
+        pattern: "TSupSet.*".to_string(),
+        tolerances: PartialTolerances {
             atoly: Some(f64::NAN),
             ..PartialTolerances::default()
         },
-    );
+    }];
     let config = VerifyConfig { outputs, ..config };
     let err = config
         .validate()
@@ -205,8 +211,8 @@ fn verify_config_rejects_empty_point_names_and_bad_sampling() {
             }],
         }],
         tolerances: Tolerances::default(),
-        outputs: Default::default(),
-        indicators: Default::default(),
+        outputs: Vec::new(),
+        indicators: Vec::new(),
         sampling: Some(0.0),
         run_controller: true,
     };
@@ -234,4 +240,59 @@ fn partial_tolerances_apply_only_present_fields() {
     assert_eq!(got.atolx.to_bits(), 10.0f64.to_bits());
     assert_eq!(got.atoly.to_bits(), 0.25f64.to_bits());
     assert_eq!(got.ltoly.to_bits(), 0.5f64.to_bits());
+}
+
+#[test]
+fn verify_config_preserves_ordered_duplicate_patterns_and_cascades_matches() {
+    let config = VerifyConfig::from_json_str(
+        r#"{
+  "references": [
+    { "model": "m", "sequence": "s", "pointNameMapping": [] }
+  ],
+  "outputs": {
+    ".*": { "atoly": 1.0 },
+    "TSup.*": { "rtoly": 0.25 },
+    "TSup.*": { "atoly": 0.5 }
+  },
+  "indicators": {
+    ".*": ["fanSta.y"],
+    "TSup.*": ["mode.y"]
+  }
+}"#,
+    )
+    .expect("duplicate JSON object keys are preserved by the ordered visitor");
+
+    assert_eq!(
+        config
+            .outputs
+            .iter()
+            .map(|entry| entry.pattern.as_str())
+            .collect::<Vec<_>>(),
+        [".*", "TSup.*", "TSup.*"]
+    );
+    let tol = config
+        .tolerance_for_output("TSupSet.y")
+        .expect("regexes compile");
+    assert_eq!(tol.atoly.to_bits(), 0.5f64.to_bits());
+    assert_eq!(tol.rtoly.to_bits(), 0.25f64.to_bits());
+    assert_eq!(
+        config
+            .indicator_signals_for_output("TSupSet.y")
+            .expect("regexes compile"),
+        ["fanSta.y".to_string(), "mode.y".to_string()]
+    );
+}
+
+#[test]
+fn verify_config_rejects_invalid_regex_patterns() {
+    let err = VerifyConfig::from_json_str(
+        r#"{
+  "references": [
+    { "model": "m", "sequence": "s", "pointNameMapping": [] }
+  ],
+  "outputs": { "[": { "atoly": 1.0 } }
+}"#,
+    )
+    .expect_err("bad regex rejected");
+    assert!(matches!(err, ConfigError::Invalid(ref message) if message.contains("regex")));
 }
