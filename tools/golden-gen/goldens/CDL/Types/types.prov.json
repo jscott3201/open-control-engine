@@ -11,6 +11,6 @@
     "ZeroTime": { "UnixTimeStamp": 1, "UnixTimeStampGMT": 2, "Custom": 3, "NY2010": 4 }
   },
   "note": "FLAG: ZeroTime members beyond NY2010 exist in the Buildings library; only the spec-cited prefix is pinned here.",
-  "generator": "golden-gen 0.1.0",
+  "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
 }

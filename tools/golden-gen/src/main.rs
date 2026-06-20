@@ -176,31 +176,41 @@ fn prov_json(g: &Golden) -> String {
 /// ordinal references with no tick trace, so there is no CombiTimeTable CSV — only a prov.json that
 /// gives an evaluator (oce-expr) its reference values.
 fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) {
-    // CDL.Constants: pi/eps/small/inf (Modelica.Constants). pi/eps exact f64; small/inf flagged.
+    // CDL.Constants: the canonical Buildings CDL.Constants.mo values (eps=1E-15, small=1E-37,
+    // pi=2*asin(1.0)). Modelica.Constants.{eps,small,inf} are _spec/02 §7.3 aliases that RESOLVE to
+    // these CDL constants, so the CDL values are authoritative — NOT the Modelica standard-library
+    // machine values (eps=2.22e-16, small=1e-60). `inf` is not defined in Buildings CDL.Constants;
+    // its value is Modelica.Constants.inf = f64::MAX (largest representable FINITE real, not IEEE
+    // +Inf), surfaced via the §7.3 alias whitelist.
     let constants_dir = goldens_root.join("CDL/Constants");
     fs::create_dir_all(&constants_dir).expect("create CDL/Constants dir");
-    let pi = std::f64::consts::PI;
-    let eps = f64::EPSILON; // 2^-52
+    let pi = std::f64::consts::PI; // bit-identical f64 to Buildings 2*asin(1.0)
+    let eps = 1e-15_f64; // Buildings CDL.Constants.eps (biggest x such that 1.0 + x == 1.0)
+    let small = 1e-37_f64; // Buildings CDL.Constants.small
+    let inf = f64::MAX; // Modelica.Constants.inf = largest representable finite real (§7.3 alias)
     let constants_json = format!(
         concat!(
             "{{\n",
             "  \"class_path\": \"CDL.Constants\",\n",
             "  \"tier\": \"A\",\n",
-            "  \"source\": \"fold-time literals from Modelica.Constants (_spec/03 §4.10; _spec/02 §6.1/§7.3)\",\n",
+            "  \"source\": \"Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.* are _spec/02 §7.3 aliases resolving to these\",\n",
             "  \"value_kind\": \"Real\",\n",
             "  \"steppable\": false,\n",
             "  \"values\": {{\n",
             "    \"pi\": {pi},\n",
             "    \"eps\": {eps},\n",
-            "    \"small\": 1e-60,\n",
-            "    \"inf\": \"+inf (Modelica largest-representable; FLAG: verify against oce-expr constant table — may fold to f64::MAX instead)\"\n",
+            "    \"small\": {small},\n",
+            "    \"inf\": {inf}\n",
             "  }},\n",
+            "  \"note\": \"inf is NOT defined in Buildings CDL.Constants.mo; value is Modelica.Constants.inf = f64::MAX (largest representable FINITE real, not IEEE +Inf), surfaced via the _spec/02 §7.3 Modelica-alias whitelist.\",\n",
             "  \"generator\": \"{generator}\",\n",
             "  \"depends_on_oce_blocks\": false\n",
             "}}\n"
         ),
         pi = csv::format_f64(pi),
         eps = csv::format_f64(eps),
+        small = csv::format_f64(small),
+        inf = csv::format_f64(inf),
         generator = GENERATOR_VERSION,
     );
     fs::write(constants_dir.join("constants.prov.json"), constants_json)
@@ -212,23 +222,28 @@ fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) 
     // CDL.Types: enumeration ordinals (1-based, declaration order).
     let types_dir = goldens_root.join("CDL/Types");
     fs::create_dir_all(&types_dir).expect("create CDL/Types dir");
-    let types_json = concat!(
-        "{\n",
-        "  \"class_path\": \"CDL.Types\",\n",
-        "  \"tier\": \"A\",\n",
-        "  \"source\": \"1-based enum ordinals in declaration order (_spec/02 §2.2; _spec/03 §4.9)\",\n",
-        "  \"value_kind\": \"Integer\",\n",
-        "  \"steppable\": false,\n",
-        "  \"enums\": {\n",
-        "    \"SimpleController\": { \"P\": 1, \"PI\": 2, \"PD\": 3, \"PID\": 4 },\n",
-        "    \"Smoothness\": { \"LinearSegments\": 1, \"ConstantSegments\": 2 },\n",
-        "    \"Extrapolation\": { \"HoldLastPoint\": 1, \"LastTwoPoints\": 2, \"Periodic\": 3 },\n",
-        "    \"ZeroTime\": { \"UnixTimeStamp\": 1, \"UnixTimeStampGMT\": 2, \"Custom\": 3, \"NY2010\": 4 }\n",
-        "  },\n",
-        "  \"note\": \"FLAG: ZeroTime members beyond NY2010 exist in the Buildings library; only the spec-cited prefix is pinned here.\",\n",
-        "  \"generator\": \"golden-gen 0.1.0\",\n",
-        "  \"depends_on_oce_blocks\": false\n",
-        "}\n"
+    // The generator field uses GENERATOR_VERSION (CARGO_PKG_VERSION) like every other emitter, so the
+    // advertised version can never skew from the crate manifest. The static JSON prefix stays a
+    // `concat!` (its inner `{`/`}` are object literals, not format placeholders); only the dynamic
+    // generator + closing brace are interpolated.
+    let types_json = format!(
+        "{prefix}  \"generator\": \"{generator}\",\n  \"depends_on_oce_blocks\": false\n}}\n",
+        prefix = concat!(
+            "{\n",
+            "  \"class_path\": \"CDL.Types\",\n",
+            "  \"tier\": \"A\",\n",
+            "  \"source\": \"1-based enum ordinals in declaration order (_spec/02 §2.2; _spec/03 §4.9)\",\n",
+            "  \"value_kind\": \"Integer\",\n",
+            "  \"steppable\": false,\n",
+            "  \"enums\": {\n",
+            "    \"SimpleController\": { \"P\": 1, \"PI\": 2, \"PD\": 3, \"PID\": 4 },\n",
+            "    \"Smoothness\": { \"LinearSegments\": 1, \"ConstantSegments\": 2 },\n",
+            "    \"Extrapolation\": { \"HoldLastPoint\": 1, \"LastTwoPoints\": 2, \"Periodic\": 3 },\n",
+            "    \"ZeroTime\": { \"UnixTimeStamp\": 1, \"UnixTimeStampGMT\": 2, \"Custom\": 3, \"NY2010\": 4 }\n",
+            "  },\n",
+            "  \"note\": \"FLAG: ZeroTime members beyond NY2010 exist in the Buildings library; only the spec-cited prefix is pinned here.\",\n",
+        ),
+        generator = GENERATOR_VERSION,
     );
     fs::write(types_dir.join("types.prov.json"), types_json).expect("write types prov");
     manifest_lines
