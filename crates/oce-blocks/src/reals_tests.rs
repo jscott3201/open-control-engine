@@ -112,7 +112,7 @@ fn assert_bool_perturb_moves(block: &dyn Block, base: &[f64], variants: &[(usize
 }
 
 #[test]
-fn a1_reals_hand_derived_golden_bits() {
+fn reals_arithmetic_hand_derived_golden_bits() {
     assert_real_bits(&Multiply, &[0.1, 0.2], 0x3f947ae147ae147c);
     assert_real_bits(&Divide, &[2.0, 3.0], 0x3fe5555555555555);
     assert_real_bits(&AddParameter { p: 0.2 }, &[0.1], 0x3fd3333333333334);
@@ -123,7 +123,7 @@ fn a1_reals_hand_derived_golden_bits() {
 }
 
 #[test]
-fn a1_reals_feedthrough_perturbation_matches_declared_contract() {
+fn reals_arithmetic_feedthrough_perturbation_matches_declared_contract() {
     assert_perturb_moves(&Multiply, &[2.0, 3.0], &[(0, 4.0), (1, 5.0)]);
     assert_perturb_moves(&Divide, &[8.0, 4.0], &[(0, 12.0), (1, 2.0)]);
     assert_perturb_moves(&AddParameter { p: 2.0 }, &[3.0], &[(0, 4.0)]);
@@ -138,7 +138,7 @@ fn a1_reals_feedthrough_perturbation_matches_declared_contract() {
 }
 
 #[test]
-fn a2_comparators_h0_are_combinational_and_bit_identical_to_plain_relations() {
+fn comparators_h0_are_combinational_and_bit_identical_to_plain_relations() {
     assert_eq!(Greater::default().kind(), BlockKind::Algebraic);
     assert_eq!(Greater::default().state_len(), 0);
     assert!(!bool_out(&Greater::default(), &[2.0, 2.0]));
@@ -183,7 +183,7 @@ fn a2_comparators_h0_are_combinational_and_bit_identical_to_plain_relations() {
 }
 
 #[test]
-fn a2_comparators_feedthrough_and_state_contract_match_r_reals_1() {
+fn comparators_feedthrough_and_state_contract_match_r_reals_1() {
     assert_bool_perturb_moves(&Greater::default(), &[2.0, 1.0], &[(0, 0.0), (1, 3.0)]);
     assert_bool_perturb_moves(
         &Greater {
@@ -258,7 +258,7 @@ fn a2_comparators_feedthrough_and_state_contract_match_r_reals_1() {
 }
 
 #[test]
-fn a2_comparator_band_switching_points_match_buildings_asymmetric_rules() {
+fn comparator_band_switching_points_match_buildings_asymmetric_rules() {
     let greater = Greater {
         h: 2.0,
         pre_y_start: false,
@@ -315,7 +315,7 @@ fn a2_comparator_band_switching_points_match_buildings_asymmetric_rules() {
 }
 
 #[test]
-fn a2_hysteresis_switching_points_match_buildings_reference() {
+fn hysteresis_switching_points_match_buildings_reference() {
     let block = Hysteresis {
         u_low: 2.0,
         u_high: 5.0,
@@ -328,7 +328,7 @@ fn a2_hysteresis_switching_points_match_buildings_reference() {
 }
 
 #[test]
-fn a2_comparators_do_not_chatter_inside_the_band() {
+fn comparators_do_not_chatter_inside_the_band() {
     let gt = GreaterThreshold {
         t: 10.0,
         h: 2.0,
@@ -371,7 +371,7 @@ fn a2_comparators_do_not_chatter_inside_the_band() {
 }
 
 #[test]
-fn a2_comparator_init_state_seeds_initial_hold_state() {
+fn comparator_init_state_seeds_initial_hold_state() {
     let seeded_greater = Greater {
         h: 2.0,
         pre_y_start: true,
@@ -405,7 +405,7 @@ fn a2_comparator_init_state_seeds_initial_hold_state() {
 }
 
 #[test]
-fn a2_comparator_nan_and_infinity_inputs_are_panic_free() {
+fn comparator_nan_and_infinity_inputs_are_panic_free() {
     assert!(!bool_out(&Greater::default(), &[f64::NAN, 0.0]));
     assert!(bool_out(&Greater::default(), &[f64::INFINITY, 0.0]));
     assert!(!bool_out(&Less::default(), &[f64::NAN, 0.0]));
@@ -432,7 +432,7 @@ fn a2_comparator_nan_and_infinity_inputs_are_panic_free() {
 }
 
 #[test]
-fn a2_comparator_outputs_are_bit_deterministic_across_reruns() {
+fn comparator_outputs_are_bit_deterministic_across_reruns() {
     let h0_a = Value::Boolean(bool_out(&Greater::default(), &[0.1 + 0.2, 0.3]));
     let h0_b = Value::Boolean(bool_out(&Greater::default(), &[0.1 + 0.2, 0.3]));
     assert!(h0_a.bit_eq(&h0_b));
@@ -562,7 +562,7 @@ fn line_pins_current_endpoint_nan_and_inverted_domain_behavior() {
 }
 
 #[test]
-fn a1_reals_outputs_are_bit_deterministic_across_reruns() {
+fn reals_arithmetic_outputs_are_bit_deterministic_across_reruns() {
     let cases: &[(&dyn Block, &[f64])] = &[
         (&Multiply, &[0.1, 0.2]),
         (&Divide, &[0.0, 0.0]),
@@ -580,7 +580,7 @@ fn a1_reals_outputs_are_bit_deterministic_across_reruns() {
 }
 
 #[test]
-fn read_real_release_degrade_remains_zero_for_a1_blocks() {
+fn read_real_release_degrade_remains_zero_for_reals_blocks() {
     if cfg!(debug_assertions) {
         assert!(
             std::panic::catch_unwind(|| read_real(&[Value::Boolean(true)], 0)).is_err(),

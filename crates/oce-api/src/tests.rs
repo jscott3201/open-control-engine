@@ -163,7 +163,7 @@ fn build_algebraic_loop_model() -> ModelGraph {
 }
 
 #[test]
-fn m0_hand_built_graph_builds_advances_and_is_byte_identical() {
+fn hand_built_graph_builds_advances_and_is_byte_identical() {
     let (m1, add_out, gt_out, lim_out) = build_accumulator_model();
     let (m2, _, _, _) = build_accumulator_model();
 
@@ -244,7 +244,7 @@ fn m0_hand_built_graph_builds_advances_and_is_byte_identical() {
 }
 
 #[test]
-fn m0_injected_algebraic_loop_is_rejected() {
+fn injected_algebraic_loop_is_rejected() {
     let mut eng = Engine::in_memory();
     let err = eng
         .build_model_in_memory(build_algebraic_loop_model())
@@ -256,7 +256,7 @@ fn m0_injected_algebraic_loop_is_rejected() {
 }
 
 #[test]
-fn m0_unknown_block_class_is_a_typed_load_error() {
+fn unknown_block_class_is_a_typed_load_error() {
     let mut mb = Mb::new();
     mb.block("CDL.Reals.NotARealBlock", &[], &[ValueType::Real], vec![]);
     let mut eng = Engine::in_memory();
@@ -270,7 +270,7 @@ fn m0_unknown_block_class_is_a_typed_load_error() {
 }
 
 #[test]
-fn m0_tick_time_must_be_monotonic() {
+fn tick_time_must_be_monotonic() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(m).unwrap();
@@ -288,7 +288,7 @@ fn m0_tick_time_must_be_monotonic() {
 }
 
 #[test]
-fn m0_non_finite_tick_time_is_rejected() {
+fn non_finite_tick_time_is_rejected() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(m).unwrap();
@@ -308,7 +308,7 @@ fn m0_non_finite_tick_time_is_rejected() {
 }
 
 #[test]
-fn m0_engine_store_round_trips_and_durability_is_noop() {
+fn engine_store_round_trips_and_durability_is_noop() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(m).unwrap();

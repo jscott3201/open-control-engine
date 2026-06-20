@@ -66,7 +66,7 @@ fn assert_real_bits(value: &Value, want_bits: u64) {
 }
 
 #[test]
-fn a4_logical_edge_latch_goldens() {
+fn logical_edge_latch_goldens() {
     let falling = FallingEdge::default();
     let (trace, _) = run(
         &falling,
@@ -131,7 +131,7 @@ fn a4_logical_edge_latch_goldens() {
 }
 
 #[test]
-fn a4_timer_goldens_pin_threshold_and_non_dyadic_dt() {
+fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
     let timer = Timer { t: 1.0 };
     let (trace, _) = run(
         &timer,
@@ -190,7 +190,7 @@ fn a4_timer_goldens_pin_threshold_and_non_dyadic_dt() {
 }
 
 #[test]
-fn a4_hold_delay_goldens_pin_boundaries_and_clear_priority() {
+fn hold_delay_goldens_pin_boundaries_and_clear_priority() {
     let delay = TrueDelay {
         delay_time: 1.0,
         delay_on_init: true,
@@ -252,7 +252,7 @@ fn a4_hold_delay_goldens_pin_boundaries_and_clear_priority() {
 }
 
 #[test]
-fn a4_integer_edge_and_counter_goldens() {
+fn integer_edge_and_counter_goldens() {
     let counter = OnCounter { y_start: 5 };
     let (trace, _) = run(
         &counter,
@@ -294,7 +294,7 @@ fn a4_integer_edge_and_counter_goldens() {
 }
 
 #[test]
-fn a4_feedthrough_perturbations_pin_current_input_surface() {
+fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     let one = 1.0f64.to_bits();
     let half = 0.5f64.to_bits();
     let zero = 0.0f64.to_bits();
@@ -438,7 +438,7 @@ fn a4_feedthrough_perturbations_pin_current_input_surface() {
 }
 
 #[test]
-fn a4_blocks_are_deterministic_over_output_and_full_state_region() {
+fn timing_latch_and_counter_blocks_are_deterministic_over_output_and_full_state_region() {
     type Step = (f64, Vec<Value>);
     type Case = (&'static str, Box<dyn Block>, Vec<Step>);
 
@@ -566,7 +566,7 @@ fn a4_blocks_are_deterministic_over_output_and_full_state_region() {
 }
 
 #[test]
-fn a4_registry_paths_and_feedthrough_classification_are_complete() {
+fn registry_paths_and_feedthrough_classification_are_complete() {
     let paths = [
         "CDL.Logical.FallingEdge",
         "CDL.Logical.Change",

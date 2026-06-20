@@ -31,8 +31,8 @@ mod logical_latch;
 mod logical_timing;
 mod pid;
 mod reals;
-mod reals_dynamic;
-mod reals_dynamic2;
+mod reals_filters;
+mod reals_integrator;
 mod registry;
 mod registry_a4;
 
@@ -55,8 +55,8 @@ pub use reals::{
     Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
     LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
 };
-pub use reals_dynamic::IntegratorWithReset;
-pub use reals_dynamic2::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_integrator::IntegratorWithReset;
 pub use registry::lookup;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -269,7 +269,7 @@ mod a4_tests;
 mod pid_tests;
 
 #[cfg(test)]
-mod reals_dynamic_tests;
+mod reals_integrator_tests;
 
 #[cfg(test)]
-mod reals_dynamic2_tests;
+mod reals_filters_tests;

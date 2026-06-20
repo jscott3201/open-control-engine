@@ -97,7 +97,7 @@ fn assert_unselected_does_not_leak(
 }
 
 #[test]
-fn a3_logical_truth_table_and_source_constant_are_bit_goldens() {
+fn logical_truth_table_and_source_constant_are_bit_goldens() {
     let cases = [
         (false, false, false, true, true, false),
         (false, true, true, true, false, true),
@@ -119,7 +119,7 @@ fn a3_logical_truth_table_and_source_constant_are_bit_goldens() {
 }
 
 #[test]
-fn a3_logical_switch_selector_order_and_non_leakage_are_pinned() {
+fn logical_switch_selector_order_and_non_leakage_are_pinned() {
     let sw = LogicalSwitch;
     assert_one_out(&sw, &[b(false), b(true), b(true)], b(false));
     assert_one_out(&sw, &[b(false), b(false), b(true)], b(true));
@@ -138,7 +138,7 @@ fn a3_logical_switch_selector_order_and_non_leakage_are_pinned() {
 }
 
 #[test]
-fn a3_conversions_follow_spec_and_real_to_integer_half_up_table() {
+fn conversions_follow_spec_and_real_to_integer_half_up_table() {
     let b2i = BooleanToInteger {
         integer_true: 7,
         integer_false: -3,
@@ -169,7 +169,7 @@ fn a3_conversions_follow_spec_and_real_to_integer_half_up_table() {
 }
 
 #[test]
-fn a3_real_to_integer_non_finite_and_out_of_range_cast_policy_is_pinned() {
+fn real_to_integer_non_finite_and_out_of_range_cast_policy_is_pinned() {
     assert_eq!(int_out(&RealToInteger, &[r(f64::NAN)]), 0);
     assert_eq!(int_out(&RealToInteger, &[r(f64::INFINITY)]), i64::MAX);
     assert_eq!(int_out(&RealToInteger, &[r(f64::NEG_INFINITY)]), i64::MIN);
@@ -178,7 +178,7 @@ fn a3_real_to_integer_non_finite_and_out_of_range_cast_policy_is_pinned() {
 }
 
 #[test]
-fn a3_integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
+fn integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
     assert_one_out(&IntegerConstant { k: -11 }, &[], i(-11));
     assert_one_out(&IntegerAbs, &[i(-9)], i(9));
     assert_one_out(&IntegerAbs, &[i(i64::MIN)], i(i64::MIN));
@@ -197,7 +197,7 @@ fn a3_integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
 }
 
 #[test]
-fn a3_integer_switch_selector_order_and_non_leakage_are_pinned() {
+fn integer_switch_selector_order_and_non_leakage_are_pinned() {
     let sw = IntegerSwitch;
     assert_one_out(&sw, &[i(1), b(true), i(9)], i(1));
     assert_one_out(&sw, &[i(1), b(false), i(9)], i(9));
@@ -208,7 +208,7 @@ fn a3_integer_switch_selector_order_and_non_leakage_are_pinned() {
 }
 
 #[test]
-fn a3_integer_comparators_are_pure_combinational_boundary_goldens() {
+fn integer_comparators_are_pure_combinational_boundary_goldens() {
     assert!(bool_out(&IntegerGreater, &[i(3), i(2)]));
     assert!(!bool_out(&IntegerGreater, &[i(2), i(2)]));
     assert!(bool_out(&IntegerGreaterThreshold { t: 2 }, &[i(3)]));
@@ -245,7 +245,7 @@ fn a3_integer_comparators_are_pure_combinational_boundary_goldens() {
 }
 
 #[test]
-fn a3_feedthrough_perturbation_matches_declared_contracts() {
+fn algebraic_feedthrough_perturbation_matches_declared_contracts() {
     assert_perturb_moves(&Or, &[b(false), b(false)], &[(0, b(true)), (1, b(true))]);
     assert_perturb_moves(&Nand, &[b(true), b(true)], &[(0, b(false)), (1, b(false))]);
     assert_perturb_moves(&Nor, &[b(false), b(false)], &[(0, b(true)), (1, b(true))]);
@@ -285,7 +285,7 @@ fn a3_feedthrough_perturbation_matches_declared_contracts() {
 }
 
 #[test]
-fn a3_outputs_are_bit_deterministic_across_reruns() {
+fn algebraic_outputs_are_bit_deterministic_across_reruns() {
     let cases: &[(&dyn Block, &[Value])] = &[
         (&Or, &[b(false), b(true)]),
         (&Nand, &[b(true), b(true)]),
@@ -326,7 +326,7 @@ fn a3_outputs_are_bit_deterministic_across_reruns() {
 }
 
 #[test]
-fn a3_registry_constructs_new_classes_and_resolves_parameters() {
+fn registry_constructs_logical_conversion_and_integer_classes() {
     let logical = (lookup("CDL.Logical.Sources.Constant").unwrap().make)(&ParamTable {
         values: vec![(Arc::from("k"), b(true))],
     });
@@ -375,7 +375,7 @@ fn a3_registry_constructs_new_classes_and_resolves_parameters() {
 }
 
 #[test]
-fn a3_deferred_vector_and_pulse_blocks_remain_unregistered_after_a4() {
+fn deferred_vector_and_pulse_blocks_remain_unregistered() {
     for path in [
         "CDL.Logical.MultiAnd",
         "CDL.Logical.MultiOr",

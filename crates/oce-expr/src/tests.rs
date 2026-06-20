@@ -141,7 +141,7 @@ fn relational_and_boolean() {
 // --- Built-ins: the R10.x oracle cases ----------------------------------------------------
 
 #[test]
-fn r10_1_div_vs_integer_rounding() {
+fn div_vs_integer_rounding() {
     assert_int("div(-7, 2)", -3); // truncate toward zero
     assert_int("integer(-7.0/2.0)", -4); // floor(-3.5)
     assert_int("div(7, 2)", 3);
@@ -149,7 +149,7 @@ fn r10_1_div_vs_integer_rounding() {
 }
 
 #[test]
-fn r10_2_mod_and_rem_sign_conventions() {
+fn mod_and_rem_sign_conventions() {
     assert_int("mod(-7, 3)", 2); // sign of divisor
     assert_int("rem(-7, 3)", -1); // sign of dividend
     assert_int("mod(7, -3)", -2); // negative divisor
@@ -161,7 +161,7 @@ fn r10_2_mod_and_rem_sign_conventions() {
 }
 
 #[test]
-fn r10_3_ceil_floor_integer_types() {
+fn ceil_floor_integer_types() {
     assert_real("floor(2.9)", 2.0);
     assert_real("ceil(2.1)", 3.0);
     assert_real("floor(-2.1)", -3.0);
@@ -170,7 +170,7 @@ fn r10_3_ceil_floor_integer_types() {
 }
 
 #[test]
-fn r10_3a_sign_is_always_integer_and_zero_is_zero() {
+fn sign_is_always_integer_and_zero_is_zero() {
     assert_int("sign(-3.0)", -1);
     assert_int("sign(2.5)", 1); // Real arg, Integer result
     assert_int("sign(0.0)", 0); // NOT 1.0 (f64::signum(0.0) == 1.0 trap)
@@ -194,7 +194,7 @@ fn min_max_scalar_promotion() {
 }
 
 #[test]
-fn r10_4_sqrt_domain() {
+fn sqrt_domain() {
     assert_real("sqrt(4.0)", 2.0);
     assert_real("sqrt(9)", 3.0);
     // `Value` has no `PartialEq` (it uses bit_eq), so compare the error directly.
@@ -297,7 +297,7 @@ fn string_equality() {
 // --- Regression tests from the M1-PR-1 adversarial review ----------------------------------
 
 #[test]
-fn c1_large_integer_comparison_is_exact() {
+fn large_integer_comparison_is_exact() {
     // Above 2^53 these collapse to equal if compared via f64; Integer comparison must be exact.
     assert_bool("9007199254740993 == 9007199254740992", false);
     assert_bool("9007199254740993 > 9007199254740992", true);
@@ -307,7 +307,7 @@ fn c1_large_integer_comparison_is_exact() {
 }
 
 #[test]
-fn i1_unary_minus_after_a_binary_operator_parses() {
+fn unary_minus_after_a_binary_operator_parses() {
     assert_int("2 * -3", -6);
     assert_int("3 - -2", 5);
     assert_int("4 + -1", 3);
@@ -359,7 +359,7 @@ fn integer_cast_saturates_without_panic() {
 }
 
 #[test]
-fn r10_3b_real_div_rem_identity() {
+fn real_div_rem_identity() {
     // div(x,y)*y + rem(x,y) == x must hold for Real operands too (R10.3b).
     assert_real("div(-7.5, 2.0)*2.0 + rem(-7.5, 2.0)", -7.5);
     assert_real("div(-7.5, 2.0)", -3.0);

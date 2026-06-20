@@ -18,7 +18,7 @@ use crate::{
     build_feedthrough_dag, compile, eval_tick,
 };
 
-mod a4_feedthrough;
+mod edge_counter_feedthrough;
 mod feedthrough_stateful;
 mod integrator_loop_cut;
 mod pid_feedthrough;
@@ -539,7 +539,7 @@ fn init_warning_source_uses_noop_diagnostics_and_tick_delivers_to_sink() {
     assert_eq!(events[0].2.to_bits(), 3.0f64.to_bits());
 }
 
-fn run_m1_stateful_blocks_for(times: &[f64]) -> RunState {
+fn run_stateful_blocks_for(times: &[f64]) -> RunState {
     let mut b = ModelBuilder::default();
     let (_one, _, one_out) = b.block_real(make(
         "CDL.Reals.Sources.Constant",
@@ -588,10 +588,10 @@ fn run_m1_stateful_blocks_for(times: &[f64]) -> RunState {
 }
 
 #[test]
-fn m1_stateful_blocks_are_run_twice_deterministic() {
+fn stateful_blocks_are_run_twice_deterministic() {
     let times = [0.0, 1.0, 2.0, 3.0, 4.0];
-    let first = run_m1_stateful_blocks_for(&times);
-    let second = run_m1_stateful_blocks_for(&times);
+    let first = run_stateful_blocks_for(&times);
+    let second = run_stateful_blocks_for(&times);
     assert_eq!(first.values.len(), second.values.len());
     for (idx, (a, b)) in first.values.iter().zip(&second.values).enumerate() {
         assert!(a.bit_eq(b), "state.values[{idx}] diverged: {a:?} vs {b:?}");
