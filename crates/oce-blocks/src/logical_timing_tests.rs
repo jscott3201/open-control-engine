@@ -51,85 +51,12 @@ fn assert_bool(value: &Value, want: bool) {
     );
 }
 
-fn assert_int(value: &Value, want: i64) {
-    assert!(
-        value.bit_eq(&Value::Integer(want)),
-        "got {value:?}, want {want}"
-    );
-}
-
 fn assert_real_bits(value: &Value, want_bits: u64) {
     let Value::Real(got) = value else {
         panic!("expected Real, got {value:?}");
     };
     assert_eq!(got.to_bits(), want_bits, "got {got:?}");
 }
-
-#[test]
-fn logical_edge_latch_goldens() {
-    let falling = FallingEdge::default();
-    let (trace, _) = run(
-        &falling,
-        &[
-            (0.0, vec![Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true)]),
-            (0.0, vec![Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(false)]),
-        ],
-    );
-    for (got, want) in trace.iter().zip([false, false, true, false]) {
-        assert_bool(&got[0], want);
-    }
-
-    let seeded = FallingEdge { pre_u_start: true };
-    let (trace, _) = run(&seeded, &[(0.0, vec![Value::Boolean(false)])]);
-    assert_bool(&trace[0][0], true);
-
-    let change = LogicalChange { pre_u_start: true };
-    let (trace, _) = run(
-        &change,
-        &[
-            (0.0, vec![Value::Boolean(true)]),
-            (0.0, vec![Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true)]),
-        ],
-    );
-    for (got, want) in trace.iter().zip([false, true, false, true]) {
-        assert_bool(&got[0], want);
-    }
-
-    let latch = Latch;
-    let (trace, _) = run(
-        &latch,
-        &[
-            (0.0, vec![Value::Boolean(true), Value::Boolean(true)]),
-            (0.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(false), Value::Boolean(true)]),
-        ],
-    );
-    for (got, want) in trace.iter().zip([false, false, true, true, false]) {
-        assert_bool(&got[0], want);
-    }
-
-    let toggle = Toggle;
-    let (trace, _) = run(
-        &toggle,
-        &[
-            (0.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (0.0, vec![Value::Boolean(true), Value::Boolean(true)]),
-        ],
-    );
-    for (got, want) in trace.iter().zip([true, true, true, false, false]) {
-        assert_bool(&got[0], want);
-    }
-}
-
 #[test]
 fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
     let timer = Timer { t: 1.0 };
@@ -250,49 +177,6 @@ fn hold_delay_goldens_pin_boundaries_and_clear_priority() {
         assert_bool(&got[0], want);
     }
 }
-
-#[test]
-fn integer_edge_and_counter_goldens() {
-    let counter = OnCounter { y_start: 5 };
-    let (trace, _) = run(
-        &counter,
-        &[
-            (0.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-            (1.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (2.0, vec![Value::Boolean(true), Value::Boolean(false)]),
-            (3.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-            (4.0, vec![Value::Boolean(true), Value::Boolean(true)]),
-            (5.0, vec![Value::Boolean(false), Value::Boolean(true)]),
-            (6.0, vec![Value::Boolean(false), Value::Boolean(false)]),
-        ],
-    );
-    for (got, want) in trace.iter().zip([5, 5, 6, 6, 6, 5, 5]) {
-        assert_int(&got[0], want);
-    }
-
-    let change = IntegerChange { pre_u_start: 10 };
-    let (trace, _) = run(
-        &change,
-        &[
-            (0.0, vec![Value::Integer(10)]),
-            (0.0, vec![Value::Integer(12)]),
-            (0.0, vec![Value::Integer(9)]),
-            (0.0, vec![Value::Integer(9)]),
-        ],
-    );
-    let expected = [
-        (false, false, false),
-        (true, true, false),
-        (true, false, true),
-        (false, false, false),
-    ];
-    for (got, (changed, up, down)) in trace.iter().zip(expected) {
-        assert_bool(&got[0], changed);
-        assert_bool(&got[1], up);
-        assert_bool(&got[2], down);
-    }
-}
-
 #[test]
 fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     let one = 1.0f64.to_bits();

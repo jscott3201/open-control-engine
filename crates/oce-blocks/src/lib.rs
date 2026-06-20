@@ -30,11 +30,11 @@ mod logical;
 mod logical_latch;
 mod logical_timing;
 mod pid;
-mod reals;
+mod reals_arithmetic;
+mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
 mod registry;
-mod registry_a4;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
@@ -51,10 +51,11 @@ pub use logical::{
 pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use pid::{Pid, PidWithReset};
-pub use reals::{
-    Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
-    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
+pub use reals_arithmetic::{
+    Abs, Add, AddParameter, Constant, Divide, Limiter, Line, Max, Min, Multiply,
+    MultiplyByParameter, Subtract, Switch,
 };
+pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use registry::lookup;
@@ -257,13 +258,28 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 mod tests;
 
 #[cfg(test)]
-mod reals_tests;
+mod reals_arithmetic_tests;
 
 #[cfg(test)]
-mod a3_tests;
+mod reals_comparators_tests;
 
 #[cfg(test)]
-mod a4_tests;
+mod logical_tests;
+
+#[cfg(test)]
+mod conversions_tests;
+
+#[cfg(test)]
+mod integers_tests;
+
+#[cfg(test)]
+mod logical_latch_tests;
+
+#[cfg(test)]
+mod logical_timing_tests;
+
+#[cfg(test)]
+mod integers_edge_tests;
 
 #[cfg(test)]
 mod pid_tests;
