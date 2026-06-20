@@ -176,24 +176,27 @@ double bad(1,2)
 }
 
 #[test]
-fn non_finite_data_cells_are_typed_errors() {
-    let err = CombiTimeTable::parse(
-        "\
+fn non_finite_data_cells_parse_and_round_trip_by_ieee_class() {
+    let text = "\
 #1
-double bad(1,2)
-0 NaN
-",
-    )
-    .expect_err("NaN data cell is rejected");
-    assert!(matches!(
-        err,
-        CsvError::NonFinite {
-            line: 3,
-            column: 1,
-            ref text
-        } if text == "NaN"
-    ));
+# columns: time pos neg nan
+double nonfinite(1,4)
+0.0 inf -inf NaN
+";
+    let table = CombiTimeTable::parse(text).expect("non-finite data cells parse");
+    assert_eq!(table.data[1].to_bits(), f64::INFINITY.to_bits());
+    assert_eq!(table.data[2].to_bits(), f64::NEG_INFINITY.to_bits());
+    assert!(table.data[3].is_nan());
+    let serialized = table.to_csv_string().expect("non-finite data writes");
+    assert_eq!(serialized, text);
+    let reparsed = CombiTimeTable::parse(&serialized).expect("non-finite output reparses");
+    assert_eq!(reparsed.data[1].to_bits(), f64::INFINITY.to_bits());
+    assert_eq!(reparsed.data[2].to_bits(), f64::NEG_INFINITY.to_bits());
+    assert!(reparsed.data[3].is_nan());
+}
 
+#[test]
+fn non_finite_time_cells_are_typed_errors() {
     let err = CombiTimeTable::parse(
         "\
 #1
@@ -230,21 +233,44 @@ NaN 0
 }
 
 #[test]
-fn writer_rejects_non_finite_in_memory_cells() {
+fn writer_accepts_non_finite_in_memory_data_cells_but_rejects_time() {
     let table = CombiTimeTable {
-        name: "bad".into(),
+        name: "nonfinite".into(),
         n_rows: 1,
         n_cols: 2,
         data: vec![0.0, f64::INFINITY],
         col_names: None,
     };
+    assert_eq!(
+        table.to_csv_string().expect("writer accepts data infinity"),
+        "#1\ndouble nonfinite(1,2)\n0.0 inf\n"
+    );
+    assert_eq!(
+        ValueKind::Real
+            .encode_value(&Value::Real(f64::NEG_INFINITY))
+            .expect("Real encoder preserves -inf")
+            .to_bits(),
+        f64::NEG_INFINITY.to_bits()
+    );
+    assert!(
+        ValueKind::Real
+            .encode_value(&Value::Real(f64::NAN))
+            .expect("Real encoder preserves NaN class")
+            .is_nan()
+    );
+
+    let table = CombiTimeTable {
+        name: "bad".into(),
+        n_rows: 1,
+        n_cols: 2,
+        data: vec![f64::INFINITY, 1.0],
+        col_names: None,
+    };
     assert!(matches!(
-        table.to_csv_string().expect_err("writer rejects infinity"),
-        CsvError::NonFinite { column: 1, .. }
-    ));
-    assert!(matches!(
-        ValueKind::Real.encode_value(&Value::Real(f64::NAN)),
-        Err(CsvError::NonFinite { .. })
+        table
+            .to_csv_string()
+            .expect_err("writer rejects non-finite time"),
+        CsvError::NonFinite { column: 0, .. }
     ));
 }
 

@@ -1,0 +1,64 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#DriverDivide",
+      "@type": "S231:Block",
+      "S231:label": "DriverDivide",
+      "S231:containsBlock": { "@id": "http://example.org#DriverDivide.divide" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#DriverDivide.u1" },
+        { "@id": "http://example.org#DriverDivide.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#DriverDivide.y" }
+    },
+
+    {
+      "@id": "http://example.org#DriverDivide.divide",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:label": "divide",
+      "S231:hasInput": [
+        { "@id": "http://example.org#DriverDivide.divide.u1" },
+        { "@id": "http://example.org#DriverDivide.divide.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#DriverDivide.divide.y" }
+    },
+    {
+      "@id": "http://example.org#DriverDivide.divide.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#DriverDivide.divide.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#DriverDivide.divide.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverDivide.y" }
+    },
+
+    {
+      "@id": "http://example.org#DriverDivide.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverDivide.divide.u1" }
+    },
+    {
+      "@id": "http://example.org#DriverDivide.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverDivide.divide.u2" }
+    },
+    {
+      "@id": "http://example.org#DriverDivide.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}

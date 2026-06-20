@@ -5,14 +5,17 @@ use std::path::Path;
 
 use oce_api::{Engine, OcError, PointDirection, PointValueType};
 use oce_conformance::{
-    CombiTimeTable, ConfigError, DriveCadence, DriveMode, DriverError, DriverInputReplay,
-    DriverOptions, IndicatorPattern, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec,
-    Tolerances, VerifyConfig, drive_trace, drive_trace_with_options,
+    CombiTimeTable, ComparisonMode, ComparisonResult, ConfigError, DriveCadence, DriveMode,
+    DriverError, DriverInputReplay, DriverOptions, IndicatorPattern, PartialTolerances, PointEnd,
+    PointMapEntry, ReferenceSpec, Tolerances, VerifyConfig, drive_trace, drive_trace_with_options,
 };
 
 const FREE_ADD: &str = include_str!("fixtures/driver/free_add.jsonld");
+const FREE_DIVIDE: &str = include_str!("fixtures/driver/free_divide.jsonld");
 const U1: &str = "http://example.org#DriverAdd.u1";
 const U2: &str = "http://example.org#DriverAdd.u2";
+const DIVIDE_U1: &str = "http://example.org#DriverDivide.u1";
+const DIVIDE_U2: &str = "http://example.org#DriverDivide.u2";
 const Y: &str = "conn#2";
 
 fn table(rows: &[(f64, f64, f64)]) -> CombiTimeTable {
@@ -51,6 +54,31 @@ fn config() -> VerifyConfig {
         },
         outputs: vec![oce_conformance::OutputPattern {
             pattern: "conn#2".to_string(),
+            tolerances: PartialTolerances::default(),
+        }],
+        indicators: Vec::new(),
+        sampling: Some(1.0),
+        run_controller: true,
+    }
+}
+
+fn divide_config() -> VerifyConfig {
+    VerifyConfig {
+        references: vec![ReferenceSpec {
+            model: "driver-free-divide".to_string(),
+            sequence: "single-block-divide".to_string(),
+            point_name_mapping: vec![map("u1", DIVIDE_U1), map("u2", DIVIDE_U2), map("y", Y)],
+        }],
+        tolerances: Tolerances {
+            atolx: 0.0,
+            atoly: 0.0,
+            rtolx: 0.0,
+            rtoly: 0.0,
+            ltolx: 0.0,
+            ltoly: 0.0,
+        },
+        outputs: vec![oce_conformance::OutputPattern {
+            pattern: Y.to_string(),
             tolerances: PartialTolerances::default(),
         }],
         indicators: Vec::new(),
@@ -125,6 +153,21 @@ fn zero_row_reference() -> CombiTimeTable {
         .expect("zero-row CombiTimeTable is syntactically valid CSV")
 }
 
+fn divide_reference() -> CombiTimeTable {
+    CombiTimeTable::parse(
+        "\
+#1
+# columns: time u1 u2 y
+double driver_divide_reference(4,4)
+0 1 2 0.5
+1 1 0 inf
+2 -1 0 -inf
+3 0 0 NaN
+",
+    )
+    .expect("non-finite divide reference parses")
+}
+
 fn trace_bits(run: &oce_conformance::DriverRun) -> Vec<Vec<u64>> {
     let mut out = Vec::new();
     out.push(run.trace.times.iter().map(|t| t.to_bits()).collect());
@@ -160,12 +203,12 @@ fn uniform_fast_path_and_event_aligned_path_agree_bit_exactly() {
     ));
     assert_eq!(fast.comparisons.len(), 1);
     assert!(
-        fast.comparisons[0].result.passed,
+        fast.comparisons[0].result.passed(),
         "engine trace should match the hand-authored reference: {:?}",
         fast.comparisons[0].result
     );
     assert!(
-        fast.comparisons[0].result.compared_points > 0,
+        fast.comparisons[0].result.compared_points() > 0,
         "comparison must not be a vacuous pass"
     );
 
@@ -178,6 +221,7 @@ fn uniform_fast_path_and_event_aligned_path_agree_bit_exactly() {
                 instants: vec![0.0, 1.0, 2.0, 3.0],
             },
             input_replay: DriverInputReplay::ReferenceTable,
+            comparison: ComparisonMode::Funnel,
         },
     )
     .expect("event path runs");
@@ -238,9 +282,9 @@ fn driver_masked_path_compares_when_indicator_is_active() {
         .expect("active indicator should drive masked comparison");
     let comparison = &run.comparisons[0];
     assert!(comparison.masked);
-    assert!(comparison.result.passed);
+    assert!(comparison.result.passed());
     assert!(
-        comparison.result.compared_points > 0,
+        comparison.result.compared_points() > 0,
         "active mask must still compare points"
     );
     let indicator = run
@@ -266,8 +310,8 @@ fn driver_masked_path_preserves_all_dont_care_vacuous_pass() {
         .expect("inactive indicator should produce a deliberate masked no-op");
     let comparison = &run.comparisons[0];
     assert!(comparison.masked);
-    assert!(comparison.result.passed);
-    assert_eq!(comparison.result.compared_points, 0);
+    assert!(comparison.result.passed());
+    assert_eq!(comparison.result.compared_points(), 0);
     let indicator = run
         .trace
         .column(&inactive_mask)
@@ -320,6 +364,7 @@ fn driver_errors_surface_uniform_bad_step_and_csv_deferred() {
                 step: 0.0,
             },
             input_replay: DriverInputReplay::ReferenceTable,
+            comparison: ComparisonMode::Funnel,
         },
     )
     .expect_err("step <= 0 must be a typed facade Load error");
@@ -342,6 +387,7 @@ fn driver_errors_surface_uniform_bad_step_and_csv_deferred() {
                 path: Path::new("reference.csv").to_path_buf(),
                 bindings: vec![(U1.to_string(), 1)],
             },
+            comparison: ComparisonMode::Funnel,
         },
     )
     .expect_err("facade Csv input source remains deferred");
@@ -361,6 +407,7 @@ fn driver_errors_surface_event_aligned_time_regression() {
                 instants: vec![0.0, 1.0, 0.5],
             },
             input_replay: DriverInputReplay::ReferenceTable,
+            comparison: ComparisonMode::Funnel,
         },
     )
     .expect_err("decreasing explicit event instants must surface the facade time guard");
@@ -418,4 +465,58 @@ fn driver_rejects_bad_regex_config_without_running() {
         matches!(err, DriverError::Config(ConfigError::Invalid(message))
         if message.contains("regex"))
     );
+}
+
+#[test]
+fn exact_mode_compares_free_add_bit_exactly() {
+    let reference = uniform_reference();
+    let config = config();
+    let run = drive_trace_with_options(
+        FREE_ADD.as_bytes(),
+        &config,
+        &reference,
+        &DriverOptions {
+            comparison: ComparisonMode::Exact,
+            ..DriverOptions::default()
+        },
+    )
+    .expect("exact mode compares finite add output");
+
+    assert_eq!(run.comparisons.len(), 1);
+    assert!(!run.comparisons[0].masked);
+    let ComparisonResult::Exact(result) = &run.comparisons[0].result else {
+        panic!("exact mode must return an exact verdict");
+    };
+    assert!(result.passed);
+    assert_eq!(result.compared_points, reference.n_rows);
+    assert_eq!(result.first_mismatch, None);
+}
+
+#[test]
+fn exact_mode_compares_non_finite_divide_reference_without_no_compared_points() {
+    let reference = divide_reference();
+    let config = divide_config();
+    let run = drive_trace_with_options(
+        FREE_DIVIDE.as_bytes(),
+        &config,
+        &reference,
+        &DriverOptions {
+            comparison: ComparisonMode::Exact,
+            ..DriverOptions::default()
+        },
+    )
+    .expect("exact mode compares non-finite divide output");
+
+    assert_eq!(run.comparisons.len(), 1);
+    let ComparisonResult::Exact(result) = &run.comparisons[0].result else {
+        panic!("exact mode must return an exact verdict");
+    };
+    assert!(result.passed);
+    assert_eq!(result.compared_points, reference.n_rows);
+
+    let y = run.trace.column(Y).expect("captured divide output");
+    assert_eq!(y.values[0].to_bits(), 0.5_f64.to_bits());
+    assert_eq!(y.values[1].to_bits(), f64::INFINITY.to_bits());
+    assert_eq!(y.values[2].to_bits(), f64::NEG_INFINITY.to_bits());
+    assert!(y.values[3].is_nan());
 }
