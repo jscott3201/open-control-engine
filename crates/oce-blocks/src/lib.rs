@@ -12,11 +12,12 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A6b dynamic Reals).** The trait surface, A0 per-tick context
+//! Status: **M2 in progress (A4 timing/latch blocks).** The trait surface, A0 per-tick context
 //! seam, starter blocks, A1/A2 Reals breadth, A3 Logical/Conversions/Integers algebraic blocks,
 //! A5 `IntegratorWithReset` loop-cut template, A6 limited PID controller core, and A6b scalar
-//! dynamic Reals are implemented on the arena trait, with a static class-path registry. The full
-//! ~130-block catalog is phased across M1–M2 per `03` §7.
+//! dynamic Reals are implemented on the arena trait; A4 adds logical timing/latch blocks and
+//! integer edge/count blocks to the static class-path registry. The full ~130-block catalog is
+//! phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
@@ -24,12 +25,16 @@ mod conversions;
 mod discrete;
 mod dynamics;
 mod integers;
+mod integers_edge;
 mod logical;
+mod logical_latch;
+mod logical_timing;
 mod pid;
 mod reals;
 mod reals_dynamic;
 mod reals_dynamic2;
 mod registry;
+mod registry_a4;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
@@ -39,9 +44,12 @@ pub use integers::{
     IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin,
     IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
 };
+pub use integers_edge::{IntegerChange, OnCounter};
 pub use logical::{
     And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
 };
+pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
+pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use pid::{Pid, PidWithReset};
 pub use reals::{
     Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
@@ -253,6 +261,9 @@ mod reals_tests;
 
 #[cfg(test)]
 mod a3_tests;
+
+#[cfg(test)]
+mod a4_tests;
 
 #[cfg(test)]
 mod pid_tests;

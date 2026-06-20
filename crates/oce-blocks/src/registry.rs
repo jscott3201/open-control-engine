@@ -7,6 +7,11 @@
 use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::pid::ControllerConfig;
+use crate::registry_a4::{
+    make_falling_edge, make_integer_change, make_integer_on_counter, make_latch,
+    make_logical_change, make_timer, make_timer_accumulating, make_toggle, make_true_delay,
+    make_true_false_hold, make_true_hold_with_reset,
+};
 use crate::{
     Abs, Add, AddParameter, And, Block, BooleanToInteger, BooleanToReal, Constant, Derivative,
     Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegerAbs, IntegerAdd,
@@ -165,6 +170,42 @@ static CATALOG: &[RegistryEntry] = &[
         make: make_edge,
     },
     RegistryEntry {
+        class_path: "CDL.Logical.FallingEdge",
+        make: make_falling_edge,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Change",
+        make: make_logical_change,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Latch",
+        make: make_latch,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Toggle",
+        make: make_toggle,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Timer",
+        make: make_timer,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.TimerAccumulating",
+        make: make_timer_accumulating,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.TrueDelay",
+        make: make_true_delay,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.TrueFalseHold",
+        make: make_true_false_hold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.TrueHoldWithReset",
+        make: make_true_hold_with_reset,
+    },
+    RegistryEntry {
         class_path: "CDL.Logical.Sources.SampleTrigger",
         make: make_sample_trigger,
     },
@@ -257,6 +298,14 @@ static CATALOG: &[RegistryEntry] = &[
         make: make_integer_less_equal_threshold,
     },
     RegistryEntry {
+        class_path: "CDL.Integers.OnCounter",
+        make: make_integer_on_counter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Change",
+        make: make_integer_change,
+    },
+    RegistryEntry {
         class_path: "CDL.Discrete.UnitDelay",
         make: make_unit_delay,
     },
@@ -272,7 +321,7 @@ fn find<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
         .map(|(_, v)| v)
 }
 
-fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
+pub(crate) fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
     match find(params, name) {
         Some(Value::Real(x)) => *x,
         // Modelica/CDL Int→Real promotion (§7.3.4): an integer literal bound to a `Real` parameter
@@ -286,14 +335,14 @@ fn real_param(params: &ParamTable, name: &str, default: f64) -> f64 {
     }
 }
 
-fn bool_param(params: &ParamTable, name: &str, default: bool) -> bool {
+pub(crate) fn bool_param(params: &ParamTable, name: &str, default: bool) -> bool {
     match find(params, name) {
         Some(Value::Boolean(b)) => *b,
         _ => default,
     }
 }
 
-fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
+pub(crate) fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
     match find(params, name) {
         Some(Value::Integer(n)) => *n,
         _ => default,
