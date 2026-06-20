@@ -109,10 +109,10 @@ fn read_display_unit(c: &Connector) -> Option<Arc<str>> {
 ///
 /// Under single assignment every `In` connector has in-degree ≤ 1, and in a *structurally-valid*
 /// graph an `In` connector is never a connection *source* (using one as a `from` is a
-/// [`check_connections`] `DirectionMismatch` that fails the load). So a connected component is a
+/// [`super::structural::check_connections`] `DirectionMismatch` that fails the load). So a connected component is a
 /// disjoint **star**: one output connector and the inputs it drives, and no connector belongs to two
 /// clusters — the result is then genuinely order-independent. (We cluster only inputs whose
-/// in-degree is exactly 1; a multiply-driven input is a [`check_single_assignment`] error, excluded
+/// in-degree is exactly 1; a multiply-driven input is a [`super::structural::check_single_assignment`] error, excluded
 /// so a cluster never double-*writes* a connector.) For each star, each `Real` attribute in
 /// `{unit, quantity, min, max}` and each `Integer` bound in `{min, max}` is *gathered* (the set of
 /// declared, non-default values across all members) then *decided*:
