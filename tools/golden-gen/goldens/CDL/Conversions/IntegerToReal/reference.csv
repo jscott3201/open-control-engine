@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Conversions_IntegerToReal_reference(4,3)
+0.0 0.0 0.0
+1.0 -7.0 -7.0
+2.0 2147483647.0 2147483647.0
+3.0 9007199254740992.0 9007199254740992.0

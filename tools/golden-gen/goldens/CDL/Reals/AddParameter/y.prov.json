@@ -6,9 +6,15 @@
   "value_kind": "Real",
   "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
   "n_samples": 3,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.1, 1.1, -2.2] }
+  ],
   "input": "param p=0.2; u=[0.1,1.1,-2.2]",
   "reference_rule": "y = u + p (IEEE-754 f64 add); _spec/03 §4.1 AddParameter",
-  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
 }

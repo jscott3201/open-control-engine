@@ -32,6 +32,14 @@ pub struct SignalColumn {
     pub values: Vec<f64>,
 }
 
+/// A single named numeric data column parallel to a shared time vector.
+pub struct DataColumn {
+    /// Column name.
+    pub name: String,
+    /// Encoded numeric samples parallel to the table time vector.
+    pub values: Vec<f64>,
+}
+
 /// Serialize one signal as a deterministic two-column `CombiTimeTable` CSV (`time`, `<name>`).
 ///
 /// Emits the `#1` header, a structured `# columns:` comment, the `double <name>(rows,2)` shape
@@ -47,17 +55,50 @@ pub fn to_csv_string(table_name: &str, col: &SignalColumn) -> String {
         "time/value length mismatch for signal {}",
         col.name
     );
-    let n_rows = col.time.len();
+    to_table_csv_string(
+        table_name,
+        &col.time,
+        &[DataColumn {
+            name: col.name.clone(),
+            values: col.values.clone(),
+        }],
+    )
+}
+
+/// Serialize multiple columns as one deterministic `CombiTimeTable` CSV.
+///
+/// Emits the `#1` header, a structured `# columns:` comment, the
+/// `double <name>(rows,cols)` shape line, then row-major data with a single-space separator.
+///
+/// # Panics
+/// Panics if any data column length differs from `time.len()`.
+#[must_use]
+pub fn to_table_csv_string(table_name: &str, time: &[f64], cols: &[DataColumn]) -> String {
+    for col in cols {
+        assert_eq!(
+            time.len(),
+            col.values.len(),
+            "time/value length mismatch for signal {}",
+            col.name
+        );
+    }
+    let n_rows = time.len();
+    let n_cols = cols.len() + 1;
     let mut out = String::new();
     out.push_str("#1\n");
-    out.push_str("# columns: time ");
-    out.push_str(&col.name);
-    out.push('\n');
-    out.push_str(&format!("double {table_name}({n_rows},2)\n"));
-    for row in 0..n_rows {
-        out.push_str(&format_f64(col.time[row]));
+    out.push_str("# columns: time");
+    for col in cols {
         out.push(' ');
-        out.push_str(&format_f64(col.values[row]));
+        out.push_str(&col.name);
+    }
+    out.push('\n');
+    out.push_str(&format!("double {table_name}({n_rows},{n_cols})\n"));
+    for (row, t) in time.iter().enumerate() {
+        out.push_str(&format_f64(*t));
+        for col in cols {
+            out.push(' ');
+            out.push_str(&format_f64(col.values[row]));
+        }
         out.push('\n');
     }
     out

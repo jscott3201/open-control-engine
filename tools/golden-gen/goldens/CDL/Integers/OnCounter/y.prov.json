@@ -6,9 +6,16 @@
   "value_kind": "Integer",
   "compare_regime": "exact (atoly=0)",
   "n_samples": 7,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "trigger", "reset", "y"],
+  "inputs": [
+    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0] },
+    { "name": "reset", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0] }
+  ],
   "input": "y_start=0; trigger=[F,T,T,F,T,T,F], reset=[F,F,F,F,F,T,F]; rising edges only",
   "reference_rule": "emit start-of-tick count; rising(trigger)++ ; rising(reset)->y_start (dominant); _spec/03 §4.2 OnCounter",
-  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
 }

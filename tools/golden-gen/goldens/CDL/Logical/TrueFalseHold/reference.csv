@@ -1,0 +1,8 @@
+#1
+# columns: time u y
+double CDL_Logical_TrueFalseHold_reference(5,3)
+0.0 1.0 1.0
+100.0 0.0 1.0
+250.0 1.0 1.0
+400.0 0.0 0.0
+700.0 1.0 1.0

@@ -9,13 +9,17 @@
 //! fold-time literal/ordinal references with no tick trace, so they are emitted as standalone
 //! provenance entries (see `constants_types`), not CombiTimeTable CSVs.
 
-use crate::oracle::{Golden, Sample, ValueKind};
+use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 fn r(x: f64) -> Sample {
     Sample::Real(x)
 }
 fn b(x: bool) -> Sample {
     Sample::Boolean(x)
+}
+
+fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSeries {
+    InputSeries::new(name, ValueKind::Real, values.into_iter().map(r).collect())
 }
 
 /// Build the steppable Discrete + Sources goldens.
@@ -42,7 +46,8 @@ pub fn goldens() -> Vec<Golden> {
             y,
             "samplePeriod=1.0, start=0.0, y_start=0.0; u=[0.1,0.2,0.3,0.4,0.5] (non-dyadic bit-carry)",
             "y(k) = u(k-1), y(0)=y_start (one-sample delay, loop cut, emit-from-state); _spec/03 §4.6 UnitDelay",
-        ));
+        )
+        .with_inputs(vec![input_r("u", u)]));
     }
 
     // Constant: y = k for all t. k = 21.5.

@@ -4,13 +4,21 @@
 //! §2.3, `_spec/01` §9). Time-driven dwell timers compare (t_now - entryTime) against the
 //! duration parameter (`_spec/01` §8). Derived solely from the spec — never from `oce-blocks`.
 
-use crate::oracle::{Golden, Sample, ValueKind};
+use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 fn b(x: bool) -> Sample {
     Sample::Boolean(x)
 }
 fn r(x: f64) -> Sample {
     Sample::Real(x)
+}
+
+fn input_b(name: &'static str, values: impl IntoIterator<Item = bool>) -> InputSeries {
+    InputSeries::new(
+        name,
+        ValueKind::Boolean,
+        values.into_iter().map(b).collect(),
+    )
 }
 
 /// Tick grid at the default 60 s cadence.
@@ -35,59 +43,71 @@ fn combinational() -> Vec<Golden> {
         let u1 = [false, true, true, false];
         let u2 = [false, true, false, true];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(a && c)).collect();
-        out.push(Golden::new(
-            "CDL.Logical.And",
-            "y",
-            ValueKind::Boolean,
-            ticks60(4),
-            y,
-            "u1=[F,T,T,F], u2=[F,T,F,T]",
-            "y = u1 AND u2; _spec/03 §4.3 And",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.And",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "u1=[F,T,T,F], u2=[F,T,F,T]",
+                "y = u1 AND u2; _spec/03 §4.3 And",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
+        );
     }
     // Or.
     {
         let u1 = [false, true, false, false];
         let u2 = [false, false, true, false];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(a || c)).collect();
-        out.push(Golden::new(
-            "CDL.Logical.Or",
-            "y",
-            ValueKind::Boolean,
-            ticks60(4),
-            y,
-            "u1=[F,T,F,F], u2=[F,F,T,F]",
-            "y = u1 OR u2; _spec/03 §4.3 Or",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Or",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "u1=[F,T,F,F], u2=[F,F,T,F]",
+                "y = u1 OR u2; _spec/03 §4.3 Or",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
+        );
     }
     // Not.
     {
         let u = [false, true, false];
         let y: Vec<Sample> = u.iter().map(|&x| b(!x)).collect();
-        out.push(Golden::new(
-            "CDL.Logical.Not",
-            "y",
-            ValueKind::Boolean,
-            ticks60(3),
-            y,
-            "u=[F,T,F]",
-            "y = NOT u; _spec/03 §4.3 Not",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Not",
+                "y",
+                ValueKind::Boolean,
+                ticks60(3),
+                y,
+                "u=[F,T,F]",
+                "y = NOT u; _spec/03 §4.3 Not",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
     // Xor.
     {
         let u1 = [false, true, true, false];
         let u2 = [false, false, true, true];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(a ^ c)).collect();
-        out.push(Golden::new(
-            "CDL.Logical.Xor",
-            "y",
-            ValueKind::Boolean,
-            ticks60(4),
-            y,
-            "u1=[F,T,T,F], u2=[F,F,T,T]",
-            "y = u1 XOR u2 (exactly-one); _spec/03 §4.3 Xor",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Xor",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "u1=[F,T,T,F], u2=[F,F,T,T]",
+                "y = u1 XOR u2 (exactly-one); _spec/03 §4.3 Xor",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
+        );
     }
     // Switch: y = u1 if u2 else u3 (u2 middle selector).
     {
@@ -97,15 +117,22 @@ fn combinational() -> Vec<Golden> {
         let y: Vec<Sample> = (0..4)
             .map(|k| if sel[k] { b(u1[k]) } else { b(u3[k]) })
             .collect();
-        out.push(Golden::new(
-            "CDL.Logical.Switch",
-            "y",
-            ValueKind::Boolean,
-            ticks60(4),
-            y,
-            "u1=[T,T,F,F], sel u2=[T,F,T,F], u3=[F,F,T,T]",
-            "y = u1 if u2 else u3; _spec/03 §4.3 Switch",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Switch",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "u1=[T,T,F,F], sel u2=[T,F,T,F], u3=[F,F,T,T]",
+                "y = u1 if u2 else u3; _spec/03 §4.3 Switch",
+            )
+            .with_inputs(vec![
+                input_b("u1", u1),
+                input_b("u2", sel),
+                input_b("u3", u3),
+            ]),
+        );
     }
 
     out
@@ -123,15 +150,18 @@ fn edges_latches() -> Vec<Golden> {
             y.push(b(x && !pre));
             pre = x;
         }
-        out.push(Golden::new(
-            "CDL.Logical.Edge",
-            "y",
-            ValueKind::Boolean,
-            ticks60(5),
-            y,
-            "pre_u_start=false; u=[F,T,T,F,T]",
-            "y = u AND NOT pre(u) (rising edge); _spec/03 §4.3 Edge",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Edge",
+                "y",
+                ValueKind::Boolean,
+                ticks60(5),
+                y,
+                "pre_u_start=false; u=[F,T,T,F,T]",
+                "y = u AND NOT pre(u) (rising edge); _spec/03 §4.3 Edge",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
     // FallingEdge: y = NOT u AND pre(u).
     {
@@ -142,15 +172,18 @@ fn edges_latches() -> Vec<Golden> {
             y.push(b(!x && pre));
             pre = x;
         }
-        out.push(Golden::new(
-            "CDL.Logical.FallingEdge",
-            "y",
-            ValueKind::Boolean,
-            ticks60(5),
-            y,
-            "pre_u_start=false; u=[F,T,F,F,T]",
-            "y = (NOT u) AND pre(u) (falling edge); _spec/03 §4.3 FallingEdge",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.FallingEdge",
+                "y",
+                ValueKind::Boolean,
+                ticks60(5),
+                y,
+                "pre_u_start=false; u=[F,T,F,F,T]",
+                "y = (NOT u) AND pre(u) (falling edge); _spec/03 §4.3 FallingEdge",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
     // Change: y = u != pre(u).
     {
@@ -161,15 +194,18 @@ fn edges_latches() -> Vec<Golden> {
             y.push(b(x != pre));
             pre = x;
         }
-        out.push(Golden::new(
-            "CDL.Logical.Change",
-            "y",
-            ValueKind::Boolean,
-            ticks60(5),
-            y,
-            "pre_u_start=false; u=[F,F,T,T,F]",
-            "y = (u != pre(u)); _spec/03 §4.3 Change",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Change",
+                "y",
+                ValueKind::Boolean,
+                ticks60(5),
+                y,
+                "pre_u_start=false; u=[F,F,T,T,F]",
+                "y = (u != pre(u)); _spec/03 §4.3 Change",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
     // Latch: clear-dominant SR. y = if clr then false else (rising(u) ? true : pre(y)).
     {
@@ -199,7 +235,8 @@ fn edges_latches() -> Vec<Golden> {
             y,
             "u=[F,T,F,T,T,F], clr=[F,F,F,F,T,F]; init pre(y)=false, pre(u)=false",
             "clear-dominant SR: clr->false; else rising(u)->true; else hold pre(y); _spec/03 §4.3 Latch",
-        ));
+        )
+        .with_inputs(vec![input_b("u", u), input_b("clr", clr)]));
     }
     // Toggle: clear-dominant T-flip-flop. rising(u) inverts pre(y); clr forces false.
     {
@@ -229,7 +266,8 @@ fn edges_latches() -> Vec<Golden> {
             y,
             "u=[F,T,F,T,T,T], clr all false; init pre(y)=false, pre(u)=false",
             "clear-dominant T-flip-flop: rising(u) inverts pre(y); clr->false; _spec/03 §4.3 Toggle",
-        ));
+        )
+        .with_inputs(vec![input_b("u", u), input_b("clr", clr)]));
     }
 
     out
@@ -267,16 +305,20 @@ fn timing() -> Vec<Golden> {
             y,
             "threshold t=0.25; t=[0,0.1,0.3,0.6,0.7] (non-dyadic), u=[T,T,T,F,T]; re-arm rising edge at t=0.7 yields y=0",
             "y = if u then time - entryTime else 0; entryTime set on rising edge of u; Buildings Logical/Timer.mo",
-        ));
-        out.push(Golden::new(
-            "CDL.Logical.Timer",
-            "passed",
-            ValueKind::Boolean,
-            t.to_vec(),
-            passed,
-            "threshold t=0.25; same trace as Timer.y",
-            "passed = (y >= t) AND running; _spec/03 §4.3 Timer (canonical Buildings >=)",
-        ));
+        )
+        .with_inputs(vec![input_b("u", u)]));
+        out.push(
+            Golden::new(
+                "CDL.Logical.Timer",
+                "passed",
+                ValueKind::Boolean,
+                t.to_vec(),
+                passed,
+                "threshold t=0.25; same trace as Timer.y",
+                "passed = (y >= t) AND running; _spec/03 §4.3 Timer (canonical Buildings >=)",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
 
     // TrueDelay: assert true only after u continuously true >= delayTime; falling passes immediately.
@@ -302,15 +344,18 @@ fn timing() -> Vec<Golden> {
             y.push(b(yk));
             pre_u = u[k];
         }
-        out.push(Golden::new(
-            "CDL.Logical.TrueDelay",
-            "y",
-            ValueKind::Boolean,
-            t.to_vec(),
-            y,
-            "delayTime=75; t=[0,30,100,130,160], u=[F,T,T,T,F]; rising at t=30, elapses at 105",
-            "y = u AND (t - entryTime >= delayTime); falling passes; _spec/03 §4.3 TrueDelay",
-        ));
+        out.push(
+            Golden::new(
+                "CDL.Logical.TrueDelay",
+                "y",
+                ValueKind::Boolean,
+                t.to_vec(),
+                y,
+                "delayTime=75; t=[0,30,100,130,160], u=[F,T,T,T,F]; rising at t=30, elapses at 105",
+                "y = u AND (t - entryTime >= delayTime); falling passes; _spec/03 §4.3 TrueDelay",
+            )
+            .with_inputs(vec![input_b("u", u)]),
+        );
     }
 
     // TrueFalseHold: minimum-dwell debounce. Initial output follows u at t0.
@@ -347,7 +392,8 @@ fn timing() -> Vec<Golden> {
             y,
             "trueHold=300, falseHold=300; t=[0,100,250,400,700], u=[T,F,T,F,T]",
             "min-dwell debounce: hold until dwell expires then follow u; _spec/03 §4.3 TrueFalseHold",
-        ));
+        )
+        .with_inputs(vec![input_b("u", u)]));
     }
 
     // TrueHoldWithReset: hold true >= duration after u rises; clr rising forces false.
@@ -385,7 +431,8 @@ fn timing() -> Vec<Golden> {
             y,
             "duration=200; t=[0,50,150,300,360], u=[F,T,F,F,T], clr=[F,F,F,T,F]; rising at 50",
             "rising(u) holds true for >=duration even if u falls; clr forces false; _spec/03 §4.3 TrueHoldWithReset",
-        ));
+        )
+        .with_inputs(vec![input_b("u", u), input_b("clr", clr)]));
     }
 
     out

@@ -1,0 +1,5 @@
+#1
+# columns: time u1 u2 u3 y
+double CDL_Integers_MultiSum_reference(2,5)
+0.0 10.0 4.0 -2.0 10.0
+1.0 100.0 100.0 100.0 400.0
