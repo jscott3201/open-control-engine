@@ -8,9 +8,9 @@ use oce_model::{ParamTable, Value};
 
 use super::{
     Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
-    Greater, GreaterThreshold, Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Multiply,
-    MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract, Switch, Time,
-    UnitDelay, lookup, read_int,
+    Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold, Limiter, Line,
+    Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract,
+    Switch, Time, UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]
@@ -161,6 +161,9 @@ fn feedthrough_classification_matches_spec() {
     assert!(!Constant { k: 0.0 }.feeds_through(0, 0)); // no inputs
     assert!(!Pre::default().feeds_through(0, 0)); // THE cut
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
+    assert!(!IntegratorWithReset::default().feeds_through(0, 0)); // integrating loop cut
+    assert!(!IntegratorWithReset::default().feeds_through(1, 0)); // reset value is delayed
+    assert!(!IntegratorWithReset::default().feeds_through(2, 0)); // trigger is delayed
 
     // Edge is stateful (owns `prev`) but FEEDS THROUGH on the current `u` — the edge is a function
     // of the current input vs the prior bit, so it is NOT a loop cut (`01` §11.2 req 3). Getting
@@ -184,6 +187,7 @@ fn feedthrough_classification_matches_spec() {
 
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
+    assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
     assert_eq!(Add.kind(), BlockKind::Algebraic);
 }
 
@@ -338,6 +342,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Less",
         "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
+        "CDL.Reals.IntegratorWithReset",
         "CDL.Logical.Sources.Constant",
         "CDL.Logical.And",
         "CDL.Logical.Or",
@@ -404,6 +409,11 @@ fn registry_make_resolves_parameters() {
     let mut region = vec![0u64; delay.state_len()];
     delay.init_state(&mut region, &delay_params);
     assert!(emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(1.25)));
+
+    let integrator = (lookup("CDL.Reals.IntegratorWithReset").unwrap().make)(&delay_params);
+    let mut region = vec![0u64; integrator.state_len()];
+    integrator.init_state(&mut region, &delay_params);
+    assert!(emit(integrator.as_ref(), &[], &region)[0].bit_eq(&Value::Real(1.25)));
 
     let greater_h = (lookup("CDL.Reals.Greater").unwrap().make)(&ParamTable {
         values: vec![(Arc::from("h"), Value::Real(1.0))],

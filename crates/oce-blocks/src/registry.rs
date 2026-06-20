@@ -12,9 +12,10 @@ use crate::{
     IntegerConstant, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
     IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerMultiplyByParameter,
-    IntegerSubtract, IntegerSwitch, IntegerToReal, Less, LessThreshold, Limiter, Line,
-    LogicalConstant, LogicalSwitch, Max, Min, Multiply, MultiplyByParameter, Nand, Nor, Not, Or,
-    Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay, Xor,
+    IntegerSubtract, IntegerSwitch, IntegerToReal, IntegratorWithReset, Less, LessThreshold,
+    Limiter, Line, LogicalConstant, LogicalSwitch, Max, Min, Multiply, MultiplyByParameter, Nand,
+    Nor, Not, Or, Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
+    Xor,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -97,6 +98,10 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Switch",
         make: make_switch,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.IntegratorWithReset",
+        make: make_integrator_with_reset,
     },
     RegistryEntry {
         class_path: "CDL.Logical.Sources.Constant",
@@ -395,6 +400,12 @@ fn make_less_threshold(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Switch)
+}
+
+fn make_integrator_with_reset(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegratorWithReset {
+        y_start: real_param(p, "y_start", 0.0),
+    })
 }
 
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
