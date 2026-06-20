@@ -372,6 +372,15 @@ fn registry_resolves_canonical_paths() {
         "CDL.Logical.Switch",
         "CDL.Logical.Pre",
         "CDL.Logical.Edge",
+        "CDL.Logical.FallingEdge",
+        "CDL.Logical.Change",
+        "CDL.Logical.Latch",
+        "CDL.Logical.Toggle",
+        "CDL.Logical.Timer",
+        "CDL.Logical.TimerAccumulating",
+        "CDL.Logical.TrueDelay",
+        "CDL.Logical.TrueFalseHold",
+        "CDL.Logical.TrueHoldWithReset",
         "CDL.Logical.Sources.SampleTrigger",
         "CDL.Conversions.BooleanToInteger",
         "CDL.Conversions.BooleanToReal",
@@ -395,8 +404,11 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.LessThreshold",
         "CDL.Integers.LessEqual",
         "CDL.Integers.LessEqualThreshold",
+        "CDL.Integers.OnCounter",
+        "CDL.Integers.Change",
         "CDL.Discrete.UnitDelay",
     ];
+    assert_eq!(PATHS.len(), 69, "M2-PR-A4 registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

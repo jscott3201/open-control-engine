@@ -18,6 +18,7 @@ use crate::{
     build_feedthrough_dag, compile, eval_tick,
 };
 
+mod a4_feedthrough;
 mod feedthrough_stateful;
 mod integrator_loop_cut;
 mod pid_feedthrough;

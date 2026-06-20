@@ -375,18 +375,16 @@ fn a3_registry_constructs_new_classes_and_resolves_parameters() {
 }
 
 #[test]
-fn a3_deferred_vector_and_stateful_integer_logical_blocks_remain_unregistered() {
+fn a3_deferred_vector_and_pulse_blocks_remain_unregistered_after_a4() {
     for path in [
         "CDL.Logical.MultiAnd",
         "CDL.Logical.MultiOr",
         "CDL.Integers.MultiSum",
-        "CDL.Integers.OnCounter",
-        "CDL.Integers.Change",
         "CDL.Logical.Sources.Pulse",
     ] {
         assert!(
             lookup(path).is_none(),
-            "{path} is explicitly deferred beyond A3"
+            "{path} remains explicitly deferred after the scalar A4 timing/latch work"
         );
     }
 }
