@@ -7,10 +7,11 @@ use std::sync::Arc;
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
-    Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold, Limiter, Line,
-    Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, Pre,
-    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
+    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics, Divide,
+    Edge, Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold,
+    LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply, MultiplyByParameter,
+    NoopDiagnostics, Not, Pid, PidWithReset, Pre, SampleTrigger, Subtract, Switch, Time, UnitDelay,
+    lookup, read_int,
 };
 
 #[derive(Default)]
@@ -188,6 +189,12 @@ fn feedthrough_classification_matches_spec() {
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
+    assert_eq!(Derivative::default().kind(), BlockKind::Stateful);
+    assert!(Derivative::default().feeds_through(0, 0));
+    assert_eq!(LimitSlewRate::default().kind(), BlockKind::Stateful);
+    assert!(LimitSlewRate::default().feeds_through(0, 0));
+    assert_eq!(MovingAverage::default().kind(), BlockKind::Stateful);
+    assert!(MovingAverage::default().feeds_through(0, 0));
     assert!(Pid::default().feeds_through(0, 0) && Pid::default().feeds_through(1, 0));
     assert!(
         PidWithReset::default().feeds_through(0, 0)
@@ -350,6 +357,9 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
         "CDL.Reals.IntegratorWithReset",
+        "CDL.Reals.Derivative",
+        "CDL.Reals.LimitSlewRate",
+        "CDL.Reals.MovingAverage",
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
         "CDL.Logical.Sources.Constant",
@@ -468,6 +478,41 @@ fn registry_make_resolves_parameters() {
     });
     assert_eq!(p_reset.kind(), BlockKind::Algebraic);
     assert_eq!(p_reset.state_len(), 0);
+
+    fn tick_real(block: &dyn Block, region: &mut [u64], t: Time, u: f64) -> Value {
+        let diag = NoopDiagnostics;
+        let cx = Ctx::new(t, &diag);
+        let inputs = [Value::Real(u)];
+        let mut out = None;
+        block.emit_from_state(&cx, &inputs, region, &mut |idx, val| {
+            assert_eq!(idx, 0);
+            out = Some(val);
+        });
+        block.update_state(&cx, &inputs, region);
+        out.expect("single-output stateful block emits one value")
+    }
+
+    let slew = (lookup("CDL.Reals.LimitSlewRate").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("raisingSlewRate"), Value::Real(2.0)),
+            (Arc::from("fallingSlewRate"), Value::Real(-3.0)),
+            (Arc::from("Td"), Value::Real(0.1)),
+        ],
+    });
+    let mut region = vec![0u64; slew.state_len()];
+    slew.init_state(&mut region, &ParamTable::default());
+    assert!(tick_real(slew.as_ref(), &mut region, 0.0, 0.0).bit_eq(&Value::Real(0.0)));
+    assert!(tick_real(slew.as_ref(), &mut region, 1.0, 10.0).bit_eq(&Value::Real(2.0)));
+    assert!(tick_real(slew.as_ref(), &mut region, 2.0, -10.0).bit_eq(&Value::Real(-1.0)));
+
+    let moving_average = (lookup("CDL.Reals.MovingAverage").unwrap().make)(&ParamTable {
+        values: vec![(Arc::from("delta"), Value::Real(0.25))],
+    });
+    let mut region = vec![0u64; moving_average.state_len()];
+    moving_average.init_state(&mut region, &ParamTable::default());
+    assert!(tick_real(moving_average.as_ref(), &mut region, 0.0, 0.0).bit_eq(&Value::Real(0.0)));
+    assert!(tick_real(moving_average.as_ref(), &mut region, 0.25, 4.0).bit_eq(&Value::Real(4.0)));
+    assert!(tick_real(moving_average.as_ref(), &mut region, 0.5, 0.0).bit_eq(&Value::Real(0.0)));
 }
 
 #[test]

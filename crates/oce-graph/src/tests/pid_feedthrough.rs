@@ -77,3 +77,53 @@ fn pid_mode_state_words_are_allocated_from_resolved_controller_type() {
     assert_eq!(state.words.len(), 3);
     assert_eq!(sched.order, vec![p_mode, pid_mode]);
 }
+
+#[test]
+fn pid_with_reset_trigger_and_reset_value_are_update_routed_end_to_end() {
+    let mut b = ModelBuilder::default();
+    let (_set, _, set_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(1.0))],
+    ));
+    let (_measured, _, measured_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(0.0))],
+    ));
+    let (_trigger, _, trigger_out) = b.block_real(make(
+        "CDL.Logical.Sources.Constant",
+        &[("k", Value::Boolean(true))],
+    ));
+    let (_reset, _, reset_out) = b.block_real(make(
+        "CDL.Reals.Sources.Constant",
+        &[("k", Value::Real(5.0))],
+    ));
+    let (_pid, pid_in, pid_out) = b.block_real(make(
+        "CDL.Reals.PIDWithReset",
+        &[
+            ("controllerType", enum_param("PI")),
+            ("k", Value::Real(1.0)),
+            ("Ti", Value::Real(1.0)),
+            ("yMin", Value::Real(-100.0)),
+            ("yMax", Value::Real(100.0)),
+        ],
+    ));
+    b.connect(set_out[0], pid_in[0]);
+    b.connect(measured_out[0], pid_in[1]);
+    b.connect(trigger_out[0], pid_in[2]);
+    b.connect(reset_out[0], pid_in[3]);
+
+    let sched = compile(&b.model, &b.blocks).expect("PIDWithReset reset inputs must not add loops");
+    let mut state = allocate_state(&b.model, &b.blocks);
+
+    tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
+    assert!(
+        state.values[pid_out[0].0 as usize].bit_eq(&Value::Real(1.0)),
+        "rising reset must not affect the same tick output"
+    );
+
+    tick_once(&b.model, &sched, &b.blocks, &mut state, 1.0);
+    assert!(
+        state.values[pid_out[0].0 as usize].bit_eq(&Value::Real(5.0)),
+        "reset target is visible on the following tick through the update pass"
+    );
+}

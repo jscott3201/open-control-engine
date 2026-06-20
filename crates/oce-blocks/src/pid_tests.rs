@@ -239,6 +239,45 @@ fn pid_mode_gating_reverse_acting_and_inactive_term_guards_are_pinned() {
 }
 
 #[test]
+fn pid_inactive_divisors_do_not_leak_nan_or_inf() {
+    use oce_model::SimpleController::{Pd, Pi};
+
+    let pd = Pid {
+        config: ControllerConfig {
+            controller_type: Pd,
+            k: 1.0,
+            ti: 0.0,
+            td: 1.0,
+            nd: 1.0,
+            y_min: -100.0,
+            y_max: 100.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let (pd_trace, _pd_region) = drive_pid(&pd, &[(0.0, 1.0, 0.0), (1.0, 2.0, 0.0)]);
+    assert_trace_bits(&pd_trace, &[1.0f64.to_bits(), 3.0f64.to_bits()]);
+
+    let pi = Pid {
+        config: ControllerConfig {
+            controller_type: Pi,
+            k: 1.0,
+            ti: 1.0,
+            td: 0.0,
+            nd: 0.0,
+            y_min: -100.0,
+            y_max: 100.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let (pi_trace, _pi_region) =
+        drive_pid(&pi, &[(0.0, 1.0, 0.0), (1.0, 1.0, 0.0), (2.0, 1.0, 0.0)]);
+    assert_trace_bits(
+        &pi_trace,
+        &[1.0f64.to_bits(), 1.0f64.to_bits(), 2.0f64.to_bits()],
+    );
+}
+
+#[test]
 fn pid_limiter_boundaries_are_pinned() {
     use oce_model::SimpleController::P;
     let block = Pid {
@@ -545,6 +584,48 @@ fn pid_with_reset_extreme_reset_value_is_bit_pinned() {
         &[1.0f64.to_bits(), 1.0f64.to_bits(), f64::MAX.to_bits()],
     );
     assert_eq!(region[0], f64::MAX.to_bits());
+}
+
+#[test]
+fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
+    use oce_model::SimpleController::Pi;
+    let block = PidWithReset {
+        config: ControllerConfig {
+            controller_type: Pi,
+            k: 1.0,
+            ti: 1.0,
+            y_min: f64::NEG_INFINITY,
+            y_max: f64::INFINITY,
+            ..ControllerConfig::default()
+        },
+    };
+
+    let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
+    let (nan_trace, nan_region) = drive_pid_with_reset(
+        &block,
+        &[
+            (0.0, 1.0, 0.0, false, 0.0),
+            (1.0, 1.0, 0.0, true, quiet_nan),
+        ],
+    );
+    assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
+    assert_eq!(nan_region[0], 0x7ff8_0000_0000_0000);
+
+    let (inf_trace, inf_region) = drive_pid_with_reset(
+        &block,
+        &[
+            (0.0, 1.0, 0.0, false, 0.0),
+            (1.0, 1.0, 0.0, true, f64::INFINITY),
+            (2.0, 1.0, 0.0, false, 0.0),
+        ],
+    );
+    assert_trace_bits(
+        &inf_trace,
+        &[1.0f64.to_bits(), 1.0f64.to_bits(), f64::INFINITY.to_bits()],
+    );
+    // The reset stores +Inf and the next emit propagates it. The following update then evaluates
+    // the deferred non-finite anti-windup seam (`Inf - Inf`) and stores canonical NaN.
+    assert_eq!(inf_region[0], 0x7ff8_0000_0000_0000);
 }
 
 #[test]

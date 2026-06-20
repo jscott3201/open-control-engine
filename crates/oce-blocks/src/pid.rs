@@ -31,11 +31,14 @@
 
 use oce_model::{ParamTable, SimpleController, Value};
 
+use crate::dynamics::{
+    PREV_T_UNSET, first_order_filter_implicit, forward_euler_accumulate,
+    is_first_tick as prev_t_is_unset, tick_dt,
+};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
 
 const CDL_EPS: f64 = 1e-15;
 const MIN_PARAM: f64 = 100.0 * CDL_EPS;
-const PREV_T_UNSET: u64 = u64::MAX;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ControllerConfig {
@@ -184,12 +187,12 @@ fn kind_for(config: ControllerConfig, with_reset: bool) -> BlockKind {
 fn is_first_tick(region: &[u64], state: StateLayout) -> bool {
     state
         .prev_t
-        .is_some_and(|prev_t| region[prev_t] == PREV_T_UNSET)
+        .is_some_and(|prev_t| prev_t_is_unset(region[prev_t]))
 }
 
 fn dt(ctx: &Ctx<'_>, region: &[u64], state: StateLayout) -> f64 {
     match state.prev_t {
-        Some(prev_t) if region[prev_t] != PREV_T_UNSET => ctx.t() - f64::from_bits(region[prev_t]),
+        Some(prev_t) => tick_dt(ctx.t(), region[prev_t]),
         _ => 0.0,
     }
 }
@@ -269,7 +272,7 @@ fn update_pid_state(
         } else {
             let ant_win_gai = (y_u - y) / (config.k_eff() * config.ni_eff());
             let err_i2 = e - ant_win_gai;
-            y_i + (config.k_eff() / config.ti_eff()) * err_i2 * step_dt
+            forward_euler_accumulate(y_i, (config.k_eff() / config.ti_eff()) * err_i2, step_dt)
         };
         region[i] = next_i.to_bits();
     }
@@ -280,8 +283,7 @@ fn update_pid_state(
         } else {
             f64::from_bits(region[d])
         };
-        let alpha = step_dt / config.derivative_time();
-        let next_d = (x + alpha * e) / (1.0 + alpha);
+        let next_d = first_order_filter_implicit(x, e, config.derivative_time(), step_dt);
         region[d] = next_d.to_bits();
     }
 
