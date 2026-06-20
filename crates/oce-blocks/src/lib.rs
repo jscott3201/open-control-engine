@@ -12,10 +12,11 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A5 integrating template).** The trait surface, A0 per-tick context
+//! Status: **M2 in progress (A6 PID controller core).** The trait surface, A0 per-tick context
 //! seam, starter blocks, A1/A2 Reals breadth, A3 Logical/Conversions/Integers algebraic blocks,
-//! and A5 `IntegratorWithReset` loop-cut template are implemented on the arena trait, with a
-//! static class-path registry. The full ~130-block catalog is phased across M1–M2 per `03` §7.
+//! A5 `IntegratorWithReset` loop-cut template, and A6 limited PID controller core are implemented
+//! on the arena trait, with a static class-path registry. The full ~130-block catalog is phased
+//! across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
@@ -23,6 +24,7 @@ mod conversions;
 mod discrete;
 mod integers;
 mod logical;
+mod pid;
 mod reals;
 mod reals_dynamic;
 mod registry;
@@ -38,6 +40,7 @@ pub use integers::{
 pub use logical::{
     And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
 };
+pub use pid::{Pid, PidWithReset};
 pub use reals::{
     Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
     LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
@@ -247,6 +250,9 @@ mod reals_tests;
 
 #[cfg(test)]
 mod a3_tests;
+
+#[cfg(test)]
+mod pid_tests;
 
 #[cfg(test)]
 mod reals_dynamic_tests;

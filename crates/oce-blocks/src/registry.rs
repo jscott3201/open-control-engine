@@ -6,6 +6,7 @@
 
 use oce_model::{ParamTable, SimpleController, Value};
 
+use crate::pid::ControllerConfig;
 use crate::{
     Abs, Add, AddParameter, And, Block, BooleanToInteger, BooleanToReal, Constant, Divide, Edge,
     Greater, GreaterThreshold, Hysteresis, IntegerAbs, IntegerAdd, IntegerAddParameter,
@@ -14,8 +15,8 @@ use crate::{
     IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerMultiplyByParameter,
     IntegerSubtract, IntegerSwitch, IntegerToReal, IntegratorWithReset, Less, LessThreshold,
     Limiter, Line, LogicalConstant, LogicalSwitch, Max, Min, Multiply, MultiplyByParameter, Nand,
-    Nor, Not, Or, Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
-    Xor,
+    Nor, Not, Or, Pid, PidWithReset, Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract,
+    Switch, UnitDelay, Xor,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -102,6 +103,14 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.IntegratorWithReset",
         make: make_integrator_with_reset,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.PID",
+        make: make_pid,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.PIDWithReset",
+        make: make_pid_with_reset,
     },
     RegistryEntry {
         class_path: "CDL.Logical.Sources.Constant",
@@ -279,13 +288,6 @@ fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
     }
 }
 
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "M2-PR-A0 lands the controller enum accessor before later Lane A controller blocks consume it"
-    )
-)]
 fn controller_type_param(
     params: &ParamTable,
     name: &str,
@@ -405,6 +407,35 @@ fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
 fn make_integrator_with_reset(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegratorWithReset {
         y_start: real_param(p, "y_start", 0.0),
+    })
+}
+
+fn pid_config(p: &ParamTable) -> ControllerConfig {
+    ControllerConfig {
+        controller_type: controller_type_param(p, "controllerType", SimpleController::Pi),
+        k: real_param(p, "k", 1.0),
+        ti: real_param(p, "Ti", 0.5),
+        td: real_param(p, "Td", 0.1),
+        r: real_param(p, "r", 1.0),
+        y_max: real_param(p, "yMax", 1.0),
+        y_min: real_param(p, "yMin", 0.0),
+        ni: real_param(p, "Ni", 0.9),
+        nd: real_param(p, "Nd", 10.0),
+        xi_start: real_param(p, "xi_start", 0.0),
+        yd_start: real_param(p, "yd_start", 0.0),
+        reverse_acting: bool_param(p, "reverseActing", true),
+    }
+}
+
+fn make_pid(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Pid {
+        config: pid_config(p),
+    })
+}
+
+fn make_pid_with_reset(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(PidWithReset {
+        config: pid_config(p),
     })
 }
 
