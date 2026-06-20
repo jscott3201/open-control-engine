@@ -54,7 +54,7 @@ impl TierStatus {
     /// Whether this status fails the report.
     #[must_use]
     pub fn is_failure(self) -> bool {
-        matches!(self, TierStatus::Failed)
+        matches!(self, TierStatus::Failed | TierStatus::NoData)
     }
 }
 

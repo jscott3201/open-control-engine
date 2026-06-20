@@ -5,6 +5,9 @@
 //! changes it. Masked funnel comparison is segmented at every don't-care boundary; it never builds a
 //! tolerance band across an inactive gap.
 
+use std::error::Error;
+use std::fmt;
+
 use crate::{
     FunnelResult, Series, Tolerances, compare,
     funnel::{Curve, eval_curve},
@@ -36,6 +39,31 @@ impl Indicator {
     }
 }
 
+/// Mask validation error.
+#[non_exhaustive]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MaskError {
+    /// An indicator sample time was not finite.
+    NonFiniteIndicatorTime {
+        /// Indicator signal name.
+        signal: String,
+        /// Zero-based sample index within the indicator.
+        index: usize,
+    },
+}
+
+impl fmt::Display for MaskError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MaskError::NonFiniteIndicatorTime { signal, index } => {
+                write!(f, "indicator {signal:?} sample {index} has non-finite time")
+            }
+        }
+    }
+}
+
+impl Error for MaskError {}
+
 /// A per-variable mask made of one or more ANDed indicators.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Mask {
@@ -52,6 +80,24 @@ impl Mask {
         self.indicators
             .iter()
             .all(|indicator| indicator.active_at(t))
+    }
+
+    /// Validate indicator sample times before using this mask for comparison.
+    ///
+    /// # Errors
+    /// Returns [`MaskError`] when an indicator contains a non-finite timestamp.
+    pub fn validate(&self) -> Result<(), MaskError> {
+        for indicator in &self.indicators {
+            for (index, (t, _)) in indicator.samples.iter().enumerate() {
+                if !t.is_finite() {
+                    return Err(MaskError::NonFiniteIndicatorTime {
+                        signal: indicator.signal.clone(),
+                        index,
+                    });
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Copy the active subset of `series` into caller-owned scratch storage.
@@ -102,11 +148,24 @@ pub fn compare_masked(
         .zip(reference.y.iter().copied())
         .collect();
     let test_vec: Curve = test.x.iter().copied().zip(test.y.iter().copied()).collect();
-    let Some((domain_start, domain_end)) = reference_domain(&reference_vec) else {
+
+    if mask.validate().is_err() {
+        return fail_closed_result(reference_vec, test_vec, None);
+    }
+    if test_vec.iter().any(|(x, _)| !x.is_finite()) {
+        return compare(reference, test, tol);
+    }
+
+    let Some((domain_start, domain_end)) = (match reference_domain(&reference_vec) {
+        Ok(domain) => domain,
+        Err(()) => return compare(reference, test, tol),
+    }) else {
         return compare(reference, test, tol);
     };
 
     let segments = active_segments(mask, domain_start, domain_end);
+    let no_active_segments = segments.is_empty();
+    let first_active_start = segments.first().map(|segment| segment.start);
     let mut combined = FunnelResult {
         passed: true,
         max_error: 0.0,
@@ -124,10 +183,7 @@ pub fn compare_masked(
         if segment_ref.is_empty() {
             continue;
         }
-        let segment_test = test_segment(&test_vec, segment);
-        if segment_test.is_empty() {
-            continue;
-        }
+        let segment_test = test_segment(&test_vec, segment, mask);
         let ref_x: Vec<_> = segment_ref.iter().map(|(x, _)| *x).collect();
         let ref_y: Vec<_> = segment_ref.iter().map(|(_, y)| *y).collect();
         let test_x: Vec<_> = segment_test.iter().map(|(x, _)| *x).collect();
@@ -147,7 +203,16 @@ pub fn compare_masked(
     }
 
     sort_combined_curves(&mut combined);
-    combined.passed = combined.max_error == 0.0;
+    combined.compared_points = combined.errors.len();
+    if no_active_segments {
+        combined.passed = true;
+    } else if combined.compared_points == 0 && combined.max_error == 0.0 {
+        combined.passed = false;
+        combined.max_error = f64::INFINITY;
+        combined.first_failure_x = first_active_start;
+    } else {
+        combined.passed = combined.max_error == 0.0;
+    }
     combined
 }
 
@@ -157,10 +222,19 @@ struct Segment {
     end: f64,
 }
 
-fn reference_domain(reference: &[(f64, f64)]) -> Option<(f64, f64)> {
-    let start = reference.first()?.0;
-    let end = reference.last()?.0;
-    (start.is_finite() && end.is_finite() && start <= end).then_some((start, end))
+fn reference_domain(reference: &[(f64, f64)]) -> Result<Option<(f64, f64)>, ()> {
+    let Some((start, _)) = reference.first() else {
+        return Ok(None);
+    };
+    if reference.iter().any(|(x, _)| !x.is_finite())
+        || reference.windows(2).any(|w| w[0].0 > w[1].0)
+    {
+        return Err(());
+    }
+    Ok(Some((
+        *start,
+        reference.last().expect("non-empty reference").0,
+    )))
 }
 
 fn active_segments(mask: &Mask, start: f64, end: f64) -> Vec<Segment> {
@@ -183,10 +257,16 @@ fn active_segments(mask: &Mask, start: f64, end: f64) -> Vec<Segment> {
     cuts.sort_by(f64::total_cmp);
     cuts.dedup_by(|a, b| a.to_bits() == b.to_bits());
 
-    let mut segments = Vec::new();
+    let mut segments: Vec<Segment> = Vec::new();
     for window in cuts.windows(2) {
         let (a, b) = (window[0], window[1]);
         if a < b && mask.active_at(a) {
+            if let Some(last) = segments.last_mut()
+                && last.end.to_bits() == a.to_bits()
+            {
+                last.end = b;
+                continue;
+            }
             segments.push(Segment { start: a, end: b });
         }
     }
@@ -205,16 +285,13 @@ fn reference_segment(reference: &[(f64, f64)], segment: Segment) -> Curve {
         }
     }
     push_point(&mut out, (segment.end, eval_curve(reference, segment.end)));
-    out.retain(|(x, y)| x.is_finite() && y.is_finite());
-    out.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
-    out.dedup_by(|a, b| a.0.to_bits() == b.0.to_bits() && a.1.to_bits() == b.1.to_bits());
     out
 }
 
-fn test_segment(test: &[(f64, f64)], segment: Segment) -> Curve {
+fn test_segment(test: &[(f64, f64)], segment: Segment, mask: &Mask) -> Curve {
     test.iter()
         .copied()
-        .filter(|(x, _)| segment.start <= *x && *x <= segment.end)
+        .filter(|(x, _)| segment.start <= *x && *x <= segment.end && mask.active_at(*x))
         .collect()
 }
 
@@ -241,6 +318,20 @@ fn merge_segment_result(combined: &mut FunnelResult, result: FunnelResult) {
     combined.errors.extend(result.errors);
 }
 
+fn fail_closed_result(reference: Curve, test: Curve, first_failure_x: Option<f64>) -> FunnelResult {
+    FunnelResult {
+        passed: false,
+        max_error: f64::INFINITY,
+        compared_points: 0,
+        first_failure_x,
+        reference,
+        test,
+        lower_bound: Vec::new(),
+        upper_bound: Vec::new(),
+        errors: Vec::new(),
+    }
+}
+
 fn sort_combined_curves(result: &mut FunnelResult) {
     for curve in [
         &mut result.reference,
@@ -250,5 +341,6 @@ fn sort_combined_curves(result: &mut FunnelResult) {
         &mut result.errors,
     ] {
         curve.sort_by(|a, b| a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1)));
+        curve.dedup_by(|a, b| a.0.to_bits() == b.0.to_bits() && a.1.to_bits() == b.1.to_bits());
     }
 }

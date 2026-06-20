@@ -18,5 +18,5 @@ pub use config::{
 };
 pub use csv::{CombiTimeTable, CsvError, ValueKind, format_f64};
 pub use funnel::{FunnelResult, Series, Tolerances, build_bounds, compare};
-pub use mask::{Indicator, Mask, compare_masked};
+pub use mask::{Indicator, Mask, MaskError, compare_masked};
 pub use tiers::{ConformanceReport, ConformanceTier, TierReport, TierStatus};

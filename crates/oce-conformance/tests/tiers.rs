@@ -73,8 +73,8 @@ fn tier_report_can_record_zero_comparison_no_data() {
         "masked comparison checked no points",
     );
     assert_eq!(report.status, TierStatus::NoData);
-    assert!(!report.failed());
-    assert!(ConformanceReport::new(vec![report]).passed());
+    assert!(report.failed());
+    assert!(!ConformanceReport::new(vec![report]).passed());
 }
 
 #[test]
