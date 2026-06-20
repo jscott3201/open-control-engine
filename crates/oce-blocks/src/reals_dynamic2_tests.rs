@@ -262,6 +262,43 @@ fn limit_slew_rate_feedthrough_perturbation_and_determinism_are_pinned() {
 }
 
 #[test]
+fn limit_slew_rate_bound_holds_over_seeded_dt_input_sweep() {
+    let block = LimitSlewRate {
+        raising_slew_rate: 0.75,
+        falling_slew_rate: -1.25,
+        td: 0.05,
+        enable: true,
+    };
+    let mut region = init_region(&block);
+    let mut seed = 0x0ce5_1eed_u64;
+    let mut t = 0.0;
+    let mut prev_y = None;
+    for _ in 0..128 {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let dt = 0.001 + f64::from(((seed >> 32) & 0xff) as u32) / 1270.0;
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let u = f64::from(((seed >> 32) & 0x3ff) as u32) / 102.3 - 5.0;
+        t += dt;
+
+        let Value::Real(y) = tick(&block, &mut region, t, u) else {
+            panic!("LimitSlewRate emits Real");
+        };
+        if let Some(prev) = prev_y {
+            let dy = y - prev;
+            assert!(
+                dy >= block.falling_slew_rate * dt - 1e-12,
+                "dy={dy} below falling bound at dt={dt}"
+            );
+            assert!(
+                dy <= block.raising_slew_rate * dt + 1e-12,
+                "dy={dy} above raising bound at dt={dt}"
+            );
+        }
+        prev_y = Some(y);
+    }
+}
+
+#[test]
 fn moving_average_startup_steady_and_variable_dt_window_are_pinned() {
     let block = MovingAverage { delta: 1.0 };
     let steps = [(0.0, 2.0), (0.5, 2.0), (1.0, 4.0), (1.5, 4.0), (2.25, 1.0)];
@@ -337,4 +374,32 @@ fn moving_average_ring_overflow_warns_instead_of_panicking() {
         "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
     );
     assert_eq!(events[0].2.to_bits(), 64.0f64.to_bits());
+}
+
+#[test]
+fn moving_average_overflow_divides_by_actual_retained_span() {
+    let block = MovingAverage { delta: 0.5 };
+    let mut region = init_region(&block);
+    let noop = NoopDiagnostics;
+    for k in 0..100 {
+        let t = f64::from(k) * 0.005;
+        tick_with_diag(&block, &mut region, t, 1.0 + t, &noop);
+    }
+
+    let diag = CapturingDiagnostics::default();
+    let y = tick_with_diag(&block, &mut region, 0.5, 1.5, &diag);
+    // dt=0.005, delta=0.5, cap=64. At t=0.5 the retained ring spans t=0.18..0.5.
+    // The numerator is mu(0.5)-mu(0.18)=0.4296000000000002, so the degraded mean is
+    // 0.4296000000000002 / 0.32 = 1.3425000000000007. The old denominator delta=0.5
+    // would under-scale this to 0.8592000000000004.
+    assert_trace_bits(&[y], &[0x3ff5_7ae1_47ae_147e]);
+
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, "CDL.Reals.MovingAverage");
+    assert_eq!(
+        events[0].1,
+        "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
+    );
+    assert_eq!(events[0].2.to_bits(), 0.5f64.to_bits());
 }

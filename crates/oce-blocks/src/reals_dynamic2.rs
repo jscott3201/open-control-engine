@@ -123,6 +123,8 @@ impl Block for Derivative {
 
 /// `CDL.Reals.LimitSlewRate` — first-order lag toward `u`, with per-tick `dy` clamped to
 /// `[fallingSlewRate*dt, raisingSlewRate*dt]`. `[S]`, feedthrough `y <- {u}`, not a loop cut.
+/// This uses the shared-helper discretization: implicit lag first, then clamp the post-filter
+/// per-tick increment, rather than a literal continuous-ODE `der(y)=clamp((u-y)/Td, ...)` solve.
 #[derive(Clone, Copy, Debug)]
 pub struct LimitSlewRate {
     pub(crate) raising_slew_rate: f64,
@@ -161,6 +163,7 @@ impl LimitSlewRate {
     }
 
     fn next_y(self, u: f64, region: &[u64], dt: f64) -> f64 {
+        debug_assert!(dt >= 0.0, "model time must be monotonic");
         if !self.enable || is_first_tick(region[PREV_T_WORD]) {
             return u;
         }
@@ -262,6 +265,10 @@ fn ma_last_time_bits(region: &[u64]) -> Option<u64> {
         let slot = ma_physical(region, len - 1);
         region[ma_time_idx(slot)]
     })
+}
+
+fn ma_oldest_time(region: &[u64]) -> Option<f64> {
+    (ma_len(region) > 0).then(|| ma_point(region, 0).0)
 }
 
 fn ma_prune(region: &mut [u64], cutoff: f64) {
@@ -375,7 +382,9 @@ impl MovingAverage {
         let delta = self.delta_eff();
         let mu_del = ma_mu_at(region, t - delta, t, mu_now);
         let denom = if t >= t_start + delta {
-            delta
+            let retained_lo = ma_oldest_time(region).unwrap_or(t_start);
+            let t_lo = (t - delta).max(retained_lo).max(t_start);
+            (t - t_lo).max(1e-3)
         } else {
             t - t_start + 1e-3
         };
