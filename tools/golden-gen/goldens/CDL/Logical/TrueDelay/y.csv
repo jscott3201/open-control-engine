@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Logical_TrueDelay_y(5,2)
+0.0 0.0
+30.0 0.0
+100.0 0.0
+130.0 1.0
+160.0 0.0

@@ -1,0 +1,13 @@
+# oracle.lock — Tier-A golden reproducibility pin (skeleton).
+#
+# Pins the toolchain and generator that produced the checked-in goldens so a future
+# run can be byte-compared. Fill the rust_toolchain from rust-toolchain.toml at release.
+
+generator = "golden-gen 0.0.0"
+tier = "A"
+format = "Modelica CombiTimeTable CSV (_spec/07 §9)"
+float_format = "ryu shortest-round-trip f64"
+field_separator = " "
+rust_toolchain = "<PIN: see rust-toolchain.toml>"
+ryu_version = "1.0"
+source = "closed-form CDL spec derivation; depends_on_oce_blocks = false"

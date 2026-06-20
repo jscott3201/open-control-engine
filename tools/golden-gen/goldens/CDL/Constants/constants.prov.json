@@ -1,0 +1,16 @@
+{
+  "class_path": "CDL.Constants",
+  "tier": "A",
+  "source": "Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.* are _spec/02 §7.3 aliases resolving to these",
+  "value_kind": "Real",
+  "steppable": false,
+  "values": {
+    "pi": 3.141592653589793,
+    "eps": 1e-15,
+    "small": 1e-37,
+    "inf": 1.7976931348623157e308
+  },
+  "note": "inf is NOT defined in Buildings CDL.Constants.mo; value is Modelica.Constants.inf = f64::MAX (largest representable FINITE real, not IEEE +Inf), surfaced via the _spec/02 §7.3 Modelica-alias whitelist.",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -1,0 +1,6 @@
+#1
+# columns: time y
+double CDL_Reals_Sources_Constant_y(3,2)
+0.0 21.5
+60.0 21.5
+120.0 21.5

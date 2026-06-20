@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Logical.TrueHoldWithReset",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0 (atoly=0)",
+  "n_samples": 5,
+  "input": "duration=200; t=[0,50,150,300,360], u=[F,T,F,F,T], clr=[F,F,F,T,F]; rising at 50",
+  "reference_rule": "rising(u) holds true for >=duration even if u falls; clr forces false; _spec/03 §4.3 TrueHoldWithReset",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

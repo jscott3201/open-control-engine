@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Integers.Max",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "input": "u1=[5,-10,7,2147483647], u2=[5,-3,-7,-2147483648]",
+  "reference_rule": "y = max(u1,u2) (integer ordering); _spec/03 §4.2 Max",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

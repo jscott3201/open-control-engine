@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Reals.Line",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "input": "(x1,f1,x2,f2,u): in-range, clamp-low, clamp-high, non-dyadic segment",
+  "reference_rule": "xLim=min(max(u,x1),x2); b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Integers.MultiSum",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 2,
+  "input": "nin=3, k=[2,-1,3]; u(t0)=[10,4,-2], u(t1)=[100,100,100]",
+  "reference_rule": "y = sum_i k[i]*u[i] in declared order (exact i64); _spec/03 §4.2 MultiSum / R-IMPL-6",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -1,0 +1,6 @@
+#1
+# columns: time y
+double CDL_Integers_LessThreshold_y(3,2)
+0.0 1.0
+1.0 0.0
+2.0 0.0

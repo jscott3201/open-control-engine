@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Integers.Subtract",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "input": "u1=[5,-2147483648,0,2147483647], u2=[12,-2147483647,-7,-1]",
+  "reference_rule": "y = u1 - u2 (exact i64 sub); _spec/03 §4.2 Subtract",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

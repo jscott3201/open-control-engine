@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Discrete_UnitDelay_y(5,2)
+0.0 0.0
+1.0 0.1
+2.0 0.2
+3.0 0.3
+4.0 0.4

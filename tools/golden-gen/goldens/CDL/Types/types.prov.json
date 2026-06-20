@@ -1,0 +1,16 @@
+{
+  "class_path": "CDL.Types",
+  "tier": "A",
+  "source": "1-based enum ordinals in declaration order (_spec/02 §2.2; _spec/03 §4.9)",
+  "value_kind": "Integer",
+  "steppable": false,
+  "enums": {
+    "SimpleController": { "P": 1, "PI": 2, "PD": 3, "PID": 4 },
+    "Smoothness": { "LinearSegments": 1, "ConstantSegments": 2 },
+    "Extrapolation": { "HoldLastPoint": 1, "LastTwoPoints": 2, "Periodic": 3 },
+    "ZeroTime": { "UnixTimeStamp": 1, "UnixTimeStampGMT": 2, "Custom": 3, "NY2010": 4 }
+  },
+  "note": "FLAG: ZeroTime members beyond NY2010 exist in the Buildings library; only the spec-cited prefix is pinned here.",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
