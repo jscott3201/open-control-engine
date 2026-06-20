@@ -1,6 +1,6 @@
 //! `CDL.Conversions` (`03` §4.4): legal explicit crossings between Boolean, Integer, and Real.
-//! Real-to-Integer intentionally uses the Buildings/CDL rule `floor(u + 0.5)`, so half values round
-//! toward `+∞` (`-2.5 -> -2`). Non-finite and out-of-range casts pin Rust's current saturating
+//! Real-to-Integer intentionally uses the sign-branched Buildings/CDL rule, so half values round
+//! away from zero (`-2.5 -> -3`). Non-finite and out-of-range casts pin Rust's current saturating
 //! `f64 as i64` behavior and join the deferred centralized non-finite diagnostics seam.
 
 use oce_model::Value;
@@ -118,8 +118,11 @@ impl Block for IntegerToReal {
     }
 }
 
-/// `CDL.Conversions.RealToInteger` — `y = integer(floor(u + 0.5))`.
-/// Stateless `[A]`, full feedthrough; half values round toward `+∞` per `03` §4.4.
+/// `CDL.Conversions.RealToInteger` — sign-branched round half away from zero.
+///
+/// Matches Buildings `Controls/OBC/CDL/Conversions/RealToInteger.mo`:
+/// `integer(floor(u + 0.5))` for positive `u`, otherwise `integer(ceil(u - 0.5))`.
+/// Stateless `[A]`, full feedthrough.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RealToInteger;
 
@@ -140,9 +143,12 @@ impl Block for RealToInteger {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(
-            0,
-            Value::Integer((read_real(inputs, 0) + 0.5).floor() as i64),
-        );
+        let u = read_real(inputs, 0);
+        let y = if u > 0.0 {
+            (u + 0.5).floor()
+        } else {
+            (u - 0.5).ceil()
+        };
+        emit(0, Value::Integer(y as i64));
     }
 }

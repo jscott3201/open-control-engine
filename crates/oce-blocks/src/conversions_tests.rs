@@ -1,5 +1,5 @@
 //! Exact algebraic tests for `CDL.Conversions` blocks.
-//! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
+//! Expected values are derived directly from `_spec/03` §4.2-§4.4 and compared bit-exactly.
 
 use oce_model::Value;
 
@@ -50,7 +50,7 @@ fn assert_one_out(block: &dyn Block, inputs: &[Value], want: Value) {
 }
 
 #[test]
-fn conversions_follow_spec_and_real_to_integer_half_up_table() {
+fn conversions_follow_spec_and_real_to_integer_half_away_table() {
     let b2i = BooleanToInteger {
         integer_true: 7,
         integer_false: -3,
@@ -70,11 +70,11 @@ fn conversions_follow_spec_and_real_to_integer_half_up_table() {
     for (u, want) in [
         (2.5, 3),
         (2.4, 2),
-        (-2.5, -2),
+        (-2.5, -3),
         (-2.6, -3),
         (-2.4, -2),
         (0.5, 1),
-        (-0.5, 0),
+        (-0.5, -1),
     ] {
         assert_eq!(int_out(&RealToInteger, &[r(u)]), want, "u={u}");
     }
