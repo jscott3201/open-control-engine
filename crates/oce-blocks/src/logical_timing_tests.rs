@@ -68,6 +68,8 @@ fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
             (1.0, vec![Value::Boolean(true)]),
             (1.0, vec![Value::Boolean(true)]),
             (1.5, vec![Value::Boolean(false)]),
+            (2.0, vec![Value::Boolean(true)]),
+            (2.5, vec![Value::Boolean(true)]),
         ],
     );
     let expected = [
@@ -76,6 +78,8 @@ fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
         (0x3ff0_0000_0000_0000, true),
         (0x3ff0_0000_0000_0000, true),
         (0x0000_0000_0000_0000, false),
+        (0x0000_0000_0000_0000, false),
+        (0x3fe0_0000_0000_0000, false),
     ];
     for (idx, (got, (bits, passed))) in trace.iter().zip(expected).enumerate() {
         assert_real_bits(&got[0], bits);
@@ -84,6 +88,38 @@ fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
             assert_bool(&got[1], true);
         }
     }
+
+    let timer = Timer { t: 1.0 };
+    let (trace, state) = run(
+        &timer,
+        &[
+            (0.2, vec![Value::Boolean(true)]),
+            (0.3, vec![Value::Boolean(true)]),
+            (0.4, vec![Value::Boolean(true)]),
+            (0.5, vec![Value::Boolean(true)]),
+            (0.6, vec![Value::Boolean(true)]),
+            (0.7, vec![Value::Boolean(true)]),
+            (0.8, vec![Value::Boolean(true)]),
+            (0.9, vec![Value::Boolean(true)]),
+        ],
+    );
+    let expected = [
+        0x0000_0000_0000_0000,
+        0x3fb9_9999_9999_9998,
+        0x3fc9_9999_9999_999a,
+        0x3fd3_3333_3333_3333,
+        0x3fd9_9999_9999_9999,
+        0x3fdf_ffff_ffff_ffff,
+        0x3fe3_3333_3333_3334,
+        0x3fe6_6666_6666_6666,
+    ];
+    for (got, bits) in trace.iter().zip(expected) {
+        assert_real_bits(&got[0], bits);
+    }
+    assert_eq!(
+        state[0], 0x3fc9_9999_9999_999a,
+        "Timer stores entryTime, not a running accumulator"
+    );
 
     let acc = TimerAccumulating { t: 0.3 };
     let (trace, _) = run(
@@ -218,7 +254,7 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     let timer = Timer { t: 1.0 };
     assert_real_bits(
         &emit_at(&timer, &[half, zero, 1], 1.0, &[Value::Boolean(true)])[0],
-        0x3ff8_0000_0000_0000,
+        0x3fe0_0000_0000_0000,
     );
     assert_real_bits(
         &emit_at(&timer, &[half, zero, 1], 1.0, &[Value::Boolean(false)])[0],

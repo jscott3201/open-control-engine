@@ -24,7 +24,11 @@ const ACC_WORD: usize = 0;
 const PREV_T_WORD: usize = 1;
 const PREV_U_WORD: usize = 2;
 
-/// `CDL.Logical.Timer` — elapsed time while `u` is true, resetting to zero while false.
+/// `CDL.Logical.Timer` — elapsed time since the last rising edge of `u`.
+///
+/// Buildings `Controls/OBC/CDL/Logical/Timer.mo` computes elapsed time as
+/// `time - entryTime`, a single subtraction from the stored rising-edge timestamp, instead of a
+/// per-tick accumulation. The output resets to zero while `u` is false.
 /// Outputs `(y, passed)` where `passed` uses the Buildings threshold boundary `y >= t`.
 /// `[S]`, feedthrough `y,passed <- {u}`, not a loop cut.
 #[derive(Clone, Copy, Debug, Default)]
@@ -41,7 +45,7 @@ impl Timer {
         if is_first_tick(region[PREV_T_WORD]) || !word_bool(region[PREV_U_WORD]) {
             0.0
         } else {
-            f64::from_bits(region[ACC_WORD]) + tick_dt(ctx.t(), region[PREV_T_WORD])
+            ctx.t() - f64::from_bits(region[ACC_WORD])
         }
     }
 }
@@ -88,9 +92,12 @@ impl Block for Timer {
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[ACC_WORD] = self.y_now(ctx, inputs, region).to_bits();
+        let u = read_bool(inputs, 0);
+        if u && (is_first_tick(region[PREV_T_WORD]) || !word_bool(region[PREV_U_WORD])) {
+            region[ACC_WORD] = ctx.t().to_bits();
+        }
         region[PREV_T_WORD] = ctx.t().to_bits();
-        region[PREV_U_WORD] = bool_word(read_bool(inputs, 0));
+        region[PREV_U_WORD] = bool_word(u);
     }
 }
 
