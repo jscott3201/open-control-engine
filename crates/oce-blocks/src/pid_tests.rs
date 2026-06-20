@@ -1,5 +1,5 @@
 //! M2-PR-A6 tests for limited `CDL.Reals.PID` blocks. Expected traces are hand-derived from
-//! the documented forward-Euler recurrence and Buildings limited-PID wiring, not recorded from the
+//! the documented PID recurrence and Buildings limited-PID wiring, not recorded from the
 //! implementation.
 
 use oce_model::Value;
@@ -379,7 +379,7 @@ fn pid_forward_euler_non_dyadic_residue_trace_is_hand_derived() {
 }
 
 #[test]
-fn pid_derivative_filter_uses_yd_start_and_forward_euler_update() {
+fn pid_derivative_filter_uses_yd_start_and_implicit_euler_update() {
     use oce_model::SimpleController::Pd;
     let block = Pid {
         config: ControllerConfig {
@@ -396,12 +396,55 @@ fn pid_derivative_filter_uses_yd_start_and_forward_euler_update() {
     let steps = [(0.0, 1.0, 0.0), (0.5, 2.0, 0.0), (1.0, 2.0, 0.0)];
     let (trace, region) = drive_pid(&block, &steps);
     // T=1, kDer=1. First emit uses yd_start=0.25 and first update initializes xD=1-0.25=0.75.
-    // Then xD=0.75+(2-0.75)*0.5=1.375 and yD=2-1.375=0.625 on the next emit.
+    // With alpha=dt/T=0.5, xD=(0.75+0.5*2)/1.5=7/6 and yD=2-7/6=5/6 on
+    // the next emit; the final stored xD is (7/6+0.5*2)/1.5=13/9.
     assert_trace_bits(
         &trace,
-        &[1.25f64.to_bits(), 3.25f64.to_bits(), 2.625f64.to_bits()],
+        &[
+            0x3ff4_0000_0000_0000,
+            0x400a_0000_0000_0000,
+            0x4006_aaaa_aaaa_aaaa,
+        ],
     );
-    assert_eq!(region[1], 1.6875f64.to_bits());
+    assert_eq!(region[1], 0x3ff7_1c71_c71c_71c8);
+}
+
+#[test]
+fn pid_derivative_filter_is_bounded_in_formerly_divergent_regime() {
+    use oce_model::SimpleController::Pd;
+    let block = Pid {
+        config: ControllerConfig {
+            controller_type: Pd,
+            k: 1.0,
+            td: 0.1,
+            nd: 10.0,
+            y_min: -1_000.0,
+            y_max: 1_000.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let steps = [
+        (0.0, 0.0, 0.0),
+        (1.0, 1.0, 0.0),
+        (2.0, 1.0, 0.0),
+        (3.0, 1.0, 0.0),
+        (4.0, 1.0, 0.0),
+    ];
+    let (trace, region) = drive_pid(&block, &steps);
+    // T=Td/Nd=0.01 and alpha=dt/T=100. Explicit Euler would make xD'=-99*xD+100e.
+    // Implicit Euler instead leaves a residual divided by 101 per tick:
+    // y=[0, 11, 1+10/101, 1+10/10201, 1+10/1030301].
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x4026_0000_0000_0000,
+            0x3ff1_958b_67eb_b908,
+            0x3ff0_0403_ea37_8fc9,
+            0x3ff0_000a_2d68_788d,
+        ],
+    );
+    assert_eq!(region[1], 0x3fef_ffff_fad7_3d19);
 }
 
 #[test]
@@ -437,6 +480,45 @@ fn pid_with_reset_back_solves_next_output_and_held_high_does_not_re_reset() {
     );
     assert_eq!(region[0], 9.0f64.to_bits());
     assert_eq!(region[2], 0, "trigger low is stored after the final tick");
+}
+
+#[test]
+fn pid_with_reset_pid_mode_pins_derivative_ordering_across_reset() {
+    use oce_model::SimpleController::Pid as PidMode;
+    let block = PidWithReset {
+        config: ControllerConfig {
+            controller_type: PidMode,
+            k: 1.0,
+            ti: 1.0,
+            td: 1.0,
+            nd: 1.0,
+            y_min: -100.0,
+            y_max: 100.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let steps = [
+        (0.0, 1.0, 0.0, false, 0.0),
+        (1.0, 2.0, 0.0, true, 5.0),
+        (2.0, 2.0, 0.0, true, 9.0),
+        (3.0, 2.0, 0.0, false, 0.0),
+    ];
+    let (trace, region) = drive_pid_with_reset(&block, &steps);
+    // At t=1 the reset back-solve uses old yD=1, storing xI=5-(yP+yD)=2, then
+    // advances xD from 1 to 1.5. The next emit is therefore 5+(0.5-1)=4.5,
+    // pinning the discrete I/D ordering across the reset boundary.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x3ff0_0000_0000_0000,
+            0x4008_0000_0000_0000,
+            0x4012_0000_0000_0000,
+            0x4019_0000_0000_0000,
+        ],
+    );
+    assert_eq!(region[0], 0x4018_0000_0000_0000);
+    assert_eq!(region[2], 0x3ffe_0000_0000_0000);
+    assert_eq!(region[3], 0, "trigger low is stored after the final tick");
 }
 
 #[test]

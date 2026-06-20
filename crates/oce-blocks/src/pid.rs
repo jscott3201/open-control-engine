@@ -1,9 +1,10 @@
 //! Limited `CDL.Reals` PID controllers.
 //!
-//! These blocks use the same forward-Euler-on-tick convention as
-//! `IntegratorWithReset`: a tick emits from prior controller state, then `update_state` advances
-//! the integrator and derivative filter with `dt = 0` on the first tick and
-//! `dt = t(k) - t(k-1)` thereafter. The limited PID recurrence is the Buildings parallel form:
+//! These blocks use the same tick timing convention as `IntegratorWithReset`: a tick emits from
+//! prior controller state, then `update_state` advances the integrator and derivative filter with
+//! `dt = 0` on the first tick and `dt = t(k) - t(k-1)` thereafter. The integrator uses
+//! forward-Euler accumulation; the first-order derivative filter uses implicit Euler for stable
+//! decay at large `dt/(Td/Nd)`. The limited PID recurrence is the Buildings parallel form:
 //!
 //! `e = revAct * (u_s - u_m) / r`
 //!
@@ -17,11 +18,12 @@
 //!
 //! `xI(k+1) = xI(k) + (k/Ti) * errI2 * dt`
 //!
-//! `xD(k+1) = xD(k) + ((e - xD(k))/(Td/Nd)) * dt`
+//! `xD(k+1) = (xD(k) + (dt/(Td/Nd))*e) / (1 + dt/(Td/Nd))`
 //!
 //! `PIDWithReset` applies reset during `update_state`: on a rising trigger, the integrator state is
 //! back-solved to `y_reset_in - (yP + yD)`, so the reset target is visible at the next emit when the
-//! current P/D path is unchanged. This matches the arena loop-cut timing used by A5; `trigger` and
+//! current P/D path is unchanged; with derivative enabled, the next emit also reflects the updated
+//! derivative filter state. This matches the arena loop-cut timing used by A5; `trigger` and
 //! `y_reset_in` do not feed through.
 //!
 //! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
@@ -278,7 +280,8 @@ fn update_pid_state(
         } else {
             f64::from_bits(region[d])
         };
-        let next_d = x + ((e - x) / config.derivative_time()) * step_dt;
+        let alpha = step_dt / config.derivative_time();
+        let next_d = (x + alpha * e) / (1.0 + alpha);
         region[d] = next_d.to_bits();
     }
 
