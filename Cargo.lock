@@ -132,8 +132,11 @@ dependencies = [
 name = "oce-conformance"
 version = "0.0.0"
 dependencies = [
+ "oce-diag",
  "oce-model",
  "ryu",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

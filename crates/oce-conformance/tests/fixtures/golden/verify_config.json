@@ -1,0 +1,47 @@
+{
+  "references": [
+    {
+      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Supply",
+      "sequence": "ahu_supply_air_temp_reset",
+      "pointNameMapping": [
+        {
+          "cdl": {
+            "name": "TSupSet.y",
+            "unit": "K",
+            "type": "Real"
+          },
+          "device": {
+            "name": "supply_air_temperature_setpoint",
+            "unit": "degC",
+            "type": "Real"
+          }
+        }
+      ]
+    }
+  ],
+  "tolerances": {
+    "atolx": 10.0,
+    "atoly": 0.0,
+    "rtolx": 0.002,
+    "rtoly": 0.002,
+    "ltolx": 0.0,
+    "ltoly": 0.0
+  },
+  "outputs": {
+    "TSupSet.*": {
+      "atolx": null,
+      "atoly": 0.1,
+      "rtolx": null,
+      "rtoly": 0.01,
+      "ltolx": null,
+      "ltoly": null
+    }
+  },
+  "indicators": {
+    "TSupSet.*": [
+      "fanSta.y"
+    ]
+  },
+  "sampling": 60.0,
+  "runController": true
+}
