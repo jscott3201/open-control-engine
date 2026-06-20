@@ -196,10 +196,17 @@ pub enum DriverError {
     Engine(OcError),
     /// The reference table has no usable column names.
     MissingColumnNames,
+    /// The reference table contains no data rows.
+    EmptyReference,
     /// A configured mapping names a reference column that is absent.
     MissingReferenceColumn(String),
     /// No mapped output points were configured.
     NoOutputs,
+    /// An unmasked funnel comparison evaluated zero points.
+    NoComparedPoints {
+        /// Output point path.
+        output: String,
+    },
     /// A configured point has an unsupported or unknown kind.
     UnsupportedPointKind(String),
     /// A Boolean reference/input cell was not encoded as 0.0 or 1.0.
@@ -229,10 +236,17 @@ impl fmt::Display for DriverError {
             DriverError::MissingColumnNames => {
                 write!(f, "reference table must include a # columns: header")
             }
+            DriverError::EmptyReference => write!(f, "reference table contains no data rows"),
             DriverError::MissingReferenceColumn(name) => {
                 write!(f, "reference table is missing column {name:?}")
             }
             DriverError::NoOutputs => write!(f, "verification config mapped no output points"),
+            DriverError::NoComparedPoints { output } => {
+                write!(
+                    f,
+                    "unmasked comparison for output {output:?} evaluated zero points"
+                )
+            }
             DriverError::UnsupportedPointKind(kind) => {
                 write!(f, "unsupported point kind {kind:?}")
             }
@@ -256,8 +270,10 @@ impl Error for DriverError {
             DriverError::Csv(err) => Some(err),
             DriverError::Engine(err) => Some(err),
             DriverError::MissingColumnNames
+            | DriverError::EmptyReference
             | DriverError::MissingReferenceColumn(_)
             | DriverError::NoOutputs
+            | DriverError::NoComparedPoints { .. }
             | DriverError::UnsupportedPointKind(_)
             | DriverError::InvalidBooleanCell { .. }
             | DriverError::InvalidIntegerCell { .. }
@@ -596,8 +612,15 @@ fn compare_outputs(
         };
         let test = captured.as_series(&trace.times);
         let indicator_signals = config.indicator_signals_for_output(&output.point)?;
-        let result = if indicator_signals.is_empty() {
-            compare(reference, test, &tolerance)
+        let masked = !indicator_signals.is_empty();
+        let result = if !masked {
+            let result = compare(reference, test, &tolerance);
+            if result.compared_points == 0 {
+                return Err(DriverError::NoComparedPoints {
+                    output: output.point.clone(),
+                });
+            }
+            result
         } else {
             let mut indicators = Vec::with_capacity(indicator_signals.len());
             for signal in indicator_signals {
@@ -620,9 +643,7 @@ fn compare_outputs(
             output: output.point.clone(),
             reference_column: output.reference_column.clone(),
             tolerance,
-            masked: !config
-                .indicator_signals_for_output(&output.point)?
-                .is_empty(),
+            masked,
             result,
         });
     }
@@ -630,7 +651,11 @@ fn compare_outputs(
 }
 
 fn validate_reference_shape(table: &CombiTimeTable) -> Result<(), DriverError> {
-    table.to_csv_string().map(|_| ()).map_err(DriverError::Csv)
+    table.to_csv_string().map_err(DriverError::Csv)?;
+    if table.n_rows == 0 {
+        return Err(DriverError::EmptyReference);
+    }
+    Ok(())
 }
 
 fn column_names(table: &CombiTimeTable) -> Result<&[String], DriverError> {

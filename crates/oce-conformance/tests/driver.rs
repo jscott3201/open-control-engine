@@ -92,6 +92,11 @@ fn nonuniform_reference() -> CombiTimeTable {
     ])
 }
 
+fn zero_row_reference() -> CombiTimeTable {
+    CombiTimeTable::parse("#1\n# columns: time u1 u2 y\ndouble driver_reference(0,4)\n")
+        .expect("zero-row CombiTimeTable is syntactically valid CSV")
+}
+
 fn trace_bits(run: &oce_conformance::DriverRun) -> Vec<Vec<u64>> {
     let mut out = Vec::new();
     out.push(run.trace.times.iter().map(|t| t.to_bits()).collect());
@@ -194,6 +199,15 @@ fn driver_trace_is_deterministic_across_identical_runs() {
     let b = drive_trace(FREE_ADD.as_bytes(), &config, &reference).expect("second run");
     assert_trace_bit_eq(&a, &b);
     assert_eq!(a.comparisons, b.comparisons);
+}
+
+#[test]
+fn driver_rejects_empty_reference_before_vacuous_compare() {
+    let reference = zero_row_reference();
+    let config = config();
+    let err = drive_trace(FREE_ADD.as_bytes(), &config, &reference)
+        .expect_err("empty reference must not produce a vacuous passing comparison");
+    assert!(matches!(err, DriverError::EmptyReference));
 }
 
 #[test]
