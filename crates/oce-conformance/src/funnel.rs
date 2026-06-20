@@ -3,8 +3,10 @@
 //! The x tolerance is static horizontal rectangle widening only. No timestamp snapping,
 //! resampling, sliding window, or dynamic-time-warping is performed.
 
+use serde::{Deserialize, Serialize};
+
 /// L1 tolerance-band parameters. Defaults mirror CDL Listing 12.1.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tolerances {
     /// Absolute tolerance on the x/time axis.
     pub atolx: f64,
