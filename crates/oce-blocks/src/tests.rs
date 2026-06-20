@@ -9,8 +9,8 @@ use oce_model::{ParamTable, Value};
 use super::{
     Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
     Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold, Limiter, Line,
-    Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pre, SampleTrigger, Subtract,
-    Switch, Time, UnitDelay, lookup, read_int,
+    Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, Pre,
+    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]
@@ -188,6 +188,13 @@ fn feedthrough_classification_matches_spec() {
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
+    assert!(Pid::default().feeds_through(0, 0) && Pid::default().feeds_through(1, 0));
+    assert!(
+        PidWithReset::default().feeds_through(0, 0)
+            && PidWithReset::default().feeds_through(1, 0)
+            && !PidWithReset::default().feeds_through(2, 0)
+            && !PidWithReset::default().feeds_through(3, 0)
+    );
     assert_eq!(Add.kind(), BlockKind::Algebraic);
 }
 
@@ -343,6 +350,8 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
         "CDL.Reals.IntegratorWithReset",
+        "CDL.Reals.PID",
+        "CDL.Reals.PIDWithReset",
         "CDL.Logical.Sources.Constant",
         "CDL.Logical.And",
         "CDL.Logical.Or",
@@ -434,6 +443,31 @@ fn registry_make_resolves_parameters() {
         vec![true],
         "pre_y_start=true must seed the initial hold state"
     );
+
+    let pid = (lookup("CDL.Reals.PID").unwrap().make)(&ParamTable {
+        values: vec![
+            (
+                Arc::from("controllerType"),
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PID",
+                )),
+            ),
+            (Arc::from("xi_start"), Value::Real(2.0)),
+        ],
+    });
+    assert_eq!(pid.kind(), BlockKind::Stateful);
+    assert_eq!(pid.state_len(), 3);
+
+    let p_reset = (lookup("CDL.Reals.PIDWithReset").unwrap().make)(&ParamTable {
+        values: vec![(
+            Arc::from("controllerType"),
+            Value::String(Arc::from(
+                "Buildings.Controls.OBC.CDL.Types.SimpleController.P",
+            )),
+        )],
+    });
+    assert_eq!(p_reset.kind(), BlockKind::Algebraic);
+    assert_eq!(p_reset.state_len(), 0);
 }
 
 #[test]

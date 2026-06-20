@@ -127,9 +127,10 @@ fn class_iri_without_hash_fragment_is_class_not_found_not_panic() {
 #[test]
 fn non_subset_class_is_class_not_found() {
     let mut doc = base();
-    // CDL.Reals.PID strips cleanly but is NOT registered → ClassNotFound (exit #2 non-subset).
+    // The class path strips cleanly but is intentionally not registered → ClassNotFound
+    // (exit #2 non-subset).
     node_mut(&mut doc, "M.c1")["@type"] =
-        json!("http://example.org#Buildings.Controls.OBC.CDL.Reals.PID");
+        json!("http://example.org#Buildings.Controls.OBC.CDL.Reals.NotRegisteredForTest");
     assert_error_code(&doc, DiagCode::ClassNotFound);
 }
 

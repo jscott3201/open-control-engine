@@ -116,12 +116,16 @@ fn load_cxf_rejects_malformed_input_without_panic() {
         Err(OcError::Cxf(_))
     ));
 
-    // A non-subset class (CDL.Reals.PID is not registered) → ClassNotFound, surfaced as Cxf.
-    let pid = MINIMAL_LOOP.replace(
+    // A non-subset class that strips cleanly but is intentionally not registered → ClassNotFound,
+    // surfaced as Cxf.
+    let unknown = MINIMAL_LOOP.replace(
         "Buildings.Controls.OBC.CDL.Reals.Add",
-        "Buildings.Controls.OBC.CDL.Reals.PID",
+        "Buildings.Controls.OBC.CDL.Reals.NotRegisteredForTest",
     );
-    assert!(matches!(eng.load_cxf(pid.as_bytes()), Err(OcError::Cxf(_))));
+    assert!(matches!(
+        eng.load_cxf(unknown.as_bytes()),
+        Err(OcError::Cxf(_))
+    ));
 
     // Empty @graph → MalformedDocument, surfaced as Cxf.
     assert!(matches!(

@@ -20,6 +20,7 @@ use crate::{
 
 mod feedthrough_stateful;
 mod integrator_loop_cut;
+mod pid_feedthrough;
 
 // ---- test fixtures --------------------------------------------------------------------------
 
