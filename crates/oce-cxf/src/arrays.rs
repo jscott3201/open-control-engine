@@ -1,4 +1,4 @@
-//! Array #5 normalization machinery (M1-PR-9; doc 04 §3.6.1) — the resolver-owned expansion of a
+//! Array-parameter normalization machinery (doc 04 §3.6.1) — the resolver-owned expansion of a
 //! **preserved** array parameter (`isArray=true`) into per-element scalar entries keyed by the
 //! 1-based row-major underscore name (`k[2]` → `k_1`,`k_2`; `B[2,2]` → `B_1_1`,`B_1_2`,`B_2_1`,
 //! `B_2_2`, last index fastest). Split out of `resolve.rs` to keep that file under the 700-LOC cap;
@@ -17,7 +17,7 @@ use crate::resolve::local_name;
 
 /// Strip a trailing array-decoration `[...]` from a local name: `k[2]` → `k`, `k` → `k`. Total —
 /// used so the preserved encoding's decorated base (`k[2]`) yields the same `k` base the flattened
-/// encoding's element `@id`s (`…k_1`) reduce to via [`local_name`] (M1-PR-9, doc 04 §3.6.1).
+/// encoding's element `@id`s (`…k_1`) reduce to via [`local_name`] (doc 04 §3.6.1).
 fn strip_array_label(name: &str) -> &str {
     match name.split_once('[') {
         Some((base, _)) => base,
@@ -30,7 +30,7 @@ fn strip_array_label(name: &str) -> &str {
 /// `scope` to an `Integer` (so `"(nin)"` resolves when `nin` is a ground *earlier* parameter — the
 /// same forward-reference limitation Step 7 already has for scalar `Expr` bindings). Returns the
 /// dimension sizes in declared order, or a human message for a `MalformedDocument`. Total; never
-/// panics (no `unwrap`/index on input text — the C1 type-domain discipline).
+/// panics (no `unwrap`/index on input text — the type-domain discipline).
 fn parse_size_dims(
     size: &str,
     n_dims: Option<i64>,
@@ -81,13 +81,13 @@ fn parse_size_dims(
     Ok(dims)
 }
 
-/// Maximum number of elements one array parameter may expand to in M1 — a DoS / OOM-abort guard.
+/// Maximum number of elements one array parameter may expand to — a DoS / OOM-abort guard.
 /// The element count is purely input-derived from untrusted CXF; without a ceiling a single
 /// `sizeOfDimensions "(2000000000)"` (or a symbolic dimension resolving to a huge earlier param)
 /// would drive a multi-gigabyte `Vec::with_capacity` that aborts the (embeddable, safety-critical)
-/// process *uncatchably*, defeating the panic-free typed-`OcError` contract (M1 exit #6). `1 << 20`
-/// is far beyond any realistic equipment-scale parameter array; revisit in M2 if a legitimate model
-/// ever approaches it (doc 04 §3.6.1).
+/// process *uncatchably*, defeating the panic-free typed-`OcError` contract. `1 << 20` is far
+/// beyond any realistic equipment-scale parameter array; revisit the cap if a legitimate model ever
+/// approaches it (doc 04 §3.6.1).
 const MAX_ARRAY_ELEMENTS: usize = 1 << 20;
 
 /// Enumerate the 1-based row-major element names of an array `base` with the given per-dimension
@@ -131,7 +131,7 @@ fn array_element_names(base: &str, dims: &[usize]) -> Result<Vec<String>, String
 }
 
 /// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
-/// owning instance's `table`/`scope_entries`, in 1-based row-major order (doc 04 §3.6.1, M1-PR-9).
+/// owning instance's `table`/`scope_entries`, in 1-based row-major order (doc 04 §3.6.1).
 /// The flattened encoding (separate `k_1`/`k_2` scalar nodes) needs no expansion — it is the
 /// convergence target — so both encodings yield the identical ordered `ParamTable`.
 ///
@@ -141,7 +141,7 @@ fn array_element_names(base: &str, dims: &[usize]) -> Result<Vec<String>, String
 /// *empty* (size-0) array — or any other length — is `GroundingFailed`; broadcasting one value into
 /// a zero-element array would otherwise silently drop it (even a malformed value), accepting broken
 /// input as valid. An array *expression* (`fill(...)`) arrives as [`CxfValue::Expr`] (not a `List`)
-/// and is rejected `GroundingFailed` — array `oce-expr` is M2.
+/// and is rejected `GroundingFailed` until array expressions are implemented.
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn expand_array_param(
@@ -182,7 +182,7 @@ pub(crate) fn expand_array_param(
             return;
         }
     };
-    // Preserved per-element values are a JSON list; an array EXPRESSION (fill/comprehension) is M2.
+    // Preserved per-element values are a JSON list; array expressions are deferred.
     let CxfValue::List(elems) = cxf_val else {
         diags.push(
             Diagnostic::error(
@@ -213,7 +213,8 @@ pub(crate) fn expand_array_param(
     }
     // Sibling local-names (every OTHER param node on this instance) for the minted-name collision
     // check. Lookup-only set — never iterated into a model id/vector order (determinism contract).
-    // M1 scope: flat single-level instances (no hasInstance nesting); revisit name scoping in M2.
+    // Current scope: flat single-level instances (no hasInstance nesting); revisit name scoping when
+    // nested instances are lowered here.
     let siblings: HashSet<&str> = param_iris
         .iter()
         .filter(|&&p| p != piri)

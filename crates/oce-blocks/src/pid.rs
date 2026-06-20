@@ -23,8 +23,8 @@
 //! `PIDWithReset` applies reset during `update_state`: on a rising trigger, the integrator state is
 //! back-solved to `y_reset_in - (yP + yD)`, so the reset target is visible at the next emit when the
 //! current P/D path is unchanged; with derivative enabled, the next emit also reflects the updated
-//! derivative filter state. This matches the arena loop-cut timing used by A5; `trigger` and
-//! `y_reset_in` do not feed through.
+//! derivative filter state. This matches the arena loop-cut timing used by reset/integrator blocks;
+//! `trigger` and `y_reset_in` do not feed through.
 //!
 //! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
 //! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.

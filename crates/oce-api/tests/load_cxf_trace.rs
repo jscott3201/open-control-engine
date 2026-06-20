@@ -1,7 +1,7 @@
-//! M1 **exit #1** end-to-end golden: load the canonical `minimal_loop.jsonld` through the full
-//! `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD → schedule) and tick it,
-//! asserting the deterministic converging trace **bit-exactly** (`TESTING.md` pillars 2 + 4), plus
-//! that malformed CXF is a typed error and never a panic (pillar 1).
+//! End-to-end golden for the canonical `minimal_loop.jsonld`: load it through the full
+//! `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD → schedule), tick it, and
+//! assert the deterministic converging trace **bit-exactly** (`TESTING.md` pillars 2 + 4), plus that
+//! malformed CXF is a typed error and never a panic (pillar 1).
 //!
 //! The model is a geometric feedback loop cut by a `UnitDelay`:
 //! `con(2.0) → add → del(UnitDelay) → gain(×0.5) → add` (the k<1 scaler makes it converge).
@@ -12,12 +12,12 @@
 // surface) — an external binder names `oce_api::Value`/`ConnectorId`, never a direct oce-model dep.
 use oce_api::{ConnectorId, Engine, OcError, Value};
 
-// One source of truth for the canonical fixture (PR-4 authored it; PR-6/PR-11 exercise it).
+// One source of truth for the canonical fixture shared across resolver and facade tests.
 const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 
 /// Resolve the `add.y` (feedback sum) output connector id **structurally** from the model — the
 /// output of the `CDL.Reals.Add` block — rather than hardcoding `ConnectorId(3)`. This stays
-/// correct if PR-9's array normalization renumbers connectors (the resolver is deterministic, so
+/// correct if array normalization renumbers connectors (the resolver is deterministic, so
 /// the id matches the one `load_cxf` builds).
 fn add_y_id() -> ConnectorId {
     let (model, _report) =
@@ -88,8 +88,7 @@ fn minimal_loop_converges_to_four_bit_exact() {
 
 #[test]
 fn load_cxf_trace_is_deterministic() {
-    // Two independent loads + identical tick sequences → bit-identical add.y traces (exit #4 seed;
-    // PR-11 owns the full byte-compare-of-trace-and-schedule harness).
+    // Two independent loads + identical tick sequences → bit-identical add.y traces.
     let id = add_y_id();
     let run = || {
         let mut eng = Engine::in_memory();
@@ -134,7 +133,7 @@ fn load_cxf_rejects_malformed_input_without_panic() {
     ));
 
     // A block whose declared interface arity disagrees with its class signature must be rejected at
-    // LOAD (the PR-6 review's CRITICAL find) — without the arity check this loads then panics on
+    // LOAD — without the arity check this loads then panics on
     // tick. Strip the Add block's output declaration (the resolver's `containsBlock`/`hasOutput`
     // structure is matched by substring on the unique add.y output reference line).
     let no_add_output = MINIMAL_LOOP.replace(

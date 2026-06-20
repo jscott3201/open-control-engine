@@ -62,9 +62,9 @@ impl FeedthroughDag {
 ///
 /// Both edge passes iterate in **deterministic order** — connections in their stored order, blocks
 /// in `BlockId` order, ports in declared connector order — so the adjacency lists are themselves
-/// order-stable, which the Kahn sort relies on (`01` §4.4). It is infallible at M0: the model is
-/// assumed flattened and validated (dense, in-range ids); structural validation of the model is an
-/// ingest/validate concern (`04` / `oce-validate`), not BUILD.
+/// order-stable, which the Kahn sort relies on (`01` §4.4). It assumes the model is flattened and
+/// validated (dense, in-range ids); structural validation of the model is an ingest/validate concern
+/// (`04` / `oce-validate`), not BUILD.
 #[must_use]
 pub fn build_feedthrough_dag(model: &Model, blocks: &[Box<dyn Block>]) -> FeedthroughDag {
     debug_assert_eq!(

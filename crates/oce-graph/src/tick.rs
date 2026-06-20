@@ -1,4 +1,4 @@
-//! TICK phase (`01` §7 state allocation + §9 the eval loop): the hot path. Allocation-free,
+//! TICK evaluation (`01` §7 state allocation + §9 the eval loop): the hot path. Allocation-free,
 //! IO-free, hashing-free, store-free, selene-free.
 //!
 //! **Two passes per tick (binding correction to the §9 sketch).** Pass 1 *emits*: every block

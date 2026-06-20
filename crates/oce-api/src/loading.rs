@@ -1,7 +1,8 @@
 //! Loading entry points beyond the primary `load_cxf` (which lives in `engine.rs`): the [`LoadReport`]
 //! returned by every `load_*` call, the [`TemplateRef`] handle, and the two **deferred** load paths
 //! (`load_from_semantic`, `load_modelica`). The deferred paths carry their **final frozen
-//! signatures** now (R-PUB-5) but return a typed [`OcError::Load`] in M1 — never a panic (exit #6).
+//! signatures** now (R-PUB-5) but return a typed [`OcError::Load`] until the corresponding ingest
+//! paths are wired — never a panic.
 
 use oce_store::{SemanticQuery, Store};
 
@@ -11,9 +12,9 @@ use crate::io::IoSummary;
 
 /// A reference to a compiled CDL template for the Ch.13 reverse [`Engine::load_from_semantic`] flow
 /// (`08` §3). doc-08 names this type but `oce-store` has none — it is an `oce-api`-level loader
-/// concern. M1: an opaque, owned by-IRI handle carrying **no** store-backend type / `DomainKey` /
-/// `PointHandle` (R-API-8). `#[non_exhaustive]` so M2 can add fields (version pin, param overrides)
-/// additively.
+/// concern. It is an opaque, owned by-IRI handle carrying **no** store-backend type / `DomainKey` /
+/// `PointHandle` (R-API-8). `#[non_exhaustive]` so version pins, param overrides, and other template
+/// metadata can be added without breaking callers.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct TemplateRef {
@@ -42,8 +43,9 @@ impl TemplateRef {
 #[non_exhaustive]
 pub struct LoadReport {
     /// Stable identity of the loaded model (re-exported `oce_store::DomainKey`; never a backend
-    /// type, R-API-8). **M1: the empty `Default` key** — `ModelGraph` carries no model-level IRI
-    /// yet; M2 derives it from the top-composite `@id`.
+    /// type, R-API-8). Currently the empty `Default` key because `ModelGraph` carries no
+    /// model-level IRI yet; the ingest layer will derive it from the top-composite `@id` once that
+    /// field is carried through.
     pub model_id: oce_store::DomainKey,
     /// `should`-level diagnostics from ingest + validation (the shared `oce-diag` vocabulary, AD-4).
     pub warnings: Vec<oce_diag::Diagnostic>,
@@ -57,18 +59,18 @@ pub struct LoadReport {
 
 impl<S: Store> Engine<S> {
     /// Ch.13 reverse flow (`08` §3): instantiate a compiled CDL template against equipment whose
-    /// point signature matches a `SemanticStore` query. **Deferred to M2** — the
-    /// `SemanticStore::match_template` binding is not yet wired; the frozen signature is surfaced
-    /// now for stability.
+    /// point signature matches a `SemanticStore` query. Deferred until the
+    /// `SemanticStore::match_template` binding is wired; the frozen signature is surfaced now for
+    /// stability.
     ///
     /// # Errors
-    /// Always [`OcError::Load`] in M1 (deferred). Never panics (R-ERR-1).
+    /// Always [`OcError::Load`] while deferred. Never panics (R-ERR-1).
     pub fn load_from_semantic(
         &mut self,
         template: &TemplateRef,
         query: &SemanticQuery,
     ) -> Result<LoadReport, OcError> {
-        let _ = query; // the frozen signature is exercised; the binding is M2
+        let _ = query; // the frozen signature is exercised; the semantic binding is deferred.
         Err(OcError::Load {
             detail: format!(
                 "load_from_semantic (Ch.13 reverse flow, 08 §3) is deferred to M2: template \
@@ -79,11 +81,10 @@ impl<S: Store> Engine<S> {
     }
 
     /// Deferred `.mo` path (FRAME §7 non-goal): in v1 this would delegate to upstream modelica-json
-    /// to produce CXF, then call [`Engine::load_cxf`]. **Deferred to M2** — surfaced now so the
-    /// signature is stable.
+    /// to produce CXF, then call [`Engine::load_cxf`]. Surfaced now so the signature is stable.
     ///
     /// # Errors
-    /// Always [`OcError::Load`] in M1 (deferred). `Path::display` allocates only — no filesystem
+    /// Always [`OcError::Load`] while deferred. `Path::display` allocates only — no filesystem
     /// access — so this never panics (R-ERR-1).
     pub fn load_modelica(&mut self, path: &std::path::Path) -> Result<LoadReport, OcError> {
         Err(OcError::Load {

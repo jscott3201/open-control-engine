@@ -2,7 +2,7 @@
 //! `oce-graph` — the deterministic dataflow scheduler/executor for the Open Control Engine
 //! (`01-execution-model.md`).
 //!
-//! Two strict phases. **BUILD** (once per load, off the tick): build the direct-feedthrough
+//! Two strict passes. **BUILD** (once per load, off the tick): build the direct-feedthrough
 //! DAG over connector vertices, hard-reject algebraic loops (CDL §7.16), run an own Kahn
 //! topological sort with declaration-order tie-break (FRAME D6), and allocate `[S]` state
 //! seeded from parameters. **TICK** (the hot path): evaluate the frozen [`Schedule`] over flat
@@ -14,9 +14,8 @@
 //! [`CompiledSchedule`]); BUILD entry point is [`compile`]; TICK entry point is [`eval_tick`]
 //! (alias [`run_tick`]) operating on an [`EvalContext`].
 //!
-//! Status: **M1 as-built.** BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state
-//! allocation + the two-pass eval loop) are implemented; the catalog and CXF ingest grow across
-//! M1–M2.
+//! BUILD (DAG + dual Kahn sorts + loop rejection) and TICK (state allocation + the two-pass eval
+//! loop) are implemented; catalog breadth and ingest features grow around this scheduler contract.
 
 use std::fmt;
 
@@ -81,9 +80,9 @@ pub struct RunState {
 }
 
 /// A human-readable dotted instance/connector path used in BUILD diagnostics (e.g. the members of
-/// a [`BuildError::AlgebraicLoop`]). At M0 it is rendered from the block class IRI and the dense
-/// block/connector ids (`<class-iri>#b<block>.<dir>#c<conn>`); CXF ingest (M1) will enrich it with
-/// the source instance names.
+/// a [`BuildError::AlgebraicLoop`]). For hand-built unnamed graphs it is rendered from the block
+/// class IRI and the dense block/connector ids (`<class-iri>#b<block>.<dir>#c<conn>`); CXF-resolved
+/// graphs carry source instance names when available.
 #[derive(Clone, PartialEq, Eq)]
 pub struct ConnectorPath(pub String);
 
@@ -100,7 +99,7 @@ impl fmt::Debug for ConnectorPath {
     }
 }
 
-/// A BUILD-phase error (typed; never a panic).
+/// A BUILD error (typed; never a panic).
 #[derive(Clone, Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum BuildError {

@@ -1,4 +1,4 @@
-//! M2-PR-A5 tests for dynamic `CDL.Reals` blocks. Expected integrator traces are hand-derived
+//! Tests for dynamic `CDL.Reals` integrator blocks. Expected integrator traces are hand-derived
 //! from the documented forward-Euler recurrence, not recorded from the implementation.
 
 use oce_model::{ParamTable, Value};

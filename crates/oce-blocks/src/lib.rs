@@ -12,12 +12,10 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A4 timing/latch blocks).** The trait surface, A0 per-tick context
-//! seam, starter blocks, A1/A2 Reals breadth, A3 Logical/Conversions/Integers algebraic blocks,
-//! A5 `IntegratorWithReset` loop-cut template, A6 limited PID controller core, and A6b scalar
-//! dynamic Reals are implemented on the arena trait; A4 adds logical timing/latch blocks and
-//! integer edge/count blocks to the static class-path registry. The full ~130-block catalog is
-//! phased across M1–M2 per `03` §7.
+//! The arena trait, per-tick context seam, scalar Reals, Logical/Conversions/Integers algebraic
+//! blocks, Reals dynamic blocks, PID controllers, logical timing/latch blocks, and integer
+//! edge/count blocks are implemented and registered by canonical CDL class path. The remaining CDL
+//! catalog breadth is added family-by-family behind the same trait and registry contracts.
 
 use oce_model::{ParamTable, Value};
 
@@ -30,11 +28,11 @@ mod logical;
 mod logical_latch;
 mod logical_timing;
 mod pid;
-mod reals;
-mod reals_dynamic;
-mod reals_dynamic2;
+mod reals_arithmetic;
+mod reals_comparators;
+mod reals_filters;
+mod reals_integrator;
 mod registry;
-mod registry_a4;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
@@ -51,12 +49,13 @@ pub use logical::{
 pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use pid::{Pid, PidWithReset};
-pub use reals::{
-    Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
-    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
+pub use reals_arithmetic::{
+    Abs, Add, AddParameter, Constant, Divide, Limiter, Line, Max, Min, Multiply,
+    MultiplyByParameter, Subtract, Switch,
 };
-pub use reals_dynamic::IntegratorWithReset;
-pub use reals_dynamic2::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
+pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
+pub use reals_integrator::IntegratorWithReset;
 pub use registry::lookup;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -152,7 +151,7 @@ impl Diagnostics for NoopDiagnostics {
 /// parameters — plain owned `f64`/`bool` data, no `Rc`/`RefCell`/raw pointers (per-instance mutable
 /// `[S]` state lives in the engine's `RunState`, never here) — so `Box<dyn Block>` is `Send + Sync`
 /// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
-/// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile (M1-PR-12).
+/// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile.
 pub trait Block: Send + Sync {
     /// Class-level interface descriptor. Drives buffer sizing and the DAG.
     fn signature(&self) -> &'static BlockSignature;
@@ -257,19 +256,34 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 mod tests;
 
 #[cfg(test)]
-mod reals_tests;
+mod reals_arithmetic_tests;
 
 #[cfg(test)]
-mod a3_tests;
+mod reals_comparators_tests;
 
 #[cfg(test)]
-mod a4_tests;
+mod logical_tests;
+
+#[cfg(test)]
+mod conversions_tests;
+
+#[cfg(test)]
+mod integers_tests;
+
+#[cfg(test)]
+mod logical_latch_tests;
+
+#[cfg(test)]
+mod logical_timing_tests;
+
+#[cfg(test)]
+mod integers_edge_tests;
 
 #[cfg(test)]
 mod pid_tests;
 
 #[cfg(test)]
-mod reals_dynamic_tests;
+mod reals_integrator_tests;
 
 #[cfg(test)]
-mod reals_dynamic2_tests;
+mod reals_filters_tests;

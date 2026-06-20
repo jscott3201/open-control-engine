@@ -1,9 +1,9 @@
 #![forbid(unsafe_code)]
-// Bit-exact is the law here (exit #4): §7.10 numeric-bound agreement compares `f64` by `to_bits`,
+// Bit-exact is the law here: §7.10 numeric-bound agreement compares `f64` by `to_bits`,
 // never by `==`/ε. `clippy::float_cmp` is pedantic-tier (not in the workspace `-D warnings` set), so
 // without this deny a regression from `to_bits` to `==` would silently flip `-0.0`/`+0.0` to
 // "agree" and `NaN`/`NaN` to "conflict" — and pass every test + the default clippy gate. Deny it so
-// any raw `f64` comparison in this gate is a build error, not just a missed test (M1-PR-8 review).
+// any raw `f64` comparison in this gate is a build error, not just a missed test.
 #![deny(clippy::float_cmp)]
 //! `oce-validate` — the authoritative **deep load-conformance gate** for the Open Control Engine.
 //!
@@ -43,10 +43,8 @@
 //! - [`unify_and_validate`] — the `oce-api` entry point: unify (so propagation lands before the
 //!   structural checks read the graph), then validate, concatenating the warning streams.
 //!
-//! Status: **M1-PR-8.** The deep gate is implemented against hand-built and CXF-resolved graphs.
-//! (The resolver does not yet *extract* unit/quantity attributes from the CXF source — it emits
-//! defaults — so via `load_cxf` the unification pass is currently a no-op; it is exercised directly
-//! on hand-built graphs and lands end-to-end when resolver attribute extraction is added.)
+//! The deep gate is implemented against hand-built and CXF-resolved graphs. Attribute extraction
+//! from CXF feeds this gate, and hand-built tests exercise the unification rules directly.
 
 use oce_diag::Diagnostic;
 use oce_model::ModelGraph;

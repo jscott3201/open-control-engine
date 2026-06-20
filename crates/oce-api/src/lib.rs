@@ -19,23 +19,22 @@
 //! # Module layout
 //!
 //! The public surface is split across internal modules and re-exported **flat** here, so every path
-//! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline, PR-12): `engine` (the
+//! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
 //! [`Engine`] handle + load/tick core), `error` ([`OcError`]), `loading` ([`LoadReport`],
 //! [`TemplateRef`], deferred loaders), `params` (the live parameter table), `sim` (execution modes
 //! + [`Outputs`]), `io` (the typed IO inventory).
 //!
-//! Status: **M1.** The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the
-//! end-to-end CXF ingest pipeline (resolve → flatten → validate → BUILD). M1-PR-10 fills the frozen
-//! public surface (`08` §11.1 R-PUB-5/6): `simulate` / `step_realtime`, `set_input` / `get_output`,
-//! the live parameter table (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed
-//! IO inventory (`io` / `io_summary` / `point_list`) — with final signatures and minimal,
-//! non-panicking bodies (`load_from_semantic` / `load_modelica` / device-filtered `point_list` are
-//! deferred to M2 behind typed errors).
+//! The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the end-to-end CXF ingest
+//! pipeline (resolve → flatten → validate → BUILD). The frozen public surface (`08` §11.1 R-PUB-5/6)
+//! includes `simulate` / `step_realtime`, `set_input` / `get_output`, the live parameter table
+//! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
+//! `io_summary` / `point_list`) with final signatures and non-panicking bodies. Semantic/modelica
+//! loaders and device-filtered point lists remain deferred behind typed errors.
 
 mod engine;
 mod error;
-/// Compile-time PyO3 binding-shape guards (R-API-PY-1..8, exit #7). A non-test module so a frozen
-/// surface drift fails the per-PR `cargo build`, not only the release-gate test run.
+/// Compile-time PyO3 binding-shape guards (R-API-PY-1..8). A non-test module so a frozen surface
+/// drift fails the normal `cargo build`, not only the release-gate test run.
 mod guards;
 mod io;
 mod loading;
@@ -55,8 +54,8 @@ pub use sim::{
     StepReport,
 };
 
-/// Re-export of the shared diagnostic type (AD-4): the element type of [`LoadReport::warnings`], so a
-/// binder owns it as `oce_api::Diagnostic` (R-PUB-6).
+/// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
+/// binder owns it as `oce_api::Diagnostic`.
 pub use oce_diag::Diagnostic;
 /// Re-export of the `oce-model` value/IO types the frozen surface is typed in (R-PUB-1: `oce-api`
 /// is the single public surface). A binder names `oce_api::Value` / `oce_api::ConnectorId` /

@@ -4,8 +4,8 @@
 //! Both `oce-cxf` (the CXF Layer-A→B resolver, which raises resolve-time structural diagnostics)
 //! and `oce-validate` (the authoritative deep load-conformance gate) report problems as
 //! [`Diagnostic`]s drawn from one [`Severity`]/[`DiagCode`] vocabulary. Sharing the vocabulary is
-//! deliberate (M1-PR-2, `_spec/11-m1-cxf-plan.md` AD-4): `oce-api`'s `LoadReport.warnings` and the
-//! resolver's report are then the **same** shape, so a host never juggles two diagnostic
+//! deliberate: `oce-api`'s `LoadReport.warnings` and the resolver's report are then the **same**
+//! shape, so a host never juggles two diagnostic
 //! dialects, and CXF resolve diagnostics flow into the validator's output without translation.
 //!
 //! This is a **Group A** leaf crate with **zero dependencies** (std only): a [`Diagnostic`] is
@@ -61,8 +61,8 @@ impl fmt::Display for Severity {
 /// A stable, machine-checkable diagnostic code shared across the ingest path. Each maps to a
 /// stable kebab-case string ([`DiagCode::as_str`]) for tests, logs, and host display.
 ///
-/// `#[non_exhaustive]`: more codes are added as later ingest passes land (M1-PR-4/5/8); matching
-/// from outside this crate must include a wildcard arm.
+/// `#[non_exhaustive]`: more codes are added as later ingest passes land; matching from outside
+/// this crate must include a wildcard arm.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 #[non_exhaustive]
 pub enum DiagCode {

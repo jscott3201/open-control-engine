@@ -1,4 +1,4 @@
-//! Public-API surface snapshot for `oce-store` — defense-in-depth for the exit-#7
+//! Public-API surface snapshot for `oce-store` — defense-in-depth for the
 //! *surface-enumeration* layer (`08` R-PUB-3).
 //!
 //! `oce-api` re-exports this port crate as `pub use oce_store;`, and the facade's own surface
@@ -11,9 +11,9 @@
 //! env var, which only `release-gate.yml` sets (after installing the pinned nightly). When the var
 //! is unset — the fast per-PR `ci.yml` gate and local `cargo test` — the test **skips**. When armed,
 //! it **must run to completion**: every tooling step is fail-hard, so a broken toolchain turns the
-//! gate RED, never a silent green (B3).
+//! gate RED, never a silent green.
 //!
-//! COMPAT TRIPLE (M3): `public-api` / `rustdoc-json` / nightly are pinned together in `Cargo.toml`.
+//! COMPAT TRIPLE: `public-api` / `rustdoc-json` / nightly are pinned together in `Cargo.toml`.
 //! A rustdoc-JSON `format_version` skew is caught because the `rustdoc-types` `Crate` shape changes
 //! between versions, so a mismatched JSON fails to deserialize (a serde parse error) — the exact
 //! pins, not a version assertion, keep the triple aligned. Re-bless after an *intentional* surface
@@ -34,7 +34,7 @@ const ARM_ENV: &str = "OCE_PUBLIC_API_NIGHTLY";
 /// Step-scoped sentinel set ONLY by the dedicated release-gate surface-gate step. When it is set the
 /// gate MUST run: an unset/empty `ARM_ENV` becomes a hard panic instead of a silent skip. This turns
 /// "the release gate ran but the surface check was silently disarmed" — e.g. a future edit drops
-/// `ARM_ENV` from that step — from a B3 false-green into a RED. It is deliberately NOT set on the
+/// `ARM_ENV` from that step — from a false-green into a RED. It is deliberately NOT set on the
 /// workspace-wide nextest step, so that unarmed double-run of this same test still skips normally.
 const REQUIRE_ENV: &str = "OCE_REQUIRE_SURFACE_CHECK";
 
@@ -50,7 +50,7 @@ fn public_api_surface_matches_blessed_baseline() {
         None if required => panic!(
             "[public_api] {REQUIRE_ENV} is set but {ARM_ENV} is unset/empty — the release-gate \
              surface-gate step is DISARMED. The public API would go UNCHECKED while the gate stays \
-             green (B3 false-green). Restore `{ARM_ENV}=nightly-YYYY-MM-DD` on that step."
+             green. Restore `{ARM_ENV}=nightly-YYYY-MM-DD` on that step."
         ),
         None => {
             eprintln!(
@@ -62,7 +62,7 @@ fn public_api_surface_matches_blessed_baseline() {
         }
     };
 
-    // ARMED. Every step is fail-hard: a tooling break must turn the gate RED, never green (B3).
+    // ARMED. Every step is fail-hard: a tooling break must turn the gate RED, never green.
     //
     // `.all_features(true)` snapshots the UNION of all cargo features, not just `default` (`mem`).
     // Today `mem = []` adds no public items, so the baseline is identical either way — but it means a

@@ -10,11 +10,11 @@
 //! O(1) reads), not its cost, so swapping `MemStore` for any other `Store` changes no engine code.
 //!
 //!
-//! Status: **M1 as-built.** The model round-trip ([`oce_store::ModelStore`]), runtime point path
+//! The model round-trip ([`oce_store::ModelStore`]), runtime point path
 //! ([`oce_store::PointStore`]), and no-op durability hooks ([`oce_store::Durable`]) are implemented
-//! with non-panicking bodies (`_spec/08` §11.2, line 800). Semantic graph operations are deliberate
-//! typed deferrals until M3: they return [`oce_store::StoreError::Unsupported`] or
-//! [`oce_store::StoreError::RetrievalUnsupported`], never silent success.
+//! with non-panicking bodies. Semantic graph operations are deliberate typed deferrals: they return
+//! [`oce_store::StoreError::Unsupported`] or [`oce_store::StoreError::RetrievalUnsupported`], never
+//! silent success.
 
 use std::collections::HashMap;
 use std::sync::RwLock;

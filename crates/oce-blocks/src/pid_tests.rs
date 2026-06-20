@@ -1,4 +1,4 @@
-//! M2-PR-A6 tests for limited `CDL.Reals.PID` blocks. Expected traces are hand-derived from
+//! Tests for limited `CDL.Reals.PID` blocks. Expected traces are hand-derived from
 //! the documented PID recurrence and Buildings limited-PID wiring, not recorded from the
 //! implementation.
 

@@ -30,7 +30,7 @@ pub struct Outputs {
 impl Outputs {
     /// Build the snapshot from a flattened model + its allocated state. `entries` and `paths` are
     /// derived from the **same** `connectors.filter(Out)` walk, so they are equal-length and aligned
-    /// by construction (the `to_map` keying contract; critic M1/M2).
+    /// by construction (the `to_map` keying contract).
     pub(crate) fn build(model: &ModelGraph, state: &RunState) -> Outputs {
         let entries: Vec<(ConnectorId, Value)> = model
             .connectors
@@ -109,8 +109,8 @@ pub struct SimSpec {
 }
 
 /// Source of staged inputs for each simulation step (`08` §5.1). `None`/`Constant`/`Closure` are
-/// live in M1; `Csv` is frozen-as-variant but deferred (a typed error). `#[non_exhaustive]` so a
-/// future `CombiTimeTable` variant is additive. NOT `Clone`/`Debug`-derivable (the `Closure` variant
+/// live; `Csv` is frozen-as-variant but deferred behind a typed error. `#[non_exhaustive]` so a
+/// future table-backed variant is additive. NOT `Clone`/`Debug`-derivable (the `Closure` variant
 /// holds a boxed `Fn`); a manual [`std::fmt::Debug`] prints the variant name only.
 #[non_exhaustive]
 pub enum InputSource {
@@ -121,7 +121,7 @@ pub enum InputSource {
     /// Host closure mapping model time → staged `(point, value)` pairs. `Fn` (not `FnMut`) so it is
     /// callable through the frozen `&SimSpec` borrow; `Send + Sync` so `SimSpec` stays thread-safe.
     Closure(Box<dyn Fn(f64) -> Vec<(String, Value)> + Send + Sync>),
-    /// DEFERRED (M2): a CombiTimeTable-style CSV of `t, col0, col1, …` bound to named inputs.
+    /// Deferred: a CombiTimeTable-style CSV of `t, col0, col1, …` bound to named inputs.
     /// Frozen as a variant now; `simulate` returns a typed [`OcError::Load`] for it.
     Csv {
         /// Path to the CSV file.
@@ -248,16 +248,16 @@ pub struct SimMetrics {
 #[derive(Clone, Debug, Default)]
 pub struct StepReport {
     /// `Assert`-block trips this step (CDL assertion sinks; 07 verification funnel). Data, never a
-    /// panic. **Empty in M1** (the Assert sink lands in M2).
+    /// panic.
     pub asserts: Vec<AssertEvent>,
-    /// Points committed through the store this step (`06` `write_points`). `0` with `MemStore` in M1.
+    /// Points committed through the store this step (`06` `write_points`). `0` with `MemStore`.
     pub written: usize,
     /// This step's single-tick latency (nanoseconds; monotonic `Instant`, saturating).
     pub tick_nanos: u64,
 }
 
 /// A single tripped CDL `Assert` block, surfaced for the verification report (`08` §5.2, R-RT-4).
-/// Owned `String` fields only (R-API-8). Frozen now; M1 always emits an empty `asserts` vec.
+/// Owned `String` fields only (R-API-8).
 #[derive(Clone, Debug)]
 pub struct AssertEvent {
     /// Dotted instance path of the `Assert` block that tripped.
@@ -368,7 +368,7 @@ impl<S: Store> Engine<S> {
 
     /// One real-time / batch verification step (`08` §5.2): advance one tick at the host's `t_now`,
     /// then batch-write the resulting point state through the store (off the read). Returns any
-    /// tripped `Assert` diagnostics (empty in M1).
+    /// tripped `Assert` diagnostics.
     ///
     /// # Errors
     /// Propagates [`Engine::tick`]'s time guards ([`OcError::NonFiniteTime`] /
@@ -378,8 +378,9 @@ impl<S: Store> Engine<S> {
         let collector = AssertCollector::default();
         self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-        // M1 stages no store-backed point projection yet, so the batched write is empty (0 written);
-        // the seam is exercised so the contract is real. The annotation fixes `&[]` inference.
+        // The facade does not stage store-backed point projection yet, so the batched write is empty
+        // (0 written); the seam is exercised so the contract is real. The annotation fixes `&[]`
+        // inference.
         let written = self.store.write_points(&[] as &[oce_store::PointWrite])?;
         Ok(StepReport {
             asserts: collector.events.into_inner(),

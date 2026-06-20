@@ -1,17 +1,18 @@
-//! The Layer-A → flat-`ModelGraph` resolver (doc 04 §7.1; `_spec/11-m1-cxf-plan.md` AD-1/AD-2).
+//! The Layer-A → flat-`ModelGraph` resolver (doc 04 §7.1).
 //!
 //! AD-1: there is **no** hierarchical Layer-B — composites are flattened away here and the resolver
 //! emits the flat `oce_model::ModelGraph` (D1's executable truth) directly. Only the elementary
 //! instances named by the top composite's `containsBlock` become [`oce_model::BlockInstance`]s; the
 //! composite itself contributes only its boundary ports (`hasInput`/`hasOutput`) and child list.
 //!
-//! ## Determinism (load-bearing for M1 exit #4)
+//! ## Determinism
 //! Every assignment of a `BlockId`, `ConnectorId`, vector position, or sort key is driven by an
 //! **array** order — `@graph` array position, `containsBlock` order, an instance's `hasInput`/
 //! `hasOutput`/`hasParameter` array order, or `isConnectedTo` array order. The `by_id` /
 //! `block_of_iri` / `conn_of_iri` maps are **lookup-only**: their iteration order never feeds a
-//! model id, a vector position, or a diagnostic order. PR-11 re-imports twice and byte-compares the
-//! whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a defect.
+//! model id, a vector position, or a diagnostic order. The resolver's determinism tests re-import
+//! twice and byte-compare the whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a
+//! defect.
 //!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input
@@ -26,16 +27,22 @@ use std::sync::Arc;
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_expr::EvalResult;
 use oce_model::{
-    Attrs, BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, IntAttrs, ModelGraph,
-    ParamTable, RealAttrs, Value, ValueType,
+    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
+    ValueType,
 };
 
 use crate::arrays::expand_array_param;
-use crate::dto::{CxfDocument, CxfValue, Node};
+use crate::dto::{CxfDocument, Node};
 use crate::ground::{ParamScope, ground_value};
 use crate::{CxfError, bridge};
 
-/// The Ground-mode import mode. Only `Ground` exists in M1: `oce_model::Value` has no symbolic
+mod attrs;
+mod diags;
+
+use attrs::connector_attrs;
+use diags::{finalize_diags, subject_of};
+
+/// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
 /// the future `Symbolic`/round-trip mode (OQ-3) without a breaking change.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -47,13 +54,13 @@ pub enum ImportMode {
 }
 
 /// Options for [`import_cxf`](crate::import_cxf). `#[non_exhaustive]` + [`Default`] so a future
-/// `LibraryIndex` / `shacl` field is non-breaking. (A `LibraryIndex` is deferred: every M1 fixture
-/// declares its elementary interfaces inline, so the "library join" collapses to a registry
+/// `LibraryIndex` / `shacl` field is non-breaking. (A `LibraryIndex` is deferred: current fixtures
+/// declare their elementary interfaces inline, so the "library join" collapses to a registry
 /// existence check via the internal `bridge` module.)
 #[derive(Clone, Debug, Default)]
 #[non_exhaustive]
 pub struct ResolveOptions {
-    /// Import mode (Ground only in M1).
+    /// Import mode (Ground only today).
     pub mode: ImportMode,
     /// If `true`, any `Warning` also fails the load (doc 04 §9). Default `false`.
     pub deny_warnings: bool,
@@ -103,162 +110,6 @@ fn term_of(iri: &str) -> &str {
 pub(crate) fn local_name(iri: &str) -> &str {
     iri.rsplit('.').next().unwrap_or(iri)
 }
-
-/// Parse a connector node's declared §7.4.1 attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`)
-/// into the `Attrs` variant matching its [`ValueType`] (doc 02 §3.3). `Real` carries unit/quantity/
-/// displayUnit + numeric bounds; `Integer` carries only integer bounds; `Boolean`/`String`/`Enum`
-/// carry none (the type system forbids it). `nominal`/`unbounded` are not parsed (R13.4 excludes
-/// them from §7.10).
-///
-/// ## No silent failure (M1-PR-11)
-/// Every malformed declaration surfaces a typed diagnostic into `diags` rather than vanishing:
-/// - A **present** `S231:min`/`max` that fails to ground (or grounds to a non-number) is a
-///   `GroundingFailed`/`MalformedDocument` with the connector IRI as subject — it is **not**
-///   silently treated as unset, mirroring Step 7's parameter grounding. Bounds ground against an
-///   **empty** scope (they are constants in M1); a *symbolic* connector bound therefore reports
-///   grounding-failed (symbolic connector bounds are M2).
-/// - A unit/quantity/displayUnit/min/max declared on a **non-numeric** (`Boolean`/`String`/`Enum`)
-///   connector — which CDL §7.4.1.3–.5 forbid — is a `MalformedDocument`, not a silent drop.
-fn connector_attrs(node: &Node, vt: ValueType, diags: &mut Vec<Diagnostic>) -> Attrs {
-    let subject = node.id.as_str();
-    match vt {
-        ValueType::Real => Attrs::Real(RealAttrs {
-            quantity: term_attr(node.quantity.as_ref(), "quantity", subject, diags),
-            unit: term_attr(node.unit.as_ref(), "unit", subject, diags),
-            display_unit: term_attr(node.display_unit.as_ref(), "displayUnit", subject, diags),
-            min: real_connector_bound(node.min.as_ref(), "min", subject, diags),
-            max: real_connector_bound(node.max.as_ref(), "max", subject, diags),
-            nominal: None,
-            unbounded: None,
-        }),
-        ValueType::Integer => Attrs::Integer(IntAttrs {
-            min: int_connector_bound(node.min.as_ref(), "min", subject, diags),
-            max: int_connector_bound(node.max.as_ref(), "max", subject, diags),
-        }),
-        // Boolean / String / Enumeration carry no §7.4.1 attributes (CDL §7.4.1.3–.5). A declared
-        // attribute on such a connector is a malformed model — surface it, never silently drop it.
-        other => {
-            if node.unit.is_some()
-                || node.quantity.is_some()
-                || node.display_unit.is_some()
-                || node.min.is_some()
-                || node.max.is_some()
-            {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::MalformedDocument,
-                        format!(
-                            "§7.4.1 attribute (unit/quantity/displayUnit/min/max) declared on a \
-                             {other:?} connector, which permits none"
-                        ),
-                    )
-                    .with_subject(subject.to_owned()),
-                );
-            }
-            Attrs::default_for(other)
-        }
-    }
-}
-
-/// Extract a declared §7.4.1 term attribute (`unit`/`quantity`/`displayUnit`) as an `Arc<str>`. An
-/// **absent** attr is `None`; a **present** attr in a malformed JSON shape ([`crate::dto::TermAttr::Other`]
-/// — a number/array/bool or a partial object) has no lexical term, so it pushes a `MalformedDocument`
-/// with the connector IRI and returns `None` (never a silent drop — a malformed attr must not sink
-/// the whole document *nor* vanish, M1-PR-11). `which` is the predicate name for the message.
-fn term_attr(
-    t: Option<&crate::dto::TermAttr>,
-    which: &str,
-    subject: &str,
-    diags: &mut Vec<Diagnostic>,
-) -> Option<Arc<str>> {
-    match t?.as_term() {
-        Some(s) => Some(Arc::from(s)),
-        None => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!(
-                        "S231:{which} is not a string, typed literal, or IRI node — malformed term"
-                    ),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
-    }
-}
-
-/// Ground a declared `S231:min`/`max` on a **Real** connector. An **absent** bound is `None`; a
-/// **present** bound that fails to ground, or grounds to a non-number, pushes a typed diagnostic and
-/// returns `None` (never a silent drop). A bare integer literal is a legal Real bound (Modelica
-/// Int→Real promotion). `which` is `"min"`/`"max"` for the message; `subject` is the connector IRI.
-fn real_connector_bound(
-    v: Option<&CxfValue>,
-    which: &str,
-    subject: &str,
-    diags: &mut Vec<Diagnostic>,
-) -> Option<f64> {
-    let v = v?;
-    match ground_value(v, &ParamScope::new(&[])) {
-        Ok(Value::Real(r)) => Some(r),
-        Ok(Value::Integer(i)) => Some(i as f64),
-        Ok(_) => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!("S231:{which} on a Real connector did not ground to a number"),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
-        Err(e) => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::GroundingFailed,
-                    format!("S231:{which} connector bound failed to ground: {e}"),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
-    }
-}
-
-/// Ground a declared `S231:min`/`max` on an **Integer** connector — like [`real_connector_bound`]
-/// but only an Integer literal is legal (a Real bound on an Integer connector is `MalformedDocument`).
-fn int_connector_bound(
-    v: Option<&CxfValue>,
-    which: &str,
-    subject: &str,
-    diags: &mut Vec<Diagnostic>,
-) -> Option<i64> {
-    let v = v?;
-    match ground_value(v, &ParamScope::new(&[])) {
-        Ok(Value::Integer(i)) => Some(i),
-        Ok(_) => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!("S231:{which} on an Integer connector did not ground to an integer"),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
-        Err(e) => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::GroundingFailed,
-                    format!("S231:{which} connector bound failed to ground: {e}"),
-                )
-                .with_subject(subject.to_owned()),
-            );
-            None
-        }
-    }
-}
-
 /// Map an `isOfDataType` term (`S231:Real` → [`ValueType::Real`], etc.). `None` if unrecognized.
 fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
     match term_of(iri) {
@@ -299,7 +150,7 @@ pub(crate) fn resolve(
     }
 
     // --- Step 2: classify — the top composite (G-1: presence of containsBlock) names the
-    // instances and the boundary ports. Exactly one composite in M1 (single level).
+    // instances and the boundary ports. Exactly one composite is accepted (single level).
     let composites: Vec<&Node> = doc
         .graph
         .iter()
@@ -367,12 +218,12 @@ pub(crate) fn resolve(
                     .with_subject(child.to_owned()),
                 ),
                 Some(entry) => {
-                    // Arity check (closes the unowned gap the PR-6 review found): the document's
-                    // declared interface must match the class signature, or the engine's
+                    // Arity check: the document's declared interface must match the class signature,
+                    // or the engine's
                     // emit-by-port-index would later index past `outputs`/`inputs` and PANIC on the
                     // tick (a malformed model would otherwise load, then crash). The block signature
-                    // is param-independent, so a default-param instance reads it safely. (Connector
-                    // value_type ↔ PortKind agreement is the deeper §7.10 check, owned by PR-8.)
+                    // is param-independent, so a default-param instance reads it safely. Connector
+                    // value_type ↔ PortKind agreement is the deeper §7.10 validation check.
                     let probe = (entry.make)(&ParamTable::default());
                     let sig = probe.signature();
                     let (got_in, got_out) = (node.has_input.len(), node.has_output.len());
@@ -401,9 +252,9 @@ pub(crate) fn resolve(
         });
         blocks.push(BlockInstance {
             id,
-            // NOTE (C-E): `class_iri` holds the *bridged class_path* (e.g. "CDL.Reals.Add"), the
-            // join key for `oce_blocks::lookup` in PR-6 — NOT the full @type IRI. Field name is a
-            // known wart inherited from the spec sketch.
+            // NOTE: `class_iri` holds the *bridged class_path* (e.g. "CDL.Reals.Add"), the join key
+            // for `oce_blocks::lookup` — NOT the full @type IRI. Field name is a known wart inherited
+            // from the spec sketch.
             class_iri: Arc::from(class_path),
             inputs: Vec::new(),            // filled in Step 5b
             outputs: Vec::new(),           // filled in Step 5b
@@ -529,8 +380,8 @@ pub(crate) fn resolve(
                 continue;
             };
             if pnode.is_array == Some(true) {
-                // PR-9: a preserved array parameter expands to per-element scalar entries (doc 04
-                // §3.6.1). Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
+                // A preserved array parameter expands to per-element scalar entries (doc 04 §3.6.1).
+                // Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
                 expand_array_param(
                     piri,
                     pnode,
@@ -541,7 +392,7 @@ pub(crate) fn resolve(
                     &mut diags,
                 );
             } else {
-                // Scalar parameter (the PR-6 path, unchanged).
+                // Scalar parameter.
                 let name: Arc<str> = Arc::from(local_name(piri));
                 match ground_value(cxf_val, &ParamScope::new(&scope_entries)) {
                     Ok(v) => {
@@ -755,45 +606,4 @@ fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
             ValueType::Real
         }
     }
-}
-
-/// The diagnostic subject for a connector — its source IRI when known, else a synthetic id.
-fn subject_of(c: &Connector) -> Arc<str> {
-    match &c.iri {
-        Some(iri) => Arc::clone(iri),
-        None => Arc::from(format!("connector#{}", c.id.0)),
-    }
-}
-
-/// Sort diagnostics into the pinned deterministic order: by the subject's `ConnectorId.0` ascending
-/// (connector subjects first), then by `DiagCode` string, then message. Non-connector subjects sort
-/// after all connectors (`u32::MAX`) by their raw subject string — total and panic-free.
-fn finalize_diags(
-    mut diags: Vec<Diagnostic>,
-    conn_of_iri: &HashMap<&str, ConnectorId>,
-) -> Vec<Diagnostic> {
-    // Resolve a subject IRI to its `ConnectorId.0`: either via a real source IRI (in `conn_of_iri`)
-    // OR the synthetic `connector#N` form `subject_of` mints for an IRI-less connector. Both must
-    // map to the numeric id so the structural diagnostics (single-assignment / direction / type) —
-    // which are IRI-less in practice — sort by ascending `ConnectorId.0` per the pinned rule, not
-    // by lexicographic string order (where `connector#10` would precede `connector#3`).
-    let key_cid = |d: &Diagnostic| -> u32 {
-        d.subject
-            .as_deref()
-            .and_then(|s| {
-                conn_of_iri.get(s).map(|c| c.0).or_else(|| {
-                    s.strip_prefix("connector#")
-                        .and_then(|n| n.parse::<u32>().ok())
-                })
-            })
-            .unwrap_or(u32::MAX)
-    };
-    diags.sort_by(|a, b| {
-        key_cid(a)
-            .cmp(&key_cid(b))
-            .then_with(|| a.subject.as_deref().cmp(&b.subject.as_deref()))
-            .then_with(|| a.code.as_str().cmp(b.code.as_str()))
-            .then_with(|| a.message.cmp(&b.message))
-    });
-    diags
 }

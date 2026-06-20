@@ -12,10 +12,8 @@
 //! adapter may pick a serde codec; the runtime-value enum is kept small and `Copy`-friendly.
 //!
 //!
-//! Status: **M1 as-built.** The trait surface, DTO shapes, typed error seam, and default in-memory
-//! adapter are active; the frozen `oce-api` surface is filled with non-panicking bodies as of
-//! `_spec/08` §11.2 (line 800). Durable/queryable backends remain app-side adapters behind these
-//! ports.
+//! The trait surface, DTO shapes, and typed error seam are active. Durable/queryable backends remain
+//! app-side adapters behind these ports.
 
 use serde::{Deserialize, Serialize};
 

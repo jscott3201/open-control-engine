@@ -1,0 +1,191 @@
+use oce_model::ParamTable;
+
+use super::int_param;
+use crate::{
+    Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
+    IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold,
+    IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax,
+    IntegerMin, IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
+    OnCounter, RegistryEntry,
+};
+
+pub(super) const ENTRIES: &[RegistryEntry] = &[
+    RegistryEntry {
+        class_path: "CDL.Integers.Sources.Constant",
+        make: make_integer_constant,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Abs",
+        make: make_integer_abs,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Add",
+        make: make_integer_add,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Subtract",
+        make: make_integer_subtract,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Multiply",
+        make: make_integer_multiply,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.AddParameter",
+        make: make_integer_add_parameter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.MultiplyByParameter",
+        make: make_integer_multiply_by_parameter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Max",
+        make: make_integer_max,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Min",
+        make: make_integer_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Switch",
+        make: make_integer_switch,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Greater",
+        make: make_integer_greater,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterThreshold",
+        make: make_integer_greater_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterEqual",
+        make: make_integer_greater_equal,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterEqualThreshold",
+        make: make_integer_greater_equal_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Less",
+        make: make_integer_less,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessThreshold",
+        make: make_integer_less_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessEqual",
+        make: make_integer_less_equal,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessEqualThreshold",
+        make: make_integer_less_equal_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.OnCounter",
+        make: make_integer_on_counter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Change",
+        make: make_integer_change,
+    },
+];
+
+fn make_integer_constant(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerConstant {
+        k: int_param(p, "k", 0),
+    })
+}
+
+fn make_integer_abs(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAbs)
+}
+
+fn make_integer_add(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAdd)
+}
+
+fn make_integer_subtract(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerSubtract)
+}
+
+fn make_integer_multiply(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMultiply)
+}
+
+fn make_integer_add_parameter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAddParameter {
+        p: int_param(p, "p", 0),
+    })
+}
+
+fn make_integer_multiply_by_parameter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMultiplyByParameter {
+        k: int_param(p, "k", 1),
+    })
+}
+
+fn make_integer_max(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMax)
+}
+
+fn make_integer_min(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMin)
+}
+
+fn make_integer_switch(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerSwitch)
+}
+
+fn make_integer_greater(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreater)
+}
+
+fn make_integer_greater_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_greater_equal(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterEqual)
+}
+
+fn make_integer_greater_equal_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterEqualThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_less(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLess)
+}
+
+fn make_integer_less_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_less_equal(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessEqual)
+}
+
+fn make_integer_less_equal_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessEqualThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_on_counter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(OnCounter {
+        y_start: int_param(p, "y_start", 0),
+    })
+}
+
+fn make_integer_change(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerChange {
+        pre_u_start: int_param(p, "pre_u_start", 0),
+    })
+}

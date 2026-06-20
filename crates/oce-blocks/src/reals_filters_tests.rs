@@ -1,4 +1,4 @@
-//! M2-PR-A6b tests for Derivative, LimitSlewRate, and MovingAverage.
+//! Tests for `CDL.Reals` filter, slew, and moving-average blocks.
 //! Expected traces are hand-derived from the documented discrete recurrences.
 
 use std::cell::RefCell;
