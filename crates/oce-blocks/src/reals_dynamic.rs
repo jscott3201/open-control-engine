@@ -13,6 +13,7 @@ const X_WORD: usize = 0;
 const PREV_T_WORD: usize = 1;
 const PREV_TRIGGER_WORD: usize = 2;
 const STATE_WORDS: usize = 3;
+// Deliberately aliases a NaN bit pattern; model time is non-NaN and this is checked as raw bits.
 const PREV_T_UNSET: u64 = u64::MAX;
 
 /// `CDL.Reals.IntegratorWithReset` — forward-Euler integrator with a rising-edge reset:

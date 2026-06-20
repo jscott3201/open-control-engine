@@ -58,6 +58,14 @@ fn assert_trace(got: &[Value], want: &[f64]) {
     }
 }
 
+fn assert_trace_bits(got: &[Value], want: &[u64]) {
+    assert_eq!(got.len(), want.len());
+    for (idx, (got, want)) in got.iter().zip(want).enumerate() {
+        let want = Value::Real(f64::from_bits(*want));
+        assert!(got.bit_eq(&want), "trace[{idx}] got {got:?}, want {want:?}");
+    }
+}
+
 #[test]
 fn integrator_with_reset_state_and_feedthrough_contract() {
     let block = IntegratorWithReset { y_start: 1.0 };
@@ -96,6 +104,35 @@ fn forward_euler_variable_dt_trace_is_hand_derived() {
 }
 
 #[test]
+fn forward_euler_non_dyadic_residue_trace_is_hand_derived() {
+    let block = IntegratorWithReset { y_start: 0.0 };
+    let steps = [
+        (0.0, 0.2, 0.0, false),
+        (0.1, 0.2, 0.0, false),
+        (0.2, 0.2, 0.0, false),
+        (0.3, 0.2, 0.0, false),
+        (0.4, 0.2, 0.0, false),
+        (0.5, 0.2, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    // Hand-derived from the rounded f64 recurrence. The first nonzero increment is
+    // 0.2 * 0.1 = 0x3f947ae147ae147c (clean 0.02 plus one ULP); later timestamp
+    // differences use the adjacent 0.1 encodings from 0.3-0.2 and 0.4-0.3.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+            0x3f94_7ae1_47ae_147c,
+            0x3fa4_7ae1_47ae_147c,
+            0x3fae_b851_eb85_1eb9,
+            0x3fb4_7ae1_47ae_147c,
+        ],
+    );
+    assert_eq!(region[0], 0x3fb9_9999_9999_999a);
+}
+
+#[test]
 fn reset_is_rising_edge_and_visible_one_tick_later() {
     let block = IntegratorWithReset { y_start: 1.0 };
     let steps = [
@@ -112,6 +149,57 @@ fn reset_is_rising_edge_and_visible_one_tick_later() {
     // and integrates 99 for one second instead of resetting to 11.
     assert_trace(&trace, &[1.0, 1.0, 3.0, 7.0, 106.0, 106.0, -5.0]);
     assert_eq!(f64::from_bits(region[0]).to_bits(), (-5.0f64).to_bits());
+}
+
+#[test]
+fn first_tick_trigger_high_resets_for_next_emit_only() {
+    let block = IntegratorWithReset { y_start: 2.0 };
+    let steps = [
+        (0.0, 10.0, 7.0, true),
+        (1.0, 10.0, 9.0, true),
+        (2.0, 0.0, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    // The tick-0 high trigger is a rising edge from the initialized false state. It emits y_start,
+    // stores 7, then the held-high tick integrates instead of re-resetting to 9.
+    assert_trace(&trace, &[2.0, 7.0, 17.0]);
+    assert_eq!(f64::from_bits(region[0]).to_bits(), 17.0f64.to_bits());
+}
+
+#[test]
+fn reset_value_path_propagates_extreme_and_nan_bits() {
+    let block = IntegratorWithReset { y_start: 0.0 };
+    let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
+    let max_steps = [
+        (0.0, 1.0, 0.0, false),
+        (1.0, 1.0, f64::MAX, true),
+        (2.0, 0.0, 0.0, false),
+    ];
+    let (max_trace, max_region) = drive(&block, &max_steps);
+    assert_trace_bits(
+        &max_trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+            f64::MAX.to_bits(),
+        ],
+    );
+    assert_eq!(max_region[0], f64::MAX.to_bits());
+
+    let nan_steps = [
+        (0.0, 1.0, 0.0, false),
+        (1.0, 1.0, quiet_nan, true),
+        (2.0, 0.0, 0.0, false),
+    ];
+    let (nan_trace, _nan_region) = drive(&block, &nan_steps);
+    assert_trace_bits(
+        &nan_trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+            0x7ff8_0000_0000_0000,
+        ],
+    );
 }
 
 #[test]
