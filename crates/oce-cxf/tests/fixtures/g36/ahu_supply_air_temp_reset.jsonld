@@ -1,0 +1,235 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset",
+      "@type": "S231:Block",
+      "S231:label": "ahu_supply_air_temp_reset",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "zoneMinusSet",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u1" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Limiter",
+      "S231:label": "demandLimiter",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMin" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMax" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMin",
+      "S231:value": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMax",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.u" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "x1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1.k",
+      "S231:value": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "f1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1.k",
+      "S231:value": { "@value": "16.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "x2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2.k",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.x2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "f2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2.k",
+      "S231:value": { "@value": "12.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.f2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "satLine",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x1" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f1" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x2" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f2" },
+        { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.satLine.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "12.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "16.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}
