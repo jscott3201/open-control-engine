@@ -7,10 +7,11 @@ use std::sync::Arc;
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Diagnostics, Divide, Edge,
-    Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold, Limiter, Line,
-    Max, Min, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, Pre,
-    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
+    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics, Divide,
+    Edge, Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold,
+    LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply, MultiplyByParameter,
+    NoopDiagnostics, Not, Pid, PidWithReset, Pre, SampleTrigger, Subtract, Switch, Time, UnitDelay,
+    lookup, read_int,
 };
 
 #[derive(Default)]
@@ -188,6 +189,12 @@ fn feedthrough_classification_matches_spec() {
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
+    assert_eq!(Derivative::default().kind(), BlockKind::Stateful);
+    assert!(Derivative::default().feeds_through(0, 0));
+    assert_eq!(LimitSlewRate::default().kind(), BlockKind::Stateful);
+    assert!(LimitSlewRate::default().feeds_through(0, 0));
+    assert_eq!(MovingAverage::default().kind(), BlockKind::Stateful);
+    assert!(MovingAverage::default().feeds_through(0, 0));
     assert!(Pid::default().feeds_through(0, 0) && Pid::default().feeds_through(1, 0));
     assert!(
         PidWithReset::default().feeds_through(0, 0)
@@ -350,6 +357,9 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
         "CDL.Reals.IntegratorWithReset",
+        "CDL.Reals.Derivative",
+        "CDL.Reals.LimitSlewRate",
+        "CDL.Reals.MovingAverage",
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
         "CDL.Logical.Sources.Constant",

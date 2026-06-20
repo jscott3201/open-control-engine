@@ -8,15 +8,15 @@ use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::pid::ControllerConfig;
 use crate::{
-    Abs, Add, AddParameter, And, Block, BooleanToInteger, BooleanToReal, Constant, Divide, Edge,
-    Greater, GreaterThreshold, Hysteresis, IntegerAbs, IntegerAdd, IntegerAddParameter,
-    IntegerConstant, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
-    IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
-    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerMultiplyByParameter,
-    IntegerSubtract, IntegerSwitch, IntegerToReal, IntegratorWithReset, Less, LessThreshold,
-    Limiter, Line, LogicalConstant, LogicalSwitch, Max, Min, Multiply, MultiplyByParameter, Nand,
-    Nor, Not, Or, Pid, PidWithReset, Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract,
-    Switch, UnitDelay, Xor,
+    Abs, Add, AddParameter, And, Block, BooleanToInteger, BooleanToReal, Constant, Derivative,
+    Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegerAbs, IntegerAdd,
+    IntegerAddParameter, IntegerConstant, IntegerGreater, IntegerGreaterEqual,
+    IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess, IntegerLessEqual,
+    IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply,
+    IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch, IntegerToReal, IntegratorWithReset,
+    Less, LessThreshold, LimitSlewRate, Limiter, Line, LogicalConstant, LogicalSwitch, Max, Min,
+    MovingAverage, Multiply, MultiplyByParameter, Nand, Nor, Not, Or, Pid, PidWithReset, Pre,
+    RealToInteger, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay, Xor,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -103,6 +103,18 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.IntegratorWithReset",
         make: make_integrator_with_reset,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Derivative",
+        make: make_derivative,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.LimitSlewRate",
+        make: make_limit_slew_rate,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.MovingAverage",
+        make: make_moving_average,
     },
     RegistryEntry {
         class_path: "CDL.Reals.PID",
@@ -407,6 +419,30 @@ fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
 fn make_integrator_with_reset(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegratorWithReset {
         y_start: real_param(p, "y_start", 0.0),
+    })
+}
+
+fn make_derivative(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Derivative {
+        k: real_param(p, "k", 1.0),
+        t: real_param(p, "T", 0.1),
+        y_start: real_param(p, "y_start", 0.0),
+    })
+}
+
+fn make_limit_slew_rate(p: &ParamTable) -> Box<dyn Block> {
+    let raising_slew_rate = real_param(p, "raisingSlewRate", 1.0);
+    Box::new(LimitSlewRate {
+        raising_slew_rate,
+        falling_slew_rate: real_param(p, "fallingSlewRate", -raising_slew_rate),
+        td: real_param(p, "Td", raising_slew_rate * 10.0),
+        enable: bool_param(p, "enable", true),
+    })
+}
+
+fn make_moving_average(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MovingAverage {
+        delta: real_param(p, "delta", 1.0),
     })
 }
 

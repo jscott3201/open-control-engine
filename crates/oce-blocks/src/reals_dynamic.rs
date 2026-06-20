@@ -7,14 +7,13 @@
 
 use oce_model::{ParamTable, Value};
 
+use crate::dynamics::{PREV_T_UNSET, forward_euler_accumulate, tick_dt};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
 
 const X_WORD: usize = 0;
 const PREV_T_WORD: usize = 1;
 const PREV_TRIGGER_WORD: usize = 2;
 const STATE_WORDS: usize = 3;
-// Deliberately aliases a NaN bit pattern; model time is non-NaN and this is checked as raw bits.
-const PREV_T_UNSET: u64 = u64::MAX;
 
 /// `CDL.Reals.IntegratorWithReset` — forward-Euler integrator with a rising-edge reset:
 ///
@@ -73,16 +72,12 @@ impl Block for IntegratorWithReset {
         let trigger = read_bool(inputs, 2);
         let prev_trigger = region[PREV_TRIGGER_WORD] != 0;
         let x = f64::from_bits(region[X_WORD]);
-        let dt = if region[PREV_T_WORD] == PREV_T_UNSET {
-            0.0
-        } else {
-            ctx.t() - f64::from_bits(region[PREV_T_WORD])
-        };
+        let dt = tick_dt(ctx.t(), region[PREV_T_WORD]);
 
         let next_x = if trigger && !prev_trigger {
             y_reset_in
         } else {
-            x + u * dt
+            forward_euler_accumulate(x, u, dt)
         };
         region[X_WORD] = next_x.to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
