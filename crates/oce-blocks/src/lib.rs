@@ -13,9 +13,10 @@
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
 //! The arena trait, per-tick context seam, scalar Reals, Logical/Conversions/Integers algebraic
-//! blocks, Reals dynamic blocks, PID controllers, logical timing/latch blocks, and integer
-//! edge/count blocks are implemented and registered by canonical CDL class path. The remaining CDL
-//! catalog breadth is added family-by-family behind the same trait and registry contracts.
+//! blocks, Reals dynamic blocks, PID controllers, logical timing/latch blocks, integer edge/count
+//! blocks, and the `Utilities.Assert` diagnostics sink are implemented and registered by canonical
+//! CDL class path. The remaining CDL catalog breadth is added family-by-family behind the same
+//! trait and registry contracts.
 
 use oce_model::{ParamTable, Value};
 
@@ -33,6 +34,7 @@ mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
 mod registry;
+mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
@@ -57,6 +59,7 @@ pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThr
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use registry::lookup;
+pub use utilities::Assert;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
 pub type Time = f64;
@@ -287,3 +290,6 @@ mod reals_integrator_tests;
 
 #[cfg(test)]
 mod reals_filters_tests;
+
+#[cfg(test)]
+mod utilities_tests;

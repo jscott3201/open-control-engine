@@ -291,7 +291,7 @@ impl Diagnostics for AssertCollector {
             block: source.to_string(),
             message: message.to_string(),
             t,
-            level: AssertLevel::default(),
+            level: AssertLevel::Warning,
         });
     }
 }

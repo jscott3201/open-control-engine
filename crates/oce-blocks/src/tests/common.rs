@@ -6,8 +6,8 @@ pub(super) use std::sync::Arc;
 pub(super) use oce_model::{ParamTable, Value};
 
 pub(super) use crate::{
-    Abs, Add, AddParameter, And, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics, Divide,
-    Edge, Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold,
+    Abs, Add, AddParameter, And, Assert, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics,
+    Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold,
     LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply, MultiplyByParameter,
     NoopDiagnostics, Not, Pid, PidWithReset, Pre, SampleTrigger, Subtract, Switch, Time, UnitDelay,
     lookup, read_int,
