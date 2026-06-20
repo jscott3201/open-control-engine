@@ -229,7 +229,8 @@ const MA_T_START_WORD: usize = 1;
 const MA_PREV_T_WORD: usize = 2;
 const MA_HEAD_WORD: usize = 3;
 const MA_LEN_WORD: usize = 4;
-const MA_META_WORDS: usize = 5;
+const MA_WARNED_WORD: usize = 5;
+const MA_META_WORDS: usize = 6;
 const MA_CAPACITY: usize = 64;
 const MA_TIME_BASE: usize = MA_META_WORDS;
 const MA_MU_BASE: usize = MA_TIME_BASE + MA_CAPACITY;
@@ -292,10 +293,13 @@ fn ma_store(region: &mut [u64], t: f64, mu: f64, ctx: &Ctx<'_>) {
 
     let mut len = ma_len(region);
     if len == MA_CAPACITY {
-        ctx.warn(
-            "CDL.Reals.MovingAverage",
-            "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped",
-        );
+        if region[MA_WARNED_WORD] == 0 {
+            ctx.warn(
+                "CDL.Reals.MovingAverage",
+                "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped",
+            );
+            region[MA_WARNED_WORD] = 1;
+        }
         region[MA_HEAD_WORD] = ((region[MA_HEAD_WORD] as usize + 1) % MA_CAPACITY) as u64;
         len -= 1;
         region[MA_LEN_WORD] = len as u64;
@@ -346,8 +350,8 @@ fn ma_mu_at(region: &[u64], target: f64, t_now: f64, mu_now: f64) -> f64 {
 ///
 /// The variable-step `delay(mu, delta)` history is represented by a fixed 64-checkpoint ring in
 /// the state region. The tick path never allocates; when more than 64 checkpoints are needed in
-/// the current window, the block warns and drops the oldest retained checkpoint. `[S]`,
-/// feedthrough `y <- {u}`, not a loop cut.
+/// the current window, the block warns once per instance and drops the oldest retained checkpoint.
+/// `[S]`, feedthrough `y <- {u}`, not a loop cut.
 #[derive(Clone, Copy, Debug)]
 pub struct MovingAverage {
     pub(crate) delta: f64,
@@ -384,7 +388,9 @@ impl MovingAverage {
         let denom = if t >= t_start + delta {
             let retained_lo = ma_oldest_time(region).unwrap_or(t_start);
             let t_lo = (t - delta).max(retained_lo).max(t_start);
-            (t - t_lo).max(1e-3)
+            // `MIN_DELTA` is only a division-by-zero guard for a collapsed retained span; legal
+            // non-overflow windows divide by their true `delta`, even when `delta < 1e-3`.
+            (t - t_lo).max(MIN_DELTA)
         } else {
             t - t_start + 1e-3
         };
@@ -420,6 +426,7 @@ impl Block for MovingAverage {
         region[MA_MU_WORD] = 0.0f64.to_bits();
         region[MA_T_START_WORD] = 0.0f64.to_bits();
         region[MA_PREV_T_WORD] = PREV_T_UNSET;
+        region[MA_WARNED_WORD] = 0;
     }
 
     fn emit_from_state(

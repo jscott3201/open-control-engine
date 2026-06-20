@@ -102,7 +102,7 @@ fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
     }
     assert_eq!(Derivative::default().state_len(), 2);
     assert_eq!(LimitSlewRate::default().state_len(), 2);
-    assert_eq!(MovingAverage::default().state_len(), 133);
+    assert_eq!(MovingAverage::default().state_len(), 134);
 }
 
 #[test]
@@ -272,30 +272,52 @@ fn limit_slew_rate_bound_holds_over_seeded_dt_input_sweep() {
     let mut region = init_region(&block);
     let mut seed = 0x0ce5_1eed_u64;
     let mut t = 0.0;
-    let mut prev_y = None;
-    for _ in 0..128 {
+    let mut rising_clamp_hit = false;
+    let mut falling_clamp_hit = false;
+    for step in 0..128 {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
         let dt = 0.001 + f64::from(((seed >> 32) & 0xff) as u32) / 1270.0;
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
         let u = f64::from(((seed >> 32) & 0x3ff) as u32) / 102.3 - 5.0;
         t += dt;
+        let prev_state = (step > 0).then(|| f64::from_bits(region[0]));
+        let effective_dt = (step > 0).then(|| t - f64::from_bits(region[1]));
 
         let Value::Real(y) = tick(&block, &mut region, t, u) else {
             panic!("LimitSlewRate emits Real");
         };
-        if let Some(prev) = prev_y {
+        if let (Some(prev), Some(dt_eff)) = (prev_state, effective_dt) {
+            let upper = block.raising_slew_rate * dt_eff;
+            let lower = block.falling_slew_rate * dt_eff;
             let dy = y - prev;
             assert!(
-                dy >= block.falling_slew_rate * dt - 1e-12,
-                "dy={dy} below falling bound at dt={dt}"
+                dy >= lower - 1e-12,
+                "dy={dy} below falling bound at dt={dt_eff}"
             );
             assert!(
-                dy <= block.raising_slew_rate * dt + 1e-12,
-                "dy={dy} above raising bound at dt={dt}"
+                dy <= upper + 1e-12,
+                "dy={dy} above raising bound at dt={dt_eff}"
             );
+            let alpha = dt_eff / block.td;
+            let requested = (prev + alpha * u) / (1.0 + alpha);
+            let requested_dy = requested - prev;
+            if requested_dy > upper {
+                assert_eq!(y.to_bits(), (prev + upper).to_bits());
+                rising_clamp_hit = true;
+            } else if requested_dy < lower {
+                assert_eq!(y.to_bits(), (prev + lower).to_bits());
+                falling_clamp_hit = true;
+            }
         }
-        prev_y = Some(y);
     }
+    assert!(
+        rising_clamp_hit,
+        "seeded sweep must exercise the rising clamp"
+    );
+    assert!(
+        falling_clamp_hit,
+        "seeded sweep must exercise the falling clamp"
+    );
 }
 
 #[test]
@@ -359,6 +381,34 @@ fn moving_average_non_dyadic_residue_feedthrough_and_determinism_are_pinned() {
 }
 
 #[test]
+fn moving_average_sub_millisecond_delta_uses_true_full_window_denominator() {
+    let block = MovingAverage { delta: 5.0e-4 };
+    let dt = 1.0e-4;
+    let steps = [
+        (0.0, 0.0),
+        (dt, 1.0),
+        (2.0 * dt, 2.0),
+        (3.0 * dt, 3.0),
+        (4.0 * dt, 4.0),
+        (5.0 * dt, 5.0),
+    ];
+    let (trace, _region) = drive(&block, &steps);
+    // Full-window tick: numerator=(1+2+3+4+5)*0.0001=0.0015, denom=0.0005,
+    // so the legal sub-1e-3 horizon reports 3.0. A literal 1e-3 floor reports 1.5.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x3fb7_45d1_745d_1746,
+            0x3fd0_0000_0000_0000,
+            0x3fdd_89d8_9d89_d89f,
+            0x3fe6_db6d_b6db_6db7,
+            0x4008_0000_0000_0000,
+        ],
+    );
+}
+
+#[test]
 fn moving_average_ring_overflow_warns_instead_of_panicking() {
     let block = MovingAverage { delta: 100.0 };
     let mut region = init_region(&block);
@@ -380,14 +430,17 @@ fn moving_average_ring_overflow_warns_instead_of_panicking() {
 fn moving_average_overflow_divides_by_actual_retained_span() {
     let block = MovingAverage { delta: 0.5 };
     let mut region = init_region(&block);
-    let noop = NoopDiagnostics;
-    for k in 0..100 {
+    let diag = CapturingDiagnostics::default();
+    let mut y = None;
+    for k in 0..=100 {
         let t = f64::from(k) * 0.005;
-        tick_with_diag(&block, &mut region, t, 1.0 + t, &noop);
+        let out = tick_with_diag(&block, &mut region, t, 1.0 + t, &diag);
+        if k == 100 {
+            y = Some(out);
+        }
     }
 
-    let diag = CapturingDiagnostics::default();
-    let y = tick_with_diag(&block, &mut region, 0.5, 1.5, &diag);
+    let y = y.expect("k=100 emits the overflow golden tick");
     // dt=0.005, delta=0.5, cap=64. At t=0.5 the retained ring spans t=0.18..0.5.
     // The numerator is mu(0.5)-mu(0.18)=0.4296000000000002, so the degraded mean is
     // 0.4296000000000002 / 0.32 = 1.3425000000000007. The old denominator delta=0.5
@@ -401,5 +454,40 @@ fn moving_average_overflow_divides_by_actual_retained_span() {
         events[0].1,
         "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
     );
-    assert_eq!(events[0].2.to_bits(), 0.5f64.to_bits());
+    assert_eq!(events[0].2.to_bits(), (64.0f64 * 0.005).to_bits());
+}
+
+#[test]
+fn moving_average_sustained_overflow_warns_once_and_keeps_degrading_correctly() {
+    let block = MovingAverage { delta: 0.5 };
+    let mut region = init_region(&block);
+    let diag = CapturingDiagnostics::default();
+    let mut overflow_trace = Vec::new();
+    for k in 0..=102 {
+        let t = f64::from(k) * 0.005;
+        let y = tick_with_diag(&block, &mut region, t, 1.0 + t, &diag);
+        if k >= 100 {
+            overflow_trace.push(y);
+        }
+    }
+
+    // Consecutive overflow ticks at t=0.500, 0.505, 0.510. Each numerator spans the retained
+    // 0.32 s window after drop-oldest, so the degraded means are 1.3425, 1.3475, 1.3525.
+    assert_trace_bits(
+        &overflow_trace,
+        &[
+            0x3ff5_7ae1_47ae_147e,
+            0x3ff5_8f5c_28f5_c292,
+            0x3ff5_a3d7_0a3d_70a7,
+        ],
+    );
+
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, "CDL.Reals.MovingAverage");
+    assert_eq!(
+        events[0].1,
+        "MovingAverage: checkpoint ring capacity exceeded; oldest in-window sample dropped"
+    );
+    assert_eq!(events[0].2.to_bits(), (64.0f64 * 0.005).to_bits());
 }
