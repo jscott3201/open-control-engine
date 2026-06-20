@@ -1,7 +1,7 @@
 //! Stateful `CDL.Integers` edge/count blocks (`03` §4.2).
 //!
 //! `Change` is transparent/feedthrough because its outputs compare the current input against the
-//! prior value. `OnCounter` is the A4 integer loop cut: its output is the prior accumulated count;
+//! prior value. `OnCounter` is the integer loop cut: its output is the prior accumulated count;
 //! trigger/reset edges are applied only in the state update pass.
 
 use oce_model::{ParamTable, Value};
@@ -32,7 +32,7 @@ fn word_i64(word: u64) -> i64 {
 ///
 /// Stateful `[S]` loop cut: `y` is purely the prior accumulated count, so neither `trigger` nor
 /// `reset` feed through to the same-tick output. If trigger and reset rise on the same tick, reset
-/// has priority. Count overflow wraps two's-complement like the A3 integer arithmetic family.
+/// has priority. Count overflow wraps two's-complement like the integer arithmetic family.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OnCounter {
     pub(crate) y_start: i64,

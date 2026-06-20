@@ -1,6 +1,6 @@
-//! BUILD-phase tests for `oce-graph`: DAG construction, the deterministic Kahn sort, algebraic-loop
-//! rejection, and the D6 (c) cross-check against a self-contained reference oracle (no external
-//! graph crate enters the dependency tree — the oracle is a naïve in-tree re-implementation).
+//! BUILD tests for `oce-graph`: DAG construction, the deterministic Kahn sort, algebraic-loop
+//! rejection, and cross-checks against a self-contained reference oracle (no external graph crate
+//! enters the dependency tree — the oracle is a naïve in-tree re-implementation).
 
 pub(super) use std::cell::RefCell;
 pub(super) use std::sync::Arc;

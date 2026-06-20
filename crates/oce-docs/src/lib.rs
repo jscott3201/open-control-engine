@@ -6,8 +6,7 @@
 //! point list from the resolved model + effective metadata read through the `oce-store` seam.
 //! Word/HTML export and CXF export are two separate output paths from the same model.
 //!
-//! Status: **Deferred to M4.** The public document-export seam is reserved; the exporters land with
-//! the M4 reporting milestone.
+//! The public document-export seam is reserved; exporters are deferred.
 
 use oce_store::PointListRow;
 

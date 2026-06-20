@@ -1,4 +1,4 @@
-//! Golden + determinism + boundary-elision integration tests for the §7.1 resolver (M1-PR-5).
+//! Golden, determinism, and boundary-elision integration tests for the §7.1 resolver.
 //!
 //! `ModelGraph` is intentionally NOT `Serialize`/`PartialEq` (`oce-model/src/lib.rs`), so the
 //! golden is a hand-written, deterministic [`render`] string compared against a checked-in
@@ -59,7 +59,7 @@ fn render(g: &ModelGraph) -> String {
             c.decl_order,
             c.iri.as_deref()
         );
-        // The parsed §7.4.1 attrs are locked bit-exactly (M1-PR-11): a unit/quantity/displayUnit
+        // The parsed §7.4.1 attrs are locked bit-exactly: a unit/quantity/displayUnit
         // mis-parse, a dropped bound, or a one-ULP bound drift fails the golden loudly.
         let _ = writeln!(s, "    attrs={}", render_attrs(&c.attrs));
     }
@@ -221,7 +221,7 @@ fn boundary_elision_input_and_output() {
 
 #[test]
 fn resolve_is_byte_identical_across_imports() {
-    // Determinism (exit #4): two imports must render byte-identically...
+    // Two imports must render byte-identically...
     let r1 = render(&import_ok(FIXTURE));
     let r2 = render(&import_ok(FIXTURE));
     assert_eq!(
@@ -258,10 +258,10 @@ fn resolve_is_byte_identical_across_imports() {
 #[test]
 fn param_plumbing_oracle_via_oce_blocks() {
     // Oracle / end-to-end cross-check (TESTING.md pillar 3): construct each block from its resolved
-    // ParamTable through the SAME registry path PR-6 will use — `oce_blocks::lookup(class_iri)` —
-    // and exercise it. This proves (a) `class_iri` is a valid registry key (C-E), and (b) the
+    // ParamTable through the SAME registry path used by the engine — `oce_blocks::lookup(class_iri)` —
+    // and exercise it. This proves (a) `class_iri` is a valid registry key, and (b) the
     // param NAMES + VALUES actually reach the block. If the param key were the dotted path instead
-    // of "k", `con` would emit 0.0 (the default) and this test would fail — the C1-class tripwire.
+    // of "k", `con` would emit 0.0 (the default) and this test would fail.
     let g = import_ok(FIXTURE);
 
     // con = Constant(k=2.0): algebraic, emits y = k.
@@ -325,7 +325,7 @@ fn unit_delay_bare_int_grounds_to_integer_not_real() {
 
 #[test]
 fn golden_connector_attrs_modelgraph() {
-    // Bit-exact golden for the parsed §7.4.1 connector attrs (M1-PR-11): unit/quantity/displayUnit
+    // Bit-exact golden for the parsed §7.4.1 connector attrs: unit/quantity/displayUnit
     // in their three legal JSON-LD wire shapes + numeric bounds by `to_bits()`. Re-bless with
     // `OCE_BLESS=1 cargo test -p oce-cxf --test resolve_golden golden_connector_attrs_modelgraph`.
     let g = import_ok(ATTRS_RICH);
@@ -348,7 +348,7 @@ fn golden_connector_attrs_modelgraph() {
 fn resolver_carries_declared_connector_attrs() {
     // The resolver PARSES each connector's declared §7.4.1 attributes onto `Connector.attrs`, so
     // oce-validate's §7.10 deep gate has something to unify — without this the gate is dead on real
-    // CXF input (regression guard for M1-PR-11). Each of the THREE new typed fields is asserted
+    // CXF input. Each typed field is asserted
     // independently (a regression dropping any one would otherwise pass), across all three legal
     // wire shapes: `unit` bare-string "K", `quantity` typed-literal, `displayUnit` IRI-node — plus
     // the numeric bounds, compared by bits. (Resolver layer: §7.10 is NOT run here, so it resolves

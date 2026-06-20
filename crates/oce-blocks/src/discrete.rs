@@ -1,4 +1,4 @@
-//! `CDL.Discrete` starter block (`03` §4.6): `UnitDelay`, the discrete one-sample loop-breaker.
+//! `CDL.Discrete` blocks (`03` §4.6): `UnitDelay`, the discrete one-sample loop-breaker.
 
 use oce_model::{ParamTable, Value};
 

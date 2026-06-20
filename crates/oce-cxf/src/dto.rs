@@ -6,10 +6,10 @@
 //! `#[serde(flatten)] other` map on both [`CxfDocument`] and [`Node`] (R-8), capturing every key
 //! not explicitly modeled (`icon`/`diagram`/`graphics`/`documentation`/`qudt:*`/`cdlLineNum*`/
 //! `redeclare`/… ). (`S231:unit`/`quantity`/`displayUnit` are **modeled** typed fields, not
-//! passthrough — see [`Node::unit`] — so the §7.10 deep gate can read them; M1-PR-11.)
+//! passthrough — see [`Node::unit`] — so the §7.10 deep gate can read them.)
 //!
 //! Layer A assigns **no meaning** — it is a dumb mirror. All interpretation (classification,
-//! library join, overlay merge, connections, grounding) happens in the resolver (§7, M1-PR-5).
+//! library join, overlay merge, connections, grounding) happens in the resolver (§7).
 //!
 //! ## RT-1 round-trip boundaries (intentional normalizations)
 //!
@@ -158,7 +158,7 @@ pub struct Node {
     /// read on the tick (R1). A [`TermAttr`] so all three legal JSON-LD wire shapes deserialize —
     /// bare string `"K"`, typed literal `{"@value":"K","@type":…}`, or the S231P-canonical IRI node
     /// `{"@id":"unit:K"}` (sh:class qudt:Unit) — rather than a bare `String` that would hard-fail the
-    /// whole document on the non-string forms (M1-PR-11). Previously fell through `other`, defeating
+    /// whole document on the non-string forms. Previously fell through `other`, defeating
     /// unit unification on CXF.
     #[serde(rename = "S231:unit", default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<TermAttr>,
@@ -240,7 +240,7 @@ pub struct Node {
 
     /// Everything else (icon/diagram/graphics/documentation/`qudt:*`/`cdlLineNum*`/redeclare/…) —
     /// opaque passthrough for lossless round-trip (R-8). (`S231:unit`/`quantity`/`displayUnit` are
-    /// modeled typed fields above, not passthrough — M1-PR-11.)
+    /// modeled typed fields above, not passthrough.)
     #[serde(flatten)]
     pub other: BTreeMap<String, serde_json::Value>,
 }
@@ -368,13 +368,13 @@ pub enum CxfValue {
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
-    /// A JSON array of element value-literals — the **preserved** array-parameter encoding (§3.6.1,
-    /// M1-PR-9). Each element is itself a [`CxfValue`] (typically a bare/typed literal); the resolver
+    /// A JSON array of element value-literals — the **preserved** array-parameter encoding (§3.6.1).
+    /// Each element is itself a [`CxfValue`] (typically a bare/typed literal); the resolver
     /// grounds them per-element into the canonical per-element-scalar params (`k_1`, `k_2`, …). A
     /// JSON array matches none of the scalar/object/string arms above, so this is the only arm an
     /// array value can take (variant order vs `Expr` is immaterial — a string never matches a `Vec`).
     /// Array *expression* values (`fill(...)`, comprehensions) arrive as [`CxfValue::Expr`] and are
-    /// rejected as `grounding-failed` in M1 (array `oce-expr` builtins are M2).
+    /// rejected as `grounding-failed` until array `oce-expr` builtins are implemented.
     List(Vec<CxfValue>),
     /// An unevaluated CDL/Modelica expression string, or a fully-qualified enumeration value.
     Expr(String),
@@ -383,7 +383,7 @@ pub enum CxfValue {
 /// A §7.4.1 **term** attribute (`S231:unit` / `S231:quantity` / `S231:displayUnit`) as it appears on
 /// the wire. JSON-LD admits three encodings for these string-/IRI-ranged properties, and a robust
 /// ingest must accept **all** of them rather than hard-fail the entire document on an
-/// unexpected-but-legal shape (M1-PR-11): a bare string (`"K"`), a typed literal
+/// unexpected-but-legal shape: a bare string (`"K"`), a typed literal
 /// (`{"@value":"K","@type":"…#string"}`), or an IRI-node reference (`{"@id":"unit:K"}` — the
 /// S231P SHACL range for unit/displayUnit is `sh:class qudt:Unit` and for quantity
 /// `sh:class qudt:QuantityKind`, i.e. an IRI node). The lexical term is recovered with [`as_term`]
@@ -399,7 +399,7 @@ pub enum CxfValue {
 /// like `{"@value":"K"}` missing `@type`) is malformed per S231P, but it must **not** sink the whole
 /// document with a coarse `serde` error — it deserializes into `Other` (round-tripping verbatim, R-8)
 /// and the resolver turns the missing term into a *targeted* `MalformedDocument` carrying the
-/// connector IRI (the same NO-SILENT-FAILURE discipline as a malformed bound; M1-PR-11).
+/// connector IRI (the same NO-SILENT-FAILURE discipline as a malformed bound).
 ///
 /// [`as_term`]: TermAttr::as_term
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -421,7 +421,7 @@ pub enum TermAttr {
     },
     /// An IRI-node reference `{"@id": "..."}` (the S231P-canonical qudt:Unit / qudt:QuantityKind form).
     Iri {
-        /// The referenced IRI — used verbatim as the term in M1 (IRI/CURIE normalization is M2).
+        /// The referenced IRI — used verbatim as the term until IRI/CURIE normalization is added.
         #[serde(rename = "@id")]
         id: String,
         /// Any other keys on the reference object, preserved for lossless round-trip (R-8).
@@ -436,9 +436,9 @@ pub enum TermAttr {
 
 impl TermAttr {
     /// The lexical term: the bare string, the typed literal's `@value`, or the IRI node's `@id`;
-    /// `None` for the malformed `Other` arm. This is the string the §7.10 deep gate unifies on. In M1
-    /// an IRI-node term is the raw IRI (e.g. `"unit:K"`); cross-form unit equivalence (IRI ⇔
-    /// bare-string ⇔ CURIE normalization) is an M2 concern — M1 compares terms by exact string equality.
+    /// `None` for the malformed `Other` arm. This is the string the §7.10 deep gate unifies on. An
+    /// IRI-node term is the raw IRI (e.g. `"unit:K"`); cross-form unit equivalence (IRI ⇔
+    /// bare-string ⇔ CURIE normalization) is deferred, so terms compare by exact string equality.
     #[must_use]
     pub fn as_term(&self) -> Option<&str> {
         match self {

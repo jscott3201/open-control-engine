@@ -8,9 +8,8 @@
 //! never here on the hot path.
 //!
 //!
-//! Status: **M1 as-built.** The public type shapes and helper bodies below are implemented and
-//! tested; they back the filled, non-panicking frozen facade described in `_spec/08` §11.2
-//! (line 800).
+//! The public type shapes and helper bodies below are implemented and tested; they back the
+//! non-panicking facade and scheduler contracts.
 
 use std::sync::Arc;
 
@@ -434,8 +433,8 @@ impl Connector {
     }
 }
 
-/// A resolved, ground parameter/constant table for one block instance (D5: parameters are
-/// typed properties on the block). M1 stores name → ground [`Value`] pairs.
+/// A resolved, ground parameter/constant table for one block instance (D5: parameters are typed
+/// properties on the block). Stores name → ground [`Value`] pairs.
 #[derive(Clone, Debug, Default)]
 pub struct ParamTable {
     /// Ground (fully evaluated) parameter values, keyed by parameter name.
@@ -486,10 +485,10 @@ pub struct ModelGraph {
     pub connectors: Vec<Connector>,
     /// Output→input dataflow edges.
     pub connections: Vec<Connection>,
-    /// Input connectors driven from **outside** the model — top-composite boundary inputs, elided
-    /// per the M1 boundary-input rule (`_spec/11-m1-cxf-plan.md` AD-2). These legally have
-    /// in-degree 0; `oce-validate` treats an in-degree-0 input that is **not** listed here as a
-    /// single-assignment error. Empty for a fully-internal hand-built model.
+    /// Input connectors driven from **outside** the model — top-composite boundary inputs elided by
+    /// the CXF boundary-input rule. These legally have in-degree 0; `oce-validate` treats an
+    /// in-degree-0 input that is **not** listed here as a single-assignment error. Empty for a
+    /// fully-internal hand-built model.
     pub external_inputs: Vec<ConnectorId>,
 }
 

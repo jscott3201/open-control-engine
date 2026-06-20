@@ -1,4 +1,4 @@
-//! M2-PR-A1 scalar `CDL.Reals` algebraic tests. Expected numeric values are hand-derived from
+//! Scalar `CDL.Reals` algebraic tests. Expected numeric values are hand-derived from
 //! `_spec/03` §4.1 and pinned by IEEE-754 bits where exact equality matters.
 
 use oce_model::Value;
@@ -12,7 +12,7 @@ fn real_out(block: &dyn Block, inputs: &[Value]) -> f64 {
     let cx = Ctx::new(0.0, &diag);
     let mut out = None;
     block.step_algebraic(&cx, inputs, &mut |idx, val| {
-        assert_eq!(idx, 0, "A1 Reals blocks have one output");
+        assert_eq!(idx, 0, "scalar Reals blocks have one output");
         out = Some(val);
     });
     match out.expect("block must emit one output") {
@@ -162,7 +162,7 @@ fn line_clamps_at_breakpoints_and_degrades_on_degenerate_domain() {
 
 #[test]
 fn line_pins_current_endpoint_nan_and_inverted_domain_behavior() {
-    // Pins the current slope-intercept endpoint behavior pending the M2-PR-G1 canonical-form decision.
+    // Pins the current slope-intercept endpoint behavior pending the canonical-form decision.
     let non_power_two = |u| [0.0, 0.1, 3.0, 1.1, u];
     assert_real_bits(&Line, &non_power_two(-1.0), 0x3fb99999999999a0);
     assert_real_bits(&Line, &non_power_two(4.0), 1.1f64.to_bits());

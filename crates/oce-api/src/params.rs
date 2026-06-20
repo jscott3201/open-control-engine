@@ -31,20 +31,20 @@ pub enum RunMode {
 }
 
 /// Declared, non-computational metadata for a parameter (CDL §7.4.1) — a flat, owned, backend-free
-/// DTO (R-API-8). **M1:** `value_type` is real (read from the value); `min`/`max`/`unit`/`quantity`
-/// are `None` (per-parameter attribute provenance is not yet carried on `oce_model::ParamTable` —
-/// an M2 refinement). Surfaced as the third element of [`ParamTable::iter`].
+/// DTO (R-API-8). `value_type` is read from the value; `min`/`max`/`unit`/`quantity` are `None`
+/// until per-parameter attribute provenance is carried on `oce_model::ParamTable`. Surfaced as the
+/// third element of [`ParamTable::iter`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParamAttrs {
     /// Structural type of the parameter.
     pub value_type: ValueType,
-    /// Lower validation bound; `None` ⇒ unbounded below. M1: always `None`.
+    /// Lower validation bound; `None` ⇒ unbounded below.
     pub min: Option<f64>,
-    /// Upper validation bound; `None` ⇒ unbounded above. M1: always `None`.
+    /// Upper validation bound; `None` ⇒ unbounded above.
     pub max: Option<f64>,
-    /// SI computation unit; metadata only. M1: `None`.
+    /// SI computation unit; metadata only.
     pub unit: Option<String>,
-    /// Physical quantity; metadata only. M1: `None`.
+    /// Physical quantity; metadata only.
     pub quantity: Option<String>,
 }
 
@@ -171,14 +171,14 @@ impl<S: Store> Engine<S> {
 
     /// Set a parameter by dotted instance path. **Only permitted when `mode() == Halted`** (CDL
     /// §7.4.2 — params never change while the model advances). Validates the value against the
-    /// parameter's declared type and (M2) `[min, max]`; no coercion (`01` §5 invariant 3). The edit
-    /// is staged and folded into block state on [`Engine::resume`].
+    /// parameter's declared type and any declared `[min, max]`; no coercion (`01` §5 invariant 3).
+    /// The edit is staged and folded into block state on [`Engine::resume`].
     ///
     /// # Errors
     /// [`OcError::ParamWhileRunning`] if not `Halted`; [`OcError::UnknownPoint`] for an unknown path;
     /// [`OcError::ParamType`] on a type mismatch; [`OcError::ParamStructural`] for a conditional-
-    /// instance param (never fires in M1); [`OcError::ParamRange`] for an out-of-bounds value
-    /// (M1: bounds are unset, so this never fires). Never panics (R-ERR-1).
+    /// instance param (not yet tracked); [`OcError::ParamRange`] for an out-of-bounds value (bounds
+    /// are currently unset, so this does not fire). Never panics (R-ERR-1).
     pub fn set_param(&mut self, path: &str, value: Value) -> Result<(), OcError> {
         if self.mode != RunMode::Halted {
             return Err(OcError::ParamWhileRunning {
@@ -201,8 +201,8 @@ impl<S: Store> Engine<S> {
                 path: path.to_string(),
             });
         }
-        // Range check: M1 carries no declared bounds (always `None`), so this is inert until param-
-        // attribute provenance lands (M2 must extend this to `Integer` bounds via `IntAttrs`).
+        // Range check: declared bounds are currently absent, so this is inert until parameter
+        // attribute provenance lands. Integer bounds must use `IntAttrs` when that path is added.
         if let Ok(v) = value.as_real()
             && (decl.min.is_some_and(|lo| v < lo) || decl.max.is_some_and(|hi| v > hi))
         {
@@ -228,7 +228,7 @@ impl<S: Store> Engine<S> {
     pub fn resume(&mut self) -> Result<(), OcError> {
         if self.params_dirty {
             // CoW the model at rest (off-tick; refcount is 1, so `make_mut` does not clone). Re-fold
-            // edits, then rebuild blocks/state/outputs via the shared helpers (critic M1/M4).
+            // edits, then rebuild blocks/state/outputs via the shared helpers.
             let (blocks, state, outputs) = {
                 let model = std::sync::Arc::make_mut(&mut self.model);
                 for e in &self.params.entries {
@@ -257,7 +257,7 @@ impl<S: Store> Engine<S> {
     }
 
     /// Whether parameter `idx` gates a conditional-instance (`if`-on-Boolean-parameter, CDL §7.7.4).
-    /// **M1: always `false`** — no conditional-gate set is tracked yet (an M2 structural concern).
+    /// Currently always `false`; conditional-gate tracking is a structural-load concern.
     fn is_structural_param(&self, _idx: usize) -> bool {
         false
     }

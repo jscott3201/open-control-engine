@@ -12,12 +12,10 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A4 timing/latch blocks).** The trait surface, A0 per-tick context
-//! seam, starter blocks, A1/A2 Reals breadth, A3 Logical/Conversions/Integers algebraic blocks,
-//! A5 `IntegratorWithReset` loop-cut template, A6 limited PID controller core, and A6b scalar
-//! dynamic Reals are implemented on the arena trait; A4 adds logical timing/latch blocks and
-//! integer edge/count blocks to the static class-path registry. The full ~130-block catalog is
-//! phased across M1–M2 per `03` §7.
+//! The arena trait, per-tick context seam, scalar Reals, Logical/Conversions/Integers algebraic
+//! blocks, Reals dynamic blocks, PID controllers, logical timing/latch blocks, and integer
+//! edge/count blocks are implemented and registered by canonical CDL class path. The remaining CDL
+//! catalog breadth is added family-by-family behind the same trait and registry contracts.
 
 use oce_model::{ParamTable, Value};
 
@@ -153,7 +151,7 @@ impl Diagnostics for NoopDiagnostics {
 /// parameters — plain owned `f64`/`bool` data, no `Rc`/`RefCell`/raw pointers (per-instance mutable
 /// `[S]` state lives in the engine's `RunState`, never here) — so `Box<dyn Block>` is `Send + Sync`
 /// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
-/// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile (M1-PR-12).
+/// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile.
 pub trait Block: Send + Sync {
     /// Class-level interface descriptor. Drives buffer sizing and the DAG.
     fn signature(&self) -> &'static BlockSignature;

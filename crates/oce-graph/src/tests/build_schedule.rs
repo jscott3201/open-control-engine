@@ -163,7 +163,7 @@ fn output_less_sink_fires_after_its_inputs() {
     assert!(pos(sink) > pos(src), "sink fires after its input source");
 }
 
-// ---- TICK tests (real blocks; the M0 determinism-harness preview) ---------------------------
+// ---- TICK tests with real blocks -------------------------------------------------------------
 #[test]
 fn mixed_feedthrough_block_cycle_is_rejected() {
     // P is a stateful 2-output block: out0 is state-only (cut), out1 feeds through from in0.

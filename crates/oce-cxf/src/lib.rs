@@ -9,9 +9,9 @@
 //! is **Group A** (no store, no database); it depends on `serde`/`serde_json`/`oce-diag` plus
 //! `oce-blocks` (the registry, for class resolution) and `oce-expr` (Ground-mode bindings).
 //!
-//! Status: **M1.** The lossless Layer-A DTO ([`dto`]) and [`parse_document`] landed in M1-PR-4; the
-//! §7.1 resolver ([`import_cxf`]) lands in M1-PR-5. The exporter ([`export`]) is **deferred past
-//! the M1 12-PR sequence** (OQ-3) and currently panics if called — it is never on a load path.
+//! The lossless Layer-A DTO ([`dto`]), [`parse_document`], and §7.1 resolver ([`import_cxf`]) are
+//! implemented. The exporter ([`export`]) is deferred and currently panics if called; it is never on
+//! a load path.
 
 use oce_model::ModelGraph;
 
@@ -26,8 +26,8 @@ mod tests;
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 
-/// A CXF import/export error (typed; never a panic). Variants follow doc 04 §5; the resolver
-/// adds `Resolve`/`Expr` in M1-PR-5 (kept `#[non_exhaustive]` so that is not a breaking change).
+/// A CXF import/export error (typed; never a panic). Variants follow doc 04 §5; kept
+/// `#[non_exhaustive]` so resolver/exporter error variants can be added without breaking callers.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum CxfError {
@@ -44,7 +44,7 @@ pub enum CxfError {
 ///
 /// This is the low-level entry point for round-trip / inspection / editing. `parse_document`
 /// then serialize reproduces the input losslessly, modulo JSON key ordering / whitespace (RT-1).
-/// It assigns **no** semantics — interpretation happens in the resolver (M1-PR-5).
+/// It assigns **no** semantics — interpretation happens in the resolver.
 ///
 /// # Errors
 /// Returns [`CxfError::Json`] if `bytes` is not valid JSON in the CXF document shape.
@@ -62,8 +62,8 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
 }
 
 /// Import a CXF JSON-LD document into the flat [`ModelGraph`] (D1's executable truth), lowering the
-/// lossless Layer-A DTO directly via the §7.1 resolver (`_spec/11-m1-cxf-plan.md` AD-1). Ground
-/// mode only in M1: every parameter binding is evaluated to a ground literal.
+/// lossless Layer-A DTO directly via the §7.1 resolver. Ground mode evaluates every parameter
+/// binding to a ground literal.
 ///
 /// Returns `Ok((graph, report))` where `report` carries `Warning`/`Info` diagnostics only (zero
 /// errors). On any [`oce_diag::Severity::Error`] diagnostic — or any `Warning` when

@@ -6,8 +6,8 @@
 //! `(-a)*b == -(a*b)`) while also accepting a sign in factor position (`2 * -3`, `3 - -2`),
 //! which real CXF-serialized binding strings contain. Relational operators are non-associative
 //! (`a < b < c` is rejected). Exponentiation (`^`) is **not** in the CDL binding subset (§6.1)
-//! and is rejected. Arrays/comprehensions/indexing/ranges are deferred to M1-PR-9 and produce a
-//! typed [`ExprError::Parse`], never a panic.
+//! and is rejected. Arrays/comprehensions/indexing/ranges are deferred and produce a typed
+//! [`ExprError::Parse`], never a panic.
 
 use std::sync::Arc;
 
@@ -50,7 +50,7 @@ enum Tok {
     RParen,
     /// `,`
     Comma,
-    /// `[`, `]`, `{`, `}`, or `:` — array/range punctuation, deferred to M1-PR-9.
+    /// `[`, `]`, `{`, `}`, or `:` — array/range punctuation, deferred.
     ArrayPunct(char),
 }
 

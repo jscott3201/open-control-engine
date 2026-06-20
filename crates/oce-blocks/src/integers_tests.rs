@@ -1,4 +1,4 @@
-//! M2-PR-A3 exact algebraic tests for Logical combinational, Conversions, and Integers.
+//! Exact algebraic tests for `CDL.Integers` blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
 
 use oce_model::Value;
@@ -16,10 +16,10 @@ fn out(block: &dyn Block, inputs: &[Value]) -> Value {
     let cx = Ctx::new(0.0, &diag);
     let mut out = None;
     block.step_algebraic(&cx, inputs, &mut |idx, val| {
-        assert_eq!(idx, 0, "A3 blocks emit one output");
+        assert_eq!(idx, 0, "integer blocks emit one output");
         out = Some(val);
     });
-    out.expect("A3 block must emit one output")
+    out.expect("integer block must emit one output")
 }
 
 fn bool_out(block: &dyn Block, inputs: &[Value]) -> bool {

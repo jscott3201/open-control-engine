@@ -24,8 +24,8 @@ use crate::sim::Outputs;
 /// the load-frozen `Arc<ModelGraph>` are `Send + Sync`, `blocks: Vec<Box<dyn Block>>` is `Send + Sync`
 /// now that `oce-blocks` declares `Block: Send + Sync`, and every other field is plain owned data —
 /// no `unsafe`, no raw pointers (R-API-3). CI-asserted by `guards::_assert_engine_send_sync`
-/// (M1-PR-12). Fields are `pub(crate)`: the split-out method modules (`params`/`sim`/`io`/`loading`)
-/// and the in-crate test harness read engine state directly, but nothing escapes the crate.
+/// Fields are `pub(crate)`: the split-out method modules (`params`/`sim`/`io`/`loading`) and the
+/// in-crate test harness read engine state directly, but nothing escapes the crate.
 pub struct Engine<S: Store = MemStore> {
     pub(crate) store: Arc<S>,
     /// The flat executable truth (D1), frozen at load.
@@ -82,8 +82,8 @@ impl<S: Store> Engine<S> {
         }
     }
 
-    /// Load a **hand-built**, already-flattened [`ModelGraph`] directly inside the crate — the M0 path
-    /// with **no parser** (CXF ingest in [`Engine::load_cxf`] shares this tail).
+    /// Load a **hand-built**, already-flattened [`ModelGraph`] directly inside the crate, with **no
+    /// parser** in front of it (CXF ingest in [`Engine::load_cxf`] shares this tail).
     ///
     /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
     /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
@@ -127,9 +127,9 @@ impl<S: Store> Engine<S> {
         self.mode = RunMode::Running;
         self.params_dirty = false;
         self.prev_t = None;
-        // M1 stages no store-backed inputs through either `load_cxf` or this shared tail, so no hot
-        // point handles are resolved yet; clear any from a prior/future load so reloads never carry
-        // stale handles.
+        // The current facade stages no store-backed inputs through either `load_cxf` or this shared
+        // tail, so no hot point handles are resolved yet; clear any from a prior/future load so
+        // reloads never carry stale handles.
         self.handles = Vec::new();
         Ok(())
     }
@@ -146,10 +146,10 @@ impl<S: Store> Engine<S> {
     pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
-        // 2. Flatten (scalar identity in M1; array normalization is resolver-owned, PR-9).
+        // 2. Flatten (scalar identity; array-parameter normalization is resolver-owned).
         let mut model = oce_flatten::flatten(model)?;
-        // 3. Deep gate (PR-8): §7.10 unification (mutates the graph to propagate one-sided units)
-        //    then the structural/type rules. A shall-violation propagates as OcError::Validate.
+        // 3. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
+        //    the structural/type rules. A shall-violation propagates as OcError::Validate.
         let validate_warnings = oce_validate::unify_and_validate(&mut model)?;
         // 4. Shared BUILD tail: registry → schedule → state → outputs → io → params → store.recover.
         //    This intentionally re-runs pure `validate`: `load_cxf` needs `unify_and_validate` above to
@@ -166,8 +166,9 @@ impl<S: Store> Engine<S> {
         let mut warnings = report.diagnostics;
         warnings.extend(validate_warnings);
         Ok(LoadReport {
-            // M1: no model-level IRI exists on `ModelGraph` yet, so the id is the empty `Default`
-            // key (honest-empty, never fabricated). M2 derives it from the top-composite `@id`.
+            // No model-level IRI exists on `ModelGraph` yet, so the id is the empty `Default` key
+            // (honest-empty, never fabricated). The ingest layer will derive it from the
+            // top-composite `@id` once that field is carried through the flat graph.
             model_id: oce_store::DomainKey::default(),
             warnings,
             io: self.io.summary(),
@@ -237,9 +238,9 @@ impl<S: Store> Engine<S> {
     }
 }
 
-/// Instantiate every block instance from the `oce-blocks` registry (the lookup + `make` loop shared
-/// by [`Engine::build_model_in_memory`] and `Engine::resume`, so the two never drift — critic M4).
-/// An unknown `class_iri` is a typed [`OcError::Load`], never a panic.
+/// Instantiate every block instance from the `oce-blocks` registry. This lookup + `make` loop is
+/// shared by [`Engine::build_model_in_memory`] and `Engine::resume`, so load and tune-at-rest
+/// refolds cannot drift. An unknown `class_iri` is a typed [`OcError::Load`], never a panic.
 pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block>>, OcError> {
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(model.blocks.len());
     for blk in &model.blocks {
@@ -253,7 +254,7 @@ pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block
 
 /// The output-connector paths in `connectors.filter(Out)` order — the keys for [`Outputs::to_map`].
 /// Derived from the model connectors (NOT the IO inventory, which excludes `String` connectors), so
-/// it is always the same length and order as the `Outputs` value entries (critic M1/M2).
+/// it is always the same length and order as the `Outputs` value entries.
 #[must_use]
 pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
     model

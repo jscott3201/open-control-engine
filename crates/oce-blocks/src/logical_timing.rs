@@ -1,4 +1,4 @@
-//! Stateful logical timing blocks for M2 A4.
+//! Stateful `CDL.Logical` timing and hold blocks.
 //!
 //! The time-based blocks all use the shared `dynamics` tick-delta convention: `dt=0` on the first
 //! tick and otherwise `ctx.t() - prev_t`. No block assumes a fixed internal step.
@@ -270,6 +270,9 @@ const TFH_PREV_T_WORD: usize = 2;
 
 /// `CDL.Logical.TrueFalseHold` — minimum dwell time for both true and false output states.
 /// `[S]`, feedthrough `y <- {u}`, not a loop cut.
+///
+/// The registry factory is the source of truth for parameter defaults: `falseHoldDuration` defaults
+/// to the resolved `trueHoldDuration`, while the bare Rust [`Default`] uses zero durations.
 #[derive(Clone, Copy, Debug)]
 pub struct TrueFalseHold {
     pub(crate) true_hold_duration: f64,
@@ -367,6 +370,10 @@ const THR_PREV_T_WORD: usize = 2;
 
 /// `CDL.Logical.TrueHoldWithReset` — true output is held for at least `duration`; `clr` resets.
 /// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut.
+///
+/// This class is spec-authoritative here: it is absent from current Buildings master. Its canonical
+/// min-hold behavior is equivalent to [`TrueFalseHold`] with `falseHoldDuration = 0`, plus the
+/// explicit clear input.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrueHoldWithReset {
     pub(crate) duration: f64,

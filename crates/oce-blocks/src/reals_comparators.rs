@@ -1,10 +1,9 @@
-//! `CDL.Reals` blocks (`03` §4.1) — scalar math is `[A]`; comparators are param-dependent `[A]`/`[S]`.
-//! Non-finite policy is intentionally local for M2: `Min`/`Max` absorb a single NaN operand to match
-//! `oce-expr`, while `Divide` and the `Line` slope/intercept arithmetic preserve IEEE NaN/±Inf
-//! behavior. Comparator comparisons with NaN are false, so a held hysteretic latch resets to false.
-//! Centralized non-finite validation/diagnostics is deferred to the future seam.
+//! Scalar `CDL.Reals` comparator blocks (`03` §4.1).
+//!
 //! Reals comparators use the Buildings asymmetric hysteresis band: set at the bare comparison point
 //! and reset at `point - h` for `Greater*` or `point + h` for `Less*` (not a ±h/2 band).
+//! Comparator comparisons with NaN are false, so a held hysteretic latch resets to false.
+//! Centralized non-finite validation/diagnostics is deferred to the future seam.
 
 use oce_model::{ParamTable, Value};
 

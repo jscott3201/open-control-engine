@@ -1,4 +1,4 @@
-//! M2-PR-A1 scalar `CDL.Reals` algebraic tests. Expected numeric values are hand-derived from
+//! Scalar `CDL.Reals` comparator tests. Expected numeric values are hand-derived from
 //! `_spec/03` §4.1 and pinned by IEEE-754 bits where exact equality matters.
 
 use oce_model::Value;
@@ -17,7 +17,7 @@ fn bool_out(block: &dyn Block, inputs: &[f64]) -> bool {
     let cx = Ctx::new(0.0, &diag);
     let mut out = None;
     block.step_algebraic(&cx, &real_inputs(inputs), &mut |idx, val| {
-        assert_eq!(idx, 0, "A2 comparator blocks have one output");
+        assert_eq!(idx, 0, "comparator blocks have one output");
         out = Some(val);
     });
     match out.expect("block must emit one output") {
@@ -36,7 +36,7 @@ fn drive_bool_values(block: &dyn Block, steps: &[Vec<f64>]) -> Vec<Value> {
         let inputs = real_inputs(step);
         let mut out = None;
         block.emit_from_state(&cx, &inputs, &region, &mut |idx, val| {
-            assert_eq!(idx, 0, "A2 comparator blocks have one output");
+            assert_eq!(idx, 0, "comparator blocks have one output");
             out = Some(val);
         });
         block.update_state(&cx, &inputs, &mut region);

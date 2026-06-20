@@ -8,6 +8,7 @@ the **OBC / LBL Control Description Language (CDL)**:
 
 - https://obc.lbl.gov/specification/cdl.html
 - https://obc.lbl.gov/specification/index.html
+- https://github.com/lbl-srg/modelica-buildings/tree/master/Buildings
 
 It is built to be the **core engine under the hood** for future Aionforge projects, so the public
 API and core semantics must stay embeddable and stable. The library ships **no first-party
@@ -83,3 +84,22 @@ fresh context, resume, or compaction.
   `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the light
   gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
   git hooks — keep commits and pushes fast.
+
+### Naming, modularization & docs
+
+- Identifiers name the thing, never the change. Banned in any file, module, type, function,
+  constant, or test name: lane tags `a1` through `a6`, milestones `m0`/`m1`/`m2`, workstream
+  `c1`, `pr`/`prN`, `phaseN`, `laneN`, and split-counter or grab-bag suffixes such as `foo2`,
+  `_extra`, `_more`, `misc`, and `util2`. Bookkeeping belongs in commits, PRs, and Aionforge
+  Memory, not source names.
+- Block-family modules are named for the CDL namespace: `reals*`, `logical*`, `integers*`,
+  `conversions`, and `discrete`. A size-split suffix must name a behavioral sub-topic such as
+  `logical_latch`, `logical_timing`, `reals_filters`, or `reals_integrator`; never use a number.
+  Types mirror the CDL class last segment in `UpperCamelCase`, the `class_path` string is the
+  canonical identity, and registry constructors stay `make_<snake_block_name>`.
+- Test functions name the property or scenario. They do not name the function under test and do
+  not carry numbered prefixes. Test files mirror their source module, for example
+  `reals_filters.rs` and `reals_filters_tests.rs`.
+- Every public item has rustdoc covering what it is, what it does, invariants, units, and panic
+  behavior where applicable. Every module has a `//!` header. Keep the 700-LOC cap by using
+  per-family modules and `tests/` trees for scenario suites.

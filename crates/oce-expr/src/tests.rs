@@ -294,7 +294,7 @@ fn string_equality() {
     assert_bool("\"K\" <> \"degC\"", true);
 }
 
-// --- Regression tests from the M1-PR-1 adversarial review ----------------------------------
+// --- Regression tests for arithmetic and parser edge cases ---------------------------------
 
 #[test]
 fn large_integer_comparison_is_exact() {

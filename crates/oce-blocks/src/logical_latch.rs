@@ -1,4 +1,4 @@
-//! Stateful logical edge/latch blocks for M2 A4.
+//! Stateful `CDL.Logical` edge and latch blocks.
 //!
 //! These blocks all feed through on their current Boolean inputs: their outputs compare current
 //! inputs with prior state or apply same-tick set/clear decisions. They are stateful but not loop

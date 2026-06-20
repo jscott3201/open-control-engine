@@ -1,15 +1,15 @@
-//! Compile-time PyO3 binding-shape guards (M1 exit #7; `10` §3 "Testability of §3").
+//! Compile-time PyO3 binding-shape guards (`10` §3 "Testability of §3").
 //!
-//! The future `oce-py` PyO3 binding (M4) wraps this `oce-api` surface, and `10` §3 makes the
-//! R-API-PY-1..8 binding-shape constraints **normative on the M1 surface** — so any drift that would
-//! make the surface un-bindable (a generic that can't be a `#[pyclass]`, a non-`Clone` type that
-//! can't cross to Python, a borrowed/lifetime/`&dyn Store` return, a non-`Send` engine) must fail the
-//! build *here*, with **no PyO3 dependency**. Every item below is a never-called `fn` whose mere
-//! compilation IS the assertion; `#[allow(dead_code)]` keeps them off the dead-code lint.
+//! The future `oce-py` PyO3 binding wraps this `oce-api` surface, and `10` §3 makes the R-API-PY-1..8
+//! binding-shape constraints normative on the facade. Any drift that would make the surface
+//! un-bindable (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to
+//! Python, a borrowed/lifetime/`&dyn Store` return, a non-`Send` engine) must fail the build here,
+//! with **no PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
+//! assertion; `#[allow(dead_code)]` keeps them off the dead-code lint.
 //!
 //! This is a **non-test** module (not `#[cfg(test)]`) on purpose: the per-PR `ci.yml` gate runs
-//! `cargo build` + `cargo clippy` but **no tests** (the suite runs only at the release gate), so a
-//! signature/shape drift must be caught by a normal build, not a test target. The complementary
+//! `cargo build` + `cargo clippy` while tests run in the release gate, so a signature/shape drift
+//! must be caught by a normal build, not a test target. The complementary
 //! layers are the checked-in `cargo public-api` baseline (release-gate; full-surface enumeration /
 //! leak detector) and the named frozen-method contract in `08` §11.1.
 
@@ -123,7 +123,7 @@ fn _assert_enumeration_item_types(o: &Outputs, i: &IoInventory, p: &ParamTable) 
 /// fn-pointer is monomorphic, lifetime-erased, and concrete-typed, so a leaked generic parameter, an
 /// `impl Trait` tied to `&self`, a `Cow<'_, _>`, or a `&dyn Store` in any of these would fail to
 /// coerce — a unit-build error, not a runtime surprise. (`load_from_semantic` / `load_modelica` are
-/// Rust-frozen here but deferred from the Python-wrapped subset until M2/M4.)
+/// Rust-frozen here but deferred from the Python-wrapped subset until those loaders are wired.)
 #[allow(clippy::type_complexity)]
 fn _assert_frozen_signatures() {
     let _: fn() -> Engine<MemStore> = Engine::<MemStore>::in_memory;

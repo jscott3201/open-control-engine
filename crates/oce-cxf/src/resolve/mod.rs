@@ -1,17 +1,18 @@
-//! The Layer-A → flat-`ModelGraph` resolver (doc 04 §7.1; `_spec/11-m1-cxf-plan.md` AD-1/AD-2).
+//! The Layer-A → flat-`ModelGraph` resolver (doc 04 §7.1).
 //!
 //! AD-1: there is **no** hierarchical Layer-B — composites are flattened away here and the resolver
 //! emits the flat `oce_model::ModelGraph` (D1's executable truth) directly. Only the elementary
 //! instances named by the top composite's `containsBlock` become [`oce_model::BlockInstance`]s; the
 //! composite itself contributes only its boundary ports (`hasInput`/`hasOutput`) and child list.
 //!
-//! ## Determinism (load-bearing for M1 exit #4)
+//! ## Determinism
 //! Every assignment of a `BlockId`, `ConnectorId`, vector position, or sort key is driven by an
 //! **array** order — `@graph` array position, `containsBlock` order, an instance's `hasInput`/
 //! `hasOutput`/`hasParameter` array order, or `isConnectedTo` array order. The `by_id` /
 //! `block_of_iri` / `conn_of_iri` maps are **lookup-only**: their iteration order never feeds a
-//! model id, a vector position, or a diagnostic order. PR-11 re-imports twice and byte-compares the
-//! whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a defect.
+//! model id, a vector position, or a diagnostic order. The resolver's determinism tests re-import
+//! twice and byte-compare the whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a
+//! defect.
 //!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input
@@ -41,7 +42,7 @@ mod diags;
 use attrs::connector_attrs;
 use diags::{finalize_diags, subject_of};
 
-/// The Ground-mode import mode. Only `Ground` exists in M1: `oce_model::Value` has no symbolic
+/// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
 /// the future `Symbolic`/round-trip mode (OQ-3) without a breaking change.
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -53,13 +54,13 @@ pub enum ImportMode {
 }
 
 /// Options for [`import_cxf`](crate::import_cxf). `#[non_exhaustive]` + [`Default`] so a future
-/// `LibraryIndex` / `shacl` field is non-breaking. (A `LibraryIndex` is deferred: every M1 fixture
-/// declares its elementary interfaces inline, so the "library join" collapses to a registry
+/// `LibraryIndex` / `shacl` field is non-breaking. (A `LibraryIndex` is deferred: current fixtures
+/// declare their elementary interfaces inline, so the "library join" collapses to a registry
 /// existence check via the internal `bridge` module.)
 #[derive(Clone, Debug, Default)]
 #[non_exhaustive]
 pub struct ResolveOptions {
-    /// Import mode (Ground only in M1).
+    /// Import mode (Ground only today).
     pub mode: ImportMode,
     /// If `true`, any `Warning` also fails the load (doc 04 §9). Default `false`.
     pub deny_warnings: bool,
@@ -149,7 +150,7 @@ pub(crate) fn resolve(
     }
 
     // --- Step 2: classify — the top composite (G-1: presence of containsBlock) names the
-    // instances and the boundary ports. Exactly one composite in M1 (single level).
+    // instances and the boundary ports. Exactly one composite is accepted (single level).
     let composites: Vec<&Node> = doc
         .graph
         .iter()
@@ -217,12 +218,12 @@ pub(crate) fn resolve(
                     .with_subject(child.to_owned()),
                 ),
                 Some(entry) => {
-                    // Arity check (closes the unowned gap the PR-6 review found): the document's
-                    // declared interface must match the class signature, or the engine's
+                    // Arity check: the document's declared interface must match the class signature,
+                    // or the engine's
                     // emit-by-port-index would later index past `outputs`/`inputs` and PANIC on the
                     // tick (a malformed model would otherwise load, then crash). The block signature
-                    // is param-independent, so a default-param instance reads it safely. (Connector
-                    // value_type ↔ PortKind agreement is the deeper §7.10 check, owned by PR-8.)
+                    // is param-independent, so a default-param instance reads it safely. Connector
+                    // value_type ↔ PortKind agreement is the deeper §7.10 validation check.
                     let probe = (entry.make)(&ParamTable::default());
                     let sig = probe.signature();
                     let (got_in, got_out) = (node.has_input.len(), node.has_output.len());
@@ -251,9 +252,9 @@ pub(crate) fn resolve(
         });
         blocks.push(BlockInstance {
             id,
-            // NOTE (C-E): `class_iri` holds the *bridged class_path* (e.g. "CDL.Reals.Add"), the
-            // join key for `oce_blocks::lookup` in PR-6 — NOT the full @type IRI. Field name is a
-            // known wart inherited from the spec sketch.
+            // NOTE: `class_iri` holds the *bridged class_path* (e.g. "CDL.Reals.Add"), the join key
+            // for `oce_blocks::lookup` — NOT the full @type IRI. Field name is a known wart inherited
+            // from the spec sketch.
             class_iri: Arc::from(class_path),
             inputs: Vec::new(),            // filled in Step 5b
             outputs: Vec::new(),           // filled in Step 5b
@@ -379,8 +380,8 @@ pub(crate) fn resolve(
                 continue;
             };
             if pnode.is_array == Some(true) {
-                // PR-9: a preserved array parameter expands to per-element scalar entries (doc 04
-                // §3.6.1). Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
+                // A preserved array parameter expands to per-element scalar entries (doc 04 §3.6.1).
+                // Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
                 expand_array_param(
                     piri,
                     pnode,
@@ -391,7 +392,7 @@ pub(crate) fn resolve(
                     &mut diags,
                 );
             } else {
-                // Scalar parameter (the PR-6 path, unchanged).
+                // Scalar parameter.
                 let name: Arc<str> = Arc::from(local_name(piri));
                 match ground_value(cxf_val, &ParamScope::new(&scope_entries)) {
                     Ok(v) => {

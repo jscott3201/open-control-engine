@@ -2,10 +2,10 @@
 //! **the tick never reads it** (CDL §7.17). It is the host's metadata surface for point-schedule
 //! export (use case 4.2.1) and the `set_input`/`get_output` name→connector resolver (R-IO-4).
 //!
-//! M1 derives every field that is structurally available from `oce-model` connectors (path,
-//! direction, value type, min/max/unit/quantity). The semantic classifications that require
-//! `oce-semantics` (physical sensor/actuator, AI/AO vs Network, point-list membership, trend config)
-//! take **defensible M1 defaults** — documented below — refined in M2.
+//! The inventory derives every field that is structurally available from `oce-model` connectors
+//! (path, direction, value type, min/max/unit/quantity). Semantic classifications that require
+//! `oce-semantics` (physical sensor/actuator, network-vs-field classification, point-list
+//! membership, trend config) use documented defaults until semantic projection is wired.
 
 use std::collections::HashMap;
 
@@ -37,20 +37,20 @@ pub enum IoClass {
     Network,
 }
 
-/// Sensor | Actuator | SoftwarePoint (CDL req 5.2.7/5.2.8). `oce-api`-owned. **M1 default
-/// everywhere: `SoftwarePoint`** — sensor/actuator classification is an `oce-semantics` M2 pass.
+/// Sensor | Actuator | SoftwarePoint (CDL req 5.2.7/5.2.8). `oce-api`-owned. The current default is
+/// `SoftwarePoint` everywhere; sensor/actuator classification belongs to the semantic projection.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum PhysicalKind {
     /// A physical sensor input.
     Sensor,
     /// A physical actuator output.
     Actuator,
-    /// A logical software point (the M1 default).
+    /// A logical software point (the current default).
     SoftwarePoint,
 }
 
-/// §7.11 trend metadata. Reuses [`TrendInterval`] (the `OnChange` == interval-0 COV sentinel). **M1:
-/// [`PointInfo::trend`] is always `None`** (no trend config parsed; M2 from the store projection).
+/// §7.11 trend metadata. Reuses [`TrendInterval`] (the `OnChange` == interval-0 COV sentinel).
+/// [`PointInfo::trend`] is currently `None` until trend config is projected from semantic metadata.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct TrendCfg {
     /// The trend recording interval.
@@ -72,7 +72,7 @@ pub struct PointInfo {
     pub value_type: PointValueType,
     /// `AI` | `AO` | `DI` | `DO` | `Network` (use case 4.2.1).
     pub io_class: IoClass,
-    /// `Sensor` | `Actuator` | `SoftwarePoint` (M1: always `SoftwarePoint`).
+    /// `Sensor` | `Actuator` | `SoftwarePoint` (currently always `SoftwarePoint`).
     pub physical: PhysicalKind,
     /// Physical quantity (e.g. `"ThermodynamicTemperature"`); `None` if unset (CDL §7.4.1).
     pub quantity: Option<String>,
@@ -84,11 +84,11 @@ pub struct PointInfo {
     pub min: Option<f64>,
     /// Upper validation bound, if declared.
     pub max: Option<f64>,
-    /// Effective §7.7.5 point-list membership (M1: always `true`).
+    /// Effective §7.7.5 point-list membership (currently always `true`).
     pub in_pointlist: bool,
-    /// §7.11 hardwired-connection flag (M1: always `false`).
+    /// §7.11 hardwired-connection flag (currently always `false`).
     pub hardwired: bool,
-    /// §7.11 trend metadata (M1: always `None`).
+    /// §7.11 trend metadata (currently always `None`).
     pub trend: Option<TrendCfg>,
 }
 
@@ -149,8 +149,8 @@ impl IoInventory {
                 Dir::In => PointDirection::In,
                 Dir::Out => PointDirection::Out,
             };
-            // M1 io-class mapping from direction + signal type. Bool ⇒ digital; else analog. The
-            // Network/physical classification is an oce-semantics M2 pass (R-IO-1).
+            // Current IO-class mapping from direction + signal type. Bool ⇒ digital; else analog.
+            // Network/physical classification belongs to the semantic projection (R-IO-1).
             let io_class = match (direction, value_type) {
                 (PointDirection::In, PointValueType::Bool) => IoClass::DigitalInput,
                 (PointDirection::In, _) => IoClass::AnalogInput,
@@ -179,7 +179,7 @@ impl IoInventory {
             let path = connector_path(c.iri.as_deref(), c.id);
             let idx = points.len();
             // First-wins on a duplicate path: a well-formed model has unique connector IRIs (the
-            // resolver/validate gate rejects duplicate @id); this is the M1 floor for safety.
+            // resolver/validate gate rejects duplicate @id), so this is only a defensive fallback.
             by_path.entry(path.clone()).or_insert(idx);
             points.push(PointInfo {
                 path,
@@ -303,7 +303,7 @@ impl<S: Store> Engine<S> {
 
     /// The effective point list (CDL §7.7.5). `None` returns the full in-memory inventory mirror
     /// (R-IO-3); a `controlled_device` filter requires the §7.7.5 equipment traversal
-    /// (`oce-semantics` + `SemanticStore::point_list`), deferred to M2.
+    /// (`oce-semantics` + `SemanticStore::point_list`), which is deferred.
     ///
     /// # Errors
     /// [`OcError::Load`] for a `controlled_device` query (deferred); `point_list(None)` is

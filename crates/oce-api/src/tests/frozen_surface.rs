@@ -1,17 +1,16 @@
-//! M0 exit-criteria harness (`08` / FRAME M0 §exit). Builds a **hand-built** flattened model with
-//! **no parser** and asserts the engine's load → BUILD → tick contract end to end:
+//! Frozen facade behavior tests built on the hand-built accumulator model.
 //!
-//! - exit #1/#2: the `Engine` loads a hand-built `ModelGraph` and ticks it (scaffold shape is real);
-//! - exit #3: a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
+//! - the `Engine` loads a hand-built `ModelGraph` and ticks it;
+//! - a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
 //!   true **one-tick** delay (1, 2, 3, 4 — not the two-tick delay an inline emit-then-update gives);
-//! - exit #4: an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
-//! - exit #3 (determinism): two independent compiles of the same model produce **byte-identical**
+//! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
+//! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - exit #5: a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
 
 use super::common::*;
 
-// ============================ M1-PR-10: frozen-surface fill ============================
+// ============================ frozen-surface fill ============================
 
 /// Load the canonical accumulator model into a fresh in-memory engine. Connector paths are
 /// `conn#<id>` (hand-built, no `iri`); param paths are `b<id>.<name>` (no `instance_iri`).
@@ -50,8 +49,8 @@ fn free_add_model() -> ModelGraph {
 
 // ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,
 // Clone family, owned-snapshot enumeration, and the Engine<MemStore>: Send + Sync assertion) live in
-// the NON-test module `crate::guards` (M1-PR-12) so a drift fails the per-PR `cargo build`, not only
-// this release-gate test target. This smoke test documents that intent; the real enforcement is that
+// the NON-test module `crate::guards` so a drift fails the normal `cargo build`, not only this
+// release-gate test target. This smoke test documents that intent; the real enforcement is that
 // `guards.rs` compiles.
 #[test]
 fn frozen_surface_guards_compile() {
@@ -144,7 +143,8 @@ fn param_lifecycle_halt_set_resume_refolds() {
     // 4 params: b0.k=1.0, b3.k=2.5, b5.uMin=0.0, b5.uMax=3.0.
     assert_eq!(eng.params().len(), 4);
     assert!(eng.get_param("b0.k").unwrap().bit_eq(&Value::Real(1.0)));
-    // The R-PUB-6 owned enumeration yields (path, value, declared attrs); M1 attrs are bounds-free.
+    // The R-PUB-6 owned enumeration yields (path, value, declared attrs); attrs are bounds-free
+    // until parameter attribute provenance is carried through.
     let rows = eng.params().to_vec();
     let (_, k0_val, k0_attrs) = rows
         .iter()
@@ -157,7 +157,7 @@ fn param_lifecycle_halt_set_resume_refolds() {
             && k0_attrs.max.is_none()
             && k0_attrs.unit.is_none()
             && k0_attrs.quantity.is_none(),
-        "M1 ParamAttrs carry no declared bounds/units yet"
+        "ParamAttrs carry no declared bounds/units yet"
     );
     // set_param while Running is rejected (CDL §7.4.2).
     assert!(matches!(
@@ -387,7 +387,7 @@ fn set_input_flows_through_to_an_undriven_output() {
 
 #[test]
 fn simulate_constant_input_source_flows_through() {
-    // InputSource::Constant is a live (non-deferred) M1 path: stage a fixed (point,value) each step.
+    // InputSource::Constant is a live path: stage a fixed (point,value) each step.
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(free_add_model()).unwrap();
     let spec = SimSpec {
@@ -434,7 +434,7 @@ fn step_realtime_advances_and_reports() {
     let mut eng = loaded_accumulator();
     let r0 = eng.step_realtime(0.0).unwrap();
     assert!(r0.asserts.is_empty());
-    assert_eq!(r0.written, 0, "MemStore commits no points in M1");
+    assert_eq!(r0.written, 0, "MemStore commits no points");
     eng.step_realtime(1.0).unwrap();
     // A backwards step is a typed time regression (delegated tick guard).
     assert!(matches!(
@@ -457,11 +457,15 @@ fn io_inventory_is_built_from_connectors() {
     assert_eq!(s.digital_inputs, 0);
     assert_eq!(s.network, 0);
     for p in eng.io().iter() {
-        assert_eq!(p.physical, PhysicalKind::SoftwarePoint, "M1 default");
+        assert_eq!(p.physical, PhysicalKind::SoftwarePoint, "current default");
         assert!(p.in_pointlist);
         assert!(!p.hardwired);
         assert!(p.trend.is_none());
-        assert_ne!(p.io_class, IoClass::Network, "M1 never classifies Network");
+        assert_ne!(
+            p.io_class,
+            IoClass::Network,
+            "Network classification is semantic"
+        );
     }
     assert_eq!(eng.io().to_vec().len(), 12);
 }

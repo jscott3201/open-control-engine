@@ -1,6 +1,6 @@
-//! Array #5 normalization tests (M1-PR-9; doc 04 §3.6.1). Headline: the **preserved** encoding
+//! Array normalization tests for doc 04 §3.6.1. Headline: the **preserved** encoding
 //! (`isArray`/`sizeOfDimensions`, `k[2]`) and the **flattened** encoding (scalar `k_1`/`k_2`) lower
-//! to a **byte-identical** `ModelGraph` (exit #5), for both 1-D and **multi-dimensional** (`B[2,2]`)
+//! to a **byte-identical** `ModelGraph`, for both 1-D and **multi-dimensional** (`B[2,2]`)
 //! arrays. Plus: per-rank goldens, determinism, 1-based-at-boundary, the element-value oracle,
 //! row-major / last-index-fastest ordering (a column-major flip fails the 2-D golden), param-only
 //! connector-neutrality, the `ArrayFlattenCollision` gate, and a panic-free edge corpus (malformed
@@ -170,7 +170,7 @@ fn array_doc_nd(label: &str, size: &str, n_dims: Json, value: Json) -> Json {
     })
 }
 
-// ---- headline: exit #5 convergence + golden -------------------------------------------------
+// ---- headline convergence + golden -----------------------------------------------------------
 
 #[test]
 fn array_preserved_and_flattened_converge_byte_identical() {
@@ -178,7 +178,7 @@ fn array_preserved_and_flattened_converge_byte_identical() {
     let flattened = render(&import_ok(FLATTENED));
     assert_eq!(
         preserved, flattened,
-        "exit #5: preserved and flattened array encodings must lower to a byte-identical ModelGraph"
+        "preserved and flattened array encodings must lower to a byte-identical ModelGraph"
     );
 }
 
@@ -238,7 +238,7 @@ fn array_element_values_oracle() {
 #[test]
 fn array_param_expansion_is_param_only_no_connector_renumber() {
     // Param-only invariant: array normalization mints NO connector, NO edge, NO external input —
-    // so ConnectorIds/external_inputs/iri are untouched (arms the M2 array-connector remap contract).
+    // so ConnectorIds/external_inputs/iri are untouched.
     let g = import_ok(PRESERVED);
     assert_eq!(
         g.connectors.len(),
@@ -305,8 +305,8 @@ fn single_value_broadcasts_to_all_elements() {
 }
 
 #[test]
-fn array_expression_value_is_grounding_failed_m2() {
-    // An array EXPRESSION (fill/comprehension) arrives as an Expr string, not a List → M2-deferred.
+fn array_expression_value_is_grounding_failed() {
+    // An array EXPRESSION (fill/comprehension) arrives as an Expr string, not a List.
     assert_error_code(
         &array_doc("(2)", json!(1), json!("fill(1, 2)")),
         DiagCode::GroundingFailed,
@@ -382,7 +382,7 @@ fn array2d_preserved_and_flattened_converge_byte_identical() {
     let flattened = render(&import_ok(FLATTENED_2D));
     assert_eq!(
         preserved, flattened,
-        "exit #5 (2-D): preserved B[2,2] and its flattened k_1_1.. twin must lower byte-identically"
+        "preserved B[2,2] and its flattened k_1_1.. twin must lower byte-identically"
     );
 }
 
@@ -498,7 +498,7 @@ fn element_count_overflow_is_malformed_document() {
 fn huge_array_dimension_is_rejected_not_allocated() {
     // A large-but-non-overflowing dimension (2e9) exceeds MAX_ARRAY_ELEMENTS → MalformedDocument.
     // The ceiling is checked BEFORE Vec::with_capacity, so this resolves quickly instead of an
-    // uncatchable multi-GB OOM abort (the DoS guard; M1 exit #6 panic-free posture).
+    // uncatchable multi-GB OOM abort (the DoS guard).
     assert_error_code(
         &array_doc("(2000000000)", json!(1), json!([td("1.0")])),
         DiagCode::MalformedDocument,

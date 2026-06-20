@@ -1,7 +1,7 @@
-//! M1 **exit #4 + #2/#3** conformance harness: drive the hand-authored fixture corpus through the
-//! **full** `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD) and assert the
-//! end-to-end accept/reject/warn contract, plus full-pipeline determinism (`TESTING.md` pillars
-//! 1 + 2 + 4).
+//! Conformance harness for the hand-authored fixture corpus. Each fixture is driven through the
+//! **full** `Engine::load_cxf` pipeline (CXF resolve → flatten → validate → BUILD) to assert the
+//! end-to-end accept/reject/warn contract and full-pipeline determinism (`TESTING.md` pillars
+//! 1, 2, and 4).
 //!
 //! This complements the resolver-layer unit tests (`oce-cxf` `resolve_errors`/`resolve_golden`) and
 //! the `oce-validate` §7.10 unit tests: the §7.10 *fixtures* (`unit_mismatch`/`one_sided_unit`/
@@ -96,7 +96,7 @@ fn valid_minimal_loop_loads_clean() {
     );
 }
 
-// ---- rejection corpus (exit #2/#3, end-to-end through the full pipeline) ------------------------
+// ---- rejection corpus, end-to-end through the full pipeline ------------------------------------
 
 #[test]
 fn unit_mismatch_is_rejected_end_to_end() {
@@ -113,7 +113,7 @@ fn double_driven_input_is_rejected_end_to_end() {
 
 #[test]
 fn non_subset_class_is_rejected_end_to_end() {
-    // An unregistered CDL class (PID is not in the M1 registry) ⇒ ClassNotFound, never a panic.
+    // An unregistered CDL class ⇒ ClassNotFound, never a panic.
     assert_rejected_with(NON_SUBSET, DiagCode::ClassNotFound);
 }
 
@@ -121,12 +121,12 @@ fn non_subset_class_is_rejected_end_to_end() {
 fn bound_mismatch_is_rejected_end_to_end() {
     // con.y declares S231:min 0.0; the driven peer add.u1 declares S231:min 5.0 — two distinct
     // declared bounds in one connected cluster ⇒ §7.10 R13.1 BoundMismatch. This is the bound twin
-    // of unit_mismatch and proves the resolver's connector-bound grounding (M1-PR-11) is load-bearing
+    // of unit_mismatch and proves the resolver's connector-bound grounding is load-bearing
     // end-to-end: without the min flowing onto Connector.attrs, this would (wrongly) load clean.
     assert_rejected_with(BOUND_MISMATCH, DiagCode::BoundMismatch);
 }
 
-// ---- propagation + warn-only (exit #3) ---------------------------------------------------------
+// ---- propagation + warn-only -------------------------------------------------------------------
 
 #[test]
 fn one_sided_unit_propagates_to_peer() {
@@ -162,7 +162,7 @@ fn display_unit_divergence_is_warn_only() {
     );
 }
 
-// ---- determinism (exit #4, end-to-end) ---------------------------------------------------------
+// ---- determinism, end-to-end -------------------------------------------------------------------
 
 #[test]
 fn rejection_is_deterministic() {

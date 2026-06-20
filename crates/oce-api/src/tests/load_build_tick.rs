@@ -1,13 +1,12 @@
-//! M0 exit-criteria harness (`08` / FRAME M0 §exit). Builds a **hand-built** flattened model with
-//! **no parser** and asserts the engine's load → BUILD → tick contract end to end:
+//! Load, BUILD, and tick tests built on a hand-built flattened model with **no parser**:
 //!
-//! - exit #1/#2: the `Engine` loads a hand-built `ModelGraph` and ticks it (scaffold shape is real);
-//! - exit #3: a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
+//! - the `Engine` loads a hand-built `ModelGraph` and ticks it;
+//! - a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
 //!   true **one-tick** delay (1, 2, 3, 4 — not the two-tick delay an inline emit-then-update gives);
-//! - exit #4: an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
-//! - exit #3 (determinism): two independent compiles of the same model produce **byte-identical**
+//! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
+//! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - exit #5: a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
 
 use super::common::*;
 
@@ -20,7 +19,7 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
     eng.build_model_in_memory(m1)
         .expect("BUILD must succeed for an acyclic (loop-broken) graph");
 
-    // Exit #3 (determinism): an independent compile of the same model is byte-identical.
+    // Determinism: an independent compile of the same model is byte-identical.
     let mut eng2 = Engine::in_memory();
     eng2.build_model_in_memory(m2).expect("BUILD must succeed");
     assert_eq!(

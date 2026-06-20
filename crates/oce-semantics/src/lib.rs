@@ -9,8 +9,8 @@
 //! higher-overrides-lower over dotted paths. This is **non-computational** data (CDL §7.17): it
 //! is never read on the tick. The crate is **Group A** (no store, no database).
 //!
-//! Status: **Deferred to M3.** The metadata enums and error seam are reserved; the annotation
-//! resolver lands with the semantic projection milestone.
+//! The metadata enums and error seam are reserved; the annotation resolver is deferred to the
+//! semantic projection layer.
 
 use oce_model::ModelGraph;
 
@@ -41,7 +41,8 @@ pub enum SemanticsError {
 }
 
 /// Resolve a model's vendor annotations into effective per-point metadata (resolved once at
-/// ingest; never resolved on read — Integration Brief §1.3). Deferred to M3.
+/// ingest; never resolved on read — Integration Brief §1.3). Deferred until semantic projection is
+/// wired.
 ///
 /// # Errors
 /// Returns [`SemanticsError`] if an annotation is malformed.

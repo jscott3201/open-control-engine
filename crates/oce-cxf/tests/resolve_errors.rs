@@ -1,10 +1,10 @@
-//! Edge-case / never-panic integration tests for the §7.1 resolver (M1-PR-5, `TESTING.md` pillar 1).
+//! Edge-case and never-panic integration tests for the §7.1 resolver (`TESTING.md` pillar 1).
 //!
 //! Each test mutates a minimal valid 2-block composite ([`BASE`]) to trigger exactly one failure,
 //! then asserts a **specific** [`DiagCode`] (or [`CxfError::Json`]). The resolver is a *total*
 //! function over arbitrary JSON-LD: reaching the assertion at all proves it returned a typed error
-//! rather than panicking (M1 exit #6). The type-domain cases (i64 overflow, garbage float) are the
-//! C1-lesson tripwires — the bug a happy-path test never writes.
+//! rather than panicking. The type-domain cases (i64 overflow, garbage float) are the tripwires a
+//! happy-path test never writes.
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
@@ -127,8 +127,7 @@ fn class_iri_without_hash_fragment_is_class_not_found_not_panic() {
 #[test]
 fn non_subset_class_is_class_not_found() {
     let mut doc = base();
-    // The class path strips cleanly but is intentionally not registered → ClassNotFound
-    // (exit #2 non-subset).
+    // The class path strips cleanly but is intentionally not registered → ClassNotFound.
     node_mut(&mut doc, "M.c1")["@type"] =
         json!("http://example.org#Buildings.Controls.OBC.CDL.Reals.NotRegisteredForTest");
     assert_error_code(&doc, DiagCode::ClassNotFound);
@@ -195,7 +194,7 @@ fn expr_referencing_unbound_param_is_grounding_failure() {
 #[test]
 fn integer_literal_overflow_is_grounding_failure_not_panic() {
     let mut doc = base();
-    // The C1-lesson type-domain boundary: a lexical past i64 must be a typed diagnostic, not a panic.
+    // A lexical integer past i64 must be a typed diagnostic, not a panic.
     node_mut(&mut doc, "M.c1.k")["S231:value"] = json!({ "@value": "99999999999999999999999", "@type": "http://www.w3.org/2001/XMLSchema#integer" });
     assert_error_code(&doc, DiagCode::GroundingFailed);
 }
@@ -239,9 +238,9 @@ fn multi_type_array_classifies_on_first_without_panic() {
 #[test]
 fn diagnostics_are_deterministically_ordered_across_imports() {
     // Two errors on different connectors + one type issue; the returned, sorted diagnostic vector
-    // must be byte-identical across two imports (determinism rule §2.3, exit #4).
+    // must be byte-identical across two imports (determinism rule §2.3).
     let mut doc = base();
-    // Undrive c2.u (SingleAssignment on C1) and add a second undriven Boolean input on a new block?
+    // Undrive c2.u and add a second undriven Boolean input on a new block?
     // Simpler: drop the edge (c2.u undriven) AND retype c2.u Boolean is moot without an edge — use
     // two undriven inputs by adding a second input port to c2.
     node_mut(&mut doc, "M.c1.y")
@@ -280,7 +279,7 @@ fn diagnostics_are_deterministically_ordered_across_imports() {
 
 #[test]
 fn connector_shared_by_two_instances_is_malformed() {
-    // C-1 regression: a connector IRI referenced by two instance ports would be silently wired into
+    // A connector IRI referenced by two instance ports would be silently wired into
     // two blocks. Add a third instance c3 that also claims c2.u as its input → MalformedDocument.
     let mut doc = base();
     node_mut(&mut doc, "#M")["S231:containsBlock"]
@@ -303,7 +302,7 @@ fn connector_shared_by_two_instances_is_malformed() {
 
 #[test]
 fn boundary_input_driving_an_output_is_direction_mismatch() {
-    // C-2 regression: a boundary INPUT may only drive a child INPUT; wiring it to an output (c1.y)
+    // A boundary INPUT may only drive a child INPUT; wiring it to an output (c1.y)
     // must NOT silently land an Out connector in external_inputs — it is a direction error.
     let mut doc = base();
     node_mut(&mut doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.uX" });
@@ -317,7 +316,7 @@ fn boundary_input_driving_an_output_is_direction_mismatch() {
 
 #[test]
 fn analog_connector_coerces_to_real_with_warning() {
-    // C-5: the resolver's only Warning path. An Analog connector (no isOfDataType) coerces to Real
+    // The resolver's only Warning path: an Analog connector (no isOfDataType) coerces to Real
     // and the load SUCCEEDS with an AnalogCoercedToReal warning recorded.
     let mut doc = base();
     let y = node_mut(&mut doc, "M.c1.y");
@@ -337,7 +336,7 @@ fn analog_connector_coerces_to_real_with_warning() {
 
 #[test]
 fn deny_warnings_turns_the_analog_warning_into_a_failure() {
-    // C-5: deny_warnings (a documented but otherwise untested public option) fails the load on any
+    // `deny_warnings` (a documented but otherwise untested public option) fails the load on any
     // warning. (ResolveOptions is #[non_exhaustive], so set the field on a Default instance.)
     let mut doc = base();
     let y = node_mut(&mut doc, "M.c1.y");
@@ -354,7 +353,7 @@ fn deny_warnings_turns_the_analog_warning_into_a_failure() {
 
 #[test]
 fn block_interface_arity_mismatch_is_malformed() {
-    // PR-6 review [CRITICAL]: a block declaring fewer/more ports than its class signature requires
+    // A block declaring fewer/more ports than its class signature requires
     // must be rejected at RESOLVE — otherwise it loads and the engine's emit-by-port-index panics
     // on the first tick (index out of bounds). Remove c2's output (MultiplyByParameter requires
     // exactly one output).
@@ -368,7 +367,7 @@ fn block_interface_arity_mismatch_is_malformed() {
 
 #[test]
 fn multiple_top_composites_is_malformed_document() {
-    // C-6: the resolver's only defense against two containsBlock roots. A regression that picked
+    // The resolver's only defense against two containsBlock roots. A regression that picked
     // composites[0] would silently flatten the wrong sub-model.
     let mut doc = base();
     doc["@graph"].as_array_mut().unwrap().push(json!({
@@ -380,7 +379,7 @@ fn multiple_top_composites_is_malformed_document() {
 
 #[test]
 fn structural_diagnostics_sort_by_ascending_connector_id() {
-    // C-4 regression: with ≥11 connectors, IRI-less structural diagnostics must sort by NUMERIC
+    // With ≥11 connectors, IRI-less structural diagnostics must sort by NUMERIC
     // ConnectorId, not lexicographically (where "connector#10" would precede "connector#2"). Six
     // MultiplyByParameter blocks each with an UNDRIVEN input → SingleAssignment on the even
     // connector ids C0,C2,C4,C6,C8,C10. A lexical sort would emit them as 0,10,2,4,6,8.
@@ -430,7 +429,7 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
 
 #[test]
 fn malformed_connector_bound_is_grounding_failure_not_silent_drop() {
-    // M1-PR-11 (NO-SILENT-FAILURE): a PRESENT S231:min/max that fails to ground must surface a
+    // A PRESENT S231:min/max that fails to ground must surface a
     // diagnostic, never be silently dropped to "unset" (which would mask an R13.1 BoundMismatch the
     // §7.10 gate exists to catch). A garbage typed-literal double bound fails to ground.
     let mut doc = base();
@@ -447,8 +446,8 @@ fn malformed_connector_bound_is_grounding_failure_not_silent_drop() {
 
 #[test]
 fn symbolic_connector_bound_is_grounding_failure_not_silent_drop() {
-    // A symbolic (expression) connector bound grounds against an EMPTY scope in M1 and so fails to
-    // ground — it must report grounding-failed (symbolic connector bounds are M2), never vanish.
+    // A symbolic connector bound grounds against an EMPTY scope and so fails to ground; symbolic
+    // connector bounds must report grounding-failed, never vanish.
     let mut doc = base();
     node_mut(&mut doc, "M.c1.y")["S231:max"] = json!("someUnboundParam + 1");
     assert_error_code(&doc, DiagCode::GroundingFailed);
@@ -456,7 +455,7 @@ fn symbolic_connector_bound_is_grounding_failure_not_silent_drop() {
 
 #[test]
 fn attribute_on_non_numeric_connector_is_malformed_not_silent_drop() {
-    // M1-PR-11 (NO-SILENT-FAILURE): a §7.4.1 attribute on a Boolean/String/Enum connector — which
+    // A §7.4.1 attribute on a Boolean/String/Enum connector — which
     // CDL §7.4.1.3–.5 forbid — must surface, not be silently dropped as the default-attrs path did.
     // Retype c1.y Boolean and declare a unit on it; assert the specific "permits none" diagnostic
     // (other errors such as the resulting Boolean→Real TypeMismatch may also fire — we assert on the
@@ -477,7 +476,7 @@ fn attribute_on_non_numeric_connector_is_malformed_not_silent_drop() {
 
 #[test]
 fn malformed_unit_shape_is_targeted_diagnostic_not_a_document_sink() {
-    // M1-PR-11: a unit/quantity/displayUnit in a non-string/non-IRI shape (here a bare number) is
+    // A unit/quantity/displayUnit in a non-string/non-IRI shape (here a bare number) is
     // malformed per S231P, but must NOT sink the WHOLE document with a coarse CxfError::Json — it
     // deserializes into TermAttr::Other and the resolver surfaces a TARGETED MalformedDocument
     // carrying the connector IRI. Reaching `Validation` (not `Json`) is the proof it did not sink.
@@ -511,7 +510,7 @@ fn partial_typed_literal_unit_is_targeted_diagnostic_not_a_document_sink() {
 #[test]
 fn real_bound_on_integer_connector_is_malformed() {
     // The Integer connector-bound path (`int_connector_bound`): a Real-valued bound on an Integer
-    // connector is malformed. No M1 *block* has Integer ports, but a connector typed `S231:Integer`
+    // connector is malformed. A connector typed `S231:Integer`
     // still classifies as `ValueType::Integer`, so the path is reachable. Retype the model output
     // c2.y2 Integer and give it a Real (1.5) min — assert the Integer-bound diagnostic fires.
     let mut doc = base();
@@ -534,8 +533,8 @@ fn real_bound_on_integer_connector_is_malformed() {
 /// `doubly_driven_input_is_single_assignment` above (which duplicates one edge); here two separate
 /// drivers exercise the in-degree gate through the real `include_str!` byte path. The sibling
 /// §7.10 fixtures (`unit_mismatch` / `one_sided_unit` / `display_unit_divergence` / `bound_mismatch`)
-/// are now driven **end-to-end** through the full pipeline in `oce-api`'s `conformance.rs` (M1-PR-11
-/// wired the resolver's §7.4.1 attribute extraction) — see `fixtures/invalid/README.md`.
+/// are now driven **end-to-end** through the full pipeline in `oce-api`'s `conformance.rs`; see
+/// `fixtures/invalid/README.md`.
 #[test]
 fn double_driven_fixture_is_rejected() {
     let doc: Value = serde_json::from_str(include_str!("fixtures/invalid/double_driven.jsonld"))

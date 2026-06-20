@@ -1,4 +1,4 @@
-//! M2-PR-A3 exact algebraic tests for Logical combinational, Conversions, and Integers.
+//! Exact algebraic tests for `CDL.Logical` combinational blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
 
 use std::sync::Arc;
@@ -19,10 +19,10 @@ fn out(block: &dyn Block, inputs: &[Value]) -> Value {
     let cx = Ctx::new(0.0, &diag);
     let mut out = None;
     block.step_algebraic(&cx, inputs, &mut |idx, val| {
-        assert_eq!(idx, 0, "A3 blocks emit one output");
+        assert_eq!(idx, 0, "algebraic blocks emit one output");
         out = Some(val);
     });
-    out.expect("A3 block must emit one output")
+    out.expect("algebraic block must emit one output")
 }
 
 fn bool_out(block: &dyn Block, inputs: &[Value]) -> bool {
@@ -262,7 +262,7 @@ fn deferred_vector_and_pulse_blocks_remain_unregistered() {
     ] {
         assert!(
             lookup(path).is_none(),
-            "{path} remains explicitly deferred after the scalar A4 timing/latch work"
+            "{path} remains explicitly deferred until vector gathering or time-source support lands"
         );
     }
 }

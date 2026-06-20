@@ -379,20 +379,19 @@ impl Default for SampleTrigger {
 impl SampleTrigger {
     /// Current sample index `k = floor((t − shift)/period + ε)`, or a value `< 0` before the first
     /// instant. A pure function of `t_now` and the block's parameters (`01` §11.1 req 1) — it never
-    /// panics, including on a non-positive or NaN `period`: `period` is **input-derived**, and exit
-    /// #6 forbids panicking on input-derived data, so the degraded path stays panic-free in *all*
-    /// builds (no `debug_assert`), and the `f64 → i64` cast saturates rather than wrapping at extreme
-    /// horizons.
+    /// panics, including on a non-positive or NaN `period`: `period` is **input-derived**, so the
+    /// degraded path stays panic-free in *all* builds (no `debug_assert`), and the `f64 → i64` cast
+    /// saturates rather than wrapping at extreme horizons.
     fn sample_index(&self, t_now: Time) -> i64 {
         // The `> 0.0` test (not a negated `<=`) is deliberate: the else-branch also catches a NaN
         // `period`, since `NaN > 0.0` is false. `f64 → i64` saturates (no UB) at extreme horizons.
         if self.period > 0.0 {
             ((t_now - self.shift) / self.period + SAMPLE_INDEX_EPS).floor() as i64
         } else {
-            // `period > 0` is REQUIRED by CDL but is NOT yet enforced by oce-validate at this
-            // milestone; until that rule lands, a non-positive or NaN `period` degrades safely to
-            // "one sample at/after `shift`, then never" — deterministic, never dividing by zero, and
-            // panic-free in every build (period is input-derived; exit #6 forbids panicking on it).
+            // `period > 0` is REQUIRED by CDL but is NOT yet enforced by oce-validate here; until
+            // that rule lands, a non-positive or NaN `period` degrades safely to "one sample
+            // at/after `shift`, then never" — deterministic, never dividing by zero, and panic-free
+            // in every build.
             if t_now >= self.shift { 0 } else { -1 }
         }
     }

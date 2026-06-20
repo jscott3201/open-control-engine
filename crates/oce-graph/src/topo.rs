@@ -272,8 +272,8 @@ fn first_cycle<K: Ord>(
     roots
 }
 
-/// Render a connector as a dotted path for diagnostics. M0 has no instance names (those arrive with
-/// CXF ingest, M1), so it is rendered from the block class IRI and dense ids:
+/// Render a connector as a dotted path for diagnostics. Hand-built unnamed graphs are rendered from
+/// the block class IRI and dense ids:
 /// `<class-iri>#b<block>.<dir>#c<conn>`.
 fn connector_path(model: &Model, c: ConnectorId) -> ConnectorPath {
     let conn = &model.connectors[c.0 as usize];

@@ -9,11 +9,10 @@
 //! value. It is **Group A** (no store, no database), pure, total, and never reads the clock,
 //! connectors, or computation-affecting attributes (R11).
 //!
-//! # M1 scope (the **scalar** subset)
+//! # Scalar subset
 //!
 //! This crate implements the scalar grounding subset that `oce-flatten` needs to fold
-//! parameter/constant bindings (`02-type-system-and-values.md` §6–7, `_spec/11-m1-cxf-plan.md`
-//! AD-5):
+//! parameter/constant bindings (`02-type-system-and-values.md` §6–7):
 //!
 //! - **Literals** — `Real`, `Integer`, `Boolean`, `String`.
 //! - **Constants** — `pi`/`eps`/`small`/`inf` (bare or `…Constants.<name>` qualified), [`BuiltinConst`].
@@ -22,12 +21,11 @@
 //! - **Scalar built-ins** — `abs sign sqrt div mod rem floor ceil integer min max` (2-arg
 //!   `min`/`max`), with the exact CDL numeric promotion and R10.x semantics.
 //!
-//! **Deferred to a later M1 PR (M1-PR-9):** arrays (`{…}` literals, comprehensions, `A[i]`
-//! indexing, `a:b` ranges) and the array-shaped built-ins (`sum`/`cat`/`fill`/`size`, the
-//! array forms of `min`/`max`), plus enumeration references and the `Modelica.Math.*` alias
-//! whitelist. They appear in `02` §7.4 and are reserved here via `#[non_exhaustive]` so adding
-//! them is not a breaking change; encountering them in a binding today is a typed error, never
-//! a panic.
+//! Arrays (`{…}` literals, comprehensions, `A[i]` indexing, `a:b` ranges) and the array-shaped
+//! built-ins (`sum`/`cat`/`fill`/`size`, the array forms of `min`/`max`), plus enumeration references
+//! and the `Modelica.Math.*` alias whitelist are deferred. They appear in `02` §7.4 and are reserved
+//! here via `#[non_exhaustive]` so adding them is not a breaking change; encountering them in a
+//! binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
@@ -43,7 +41,7 @@ mod tests;
 
 /// A parsed binding expression. Unknown functions are **not representable** — they are
 /// rejected during parse/resolve (R9). Array constructs (`02` §7.4: `EnumRef`, `ArrayLit`,
-/// `Comprehension`, `Index`, `Range`) are reserved for M1-PR-9 via `#[non_exhaustive]`.
+/// `Comprehension`, `Index`, `Range`) are reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExprAst {
@@ -134,7 +132,7 @@ pub enum BinOp {
 }
 
 /// The closed §7.7.2 built-in function set implemented for the **scalar** subset (R9: anything
-/// outside this set, and the array-shaped built-ins reserved for M1-PR-9, is rejected).
+/// outside this set, and the deferred array-shaped built-ins, is rejected).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum Builtin {
@@ -162,8 +160,8 @@ pub enum Builtin {
     MaxScalar,
 }
 
-/// A fully-evaluated binding result. Arrays (an `EvalResult::Array` variant in `02` §7.4) land
-/// in M1-PR-9; reserved here via `#[non_exhaustive]`.
+/// A fully-evaluated binding result. Arrays (an `EvalResult::Array` variant in `02` §7.4) are
+/// reserved here via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum EvalResult {
@@ -175,9 +173,9 @@ pub enum EvalResult {
 /// parameter/constant table that `oce-flatten` supplies. Pure and total: never reads
 /// attributes, connectors, or time (R11).
 ///
-/// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4). The scalar M1
-/// subset never calls them; default implementations return `None`, so scalar-only scopes need
-/// only provide [`Scope::lookup`]. They gain real bodies when enum references land (M1-PR-9).
+/// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4). The scalar subset
+/// never calls them; default implementations return `None`, so scalar-only scopes need only provide
+/// [`Scope::lookup`]. They gain real bodies when enum references are implemented.
 pub trait Scope {
     /// Look up a parameter/constant by name, borrowing its already-evaluated value.
     fn lookup(&self, name: &str) -> Option<&EvalResult>;
@@ -194,7 +192,7 @@ pub trait Scope {
 }
 
 /// A typed expression error (never a panic; R10/R11). Array-shaped variants (`IndexOutOfBounds`,
-/// `ShapeMismatch`, …) from `02` §7.4 are reserved for M1-PR-9 via `#[non_exhaustive]`.
+/// `ShapeMismatch`, …) from `02` §7.4 are reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExprError {
@@ -228,7 +226,7 @@ pub enum ExprError {
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
 /// function outside the §7.7.2 scalar set (array constructs are reported as parse errors until
-/// M1-PR-9).
+/// implemented).
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }

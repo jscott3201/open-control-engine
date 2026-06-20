@@ -1,5 +1,5 @@
 //! Regression tests for the crate-private hand-built graph seam. These stay outside `tests.rs` so the
-//! legacy M0/M1 harness remains below the CI file-size cap.
+//! legacy validation harness remains below the CI file-size cap.
 
 use std::sync::Arc;
 

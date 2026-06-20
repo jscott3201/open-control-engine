@@ -1,13 +1,13 @@
-//! M0 exit-criteria harness (`08` / FRAME M0 §exit). Builds a **hand-built** flattened model with
-//! **no parser** and asserts the engine's load → BUILD → tick contract end to end:
+//! Shared helpers for facade tests. Builds a **hand-built** flattened model with **no parser** and
+//! asserts the engine's load → BUILD → tick contract end to end:
 //!
-//! - exit #1/#2: the `Engine` loads a hand-built `ModelGraph` and ticks it (scaffold shape is real);
-//! - exit #3: a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
+//! - the `Engine` loads a hand-built `ModelGraph` and ticks it;
+//! - a multi-tick run advances the canonical `Add`/`UnitDelay` feedback accumulator with a
 //!   true **one-tick** delay (1, 2, 3, 4 — not the two-tick delay an inline emit-then-update gives);
-//! - exit #4: an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
-//! - exit #3 (determinism): two independent compiles of the same model produce **byte-identical**
+//! - an injected feedthrough cycle is rejected with a typed [`BuildError::AlgebraicLoop`];
+//! - determinism: two independent compiles of the same model produce **byte-identical**
 //!   `order`/`connector_order`/`driver_of`;
-//! - exit #5: a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
+//! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
 
 pub(super) use std::sync::Arc;
 
@@ -86,8 +86,8 @@ pub(super) fn rp(name: &str, v: f64) -> (Arc<str>, Value) {
     (Arc::from(name), Value::Real(v))
 }
 
-/// The canonical M0 graph (6 blocks): a `Constant(1)` drives an `Add` that is closed into a
-/// one-sample feedback loop by a `UnitDelay` (the accumulator `acc(k) = acc(k-1) + 1`), with a
+/// The canonical accumulator graph (6 blocks): a `Constant(1)` drives an `Add` that is closed into
+/// a one-sample feedback loop by a `UnitDelay` (the accumulator `acc(k) = acc(k-1) + 1`), with a
 /// `Constant(2.5)` + `Greater` comparator and a `Limiter[0,3]` reading the accumulator. Returns the
 /// model plus the `(add_out, greater_out, limiter_out)` connectors to probe.
 pub(super) fn build_accumulator_model() -> (ModelGraph, ConnectorId, ConnectorId, ConnectorId) {

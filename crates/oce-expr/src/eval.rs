@@ -130,7 +130,7 @@ fn eval_binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, ExprError> {
 
 /// Relational comparison (`> >= < <=`). Integer/Integer compares **exactly** as `i64`; any Real
 /// operand promotes both to `f64` (an `i64 as f64` of both operands would lose precision above
-/// 2^53, silently mis-ordering large integers — see the C1 regression test).
+/// 2^53, silently mis-ordering large integers; the large-integer regression pins this).
 fn compare_rel(op: BinOp, a: Num, b: Num) -> bool {
     match (a, b) {
         (Num::I(x), Num::I(y)) => match op {
@@ -178,7 +178,7 @@ fn arith(op: BinOp, a: Num, b: Num) -> Result<Value, ExprError> {
 /// Equality for `==`/`<>`. Integer/Integer and String/String compare exactly; Booleans compare
 /// directly; a mixed numeric pair (Real with Integer or Real) compares by promoted `f64` value;
 /// any other pairing is a `TypeError`. Exact float comparison is intended — these are ground
-/// binding values, not measured signals (Enumeration equality lands with enum refs, M1-PR-9).
+/// binding values, not measured signals. Enumeration equality lands with enum-reference grounding.
 #[allow(clippy::float_cmp)]
 fn values_equal(a: &Value, b: &Value) -> Result<bool, ExprError> {
     match (a, b) {

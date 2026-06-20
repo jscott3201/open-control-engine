@@ -192,7 +192,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.Change",
         "CDL.Discrete.UnitDelay",
     ];
-    assert_eq!(PATHS.len(), 69, "M2-PR-A4 registry count");
+    assert_eq!(PATHS.len(), 69, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -316,7 +316,7 @@ fn real_param_promotes_integer_to_real() {
     // Modelica/CDL Int→Real promotion: an integer literal bound to a `Real` parameter is its real
     // value, NOT silently dropped to the constructor default. CXF can carry a bare integer for a
     // Real parameter (no `isOfDataType` re-types it), so a non-zero integer `y_start`/`k` must reach
-    // the block. Tripwire for the silent-wrong-initial-state hole (M1-PR-5 review C-3).
+    // the block. Tripwire for the silent-wrong-initial-state hole.
     let k_int = ParamTable {
         values: vec![(Arc::from("k"), Value::Integer(5))],
     };

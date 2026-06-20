@@ -1,17 +1,16 @@
-//! Ground-mode value grounding (doc 04 §8, `_spec/11-m1-cxf-plan.md` AD-5): turn a parsed
+//! Ground-mode value grounding (doc 04 §8): turn a parsed
 //! [`CxfValue`] parameter/constant binding into a ground [`oce_model::Value`].
 //!
 //! Three input shapes (verified against `dto::CxfValue`):
 //! - bare JSON literals (`Bool`/`Int`/`Float`) ground **literal-natural** to the matching `Value`
-//!   variant. (Note the M1 fragility documented in `resolve.rs`: a bare `Int` feeding a Real-typed
-//!   parameter with no `isOfDataType` is *not* re-typed here; the block constructor's default
-//!   absorbs it.)
+//!   variant. A bare `Int` feeding a Real-typed parameter with no `isOfDataType` is *not* re-typed
+//!   here; the block constructor owns any accepted Int→Real parameter promotion.
 //! - typed XSD literals (`{"@value","@type"}`) parse the lexical form per the datatype suffix.
 //! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`ParamScope`] of the instance's
 //!   already-ground parameters (so a later binding may reference an earlier one).
 //!
 //! Every failure path is a typed [`GroundErr`] — **never a panic, never an `unwrap`** on
-//! input-derived text (M1 exit #6). The resolver maps a `GroundErr` to a
+//! input-derived text. The resolver maps a `GroundErr` to a
 //! [`oce_diag::DiagCode::GroundingFailed`] diagnostic.
 
 use std::fmt;
@@ -39,8 +38,8 @@ pub(crate) enum GroundErr {
     /// An `Expr` binding failed to evaluate to a ground value (unbound symbol, type error, …).
     Expr(oce_expr::ExprError),
     /// The binding did not ground to a scalar — either an `Expr` that evaluated to a non-scalar
-    /// (reserved; the scalar M1 subset never produces this) or a `List` (array) value on a
-    /// non-array parameter node.
+    /// (reserved; the scalar subset never produces this) or a `List` (array) value on a non-array
+    /// parameter node.
     NonScalar,
 }
 
@@ -81,13 +80,13 @@ pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value,
             value, datatype, ..
         } => ground_typed(value, datatype),
         CxfValue::Expr(text) => match oce_expr::eval_str(text, scope) {
-            // `EvalResult` is `#[non_exhaustive]`; the scalar M1 subset only yields `Scalar`.
+            // `EvalResult` is `#[non_exhaustive]`; the scalar subset only yields `Scalar`.
             Ok(EvalResult::Scalar(v)) => Ok(v),
             Ok(_) => Err(GroundErr::NonScalar),
             Err(e) => Err(GroundErr::Expr(e)),
         },
         // A `List` is an array value. The resolver decodes an array-parameter's `List` per-element
-        // (M1-PR-9, §3.6.1) BEFORE calling this — so a `List` reaching here is an array value on a
+        // BEFORE calling this — so a `List` reaching here is an array value on a
         // non-array (scalar) parameter node: a malformed binding, reported as a typed failure.
         CxfValue::List(_) => Err(GroundErr::NonScalar),
     }
@@ -109,7 +108,7 @@ fn ground_typed(lexical: &str, datatype: &str) -> Result<Value, GroundErr> {
             .map(Value::Real)
             .map_err(|_| bad("Real")),
         // `integer`/`int`/`long` → Integer. Out-of-`i64` lexicals (overflow) are a typed error,
-        // NOT a panic (the C1 lesson: hit the type-domain boundary on purpose).
+        // NOT a panic (hit the type-domain boundary on purpose).
         "integer" | "int" | "long" => lexical
             .parse::<i64>()
             .map(Value::Integer)
@@ -217,7 +216,7 @@ mod tests {
 
     #[test]
     fn typed_integer_overflow_is_typed_error_not_panic() {
-        // The C1-lesson type-domain boundary: a lexical past i64 must be GroundingFailed, not a panic.
+        // Type-domain boundary: a lexical past i64 must be GroundingFailed, not a panic.
         let r = ground_value(
             &typed(
                 "99999999999999999999999",
