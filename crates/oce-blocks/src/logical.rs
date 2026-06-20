@@ -1,10 +1,42 @@
-//! `CDL.Logical` starter blocks (`03` §4.3): the combinational `And`/`Not` `[A]`, the canonical
+//! `CDL.Logical` blocks (`03` §4.3): combinational Boolean algebra `[A]`, the canonical
 //! loop-breaker `Pre` `[S]`, the rising-edge detector `Edge` `[S]`, and the parameter-clocked
 //! Boolean source `Sources.SampleTrigger` `[S]` — the two discrete primitives of `01` §11.
 
 use oce_model::{ParamTable, Value};
 
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, read_bool};
+
+/// `CDL.Logical.Sources.Constant` — `y = k`. Stateless `[A]` source, no feedthrough edges.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LogicalConstant {
+    pub(crate) k: bool,
+}
+
+impl Block for LogicalConstant {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Sources.Constant",
+            inputs: &[],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        false
+    }
+    fn step_algebraic(
+        &self,
+        _ctx: &Ctx<'_>,
+        _inputs: &[Value],
+        emit: &mut dyn FnMut(usize, Value),
+    ) {
+        emit(0, Value::Boolean(self.k));
+    }
+}
 
 /// `CDL.Logical.And` — `y = u1 ∧ u2` (`03` §4.3).
 #[derive(Clone, Copy, Debug, Default)]
@@ -34,6 +66,34 @@ impl Block for And {
     }
 }
 
+/// `CDL.Logical.Or` — `y = u1 ∨ u2` (`03` §4.3). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Or;
+
+impl Block for Or {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Or",
+            inputs: &[PortKind::Boolean, PortKind::Boolean],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Boolean(read_bool(inputs, 0) || read_bool(inputs, 1)),
+        );
+    }
+}
+
 /// `CDL.Logical.Not` — `y = ¬u` (`03` §4.3).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Not;
@@ -56,6 +116,121 @@ impl Block for Not {
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit(0, Value::Boolean(!read_bool(inputs, 0)));
+    }
+}
+
+/// `CDL.Logical.Nand` — `y = ¬(u1 ∧ u2)` (`03` §4.3). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Nand;
+
+impl Block for Nand {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Nand",
+            inputs: &[PortKind::Boolean, PortKind::Boolean],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Boolean(!(read_bool(inputs, 0) && read_bool(inputs, 1))),
+        );
+    }
+}
+
+/// `CDL.Logical.Nor` — `y = ¬(u1 ∨ u2)` (`03` §4.3). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Nor;
+
+impl Block for Nor {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Nor",
+            inputs: &[PortKind::Boolean, PortKind::Boolean],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Boolean(!(read_bool(inputs, 0) || read_bool(inputs, 1))),
+        );
+    }
+}
+
+/// `CDL.Logical.Xor` — `y = u1 xor u2` (`03` §4.3). Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Xor;
+
+impl Block for Xor {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Xor",
+            inputs: &[PortKind::Boolean, PortKind::Boolean],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit(
+            0,
+            Value::Boolean(read_bool(inputs, 0) ^ read_bool(inputs, 1)),
+        );
+    }
+}
+
+/// `CDL.Logical.Switch` — `y = if u2 then u1 else u3`; `u2` is the selector (`03` §4.3).
+/// Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LogicalSwitch;
+
+impl Block for LogicalSwitch {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.Switch",
+            inputs: &[PortKind::Boolean, PortKind::Boolean, PortKind::Boolean],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let y = if read_bool(inputs, 1) {
+            read_bool(inputs, 0)
+        } else {
+            read_bool(inputs, 2)
+        };
+        emit(0, Value::Boolean(y));
     }
 }
 

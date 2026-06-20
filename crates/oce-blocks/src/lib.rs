@@ -12,20 +12,31 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A2 Reals comparators).** The trait surface, A0 per-tick context seam,
-//! starter blocks, A1 scalar Reals algebraic core, and A2 param-dependent comparator state are
-//! implemented on the arena trait, with a static class-path registry. The full ~130-block catalog
-//! is phased across M1–M2 per `03` §7.
+//! Status: **M2 in progress (A3 exact algebraic breadth).** The trait surface, A0 per-tick context
+//! seam, starter blocks, A1/A2 Reals breadth, and A3 Logical/Conversions/Integers algebraic blocks
+//! are implemented on the arena trait, with a static class-path registry. The full ~130-block
+//! catalog is phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
+mod conversions;
 mod discrete;
+mod integers;
 mod logical;
 mod reals;
 mod registry;
 
+pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
-pub use logical::{And, Edge, Not, Pre, SampleTrigger};
+pub use integers::{
+    IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerGreater,
+    IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
+    IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin,
+    IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
+};
+pub use logical::{
+    And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
+};
 pub use reals::{
     Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
     LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
@@ -216,13 +227,6 @@ pub(crate) fn read_bool(inputs: &[Value], i: usize) -> bool {
 
 /// Read input `i` as an `Integer`, defaulting to `0` on a (validation-prevented) type mismatch.
 #[must_use]
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "M2-PR-A0 lands the integer accessor before later Lane A integer blocks consume it"
-    )
-)]
 pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
     match inputs.get(i) {
         Some(Value::Integer(n)) => *n,
@@ -238,3 +242,6 @@ mod tests;
 
 #[cfg(test)]
 mod reals_tests;
+
+#[cfg(test)]
+mod a3_tests;

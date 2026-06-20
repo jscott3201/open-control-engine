@@ -1,6 +1,5 @@
-//! Per-block tests for the M0 starter catalog: feedthrough classification against the `03` §3/§5
-//! table, algebraic step semantics, the loop-breakers' emit-then-latch cycle, and registry
-//! resolution.
+//! Per-block tests for the native catalog: feedthrough classification against the `03` §3/§5 table,
+//! algebraic step semantics, the loop-breakers' emit-then-latch cycle, and registry resolution.
 
 use std::cell::RefCell;
 use std::sync::Arc;
@@ -339,11 +338,39 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Less",
         "CDL.Reals.LessThreshold",
         "CDL.Reals.Switch",
+        "CDL.Logical.Sources.Constant",
         "CDL.Logical.And",
+        "CDL.Logical.Or",
         "CDL.Logical.Not",
+        "CDL.Logical.Nand",
+        "CDL.Logical.Nor",
+        "CDL.Logical.Xor",
+        "CDL.Logical.Switch",
         "CDL.Logical.Pre",
         "CDL.Logical.Edge",
         "CDL.Logical.Sources.SampleTrigger",
+        "CDL.Conversions.BooleanToInteger",
+        "CDL.Conversions.BooleanToReal",
+        "CDL.Conversions.IntegerToReal",
+        "CDL.Conversions.RealToInteger",
+        "CDL.Integers.Sources.Constant",
+        "CDL.Integers.Abs",
+        "CDL.Integers.Add",
+        "CDL.Integers.Subtract",
+        "CDL.Integers.Multiply",
+        "CDL.Integers.AddParameter",
+        "CDL.Integers.MultiplyByParameter",
+        "CDL.Integers.Max",
+        "CDL.Integers.Min",
+        "CDL.Integers.Switch",
+        "CDL.Integers.Greater",
+        "CDL.Integers.GreaterThreshold",
+        "CDL.Integers.GreaterEqual",
+        "CDL.Integers.GreaterEqualThreshold",
+        "CDL.Integers.Less",
+        "CDL.Integers.LessThreshold",
+        "CDL.Integers.LessEqual",
+        "CDL.Integers.LessEqualThreshold",
         "CDL.Discrete.UnitDelay",
     ];
     for path in PATHS {

@@ -7,9 +7,14 @@
 use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::{
-    Abs, Add, AddParameter, And, Block, Constant, Divide, Edge, Greater, GreaterThreshold,
-    Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Not,
-    Pre, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay,
+    Abs, Add, AddParameter, And, Block, BooleanToInteger, BooleanToReal, Constant, Divide, Edge,
+    Greater, GreaterThreshold, Hysteresis, IntegerAbs, IntegerAdd, IntegerAddParameter,
+    IntegerConstant, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
+    IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerMultiplyByParameter,
+    IntegerSubtract, IntegerSwitch, IntegerToReal, Less, LessThreshold, Limiter, Line,
+    LogicalConstant, LogicalSwitch, Max, Min, Multiply, MultiplyByParameter, Nand, Nor, Not, Or,
+    Pre, RealToInteger, RegistryEntry, SampleTrigger, Subtract, Switch, UnitDelay, Xor,
 };
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
@@ -94,12 +99,36 @@ static CATALOG: &[RegistryEntry] = &[
         make: make_switch,
     },
     RegistryEntry {
+        class_path: "CDL.Logical.Sources.Constant",
+        make: make_logical_constant,
+    },
+    RegistryEntry {
         class_path: "CDL.Logical.And",
         make: make_and,
     },
     RegistryEntry {
+        class_path: "CDL.Logical.Or",
+        make: make_or,
+    },
+    RegistryEntry {
         class_path: "CDL.Logical.Not",
         make: make_not,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Nand",
+        make: make_nand,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Nor",
+        make: make_nor,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Xor",
+        make: make_xor,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Switch",
+        make: make_logical_switch,
     },
     RegistryEntry {
         class_path: "CDL.Logical.Pre",
@@ -112,6 +141,94 @@ static CATALOG: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Sources.SampleTrigger",
         make: make_sample_trigger,
+    },
+    RegistryEntry {
+        class_path: "CDL.Conversions.BooleanToInteger",
+        make: make_boolean_to_integer,
+    },
+    RegistryEntry {
+        class_path: "CDL.Conversions.BooleanToReal",
+        make: make_boolean_to_real,
+    },
+    RegistryEntry {
+        class_path: "CDL.Conversions.IntegerToReal",
+        make: make_integer_to_real,
+    },
+    RegistryEntry {
+        class_path: "CDL.Conversions.RealToInteger",
+        make: make_real_to_integer,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Sources.Constant",
+        make: make_integer_constant,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Abs",
+        make: make_integer_abs,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Add",
+        make: make_integer_add,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Subtract",
+        make: make_integer_subtract,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Multiply",
+        make: make_integer_multiply,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.AddParameter",
+        make: make_integer_add_parameter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.MultiplyByParameter",
+        make: make_integer_multiply_by_parameter,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Max",
+        make: make_integer_max,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Min",
+        make: make_integer_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Switch",
+        make: make_integer_switch,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Greater",
+        make: make_integer_greater,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterThreshold",
+        make: make_integer_greater_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterEqual",
+        make: make_integer_greater_equal,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.GreaterEqualThreshold",
+        make: make_integer_greater_equal_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Less",
+        make: make_integer_less,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessThreshold",
+        make: make_integer_less_threshold,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessEqual",
+        make: make_integer_less_equal,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.LessEqualThreshold",
+        make: make_integer_less_equal_threshold,
     },
     RegistryEntry {
         class_path: "CDL.Discrete.UnitDelay",
@@ -150,13 +267,6 @@ fn bool_param(params: &ParamTable, name: &str, default: bool) -> bool {
     }
 }
 
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "M2-PR-A0 lands the integer param accessor before later Lane A integer blocks consume it"
-    )
-)]
 fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
     match find(params, name) {
         Some(Value::Integer(n)) => *n,
@@ -287,12 +397,38 @@ fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Switch)
 }
 
+fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(LogicalConstant {
+        k: bool_param(p, "k", false),
+    })
+}
+
 fn make_and(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(And)
 }
 
+fn make_or(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Or)
+}
+
 fn make_not(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Not)
+}
+
+fn make_nand(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Nand)
+}
+
+fn make_nor(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Nor)
+}
+
+fn make_xor(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Xor)
+}
+
+fn make_logical_switch(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(LogicalSwitch)
 }
 
 fn make_pre(p: &ParamTable) -> Box<dyn Block> {
@@ -314,6 +450,114 @@ fn make_sample_trigger(p: &ParamTable) -> Box<dyn Block> {
     Box::new(SampleTrigger {
         period: real_param(p, "period", 1.0),
         shift: real_param(p, "shift", 0.0),
+    })
+}
+
+fn make_boolean_to_integer(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(BooleanToInteger {
+        integer_true: int_param(p, "integerTrue", 1),
+        integer_false: int_param(p, "integerFalse", 0),
+    })
+}
+
+fn make_boolean_to_real(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(BooleanToReal {
+        real_true: real_param(p, "realTrue", 1.0),
+        real_false: real_param(p, "realFalse", 0.0),
+    })
+}
+
+fn make_integer_to_real(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerToReal)
+}
+
+fn make_real_to_integer(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(RealToInteger)
+}
+
+fn make_integer_constant(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerConstant {
+        k: int_param(p, "k", 0),
+    })
+}
+
+fn make_integer_abs(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAbs)
+}
+
+fn make_integer_add(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAdd)
+}
+
+fn make_integer_subtract(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerSubtract)
+}
+
+fn make_integer_multiply(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMultiply)
+}
+
+fn make_integer_add_parameter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerAddParameter {
+        p: int_param(p, "p", 0),
+    })
+}
+
+fn make_integer_multiply_by_parameter(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMultiplyByParameter {
+        k: int_param(p, "k", 1),
+    })
+}
+
+fn make_integer_max(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMax)
+}
+
+fn make_integer_min(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerMin)
+}
+
+fn make_integer_switch(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerSwitch)
+}
+
+fn make_integer_greater(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreater)
+}
+
+fn make_integer_greater_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_greater_equal(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterEqual)
+}
+
+fn make_integer_greater_equal_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerGreaterEqualThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_less(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLess)
+}
+
+fn make_integer_less_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessThreshold {
+        t: int_param(p, "t", 0),
+    })
+}
+
+fn make_integer_less_equal(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessEqual)
+}
+
+fn make_integer_less_equal_threshold(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerLessEqualThreshold {
+        t: int_param(p, "t", 0),
     })
 }
 
