@@ -1,0 +1,384 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.ahu_economizer",
+      "@type": "S231:Block",
+      "S231:label": "ahu_economizer",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor" },
+        { "@id": "http://example.org#g36.ahu_economizer.favorable" },
+        { "@id": "http://example.org#g36.ahu_economizer.modeIdentity" },
+        { "@id": "http://example.org#g36.ahu_economizer.modeAllowed" },
+        { "@id": "http://example.org#g36.ahu_economizer.modeToReal" },
+        { "@id": "http://example.org#g36.ahu_economizer.candidate" },
+        { "@id": "http://example.org#g36.ahu_economizer.delay" },
+        { "@id": "http://example.org#g36.ahu_economizer.notCandidate" },
+        { "@id": "http://example.org#g36.ahu_economizer.enableLatch" },
+        { "@id": "http://example.org#g36.ahu_economizer.damperOpen" },
+        { "@id": "http://example.org#g36.ahu_economizer.damperMinimum" },
+        { "@id": "http://example.org#g36.ahu_economizer.damperSwitch" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_economizer.return_air_temp" },
+        { "@id": "http://example.org#g36.ahu_economizer.outdoor_air_temp" },
+        { "@id": "http://example.org#g36.ahu_economizer.operating_mode" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.ahu_economizer.economizer_enabled" },
+        { "@id": "http://example.org#g36.ahu_economizer.damper_command" },
+        { "@id": "http://example.org#g36.ahu_economizer.operating_mode_real" },
+        { "@id": "http://example.org#g36.ahu_economizer.oa_temperature_delta" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "returnMinusOutdoor",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u1" },
+        { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.ahu_economizer.favorable.u" },
+        { "@id": "http://example.org#g36.ahu_economizer.oa_temperature_delta" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.favorable",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "favorable",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.ahu_economizer.favorable.uLow" },
+        { "@id": "http://example.org#g36.ahu_economizer.favorable.uHigh" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.favorable.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.favorable.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.favorable.uLow",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.favorable.uHigh",
+      "S231:value": { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.favorable.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.favorable.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.candidate.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeIdentity",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.AddParameter",
+      "S231:label": "modeIdentity",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_economizer.modeIdentity.p" },
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.modeIdentity.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.modeIdentity.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeIdentity.p",
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#integer" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeIdentity.u",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeIdentity.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.ahu_economizer.modeAllowed.u" },
+        { "@id": "http://example.org#g36.ahu_economizer.modeToReal.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeAllowed",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.GreaterThreshold",
+      "S231:label": "modeAllowed",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_economizer.modeAllowed.t" },
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.modeAllowed.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.modeAllowed.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeAllowed.t",
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#integer" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeAllowed.u",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeAllowed.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.candidate.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeToReal",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+      "S231:label": "modeToReal",
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.modeToReal.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.modeToReal.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeToReal.u",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.modeToReal.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.operating_mode_real" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.candidate",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "candidate",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_economizer.candidate.u1" },
+        { "@id": "http://example.org#g36.ahu_economizer.candidate.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.candidate.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.candidate.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.candidate.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.candidate.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.ahu_economizer.delay.u" },
+        { "@id": "http://example.org#g36.ahu_economizer.notCandidate.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.delay",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "delay",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_economizer.delay.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.delay.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.delay.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.delay.delayTime",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.delay.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.delay.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.enableLatch.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.notCandidate",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "notCandidate",
+      "S231:hasInput": { "@id": "http://example.org#g36.ahu_economizer.notCandidate.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.notCandidate.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.notCandidate.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.notCandidate.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.enableLatch.clr" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.enableLatch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "enableLatch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_economizer.enableLatch.u" },
+        { "@id": "http://example.org#g36.ahu_economizer.enableLatch.clr" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.enableLatch.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.enableLatch.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.enableLatch.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.enableLatch.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u2" },
+        { "@id": "http://example.org#g36.ahu_economizer.economizer_enabled" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperOpen",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "damperOpen",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_economizer.damperOpen.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.damperOpen.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperOpen.k",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperOpen.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperMinimum",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "damperMinimum",
+      "S231:hasParameter": { "@id": "http://example.org#g36.ahu_economizer.damperMinimum.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.damperMinimum.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperMinimum.k",
+      "S231:value": { "@value": "0.2", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperMinimum.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "damperSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u1" },
+        { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u2" },
+        { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.ahu_economizer.damperSwitch.y" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damperSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0.2", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.damper_command" }
+    },
+
+    {
+      "@id": "http://example.org#g36.ahu_economizer.return_air_temp",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.outdoor_air_temp",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.returnMinusOutdoor.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.operating_mode",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.ahu_economizer.modeIdentity.u" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.economizer_enabled",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.damper_command",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.operating_mode_real",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.ahu_economizer.oa_temperature_delta",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}

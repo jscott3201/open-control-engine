@@ -1,0 +1,326 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.vav_single_zone",
+      "@type": "S231:Block",
+      "S231:label": "vav_single_zone",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.vav_single_zone.zoneSignal" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid" },
+        { "@id": "http://example.org#g36.vav_single_zone.minimumFlow" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingFlow" },
+        { "@id": "http://example.org#g36.vav_single_zone.heatingNeed" },
+        { "@id": "http://example.org#g36.vav_single_zone.heatingFlow" },
+        { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch" },
+        { "@id": "http://example.org#g36.vav_single_zone.damperLimiter" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.vav_single_zone.zone_temp" },
+        { "@id": "http://example.org#g36.vav_single_zone.cooling_setpoint" },
+        { "@id": "http://example.org#g36.vav_single_zone.heating_setpoint" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.vav_single_zone.damper_command" },
+        { "@id": "http://example.org#g36.vav_single_zone.airflow_setpoint" },
+        { "@id": "http://example.org#g36.vav_single_zone.cooling_signal" },
+        { "@id": "http://example.org#g36.vav_single_zone.heating_enabled" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.zoneSignal",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.AddParameter",
+      "S231:label": "zoneSignal",
+      "S231:hasParameter": { "@id": "http://example.org#g36.vav_single_zone.zoneSignal.p" },
+      "S231:hasInput": { "@id": "http://example.org#g36.vav_single_zone.zoneSignal.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.zoneSignal.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.zoneSignal.p",
+      "S231:value": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.zoneSignal.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.zoneSignal.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_m" },
+        { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "coolingPid",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.k" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.Ti" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.yMin" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.yMax" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.reverseActing" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_m" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.coolingPid.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.k",
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.Ti",
+      "S231:value": { "@value": "20.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.yMin",
+      "S231:value": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.yMax",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.reverseActing",
+      "S231:value": { "@value": "false", "@type": "http://www.w3.org/2001/XMLSchema#boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingPid.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u1" },
+        { "@id": "http://example.org#g36.vav_single_zone.cooling_signal" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.minimumFlow",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "minimumFlow",
+      "S231:hasParameter": { "@id": "http://example.org#g36.vav_single_zone.minimumFlow.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.minimumFlow.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.minimumFlow.k",
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.minimumFlow.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingFlow",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:label": "coolingFlow",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u1" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.coolingFlow.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingFlow.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.coolingFlow.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingNeed",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Less",
+      "S231:label": "heatingNeed",
+      "S231:hasParameter": { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u1" },
+        { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingNeed.h",
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingNeed.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u2" },
+        { "@id": "http://example.org#g36.vav_single_zone.heating_enabled" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingFlow",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "heatingFlow",
+      "S231:hasParameter": { "@id": "http://example.org#g36.vav_single_zone.heatingFlow.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.heatingFlow.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingFlow.k",
+      "S231:value": { "@value": "0.6", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heatingFlow.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflowSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "airflowSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u1" },
+        { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u2" },
+        { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflowSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.vav_single_zone.damperLimiter.u" },
+        { "@id": "http://example.org#g36.vav_single_zone.airflow_setpoint" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damperLimiter",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Limiter",
+      "S231:label": "damperLimiter",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.vav_single_zone.damperLimiter.uMin" },
+        { "@id": "http://example.org#g36.vav_single_zone.damperLimiter.uMax" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.vav_single_zone.damperLimiter.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.vav_single_zone.damperLimiter.y" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damperLimiter.uMin",
+      "S231:value": { "@value": "0.2", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damperLimiter.uMax",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damperLimiter.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damperLimiter.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0.2", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.damper_command" }
+    },
+
+    {
+      "@id": "http://example.org#g36.vav_single_zone.zone_temp",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.zoneSignal.u" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.cooling_setpoint",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heating_setpoint",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.damper_command",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.airflow_setpoint",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.cooling_signal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.vav_single_zone.heating_enabled",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    }
+  ]
+}
