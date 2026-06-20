@@ -1,7 +1,7 @@
 //! Rule implementations and deterministic diagnostic ordering for the deep load gate.
 //!
 //! Every check here is **total and panic-free** on *any* [`ModelGraph`] — including a
-//! structurally-malformed, hand-built one whose ids are out of range or whose [`Attrs`] variant
+//! structurally-malformed, hand-built one whose ids are out of range or whose [`oce_model::Attrs`] variant
 //! violates the R5 tag invariant (a public struct literal can do this, bypassing the checked
 //! [`oce_model::Connector::with_attrs`] constructor). Every block/connector/connection index is
 //! bounds-checked before use and every `Real`-attribute read goes through

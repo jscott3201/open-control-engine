@@ -1,12 +1,12 @@
 //! Rule implementations and deterministic diagnostic ordering for the deep load gate.
 //!
 //! Every check here is **total and panic-free** on *any* [`ModelGraph`] — including a
-//! structurally-malformed, hand-built one whose ids are out of range or whose [`Attrs`] variant
+//! structurally-malformed, hand-built one whose ids are out of range or whose [`oce_model::Attrs`] variant
 //! violates the R5 tag invariant (a public struct literal can do this, bypassing the checked
 //! [`oce_model::Connector::with_attrs`] constructor). Every block/connector/connection index is
 //! bounds-checked before use and every `Real`-attribute read goes through
 //! [`oce_model::Attrs::as_real`] (which yields `None` on a mismatched tag) rather than an unwrap.
-//! A malformed graph yields a [`DiagCode::MalformedDocument`] diagnostic, never an abort
+//! A malformed graph yields a [`oce_diag::DiagCode::MalformedDocument`] diagnostic, never an abort
 //! (`08` R-ERR-1 / the safety-critical testing standard).
 
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ pub(crate) fn conn_of_iri(model: &ModelGraph) -> HashMap<&str, ConnectorId> {
 }
 
 /// In-degree of every connector (count of connections whose `to` is that connector). Out-of-range
-/// `to` endpoints are skipped here (they are reported as [`DiagCode::MalformedDocument`] by
+/// `to` endpoints are skipped here (they are reported as [`oce_diag::DiagCode::MalformedDocument`] by
 /// [`structural::check_connections`]); the returned vector is dense over `connectors.len()`.
 pub(super) fn in_degrees(model: &ModelGraph) -> Vec<u32> {
     let mut deg = vec![0u32; model.connectors.len()];
