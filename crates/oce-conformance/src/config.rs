@@ -1,13 +1,19 @@
 //! JSON verification configuration for conformance runs.
 //!
 //! The configuration mirrors the CDL verification artifact shape: references, base tolerances,
-//! per-output tolerance overrides, indicator masks, sampling hints, and device/CDL point mappings.
+//! ordered per-output tolerance overrides, indicator masks, sampling hints, and device/CDL point
+//! mappings.
 
-use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt;
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde::{
+    Deserializer, Serializer,
+    de::{MapAccess, Visitor},
+    ser::SerializeMap,
+};
 
 use crate::Tolerances;
 
@@ -22,17 +28,19 @@ pub struct VerifyConfig {
     #[serde(default)]
     pub tolerances: Tolerances,
     /// Per-output regex string to partial tolerance override.
-    ///
-    /// This B2 DTO keeps the JSON object shape deterministic with a map. The B3 driver will own the
-    /// ordered duplicate-preserving pattern list described in the conformance spec.
-    #[serde(default)]
-    pub outputs: BTreeMap<String, PartialTolerances>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_output_patterns",
+        serialize_with = "serialize_output_patterns"
+    )]
+    pub outputs: Vec<OutputPattern>,
     /// Per-output regex string to indicator signal names.
-    ///
-    /// This B2 DTO keeps the JSON object shape deterministic with a map. The B3 driver will own the
-    /// ordered duplicate-preserving pattern list described in the conformance spec.
-    #[serde(default)]
-    pub indicators: BTreeMap<String, Vec<String>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_indicator_patterns",
+        serialize_with = "serialize_indicator_patterns"
+    )]
+    pub indicators: Vec<IndicatorPattern>,
     /// Optional comparison sampling-rate hint in seconds.
     #[serde(default)]
     pub sampling: Option<f64>,
@@ -60,15 +68,56 @@ impl VerifyConfig {
         serde_json::to_string_pretty(self).map_err(ConfigError::Json)
     }
 
+    /// Return the base tolerance with matching per-output regex overrides applied in declaration
+    /// order. Later matching records override only the fields they name, so duplicate patterns are
+    /// preserved instead of being collapsed by JSON-object key semantics.
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::Invalid`] if a pattern is not a valid regex.
+    pub fn tolerance_for_output(&self, output: &str) -> Result<Tolerances, ConfigError> {
+        let mut tolerance = self.tolerances;
+        for entry in &self.outputs {
+            if Regex::new(&entry.pattern)
+                .map_err(|err| invalid_error(format!("outputs {:?}: {err}", entry.pattern)))?
+                .is_match(output)
+            {
+                tolerance = entry.tolerances.apply_to(tolerance);
+            }
+        }
+        Ok(tolerance)
+    }
+
+    /// Return all indicator signal names whose regex pattern matches `output`, preserving
+    /// declaration order. Multiple matching records are concatenated; [`crate::Mask`] ANDs the
+    /// resulting indicators.
+    ///
+    /// # Errors
+    /// Returns [`ConfigError::Invalid`] if a pattern is not a valid regex.
+    pub fn indicator_signals_for_output(&self, output: &str) -> Result<Vec<String>, ConfigError> {
+        let mut signals = Vec::new();
+        for entry in &self.indicators {
+            if Regex::new(&entry.pattern)
+                .map_err(|err| invalid_error(format!("indicators {:?}: {err}", entry.pattern)))?
+                .is_match(output)
+            {
+                signals.extend(entry.signals.iter().cloned());
+            }
+        }
+        Ok(signals)
+    }
+
     /// Return the base tolerance with an exact-key per-output override applied.
     ///
-    /// Regex compilation and matching belongs to the B3 driver; this helper intentionally applies
-    /// only a literal key so B2 does not introduce a second pattern engine.
+    /// Retained for B2-era tests and callers that already resolved a literal output key; new driver
+    /// code should use [`VerifyConfig::tolerance_for_output`] so regex patterns are honored.
     #[must_use]
     pub fn tolerance_for_exact_output(&self, output: &str) -> Tolerances {
         self.outputs
-            .get(output)
-            .map_or(self.tolerances, |partial| partial.apply_to(self.tolerances))
+            .iter()
+            .find(|entry| entry.pattern == output)
+            .map_or(self.tolerances, |entry| {
+                entry.tolerances.apply_to(self.tolerances)
+            })
     }
 
     /// Validate semantic invariants that serde alone cannot express.
@@ -79,6 +128,24 @@ impl VerifyConfig {
     pub fn validate(&self) -> Result<(), ConfigError> {
         validate_config(self)
     }
+}
+
+/// One ordered per-output tolerance pattern.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct OutputPattern {
+    /// Regex matched against an output point name.
+    pub pattern: String,
+    /// Partial tolerance override applied when the regex matches.
+    pub tolerances: PartialTolerances,
+}
+
+/// One ordered per-output indicator pattern.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IndicatorPattern {
+    /// Regex matched against an output point name.
+    pub pattern: String,
+    /// Indicator signal names ANDed when the regex matches.
+    pub signals: Vec<String>,
 }
 
 /// One reference sequence and its device-to-CDL point mapping.
@@ -198,22 +265,28 @@ fn validate_config(config: &VerifyConfig) -> Result<(), ConfigError> {
         return invalid("at least one reference is required");
     }
     validate_tolerances("tolerances", config.tolerances)?;
-    for (pattern, partial) in &config.outputs {
-        if pattern.trim().is_empty() {
+    for entry in &config.outputs {
+        if entry.pattern.trim().is_empty() {
             return invalid("output tolerance pattern must not be empty");
         }
-        validate_partial_tolerances(pattern, *partial)?;
+        validate_regex("outputs", &entry.pattern)?;
+        validate_partial_tolerances(&entry.pattern, entry.tolerances)?;
     }
-    for (pattern, signals) in &config.indicators {
-        if pattern.trim().is_empty() {
+    for entry in &config.indicators {
+        if entry.pattern.trim().is_empty() {
             return invalid("indicator output pattern must not be empty");
         }
-        if signals.is_empty() {
-            return invalid(format!("indicator mask for {pattern:?} has no signals"));
-        }
-        if signals.iter().any(|signal| signal.trim().is_empty()) {
+        validate_regex("indicators", &entry.pattern)?;
+        if entry.signals.is_empty() {
             return invalid(format!(
-                "indicator mask for {pattern:?} contains an empty signal"
+                "indicator mask for {:?} has no signals",
+                entry.pattern
+            ));
+        }
+        if entry.signals.iter().any(|signal| signal.trim().is_empty()) {
+            return invalid(format!(
+                "indicator mask for {:?} contains an empty signal",
+                entry.pattern
             ));
         }
     }
@@ -235,6 +308,12 @@ fn validate_config(config: &VerifyConfig) -> Result<(), ConfigError> {
         }
     }
     Ok(())
+}
+
+fn validate_regex(section: &str, pattern: &str) -> Result<(), ConfigError> {
+    Regex::new(pattern)
+        .map(|_| ())
+        .map_err(|err| invalid_error(format!("{section} pattern {pattern:?} is not regex: {err}")))
 }
 
 fn validate_point_end(
@@ -293,6 +372,98 @@ fn invalid<T>(message: impl Into<String>) -> Result<T, ConfigError> {
     Err(ConfigError::Invalid(message.into()))
 }
 
+fn invalid_error(message: impl Into<String>) -> ConfigError {
+    ConfigError::Invalid(message.into())
+}
+
 fn default_run_controller() -> bool {
     true
+}
+
+fn serialize_output_patterns<S>(entries: &[OutputPattern], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut map = serializer.serialize_map(Some(entries.len()))?;
+    for entry in entries {
+        map.serialize_entry(&entry.pattern, &entry.tolerances)?;
+    }
+    map.end()
+}
+
+fn serialize_indicator_patterns<S>(
+    entries: &[IndicatorPattern],
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut map = serializer.serialize_map(Some(entries.len()))?;
+    for entry in entries {
+        map.serialize_entry(&entry.pattern, &entry.signals)?;
+    }
+    map.end()
+}
+
+fn deserialize_output_patterns<'de, D>(deserializer: D) -> Result<Vec<OutputPattern>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct OutputPatternsVisitor;
+
+    impl<'de> Visitor<'de> for OutputPatternsVisitor {
+        type Value = Vec<OutputPattern>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an object mapping output regexes to tolerance overrides")
+        }
+
+        fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut entries = Vec::with_capacity(access.size_hint().unwrap_or(0));
+            while let Some((pattern, tolerances)) =
+                access.next_entry::<String, PartialTolerances>()?
+            {
+                entries.push(OutputPattern {
+                    pattern,
+                    tolerances,
+                });
+            }
+            Ok(entries)
+        }
+    }
+
+    deserializer.deserialize_map(OutputPatternsVisitor)
+}
+
+fn deserialize_indicator_patterns<'de, D>(
+    deserializer: D,
+) -> Result<Vec<IndicatorPattern>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct IndicatorPatternsVisitor;
+
+    impl<'de> Visitor<'de> for IndicatorPatternsVisitor {
+        type Value = Vec<IndicatorPattern>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("an object mapping output regexes to indicator signal lists")
+        }
+
+        fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+        where
+            A: MapAccess<'de>,
+        {
+            let mut entries = Vec::with_capacity(access.size_hint().unwrap_or(0));
+            while let Some((pattern, signals)) = access.next_entry::<String, Vec<String>>()? {
+                entries.push(IndicatorPattern { pattern, signals });
+            }
+            Ok(entries)
+        }
+    }
+
+    deserializer.deserialize_map(IndicatorPatternsVisitor)
 }

@@ -1,0 +1,64 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#DriverAdd",
+      "@type": "S231:Block",
+      "S231:label": "DriverAdd",
+      "S231:containsBlock": { "@id": "http://example.org#DriverAdd.add" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#DriverAdd.u1" },
+        { "@id": "http://example.org#DriverAdd.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#DriverAdd.y" }
+    },
+
+    {
+      "@id": "http://example.org#DriverAdd.add",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#DriverAdd.add.u1" },
+        { "@id": "http://example.org#DriverAdd.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#DriverAdd.add.y" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.add.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.add.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverAdd.y" }
+    },
+
+    {
+      "@id": "http://example.org#DriverAdd.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverAdd.add.u1" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverAdd.add.u2" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}

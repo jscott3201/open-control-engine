@@ -13,8 +13,10 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+oce-api = { workspace = true }
 oce-diag = { workspace = true }
 oce-model = { workspace = true }
+regex = "1"
 ryu = "1.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
