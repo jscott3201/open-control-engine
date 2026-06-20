@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Conversions.RealToInteger",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 8,
+  "input": "u=[2.5,-2.5,2.4,2.6,-2.4,-2.6,0.5,-0.5]; half-boundary cases pin round-half-away-from-zero",
+  "reference_rule": "y = if u>0 then integer(floor(u+0.5)) else integer(ceil(u-0.5)) (round half away from zero); Buildings Conversions/RealToInteger.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

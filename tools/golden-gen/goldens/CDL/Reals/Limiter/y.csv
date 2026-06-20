@@ -1,0 +1,6 @@
+#1
+# columns: time y
+double CDL_Reals_Limiter_y(3,2)
+0.0 0.0
+60.0 2.2
+120.0 5.5

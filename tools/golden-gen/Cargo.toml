@@ -1,0 +1,35 @@
+# golden-gen — Tier-A oracle generator (standalone, OFF the workspace test path).
+#
+# This crate is intentionally placed under `tools/` rather than `crates/` so it is NOT a member
+# of the workspace (`members = ["crates/*"]`) and therefore never runs on the cargo-test gate.
+#
+# ANTI-TAUTOLOGY: this generator derives every reference output from the CDL spec math directly
+# (closed-form, independently re-derived). It MUST NOT depend on `oce-blocks` (the implementation
+# under test). It is fully self-contained: it ships its own byte-stable CombiTimeTable CSV writer
+# (mirroring `_spec/07` §9 and the `ryu` shortest-round-trip formatting that `oce-conformance`
+# uses) so the goldens are byte-identical for finite values. A self-contained writer is required
+# because the `oce-conformance` writer rejects non-finite cells, yet the IEEE Divide oracle must
+# emit +inf / -inf / NaN for the divide-by-zero edges.
+
+# Empty `[workspace]` table makes this a STANDALONE crate with its own (tiny) workspace, so the
+# repo-root workspace never absorbs it and it stays off the cargo-test gate.
+[workspace]
+
+[package]
+name = "golden-gen"
+description = "Tier-A oracle generator: closed-form CDL reference goldens (CombiTimeTable CSV)."
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95.0"
+authors = ["Justin Scott"]
+license = "MIT OR Apache-2.0"
+publish = false
+
+[[bin]]
+name = "golden-gen"
+path = "src/main.rs"
+
+[dependencies]
+# Same shortest-round-trip f64 formatter that `oce-conformance` uses, so finite-valued goldens are
+# byte-identical to what the conformance writer would produce. NOT a dependency on any oce crate.
+ryu = "1.0"

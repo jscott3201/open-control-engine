@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Logical.TrueDelay",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0 (atoly=0)",
+  "n_samples": 5,
+  "input": "delayTime=75; t=[0,30,100,130,160], u=[F,T,T,T,F]; rising at t=30, elapses at 105",
+  "reference_rule": "y = u AND (t - entryTime >= delayTime); falling passes; _spec/03 §4.3 TrueDelay",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

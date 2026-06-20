@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Reals.Abs",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "input": "u=[-3.7,0.1,-0.0,-1.5e-300]; negative, positive, signed zero, tiny",
+  "reference_rule": "y = |u| (IEEE magnitude, sign bit cleared); _spec/03 §4.1 Abs",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

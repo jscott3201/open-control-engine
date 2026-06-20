@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Integers.Multiply",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "input": "u1=[7,-6,46341,0], u2=[-8,-9,46341,2147483647]; 46341^2 exceeds i32, exact in i64",
+  "reference_rule": "y = u1 * u2 (exact i64 mul); _spec/03 §4.2 Multiply",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

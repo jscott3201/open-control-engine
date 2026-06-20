@@ -1,0 +1,15 @@
+{
+  "class_path": "CDL.Constants",
+  "tier": "A",
+  "source": "fold-time literals from Modelica.Constants (_spec/03 §4.10; _spec/02 §6.1/§7.3)",
+  "value_kind": "Real",
+  "steppable": false,
+  "values": {
+    "pi": 3.141592653589793,
+    "eps": 2.220446049250313e-16,
+    "small": 1e-60,
+    "inf": "+inf (Modelica largest-representable; FLAG: verify against oce-expr constant table — may fold to f64::MAX instead)"
+  },
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

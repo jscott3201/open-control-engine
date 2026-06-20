@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Reals.Subtract",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 3,
+  "input": "u1=[0.3,1.0,2.2], u2=[0.1,0.9,1.1]; exposes cancellation round-off",
+  "reference_rule": "y = u1 - u2 (IEEE-754 f64 subtract); _spec/03 §4.1 Subtract",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

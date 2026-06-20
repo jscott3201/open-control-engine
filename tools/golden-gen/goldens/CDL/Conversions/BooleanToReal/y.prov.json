@@ -1,0 +1,14 @@
+{
+  "class_path": "CDL.Conversions.BooleanToReal",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "input": "realTrue=0.1, realFalse=-0.3; u=[T,F,T,F]; non-dyadic constants pin f64 bits",
+  "reference_rule": "y = realTrue if u else realFalse; _spec/03 §4.4 BooleanToReal (R-CONV-1)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
