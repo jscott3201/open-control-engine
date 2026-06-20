@@ -12,10 +12,10 @@
 //! **Group A**: no store, no database (D-OWNER-1); it carries behavior only — never per-tick state
 //! in the struct, never non-computational metadata (CDL §7.17).
 //!
-//! Status: **M2 in progress (A3 exact algebraic breadth).** The trait surface, A0 per-tick context
-//! seam, starter blocks, A1/A2 Reals breadth, and A3 Logical/Conversions/Integers algebraic blocks
-//! are implemented on the arena trait, with a static class-path registry. The full ~130-block
-//! catalog is phased across M1–M2 per `03` §7.
+//! Status: **M2 in progress (A5 integrating template).** The trait surface, A0 per-tick context
+//! seam, starter blocks, A1/A2 Reals breadth, A3 Logical/Conversions/Integers algebraic blocks,
+//! and A5 `IntegratorWithReset` loop-cut template are implemented on the arena trait, with a
+//! static class-path registry. The full ~130-block catalog is phased across M1–M2 per `03` §7.
 
 use oce_model::{ParamTable, Value};
 
@@ -24,6 +24,7 @@ mod discrete;
 mod integers;
 mod logical;
 mod reals;
+mod reals_dynamic;
 mod registry;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
@@ -41,6 +42,7 @@ pub use reals::{
     Abs, Add, AddParameter, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
     LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, Subtract, Switch,
 };
+pub use reals_dynamic::IntegratorWithReset;
 pub use registry::lookup;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -245,3 +247,6 @@ mod reals_tests;
 
 #[cfg(test)]
 mod a3_tests;
+
+#[cfg(test)]
+mod reals_dynamic_tests;

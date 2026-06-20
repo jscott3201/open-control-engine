@@ -19,6 +19,7 @@ use crate::{
 };
 
 mod feedthrough_stateful;
+mod integrator_loop_cut;
 
 // ---- test fixtures --------------------------------------------------------------------------
 
