@@ -36,16 +36,11 @@ impl ValueKind {
     /// Encode a typed `oce-model` value into a numeric CombiTimeTable cell.
     ///
     /// # Errors
-    /// Returns a typed [`CsvError`] if the value kind mismatches, a real value is non-finite, or
-    /// an integer is not exactly representable in `f64`.
+    /// Returns a typed [`CsvError`] if the value kind mismatches or an integer is not exactly
+    /// representable in `f64`.
     pub fn encode_value(self, value: &Value) -> Result<f64, CsvError> {
         match (self, value) {
-            (Self::Real, Value::Real(x)) if x.is_finite() => Ok(*x),
-            (Self::Real, Value::Real(x)) => Err(CsvError::NonFinite {
-                line: 0,
-                column: 0,
-                text: format_f64(*x),
-            }),
+            (Self::Real, Value::Real(x)) => Ok(*x),
             (Self::Integer, Value::Integer(i)) => encode_i64(*i),
             (Self::Boolean, Value::Boolean(b)) => Ok(if *b { 1.0 } else { 0.0 }),
             (_, other) => Err(CsvError::ValueKindMismatch {
@@ -75,8 +70,8 @@ impl CombiTimeTable {
     /// Read a `CombiTimeTable` CSV file.
     ///
     /// # Errors
-    /// Returns [`CsvError`] for I/O, malformed headers, shape mismatches, invalid or non-finite
-    /// numbers, or decreasing time.
+    /// Returns [`CsvError`] for I/O, malformed headers, shape mismatches, invalid numbers,
+    /// non-finite time, or decreasing time.
     pub fn read(path: &Path) -> Result<Self, CsvError> {
         let text = fs::read_to_string(path).map_err(|e| CsvError::Io(e.to_string()))?;
         Self::parse(&text)
@@ -153,7 +148,7 @@ impl CombiTimeTable {
                     line: line_no + 1,
                     text: f.to_string(),
                 })?;
-                if !value.is_finite() {
+                if col == 0 && !value.is_finite() {
                     return Err(CsvError::NonFinite {
                         line: line_no + 1,
                         column: col,
@@ -187,7 +182,7 @@ impl CombiTimeTable {
     /// `# columns:` comment; arbitrary input comments are not byte-preserved.
     ///
     /// # Errors
-    /// Returns [`CsvError`] for I/O, shape mismatch, non-finite values, or decreasing time.
+    /// Returns [`CsvError`] for I/O, shape mismatch, non-finite time, or decreasing time.
     pub fn write(&self, path: &Path) -> Result<(), CsvError> {
         fs::write(path, self.to_csv_string()?).map_err(|e| CsvError::Io(e.to_string()))
     }
@@ -198,7 +193,7 @@ impl CombiTimeTable {
     /// `# columns:` comment. Other parsed comments are intentionally dropped.
     ///
     /// # Errors
-    /// Returns [`CsvError`] for shape mismatch, non-finite values, or decreasing time.
+    /// Returns [`CsvError`] for shape mismatch, non-finite time, or decreasing time.
     pub fn to_csv_string(&self) -> Result<String, CsvError> {
         validate_shape(self)?;
         validate_time(&self.data, self.n_rows, self.n_cols)?;
@@ -291,7 +286,7 @@ pub enum CsvError {
         /// Offending cell or row text.
         text: String,
     },
-    /// Non-finite numeric data cell.
+    /// Non-finite time column cell.
     NonFinite {
         /// One-based input line number, or zero when the value came from an in-memory encoder.
         line: usize,
@@ -419,15 +414,13 @@ fn validate_time(data: &[f64], n_rows: usize, n_cols: usize) -> Result<(), CsvEr
         });
     }
     for row in 0..n_rows {
-        for col in 0..n_cols {
-            let value = data[row * n_cols + col];
-            if !value.is_finite() {
-                return Err(CsvError::NonFinite {
-                    line: row,
-                    column: col,
-                    text: format_f64(value),
-                });
-            }
+        let value = data[row * n_cols];
+        if !value.is_finite() {
+            return Err(CsvError::NonFinite {
+                line: row,
+                column: 0,
+                text: format_f64(value),
+            });
         }
     }
     for row in 1..n_rows {

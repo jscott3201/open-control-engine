@@ -3,7 +3,8 @@
 //! The driver loads CXF bytes through [`oce_api::Engine::load_cxf`], stages reference inputs through
 //! [`oce_api::Engine::simulate`] or a driver-owned
 //! [`oce_api::Engine::set_input`] / [`oce_api::Engine::step_realtime`] /
-//! [`oce_api::Engine::get_output`] loop, and returns an encoded trace ready for funnel comparison.
+//! [`oce_api::Engine::get_output`] loop, and returns an encoded trace ready for configured
+//! comparison.
 //! It never depends on `oce-graph` or `oce-blocks`.
 
 use std::collections::HashMap;
@@ -16,10 +17,11 @@ use oce_api::{
     PointValueType, SimSpec, Value,
 };
 
-use crate::{
-    CombiTimeTable, ConfigError, CsvError, FunnelResult, Indicator, Mask, Series, Tolerances,
-    ValueKind, VerifyConfig, compare, compare_masked,
-};
+use crate::{CombiTimeTable, ConfigError, CsvError, Series, Tolerances, ValueKind, VerifyConfig};
+
+mod compare;
+use compare::compare_outputs;
+pub use compare::{ComparisonMode, ComparisonResult};
 
 /// Driver cadence selection.
 #[derive(Clone, Debug, PartialEq)]
@@ -67,6 +69,8 @@ pub struct DriverOptions {
     pub cadence: DriveCadence,
     /// How input values are staged in the uniform path.
     pub input_replay: DriverInputReplay,
+    /// How outputs are compared against the reference table.
+    pub comparison: ComparisonMode,
 }
 
 impl Default for DriverOptions {
@@ -74,6 +78,7 @@ impl Default for DriverOptions {
         Self {
             cadence: DriveCadence::Auto,
             input_replay: DriverInputReplay::ReferenceTable,
+            comparison: ComparisonMode::Funnel,
         }
     }
 }
@@ -169,8 +174,8 @@ pub struct SignalComparison {
     pub tolerance: Tolerances,
     /// Whether indicator masking was applied.
     pub masked: bool,
-    /// Funnel comparison result.
-    pub result: FunnelResult,
+    /// Comparison result.
+    pub result: ComparisonResult,
 }
 
 /// Full driver result.
@@ -178,7 +183,7 @@ pub struct SignalComparison {
 pub struct DriverRun {
     /// Trace captured from the engine.
     pub trace: CapturedTrace,
-    /// Per-output funnel comparisons against the reference table.
+    /// Per-output comparisons against the reference table.
     pub comparisons: Vec<SignalComparison>,
     /// Drive path used.
     pub drive_mode: DriveMode,
@@ -202,7 +207,7 @@ pub enum DriverError {
     MissingReferenceColumn(String),
     /// No mapped output points were configured.
     NoOutputs,
-    /// An unmasked funnel comparison evaluated zero points.
+    /// An unmasked comparison evaluated zero points.
     NoComparedPoints {
         /// Output point path.
         output: String,
@@ -354,7 +359,7 @@ pub fn drive_trace_with_options(
             run_event_aligned(engine, &plan, instants.clone())?
         }
     };
-    let comparisons = compare_outputs(config, &plan, &trace)?;
+    let comparisons = compare_outputs(config, &plan, &trace, options.comparison)?;
     Ok(DriverRun {
         trace,
         comparisons,
@@ -593,61 +598,6 @@ fn trace_from_output_trace(
         times: trace.times().to_vec(),
         columns,
     })
-}
-
-fn compare_outputs(
-    config: &VerifyConfig,
-    plan: &Plan,
-    trace: &CapturedTrace,
-) -> Result<Vec<SignalComparison>, DriverError> {
-    let mut comparisons = Vec::with_capacity(plan.outputs.len());
-    for output in &plan.outputs {
-        let captured = trace
-            .column(&output.point)
-            .ok_or_else(|| DriverError::MissingCapturedColumn(output.point.clone()))?;
-        let tolerance = config.tolerance_for_output(&output.point)?;
-        let reference = Series {
-            x: &plan.times,
-            y: &output.reference_values,
-        };
-        let test = captured.as_series(&trace.times);
-        let indicator_signals = config.indicator_signals_for_output(&output.point)?;
-        let masked = !indicator_signals.is_empty();
-        let result = if !masked {
-            let result = compare(reference, test, &tolerance);
-            if result.compared_points == 0 {
-                return Err(DriverError::NoComparedPoints {
-                    output: output.point.clone(),
-                });
-            }
-            result
-        } else {
-            let mut indicators = Vec::with_capacity(indicator_signals.len());
-            for signal in indicator_signals {
-                let column = trace
-                    .column(&signal)
-                    .ok_or_else(|| DriverError::MissingCapturedColumn(signal.clone()))?;
-                indicators.push(Indicator {
-                    signal,
-                    samples: trace
-                        .times
-                        .iter()
-                        .copied()
-                        .zip(column.values.iter().map(|value| *value != 0.0))
-                        .collect(),
-                });
-            }
-            compare_masked(reference, test, &tolerance, &Mask { indicators })
-        };
-        comparisons.push(SignalComparison {
-            output: output.point.clone(),
-            reference_column: output.reference_column.clone(),
-            tolerance,
-            masked,
-            result,
-        });
-    }
-    Ok(comparisons)
 }
 
 fn validate_reference_shape(table: &CombiTimeTable) -> Result<(), DriverError> {
