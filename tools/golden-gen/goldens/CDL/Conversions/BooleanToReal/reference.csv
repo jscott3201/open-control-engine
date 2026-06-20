@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Conversions_BooleanToReal_reference(4,3)
+0.0 1.0 0.1
+1.0 0.0 -0.3
+2.0 1.0 0.1
+3.0 0.0 -0.3

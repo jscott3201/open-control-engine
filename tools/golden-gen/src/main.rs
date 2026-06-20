@@ -2,7 +2,8 @@
 //!
 //! Emits closed-form CDL reference goldens as Modelica `CombiTimeTable` CSV under
 //! `tools/golden-gen/goldens/<class_path>/<signal>.csv`, a sibling `<signal>.prov.json` per golden,
-//! and a crate-root `oracle.lock` toolchain/version pin skeleton.
+//! one per-block `reference.csv` containing `time`, machine-readable inputs, and all outputs, and
+//! a crate-root `oracle.lock` toolchain/version pin skeleton.
 //!
 //! ANTI-TAUTOLOGY: all reference math is re-derived independently from `_spec/03`, `_spec/02`,
 //! `_spec/01`, `_spec/07` (format only) and CDL §7.x. This crate has ZERO dependency on
@@ -18,8 +19,10 @@ mod reals;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use csv::SignalColumn;
-use oracle::{Golden, Sample, ValueKind};
+use std::collections::BTreeMap;
+
+use csv::{DataColumn, SignalColumn};
+use oracle::{Golden, InputSeries, Sample, ValueKind};
 
 /// Generator version, recorded in every provenance record and `oracle.lock`.
 ///
@@ -45,6 +48,7 @@ fn main() {
     }
     fs::create_dir_all(&goldens_root).expect("create goldens root");
 
+    let grouped = group_by_class(&goldens);
     let mut manifest_lines: Vec<String> = Vec::new();
     for g in &goldens {
         let dir = goldens_root.join(class_path_to_dir(g.class_path));
@@ -62,7 +66,11 @@ fn main() {
         fs::write(&csv_path, csv_text).expect("write golden csv");
 
         let prov_path = dir.join(format!("{}.prov.json", g.signal));
-        fs::write(&prov_path, prov_json(g)).expect("write prov json");
+        fs::write(
+            &prov_path,
+            prov_json(g, grouped.get(g.class_path).expect("grouped golden")),
+        )
+        .expect("write prov json");
 
         manifest_lines.push(format!(
             "{} {} -> goldens/{}/{}.csv",
@@ -72,6 +80,7 @@ fn main() {
             g.signal
         ));
     }
+    write_reference_csvs(&goldens_root, &grouped, &mut manifest_lines);
 
     // Non-steppable fold-time references (CDL.Constants, CDL.Types): provenance only, no CSV.
     write_constants_types(&goldens_root, &mut manifest_lines);
@@ -91,6 +100,118 @@ fn main() {
 
     println!("golden-gen: emitted {} signal goldens", goldens.len());
     print!("{manifest}");
+}
+
+/// Group output-signal goldens by block class path, preserving family emission order within a block.
+fn group_by_class(goldens: &[Golden]) -> BTreeMap<&'static str, Vec<&Golden>> {
+    let mut grouped: BTreeMap<&'static str, Vec<&Golden>> = BTreeMap::new();
+    for golden in goldens {
+        grouped.entry(golden.class_path).or_default().push(golden);
+    }
+    grouped
+}
+
+/// Emit one self-contained driver-ready reference table per steppable block.
+fn write_reference_csvs(
+    goldens_root: &Path,
+    grouped: &BTreeMap<&'static str, Vec<&Golden>>,
+    manifest_lines: &mut Vec<String>,
+) {
+    for (class_path, group) in grouped {
+        let dir = goldens_root.join(class_path_to_dir(class_path));
+        let first = group.first().expect("non-empty golden group");
+        assert_group_consistent(group);
+
+        let mut cols = Vec::new();
+        for input in &first.inputs {
+            cols.push(DataColumn {
+                name: input.name.to_string(),
+                values: input.samples.iter().map(|s| s.encode()).collect(),
+            });
+        }
+        for golden in group {
+            cols.push(DataColumn {
+                name: golden.signal.to_string(),
+                values: golden.samples.iter().map(|s| s.encode()).collect(),
+            });
+        }
+
+        let table_name = sanitize_table_name(&format!("{}_reference", class_path));
+        let csv_text = csv::to_table_csv_string(&table_name, &first.time, &cols);
+        fs::write(dir.join("reference.csv"), csv_text).expect("write reference csv");
+        manifest_lines.push(format!(
+            "{class_path} reference -> goldens/{}/reference.csv",
+            class_path_to_dir(class_path)
+        ));
+    }
+}
+
+/// Multi-output blocks must share one time grid and one input replay table.
+fn assert_group_consistent(group: &[&Golden]) {
+    let first = group.first().expect("non-empty golden group");
+    for golden in group.iter().skip(1) {
+        assert_eq!(
+            first.time.len(),
+            golden.time.len(),
+            "{} output {} time length mismatch",
+            golden.class_path,
+            golden.signal
+        );
+        for (idx, (a, b)) in first.time.iter().zip(&golden.time).enumerate() {
+            assert_eq!(
+                a.to_bits(),
+                b.to_bits(),
+                "{} output {} time[{idx}] mismatch",
+                golden.class_path,
+                golden.signal
+            );
+        }
+        assert_eq!(
+            first.inputs.len(),
+            golden.inputs.len(),
+            "{} output {} input column count mismatch",
+            golden.class_path,
+            golden.signal
+        );
+        for (left, right) in first.inputs.iter().zip(&golden.inputs) {
+            assert_eq!(
+                left.name, right.name,
+                "{} output {} input name mismatch",
+                golden.class_path, golden.signal
+            );
+            assert_eq!(
+                left.kind, right.kind,
+                "{} output {} input kind mismatch for {}",
+                golden.class_path, golden.signal, left.name
+            );
+            assert_samples_bit_eq(left, right, golden);
+        }
+    }
+}
+
+fn assert_samples_bit_eq(left: &InputSeries, right: &InputSeries, golden: &Golden) {
+    assert_eq!(
+        left.samples.len(),
+        right.samples.len(),
+        "{} output {} input {} length mismatch",
+        golden.class_path,
+        golden.signal,
+        left.name
+    );
+    for (idx, (a, b)) in left.samples.iter().zip(&right.samples).enumerate() {
+        assert_eq!(
+            sample_bits(a),
+            sample_bits(b),
+            "{} output {} input {} sample[{idx}] mismatch",
+            golden.class_path,
+            golden.signal,
+            left.name
+        );
+    }
+}
+
+fn sample_bits(sample: &Sample) -> u64 {
+    sample.encode().to_bits()
 }
 
 /// Map `CDL.Reals.Add` -> `CDL/Reals/Add` for the on-disk directory layout.
@@ -127,8 +248,65 @@ fn json_escape(s: &str) -> String {
     out
 }
 
+fn json_string_array(values: impl IntoIterator<Item = String>) -> String {
+    let mut out = String::from("[");
+    for (idx, value) in values.into_iter().enumerate() {
+        if idx > 0 {
+            out.push_str(", ");
+        }
+        out.push('"');
+        out.push_str(&json_escape(&value));
+        out.push('"');
+    }
+    out.push(']');
+    out
+}
+
+fn json_sample_values(samples: &[Sample]) -> String {
+    let mut out = String::from("[");
+    for (idx, sample) in samples.iter().enumerate() {
+        if idx > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&csv::format_f64(sample.encode()));
+    }
+    out.push(']');
+    out
+}
+
+fn input_series_json(inputs: &[InputSeries]) -> String {
+    if inputs.is_empty() {
+        return "[]".to_string();
+    }
+    let mut out = String::from("[\n");
+    for (idx, input) in inputs.iter().enumerate() {
+        if idx > 0 {
+            out.push_str(",\n");
+        }
+        out.push_str(&format!(
+            concat!(
+                "    {{ \"name\": \"{name}\", \"value_kind\": \"{kind}\", \"values\": {values} }}"
+            ),
+            name = json_escape(input.name),
+            kind = input.kind.as_str(),
+            values = json_sample_values(&input.samples),
+        ));
+    }
+    out.push_str("\n  ]");
+    out
+}
+
+fn reference_columns(group: &[&Golden]) -> Vec<String> {
+    let first = group.first().expect("non-empty golden group");
+    let mut columns = Vec::with_capacity(1 + first.inputs.len() + group.len());
+    columns.push("time".to_string());
+    columns.extend(first.inputs.iter().map(|input| input.name.to_string()));
+    columns.extend(group.iter().map(|golden| golden.signal.to_string()));
+    columns
+}
+
 /// Build the per-golden provenance JSON record.
-fn prov_json(g: &Golden) -> String {
+fn prov_json(g: &Golden, group: &[&Golden]) -> String {
     // Describe non-finite Real samples by IEEE class so the provenance documents the compare regime.
     let has_non_finite = g
         .samples
@@ -142,6 +320,7 @@ fn prov_json(g: &Golden) -> String {
         ValueKind::Integer => "exact (atoly=0)",
         ValueKind::Boolean => "exact 0.0/1.0 (atoly=0)",
     };
+    let ref_columns = reference_columns(group);
     format!(
         concat!(
             "{{\n",
@@ -152,9 +331,13 @@ fn prov_json(g: &Golden) -> String {
             "  \"value_kind\": \"{value_kind}\",\n",
             "  \"compare_regime\": \"{compare}\",\n",
             "  \"n_samples\": {n_samples},\n",
+            "  \"n_reference_columns\": {n_reference_columns},\n",
+            "  \"reference_csv\": \"reference.csv\",\n",
+            "  \"reference_columns\": {reference_columns},\n",
+            "  \"inputs\": {inputs},\n",
             "  \"input\": \"{input}\",\n",
             "  \"reference_rule\": \"{rule}\",\n",
-            "  \"format\": \"Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64\",\n",
+            "  \"format\": \"Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64\",\n",
             "  \"generator\": \"{generator}\",\n",
             "  \"depends_on_oce_blocks\": false\n",
             "}}\n"
@@ -164,6 +347,9 @@ fn prov_json(g: &Golden) -> String {
         value_kind = g.kind.as_str(),
         compare = json_escape(compare),
         n_samples = g.samples.len(),
+        n_reference_columns = ref_columns.len(),
+        reference_columns = json_string_array(ref_columns),
+        inputs = input_series_json(&g.inputs),
         input = json_escape(&g.input_desc),
         rule = json_escape(&g.rule_desc),
         generator = GENERATOR_VERSION,

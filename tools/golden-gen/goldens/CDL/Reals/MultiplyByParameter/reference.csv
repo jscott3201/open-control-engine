@@ -1,0 +1,6 @@
+#1
+# columns: time u y
+double CDL_Reals_MultiplyByParameter_reference(3,3)
+0.0 7.0 0.7000000000000001
+60.0 2.5 0.25
+120.0 11.0 1.1

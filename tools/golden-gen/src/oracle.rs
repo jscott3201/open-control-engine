@@ -61,6 +61,28 @@ impl Sample {
     }
 }
 
+/// One input column that produced a golden trace.
+pub struct InputSeries {
+    /// CDL input connector / signal name, e.g. `u`, `u1`, `clr`.
+    pub name: &'static str,
+    /// Declared value kind of this input.
+    pub kind: ValueKind,
+    /// Reference input samples, parallel to the parent golden's `time`.
+    pub samples: Vec<Sample>,
+}
+
+impl InputSeries {
+    /// Convenience constructor.
+    #[must_use]
+    pub fn new(name: &'static str, kind: ValueKind, samples: Vec<Sample>) -> Self {
+        Self {
+            name,
+            kind,
+            samples,
+        }
+    }
+}
+
 /// One emitted golden: a single output signal of a single block instance.
 pub struct Golden {
     /// CDL class path, e.g. `CDL.Reals.Add`.
@@ -73,6 +95,8 @@ pub struct Golden {
     pub time: Vec<f64>,
     /// Reference samples (closed-form spec math), parallel to `time`.
     pub samples: Vec<Sample>,
+    /// Input columns that produced this output, parallel to `time`.
+    pub inputs: Vec<InputSeries>,
     /// Human description of the input trace / parameters (for provenance).
     pub input_desc: String,
     /// Short statement of the closed-form rule used (for provenance).
@@ -103,8 +127,29 @@ impl Golden {
             kind,
             time,
             samples,
+            inputs: Vec::new(),
             input_desc: input_desc.into(),
             rule_desc: rule_desc.into(),
         }
+    }
+
+    /// Attach machine-readable input columns to this golden.
+    ///
+    /// # Panics
+    /// Panics if any input column length differs from the golden's time length.
+    #[must_use]
+    pub fn with_inputs(mut self, inputs: Vec<InputSeries>) -> Self {
+        for input in &inputs {
+            assert_eq!(
+                self.time.len(),
+                input.samples.len(),
+                "{}.{} input {} length mismatch",
+                self.class_path,
+                self.signal,
+                input.name
+            );
+        }
+        self.inputs = inputs;
+        self
     }
 }

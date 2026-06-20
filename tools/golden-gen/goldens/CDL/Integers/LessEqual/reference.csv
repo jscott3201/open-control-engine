@@ -1,0 +1,6 @@
+#1
+# columns: time u1 u2 y
+double CDL_Integers_LessEqual_reference(3,4)
+0.0 3.0 4.0 1.0
+1.0 5.0 5.0 1.0
+2.0 6.0 5.0 0.0

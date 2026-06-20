@@ -1,0 +1,6 @@
+#1
+# columns: time u1 u2 y
+double CDL_Reals_Min_reference(3,4)
+0.0 0.1 0.2 0.1
+60.0 3.3 3.3 3.3
+120.0 -1.1 2.7 -1.1

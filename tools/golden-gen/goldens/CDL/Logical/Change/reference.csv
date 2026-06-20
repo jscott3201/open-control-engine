@@ -1,0 +1,8 @@
+#1
+# columns: time u y
+double CDL_Logical_Change_reference(5,3)
+0.0 0.0 0.0
+60.0 0.0 0.0
+120.0 1.0 1.0
+180.0 1.0 0.0
+240.0 0.0 1.0

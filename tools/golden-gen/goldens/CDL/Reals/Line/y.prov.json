@@ -6,9 +6,19 @@
   "value_kind": "Real",
   "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
   "n_samples": 4,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "x1", "f1", "x2", "f2", "u", "y"],
+  "inputs": [
+    { "name": "x1", "value_kind": "Real", "values": [1.0, 1.0, 1.0, 0.3] },
+    { "name": "f1", "value_kind": "Real", "values": [10.0, 10.0, 10.0, 0.5] },
+    { "name": "x2", "value_kind": "Real", "values": [4.0, 4.0, 4.0, 2.7] },
+    { "name": "f2", "value_kind": "Real", "values": [20.0, 20.0, 20.0, 3.3] },
+    { "name": "u", "value_kind": "Real", "values": [2.5, 0.5, 5.0, 1.1] }
+  ],
   "input": "(x1,f1,x2,f2,u): in-range, clamp-low, clamp-high, non-dyadic segment",
   "reference_rule": "xLim=min(max(u,x1),x2); b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
-  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); time col 0; ryu shortest-round-trip f64",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
 }

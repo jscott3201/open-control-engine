@@ -1,0 +1,7 @@
+#1
+# columns: time u1 u2 y
+double CDL_Logical_Or_reference(4,4)
+0.0 0.0 0.0 0.0
+60.0 1.0 0.0 1.0
+120.0 0.0 1.0 1.0
+180.0 0.0 0.0 0.0

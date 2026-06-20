@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Reals_Abs_reference(4,3)
+0.0 -3.7 3.7
+60.0 0.1 0.1
+120.0 -0.0 0.0
+180.0 -1.5e-300 1.5e-300
