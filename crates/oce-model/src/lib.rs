@@ -56,6 +56,11 @@ impl SimpleController {
 /// `Real` = IEEE-754 `f64`; `Integer` = `i64` (honors the required ±2_147_483_647 i32 range
 /// as the logical domain); `Boolean` = `bool`; `String` = `Arc<str>` (metadata/identifiers
 /// only — never a tick signal, §7.8); `Enum` = a 1-based ordinal plus its class.
+///
+/// This is a closed domain fixed by the CDL native data types. It is deliberately exhaustive so
+/// every handler must cover every signal kind at compile time; adding a variant is a major-version
+/// change the compiler should force through all match sites. Do not silence that with a wildcard
+/// arm.
 #[derive(Clone, Debug)]
 pub enum Value {
     /// Real — IEEE-754 `f64` (§7.4.1.1).
@@ -76,6 +81,11 @@ pub enum Value {
 }
 
 /// The structural discriminant of a [`Value`] (CDL §7.4.1).
+///
+/// This is a closed domain fixed by the CDL native data types. It is deliberately exhaustive so
+/// every type handler must cover every signal kind at compile time; adding a variant is a
+/// major-version change the compiler should force through all match sites. Do not silence that with
+/// a wildcard arm.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum ValueType {
     /// Real (`f64`).
