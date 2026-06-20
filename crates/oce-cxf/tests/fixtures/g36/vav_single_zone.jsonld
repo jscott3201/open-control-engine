@@ -53,7 +53,7 @@
       "@type": "S231:RealOutput",
       "S231:isOfDataType": { "@id": "S231:Real" },
       "S231:isConnectedTo": [
-        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s" },
+        { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_m" },
         { "@id": "http://example.org#g36.vav_single_zone.heatingNeed.u1" }
       ]
     },
@@ -93,7 +93,7 @@
     },
     {
       "@id": "http://example.org#g36.vav_single_zone.coolingPid.reverseActing",
-      "S231:value": { "@value": "true", "@type": "http://www.w3.org/2001/XMLSchema#boolean" }
+      "S231:value": { "@value": "false", "@type": "http://www.w3.org/2001/XMLSchema#boolean" }
     },
     {
       "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s",
@@ -294,7 +294,7 @@
       "@id": "http://example.org#g36.vav_single_zone.cooling_setpoint",
       "@type": "S231:RealInput",
       "S231:isOfDataType": { "@id": "S231:Real" },
-      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_m" }
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.vav_single_zone.coolingPid.u_s" }
     },
     {
       "@id": "http://example.org#g36.vav_single_zone.heating_setpoint",
