@@ -116,6 +116,9 @@ fn feedthrough_classification_matches_spec() {
             && !PidWithReset::default().feeds_through(2, 0)
             && !PidWithReset::default().feeds_through(3, 0)
     );
+    assert_eq!(Assert::default().kind(), BlockKind::Algebraic);
+    assert!(!Assert::default().feeds_through(0, 0));
+    assert!(Assert::default().signature().outputs.is_empty());
     assert_eq!(Add.kind(), BlockKind::Algebraic);
 }
 
@@ -191,8 +194,9 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.OnCounter",
         "CDL.Integers.Change",
         "CDL.Discrete.UnitDelay",
+        "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 69, "registry count");
+    assert_eq!(PATHS.len(), 70, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

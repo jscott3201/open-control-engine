@@ -1,5 +1,7 @@
 //! Static class-path to constructor registry for native CDL block implementations.
 
+use std::sync::Arc;
+
 use oce_model::{ParamTable, SimpleController, Value};
 
 use crate::RegistryEntry;
@@ -13,6 +15,7 @@ mod pid;
 mod reals;
 mod reals_filters;
 mod reals_integrator;
+mod utilities;
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
 /// (an unresolved external / extension block — never a panic; R-IMPL-2).
@@ -34,6 +37,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     conversions::ENTRIES,
     integers::ENTRIES,
     discrete::ENTRIES,
+    utilities::ENTRIES,
 ];
 
 // ---- parameter readers ----------------------------------------------------------------------
@@ -74,6 +78,13 @@ pub(crate) fn int_param(params: &ParamTable, name: &str, default: i64) -> i64 {
     }
 }
 
+pub(crate) fn string_param(params: &ParamTable, name: &str, default: &'static str) -> Arc<str> {
+    match find(params, name) {
+        Some(Value::String(s)) => Arc::clone(s),
+        _ => Arc::from(default),
+    }
+}
+
 pub(super) fn controller_type_param(
     params: &ParamTable,
     name: &str,
@@ -95,7 +106,7 @@ mod tests {
 
     use oce_model::{EnumClassId, SimpleController, Value};
 
-    use super::{controller_type_param, int_param};
+    use super::{controller_type_param, int_param, string_param};
     use crate::ParamTable;
 
     #[test]
@@ -162,6 +173,26 @@ mod tests {
         assert_eq!(
             controller_type_param(&unknown, "controllerType", SimpleController::Pd),
             SimpleController::Pd
+        );
+    }
+
+    #[test]
+    fn string_param_reads_string_without_coercion() {
+        let params = ParamTable {
+            values: vec![
+                (Arc::from("message"), Value::String(Arc::from("trip"))),
+                (Arc::from("other"), Value::Boolean(true)),
+            ],
+        };
+        assert_eq!(string_param(&params, "message", "default").as_ref(), "trip");
+        assert_eq!(
+            string_param(&params, "other", "default").as_ref(),
+            "default",
+            "String params must not coerce other value kinds"
+        );
+        assert_eq!(
+            string_param(&params, "missing", "default").as_ref(),
+            "default"
         );
     }
 }
