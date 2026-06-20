@@ -3,11 +3,11 @@
 use std::fs;
 use std::path::Path;
 
-use oce_api::OcError;
+use oce_api::{Engine, OcError, PointDirection, PointValueType};
 use oce_conformance::{
     CombiTimeTable, ConfigError, DriveCadence, DriveMode, DriverError, DriverInputReplay,
-    DriverOptions, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec, Tolerances,
-    VerifyConfig, drive_trace, drive_trace_with_options,
+    DriverOptions, IndicatorPattern, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec,
+    Tolerances, VerifyConfig, drive_trace, drive_trace_with_options,
 };
 
 const FREE_ADD: &str = include_str!("fixtures/driver/free_add.jsonld");
@@ -57,6 +57,34 @@ fn config() -> VerifyConfig {
         sampling: Some(1.0),
         run_controller: true,
     }
+}
+
+fn config_with_indicator(signal: &str) -> VerifyConfig {
+    let mut config = config();
+    config.indicators = vec![IndicatorPattern {
+        pattern: Y.to_string(),
+        signals: vec![signal.to_string()],
+    }];
+    config
+}
+
+fn indicator_output_paths() -> (String, String) {
+    let mut engine = Engine::in_memory();
+    engine.load_cxf(FREE_ADD.as_bytes()).expect("fixture loads");
+    let indicators = engine
+        .io()
+        .iter()
+        .filter(|point| {
+            point.direction == PointDirection::Out && point.value_type == PointValueType::Bool
+        })
+        .map(|point| point.path)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        indicators.len(),
+        2,
+        "fixture should expose active and inactive Boolean indicators"
+    );
+    (indicators[0].clone(), indicators[1].clone())
 }
 
 fn map(device: &str, cdl: &str) -> PointMapEntry {
@@ -199,6 +227,59 @@ fn driver_trace_is_deterministic_across_identical_runs() {
     let b = drive_trace(FREE_ADD.as_bytes(), &config, &reference).expect("second run");
     assert_trace_bit_eq(&a, &b);
     assert_eq!(a.comparisons, b.comparisons);
+}
+
+#[test]
+fn driver_masked_path_compares_when_indicator_is_active() {
+    let reference = uniform_reference();
+    let (active_mask, _) = indicator_output_paths();
+    let config = config_with_indicator(&active_mask);
+    let run = drive_trace(FREE_ADD.as_bytes(), &config, &reference)
+        .expect("active indicator should drive masked comparison");
+    let comparison = &run.comparisons[0];
+    assert!(comparison.masked);
+    assert!(comparison.result.passed);
+    assert!(
+        comparison.result.compared_points > 0,
+        "active mask must still compare points"
+    );
+    let indicator = run
+        .trace
+        .column(&active_mask)
+        .expect("captured active mask");
+    assert_eq!(
+        indicator
+            .values
+            .iter()
+            .map(|value| value.to_bits())
+            .collect::<Vec<_>>(),
+        vec![1.0f64.to_bits(); reference.n_rows]
+    );
+}
+
+#[test]
+fn driver_masked_path_preserves_all_dont_care_vacuous_pass() {
+    let reference = uniform_reference();
+    let (_, inactive_mask) = indicator_output_paths();
+    let config = config_with_indicator(&inactive_mask);
+    let run = drive_trace(FREE_ADD.as_bytes(), &config, &reference)
+        .expect("inactive indicator should produce a deliberate masked no-op");
+    let comparison = &run.comparisons[0];
+    assert!(comparison.masked);
+    assert!(comparison.result.passed);
+    assert_eq!(comparison.result.compared_points, 0);
+    let indicator = run
+        .trace
+        .column(&inactive_mask)
+        .expect("captured inactive mask");
+    assert_eq!(
+        indicator
+            .values
+            .iter()
+            .map(|value| value.to_bits())
+            .collect::<Vec<_>>(),
+        vec![0.0f64.to_bits(); reference.n_rows]
+    );
 }
 
 #[test]

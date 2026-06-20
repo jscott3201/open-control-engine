@@ -8,7 +8,11 @@
       "@id": "http://example.org#DriverAdd",
       "@type": "S231:Block",
       "S231:label": "DriverAdd",
-      "S231:containsBlock": { "@id": "http://example.org#DriverAdd.add" },
+      "S231:containsBlock": [
+        { "@id": "http://example.org#DriverAdd.add" },
+        { "@id": "http://example.org#DriverAdd.activeMask" },
+        { "@id": "http://example.org#DriverAdd.inactiveMask" }
+      ],
       "S231:hasInput": [
         { "@id": "http://example.org#DriverAdd.u1" },
         { "@id": "http://example.org#DriverAdd.u2" }
@@ -41,6 +45,46 @@
       "@type": "S231:RealOutput",
       "S231:isOfDataType": { "@id": "S231:Real" },
       "S231:isConnectedTo": { "@id": "http://example.org#DriverAdd.y" }
+    },
+
+    {
+      "@id": "http://example.org#DriverAdd.activeMask",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "activeMask",
+      "S231:hasParameter": { "@id": "http://example.org#DriverAdd.activeMask.k" },
+      "S231:hasOutput": { "@id": "http://example.org#DriverAdd.activeMask.y" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.activeMask.k",
+      "S231:value": {
+        "@value": "true",
+        "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.activeMask.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+
+    {
+      "@id": "http://example.org#DriverAdd.inactiveMask",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "inactiveMask",
+      "S231:hasParameter": { "@id": "http://example.org#DriverAdd.inactiveMask.k" },
+      "S231:hasOutput": { "@id": "http://example.org#DriverAdd.inactiveMask.y" }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.inactiveMask.k",
+      "S231:value": {
+        "@value": "false",
+        "@type": "http://www.w3.org/2001/XMLSchema#boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#DriverAdd.inactiveMask.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
     },
 
     {
