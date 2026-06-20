@@ -75,6 +75,11 @@ pub struct FunnelResult {
     pub passed: bool,
     /// Supremum of the pointwise positive error.
     pub max_error: f64,
+    /// Number of points actually checked against a bound.
+    ///
+    /// A zero count is distinguishable from a verified pass; the caller can classify it as a
+    /// legitimate full don't-care interval or a configuration/data issue.
+    pub compared_points: usize,
     /// Earliest x where `error > 0`.
     pub first_failure_x: Option<f64>,
     /// Reference samples copied from the input view.
@@ -152,6 +157,7 @@ pub fn compare(reference: Series<'_>, test: Series<'_>, tol: &Tolerances) -> Fun
         return FunnelResult {
             passed: true,
             max_error: 0.0,
+            compared_points: 0,
             first_failure_x: None,
             reference: reference_vec,
             test: test_vec,
@@ -164,6 +170,7 @@ pub fn compare(reference: Series<'_>, test: Series<'_>, tol: &Tolerances) -> Fun
         return FunnelResult {
             passed: false,
             max_error: f64::INFINITY,
+            compared_points: 0,
             first_failure_x: reference_vec.first().map(|(x, _)| *x),
             reference: reference_vec,
             test: test_vec,
@@ -178,6 +185,7 @@ pub fn compare(reference: Series<'_>, test: Series<'_>, tol: &Tolerances) -> Fun
         return FunnelResult {
             passed: false,
             max_error: f64::INFINITY,
+            compared_points: 0,
             first_failure_x: x,
             reference: reference_vec,
             test: test_vec,
@@ -226,6 +234,7 @@ pub fn compare(reference: Series<'_>, test: Series<'_>, tol: &Tolerances) -> Fun
     FunnelResult {
         passed: max_error == 0.0,
         max_error,
+        compared_points: errors.len(),
         first_failure_x,
         reference: reference_vec,
         test: test_vec,
@@ -313,7 +322,7 @@ fn first_bad_x(pairs: &[(f64, f64)]) -> Option<f64> {
         .find_map(|(x, y)| (!x.is_finite() || !y.is_finite()).then_some(*x))
 }
 
-fn eval_curve(curve: &[(f64, f64)], x: f64) -> f64 {
+pub(crate) fn eval_curve(curve: &[(f64, f64)], x: f64) -> f64 {
     if curve.is_empty() {
         return f64::NAN;
     }

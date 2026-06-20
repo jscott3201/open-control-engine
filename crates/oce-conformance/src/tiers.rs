@@ -3,7 +3,7 @@
 //! Tiers 0 through 4 describe the ladder from static parse/validate checks to full sequence
 //! comparison. The report records each tier's outcome without owning the future driver/oracle logic.
 
-use oce_diag::{Diagnostic, Severity};
+use oce_diag::Diagnostic;
 
 /// The conformance tier being reported.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -43,6 +43,9 @@ pub enum TierStatus {
     Advisory,
     /// The tier ran and produced at least one hard failure.
     Failed,
+    /// The tier ran but compared zero points; caller must distinguish genuine don't-care from a
+    /// configuration/data issue.
+    NoData,
     /// The tier is intentionally not executed in this harness yet.
     Skipped,
 }
@@ -93,10 +96,21 @@ impl TierReport {
         }
     }
 
+    /// Build a no-data tier report for a comparison that checked zero points.
+    #[must_use]
+    pub fn no_data(tier: ConformanceTier, summary: impl Into<String>) -> Self {
+        Self {
+            tier,
+            status: TierStatus::NoData,
+            summary: summary.into(),
+            diagnostics: Vec::new(),
+        }
+    }
+
     /// Classify a tier from diagnostics.
     ///
-    /// A [`Severity::Error`] diagnostic is a shall-level hard failure. Warning and info diagnostics
-    /// are should-level/advisory signals and do not fail the tier.
+    /// A [`oce_diag::Severity::Error`] diagnostic is a shall-level hard failure. Warning and info
+    /// diagnostics are should-level/advisory signals and do not fail the tier.
     #[must_use]
     pub fn from_diagnostics(
         tier: ConformanceTier,
@@ -160,7 +174,7 @@ impl ConformanceReport {
 fn classify_diagnostics(diagnostics: &[Diagnostic]) -> TierStatus {
     if diagnostics
         .iter()
-        .any(|diagnostic| diagnostic.severity == Severity::Error)
+        .any(|diagnostic| diagnostic.severity.is_error())
     {
         TierStatus::Failed
     } else if diagnostics.is_empty() {

@@ -1,7 +1,7 @@
 //! Tier report and shall/should classification coverage.
 
 use oce_conformance::{ConformanceReport, ConformanceTier, TierReport, TierStatus};
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, Severity};
 
 #[test]
 fn tier0_shall_error_is_a_hard_failure() {
@@ -33,6 +33,48 @@ fn tier0_should_warning_is_advisory_not_failure() {
 
     let full = ConformanceReport::new(vec![report]);
     assert!(full.passed());
+}
+
+#[test]
+fn tier0_info_is_advisory_not_failure() {
+    let report = TierReport::tier0(
+        "static validation",
+        vec![Diagnostic::info(
+            DiagCode::AnalogCoercedToReal,
+            "analog connector was normalized",
+        )],
+    );
+    assert_eq!(report.status, TierStatus::Advisory);
+    assert!(!report.failed());
+}
+
+#[test]
+fn tier0_error_dominates_mixed_diagnostics_even_when_last() {
+    let report = TierReport::tier0(
+        "static validation",
+        vec![
+            Diagnostic::warning(DiagCode::DisplayUnitDivergence, "displayUnit differs"),
+            Diagnostic::info(DiagCode::AnalogCoercedToReal, "analog connector normalized"),
+            Diagnostic::new(
+                Severity::Error,
+                DiagCode::SingleAssignment,
+                "input has two drivers",
+            ),
+        ],
+    );
+    assert_eq!(report.status, TierStatus::Failed);
+    assert!(report.failed());
+}
+
+#[test]
+fn tier_report_can_record_zero_comparison_no_data() {
+    let report = TierReport::no_data(
+        ConformanceTier::Tier4,
+        "masked comparison checked no points",
+    );
+    assert_eq!(report.status, TierStatus::NoData);
+    assert!(!report.failed());
+    assert!(ConformanceReport::new(vec![report]).passed());
 }
 
 #[test]

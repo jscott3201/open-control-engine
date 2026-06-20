@@ -22,9 +22,15 @@ pub struct VerifyConfig {
     #[serde(default)]
     pub tolerances: Tolerances,
     /// Per-output regex string to partial tolerance override.
+    ///
+    /// This B2 DTO keeps the JSON object shape deterministic with a map. The B3 driver will own the
+    /// ordered duplicate-preserving pattern list described in the conformance spec.
     #[serde(default)]
     pub outputs: BTreeMap<String, PartialTolerances>,
     /// Per-output regex string to indicator signal names.
+    ///
+    /// This B2 DTO keeps the JSON object shape deterministic with a map. The B3 driver will own the
+    /// ordered duplicate-preserving pattern list described in the conformance spec.
     #[serde(default)]
     pub indicators: BTreeMap<String, Vec<String>>,
     /// Optional comparison sampling-rate hint in seconds.
@@ -160,6 +166,7 @@ impl PartialTolerances {
 }
 
 /// Verification configuration parse/validation error.
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum ConfigError {
     /// JSON syntax or type-shape error.

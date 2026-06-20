@@ -6,36 +6,7 @@ use oce_conformance::{
 };
 
 fn valid_config_json() -> &'static str {
-    r#"{
-  "references": [
-    {
-      "model": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints.Supply",
-      "sequence": "ahu_supply_air_temp_reset",
-      "pointNameMapping": [
-        {
-          "cdl": { "name": "TSupSet.y", "unit": "K", "type": "Real" },
-          "device": { "name": "supply_air_temperature_setpoint", "unit": "degC", "type": "Real" }
-        }
-      ]
-    }
-  ],
-  "tolerances": {
-    "atolx": 10.0,
-    "atoly": 0.0,
-    "rtolx": 0.002,
-    "rtoly": 0.002,
-    "ltolx": 0.0,
-    "ltoly": 0.0
-  },
-  "outputs": {
-    "TSupSet.*": { "atoly": 0.1, "rtoly": 0.01 }
-  },
-  "indicators": {
-    "TSupSet.*": [ "fanSta.y" ]
-  },
-  "sampling": 60.0,
-  "runController": true
-}"#
+    include_str!("fixtures/golden/verify_config.json")
 }
 
 #[test]
@@ -58,6 +29,19 @@ fn verify_config_round_trips_with_point_mapping_masks_and_tolerances() {
     let text = config.to_json_string_pretty().expect("serialize config");
     let reparsed = VerifyConfig::from_json_str(&text).expect("reparse serialized config");
     assert_eq!(reparsed, config);
+}
+
+#[test]
+fn verify_config_golden_serializes_byte_identically_across_reruns() {
+    let golden = valid_config_json();
+    let config = VerifyConfig::from_json_str(golden).expect("golden config parses");
+    let once = config.to_json_string_pretty().expect("serialize once");
+    let twice = VerifyConfig::from_json_str(&once)
+        .expect("serialized config parses")
+        .to_json_string_pretty()
+        .expect("serialize twice");
+    assert_eq!(once, golden.trim_end());
+    assert_eq!(twice, once);
 }
 
 #[test]
@@ -93,6 +77,94 @@ fn verify_config_rejects_negative_or_nonfinite_tolerances() {
     )
     .expect_err("negative tolerance fails validation");
     assert!(matches!(err, ConfigError::Invalid(ref message) if message.contains("atoly")));
+}
+
+#[test]
+fn verify_config_rejects_negative_per_output_tolerances() {
+    let err = VerifyConfig::from_json_str(
+        r#"{
+  "references": [
+    { "model": "m", "sequence": "s", "pointNameMapping": [] }
+  ],
+  "outputs": {
+    "TSupSet.*": { "atoly": -0.1 }
+  }
+}"#,
+    )
+    .expect_err("negative per-output tolerance fails validation");
+    assert!(matches!(err, ConfigError::Invalid(ref message)
+            if message.contains("outputs[\"TSupSet.*\"].atoly")));
+}
+
+#[test]
+fn verify_config_rejects_nonfinite_tolerances_through_struct_path() {
+    let base = VerifyConfig {
+        references: vec![ReferenceSpec {
+            model: "m".into(),
+            sequence: "s".into(),
+            point_name_mapping: vec![],
+        }],
+        tolerances: Tolerances {
+            atoly: f64::INFINITY,
+            ..Tolerances::default()
+        },
+        outputs: Default::default(),
+        indicators: Default::default(),
+        sampling: Some(60.0),
+        run_controller: true,
+    };
+    let err = base
+        .validate()
+        .expect_err("infinite base tolerance rejected");
+    assert!(
+        matches!(err, ConfigError::Invalid(ref message) if message.contains("tolerances.atoly"))
+    );
+
+    let base = VerifyConfig {
+        tolerances: Tolerances {
+            atoly: f64::NAN,
+            ..Tolerances::default()
+        },
+        ..base
+    };
+    let err = base.validate().expect_err("NaN base tolerance rejected");
+    assert!(
+        matches!(err, ConfigError::Invalid(ref message) if message.contains("tolerances.atoly"))
+    );
+
+    let mut outputs = std::collections::BTreeMap::new();
+    outputs.insert(
+        "TSupSet.*".to_string(),
+        PartialTolerances {
+            atoly: Some(f64::INFINITY),
+            ..PartialTolerances::default()
+        },
+    );
+    let config = VerifyConfig {
+        tolerances: Tolerances::default(),
+        outputs,
+        ..base
+    };
+    let err = config
+        .validate()
+        .expect_err("infinite per-output tolerance rejected");
+    assert!(matches!(err, ConfigError::Invalid(ref message)
+            if message.contains("outputs[\"TSupSet.*\"].atoly")));
+
+    let mut outputs = std::collections::BTreeMap::new();
+    outputs.insert(
+        "TSupSet.*".to_string(),
+        PartialTolerances {
+            atoly: Some(f64::NAN),
+            ..PartialTolerances::default()
+        },
+    );
+    let config = VerifyConfig { outputs, ..config };
+    let err = config
+        .validate()
+        .expect_err("NaN per-output tolerance rejected");
+    assert!(matches!(err, ConfigError::Invalid(ref message)
+            if message.contains("outputs[\"TSupSet.*\"].atoly")));
 }
 
 #[test]
