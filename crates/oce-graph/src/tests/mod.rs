@@ -7,5 +7,6 @@ mod feedthrough_stateful;
 mod integrator_loop_cut;
 mod pid_feedthrough;
 mod tick_eval;
+mod topo_oracle;
 
 use common::*;
