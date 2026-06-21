@@ -30,7 +30,8 @@ progressing milestone by milestone, each gated by extensive tests.
 | **M1** | CXF ingest, database-free, end-to-end *load → simulate* | ✅ done |
 | **M2** | CDL block-library breadth (G36) + conformance/oracle + parameter validation | ✅ done (in-repo) |
 | **M3** | Durability through the `oce-store` port (reference adapter) | ⬜ planned |
-| **M4** | PyO3 Python bindings (`oce-py`) | ⬜ planned |
+| **M4** | Docs/point-list export, model-from-semantic, hardening, and `oce-py` PyO3 bindings (MVP) | ⬜ planned |
+| **M5** | Python free-threading (`gil_used = false`) + free-threaded wheels + first PyPI publish | ⬜ planned |
 
 Today the engine loads representative **ASHRAE Guideline 36** sequences (AHU supply-air-temperature
 reset, AHU economizer, single-zone VAV) from CXF and simulates them end-to-end through the frozen
