@@ -104,6 +104,8 @@ pub struct Golden {
     pub input_desc: String,
     /// Short statement of the closed-form rule used (for provenance).
     pub rule_desc: String,
+    /// Extra provenance fields for scenario-specific audit notes.
+    pub extra_provenance: Vec<(&'static str, String)>,
 }
 
 impl Golden {
@@ -134,6 +136,7 @@ impl Golden {
             inputs: Vec::new(),
             input_desc: input_desc.into(),
             rule_desc: rule_desc.into(),
+            extra_provenance: Vec::new(),
         }
     }
 
@@ -161,6 +164,17 @@ impl Golden {
             );
         }
         self.inputs = inputs;
+        self
+    }
+
+    /// Attach an extra provenance JSON string field.
+    #[must_use]
+    pub fn with_provenance(mut self, key: &'static str, value: impl Into<String>) -> Self {
+        assert!(
+            !key.is_empty() && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'),
+            "provenance key must be a non-empty JSON identifier fragment"
+        );
+        self.extra_provenance.push((key, value.into()));
         self
     }
 }

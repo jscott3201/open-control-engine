@@ -133,6 +133,10 @@ CDL.Reals.Multiply reference -> goldens/CDL/Reals/Multiply/reference.csv
 CDL.Reals.Multiply y -> goldens/CDL/Reals/Multiply/y.csv
 CDL.Reals.MultiplyByParameter reference -> goldens/CDL/Reals/MultiplyByParameter/reference.csv
 CDL.Reals.MultiplyByParameter y -> goldens/CDL/Reals/MultiplyByParameter/y.csv
+CDL.Reals.PID/pi_recurrence reference -> goldens/CDL/Reals/PID/pi_recurrence/reference.csv
+CDL.Reals.PID/pi_recurrence y -> goldens/CDL/Reals/PID/pi_recurrence/y.csv
+CDL.Reals.PIDWithReset/pi_reset_recurrence reference -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/reference.csv
+CDL.Reals.PIDWithReset/pi_reset_recurrence y -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv
 CDL.Reals.Sources.Constant y -> goldens/CDL/Reals/Sources/Constant/y.csv
 CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv
