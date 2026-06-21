@@ -9,8 +9,10 @@ use oce_conformance::{
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 pub(crate) enum SignalKind {
     Real,
+    Integer,
     Boolean,
 }
 
@@ -19,6 +21,8 @@ impl SignalKind {
         match (self, dir) {
             (SignalKind::Real, "input") => "S231:RealInput",
             (SignalKind::Real, "output") => "S231:RealOutput",
+            (SignalKind::Integer, "input") => "S231:IntegerInput",
+            (SignalKind::Integer, "output") => "S231:IntegerOutput",
             (SignalKind::Boolean, "input") => "S231:BooleanInput",
             (SignalKind::Boolean, "output") => "S231:BooleanOutput",
             _ => unreachable!("test builder passes input/output only"),
@@ -28,6 +32,7 @@ impl SignalKind {
     fn cxf_data_type(self) -> &'static str {
         match self {
             SignalKind::Real => "S231:Real",
+            SignalKind::Integer => "S231:Integer",
             SignalKind::Boolean => "S231:Boolean",
         }
     }
@@ -35,6 +40,7 @@ impl SignalKind {
     fn config_type(self) -> &'static str {
         match self {
             SignalKind::Real => "Real",
+            SignalKind::Integer => "Integer",
             SignalKind::Boolean => "Boolean",
         }
     }
@@ -53,8 +59,10 @@ pub(crate) struct Param {
 }
 
 #[derive(Copy, Clone)]
+#[allow(dead_code)]
 pub(crate) enum ParamValue {
     Real(&'static str),
+    Integer(&'static str),
 }
 
 #[derive(Copy, Clone)]
@@ -67,7 +75,11 @@ pub(crate) struct BlockCase {
     outputs: &'static [Port],
 }
 
+#[allow(dead_code)]
 pub(crate) const R: SignalKind = SignalKind::Real;
+#[allow(dead_code)]
+pub(crate) const I: SignalKind = SignalKind::Integer;
+#[allow(dead_code)]
 pub(crate) const B: SignalKind = SignalKind::Boolean;
 
 pub(crate) const fn case(
@@ -358,6 +370,7 @@ fn block_node(case: &BlockCase, block_id: &str, output_ids: &[String]) -> String
 fn param_node(block_id: &str, param: &Param) -> String {
     let (value, ty) = match param.value {
         ParamValue::Real(value) => (value, "http://www.w3.org/2001/XMLSchema#double"),
+        ParamValue::Integer(value) => (value, "http://www.w3.org/2001/XMLSchema#integer"),
     };
     object(vec![
         format!(r#""@id": "{block_id}.{}""#, param.name),
