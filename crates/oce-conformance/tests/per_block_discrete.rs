@@ -13,22 +13,34 @@ const UNIT_DELAY_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("0.0"),
 }];
+const UNIT_DELAY_NONZERO_START_PARAMS: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Real("2.5"),
+}];
 
-// The checked-in golden pins one-sample-delay dynamics, state latching,
-// determinism, and non-dyadic bit-exact values. It does not discriminate
-// `y_start` parameter binding because the golden's `y_start=0.0` equals the
-// registry default; a future generator-derived non-zero-y_start golden should
-// cover that binding without hand-editing provenance artifacts.
-const CASES: &[BlockCase] = &[case(
-    "discrete_unit_delay",
-    "CDL.Discrete.UnitDelay",
-    "UnitDelay",
-    U,
-    UNIT_DELAY_PARAMS,
-    REAL_Y,
-)];
+// The checked-in goldens pin one-sample-delay dynamics, state latching,
+// determinism, non-dyadic bit-exact values, and `y_start` parameter binding.
+const CASES: &[BlockCase] = &[
+    case(
+        "discrete_unit_delay",
+        "CDL.Discrete.UnitDelay",
+        "UnitDelay",
+        U,
+        UNIT_DELAY_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_unit_delay_nonzero_y_start",
+        "CDL.Discrete.UnitDelay",
+        "UnitDelay/y_start_nonzero",
+        U,
+        UNIT_DELAY_NONZERO_START_PARAMS,
+        REAL_Y,
+    ),
+];
 
-const STATEFUL_DISCRETE_SLUGS: &[&str] = &["discrete_unit_delay"];
+const STATEFUL_DISCRETE_SLUGS: &[&str] =
+    &["discrete_unit_delay", "discrete_unit_delay_nonzero_y_start"];
 
 #[test]
 fn discrete_reference_blocks_match_exact_oracle() {

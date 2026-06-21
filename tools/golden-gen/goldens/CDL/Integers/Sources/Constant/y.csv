@@ -1,0 +1,6 @@
+#1
+# columns: time y
+double CDL_Integers_Sources_Constant_y(3,2)
+0.0 -12345.0
+10.0 -12345.0
+20.0 -12345.0

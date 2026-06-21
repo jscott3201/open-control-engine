@@ -65,13 +65,17 @@ const K_NEG3: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Integer("-3"),
 }];
+const K_NEG_12345: &[Param] = &[Param {
+    name: "k",
+    value: ParamValue::Integer("-12345"),
+}];
 const T_10: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Integer("10"),
 }];
 
 // This table covers registered `CDL.Integers` blocks with checked-in reference tables.
-// MultiSum is vector-shaped and remains deferred; Constant and Abs have no goldens yet.
+// MultiSum is vector-shaped and remains deferred.
 const CASES: &[BlockCase] = &[
     case(
         "integers_add",
@@ -113,6 +117,7 @@ const CASES: &[BlockCase] = &[
         K_NEG3,
         INTEGER_Y,
     ),
+    case("integers_abs", "CDL.Integers.Abs", "Abs", U, &[], INTEGER_Y),
     case(
         "integers_max",
         "CDL.Integers.Max",
@@ -216,6 +221,14 @@ const CASES: &[BlockCase] = &[
         U,
         &[],
         CHANGE_OUTPUTS,
+    ),
+    case(
+        "integers_constant",
+        "CDL.Integers.Sources.Constant",
+        "Sources/Constant",
+        &[],
+        K_NEG_12345,
+        INTEGER_Y,
     ),
 ];
 
