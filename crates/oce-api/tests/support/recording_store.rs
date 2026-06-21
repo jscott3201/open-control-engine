@@ -1,3 +1,5 @@
+//! Recording `Store` test double for tick-purity assertions.
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
