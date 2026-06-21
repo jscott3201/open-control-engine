@@ -10,8 +10,8 @@
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "u1", "u2", "y"],
   "inputs": [
-    { "name": "u1", "value_kind": "Real", "values": [0.3, 1.0, 2.2, inf, inf, -inf] },
-    { "name": "u2", "value_kind": "Real", "values": [0.1, 0.9, 1.1, 1.0, inf, inf] }
+    { "name": "u1", "value_kind": "Real", "values": [0.3, 1.0, 2.2, "inf", "inf", "-inf"] },
+    { "name": "u2", "value_kind": "Real", "values": [0.1, 0.9, 1.1, 1.0, "inf", "inf"] }
   ],
   "input": "u1=[0.3,1.0,2.2,+Inf,+Inf,-Inf], u2=[0.1,0.9,1.1,1,+Inf,+Inf]; finite cancellation plus IEEE Inf/NaN rows",
   "reference_rule": "y = u1 - u2 (IEEE-754 f64 subtract); _spec/03 §4.1 Subtract",

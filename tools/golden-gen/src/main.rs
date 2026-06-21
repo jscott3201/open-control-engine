@@ -98,6 +98,8 @@ fn main() {
     }
     fs::write(goldens_root.join("MANIFEST.txt"), &manifest).expect("write manifest");
 
+    assert_provenance_json_is_strict(&goldens_root);
+
     println!("golden-gen: emitted {} signal goldens", goldens.len());
     print!("{manifest}");
 }
@@ -268,10 +270,25 @@ fn json_sample_values(samples: &[Sample]) -> String {
         if idx > 0 {
             out.push_str(", ");
         }
-        out.push_str(&csv::format_f64(sample.encode()));
+        out.push_str(&json_sample_value(sample));
     }
     out.push(']');
     out
+}
+
+fn json_sample_value(sample: &Sample) -> String {
+    match sample {
+        Sample::Real(x) if !x.is_finite() => {
+            if x.is_nan() {
+                "\"NaN\"".to_string()
+            } else if x.is_sign_positive() {
+                "\"inf\"".to_string()
+            } else {
+                "\"-inf\"".to_string()
+            }
+        }
+        _ => csv::format_f64(sample.encode()),
+    }
 }
 
 fn input_series_json(inputs: &[InputSeries]) -> String {
@@ -434,6 +451,30 @@ fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) 
     fs::write(types_dir.join("types.prov.json"), types_json).expect("write types prov");
     manifest_lines
         .push("CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json".into());
+}
+
+fn assert_provenance_json_is_strict(goldens_root: &Path) {
+    let mut checked = 0;
+    assert_provenance_json_dir(goldens_root, &mut checked);
+    assert!(checked > 0, "golden-gen emitted no provenance JSON files");
+}
+
+fn assert_provenance_json_dir(dir: &Path, checked: &mut usize) {
+    for entry in fs::read_dir(dir).expect("read provenance directory") {
+        let path = entry.expect("read provenance directory entry").path();
+        if path.is_dir() {
+            assert_provenance_json_dir(&path, checked);
+        } else if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.ends_with(".prov.json"))
+        {
+            let text = fs::read_to_string(&path).expect("read provenance JSON");
+            serde_json::from_str::<serde_json::Value>(&text)
+                .unwrap_or_else(|err| panic!("invalid strict JSON in {}: {err}", path.display()));
+            *checked += 1;
+        }
+    }
 }
 
 /// The crate-root `oracle.lock` skeleton (toolchain / version pins for reproducibility).

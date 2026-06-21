@@ -52,14 +52,7 @@ fn algebraic() -> Vec<Golden> {
             f64::INFINITY,
             f64::NEG_INFINITY,
         ];
-        let u2 = [
-            0.2,
-            2.2,
-            0.3,
-            1.0,
-            f64::NEG_INFINITY,
-            f64::NEG_INFINITY,
-        ];
+        let u2 = [0.2, 2.2, 0.3, 1.0, f64::NEG_INFINITY, f64::NEG_INFINITY];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(a, b)| r(a + b)).collect();
         out.push(Golden::new(
             "CDL.Reals.Add",
