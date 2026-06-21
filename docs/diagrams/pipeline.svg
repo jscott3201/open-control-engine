@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 250" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="ptitle pdesc">
+  <title id="ptitle">Open Control Engine execution pipeline</title>
+  <desc id="pdesc">A model is loaded from CXF, elaborated, validated, and compiled into a frozen topological schedule once per load (the BUILD phase, off the hot path). The frozen schedule is then evaluated tick by tick to simulate, on a deterministic hot path with no allocation, no I/O, and no store access.</desc>
+
+  <rect width="880" height="250" fill="#ffffff"/>
+  <text x="440" y="34" text-anchor="middle" font-size="16" font-weight="700" fill="#202124">From CXF to simulated control signals</text>
+
+  <defs>
+    <marker id="parrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9aa0a6"/>
+    </marker>
+  </defs>
+
+  <!-- BUILD stages (blue) -->
+  <g>
+    <rect x="30"  y="64" width="118" height="66" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.8"/>
+    <text x="89"  y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#174ea6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">load</text>
+    <text x="89"  y="112" text-anchor="middle" font-size="11" fill="#5f6368">ingest CXF</text>
+
+    <rect x="168" y="64" width="118" height="66" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.8"/>
+    <text x="227" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#174ea6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">flatten</text>
+    <text x="227" y="112" text-anchor="middle" font-size="11" fill="#5f6368">elaborate</text>
+
+    <rect x="306" y="64" width="118" height="66" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.8"/>
+    <text x="365" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#174ea6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">validate</text>
+    <text x="365" y="112" text-anchor="middle" font-size="11" fill="#5f6368">conformance gate</text>
+
+    <rect x="444" y="64" width="118" height="66" rx="8" fill="#e8f0fe" stroke="#1a73e8" stroke-width="1.8"/>
+    <text x="503" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#174ea6" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">schedule</text>
+    <text x="503" y="112" text-anchor="middle" font-size="11" fill="#5f6368">Kahn topo-sort</text>
+  </g>
+
+  <!-- TICK stages (green) -->
+  <g>
+    <rect x="582" y="64" width="118" height="66" rx="8" fill="#e6f4ea" stroke="#137333" stroke-width="1.8"/>
+    <text x="641" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">tick</text>
+    <text x="641" y="112" text-anchor="middle" font-size="11" fill="#5f6368">one step</text>
+
+    <rect x="720" y="64" width="118" height="66" rx="8" fill="#e6f4ea" stroke="#137333" stroke-width="1.8"/>
+    <text x="779" y="92"  text-anchor="middle" font-size="13.5" font-weight="700" fill="#0d652d" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">simulate</text>
+    <text x="779" y="112" text-anchor="middle" font-size="11" fill="#5f6368">run to t_stop</text>
+  </g>
+
+  <!-- arrows -->
+  <g stroke="#9aa0a6" stroke-width="1.6" fill="none">
+    <path d="M148 97 L168 97" marker-end="url(#parrow)"/>
+    <path d="M286 97 L306 97" marker-end="url(#parrow)"/>
+    <path d="M424 97 L444 97" marker-end="url(#parrow)"/>
+    <path d="M562 97 L582 97" marker-end="url(#parrow)"/>
+    <path d="M700 97 L720 97" marker-end="url(#parrow)"/>
+  </g>
+
+  <!-- phase brackets -->
+  <path d="M30 150 L30 162 L562 162 L562 150" fill="none" stroke="#1a73e8" stroke-width="1.5"/>
+  <text x="296" y="184" text-anchor="middle" font-size="12.5" font-weight="600" fill="#174ea6">BUILD — once per load, off the hot path</text>
+
+  <path d="M582 150 L582 162 L838 162 L838 150" fill="none" stroke="#137333" stroke-width="1.5"/>
+  <text x="710" y="184" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0d652d">TICK — the hot path</text>
+  <text x="710" y="202" text-anchor="middle" font-size="11" fill="#5f6368">no alloc · no I/O · no store access</text>
+</svg>
