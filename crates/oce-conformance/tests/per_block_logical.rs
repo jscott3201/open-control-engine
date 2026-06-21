@@ -1,0 +1,198 @@
+//! Tier-1 exact conformance for CDL.Logical blocks through the frozen facade.
+
+mod block_harness;
+
+use block_harness::{
+    B, BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
+    assert_cases_match_exact_oracle, case,
+};
+
+const U: &[Port] = &[Port { name: "u", kind: B }];
+const U1_U2: &[Port] = &[
+    Port {
+        name: "u1",
+        kind: B,
+    },
+    Port {
+        name: "u2",
+        kind: B,
+    },
+];
+const U_CLR: &[Port] = &[
+    Port { name: "u", kind: B },
+    Port {
+        name: "clr",
+        kind: B,
+    },
+];
+const SWITCH_INPUTS: &[Port] = &[
+    Port {
+        name: "u1",
+        kind: B,
+    },
+    Port {
+        name: "u2",
+        kind: B,
+    },
+    Port {
+        name: "u3",
+        kind: B,
+    },
+];
+const TIMER_OUTPUTS: &[Port] = &[
+    Port { name: "y", kind: R },
+    Port {
+        name: "passed",
+        kind: B,
+    },
+];
+const BOOL_Y: &[Port] = &[Port { name: "y", kind: B }];
+
+const TIMER_PARAMS: &[Param] = &[Param {
+    name: "t",
+    value: ParamValue::Real("0.25"),
+}];
+const TRUE_DELAY_PARAMS: &[Param] = &[Param {
+    name: "delayTime",
+    value: ParamValue::Real("75.0"),
+}];
+const TRUE_FALSE_HOLD_PARAMS: &[Param] = &[
+    Param {
+        name: "trueHoldDuration",
+        value: ParamValue::Real("300.0"),
+    },
+    Param {
+        name: "falseHoldDuration",
+        value: ParamValue::Real("300.0"),
+    },
+];
+const TRUE_HOLD_WITH_RESET_PARAMS: &[Param] = &[Param {
+    name: "duration",
+    value: ParamValue::Real("200.0"),
+}];
+const SAMPLE_TRIGGER_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("1.0"),
+    },
+];
+
+const CASES: &[BlockCase] = &[
+    case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
+    case("logical_or", "CDL.Logical.Or", "Or", U1_U2, &[], BOOL_Y),
+    case("logical_xor", "CDL.Logical.Xor", "Xor", U1_U2, &[], BOOL_Y),
+    case("logical_not", "CDL.Logical.Not", "Not", U, &[], BOOL_Y),
+    case(
+        "logical_switch",
+        "CDL.Logical.Switch",
+        "Switch",
+        SWITCH_INPUTS,
+        &[],
+        BOOL_Y,
+    ),
+    case("logical_edge", "CDL.Logical.Edge", "Edge", U, &[], BOOL_Y),
+    case(
+        "logical_falling_edge",
+        "CDL.Logical.FallingEdge",
+        "FallingEdge",
+        U,
+        &[],
+        BOOL_Y,
+    ),
+    case(
+        "logical_change",
+        "CDL.Logical.Change",
+        "Change",
+        U,
+        &[],
+        BOOL_Y,
+    ),
+    case(
+        "logical_latch",
+        "CDL.Logical.Latch",
+        "Latch",
+        U_CLR,
+        &[],
+        BOOL_Y,
+    ),
+    case(
+        "logical_toggle",
+        "CDL.Logical.Toggle",
+        "Toggle",
+        U_CLR,
+        &[],
+        BOOL_Y,
+    ),
+    case(
+        "logical_timer",
+        "CDL.Logical.Timer",
+        "Timer",
+        U,
+        TIMER_PARAMS,
+        TIMER_OUTPUTS,
+    ),
+    case(
+        "logical_true_delay",
+        "CDL.Logical.TrueDelay",
+        "TrueDelay",
+        U,
+        TRUE_DELAY_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_true_false_hold",
+        "CDL.Logical.TrueFalseHold",
+        "TrueFalseHold",
+        U,
+        TRUE_FALSE_HOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_true_hold_with_reset",
+        "CDL.Logical.TrueHoldWithReset",
+        "TrueHoldWithReset",
+        U_CLR,
+        TRUE_HOLD_WITH_RESET_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_sample_trigger",
+        "CDL.Logical.Sources.SampleTrigger",
+        "Sources/SampleTrigger",
+        &[],
+        SAMPLE_TRIGGER_PARAMS,
+        BOOL_Y,
+    ),
+];
+
+const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
+    "logical_edge",
+    "logical_falling_edge",
+    "logical_change",
+    "logical_latch",
+    "logical_toggle",
+    "logical_timer",
+    "logical_true_delay",
+    "logical_true_false_hold",
+    "logical_true_hold_with_reset",
+    "logical_sample_trigger",
+];
+
+#[test]
+fn logical_reference_blocks_match_exact_oracle() {
+    assert_cases_match_exact_oracle(CASES, "CDL/Logical", "single-block-logical");
+}
+
+#[test]
+fn stateful_logical_blocks_exact_runs_are_deterministic() {
+    assert_cases_are_deterministic(
+        CASES,
+        STATEFUL_LOGICAL_SLUGS,
+        "CDL/Logical",
+        "single-block-logical",
+    );
+}
