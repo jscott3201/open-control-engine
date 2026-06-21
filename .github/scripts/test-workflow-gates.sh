@@ -132,6 +132,7 @@ run_case() {
   name="$1"
   expected="$2"
   mutate="$3"
+  expected_message="${4:-}"
   dir="$tmp/$name/workflows"
   deny="$tmp/$name/deny.toml"
   root_cargo="$tmp/$name/Cargo.toml"
@@ -172,6 +173,11 @@ run_case() {
       fi
       if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
         echo "FAIL: workflow fixture '$name' failed without a FAIL line"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+        echo "FAIL: workflow fixture '$name' failed without expected message substring: $expected_message"
         printf '%s\n' "$output"
         exit 1
       fi
@@ -289,17 +295,59 @@ remove_no_db_gate() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+empty_crate_dir_only() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  rm -rf "$crates_dir"
+  mkdir -p "$crates_dir/oce-empty"
+}
+
+remove_crate_lib_files() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  rm -f "$crates_dir"/*/src/lib.rs
+}
+
+remove_crates_dir() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  rm -rf "$crates_dir"
+}
+
 run_case positive pass noop
-run_case missing-release-nextest fail remove_release_nextest
-run_case seeded-advisory-ignore fail seed_advisory_ignore
-run_case garbled-workflow fail garble_release_workflow
-run_case missing-stale-status-gate fail remove_stale_status_gate
-run_case empty-bans-deny fail empty_bans_deny
-run_case missing-store-surface-gate fail remove_store_surface_gate
-run_case missing-golden-gen-firewall fail remove_golden_gen_firewall
-run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid
-run_case missing-crate-lints-workspace fail remove_crate_lints_workspace
-run_case missing-crate-lib-forbid fail remove_crate_lib_forbid
-run_case missing-no-db-gate fail remove_no_db_gate
+run_case missing-release-nextest fail remove_release_nextest \
+  "release-codegen nextest with hard-fail-on-zero-tests"
+run_case seeded-advisory-ignore fail seed_advisory_ignore \
+  "empty advisory ignore list"
+run_case garbled-workflow fail garble_release_workflow \
+  "scheduled heavy gate"
+run_case missing-stale-status-gate fail remove_stale_status_gate \
+  "run stale crate-status fixture tests"
+run_case empty-bans-deny fail empty_bans_deny \
+  "cargo-deny bans include representative SQL/ORM crate sqlx"
+run_case missing-store-surface-gate fail remove_store_surface_gate \
+  "oce-store public-api surface gate package selector"
+run_case missing-golden-gen-firewall fail remove_golden_gen_firewall \
+  "run golden-gen firewall fixture tests"
+run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid \
+  "workspace.lints.rust unsafe_code = \"forbid\""
+run_case missing-crate-lints-workspace fail remove_crate_lints_workspace \
+  "missing [lints] workspace = true"
+run_case missing-crate-lib-forbid fail remove_crate_lib_forbid \
+  "line 1 must be #![forbid(unsafe_code)]"
+run_case missing-no-db-gate fail remove_no_db_gate \
+  "run default-no-db smoke"
+run_case empty-crate-dir-only fail empty_crate_dir_only \
+  "no crate Cargo.toml files found under"
+run_case missing-crate-lib-files fail remove_crate_lib_files \
+  "no crate src/lib.rs files found under"
+run_case missing-crates-dir fail remove_crates_dir \
+  "crates directory is missing"
 
 echo "OK: workflow gate fixtures passed."

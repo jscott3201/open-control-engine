@@ -14,14 +14,15 @@ trap 'rm -rf "$tmp"' EXIT
 run_fixture() {
   name="$1"
   expected="$2"
+  fixture="$3"
+  expected_message="${4:-}"
   members="$tmp/$name.members"
   trees="$tmp/$name.trees"
   metadata="$tmp/$name.metadata"
-  shift 2
 
   mkdir -p "$trees"
   write_clean_metadata "$metadata"
-  "$@" "$members" "$trees" "$metadata"
+  "$fixture" "$members" "$trees" "$metadata"
 
   set +e
   output="$(
@@ -54,6 +55,11 @@ run_fixture() {
       fi
       if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
         echo "FAIL: fixture '$name' failed without a FAIL line"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+        echo "FAIL: fixture '$name' failed without expected message substring: $expected_message"
         printf '%s\n' "$output"
         exit 1
       fi
@@ -189,6 +195,37 @@ direct_tokio_metadata_fixture() {
 EOF
 }
 
+direct_tokio_macros_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  metadata="$3"
+  positive_fixture "$members" "$trees"
+  cat > "$metadata" <<'EOF'
+{
+  "packages": [
+    {
+      "name": "oce-api",
+      "id": "path+file:///repo/crates/oce-api#0.0.0",
+      "publish": null,
+      "dependencies": [
+        { "name": "tokio-macros", "kind": "normal" }
+      ]
+    },
+    {
+      "name": "oce-docs",
+      "id": "path+file:///repo/crates/oce-docs#0.0.0",
+      "publish": null,
+      "dependencies": []
+    }
+  ],
+  "workspace_members": [
+    "path+file:///repo/crates/oce-api#0.0.0",
+    "path+file:///repo/crates/oce-docs#0.0.0"
+  ]
+}
+EOF
+}
+
 direct_verification_metadata_fixture() {
   members="$1"
   trees="$2"
@@ -222,7 +259,30 @@ direct_verification_metadata_fixture() {
     "path+file:///repo/crates/oce-api#0.0.0",
     "path+file:///repo/crates/oce-docs#0.0.0",
     "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
-  ]
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "id": "path+file:///repo/crates/oce-api#0.0.0",
+        "deps": [
+          {
+            "pkg": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+            "dep_kinds": [
+              { "kind": "dev" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "path+file:///repo/crates/oce-docs#0.0.0",
+        "deps": []
+      },
+      {
+        "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+        "deps": []
+      }
+    ]
+  }
 }
 EOF
 }
@@ -376,16 +436,77 @@ malformed_metadata_fixture() {
   printf '%s\n' 'not cargo metadata json' > "$metadata"
 }
 
+zero_shipped_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  metadata="$3"
+  positive_fixture "$members" "$trees"
+  cat > "$metadata" <<'EOF'
+{
+  "packages": [
+    {
+      "name": "oce-reference-wal-adapter",
+      "id": "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0",
+      "publish": [],
+      "dependencies": []
+    }
+  ],
+  "workspace_members": [
+    "path+file:///repo/crates/oce-reference-wal-adapter#0.0.0"
+  ],
+  "resolve": { "nodes": [] }
+}
+EOF
+}
+
+missing_facade_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  metadata="$3"
+  positive_fixture "$members" "$trees"
+  cat > "$metadata" <<'EOF'
+{
+  "packages": [
+    {
+      "name": "oce-docs",
+      "id": "path+file:///repo/crates/oce-docs#0.0.0",
+      "publish": null,
+      "dependencies": []
+    }
+  ],
+  "workspace_members": [
+    "path+file:///repo/crates/oce-docs#0.0.0"
+  ],
+  "resolve": { "nodes": [] }
+}
+EOF
+}
+
 run_fixture positive pass positive_fixture
-run_fixture forbidden-non-facade fail forbidden_non_facade_fixture
-run_fixture empty-members fail empty_members_fixture
-run_fixture missing-tree fail missing_tree_fixture
-run_fixture garbled-tree fail garbled_tree_fixture
-run_fixture direct-tokio-metadata fail direct_tokio_metadata_fixture
-run_fixture direct-verification-metadata fail direct_verification_metadata_fixture
+run_fixture forbidden-non-facade fail forbidden_non_facade_fixture \
+  "FAIL: 'oce-conformance' default build links a database / async runtime / parallelism runtime"
+run_fixture empty-members fail empty_members_fixture \
+  "workspace member fixture is missing or empty"
+run_fixture missing-tree fail missing_tree_fixture \
+  "tree fixture for 'oce-api' is missing or empty"
+run_fixture garbled-tree fail garbled_tree_fixture \
+  "did not contain the expected 'oce-api v' root node"
+run_fixture direct-tokio-metadata fail direct_tokio_metadata_fixture \
+  "shipped crate 'oce-api' has forbidden direct normal dependency 'tokio'"
+run_fixture direct-tokio-macros-metadata fail direct_tokio_macros_metadata_fixture \
+  "shipped crate 'oce-api' has forbidden direct normal dependency 'tokio-macros'"
+run_fixture direct-verification-metadata fail direct_verification_metadata_fixture \
+  "shipped crate 'oce-api' has forbidden direct normal dependency on verification-only crate 'oce-reference-wal-adapter'"
 run_fixture dev-verification-metadata pass dev_verification_metadata_fixture
-run_fixture transitive-verification-metadata fail transitive_verification_metadata_fixture
-run_fixture empty-metadata fail empty_metadata_fixture
-run_fixture malformed-metadata fail malformed_metadata_fixture
+run_fixture transitive-verification-metadata fail transitive_verification_metadata_fixture \
+  "shipped crate 'oce-api' reaches verification-only crate 'oce-reference-wal-adapter' through non-dev dependencies"
+run_fixture empty-metadata fail empty_metadata_fixture \
+  "cargo metadata fixture is missing or empty"
+run_fixture malformed-metadata fail malformed_metadata_fixture \
+  "cargo metadata was missing a package array or was malformed"
+run_fixture zero-shipped-metadata fail zero_shipped_metadata_fixture \
+  "cargo metadata contained no shipped crates (publish == null)"
+run_fixture missing-facade-metadata fail missing_facade_metadata_fixture \
+  "cargo metadata shipped set did not include the canonical facade crate 'oce-api'"
 
 echo "OK: check-default-no-db gate fixtures passed."

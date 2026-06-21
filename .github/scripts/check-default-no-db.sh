@@ -13,7 +13,9 @@
 # 3. Verification-adapter unreachability check: workspace packages with `publish == []` are treated
 #    as verification-only. Shipped crates must not depend on them directly or reach them through any
 #    non-dev dependency path. The pass is forward-armed and vacuously green while no such package
-#    exists.
+#    exists. To arm this pass, the future reference WAL adapter must be a `publish = false` workspace
+#    member under `crates/` so root cargo metadata can see it; a tests/ fixture or tools/-style
+#    standalone sub-workspace is invisible here and would leave this pass permanently vacuous.
 #
 # Tests may inject cargo metadata with OCE_NO_DB_METADATA_FILE; the fixture is used for both the
 # `--no-deps` package scan and the full resolve graph scan. The gate fails closed if metadata or jq
@@ -24,11 +26,11 @@
 # We keep `oce-api` (the public facade) as the canonical embeddable assertion AND loop the same
 # forbidden-crate check over every workspace member derived from `cargo metadata --no-deps`. That
 # catches Group C drift (`oce-conformance`, `oce-extension`, `oce-docs`) when new crates are added.
-# We match real crate names (`selene-db`, `selene_*`, `tokio`, `async-std`, `rayon`); `selene-db` is
-# listed as a representative graph database an app might adopt app-side — it must never enter this
-# library's tree. `rayon` is forbidden by D6: the deterministic Kahn scheduler is single-threaded,
-# and rayon's work-stealing parallelism would make schedules/traces non-bit-stable — the determinism
-# contract (CDL §7.16) bans it from the engine, not just from the hot path.
+# We match real crate names (`selene-db`, `selene_*`, `tokio*`, `async-std*`, `rayon*`); `selene-db`
+# is listed as a representative graph database an app might adopt app-side — it must never enter
+# this library's tree. `rayon` is forbidden by D6: the deterministic Kahn scheduler is
+# single-threaded, and rayon's work-stealing parallelism would make schedules/traces non-bit-stable
+# — the determinism contract (CDL §7.16) bans it from the engine, not just from the hot path.
 #
 # This shell regex intentionally stays narrow: it is the fast every-PR default-tree canary for the
 # core embeddability invariant, not an exhaustive DB-family catalogue. The broader curated family
@@ -42,7 +44,7 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 # Real database / async-runtime / parallelism crate names that must never enter the library tree.
-FORBIDDEN='(^|[[:space:]])(selene-db[-a-z]*|selene_[a-z]*|tokio|async-std|rayon[-a-z]*)([[:space:]]|$| v)'
+FORBIDDEN='(^|[[:space:]])(selene-db[-a-z]*|selene_[a-z]*|tokio[-a-z]*|async-std[-a-z]*|rayon[-a-z]*)([[:space:]]|$| v)'
 
 load_metadata() {
   local mode="$1"
@@ -339,6 +341,9 @@ fi
 
 verification_count="$(verification_only_count "$no_deps_metadata_file")"
 if [ "$verification_count" -gt 0 ]; then
+  # Future adapter placement contract: the reference WAL adapter must be a `publish = false`
+  # workspace member under crates/. Root cargo metadata cannot see tests/ fixtures or tools/-style
+  # standalone sub-workspaces, which would make this forward-armed pass vacuous forever.
   if ! load_metadata full "$full_metadata_file"; then
     exit 1
   fi
