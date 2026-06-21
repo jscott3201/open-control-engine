@@ -125,6 +125,17 @@ fn strict_positive_param_rules_reject_zero() {
                 ValueType::Real,
             ],
             &[ValueType::Real],
+            "Td",
+        ),
+        (
+            "CDL.Reals.PIDWithReset",
+            &[
+                ValueType::Real,
+                ValueType::Real,
+                ValueType::Boolean,
+                ValueType::Real,
+            ],
+            &[ValueType::Real],
             "Nd",
         ),
     ];
@@ -148,6 +159,29 @@ fn strict_positive_param_rules_reject_zero() {
             err.diagnostics
         );
     }
+}
+
+#[test]
+fn pid_with_reset_zero_td_is_rejected() {
+    let model = one_block_model(
+        "CDL.Reals.PIDWithReset",
+        &[
+            ValueType::Real,
+            ValueType::Real,
+            ValueType::Boolean,
+            ValueType::Real,
+        ],
+        &[ValueType::Real],
+        vec![rp("Td", 0.0)],
+    );
+    let err = validate(&model).expect_err("PIDWithReset.Td=0 must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(
+        err.diagnostics[0].message.contains("`Td`"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
 }
 
 #[test]

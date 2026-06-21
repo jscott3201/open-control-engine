@@ -167,8 +167,9 @@ shortest-round-trip f64 formatter with byte-exact CSV goldens (the Tier-2 bit-ex
   oracle.lock pin **when the toolchain question is revisited**.
 - **OD-D / OD-severity-table → RESOLVED 2026-06-21, PER-CLASS SAFETY CASE.** **Shall-error:**
   `SampleTrigger.period > 0`, Discrete `period > 0` when such a class is present,
-  `Reals.Limiter.uMin <= uMax`, `PID/PIDWithReset.Nd > 0`, `Derivative/LimitSlewRate/PID.Td > 0`,
-  `MovingAverage.delta > 0`, and all required-parameter presence. **Should-warning:**
+  `Reals.Limiter.uMin <= uMax`, `PID/PIDWithReset.Nd > 0`,
+  `Derivative/LimitSlewRate/PID/PIDWithReset.Td > 0`, `MovingAverage.delta > 0`, and all
+  required-parameter presence. **Should-warning:**
   `Reals.Limiter.uMin == uMax` (safe deterministic clamp-to-constant).
 
 **Lead defaults (proceeding unless owner flags otherwise):**

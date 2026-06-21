@@ -26,10 +26,16 @@ pub(super) const PID_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
-pub(super) const PID_WITH_RESET_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "Nd",
-    min: 0.0,
-}];
+pub(super) const PID_WITH_RESET_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::RealGreaterThan {
+        name: "Td",
+        min: 0.0,
+    },
+    ParamRule::RealGreaterThan {
+        name: "Nd",
+        min: 0.0,
+    },
+];
 
 fn pid_config(p: &ParamTable) -> ControllerConfig {
     ControllerConfig {

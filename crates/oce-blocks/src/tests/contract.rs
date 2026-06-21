@@ -270,10 +270,16 @@ fn registry_exposes_block_param_rules() {
     );
     assert_eq!(
         lookup("CDL.Reals.PIDWithReset").unwrap().param_rules(),
-        &[ParamRule::RealGreaterThan {
-            name: "Nd",
-            min: 0.0,
-        }]
+        &[
+            ParamRule::RealGreaterThan {
+                name: "Td",
+                min: 0.0,
+            },
+            ParamRule::RealGreaterThan {
+                name: "Nd",
+                min: 0.0,
+            },
+        ]
     );
     assert!(
         lookup("CDL.Reals.Sources.Constant")
