@@ -63,6 +63,7 @@ pub(crate) struct Param {
 pub(crate) enum ParamValue {
     Real(&'static str),
     Integer(&'static str),
+    Boolean(&'static str),
 }
 
 #[derive(Copy, Clone)]
@@ -371,6 +372,7 @@ fn param_node(block_id: &str, param: &Param) -> String {
     let (value, ty) = match param.value {
         ParamValue::Real(value) => (value, "http://www.w3.org/2001/XMLSchema#double"),
         ParamValue::Integer(value) => (value, "http://www.w3.org/2001/XMLSchema#integer"),
+        ParamValue::Boolean(value) => (value, "http://www.w3.org/2001/XMLSchema#boolean"),
     };
     object(vec![
         format!(r#""@id": "{block_id}.{}""#, param.name),

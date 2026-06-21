@@ -1,0 +1,11 @@
+#1
+# columns: time y
+double CDL_Reals_GreaterThreshold_hysteretic_preset_y(8,2)
+0.0 1.0
+60.0 1.0
+120.0 0.0
+180.0 0.0
+240.0 0.0
+300.0 1.0
+360.0 1.0
+420.0 0.0

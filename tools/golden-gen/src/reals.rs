@@ -368,6 +368,33 @@ fn comparators() -> Vec<Golden> {
         );
     }
 
+    // Greater preset (h>0, pre_y_start=true): first sample starts inside the hold band.
+    {
+        let h = 1.0;
+        let u1 = [4.0, 5.0, 3.5, 3.0, 4.0, 5.0, 4.2, 3.4];
+        let u2 = [4.5; 8];
+        let mut prev = true; // pre_y_start
+        let mut y = Vec::new();
+        for (&a, &c) in u1.iter().zip(&u2) {
+            let next = (!prev && a > c) || (prev && a > c - h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.Greater",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic_preset, h=1.0, pre_y_start=true; u2=4.5; u1=[4.0,5.0,3.5,3.0,4.0,5.0,4.2,3.4]",
+                "y_h = (!pre_y && u1>u2) || (pre_y && u1>u2-h); first row is in the hold band so pre_y_start=true is observable; _spec/03 §4.1 Greater",
+            )
+            .with_scenario("hysteretic_preset")
+            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
+        );
+    }
+
     // Less (h=0): y = u1 < u2.
     {
         let u1 = [2.1, 5.7, 7.9, 5.7, 5.69999999999];
@@ -410,6 +437,33 @@ fn comparators() -> Vec<Golden> {
                 "y_h = (!pre_y && u1<u2) || (pre_y && u1<u2+h); asymmetric Buildings Reals/Less.mo band; _spec/03 §4.1 Less",
             )
             .with_scenario("hysteretic")
+            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
+        );
+    }
+
+    // Less preset (h>0, pre_y_start=true): first sample starts inside the hold band.
+    {
+        let h = 1.0;
+        let u1 = [5.0, 4.0, 5.5, 6.0, 5.0, 4.0, 5.2, 5.6];
+        let u2 = [4.5; 8];
+        let mut prev = true; // pre_y_start
+        let mut y = Vec::new();
+        for (&a, &c) in u1.iter().zip(&u2) {
+            let next = (!prev && a < c) || (prev && a < c + h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.Less",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic_preset, h=1.0, pre_y_start=true; u2=4.5; u1=[5.0,4.0,5.5,6.0,5.0,4.0,5.2,5.6]",
+                "y_h = (!pre_y && u1<u2) || (pre_y && u1<u2+h); first row is in the hold band so pre_y_start=true is observable; _spec/03 §4.1 Less",
+            )
+            .with_scenario("hysteretic_preset")
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
         );
     }
@@ -459,6 +513,32 @@ fn comparators() -> Vec<Golden> {
         );
     }
 
+    // GreaterThreshold preset (h>0, pre_y_start=true): first sample starts inside the hold band.
+    {
+        let (t, h) = (4.5, 1.0);
+        let u = [4.0, 5.0, 3.5, 3.0, 4.0, 5.0, 4.2, 3.4];
+        let mut prev = true; // pre_y_start
+        let mut y = Vec::new();
+        for &x in &u {
+            let next = (!prev && x > t) || (prev && x > t - h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.GreaterThreshold",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic_preset, t=4.5, h=1.0, pre_y_start=true; u=[4.0,5.0,3.5,3.0,4.0,5.0,4.2,3.4]",
+                "y_h = (!pre_y && u>t) || (pre_y && u>t-h); first row is in the hold band so pre_y_start=true is observable; _spec/03 §4.1 GreaterThreshold",
+            )
+            .with_scenario("hysteretic_preset")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
     // LessThreshold (h=0, t=4.5): y = u < t.
     {
         let t = 4.5;
@@ -500,6 +580,32 @@ fn comparators() -> Vec<Golden> {
                 "y_h = (!pre_y && u<t) || (pre_y && u<t+h); asymmetric Buildings Reals/LessThreshold.mo band; _spec/03 §4.1 LessThreshold",
             )
             .with_scenario("hysteretic")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // LessThreshold preset (h>0, pre_y_start=true): first sample starts inside the hold band.
+    {
+        let (t, h) = (4.5, 1.0);
+        let u = [5.0, 4.0, 5.5, 6.0, 5.0, 4.0, 5.2, 5.6];
+        let mut prev = true; // pre_y_start
+        let mut y = Vec::new();
+        for &x in &u {
+            let next = (!prev && x < t) || (prev && x < t + h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.LessThreshold",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic_preset, t=4.5, h=1.0, pre_y_start=true; u=[5.0,4.0,5.5,6.0,5.0,4.0,5.2,5.6]",
+                "y_h = (!pre_y && u<t) || (pre_y && u<t+h); first row is in the hold band so pre_y_start=true is observable; _spec/03 §4.1 LessThreshold",
+            )
+            .with_scenario("hysteretic_preset")
             .with_inputs(vec![input_r("u", u)]),
         );
     }
