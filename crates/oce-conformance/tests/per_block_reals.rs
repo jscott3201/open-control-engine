@@ -404,6 +404,7 @@ fn input_point(case: &BlockCase, input: &Port) -> String {
 }
 
 fn output_point(case: &BlockCase) -> String {
+    // The one-block CXF lists inputs first and output last, so connector_path renders y as conn#N.
     format!("conn#{}", case.inputs.len())
 }
 

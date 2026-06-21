@@ -1,6 +1,9 @@
 #1
 # columns: time y
-double CDL_Reals_Multiply_y(3,2)
+double CDL_Reals_Multiply_y(6,2)
 0.0 0.010000000000000002
 60.0 1.2100000000000002
 120.0 2.3099999999999996
+180.0 inf
+240.0 NaN
+300.0 -inf
