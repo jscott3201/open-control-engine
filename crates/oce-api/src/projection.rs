@@ -266,6 +266,7 @@ fn store_point_type(point_type: SemanticPointType) -> PointType {
 fn store_trend_interval(interval: SemanticTrendInterval) -> TrendInterval {
     match interval {
         SemanticTrendInterval::OnChange => TrendInterval::OnChange,
+        SemanticTrendInterval::EverySeconds(0) => TrendInterval::OnChange,
         SemanticTrendInterval::EverySeconds(seconds) => TrendInterval::EverySeconds(seconds),
     }
 }

@@ -8,7 +8,8 @@ use oce_model::{
     ParamTable, RealAttrs, Value, ValueType,
 };
 use oce_semantics::{
-    EffectivePoint, PointKey, PointType as SemanticPointType, ResolvedSemantics, TrendSpec,
+    EffectivePoint, PointKey, PointType as SemanticPointType, ResolvedSemantics,
+    TrendInterval as SemanticTrendInterval, TrendSpec,
 };
 use oce_store::{
     DomainKey, ModelStore, ResolvedModel, StoreError, StoreResult, TrendInterval as StoreTrend,
@@ -258,6 +259,30 @@ fn out_of_range_connection_endpoints_are_rejected_before_projection() {
 }
 
 #[test]
+fn out_of_arena_connector_id_is_rejected_before_projection() {
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.connectors[0].id = ConnectorId(99);
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connector 99 is out of range",
+        "out-of-arena connector id must fail producer-side",
+    );
+}
+
+#[test]
+fn out_of_range_connector_owner_block_is_rejected_before_projection() {
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.connectors[0].block = BlockId(99);
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connector 0 has out-of-range owner",
+        "out-of-range connector owner must fail producer-side",
+    );
+}
+
+#[test]
 fn string_to_store_visible_connection_is_rejected_before_projection() {
     let (mut model, semantics) = fully_populated_projection_fixture();
     model.connections = vec![Connection {
@@ -270,6 +295,27 @@ fn string_to_store_visible_connection_is_rejected_before_projection() {
         &semantics,
         "connection 4 -> 0 has exactly one store-visible endpoint",
         "String-to-non-String connection must not be silently dropped",
+    );
+}
+
+#[test]
+fn zero_second_semantic_trend_projects_as_on_change_with_stable_model_id() {
+    let (model, on_change_semantics) = fully_populated_projection_fixture();
+    let mut zero_seconds_semantics = on_change_semantics.clone();
+    zero_seconds_semantics.points[0].trend.interval = SemanticTrendInterval::EverySeconds(0);
+
+    let on_change =
+        project_resolved_model(&model, &on_change_semantics).expect("OnChange projects");
+    let zero_seconds =
+        project_resolved_model(&model, &zero_seconds_semantics).expect("zero seconds projects");
+
+    assert_eq!(
+        zero_seconds.points[0].trend_interval_s,
+        StoreTrend::OnChange
+    );
+    assert_eq!(
+        zero_seconds.model_id, on_change.model_id,
+        "raw interval 0 and OnChange must share durable identity"
     );
 }
 
