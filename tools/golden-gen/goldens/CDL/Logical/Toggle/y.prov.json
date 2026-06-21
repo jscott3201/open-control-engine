@@ -10,11 +10,11 @@
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "u", "clr", "y"],
   "inputs": [
-    { "name": "u", "value_kind": "Boolean", "values": [0.0, 1.0, 0.0, 1.0, 1.0, 1.0] },
-    { "name": "clr", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }
+    { "name": "u", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 0.0, 0.0, 0.0] },
+    { "name": "clr", "value_kind": "Boolean", "values": [0.0, 0.0, 1.0, 0.0, 0.0, 0.0] }
   ],
-  "input": "u=[F,T,F,T,T,T], clr all false; init pre(y)=false, pre(u)=false",
-  "reference_rule": "clear-dominant T-flip-flop: rising(u) inverts pre(y); clr->false; _spec/03 §4.3 Toggle",
+  "input": "u=[F,T,T,F,F,F], clr=[F,F,T,F,F,F]; init pre(y)=false, pre(u)=false",
+  "reference_rule": "clear-dominant T-flip-flop: rising(u) inverts pre(y); clr->false; exercises clear path at row 2; _spec/03 §4.3 Toggle",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
