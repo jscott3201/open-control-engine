@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use oce_model::{ParamTable, SimpleController, Value};
 
-use crate::RegistryEntry;
+use crate::{ParamRule, RegistryEntry};
 
 mod conversions;
 mod discrete;
@@ -25,6 +25,19 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
         .iter()
         .flat_map(|entries| entries.iter())
         .find(|e| e.class_path == class_path)
+}
+
+pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
+    match class_path {
+        "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
+        "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
+        "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
+        "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
+        "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,
+        "CDL.Reals.PID" => pid::PID_PARAM_RULES,
+        "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
+        _ => &[],
+    }
 }
 
 static CATALOG: &[&[RegistryEntry]] = &[

@@ -204,12 +204,55 @@ pub trait Block: Send + Sync {
     fn update_state(&self, _ctx: &Ctx<'_>, _inputs: &[Value], _region: &mut [u64]) {}
 }
 
+/// A class-level parameter validation rule published by the block registry.
+///
+/// Rules are static metadata for resolved block parameters: `oce-validate` uses them at load time,
+/// and `oce-api` mirrors the single-parameter bounds into tune-at-rest metadata. They intentionally
+/// describe only CDL semantics, not storage or host UI policy.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ParamRule {
+    /// The named parameter must appear in the resolved [`ParamTable`].
+    Required {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+    },
+    /// The named `Real` parameter must be strictly greater than `min`.
+    RealGreaterThan {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Exclusive lower bound.
+        min: f64,
+    },
+    /// The two named `Real` parameters must satisfy `lower <= upper`.
+    RealLessOrEqual {
+        /// Lower-bound parameter name.
+        lower: &'static str,
+        /// Upper-bound parameter name.
+        upper: &'static str,
+    },
+    /// Equal `Real` parameter values are permitted but should produce a warning.
+    RealEqualWarning {
+        /// Left-hand parameter name.
+        left: &'static str,
+        /// Right-hand parameter name.
+        right: &'static str,
+    },
+}
+
 /// A `&'static` registry entry mapping a class path to its block constructor (R-IMPL-2).
 pub struct RegistryEntry {
     /// Canonical (or accepted-alias) class path.
     pub class_path: &'static str,
     /// Constructor from a resolved parameter table.
     pub make: fn(&ParamTable) -> Box<dyn Block>,
+}
+
+impl RegistryEntry {
+    /// Class-level parameter rules for this registered block.
+    #[must_use]
+    pub fn param_rules(&self) -> &'static [ParamRule] {
+        registry::param_rules(self.class_path)
+    }
 }
 
 // ---- shared hot-path value readers (used by block impls) ------------------------------------

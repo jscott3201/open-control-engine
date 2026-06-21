@@ -9,16 +9,14 @@
 //! A malformed graph yields a [`DiagCode::MalformedDocument`] diagnostic, never an abort
 //! (`08` R-ERR-1 / the safety-critical testing standard).
 
-use std::collections::HashSet;
-use std::sync::Arc;
-
 use oce_blocks::{PortKind, lookup};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{ConnectorId, Dir, ModelGraph, ValueType};
+use std::collections::HashSet;
 
 // ---- shared helpers -------------------------------------------------------------------------
 
-use super::{in_degrees, subject_of};
+use super::{block_subject_of, in_degrees, subject_of};
 
 /// Map an `oce-blocks` [`PortKind`] to the model [`ValueType`] a conforming connector must carry.
 fn port_value_type(kind: PortKind) -> ValueType {
@@ -256,13 +254,6 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
             sig.outputs,
             "output",
         );
-    }
-}
-
-fn block_subject_of(blk: &oce_model::BlockInstance) -> Arc<str> {
-    match &blk.instance_iri {
-        Some(iri) => Arc::clone(iri),
-        None => Arc::from(format!("block#{}", blk.id.0)),
     }
 }
 

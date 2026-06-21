@@ -1,7 +1,7 @@
 use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
-use crate::{Block, Derivative, LimitSlewRate, MovingAverage, RegistryEntry};
+use crate::{Block, Derivative, LimitSlewRate, MovingAverage, ParamRule, RegistryEntry};
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -17,6 +17,21 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
         make: make_moving_average,
     },
 ];
+
+pub(super) const DERIVATIVE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
+    name: "T",
+    min: 0.0,
+}];
+
+pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
+    name: "Td",
+    min: 0.0,
+}];
+
+pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
+    name: "delta",
+    min: 0.0,
+}];
 
 fn make_derivative(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Derivative {

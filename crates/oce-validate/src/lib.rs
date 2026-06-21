@@ -76,6 +76,7 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     rules::check_single_assignment(model, &mut diags);
     rules::check_connections(model, &mut diags);
     rules::check_port_types(model, &mut diags);
+    rules::check_block_params(model, &mut diags);
     finish(model, diags)
 }
 

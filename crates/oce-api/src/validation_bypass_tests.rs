@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use oce_diag::DiagCode;
 use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable,
+    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
     ValueType,
 };
 
@@ -21,6 +21,23 @@ fn raw_block(id: u32, class: &str, inputs: &[u32], outputs: &[u32]) -> BlockInst
         decl_order: id,
         instance_iri: None,
     }
+}
+
+fn raw_block_with_params(
+    id: u32,
+    class: &str,
+    inputs: &[u32],
+    outputs: &[u32],
+    params: Vec<(Arc<str>, Value)>,
+) -> BlockInstance {
+    BlockInstance {
+        params: ParamTable { values: params },
+        ..raw_block(id, class, inputs, outputs)
+    }
+}
+
+fn rp(name: &str, value: f64) -> (Arc<str>, Value) {
+    (Arc::from(name), Value::Real(value))
 }
 
 fn raw_conn(id: u32, block: u32, dir: Dir, vt: ValueType) -> Connector {
@@ -76,6 +93,30 @@ fn build_model_in_memory_rejects_out_of_range_connection_endpoint_without_panic(
         err.diagnostics[0]
             .message
             .contains("out-of-range connector id"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn build_model_in_memory_rejects_sample_trigger_zero_period_without_panic() {
+    let model = ModelGraph {
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Logical.Sources.SampleTrigger",
+            &[],
+            &[0],
+            vec![rp("period", 0.0)],
+        )],
+        connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Boolean)],
+        ..ModelGraph::new()
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#0"));
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("`period` on block `CDL.Logical.Sources.SampleTrigger` must be > 0"),
         "unexpected diagnostic: {:?}",
         err.diagnostics
     );

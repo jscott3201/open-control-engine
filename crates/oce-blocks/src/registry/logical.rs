@@ -2,8 +2,8 @@ use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
 use crate::{
-    And, Block, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, RegistryEntry,
-    SampleTrigger, Xor,
+    And, Block, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, ParamRule, Pre,
+    RegistryEntry, SampleTrigger, Xor,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -50,6 +50,14 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Sources.SampleTrigger",
         make: make_sample_trigger,
+    },
+];
+
+pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "period" },
+    ParamRule::RealGreaterThan {
+        name: "period",
+        min: 0.0,
     },
 ];
 
@@ -100,9 +108,9 @@ fn make_edge(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn make_sample_trigger(p: &ParamTable) -> Box<dyn Block> {
-    // `period` defaults to 1.0 only for a param-less construction; a resolved model carries the
-    // author's value (CDL requires `period > 0`; the oce-validate rule enforcing it is pending —
-    // SampleTrigger degrades safely until then). `shift` defaults to 0.0.
+    // `period` defaults to 1.0 only for a param-less construction; resolved models must carry the
+    // author's required `period > 0` value, enforced by SAMPLE_TRIGGER_PARAM_RULES. `shift`
+    // defaults to 0.0.
     Box::new(SampleTrigger {
         period: real_param(p, "period", 1.0),
         shift: real_param(p, "shift", 0.0),

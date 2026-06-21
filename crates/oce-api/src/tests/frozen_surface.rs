@@ -47,6 +47,17 @@ fn free_add_model() -> ModelGraph {
     model
 }
 
+fn sample_trigger_model(period: f64) -> ModelGraph {
+    let mut mb = Mb::new();
+    mb.block(
+        "CDL.Logical.Sources.SampleTrigger",
+        &[],
+        &[ValueType::Boolean],
+        vec![rp("period", period), rp("shift", 0.0)],
+    );
+    mb.finish()
+}
+
 // ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,
 // Clone family, owned-snapshot enumeration, and the Engine<MemStore>: Send + Sync assertion) live in
 // the NON-test module `crate::guards` so a drift fails the normal `cargo build`, not only this
@@ -143,8 +154,8 @@ fn param_lifecycle_halt_set_resume_refolds() {
     // 4 params: b0.k=1.0, b3.k=2.5, b5.uMin=0.0, b5.uMax=3.0.
     assert_eq!(eng.params().len(), 4);
     assert!(eng.get_param("b0.k").unwrap().bit_eq(&Value::Real(1.0)));
-    // The R-PUB-6 owned enumeration yields (path, value, declared attrs); attrs are bounds-free
-    // until parameter attribute provenance is carried through.
+    // The R-PUB-6 owned enumeration yields (path, value, declared attrs). Unconstrained params
+    // remain bounds-free.
     let rows = eng.params().to_vec();
     let (_, k0_val, k0_attrs) = rows
         .iter()
@@ -157,7 +168,7 @@ fn param_lifecycle_halt_set_resume_refolds() {
             && k0_attrs.max.is_none()
             && k0_attrs.unit.is_none()
             && k0_attrs.quantity.is_none(),
-        "ParamAttrs carry no declared bounds/units yet"
+        "unconstrained ParamAttrs carry no bounds/units"
     );
     // set_param while Running is rejected (CDL §7.4.2).
     assert!(matches!(
@@ -183,6 +194,54 @@ fn param_lifecycle_halt_set_resume_refolds() {
     // The re-folded Constant(9) now drives Add ⇒ accumulator starts at 9 (proves re-instantiation).
     eng.tick(0.0).unwrap();
     assert!(eng.get_output("conn#3").unwrap().bit_eq(&Value::Real(9.0)));
+}
+
+#[test]
+fn positive_param_rules_surface_attrs_and_reject_zero_at_rest() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(sample_trigger_model(1.0))
+        .expect("valid SampleTrigger loads");
+    let (_, period_value, period_attrs) = eng
+        .params()
+        .to_vec()
+        .into_iter()
+        .find(|(p, _, _)| p == "b0.period")
+        .expect("period param must be present");
+    assert!(period_value.bit_eq(&Value::Real(1.0)));
+    assert_eq!(period_attrs.value_type, ValueType::Real);
+    assert_eq!(period_attrs.min, Some(0.0));
+    assert_eq!(period_attrs.max, None);
+
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.period", Value::Real(-1.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.period", Value::Real(0.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    eng.set_param("b0.period", Value::Real(2.0)).unwrap();
+}
+
+#[test]
+fn limiter_cross_param_rules_reject_inverted_at_rest() {
+    let mut eng = loaded_accumulator();
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b5.uMin", Value::Real(4.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b5.uMax", Value::Real(-1.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    eng.set_param("b5.uMax", Value::Real(0.0))
+        .expect("equal Limiter bounds are permitted at rest");
+    assert!(matches!(
+        eng.set_param("b5.uMin", Value::Real(1.0)),
+        Err(OcError::ParamRange { .. })
+    ));
 }
 
 // ---- simulation mode: real loop, golden trace, bit-determinism, adversarial specs ----

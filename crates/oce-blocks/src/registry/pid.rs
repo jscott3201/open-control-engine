@@ -2,7 +2,7 @@ use oce_model::{ParamTable, SimpleController};
 
 use super::{bool_param, controller_type_param, real_param};
 use crate::pid::ControllerConfig;
-use crate::{Block, Pid, PidWithReset, RegistryEntry};
+use crate::{Block, ParamRule, Pid, PidWithReset, RegistryEntry};
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -12,6 +12,28 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.PIDWithReset",
         make: make_pid_with_reset,
+    },
+];
+
+pub(super) const PID_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::RealGreaterThan {
+        name: "Td",
+        min: 0.0,
+    },
+    ParamRule::RealGreaterThan {
+        name: "Nd",
+        min: 0.0,
+    },
+];
+
+pub(super) const PID_WITH_RESET_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::RealGreaterThan {
+        name: "Td",
+        min: 0.0,
+    },
+    ParamRule::RealGreaterThan {
+        name: "Nd",
+        min: 0.0,
     },
 ];
 

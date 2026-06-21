@@ -9,5 +9,6 @@
 
 mod common;
 mod determinism;
+mod params;
 mod structural;
 mod unification;
