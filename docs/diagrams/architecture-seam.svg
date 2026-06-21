@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+  <title id="title">Open Control Engine architecture: the CDL §7.17 non-computational seam</title>
+  <desc id="desc">A host application drives the engine through the oce-api facade. The deterministic execution core (Group A) sees only blocks, connections, and values and has no database. Everything non-computational — topology, points, parameters, trends, semantics, and durability — sits behind the oce-store port, reached only through traits, with an in-memory default and app-side adapters.</desc>
+
+  <rect width="880" height="470" fill="#ffffff"/>
+
+  <!-- Host application -->
+  <rect x="20" y="20" width="840" height="50" rx="8" fill="#f1f3f4" stroke="#9aa0a6" stroke-width="1.5"/>
+  <text x="440" y="50" text-anchor="middle" font-size="15" font-weight="600" fill="#202124">Host application&#8201;&#8201;·&#8201;&#8201;owns process lifecycle, transport, TLS, auth, multi-tenancy, off-host durability</text>
+
+  <!-- Facade -->
+  <rect x="60" y="86" width="760" height="50" rx="8" fill="#fef7e0" stroke="#ea8600" stroke-width="1.5"/>
+  <text x="440" y="110" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">oce-api&#8201;&#8201;—&#8201;&#8201;the embeddable facade</text>
+  <text x="440" y="127" text-anchor="middle" font-size="12.5" fill="#5f6368" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Engine&lt;S: Store = MemStore&gt;&#8195;·&#8195;published as open-control-engine</text>
+
+  <!-- arrows from facade -->
+  <path d="M280 136 L280 168" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M650 136 L650 168" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Execution core (Group A) -->
+  <rect x="20" y="170" width="500" height="280" rx="10" fill="#e8f0fe" stroke="#1a73e8" stroke-width="2"/>
+  <text x="270" y="198" text-anchor="middle" font-size="15" font-weight="700" fill="#174ea6">Execution core&#8201;&#8201;·&#8201;&#8201;Group A</text>
+  <text x="270" y="217" text-anchor="middle" font-size="12.5" fill="#174ea6">deterministic · in-memory · NO database · the hot path</text>
+
+  <!-- crate chips: 3 columns x 3 rows -->
+  <g font-size="12.5" font-weight="600" fill="#1967d2" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <rect x="40"  y="236" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="114" y="256" text-anchor="middle">oce-model</text>
+    <rect x="196" y="236" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="270" y="256" text-anchor="middle">oce-expr</text>
+    <rect x="352" y="236" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="426" y="256" text-anchor="middle">oce-blocks</text>
+    <rect x="40"  y="276" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="114" y="296" text-anchor="middle">oce-flatten</text>
+    <rect x="196" y="276" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="270" y="296" text-anchor="middle">oce-validate</text>
+    <rect x="352" y="276" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="426" y="296" text-anchor="middle">oce-graph</text>
+    <rect x="40"  y="316" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="114" y="336" text-anchor="middle">oce-cxf</text>
+    <rect x="196" y="316" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="270" y="336" text-anchor="middle">oce-semantics</text>
+    <rect x="352" y="316" width="148" height="32" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="426" y="336" text-anchor="middle">oce-diag</text>
+  </g>
+  <text x="270" y="378" text-anchor="middle" font-size="12.5" fill="#174ea6" font-style="italic">frozen Kahn schedule over flat arrays — no graph walk, no alloc, no I/O</text>
+  <text x="270" y="424" text-anchor="middle" font-size="13" fill="#174ea6">load → flatten → validate → schedule → tick → simulate</text>
+
+  <!-- the seam -->
+  <line x1="540" y1="176" x2="540" y2="444" stroke="#5f6368" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="540" y="166" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5f6368">CDL §7.17 seam</text>
+
+  <!-- Storage port (Group B) -->
+  <rect x="560" y="170" width="300" height="280" rx="10" fill="#e6f4ea" stroke="#137333" stroke-width="2"/>
+  <text x="710" y="198" text-anchor="middle" font-size="15" font-weight="700" fill="#0d652d">Storage behind the port</text>
+  <text x="710" y="217" text-anchor="middle" font-size="12.5" fill="#0d652d">non-computational · traits only</text>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <rect x="585" y="238" width="250" height="42" rx="6" fill="#ffffff" stroke="#a8dab5"/>
+    <text x="710" y="258" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0d652d">oce-store</text>
+    <text x="710" y="273" text-anchor="middle" font-size="11" fill="#5f6368">ModelStore · PointStore · SemanticStore</text>
+
+    <rect x="585" y="292" width="250" height="38" rx="6" fill="#ffffff" stroke="#a8dab5"/>
+    <text x="710" y="316" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0d652d">oce-store-mem&#8201;&#8201;(default)</text>
+
+    <rect x="585" y="342" width="250" height="48" rx="6" fill="#fce8e6" stroke="#d93025" stroke-dasharray="5 4"/>
+    <text x="710" y="362" text-anchor="middle" font-size="12.5" font-weight="600" fill="#a50e0e" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">your app-side adapter</text>
+    <text x="710" y="379" text-anchor="middle" font-size="11" fill="#a50e0e" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">graph DB · SQL · time-series · …</text>
+  </g>
+  <text x="710" y="420" text-anchor="middle" font-size="11.5" fill="#0d652d" font-style="italic" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif">the library ships no first-party database</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#9aa0a6"/>
+    </marker>
+  </defs>
+</svg>
