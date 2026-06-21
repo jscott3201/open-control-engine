@@ -24,6 +24,8 @@ use std::collections::BTreeMap;
 use csv::{DataColumn, SignalColumn};
 use oracle::{Golden, InputSeries, Sample, ValueKind};
 
+type GoldenGroupKey = (&'static str, Option<&'static str>);
+
 /// Generator version, recorded in every provenance record and `oracle.lock`.
 ///
 /// Derived from `CARGO_PKG_VERSION` so the advertised version can never skew from the crate manifest.
@@ -51,11 +53,12 @@ fn main() {
     let grouped = group_by_class(&goldens);
     let mut manifest_lines: Vec<String> = Vec::new();
     for g in &goldens {
-        let dir = goldens_root.join(class_path_to_dir(g.class_path));
+        let dir_rel = golden_dir_relative(g.class_path, g.scenario);
+        let dir = goldens_root.join(&dir_rel);
         fs::create_dir_all(&dir).expect("create golden dir");
 
         // Table name: a Modelica-identifier-safe slug of class_path + signal.
-        let table_name = sanitize_table_name(&format!("{}_{}", g.class_path, g.signal));
+        let table_name = table_name(g.class_path, g.scenario, g.signal);
         let col = SignalColumn {
             name: g.signal.to_string(),
             time: g.time.clone(),
@@ -68,15 +71,15 @@ fn main() {
         let prov_path = dir.join(format!("{}.prov.json", g.signal));
         fs::write(
             &prov_path,
-            prov_json(g, grouped.get(g.class_path).expect("grouped golden")),
+            prov_json(g, grouped.get(&golden_key(g)).expect("grouped golden")),
         )
         .expect("write prov json");
 
         manifest_lines.push(format!(
             "{} {} -> goldens/{}/{}.csv",
-            g.class_path,
+            golden_manifest_name(g.class_path, g.scenario),
             g.signal,
-            class_path_to_dir(g.class_path),
+            dir_rel,
             g.signal
         ));
     }
@@ -104,23 +107,28 @@ fn main() {
     print!("{manifest}");
 }
 
-/// Group output-signal goldens by block class path, preserving family emission order within a block.
-fn group_by_class(goldens: &[Golden]) -> BTreeMap<&'static str, Vec<&Golden>> {
-    let mut grouped: BTreeMap<&'static str, Vec<&Golden>> = BTreeMap::new();
+/// Group output-signal goldens by block class path and scenario, preserving family emission order.
+fn group_by_class(goldens: &[Golden]) -> BTreeMap<GoldenGroupKey, Vec<&Golden>> {
+    let mut grouped: BTreeMap<GoldenGroupKey, Vec<&Golden>> = BTreeMap::new();
     for golden in goldens {
-        grouped.entry(golden.class_path).or_default().push(golden);
+        grouped.entry(golden_key(golden)).or_default().push(golden);
     }
     grouped
+}
+
+fn golden_key(golden: &Golden) -> GoldenGroupKey {
+    (golden.class_path, golden.scenario)
 }
 
 /// Emit one self-contained driver-ready reference table per steppable block.
 fn write_reference_csvs(
     goldens_root: &Path,
-    grouped: &BTreeMap<&'static str, Vec<&Golden>>,
+    grouped: &BTreeMap<GoldenGroupKey, Vec<&Golden>>,
     manifest_lines: &mut Vec<String>,
 ) {
-    for (class_path, group) in grouped {
-        let dir = goldens_root.join(class_path_to_dir(class_path));
+    for (&(class_path, scenario), group) in grouped {
+        let dir_rel = golden_dir_relative(class_path, scenario);
+        let dir = goldens_root.join(&dir_rel);
         let first = group.first().expect("non-empty golden group");
         assert_group_consistent(group);
 
@@ -138,12 +146,13 @@ fn write_reference_csvs(
             });
         }
 
-        let table_name = sanitize_table_name(&format!("{}_reference", class_path));
+        let table_name = table_name(class_path, scenario, "reference");
         let csv_text = csv::to_table_csv_string(&table_name, &first.time, &cols);
         fs::write(dir.join("reference.csv"), csv_text).expect("write reference csv");
         manifest_lines.push(format!(
-            "{class_path} reference -> goldens/{}/reference.csv",
-            class_path_to_dir(class_path)
+            "{} reference -> goldens/{}/reference.csv",
+            golden_manifest_name(class_path, scenario),
+            dir_rel
         ));
     }
 }
@@ -219,6 +228,28 @@ fn sample_bits(sample: &Sample) -> u64 {
 /// Map `CDL.Reals.Add` -> `CDL/Reals/Add` for the on-disk directory layout.
 fn class_path_to_dir(class_path: &str) -> String {
     class_path.replace('.', "/")
+}
+
+fn golden_dir_relative(class_path: &str, scenario: Option<&str>) -> String {
+    match scenario {
+        Some(scenario) => format!("{}/{}", class_path_to_dir(class_path), scenario),
+        None => class_path_to_dir(class_path),
+    }
+}
+
+fn table_name(class_path: &str, scenario: Option<&str>, suffix: &str) -> String {
+    let raw = match scenario {
+        Some(scenario) => format!("{class_path}_{scenario}_{suffix}"),
+        None => format!("{class_path}_{suffix}"),
+    };
+    sanitize_table_name(&raw)
+}
+
+fn golden_manifest_name(class_path: &str, scenario: Option<&str>) -> String {
+    match scenario {
+        Some(scenario) => format!("{class_path}/{scenario}"),
+        None => class_path.to_string(),
+    }
 }
 
 /// Produce a Modelica-identifier-safe table name (letters/digits/underscore only).
@@ -338,10 +369,14 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         ValueKind::Boolean => "exact 0.0/1.0 (atoly=0)",
     };
     let ref_columns = reference_columns(group);
+    let scenario_line = g.scenario.map_or_else(String::new, |scenario| {
+        format!("  \"scenario\": \"{}\",\n", json_escape(scenario))
+    });
     format!(
         concat!(
             "{{\n",
             "  \"class_path\": \"{class_path}\",\n",
+            "{scenario_line}",
             "  \"signal\": \"{signal}\",\n",
             "  \"tier\": \"A\",\n",
             "  \"source\": \"closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation\",\n",
@@ -360,6 +395,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
             "}}\n"
         ),
         class_path = json_escape(g.class_path),
+        scenario_line = scenario_line,
         signal = json_escape(g.signal),
         value_kind = g.kind.as_str(),
         compare = json_escape(compare),

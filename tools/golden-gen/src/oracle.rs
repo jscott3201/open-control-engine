@@ -87,6 +87,8 @@ impl InputSeries {
 pub struct Golden {
     /// CDL class path, e.g. `CDL.Reals.Add`.
     pub class_path: &'static str,
+    /// Optional behavioral scenario discriminator for multiple goldens of the same class path.
+    pub scenario: Option<&'static str>,
     /// Output connector / signal name, e.g. `y`, `passed`, `up`.
     pub signal: &'static str,
     /// Declared value kind of this signal.
@@ -123,6 +125,7 @@ impl Golden {
         );
         Golden {
             class_path,
+            scenario: None,
             signal,
             kind,
             time,
@@ -131,6 +134,13 @@ impl Golden {
             input_desc: input_desc.into(),
             rule_desc: rule_desc.into(),
         }
+    }
+
+    /// Attach a behavioral scenario discriminator, used when one class has multiple goldens.
+    #[must_use]
+    pub fn with_scenario(mut self, scenario: &'static str) -> Self {
+        self.scenario = Some(scenario);
+        self
     }
 
     /// Attach machine-readable input columns to this golden.

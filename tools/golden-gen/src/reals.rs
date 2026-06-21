@@ -341,6 +341,33 @@ fn comparators() -> Vec<Golden> {
         );
     }
 
+    // Greater (h>0): asymmetric Buildings band, set at u1>u2 and reset at u1<=u2-h.
+    {
+        let h = 1.0;
+        let u1 = [3.0, 5.0, 4.0, 3.5, 4.0, 5.0, 3.6, 3.4];
+        let u2 = [4.5; 8];
+        let mut prev = false; // pre_y_start
+        let mut y = Vec::new();
+        for (&a, &c) in u1.iter().zip(&u2) {
+            let next = (!prev && a > c) || (prev && a > c - h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.Greater",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic, h=1.0, pre_y_start=false; u2=4.5; u1=[3.0,5.0,4.0,3.5,4.0,5.0,3.6,3.4]",
+                "y_h = (!pre_y && u1>u2) || (pre_y && u1>u2-h); asymmetric Buildings Reals/Greater.mo band; _spec/03 §4.1 Greater",
+            )
+            .with_scenario("hysteretic")
+            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
+        );
+    }
+
     // Less (h=0): y = u1 < u2.
     {
         let u1 = [2.1, 5.7, 7.9, 5.7, 5.69999999999];
@@ -356,6 +383,33 @@ fn comparators() -> Vec<Golden> {
                 "h=0; u1=[2.1,5.7,7.9,5.7,5.69999999999], u2=[5.7,5.7,3.2,5.7,5.7]",
                 "y = (u1 < u2), strict, h=0; _spec/03 §4.1 Less",
             )
+            .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
+        );
+    }
+
+    // Less (h>0): asymmetric Buildings band, set at u1<u2 and reset at u1>=u2+h.
+    {
+        let h = 1.0;
+        let u1 = [6.0, 4.0, 5.0, 5.5, 5.0, 4.0, 5.4, 5.6];
+        let u2 = [4.5; 8];
+        let mut prev = false; // pre_y_start
+        let mut y = Vec::new();
+        for (&a, &c) in u1.iter().zip(&u2) {
+            let next = (!prev && a < c) || (prev && a < c + h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.Less",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic, h=1.0, pre_y_start=false; u2=4.5; u1=[6.0,4.0,5.0,5.5,5.0,4.0,5.4,5.6]",
+                "y_h = (!pre_y && u1<u2) || (pre_y && u1<u2+h); asymmetric Buildings Reals/Less.mo band; _spec/03 §4.1 Less",
+            )
+            .with_scenario("hysteretic")
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
         );
     }
@@ -379,6 +433,32 @@ fn comparators() -> Vec<Golden> {
         );
     }
 
+    // GreaterThreshold (h>0): set at u>t, reset at u<=t-h, and hold in band.
+    {
+        let (t, h) = (4.5, 1.0);
+        let u = [3.0, 5.0, 4.0, 3.5, 4.0, 5.0, 3.6, 3.4];
+        let mut prev = false; // pre_y_start
+        let mut y = Vec::new();
+        for &x in &u {
+            let next = (!prev && x > t) || (prev && x > t - h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.GreaterThreshold",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic, t=4.5, h=1.0, pre_y_start=false; u=[3.0,5.0,4.0,3.5,4.0,5.0,3.6,3.4]",
+                "y_h = (!pre_y && u>t) || (pre_y && u>t-h); asymmetric Buildings Reals/GreaterThreshold.mo band; _spec/03 §4.1 GreaterThreshold",
+            )
+            .with_scenario("hysteretic")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
     // LessThreshold (h=0, t=4.5): y = u < t.
     {
         let t = 4.5;
@@ -394,6 +474,32 @@ fn comparators() -> Vec<Golden> {
                 "h=0, t=4.5; u=[4.5,4.49999999999,1.0,9.3,4.50000000001]",
                 "y = (u < t), strict, h=0; _spec/03 §4.1 LessThreshold",
             )
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // LessThreshold (h>0): set at u<t, reset at u>=t+h, and hold in band.
+    {
+        let (t, h) = (4.5, 1.0);
+        let u = [6.0, 4.0, 5.0, 5.5, 5.0, 4.0, 5.4, 5.6];
+        let mut prev = false; // pre_y_start
+        let mut y = Vec::new();
+        for &x in &u {
+            let next = (!prev && x < t) || (prev && x < t + h);
+            y.push(b(next));
+            prev = next;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Reals.LessThreshold",
+                "y",
+                ValueKind::Boolean,
+                ticks(8),
+                y,
+                "scenario=hysteretic, t=4.5, h=1.0, pre_y_start=false; u=[6.0,4.0,5.0,5.5,5.0,4.0,5.4,5.6]",
+                "y_h = (!pre_y && u<t) || (pre_y && u<t+h); asymmetric Buildings Reals/LessThreshold.mo band; _spec/03 §4.1 LessThreshold",
+            )
+            .with_scenario("hysteretic")
             .with_inputs(vec![input_r("u", u)]),
         );
     }
