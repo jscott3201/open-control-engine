@@ -1,0 +1,23 @@
+{
+  "class_path": "CDL.Reals.PID",
+  "scenario": "pi_recurrence",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "bit-exact Tier-1 f64 recurrence oracle (Value::bit_eq)",
+  "n_samples": 10,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u_s", "u_m", "y"],
+  "inputs": [
+    { "name": "u_s", "value_kind": "Real", "values": [0.14, 0.16, 0.61, 0.65, -0.58, -0.63, -1.3, 1.2, -0.019, 0.021] },
+    { "name": "u_m", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }
+  ],
+  "input": "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.19, yMin=-0.36, yMax=0.42; dt=0.1 decimal grid; u_m=0; u_s drives high-limit, interior, and cancellation rows",
+  "reference_rule": "At each event: e=(u_s-u_m), yP=k*e, yU=yP+xI, y=max(yMin,min(yU,yMax)); then xI := xI + (k/Ti)*(e-(yU-y)/(k*Ni))*dt with first dt=0. This is the forward-Euler PI branch plus Buildings limiter anti-windup.",
+  "fp_residue_note": "The stimulus avoids the G36 dyadic PID cone: k=0.37, Ti=0.3, Ni=0.9, and dt=0.1 are all non-dyadic decimal literals in binary64, so k/Ti and the accumulated xI values carry rounding residue. PID row 6 uses e=-1.30 so the xI increment is about -0.1603333333333335 while xI is about 0.17323927754915414 before the add; the subtraction crosses near zero.",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

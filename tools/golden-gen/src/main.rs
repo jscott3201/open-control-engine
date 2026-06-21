@@ -15,6 +15,7 @@ mod integers_conversions;
 mod logical;
 mod oracle;
 mod reals;
+mod reals_pid;
 mod sequences;
 
 use std::fs;
@@ -41,6 +42,7 @@ fn main() {
     // Re-derive every golden (closed-form spec math).
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
+    goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(integers_conversions::goldens());
     goldens.extend(discrete_sources::goldens());
@@ -359,9 +361,27 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
 fn provenance_source(g: &Golden) -> &'static str {
     if g.class_path == "G36" {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
+    } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
+        "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }
+}
+
+fn extra_provenance_json(g: &Golden) -> String {
+    let mut out = String::new();
+    for (key, value) in &g.extra_provenance {
+        out.push_str(&format!(
+            "  \"{key}\": \"{value}\",\n",
+            key = json_escape(key),
+            value = json_escape(value),
+        ));
+    }
+    out
+}
+
+fn is_pid_recurrence(g: &Golden) -> bool {
+    matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset")
 }
 
 /// Build the per-golden provenance JSON record.
@@ -379,6 +399,8 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
             ValueKind::Integer => "exact encoded integer",
             ValueKind::Boolean => "exact 0.0/1.0",
         }
+    } else if is_pid_recurrence(g) {
+        "bit-exact Tier-1 f64 recurrence oracle (Value::bit_eq)"
     } else {
         match g.kind {
             ValueKind::Real if has_non_finite => {
@@ -393,6 +415,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
     let scenario_line = g.scenario.map_or_else(String::new, |scenario| {
         format!("  \"scenario\": \"{}\",\n", json_escape(scenario))
     });
+    let extra_provenance = extra_provenance_json(g);
     format!(
         concat!(
             "{{\n",
@@ -410,6 +433,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
             "  \"inputs\": {inputs},\n",
             "  \"input\": \"{input}\",\n",
             "  \"reference_rule\": \"{rule}\",\n",
+            "{extra_provenance}",
             "  \"format\": \"Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64\",\n",
             "  \"generator\": \"{generator}\",\n",
             "  \"depends_on_oce_blocks\": false\n",
@@ -427,6 +451,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         inputs = input_series_json(&g.inputs),
         input = json_escape(&g.input_desc),
         rule = json_escape(&g.rule_desc),
+        extra_provenance = extra_provenance,
         generator = GENERATOR_VERSION,
     )
 }
