@@ -56,5 +56,5 @@
 
   <path d="M582 150 L582 162 L838 162 L838 150" fill="none" stroke="#137333" stroke-width="1.5"/>
   <text x="710" y="184" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0d652d">TICK — the hot path</text>
-  <text x="710" y="202" text-anchor="middle" font-size="11" fill="#5f6368">no alloc · no I/O · no store · bit-reproducible</text>
+  <text x="710" y="202" text-anchor="middle" font-size="11" fill="#5f6368">no alloc · no I/O · no store access</text>
 </svg>
