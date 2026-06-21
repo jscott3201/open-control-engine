@@ -9,13 +9,14 @@ use std::sync::Arc;
 use oce_blocks::{Block, BlockKind, NoopDiagnostics, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
 use oce_model::{Dir, ModelGraph};
-use oce_store::{PointHandle, Store};
+use oce_store::{DomainKey, PointHandle, Store};
 use oce_store_mem::MemStore;
 
 use crate::error::OcError;
 use crate::io::IoInventory;
 use crate::loading::LoadReport;
 use crate::params::{ParamTable, RunMode};
+use crate::projection::project_resolved_model;
 use crate::sim::Outputs;
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB, D-OWNER-1).
@@ -42,6 +43,10 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) prev_t: Option<f64>,
     /// Hot point handles, pre-resolved at load (FRAME §3.3) — opaque, no DB type.
     pub(crate) handles: Vec<PointHandle>,
+    /// Stable durable identity of the loaded model projection.
+    pub(crate) model_id: DomainKey,
+    /// Should-level semantic diagnostics from the load-time resolver.
+    pub(crate) semantic_warnings: Vec<oce_diag::Diagnostic>,
     /// The live parameter table (`08` §4): a dotted-path mirror of the model's block params.
     pub(crate) params: ParamTable,
     /// The tune-at-rest lifecycle gate (`08` §4); `Running` post-load.
@@ -75,6 +80,8 @@ impl<S: Store> Engine<S> {
             outputs: Outputs::default(),
             prev_t: None,
             handles: Vec::new(),
+            model_id: DomainKey::default(),
+            semantic_warnings: Vec::new(),
             params: ParamTable::default(),
             mode: RunMode::Running,
             params_dirty: false,
@@ -88,7 +95,8 @@ impl<S: Store> Engine<S> {
     /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
     /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
     /// algebraic loops per CDL §7.16), allocates the parameter-seeded run state, builds the IO
-    /// inventory + parameter table, snapshots the output connectors, and opens the store's
+    /// inventory + parameter table, snapshots the output connectors, projects the durable
+    /// [`oce_store::ResolvedModel`], saves it through the store port, and opens the store's
     /// durability lifecycle (`recover`). Replaces all per-run state, so calling it again reloads a
     /// fresh model.
     ///
@@ -99,9 +107,9 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// [`OcError::Validate`] if the graph is malformed; [`OcError::Load`] if a block's `class_iri` is
-    /// not in the registry; [`OcError::Build`] if the graph has an algebraic loop; [`OcError::Store`]
-    /// if the store's `recover` fails. Never panics on host input covered by the validation seam
-    /// (R-ERR-1).
+    /// not in the registry or semantic resolution fails; [`OcError::Build`] if the graph has an
+    /// algebraic loop; [`OcError::Store`] if the store's `recover`/`save_model` fails. Never panics
+    /// on host input covered by the validation seam (R-ERR-1).
     pub(crate) fn build_model_in_memory(&mut self, model: ModelGraph) -> Result<(), OcError> {
         // Defense in depth for every in-crate caller: `oce-graph` assumes a validated graph and keeps
         // the tick/build arenas lean, so malformed hand-built graphs stop here as typed diagnostics.
@@ -115,8 +123,14 @@ impl<S: Store> Engine<S> {
         let outputs = Outputs::build(&model, &state);
         let io = IoInventory::build_at_load(&model);
         let params = ParamTable::build_at_load(&model);
+        let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
+            detail: format!("semantic resolution failed: {err}"),
+        })?;
+        let resolved_model = project_resolved_model(&model, &semantics)?;
+        let semantic_warnings = semantics.diagnostics;
         // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
         self.store.recover()?;
+        self.store.save_model(&resolved_model)?;
         self.model = Arc::new(model);
         self.blocks = blocks;
         self.schedule = schedule;
@@ -127,6 +141,8 @@ impl<S: Store> Engine<S> {
         self.mode = RunMode::Running;
         self.params_dirty = false;
         self.prev_t = None;
+        self.model_id = resolved_model.model_id;
+        self.semantic_warnings = semantic_warnings;
         // The current facade stages no store-backed inputs through either `load_cxf` or this shared
         // tail, so no hot point handles are resolved yet; clear any from a prior/future load so
         // reloads never carry stale handles.
@@ -165,11 +181,9 @@ impl<S: Store> Engine<S> {
         // gate's — each already internally sorted; no global re-sort across the seam.
         let mut warnings = report.diagnostics;
         warnings.extend(validate_warnings);
+        warnings.extend(self.semantic_warnings.clone());
         Ok(LoadReport {
-            // No model-level IRI exists on `ModelGraph` yet, so the id is the empty `Default` key
-            // (honest-empty, never fabricated). The ingest layer will derive it from the
-            // top-composite `@id` once that field is carried through the flat graph.
-            model_id: oce_store::DomainKey::default(),
+            model_id: self.model_id.clone(),
             warnings,
             io: self.io.summary(),
             block_count: self.model.blocks.len(),

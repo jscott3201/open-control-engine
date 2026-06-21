@@ -33,6 +33,7 @@ oce-cxf = { workspace = true }
 oce-diag = { workspace = true }
 oce-validate = { workspace = true }
 oce-flatten = { workspace = true }
+oce-semantics = { workspace = true }
 oce-store = { workspace = true }
 oce-store-mem = { workspace = true }
 thiserror = { workspace = true }
@@ -57,4 +58,5 @@ thiserror = { workspace = true }
 public-api = { version = "=0.52.1", default-features = false }
 rustdoc-json = "=0.9.10"
 expect-test = "1.5"
+serde_json = { workspace = true }
 stats_alloc = "0.1.10"

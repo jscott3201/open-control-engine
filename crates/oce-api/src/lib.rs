@@ -39,6 +39,7 @@ mod guards;
 mod io;
 mod loading;
 mod params;
+mod projection;
 mod sim;
 
 pub use engine::Engine;

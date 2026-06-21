@@ -1,0 +1,159 @@
+{
+  "model_id": "model:fnv1a128:1ae83fbbc6a9c09423cd9083c664afbf",
+  "schema_rev": 1,
+  "classes": [
+    {
+      "class_iri": "CDL.Test.Source",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    },
+    {
+      "class_iri": "CDL.Test.Controller",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    }
+  ],
+  "blocks": [
+    {
+      "key": "http://example.org#ahu.source",
+      "class_iri": "CDL.Test.Source",
+      "params": [
+        [
+          "gain",
+          {
+            "Real": 1.25
+          }
+        ],
+        [
+          "count",
+          {
+            "Int": 3
+          }
+        ],
+        [
+          "enabled",
+          {
+            "Bool": true
+          }
+        ],
+        [
+          "label",
+          {
+            "String": "supply"
+          }
+        ],
+        [
+          "mode",
+          {
+            "Enum": {
+              "type_iri": "enum#2",
+              "literal": "3"
+            }
+          }
+        ]
+      ],
+      "config_json": "{}"
+    },
+    {
+      "key": "http://example.org#ahu.controller",
+      "class_iri": "CDL.Test.Controller",
+      "params": [],
+      "config_json": "{}"
+    }
+  ],
+  "points": [
+    {
+      "key": "http://example.org#ahu.sat",
+      "owner_block": "http://example.org#ahu.controller",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": true,
+      "trend_interval_s": "OnChange",
+      "trend_enable": true,
+      "quantity": "ThermodynamicTemperature",
+      "unit": "K",
+      "display_unit": "degC",
+      "description": "Supply air temperature",
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "http://example.org#ahu.mode",
+      "owner_block": "http://example.org#ahu.source",
+      "direction": "Out",
+      "value_type": "Int",
+      "point_type": "Mode",
+      "hardwired": false,
+      "trend_interval_s": {
+        "EverySeconds": 60
+      },
+      "trend_enable": true,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": "Operating mode",
+      "in_pointlist": true,
+      "controlled_device": "AHU-1",
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "http://example.org#ahu.enable",
+      "owner_block": "http://example.org#ahu.controller",
+      "direction": "In",
+      "value_type": "Bool",
+      "point_type": "Di",
+      "hardwired": false,
+      "trend_interval_s": {
+        "EverySeconds": 5
+      },
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": false,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "http://example.org#ahu.command",
+      "owner_block": "http://example.org#ahu.source",
+      "direction": "Out",
+      "value_type": "Bool",
+      "point_type": "Do",
+      "hardwired": true,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    }
+  ],
+  "connections": [
+    {
+      "from_point": "http://example.org#ahu.command",
+      "to_point": "http://example.org#ahu.enable"
+    },
+    {
+      "from_point": "http://example.org#ahu.mode",
+      "to_point": "http://example.org#ahu.sat"
+    }
+  ],
+  "containment": []
+}

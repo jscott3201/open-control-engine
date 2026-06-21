@@ -13,5 +13,6 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+oce-diag = { workspace = true }
 oce-model = { workspace = true }
 thiserror = { workspace = true }
