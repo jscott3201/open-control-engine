@@ -10,6 +10,10 @@ CDL.Conversions.RealToInteger reference -> goldens/CDL/Conversions/RealToInteger
 CDL.Conversions.RealToInteger y -> goldens/CDL/Conversions/RealToInteger/y.csv
 CDL.Discrete.UnitDelay reference -> goldens/CDL/Discrete/UnitDelay/reference.csv
 CDL.Discrete.UnitDelay y -> goldens/CDL/Discrete/UnitDelay/y.csv
+CDL.Discrete.UnitDelay/y_start_nonzero reference -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/reference.csv
+CDL.Discrete.UnitDelay/y_start_nonzero y -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/y.csv
+CDL.Integers.Abs reference -> goldens/CDL/Integers/Abs/reference.csv
+CDL.Integers.Abs y -> goldens/CDL/Integers/Abs/y.csv
 CDL.Integers.Add reference -> goldens/CDL/Integers/Add/reference.csv
 CDL.Integers.Add y -> goldens/CDL/Integers/Add/y.csv
 CDL.Integers.AddParameter reference -> goldens/CDL/Integers/AddParameter/reference.csv
@@ -46,6 +50,8 @@ CDL.Integers.MultiplyByParameter reference -> goldens/CDL/Integers/MultiplyByPar
 CDL.Integers.MultiplyByParameter y -> goldens/CDL/Integers/MultiplyByParameter/y.csv
 CDL.Integers.OnCounter reference -> goldens/CDL/Integers/OnCounter/reference.csv
 CDL.Integers.OnCounter y -> goldens/CDL/Integers/OnCounter/y.csv
+CDL.Integers.Sources.Constant reference -> goldens/CDL/Integers/Sources/Constant/reference.csv
+CDL.Integers.Sources.Constant y -> goldens/CDL/Integers/Sources/Constant/y.csv
 CDL.Integers.Subtract reference -> goldens/CDL/Integers/Subtract/reference.csv
 CDL.Integers.Subtract y -> goldens/CDL/Integers/Subtract/y.csv
 CDL.Integers.Switch reference -> goldens/CDL/Integers/Switch/reference.csv

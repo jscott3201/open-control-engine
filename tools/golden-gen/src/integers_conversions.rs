@@ -145,6 +145,33 @@ fn integer_arithmetic() -> Vec<Golden> {
             .with_inputs(vec![input_i("u", u)]),
         );
     }
+    // Abs.
+    {
+        let u = [
+            -9007199254740992_i64,
+            -4503599627370496,
+            -2,
+            -1,
+            0,
+            1,
+            2,
+            4503599627370496,
+            9007199254740992,
+        ];
+        let y: Vec<Sample> = u.iter().map(|&x| i(x.abs())).collect();
+        out.push(
+            Golden::new(
+                "CDL.Integers.Abs",
+                "y",
+                ValueKind::Integer,
+                ticks(9),
+                y,
+                "u=[-2^53,-2^52,-2,-1,0,1,2,2^52,2^53]; negatives, zero, positives, ±2^53 boundary",
+                "y = abs(u) (wrapping at i64::MIN, but MIN is outside conformance range ±2^53); _spec/03 §4.2 Abs",
+            )
+            .with_inputs(vec![input_i("u", u)]),
+        );
+    }
     // Max.
     {
         let u1 = [5_i64, -10, 7, 2147483647];
@@ -228,6 +255,20 @@ fn integer_arithmetic() -> Vec<Golden> {
                 input_i("u3", u3),
             ]),
         );
+    }
+
+    // Sources.Constant.
+    {
+        let k = -12345_i64;
+        out.push(Golden::new(
+            "CDL.Integers.Sources.Constant",
+            "y",
+            ValueKind::Integer,
+            vec![0.0, 10.0, 20.0],
+            vec![i(k); 3],
+            "k=-12345; ticks t=[0,10,20] (zero-input source)",
+            "y = k (stateless source, t-invariant, parameter only); _spec/03 §4.2 Sources.Constant",
+        ));
     }
 
     out

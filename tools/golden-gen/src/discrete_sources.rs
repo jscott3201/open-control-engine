@@ -50,6 +50,31 @@ pub fn goldens() -> Vec<Golden> {
         .with_inputs(vec![input_r("u", u)]));
     }
 
+    // UnitDelay scenario variant: y_start = 2.5.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+        let u = [0.1, 0.2, 0.3, 0.4, 0.5];
+        let mut held = 2.5_f64;
+        let mut y = Vec::new();
+        for &cur in &u {
+            y.push(r(held));
+            held = cur;
+        }
+        out.push(
+            Golden::new(
+                "CDL.Discrete.UnitDelay",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=1.0, start=0.0, y_start=2.5; u=[0.1..0.5] non-dyadic",
+                "y(k)=u(k-1), y(0)=y_start (one-sample delay, emit-from-state); _spec/03 §4.6 UnitDelay",
+            )
+            .with_scenario("y_start_nonzero")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
     // Constant: y = k for all t. k = 21.5.
     {
         let t = vec![0.0, 60.0, 120.0];
