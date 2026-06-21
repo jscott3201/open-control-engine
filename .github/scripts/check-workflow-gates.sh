@@ -7,6 +7,8 @@ cd "$(git rev-parse --show-toplevel)"
 
 WORKFLOW_DIR="${OCE_WORKFLOW_DIR:-.github/workflows}"
 DENY_TOML="${OCE_DENY_TOML:-deny.toml}"
+ROOT_CARGO_TOML="${OCE_ROOT_CARGO_TOML:-Cargo.toml}"
+CRATES_DIR="${OCE_CRATES_DIR:-crates}"
 
 require_file() {
   path="$1"
@@ -26,6 +28,62 @@ require_pattern() {
   fi
 }
 
+require_lints_workspace() {
+  path="$1"
+  if ! awk '
+    /^\[lints\]$/ { in_lints = 1; next }
+    /^\[/ { in_lints = 0 }
+    in_lints && /^[[:space:]]*workspace[[:space:]]*=[[:space:]]*true[[:space:]]*$/ { found = 1 }
+    END { exit found ? 0 : 1 }
+  ' "$path"; then
+    echo "FAIL: $path is missing [lints] workspace = true"
+    exit 1
+  fi
+}
+
+require_unsafe_forbid_layers() {
+  local manifest_count=0
+  local lib_count=0
+  local manifest=""
+  local lib=""
+  local first_line=""
+
+  require_file "$ROOT_CARGO_TOML"
+  if [ ! -d "$CRATES_DIR" ]; then
+    echo "FAIL: crates directory is missing: $CRATES_DIR"
+    exit 1
+  fi
+
+  require_pattern "$ROOT_CARGO_TOML" '^[[:space:]]*unsafe_code[[:space:]]*=[[:space:]]*"forbid"' \
+    'workspace.lints.rust unsafe_code = "forbid"'
+
+  for manifest in "$CRATES_DIR"/*/Cargo.toml; do
+    [ -e "$manifest" ] || continue
+    manifest_count=$((manifest_count + 1))
+    require_lints_workspace "$manifest"
+  done
+
+  if [ "$manifest_count" -eq 0 ]; then
+    echo "FAIL: no crate Cargo.toml files found under $CRATES_DIR"
+    exit 1
+  fi
+
+  for lib in "$CRATES_DIR"/*/src/lib.rs; do
+    [ -e "$lib" ] || continue
+    lib_count=$((lib_count + 1))
+    first_line="$(sed -n '1p' "$lib")"
+    if [ "$first_line" != '#![forbid(unsafe_code)]' ]; then
+      echo "FAIL: $lib line 1 must be #![forbid(unsafe_code)]"
+      exit 1
+    fi
+  done
+
+  if [ "$lib_count" -eq 0 ]; then
+    echo "FAIL: no crate src/lib.rs files found under $CRATES_DIR"
+    exit 1
+  fi
+}
+
 ci="$WORKFLOW_DIR/ci.yml"
 release="$WORKFLOW_DIR/release-gate.yml"
 advisories="$WORKFLOW_DIR/advisories.yml"
@@ -34,10 +92,12 @@ require_file "$ci"
 require_file "$release"
 require_file "$advisories"
 require_file "$DENY_TOML"
+require_unsafe_forbid_layers
 
 # Light per-PR dependency drift gate.
 require_pattern "$ci" 'cargo-machete' 'install cargo-machete'
 require_pattern "$ci" 'cargo machete' 'run cargo machete'
+require_pattern "$ci" 'check-default-no-db\.sh' 'run default-no-db smoke'
 require_pattern "$ci" 'test-check-default-no-db\.sh' 'run default-no-db fixture tests'
 require_pattern "$ci" 'test-check-golden-gen-anti-tautology\.sh' \
   'run golden-gen firewall fixture tests'
@@ -64,6 +124,8 @@ require_pattern "$release" 'cargo nextest run -p oce-store' \
   'oce-store public-api surface gate package selector'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
+require_pattern "$release" 'check-default-no-db\.sh' 'release gate runs default-no-db smoke'
+require_pattern "$release" 'test-check-default-no-db\.sh' 'release gate runs default-no-db fixture tests'
 require_pattern "$release" 'test-check-golden-gen-anti-tautology\.sh' \
   'release gate runs golden-gen firewall fixture tests'
 require_pattern "$release" 'check-golden-gen-anti-tautology\.sh' \

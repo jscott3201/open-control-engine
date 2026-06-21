@@ -13,9 +13,14 @@ trap 'rm -rf "$tmp"' EXIT
 write_positive() {
   dir="$1"
   deny="$2"
+  root_cargo="$3"
+  crates_dir="$4"
   mkdir -p "$dir"
   cat > "$dir/ci.yml" <<'EOF'
 jobs:
+  default-no-db:
+    steps:
+      - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
     steps:
       - uses: taiki-e/install-action@v2
@@ -54,6 +59,9 @@ jobs:
         env:
           OCE_REQUIRE_SURFACE_CHECK: "1"
         run: cargo nextest run -p oce-store -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api --locked --no-tests=fail
+  default-no-db:
+    steps:
+      - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
     steps:
       - uses: taiki-e/install-action@v2
@@ -62,6 +70,7 @@ jobs:
       - run: cargo machete
   gate-fixtures:
     steps:
+      - run: bash .github/scripts/test-check-default-no-db.sh
       - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
@@ -90,6 +99,33 @@ deny = [
   { name = "sled" },
 ]
 EOF
+  cat > "$root_cargo" <<'EOF'
+[workspace.lints.rust]
+unsafe_code = "forbid"
+EOF
+  mkdir -p "$crates_dir/oce-api/src" "$crates_dir/oce-store/src"
+  cat > "$crates_dir/oce-api/Cargo.toml" <<'EOF'
+[package]
+name = "oce-api"
+
+[lints]
+workspace = true
+EOF
+  cat > "$crates_dir/oce-store/Cargo.toml" <<'EOF'
+[package]
+name = "oce-store"
+
+[lints]
+workspace = true
+EOF
+  cat > "$crates_dir/oce-api/src/lib.rs" <<'EOF'
+#![forbid(unsafe_code)]
+//! Fixture crate.
+EOF
+  cat > "$crates_dir/oce-store/src/lib.rs" <<'EOF'
+#![forbid(unsafe_code)]
+//! Fixture crate.
+EOF
 }
 
 run_case() {
@@ -98,14 +134,18 @@ run_case() {
   mutate="$3"
   dir="$tmp/$name/workflows"
   deny="$tmp/$name/deny.toml"
+  root_cargo="$tmp/$name/Cargo.toml"
+  crates_dir="$tmp/$name/crates"
   mkdir -p "$tmp/$name"
-  write_positive "$dir" "$deny"
-  "$mutate" "$dir" "$deny"
+  write_positive "$dir" "$deny" "$root_cargo" "$crates_dir"
+  "$mutate" "$dir" "$deny" "$root_cargo" "$crates_dir"
 
   set +e
   output="$(
     OCE_WORKFLOW_DIR="$dir" \
     OCE_DENY_TOML="$deny" \
+    OCE_ROOT_CARGO_TOML="$root_cargo" \
+    OCE_CRATES_DIR="$crates_dir" \
     bash "$SCRIPT" 2>&1
   )"
   status=$?
@@ -211,6 +251,44 @@ remove_golden_gen_firewall() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+remove_root_unsafe_forbid() {
+  _dir="$1"
+  _deny="$2"
+  root_cargo="$3"
+  cat > "$root_cargo" <<'EOF'
+[workspace.lints.rust]
+unsafe_code = "allow"
+EOF
+}
+
+remove_crate_lints_workspace() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  cat > "$crates_dir/oce-api/Cargo.toml" <<'EOF'
+[package]
+name = "oce-api"
+EOF
+}
+
+remove_crate_lib_forbid() {
+  _dir="$1"
+  _deny="$2"
+  _root_cargo="$3"
+  crates_dir="$4"
+  cat > "$crates_dir/oce-api/src/lib.rs" <<'EOF'
+//! Fixture crate.
+EOF
+}
+
+remove_no_db_gate() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'check-default-no-db' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest
 run_case seeded-advisory-ignore fail seed_advisory_ignore
@@ -219,5 +297,9 @@ run_case missing-stale-status-gate fail remove_stale_status_gate
 run_case empty-bans-deny fail empty_bans_deny
 run_case missing-store-surface-gate fail remove_store_surface_gate
 run_case missing-golden-gen-firewall fail remove_golden_gen_firewall
+run_case missing-root-unsafe-forbid fail remove_root_unsafe_forbid
+run_case missing-crate-lints-workspace fail remove_crate_lints_workspace
+run_case missing-crate-lib-forbid fail remove_crate_lib_forbid
+run_case missing-no-db-gate fail remove_no_db_gate
 
 echo "OK: workflow gate fixtures passed."
