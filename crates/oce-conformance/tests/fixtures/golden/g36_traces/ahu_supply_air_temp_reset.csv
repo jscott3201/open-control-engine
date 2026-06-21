@@ -1,0 +1,8 @@
+#1
+# columns: time http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand
+double ahu_supply_air_temp_reset(5,3)
+0.0 16.0 0.0
+1.0 16.0 0.0
+2.0 14.0 0.5
+3.0 12.0 1.0
+4.0 12.0 1.0
