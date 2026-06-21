@@ -13,11 +13,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use oce_diag::Diagnostic;
-use oce_model::{Connector, ConnectorId, ModelGraph};
+use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 
+mod params;
 mod structural;
 mod unify;
 
+pub(crate) use params::check_block_params;
 pub(crate) use structural::{
     check_arena_ids, check_connections, check_port_types, check_single_assignment,
 };
@@ -34,6 +36,16 @@ pub(crate) fn subject_of(c: &Connector) -> Arc<str> {
     match &c.iri {
         Some(iri) => Arc::clone(iri),
         None => Arc::from(format!("connector#{}", c.id.0)),
+    }
+}
+
+/// The diagnostic subject for a block — its source instance IRI when known, else a synthetic
+/// `block#N` id. [`finalize_diags`] parses the synthetic form so block diagnostics sort by
+/// ascending [`oce_model::BlockId`] rather than lexicographically.
+pub(crate) fn block_subject_of(blk: &BlockInstance) -> Arc<str> {
+    match &blk.instance_iri {
+        Some(iri) => Arc::clone(iri),
+        None => Arc::from(format!("block#{}", blk.id.0)),
     }
 }
 

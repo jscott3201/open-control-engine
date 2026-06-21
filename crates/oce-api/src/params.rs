@@ -9,8 +9,10 @@
 //! never this table (perf §6). `resume` re-folds any edits back into the model and re-instantiates
 //! the affected blocks.
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use oce_blocks::{ParamRule, lookup};
 use oce_graph::allocate_state;
 use oce_model::{BlockId, ModelGraph, Value, ValueType};
 use oce_store::Store;
@@ -31,9 +33,10 @@ pub enum RunMode {
 }
 
 /// Declared, non-computational metadata for a parameter (CDL §7.4.1) — a flat, owned, backend-free
-/// DTO (R-API-8). `value_type` is read from the value; `min`/`max`/`unit`/`quantity` are `None`
-/// until per-parameter attribute provenance is carried on `oce_model::ParamTable`. Surfaced as the
-/// third element of [`ParamTable::iter`].
+/// DTO (R-API-8). `value_type` is read from the value; `min`/`max` come from registry-published
+/// class parameter rules where they can be represented as static single-parameter bounds; `unit`
+/// and `quantity` remain `None` until per-parameter attribute provenance is carried on
+/// `oce_model::ParamTable`. Surfaced as the third element of [`ParamTable::iter`].
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParamAttrs {
     /// Structural type of the parameter.
@@ -83,10 +86,11 @@ impl ParamTable {
                 .unwrap_or_else(|| format!("b{}", blk.id.0));
             for (name, value) in &blk.params.values {
                 let path = format!("{base}.{name}");
+                let (min, max) = static_real_bounds(&blk.class_iri, name);
                 let declared = ParamAttrs {
                     value_type: value.value_type(),
-                    min: None,
-                    max: None,
+                    min,
+                    max,
                     unit: None,
                     quantity: None,
                 };
@@ -177,8 +181,8 @@ impl<S: Store> Engine<S> {
     /// # Errors
     /// [`OcError::ParamWhileRunning`] if not `Halted`; [`OcError::UnknownPoint`] for an unknown path;
     /// [`OcError::ParamType`] on a type mismatch; [`OcError::ParamStructural`] for a conditional-
-    /// instance param (not yet tracked); [`OcError::ParamRange`] for an out-of-bounds value (bounds
-    /// are currently unset, so this does not fire). Never panics (R-ERR-1).
+    /// instance param (not yet tracked); [`OcError::ParamRange`] for a value rejected by registry
+    /// parameter rules. Never panics (R-ERR-1).
     pub fn set_param(&mut self, path: &str, value: Value) -> Result<(), OcError> {
         if self.mode != RunMode::Halted {
             return Err(OcError::ParamWhileRunning {
@@ -201,11 +205,17 @@ impl<S: Store> Engine<S> {
                 path: path.to_string(),
             });
         }
-        // Range check: declared bounds are currently absent, so this is inert until parameter
-        // attribute provenance lands. Integer bounds must use `IntAttrs` when that path is added.
+        // Inclusive metadata bounds catch ordinary out-of-range edits; strict and cross-parameter
+        // class rules are checked just below because `ParamAttrs` has no exclusive/cross-field
+        // shape.
         if let Ok(v) = value.as_real()
             && (decl.min.is_some_and(|lo| v < lo) || decl.max.is_some_and(|hi| v > hi))
         {
+            return Err(OcError::ParamRange {
+                path: path.to_string(),
+            });
+        }
+        if self.class_param_rules_reject(idx, &value) {
             return Err(OcError::ParamRange {
                 path: path.to_string(),
             });
@@ -261,4 +271,104 @@ impl<S: Store> Engine<S> {
     fn is_structural_param(&self, _idx: usize) -> bool {
         false
     }
+
+    fn class_param_rules_reject(&self, idx: usize, value: &Value) -> bool {
+        let edited = &self.params.entries[idx];
+        let Some(block) = self.model.blocks.get(edited.block.0 as usize) else {
+            return false;
+        };
+        let Some(entry) = lookup(&block.class_iri) else {
+            return false;
+        };
+        for rule in entry.param_rules() {
+            match *rule {
+                ParamRule::Required { .. } | ParamRule::RealEqualWarning { .. } => {}
+                ParamRule::RealGreaterThan { name, min } if edited.name.as_ref() == name => {
+                    let Some(v) = real_param_value(value) else {
+                        return true;
+                    };
+                    if !real_greater_than(v, min) {
+                        return true;
+                    }
+                }
+                ParamRule::RealGreaterThan { .. } => {}
+                ParamRule::RealLessOrEqual { lower, upper }
+                    if edited.name.as_ref() == lower || edited.name.as_ref() == upper =>
+                {
+                    let lower_value =
+                        block_param_value(&self.params.entries, edited.block, lower, idx, value);
+                    let upper_value =
+                        block_param_value(&self.params.entries, edited.block, upper, idx, value);
+                    if let (Some(lower_value), Some(upper_value)) = (lower_value, upper_value)
+                        && !real_less_or_equal(lower_value, upper_value)
+                    {
+                        return true;
+                    }
+                }
+                ParamRule::RealLessOrEqual { .. } => {}
+            }
+        }
+        false
+    }
+}
+
+fn static_real_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>) {
+    let Some(entry) = lookup(class_path) else {
+        return (None, None);
+    };
+    let mut min = None::<f64>;
+    let max = None;
+    for rule in entry.param_rules() {
+        if let ParamRule::RealGreaterThan {
+            name: rule_name,
+            min: lower,
+        } = *rule
+            && rule_name == name
+        {
+            min = Some(match min {
+                Some(current) => current.max(lower),
+                None => lower,
+            });
+        }
+    }
+    (min, max)
+}
+
+fn block_param_value(
+    entries: &[ParamEntry],
+    block: BlockId,
+    name: &str,
+    edited_idx: usize,
+    edited_value: &Value,
+) -> Option<f64> {
+    entries
+        .iter()
+        .enumerate()
+        .find(|(_, entry)| entry.block == block && entry.name.as_ref() == name)
+        .and_then(|(idx, entry)| {
+            if idx == edited_idx {
+                real_param_value(edited_value)
+            } else {
+                real_param_value(&entry.value)
+            }
+        })
+}
+
+fn real_param_value(value: &Value) -> Option<f64> {
+    match value {
+        Value::Real(v) => Some(*v),
+        Value::Integer(v) => Some(*v as f64),
+        _ => None,
+    }
+}
+
+fn real_greater_than(value: f64, min: f64) -> bool {
+    matches!(value.partial_cmp(&min), Some(Ordering::Greater))
+}
+
+fn real_less_or_equal(lower: f64, upper: f64) -> bool {
+    matches!(
+        lower.partial_cmp(&upper),
+        Some(Ordering::Less | Ordering::Equal)
+    )
 }

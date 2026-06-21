@@ -208,6 +208,82 @@ fn registry_resolves_canonical_paths() {
 }
 
 #[test]
+fn registry_exposes_block_param_rules() {
+    assert_eq!(
+        lookup("CDL.Logical.Sources.SampleTrigger")
+            .unwrap()
+            .param_rules(),
+        &[
+            ParamRule::Required { name: "period" },
+            ParamRule::RealGreaterThan {
+                name: "period",
+                min: 0.0,
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Limiter").unwrap().param_rules(),
+        &[
+            ParamRule::RealLessOrEqual {
+                lower: "uMin",
+                upper: "uMax",
+            },
+            ParamRule::RealEqualWarning {
+                left: "uMin",
+                right: "uMax",
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Derivative").unwrap().param_rules(),
+        &[ParamRule::RealGreaterThan {
+            name: "T",
+            min: 0.0,
+        }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.LimitSlewRate").unwrap().param_rules(),
+        &[ParamRule::RealGreaterThan {
+            name: "Td",
+            min: 0.0,
+        }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.MovingAverage").unwrap().param_rules(),
+        &[ParamRule::RealGreaterThan {
+            name: "delta",
+            min: 0.0,
+        }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.PID").unwrap().param_rules(),
+        &[
+            ParamRule::RealGreaterThan {
+                name: "Td",
+                min: 0.0,
+            },
+            ParamRule::RealGreaterThan {
+                name: "Nd",
+                min: 0.0,
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.PIDWithReset").unwrap().param_rules(),
+        &[ParamRule::RealGreaterThan {
+            name: "Nd",
+            min: 0.0,
+        }]
+    );
+    assert!(
+        lookup("CDL.Reals.Sources.Constant")
+            .unwrap()
+            .param_rules()
+            .is_empty()
+    );
+}
+
+#[test]
 fn registry_make_resolves_parameters() {
     let params = ParamTable {
         values: vec![(Arc::from("k"), Value::Real(4.0))],

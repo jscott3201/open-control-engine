@@ -108,6 +108,10 @@ pub enum DiagCode {
     /// Two connected connectors both declared a `min`/`max` bound and they differ — §7.10 R13.1
     /// hard error (the bound analogue of [`DiagCode::UnitQuantityMismatch`]).
     BoundMismatch,
+    /// A block instance omitted a parameter that the class requires at build time.
+    MissingRequiredParameter,
+    /// A block parameter violates a class-level range or ordering rule.
+    ParameterOutOfRange,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
     /// Connected connectors declared divergent `displayUnit`s — non-computational, warning only
@@ -141,6 +145,8 @@ impl DiagCode {
             DiagCode::PortKindMismatch => "port-kind-mismatch",
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
+            DiagCode::MissingRequiredParameter => "missing-required-parameter",
+            DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
@@ -262,6 +268,8 @@ mod tests {
             DiagCode::PortKindMismatch,
             DiagCode::UnitQuantityMismatch,
             DiagCode::BoundMismatch,
+            DiagCode::MissingRequiredParameter,
+            DiagCode::ParameterOutOfRange,
             DiagCode::DisplayUnitDivergence,
             DiagCode::AnalogCoercedToReal,
             DiagCode::MissingFmuPath,

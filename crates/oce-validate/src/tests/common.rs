@@ -10,7 +10,7 @@ pub(super) use std::sync::Arc;
 pub(super) use oce_diag::{DiagCode, Severity};
 pub(super) use oce_model::{
     Attrs, BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, IntAttrs, ModelGraph,
-    ParamTable, RealAttrs, ValueType,
+    ParamTable, RealAttrs, Value, ValueType,
 };
 
 pub(super) use crate::{unify_and_validate, unify_attributes, validate};
@@ -58,6 +58,24 @@ pub(super) fn block(id: u32, class: &str, inputs: &[u32], outputs: &[u32]) -> Bl
         decl_order: id,
         instance_iri: None,
     }
+}
+
+/// A block instance with explicit raw parameter values.
+pub(super) fn block_with_params(
+    id: u32,
+    class: &str,
+    inputs: &[u32],
+    outputs: &[u32],
+    params: Vec<(Arc<str>, Value)>,
+) -> BlockInstance {
+    BlockInstance {
+        params: ParamTable { values: params },
+        ..block(id, class, inputs, outputs)
+    }
+}
+
+pub(super) fn rp(name: &str, value: f64) -> (Arc<str>, Value) {
+    (Arc::from(name), Value::Real(value))
 }
 
 pub(super) fn conn_edge(from: u32, to: u32) -> Connection {

@@ -3,8 +3,8 @@ use oce_model::ParamTable;
 use super::{bool_param, real_param};
 use crate::{
     Abs, Add, AddParameter, Block, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
-    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, RegistryEntry, Subtract,
-    Switch,
+    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, ParamRule,
+    RegistryEntry, Subtract, Switch,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -79,6 +79,17 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Switch",
         make: make_switch,
+    },
+];
+
+pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::RealLessOrEqual {
+        lower: "uMin",
+        upper: "uMax",
+    },
+    ParamRule::RealEqualWarning {
+        left: "uMin",
+        right: "uMax",
     },
 ];
 
