@@ -33,3 +33,4 @@ path = "src/main.rs"
 # Same shortest-round-trip f64 formatter that `oce-conformance` uses, so finite-valued goldens are
 # byte-identical to what the conformance writer would produce. NOT a dependency on any oce crate.
 ryu = "1.0"
+serde_json = "1.0"

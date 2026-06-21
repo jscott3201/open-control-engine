@@ -1,6 +1,6 @@
 #1
 # columns: time y
-double CDL_Reals_Hysteresis_y(7,2)
+double CDL_Reals_Hysteresis_y(8,2)
 0.0 0.0
 60.0 1.0
 120.0 1.0
@@ -8,3 +8,4 @@ double CDL_Reals_Hysteresis_y(7,2)
 240.0 1.0
 300.0 0.0
 360.0 0.0
+420.0 0.0

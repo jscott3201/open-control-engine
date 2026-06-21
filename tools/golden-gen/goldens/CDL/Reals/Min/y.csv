@@ -1,6 +1,7 @@
 #1
 # columns: time y
-double CDL_Reals_Min_y(3,2)
+double CDL_Reals_Min_y(4,2)
 0.0 0.1
 60.0 3.3
 120.0 -1.1
+180.0 -1.1

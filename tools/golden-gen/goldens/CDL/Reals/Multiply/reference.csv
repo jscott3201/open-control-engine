@@ -1,6 +1,9 @@
 #1
 # columns: time u1 u2 y
-double CDL_Reals_Multiply_reference(3,4)
+double CDL_Reals_Multiply_reference(6,4)
 0.0 0.1 0.1 0.010000000000000002
 60.0 1.1 1.1 1.2100000000000002
 120.0 3.3 0.7 2.3099999999999996
+180.0 inf 2.0 inf
+240.0 inf 0.0 NaN
+300.0 -inf 2.0 -inf

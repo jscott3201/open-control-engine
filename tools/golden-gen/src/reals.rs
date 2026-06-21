@@ -44,16 +44,23 @@ fn algebraic() -> Vec<Golden> {
 
     // Add: y = u1 + u2 (single IEEE add).
     {
-        let u1 = [0.1, 1.1, 100000.1];
-        let u2 = [0.2, 2.2, 0.3];
+        let u1 = [
+            0.1,
+            1.1,
+            100000.1,
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ];
+        let u2 = [0.2, 2.2, 0.3, 1.0, f64::NEG_INFINITY, f64::NEG_INFINITY];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(a, b)| r(a + b)).collect();
         out.push(Golden::new(
             "CDL.Reals.Add",
             "y",
             ValueKind::Real,
-            ticks(3),
+            ticks(6),
             y,
-            "u1=[0.1,1.1,100000.1], u2=[0.2,2.2,0.3]; non-dyadic operands carry IEEE add round-off",
+            "u1=[0.1,1.1,100000.1,+Inf,+Inf,-Inf], u2=[0.2,2.2,0.3,1,-Inf,-Inf]; finite round-off plus IEEE Inf/NaN rows",
             "y = u1 + u2 (IEEE-754 f64 add, round-to-nearest-even); _spec/03 §4.1 Add",
         )
         .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]));
@@ -61,17 +68,24 @@ fn algebraic() -> Vec<Golden> {
 
     // Subtract: y = u1 - u2.
     {
-        let u1 = [0.3, 1.0, 2.2];
-        let u2 = [0.1, 0.9, 1.1];
+        let u1 = [
+            0.3,
+            1.0,
+            2.2,
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ];
+        let u2 = [0.1, 0.9, 1.1, 1.0, f64::INFINITY, f64::INFINITY];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(a, b)| r(a - b)).collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Subtract",
                 "y",
                 ValueKind::Real,
-                ticks(3),
+                ticks(6),
                 y,
-                "u1=[0.3,1.0,2.2], u2=[0.1,0.9,1.1]; exposes cancellation round-off",
+                "u1=[0.3,1.0,2.2,+Inf,+Inf,-Inf], u2=[0.1,0.9,1.1,1,+Inf,+Inf]; finite cancellation plus IEEE Inf/NaN rows",
                 "y = u1 - u2 (IEEE-754 f64 subtract); _spec/03 §4.1 Subtract",
             )
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
@@ -80,17 +94,24 @@ fn algebraic() -> Vec<Golden> {
 
     // Multiply: y = u1 * u2.
     {
-        let u1 = [0.1, 1.1, 3.3];
-        let u2 = [0.1, 1.1, 0.7];
+        let u1 = [
+            0.1,
+            1.1,
+            3.3,
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ];
+        let u2 = [0.1, 1.1, 0.7, 2.0, 0.0, 2.0];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(a, b)| r(a * b)).collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Multiply",
                 "y",
                 ValueKind::Real,
-                ticks(3),
+                ticks(6),
                 y,
-                "u1=[0.1,1.1,3.3], u2=[0.1,1.1,0.7]; non-dyadic factors -> rounded products",
+                "u1=[0.1,1.1,3.3,+Inf,+Inf,-Inf], u2=[0.1,1.1,0.7,2,0,2]; finite products plus IEEE Inf/NaN rows",
                 "y = u1 * u2 (IEEE-754 f64 multiply); _spec/03 §4.1 Multiply",
             )
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
@@ -170,17 +191,17 @@ fn algebraic() -> Vec<Golden> {
 
     // Min: y = min(u1,u2) (verbatim operand).
     {
-        let u1 = [0.1_f64, 3.3, -1.1];
-        let u2 = [0.2_f64, 3.3, 2.7];
+        let u1 = [0.1_f64, 3.3, -1.1, 2.7];
+        let u2 = [0.2_f64, 3.3, 2.7, -1.1];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, b)| r(a.min(b))).collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Min",
                 "y",
                 ValueKind::Real,
-                ticks(3),
+                ticks(4),
                 y,
-                "u1=[0.1,3.3,-1.1], u2=[0.2,3.3,2.7]; lesser operand, tie, sign",
+                "u1=[0.1,3.3,-1.1,2.7], u2=[0.2,3.3,2.7,-1.1]; covers both operand selections and tie",
                 "y = min(u1,u2) (lesser operand verbatim); _spec/03 §4.1 Min / CDL §7.7.2",
             )
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
@@ -189,17 +210,17 @@ fn algebraic() -> Vec<Golden> {
 
     // Max: y = max(u1,u2).
     {
-        let u1 = [0.1_f64, 3.3, -1.1];
-        let u2 = [0.2_f64, 3.3, 2.7];
+        let u1 = [0.1_f64, 3.3, -1.1, 2.7];
+        let u2 = [0.2_f64, 3.3, 2.7, -1.1];
         let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, b)| r(a.max(b))).collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Max",
                 "y",
                 ValueKind::Real,
-                ticks(3),
+                ticks(4),
                 y,
-                "u1=[0.1,3.3,-1.1], u2=[0.2,3.3,2.7]",
+                "u1=[0.1,3.3,-1.1,2.7], u2=[0.2,3.3,2.7,-1.1]; covers both operand selections and tie",
                 "y = max(u1,u2) (greater operand verbatim); _spec/03 §4.1 Max / CDL §7.7.2",
             )
             .with_inputs(vec![input_r("u1", u1), input_r("u2", u2)]),
@@ -380,7 +401,7 @@ fn comparators() -> Vec<Golden> {
     // Hysteresis: latch with dead-band [uLow,uHigh], strict crossings, pre_y_start=false.
     {
         let (u_low, u_high) = (1.5_f64, 3.5_f64);
-        let u = [2.5, 3.6, 2.5, 3.5, 1.5, 1.4, 2.5];
+        let u = [2.5, 3.6, 2.5, 3.5, 1.5, 1.4, 2.5, 3.5];
         let mut prev = false; // pre_y_start
         let mut y = Vec::new();
         for &x in &u {
@@ -400,9 +421,9 @@ fn comparators() -> Vec<Golden> {
             "CDL.Reals.Hysteresis",
             "y",
             ValueKind::Boolean,
-            ticks(7),
+            ticks(8),
             y,
-            "uLow=1.5, uHigh=3.5, pre_y_start=false; u=[2.5,3.6,2.5,3.5,1.5,1.4,2.5]",
+            "uLow=1.5, uHigh=3.5, pre_y_start=false; u=[2.5,3.6,2.5,3.5,1.5,1.4,2.5,3.5]",
             "y=true if u>uHigh; y=false if u<uLow; else hold pre(y); dead-band boundaries u==uLow and u==uHigh hold the prior state; pre_y_start=false; Buildings Reals/Hysteresis.mo",
         )
         .with_inputs(vec![input_r("u", u)]));
