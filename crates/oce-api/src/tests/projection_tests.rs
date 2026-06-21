@@ -92,6 +92,33 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
 }
 
 #[test]
+fn iri_keyed_projection_is_deterministic_and_coherent_with_io_inventory() {
+    let (model, semantics) = fully_populated_projection_fixture();
+
+    let first = project_resolved_model(&model, &semantics).expect("first projection succeeds");
+    let second = project_resolved_model(&model, &semantics).expect("second projection succeeds");
+
+    assert_eq!(canonical_json(&first), canonical_json(&second));
+    assert_eq!(first.model_id, second.model_id);
+    let io_paths = IoInventory::build_at_load(&model)
+        .iter()
+        .map(|point| point.path)
+        .collect::<Vec<_>>();
+    let dto_paths = first
+        .points
+        .iter()
+        .map(|point| point.key.as_str().to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(dto_paths, io_paths);
+    assert!(
+        dto_paths
+            .iter()
+            .all(|path| path.starts_with("http://example.org#")),
+        "IRI-bearing models must keep source connector IRIs as point keys"
+    );
+}
+
+#[test]
 fn empty_model_projects_to_empty_collections_with_stable_model_id() {
     let model = ModelGraph::new();
     let semantics = oce_semantics::resolve(&model).expect("empty semantics resolves");
@@ -127,15 +154,122 @@ fn duplicate_connector_domain_key_is_rejected_before_store_handoff() {
     let model = duplicate_point_key_model();
     let semantics = oce_semantics::resolve(&model).expect("semantics resolves");
 
-    let err = project_resolved_model(&model, &semantics)
-        .expect_err("duplicate connector IRI must fail producer-side");
-    assert!(
-        matches!(err, StoreError::Validation(_)),
-        "expected StoreError::Validation, got {err:?}"
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "duplicate point DomainKey",
+        "duplicate connector IRI must fail producer-side",
     );
-    assert!(
-        err.to_string().contains("duplicate point DomainKey"),
-        "diagnostic should name the duplicate-key guard: {err}"
+}
+
+#[test]
+fn duplicate_semantic_metadata_is_rejected_before_projection() {
+    let (model, mut semantics) = fully_populated_projection_fixture();
+    semantics.points.push(semantics.points[0].clone());
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "duplicate semantic metadata for connector 0",
+        "duplicate metadata must fail producer-side",
+    );
+}
+
+#[test]
+fn missing_semantic_metadata_is_rejected_before_projection() {
+    let (model, mut semantics) = fully_populated_projection_fixture();
+    semantics
+        .points
+        .retain(|point| point.connector_id != ConnectorId(2));
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "missing semantic metadata for connector 2",
+        "missing metadata must fail producer-side",
+    );
+}
+
+#[test]
+fn semantic_metadata_key_mismatch_is_rejected_before_projection() {
+    let (model, mut semantics) = fully_populated_projection_fixture();
+    semantics.points[0].key = PointKey::Iri(Arc::from("http://example.org#wrong"));
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "semantic metadata key mismatch for connector 0",
+        "metadata key desync must fail producer-side",
+    );
+}
+
+#[test]
+fn empty_point_domain_key_is_rejected_before_store_handoff() {
+    let (mut model, mut semantics) = fully_populated_projection_fixture();
+    model.connectors[0].iri = Some(Arc::from(""));
+    semantics.points[0].key = PointKey::Iri(Arc::from(""));
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connector 0 projected an empty DomainKey",
+        "empty point key must fail producer-side",
+    );
+}
+
+#[test]
+fn empty_block_domain_key_is_rejected_before_store_handoff() {
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.blocks[0].instance_iri = Some(Arc::from(""));
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "block 0 projected an empty DomainKey",
+        "empty block key must fail producer-side",
+    );
+}
+
+#[test]
+fn out_of_range_connection_endpoints_are_rejected_before_projection() {
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.connections = vec![Connection {
+        from: ConnectorId(99),
+        to: ConnectorId(0),
+    }];
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connection from 99 is out of range",
+        "out-of-range source endpoint must fail producer-side",
+    );
+
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.connections = vec![Connection {
+        from: ConnectorId(1),
+        to: ConnectorId(99),
+    }];
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connection to 99 is out of range",
+        "out-of-range target endpoint must fail producer-side",
+    );
+}
+
+#[test]
+fn string_to_store_visible_connection_is_rejected_before_projection() {
+    let (mut model, semantics) = fully_populated_projection_fixture();
+    model.connections = vec![Connection {
+        from: ConnectorId(4),
+        to: ConnectorId(0),
+    }];
+
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connection 4 -> 0 has exactly one store-visible endpoint",
+        "String-to-non-String connection must not be silently dropped",
     );
 }
 
@@ -418,6 +552,23 @@ fn canonical_json(model: &ResolvedModel) -> String {
     let mut text = serde_json::to_string_pretty(model).expect("serialize ResolvedModel");
     text.push('\n');
     text
+}
+
+fn assert_projection_validation(
+    model: &ModelGraph,
+    semantics: &ResolvedSemantics,
+    needle: &str,
+    context: &str,
+) {
+    let err = project_resolved_model(model, semantics).expect_err(context);
+    assert!(
+        matches!(err, StoreError::Validation(_)),
+        "expected StoreError::Validation, got {err:?}"
+    );
+    assert!(
+        err.to_string().contains(needle),
+        "validation message should contain {needle:?}: {err}"
+    );
 }
 
 fn assert_validation_rejects(store: &ValidatingModelStore, model: &ResolvedModel, needle: &str) {

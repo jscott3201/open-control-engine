@@ -1,13 +1,14 @@
 #![forbid(unsafe_code)]
-//! `oce-semantics` — annotation parsing and effective-metadata resolution for the Open Control
-//! Engine (`05-semantics-and-point-graph.md`).
+//! `oce-semantics` — effective-metadata resolution for the Open Control Engine
+//! (`05-semantics-and-point-graph.md`).
 //!
-//! Parses the `__cdl(...)`/`__CDL(...)` vendor annotations (point-list, trend, connection,
-//! propagate, …) and resolves them — once, at ingest — into the *effective* per-point metadata
-//! the store projects (point type AI/AO/DI/DO/Mode, hardwired flag, trend interval with the
-//! `interval=0` on-change sentinel, quantity/unit, description). Propagation resolves
-//! higher-overrides-lower over dotted paths. This is **non-computational** data (CDL §7.17): it
-//! is never read on the tick. The crate is **Group A** (no store, no database).
+//! The active M3 resolver derives the *effective* per-point metadata the store projects from the
+//! data currently carried by `oce-model`: connector attributes, direction, value type, and
+//! defaults. It records point type AI/AO/DI/DO/Mode, hardwired flag, trend interval with the
+//! `interval=0` on-change sentinel, quantity/unit, and description. Raw `__cdl(...)`/`__CDL(...)`
+//! vendor annotation parsing and higher-overrides-lower propagation are deferred until those
+//! annotation blobs are carried through ingest. The resolved metadata is **non-computational** data
+//! (CDL §7.17): it is never read on the tick. The crate is **Group A** (no store, no database).
 //!
 //! The metadata enums and error seam are reserved; the annotation resolver is deferred to the
 //! semantic projection layer.
@@ -61,7 +62,8 @@ impl PointKey {
 pub enum TrendInterval {
     /// Record on every value change (`interval=0`).
     OnChange,
-    /// Record every N seconds.
+    /// Record every non-zero N seconds. Use [`TrendSpec::from_interval_seconds`] to map raw
+    /// `0` values to [`TrendInterval::OnChange`].
     EverySeconds(u32),
 }
 

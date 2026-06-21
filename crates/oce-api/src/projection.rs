@@ -191,11 +191,20 @@ fn project_connections(
             .ok_or_else(|| {
                 malformed(format!("connection to {} is out of range", connection.to.0))
             })?;
-        if let (Some(from_point), Some(to_point)) = (from_point, to_point) {
-            connections.push(ConnectionDto {
-                from_point: from_point.clone(),
-                to_point: to_point.clone(),
-            });
+        match (from_point, to_point) {
+            (Some(from_point), Some(to_point)) => {
+                connections.push(ConnectionDto {
+                    from_point: from_point.clone(),
+                    to_point: to_point.clone(),
+                });
+            }
+            (None, None) => {}
+            (Some(_), None) | (None, Some(_)) => {
+                return Err(StoreError::Validation(format!(
+                    "connection {} -> {} has exactly one store-visible endpoint",
+                    connection.from.0, connection.to.0
+                )));
+            }
         }
     }
     connections.sort_by(|left, right| {
