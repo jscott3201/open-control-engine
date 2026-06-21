@@ -57,3 +57,4 @@ thiserror = { workspace = true }
 public-api = { version = "=0.52.1", default-features = false }
 rustdoc-json = "=0.9.10"
 expect-test = "1.5"
+stats_alloc = "0.1.10"
