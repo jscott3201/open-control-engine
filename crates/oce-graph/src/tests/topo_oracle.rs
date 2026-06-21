@@ -173,6 +173,25 @@ fn diamond_case() -> ModelBuilder {
     b
 }
 
+fn diamond_case_with_connections(order: &[usize]) -> ModelBuilder {
+    let mut b = ModelBuilder::default();
+    let (_source, _, source_out) = b.block("test.Source", 0, 1, false, false);
+    let (_left, left_in, left_out) = b.block("test.LeftBranch", 1, 1, true, false);
+    let (_right, right_in, right_out) = b.block("test.RightBranch", 1, 1, true, false);
+    let (_join, join_in, _) = b.block("test.Join", 2, 1, true, false);
+    let edges = [
+        (source_out[0], left_in[0]),
+        (source_out[0], right_in[0]),
+        (left_out[0], join_in[0]),
+        (right_out[0], join_in[1]),
+    ];
+    for &idx in order {
+        let (from, to) = edges[idx];
+        b.connect(from, to);
+    }
+    b
+}
+
 fn mixed_feedthrough_case() -> ModelBuilder {
     let mut b = ModelBuilder::default();
     let (_consumer, consumer_in, _consumer_out) =
@@ -234,6 +253,62 @@ fn schedule_matches_independent_oracle_for_diverse_acyclic_topologies() {
 
     for (name, builder) in cases {
         assert_matches_reference(name, &builder);
+    }
+}
+
+#[test]
+fn schedule_is_independent_of_connection_insertion_order_for_tied_diamond() {
+    let forward = diamond_case_with_connections(&[0, 1, 2, 3]);
+    let reversed = diamond_case_with_connections(&[3, 2, 1, 0]);
+    let rotated = diamond_case_with_connections(&[2, 0, 3, 1]);
+    let cases = [
+        ("forward", forward),
+        ("reversed", reversed),
+        ("rotated", rotated),
+    ];
+
+    let baseline = reference_schedule(&cases[0].1.model, &cases[0].1.blocks)
+        .expect("diamond reference schedule");
+    assert_eq!(
+        baseline.order,
+        vec![BlockId(0), BlockId(1), BlockId(2), BlockId(3)],
+        "fixture must contain a real block-order tie between the two diamond branches"
+    );
+    assert_eq!(
+        baseline.connector_order,
+        vec![
+            ConnectorId(0),
+            ConnectorId(1),
+            ConnectorId(2),
+            ConnectorId(3),
+            ConnectorId(4),
+            ConnectorId(5),
+            ConnectorId(6),
+            ConnectorId(7),
+        ],
+        "fixture must contain real connector-order ties after the shared source emits"
+    );
+
+    for (name, builder) in &cases {
+        let oracle =
+            reference_schedule(&builder.model, &builder.blocks).expect("acyclic diamond oracle");
+        let schedule = compile(&builder.model, &builder.blocks).unwrap_or_else(|err| {
+            panic!("{name}: production scheduler rejected acyclic diamond: {err:?}")
+        });
+
+        assert_eq!(oracle.order, baseline.order, "{name}: oracle block order");
+        assert_eq!(
+            oracle.connector_order, baseline.connector_order,
+            "{name}: oracle connector order"
+        );
+        assert_eq!(
+            schedule.order, baseline.order,
+            "{name}: production block order"
+        );
+        assert_eq!(
+            schedule.connector_order, baseline.connector_order,
+            "{name}: production connector order"
+        );
     }
 }
 
