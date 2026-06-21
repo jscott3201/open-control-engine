@@ -103,6 +103,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: bash .github/scripts/check-default-no-db.sh
 
+  golden-gen-firewall:
+    name: golden-gen anti-tautology firewall
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+
   gate-fixtures:
     name: gate behavior fixtures
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
@@ -111,6 +120,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
+      - name: golden-gen firewall fixtures
+        run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - name: stale crate-status fixtures
         run: bash .github/scripts/test-check-stale-crate-status.sh
       - name: stale crate-status smoke

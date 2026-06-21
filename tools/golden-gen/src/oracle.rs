@@ -62,6 +62,7 @@ impl Sample {
 }
 
 /// One input column that produced a golden trace.
+#[derive(Clone)]
 pub struct InputSeries {
     /// CDL input connector / signal name, e.g. `u`, `u1`, `clr`.
     pub name: &'static str,

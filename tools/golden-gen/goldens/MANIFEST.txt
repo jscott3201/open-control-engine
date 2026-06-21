@@ -140,3 +140,16 @@ CDL.Reals.Subtract y -> goldens/CDL/Reals/Subtract/y.csv
 CDL.Reals.Switch reference -> goldens/CDL/Reals/Switch/reference.csv
 CDL.Reals.Switch y -> goldens/CDL/Reals/Switch/y.csv
 CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json
+G36/ahu_economizer damper_command -> goldens/G36/ahu_economizer/damper_command.csv
+G36/ahu_economizer economizer_enabled -> goldens/G36/ahu_economizer/economizer_enabled.csv
+G36/ahu_economizer oa_temperature_delta -> goldens/G36/ahu_economizer/oa_temperature_delta.csv
+G36/ahu_economizer operating_mode_real -> goldens/G36/ahu_economizer/operating_mode_real.csv
+G36/ahu_economizer reference -> goldens/G36/ahu_economizer/reference.csv
+G36/ahu_supply_air_temp_reset cooling_demand -> goldens/G36/ahu_supply_air_temp_reset/cooling_demand.csv
+G36/ahu_supply_air_temp_reset reference -> goldens/G36/ahu_supply_air_temp_reset/reference.csv
+G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_reset/sat_setpoint.csv
+G36/vav_single_zone PID cone deferred -> goldens/G36/vav_single_zone/pid_cone_deferred.prov.json
+G36/vav_single_zone airflow_setpoint -> goldens/G36/vav_single_zone/airflow_setpoint.csv
+G36/vav_single_zone damper_command -> goldens/G36/vav_single_zone/damper_command.csv
+G36/vav_single_zone heating_enabled -> goldens/G36/vav_single_zone/heating_enabled.csv
+G36/vav_single_zone reference -> goldens/G36/vav_single_zone/reference.csv

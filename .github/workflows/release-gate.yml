@@ -185,6 +185,8 @@ jobs:
           ref: ${{ env.CHECKOUT_REF }}
       - name: no-db gate fixtures
         run: bash .github/scripts/test-check-default-no-db.sh
+      - name: golden-gen firewall fixtures
+        run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - name: stale crate-status fixtures
         run: bash .github/scripts/test-check-stale-crate-status.sh
       - name: stale crate-status smoke
@@ -219,6 +221,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
       - run: bash .github/scripts/check-default-no-db.sh
+
+  golden-gen-firewall:
+    name: golden-gen anti-tautology firewall
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 
   clippy:
     name: clippy (-D warnings)
