@@ -240,8 +240,8 @@ fn edges_latches() -> Vec<Golden> {
     }
     // Toggle: clear-dominant T-flip-flop. rising(u) inverts pre(y); clr forces false.
     {
-        let u = [false, true, false, true, true, true];
-        let clr = [false, false, false, false, false, false];
+        let u = [false, true, true, false, false, false];
+        let clr = [false, false, true, false, false, false];
         let mut pre_u = false;
         let mut pre_y = false;
         let mut y = Vec::new();
@@ -264,8 +264,8 @@ fn edges_latches() -> Vec<Golden> {
             ValueKind::Boolean,
             ticks60(6),
             y,
-            "u=[F,T,F,T,T,T], clr all false; init pre(y)=false, pre(u)=false",
-            "clear-dominant T-flip-flop: rising(u) inverts pre(y); clr->false; _spec/03 §4.3 Toggle",
+            "u=[F,T,T,F,F,F], clr=[F,F,T,F,F,F]; init pre(y)=false, pre(u)=false",
+            "clear-dominant T-flip-flop: rising(u) inverts pre(y); clr->false; exercises clear path at row 2; _spec/03 §4.3 Toggle",
         )
         .with_inputs(vec![input_b("u", u), input_b("clr", clr)]));
     }
