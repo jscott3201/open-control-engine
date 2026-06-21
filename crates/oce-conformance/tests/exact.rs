@@ -88,3 +88,39 @@ fn exact_boolean_and_integer_cells_are_exact() {
     assert!(!int_fail.passed);
     assert_eq!(int_fail.first_mismatch.expect("int mismatch").index, 1);
 }
+
+#[test]
+fn exact_length_mismatch_fails_at_prefix_boundary() {
+    let reference_x = [0.0, 1.0, 2.0];
+    let reference_y = [10.0, 20.0, 30.0];
+
+    let shorter_x = [0.0, 1.0];
+    let shorter_y = [10.0, 20.0];
+    let shorter = compare_exact(
+        series(&reference_x, &reference_y),
+        series(&shorter_x, &shorter_y),
+        ValueKind::Real,
+    );
+    assert!(!shorter.passed);
+    assert_eq!(shorter.compared_points, shorter_x.len());
+    let mismatch = shorter.first_mismatch.expect("short trace mismatch");
+    assert_eq!(mismatch.index, shorter.compared_points);
+    assert_eq!(mismatch.x.to_bits(), reference_x[2].to_bits());
+    assert_eq!(mismatch.expected.to_bits(), reference_y[2].to_bits());
+    assert!(mismatch.actual.is_nan());
+
+    let longer_x = [0.0, 1.0, 2.0, 3.0];
+    let longer_y = [10.0, 20.0, 30.0, 40.0];
+    let longer = compare_exact(
+        series(&reference_x, &reference_y),
+        series(&longer_x, &longer_y),
+        ValueKind::Real,
+    );
+    assert!(!longer.passed);
+    assert_eq!(longer.compared_points, reference_x.len());
+    let mismatch = longer.first_mismatch.expect("long trace mismatch");
+    assert_eq!(mismatch.index, longer.compared_points);
+    assert_eq!(mismatch.x.to_bits(), longer_x[3].to_bits());
+    assert!(mismatch.expected.is_nan());
+    assert_eq!(mismatch.actual.to_bits(), longer_y[3].to_bits());
+}
