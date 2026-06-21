@@ -1,0 +1,23 @@
+{
+  "class_path": "G36",
+  "scenario": "vav_single_zone",
+  "signal": "damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants",
+  "n_samples": 6,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "zone_temp", "cooling_setpoint", "heating_setpoint", "heating_enabled", "airflow_setpoint", "damper_command"],
+  "inputs": [
+    { "name": "zone_temp", "value_kind": "Real", "values": [22.0, 27.0, 27.5, 19.0, 19.3, 21.0] },
+    { "name": "cooling_setpoint", "value_kind": "Real", "values": [24.0, 24.0, 24.0, 24.0, 24.0, 24.0] },
+    { "name": "heating_setpoint", "value_kind": "Real", "values": [20.0, 20.0, 20.0, 20.0, 20.0, 20.0] }
+  ],
+  "input": "VAV damperLimiter heating branch only: airflowSwitch.y=0.6, uMin=0.2, uMax=1.0",
+  "reference_rule": "When heating_enabled is true, Limiter clamps 0.6 to 0.6 exactly; cooling-branch rows are masked and deferred",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -1,0 +1,19 @@
+{
+  "sequence": "vav_single_zone",
+  "tier": "B-deferred",
+  "source": "no in-repo correctness oracle yet; deferred to the OpenModelica-Docker Tier-B spike 019eeada-4929/019eeab6-7edc",
+  "depends_on_oce_blocks": false,
+  "deferred_signals": [
+    "cooling_signal",
+    "cooling-branch airflow_setpoint",
+    "cooling-branch damper_command",
+    "internal coolingPid.y"
+  ],
+  "covered_here": [
+    "heating_enabled",
+    "heating-branch airflow_setpoint masked by heating_enabled",
+    "heating-branch damper_command masked by heating_enabled"
+  ],
+  "fp_residue_note": "E2 Tier-A G36 references exercise no add-rounding; the dyadic/add-rounding residue concern remains B4 follow-up scope.",
+  "generator": "golden-gen 0.0.0"
+}

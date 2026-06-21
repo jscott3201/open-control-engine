@@ -1,0 +1,22 @@
+{
+  "class_path": "G36",
+  "scenario": "ahu_supply_air_temp_reset",
+  "signal": "sat_setpoint",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants",
+  "n_samples": 5,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "zone_temp", "cooling_setpoint", "sat_setpoint", "cooling_demand"],
+  "inputs": [
+    { "name": "zone_temp", "value_kind": "Real", "values": [22.0, 24.0, 24.5, 25.5, 25.5] },
+    { "name": "cooling_setpoint", "value_kind": "Real", "values": [24.0, 24.0, 24.0, 24.0, 24.0] }
+  ],
+  "input": "SAT reset: zone_temp=[22,24,24.5,25.5,25.5], cooling_setpoint=24; dyadic trace",
+  "reference_rule": "zoneMinusSet=zone_temp-cooling_setpoint; demandLimiter=max(0,min(diff,1)); satLine uses Buildings Reals/Line.mo xLim, b=(f2-f1)/(x2-x1), a=f2-b*x2, y=a+b*xLim",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

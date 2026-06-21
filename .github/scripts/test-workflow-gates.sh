@@ -25,9 +25,13 @@ jobs:
   gate-fixtures:
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
+      - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
       - run: bash .github/scripts/check-workflow-gates.sh
+  golden-gen-firewall:
+    steps:
+      - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -58,8 +62,12 @@ jobs:
       - run: cargo machete
   gate-fixtures:
     steps:
+      - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
+  golden-gen-firewall:
+    steps:
+      - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -196,6 +204,13 @@ remove_store_surface_gate() {
   mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
 }
 
+remove_golden_gen_firewall() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'check-golden-gen-anti-tautology' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest
 run_case seeded-advisory-ignore fail seed_advisory_ignore
@@ -203,5 +218,6 @@ run_case garbled-workflow fail garble_release_workflow
 run_case missing-stale-status-gate fail remove_stale_status_gate
 run_case empty-bans-deny fail empty_bans_deny
 run_case missing-store-surface-gate fail remove_store_surface_gate
+run_case missing-golden-gen-firewall fail remove_golden_gen_firewall
 
 echo "OK: workflow gate fixtures passed."

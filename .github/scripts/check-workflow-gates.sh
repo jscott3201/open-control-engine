@@ -39,6 +39,9 @@ require_file "$DENY_TOML"
 require_pattern "$ci" 'cargo-machete' 'install cargo-machete'
 require_pattern "$ci" 'cargo machete' 'run cargo machete'
 require_pattern "$ci" 'test-check-default-no-db\.sh' 'run default-no-db fixture tests'
+require_pattern "$ci" 'test-check-golden-gen-anti-tautology\.sh' \
+  'run golden-gen firewall fixture tests'
+require_pattern "$ci" 'check-golden-gen-anti-tautology\.sh' 'run golden-gen anti-tautology firewall'
 require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-status fixture tests'
 require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
@@ -61,6 +64,10 @@ require_pattern "$release" 'cargo nextest run -p oce-store' \
   'oce-store public-api surface gate package selector'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
+require_pattern "$release" 'test-check-golden-gen-anti-tautology\.sh' \
+  'release gate runs golden-gen firewall fixture tests'
+require_pattern "$release" 'check-golden-gen-anti-tautology\.sh' \
+  'release gate runs golden-gen anti-tautology firewall'
 require_pattern "$release" 'test-check-stale-crate-status\.sh' \
   'release gate runs stale crate-status fixture tests'
 require_pattern "$release" 'check-stale-crate-status\.sh' 'release gate runs stale crate-status smoke'

@@ -15,6 +15,7 @@ mod integers_conversions;
 mod logical;
 mod oracle;
 mod reals;
+mod sequences;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -43,6 +44,7 @@ fn main() {
     goldens.extend(logical::goldens());
     goldens.extend(integers_conversions::goldens());
     goldens.extend(discrete_sources::goldens());
+    goldens.extend(sequences::goldens());
 
     // Clean and recreate the goldens tree so removed entries never linger (deterministic output).
     if goldens_root.exists() {
@@ -87,6 +89,7 @@ fn main() {
 
     // Non-steppable fold-time references (CDL.Constants, CDL.Types): provenance only, no CSV.
     write_constants_types(&goldens_root, &mut manifest_lines);
+    write_deferred_provenance(&goldens_root, &mut manifest_lines);
 
     // oracle.lock skeleton (toolchain / version pins).
     fs::write(crate_root.join("oracle.lock"), oracle_lock()).expect("write oracle.lock");
@@ -353,6 +356,14 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
     columns
 }
 
+fn provenance_source(g: &Golden) -> &'static str {
+    if g.class_path == "G36" {
+        "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
+    } else {
+        "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
+    }
+}
+
 /// Build the per-golden provenance JSON record.
 fn prov_json(g: &Golden, group: &[&Golden]) -> String {
     // Describe non-finite Real samples by IEEE class so the provenance documents the compare regime.
@@ -360,13 +371,23 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         .samples
         .iter()
         .any(|s| matches!(s, Sample::Real(x) if !x.is_finite()));
-    let compare = match g.kind {
-        ValueKind::Real if has_non_finite => {
-            "bit-exact for finite; Inf/NaN by IEEE class (Value::bit_eq)"
+    let compare = if g.class_path == "G36" {
+        match g.kind {
+            ValueKind::Real => {
+                "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants"
+            }
+            ValueKind::Integer => "exact encoded integer",
+            ValueKind::Boolean => "exact 0.0/1.0",
         }
-        ValueKind::Real => "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
-        ValueKind::Integer => "exact (atoly=0)",
-        ValueKind::Boolean => "exact 0.0/1.0 (atoly=0)",
+    } else {
+        match g.kind {
+            ValueKind::Real if has_non_finite => {
+                "bit-exact for finite; Inf/NaN by IEEE class (Value::bit_eq)"
+            }
+            ValueKind::Real => "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+            ValueKind::Integer => "exact (atoly=0)",
+            ValueKind::Boolean => "exact 0.0/1.0 (atoly=0)",
+        }
     };
     let ref_columns = reference_columns(group);
     let scenario_line = g.scenario.map_or_else(String::new, |scenario| {
@@ -379,7 +400,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
             "{scenario_line}",
             "  \"signal\": \"{signal}\",\n",
             "  \"tier\": \"A\",\n",
-            "  \"source\": \"closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation\",\n",
+            "  \"source\": \"{source}\",\n",
             "  \"value_kind\": \"{value_kind}\",\n",
             "  \"compare_regime\": \"{compare}\",\n",
             "  \"n_samples\": {n_samples},\n",
@@ -397,6 +418,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         class_path = json_escape(g.class_path),
         scenario_line = scenario_line,
         signal = json_escape(g.signal),
+        source = json_escape(provenance_source(g)),
         value_kind = g.kind.as_str(),
         compare = json_escape(compare),
         n_samples = g.samples.len(),
@@ -487,6 +509,16 @@ fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) 
     fs::write(types_dir.join("types.prov.json"), types_json).expect("write types prov");
     manifest_lines
         .push("CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json".into());
+}
+
+fn write_deferred_provenance(goldens_root: &Path, manifest_lines: &mut Vec<String>) {
+    for record in sequences::deferred_provenance(GENERATOR_VERSION) {
+        let path = goldens_root.join(record.relative_path);
+        fs::create_dir_all(path.parent().expect("deferred provenance has parent"))
+            .expect("create deferred provenance dir");
+        fs::write(&path, record.contents).expect("write deferred provenance JSON");
+        manifest_lines.push(record.manifest_line.into());
+    }
 }
 
 fn assert_provenance_json_is_strict(goldens_root: &Path) {

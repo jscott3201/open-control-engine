@@ -1,0 +1,9 @@
+#1
+# columns: time return_air_temp outdoor_air_temp operating_mode oa_temperature_delta operating_mode_real economizer_enabled damper_command
+double G36_ahu_economizer_reference(6,8)
+0.0 24.0 23.0 1.0 1.0 1.0 0.0 0.2
+1.0 24.0 19.0 1.0 5.0 1.0 0.0 0.2
+2.0 24.0 19.0 1.0 5.0 1.0 1.0 1.0
+3.0 24.0 19.0 1.0 5.0 1.0 1.0 1.0
+4.0 24.0 24.0 1.0 0.0 1.0 0.0 0.2
+5.0 24.0 19.0 0.0 5.0 0.0 0.0 0.2

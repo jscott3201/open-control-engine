@@ -1,0 +1,23 @@
+{
+  "class_path": "G36",
+  "scenario": "ahu_economizer",
+  "signal": "oa_temperature_delta",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants",
+  "n_samples": 6,
+  "n_reference_columns": 8,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "return_air_temp", "outdoor_air_temp", "operating_mode", "oa_temperature_delta", "operating_mode_real", "economizer_enabled", "damper_command"],
+  "inputs": [
+    { "name": "return_air_temp", "value_kind": "Real", "values": [24.0, 24.0, 24.0, 24.0, 24.0, 24.0] },
+    { "name": "outdoor_air_temp", "value_kind": "Real", "values": [23.0, 19.0, 19.0, 19.0, 24.0, 19.0] },
+    { "name": "operating_mode", "value_kind": "Integer", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 0.0] }
+  ],
+  "input": "Economizer: return_air_temp=24; outdoor_air_temp=[23,19,19,19,24,19]",
+  "reference_rule": "returnMinusOutdoor.y = return_air_temp - outdoor_air_temp; dyadic operands, no add-rounding coverage",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
