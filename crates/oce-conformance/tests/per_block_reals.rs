@@ -85,6 +85,16 @@ const HYSTERETIC_COMPARATOR_PARAMS: &[Param] = &[Param {
     name: "h",
     value: ParamValue::Real("1.0"),
 }];
+const HYSTERETIC_COMPARATOR_PRESET_PARAMS: &[Param] = &[
+    Param {
+        name: "h",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "pre_y_start",
+        value: ParamValue::Boolean("true"),
+    },
+];
 const HYSTERETIC_THRESHOLD_PARAMS: &[Param] = &[
     Param {
         name: "t",
@@ -93,6 +103,20 @@ const HYSTERETIC_THRESHOLD_PARAMS: &[Param] = &[
     Param {
         name: "h",
         value: ParamValue::Real("1.0"),
+    },
+];
+const HYSTERETIC_THRESHOLD_PRESET_PARAMS: &[Param] = &[
+    Param {
+        name: "t",
+        value: ParamValue::Real("4.5"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "pre_y_start",
+        value: ParamValue::Boolean("true"),
     },
 ];
 const HYSTERESIS_PARAMS: &[Param] = &[
@@ -200,11 +224,27 @@ const CASES: &[BlockCase] = &[
         BOOL_Y,
     ),
     case(
+        "reals_greater_hysteretic_preset",
+        "CDL.Reals.Greater",
+        "Greater/hysteretic_preset",
+        U1_U2,
+        HYSTERETIC_COMPARATOR_PRESET_PARAMS,
+        BOOL_Y,
+    ),
+    case(
         "reals_greater_threshold_hysteretic",
         "CDL.Reals.GreaterThreshold",
         "GreaterThreshold/hysteretic",
         U,
         HYSTERETIC_THRESHOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "reals_greater_threshold_hysteretic_preset",
+        "CDL.Reals.GreaterThreshold",
+        "GreaterThreshold/hysteretic_preset",
+        U,
+        HYSTERETIC_THRESHOLD_PRESET_PARAMS,
         BOOL_Y,
     ),
     case(
@@ -233,11 +273,27 @@ const CASES: &[BlockCase] = &[
         BOOL_Y,
     ),
     case(
+        "reals_less_hysteretic_preset",
+        "CDL.Reals.Less",
+        "Less/hysteretic_preset",
+        U1_U2,
+        HYSTERETIC_COMPARATOR_PRESET_PARAMS,
+        BOOL_Y,
+    ),
+    case(
         "reals_less_threshold_hysteretic",
         "CDL.Reals.LessThreshold",
         "LessThreshold/hysteretic",
         U,
         HYSTERETIC_THRESHOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "reals_less_threshold_hysteretic_preset",
+        "CDL.Reals.LessThreshold",
+        "LessThreshold/hysteretic_preset",
+        U,
+        HYSTERETIC_THRESHOLD_PRESET_PARAMS,
         BOOL_Y,
     ),
     case(
@@ -253,9 +309,13 @@ const CASES: &[BlockCase] = &[
 const STATEFUL_REALS_SLUGS: &[&str] = &[
     "reals_hysteresis",
     "reals_greater_hysteretic",
+    "reals_greater_hysteretic_preset",
     "reals_greater_threshold_hysteretic",
+    "reals_greater_threshold_hysteretic_preset",
     "reals_less_hysteretic",
+    "reals_less_hysteretic_preset",
     "reals_less_threshold_hysteretic",
+    "reals_less_threshold_hysteretic_preset",
 ];
 
 #[test]
