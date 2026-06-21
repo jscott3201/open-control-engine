@@ -144,6 +144,20 @@ const THRESHOLD_PARAMS: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Real("4.5"),
 }];
+const HYSTERETIC_COMPARATOR_PARAMS: &[Param] = &[Param {
+    name: "h",
+    value: ParamValue::Real("1.0"),
+}];
+const HYSTERETIC_THRESHOLD_PARAMS: &[Param] = &[
+    Param {
+        name: "t",
+        value: ParamValue::Real("4.5"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("1.0"),
+    },
+];
 const HYSTERESIS_PARAMS: &[Param] = &[
     Param {
         name: "uLow",
@@ -241,6 +255,22 @@ const CASES: &[BlockCase] = &[
         BOOL_Y,
     ),
     case(
+        "reals_greater_hysteretic",
+        "CDL.Reals.Greater",
+        "Greater/hysteretic",
+        U1_U2,
+        HYSTERETIC_COMPARATOR_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "reals_greater_threshold_hysteretic",
+        "CDL.Reals.GreaterThreshold",
+        "GreaterThreshold/hysteretic",
+        U,
+        HYSTERETIC_THRESHOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
         "reals_hysteresis",
         "CDL.Reals.Hysteresis",
         "Hysteresis",
@@ -255,6 +285,22 @@ const CASES: &[BlockCase] = &[
         "LessThreshold",
         U,
         THRESHOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "reals_less_hysteretic",
+        "CDL.Reals.Less",
+        "Less/hysteretic",
+        U1_U2,
+        HYSTERETIC_COMPARATOR_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "reals_less_threshold_hysteretic",
+        "CDL.Reals.LessThreshold",
+        "LessThreshold/hysteretic",
+        U,
+        HYSTERETIC_THRESHOLD_PARAMS,
         BOOL_Y,
     ),
     case(
@@ -308,19 +354,29 @@ fn reals_reference_blocks_match_exact_oracle() {
 }
 
 #[test]
-fn stateful_reals_block_exact_run_is_deterministic() {
-    let case = CASES
-        .iter()
-        .find(|case| case.slug == "reals_hysteresis")
-        .expect("hysteresis case");
-    let reference = read_reference(case);
-    let cxf = build_cxf(case);
-    let first = drive_case(case, &cxf, &reference);
-    let second = drive_case(case, &cxf, &reference);
+fn stateful_reals_blocks_exact_runs_are_deterministic() {
+    for slug in STATEFUL_REALS_SLUGS {
+        let case = CASES
+            .iter()
+            .find(|case| case.slug == *slug)
+            .unwrap_or_else(|| panic!("{slug} case"));
+        let reference = read_reference(case);
+        let cxf = build_cxf(case);
+        let first = drive_case(case, &cxf, &reference);
+        let second = drive_case(case, &cxf, &reference);
 
-    assert_trace_bit_eq(&first, &second);
-    assert_eq!(first.comparisons, second.comparisons);
+        assert_trace_bit_eq(&first, &second);
+        assert_eq!(first.comparisons, second.comparisons, "{slug}");
+    }
 }
+
+const STATEFUL_REALS_SLUGS: &[&str] = &[
+    "reals_hysteresis",
+    "reals_greater_hysteretic",
+    "reals_greater_threshold_hysteretic",
+    "reals_less_hysteretic",
+    "reals_less_threshold_hysteretic",
+];
 
 fn read_reference(case: &BlockCase) -> CombiTimeTable {
     let path = reference_path(case);
