@@ -68,6 +68,7 @@ const G36_FIXTURES: &[G36Fixture] = &[
 fn g36_tick_path_stays_store_pure_and_alloc_free() {
     assert_recording_store_guard_and_counters_are_live();
     assert_read_resolved_returns_none_for_missing_handles();
+    assert_load_saves_model_once_and_tick_does_not_save_again();
     assert_simulate_uses_no_forbidden_store_methods();
     assert_manual_g36_tick_allocates_nothing();
 }
@@ -128,6 +129,55 @@ fn assert_read_resolved_returns_none_for_missing_handles() {
             .is_none(),
         "an unknown point key returns None"
     );
+}
+
+fn assert_load_saves_model_once_and_tick_does_not_save_again() {
+    for fixture in G36_FIXTURES {
+        let store = Arc::new(RecordingStore::default());
+        let mut engine = Engine::with_store(Arc::clone(&store));
+        let report = engine
+            .load_cxf(fixture.cxf.as_bytes())
+            .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+        assert!(
+            !report.model_id.as_str().is_empty(),
+            "{} fixture reports the saved model id",
+            fixture.name
+        );
+
+        let post_load = store.calls();
+        assert_eq!(
+            post_load.save_model, 1,
+            "{} fixture saves the model exactly once at load",
+            fixture.name
+        );
+        assert_eq!(
+            post_load.recover, 1,
+            "{} fixture opens the store lifecycle exactly once at load",
+            fixture.name
+        );
+
+        store.arm_hot_path_guard();
+        for (path, value) in (fixture.inputs)(0.0) {
+            engine
+                .set_input(&path, value)
+                .unwrap_or_else(|e| panic!("{} fixture stages input {path}: {e:?}", fixture.name));
+        }
+        engine
+            .tick(0.0)
+            .unwrap_or_else(|e| panic!("{} fixture ticks after load: {e:?}", fixture.name));
+
+        let post_tick = store.calls();
+        assert_eq!(
+            post_tick.save_model, post_load.save_model,
+            "{} fixture must not save the model on tick",
+            fixture.name
+        );
+        assert_eq!(
+            post_tick.recover, post_load.recover,
+            "{} fixture must not recover on tick",
+            fixture.name
+        );
+    }
 }
 
 fn assert_simulate_uses_no_forbidden_store_methods() {

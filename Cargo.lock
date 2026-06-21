@@ -122,11 +122,13 @@ dependencies = [
  "oce-flatten",
  "oce-graph",
  "oce-model",
+ "oce-semantics",
  "oce-store",
  "oce-store-mem",
  "oce-validate",
  "public-api",
  "rustdoc-json",
+ "serde_json",
  "stats_alloc",
  "thiserror",
 ]
@@ -212,6 +214,7 @@ version = "0.0.0"
 name = "oce-semantics"
 version = "0.0.0"
 dependencies = [
+ "oce-diag",
  "oce-model",
  "thiserror",
 ]

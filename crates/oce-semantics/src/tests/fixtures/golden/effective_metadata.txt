@@ -1,0 +1,5 @@
+diagnostics=0
+connector=0 key=iri:zone_temp type=Ai hardwired=false trend=OnChange/false pointlist=true quantity=Some("ThermodynamicTemperature") unit=Some("K") display_unit=Some("degC") controlled_device=None description=None
+connector=1 key=conn#1 type=Ai hardwired=false trend=OnChange/false pointlist=true quantity=None unit=None display_unit=None controlled_device=None description=None
+connector=2 key=iri:enabled type=Do hardwired=false trend=OnChange/false pointlist=true quantity=None unit=None display_unit=None controlled_device=None description=None
+connector=4 key=iri:mode_ordinal type=Ao hardwired=false trend=OnChange/false pointlist=true quantity=None unit=None display_unit=None controlled_device=None description=None

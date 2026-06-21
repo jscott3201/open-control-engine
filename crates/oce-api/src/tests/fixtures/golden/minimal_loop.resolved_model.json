@@ -1,0 +1,323 @@
+{
+  "model_id": "model:fnv1a128:21bb773f666d97e2f4c7bccb1987c4c4",
+  "schema_rev": 1,
+  "classes": [
+    {
+      "class_iri": "CDL.Reals.Sources.Constant",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    },
+    {
+      "class_iri": "CDL.Reals.Add",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    },
+    {
+      "class_iri": "CDL.Discrete.UnitDelay",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    },
+    {
+      "class_iri": "CDL.Reals.MultiplyByParameter",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    },
+    {
+      "class_iri": "CDL.Reals.Greater",
+      "kind": "Elementary",
+      "is_library": true,
+      "shape_json": "{}"
+    }
+  ],
+  "blocks": [
+    {
+      "key": "http://example.org#MinLoop.con",
+      "class_iri": "CDL.Reals.Sources.Constant",
+      "params": [
+        [
+          "k",
+          {
+            "Real": 2.0
+          }
+        ]
+      ],
+      "config_json": "{}"
+    },
+    {
+      "key": "http://example.org#MinLoop.add",
+      "class_iri": "CDL.Reals.Add",
+      "params": [],
+      "config_json": "{}"
+    },
+    {
+      "key": "http://example.org#MinLoop.del",
+      "class_iri": "CDL.Discrete.UnitDelay",
+      "params": [
+        [
+          "y_start",
+          {
+            "Int": 0
+          }
+        ]
+      ],
+      "config_json": "{}"
+    },
+    {
+      "key": "http://example.org#MinLoop.gain",
+      "class_iri": "CDL.Reals.MultiplyByParameter",
+      "params": [
+        [
+          "k",
+          {
+            "Real": 0.5
+          }
+        ]
+      ],
+      "config_json": "{}"
+    },
+    {
+      "key": "http://example.org#MinLoop.gt",
+      "class_iri": "CDL.Reals.Greater",
+      "params": [],
+      "config_json": "{}"
+    }
+  ],
+  "points": [
+    {
+      "key": "conn#0",
+      "owner_block": "http://example.org#MinLoop.con",
+      "direction": "Out",
+      "value_type": "Real",
+      "point_type": "Ao",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#1",
+      "owner_block": "http://example.org#MinLoop.add",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#2",
+      "owner_block": "http://example.org#MinLoop.add",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#3",
+      "owner_block": "http://example.org#MinLoop.add",
+      "direction": "Out",
+      "value_type": "Real",
+      "point_type": "Ao",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#4",
+      "owner_block": "http://example.org#MinLoop.del",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#5",
+      "owner_block": "http://example.org#MinLoop.del",
+      "direction": "Out",
+      "value_type": "Real",
+      "point_type": "Ao",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#6",
+      "owner_block": "http://example.org#MinLoop.gain",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#7",
+      "owner_block": "http://example.org#MinLoop.gain",
+      "direction": "Out",
+      "value_type": "Real",
+      "point_type": "Ao",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#8",
+      "owner_block": "http://example.org#MinLoop.gt",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "http://example.org#MinLoop.uSet",
+      "owner_block": "http://example.org#MinLoop.gt",
+      "direction": "In",
+      "value_type": "Real",
+      "point_type": "Ai",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    },
+    {
+      "key": "conn#10",
+      "owner_block": "http://example.org#MinLoop.gt",
+      "direction": "Out",
+      "value_type": "Bool",
+      "point_type": "Do",
+      "hardwired": false,
+      "trend_interval_s": "OnChange",
+      "trend_enable": false,
+      "quantity": null,
+      "unit": null,
+      "display_unit": null,
+      "description": null,
+      "in_pointlist": true,
+      "controlled_device": null,
+      "search_text": null,
+      "tags_json": null,
+      "embedding": null
+    }
+  ],
+  "connections": [
+    {
+      "from_point": "conn#0",
+      "to_point": "conn#1"
+    },
+    {
+      "from_point": "conn#3",
+      "to_point": "conn#4"
+    },
+    {
+      "from_point": "conn#5",
+      "to_point": "conn#6"
+    },
+    {
+      "from_point": "conn#5",
+      "to_point": "conn#8"
+    },
+    {
+      "from_point": "conn#7",
+      "to_point": "conn#2"
+    }
+  ],
+  "containment": []
+}

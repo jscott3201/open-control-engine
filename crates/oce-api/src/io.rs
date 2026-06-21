@@ -120,6 +120,12 @@ pub struct IoInventory {
     by_path: HashMap<String, usize>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct PointInventoryRow {
+    pub(crate) info: PointInfo,
+    pub(crate) connector_id: ConnectorId,
+}
+
 /// The canonical point path of a connector: its `iri`, or a synthetic `conn#<id>` for an unnamed
 /// (hand-built) connector. The **single** path-derivation rule, shared by the inventory and by the
 /// `Outputs` snapshot, so the two never disagree (the `to_map` keying contract).
@@ -129,60 +135,50 @@ pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
         .unwrap_or_else(|| format!("conn#{}", id.0))
 }
 
-impl IoInventory {
-    /// Build the inventory from a flattened, structurally-valid [`ModelGraph`]. `String`-typed
-    /// connectors are skipped (metadata-only, CDL §7.8). Pure function of the model — no map order
-    /// feeds a position (connectors are walked in arena order).
-    pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
-        let mut points = Vec::with_capacity(model.connectors.len());
-        let mut conn_id = Vec::with_capacity(model.connectors.len());
-        let mut by_path = HashMap::with_capacity(model.connectors.len());
-        for c in &model.connectors {
-            let value_type = match c.value_type {
-                ValueType::Real => PointValueType::Real,
-                ValueType::Integer | ValueType::Enum(_) => PointValueType::Int,
-                ValueType::Boolean => PointValueType::Bool,
-                // A String connector is metadata-only (CDL §7.8) — not a control point.
-                ValueType::String => continue,
-            };
-            let direction = match c.dir {
-                Dir::In => PointDirection::In,
-                Dir::Out => PointDirection::Out,
-            };
-            // Current IO-class mapping from direction + signal type. Bool ⇒ digital; else analog.
-            // Network/physical classification belongs to the semantic projection (R-IO-1).
-            let io_class = match (direction, value_type) {
-                (PointDirection::In, PointValueType::Bool) => IoClass::DigitalInput,
-                (PointDirection::In, _) => IoClass::AnalogInput,
-                (PointDirection::Out, PointValueType::Bool) => IoClass::DigitalOutput,
-                (PointDirection::Out, _) => IoClass::AnalogOutput,
-            };
-            let (quantity, unit, display_unit, min, max) = match &c.attrs {
-                Attrs::Real(a) => (
-                    a.quantity.as_deref().map(str::to_owned),
-                    a.unit.as_deref().map(str::to_owned),
-                    a.display_unit.as_deref().map(str::to_owned),
-                    a.min,
-                    a.max,
-                ),
-                Attrs::Integer(a) => (
-                    None,
-                    None,
-                    None,
-                    a.min.map(|v| v as f64),
-                    a.max.map(|v| v as f64),
-                ),
-                Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => {
-                    (None, None, None, None, None)
-                }
-            };
-            let path = connector_path(c.iri.as_deref(), c.id);
-            let idx = points.len();
-            // First-wins on a duplicate path: a well-formed model has unique connector IRIs (the
-            // resolver/validate gate rejects duplicate @id), so this is only a defensive fallback.
-            by_path.entry(path.clone()).or_insert(idx);
-            points.push(PointInfo {
-                path,
+/// The shared load-time point walk. It is the single source of truth for both host-visible
+/// [`IoInventory`] rows and the durable [`oce_store::PointDto`] projection.
+pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
+    let mut rows = Vec::with_capacity(model.connectors.len());
+    for c in &model.connectors {
+        let value_type = match c.value_type {
+            ValueType::Real => PointValueType::Real,
+            ValueType::Integer | ValueType::Enum(_) => PointValueType::Int,
+            ValueType::Boolean => PointValueType::Bool,
+            // A String connector is metadata-only (CDL §7.8) — not a control point.
+            ValueType::String => continue,
+        };
+        let direction = match c.dir {
+            Dir::In => PointDirection::In,
+            Dir::Out => PointDirection::Out,
+        };
+        // Current IO-class mapping from direction + signal type. Bool ⇒ digital; else analog.
+        // Network/physical classification belongs to the semantic projection (R-IO-1).
+        let io_class = match (direction, value_type) {
+            (PointDirection::In, PointValueType::Bool) => IoClass::DigitalInput,
+            (PointDirection::In, _) => IoClass::AnalogInput,
+            (PointDirection::Out, PointValueType::Bool) => IoClass::DigitalOutput,
+            (PointDirection::Out, _) => IoClass::AnalogOutput,
+        };
+        let (quantity, unit, display_unit, min, max) = match &c.attrs {
+            Attrs::Real(a) => (
+                a.quantity.as_deref().map(str::to_owned),
+                a.unit.as_deref().map(str::to_owned),
+                a.display_unit.as_deref().map(str::to_owned),
+                a.min,
+                a.max,
+            ),
+            Attrs::Integer(a) => (
+                None,
+                None,
+                None,
+                a.min.map(|v| v as f64),
+                a.max.map(|v| v as f64),
+            ),
+            Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => (None, None, None, None, None),
+        };
+        rows.push(PointInventoryRow {
+            info: PointInfo {
+                path: connector_path(c.iri.as_deref(), c.id),
                 direction,
                 value_type,
                 io_class,
@@ -195,8 +191,29 @@ impl IoInventory {
                 in_pointlist: true,
                 hardwired: false,
                 trend: None,
-            });
-            conn_id.push(c.id);
+            },
+            connector_id: c.id,
+        });
+    }
+    rows
+}
+
+impl IoInventory {
+    /// Build the inventory from a flattened, structurally-valid [`ModelGraph`]. `String`-typed
+    /// connectors are skipped (metadata-only, CDL §7.8). Pure function of the model — no map order
+    /// feeds a position (connectors are walked in arena order).
+    pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
+        let mut points = Vec::with_capacity(model.connectors.len());
+        let mut conn_id = Vec::with_capacity(model.connectors.len());
+        let mut by_path = HashMap::with_capacity(model.connectors.len());
+        for row in point_rows_at_load(model) {
+            let path = row.info.path.clone();
+            let idx = points.len();
+            // First-wins on a duplicate path: a well-formed model has unique connector IRIs (the
+            // resolver/validate gate rejects duplicate @id), so this is only a defensive fallback.
+            by_path.entry(path.clone()).or_insert(idx);
+            points.push(row.info);
+            conn_id.push(row.connector_id);
         }
         IoInventory {
             points,

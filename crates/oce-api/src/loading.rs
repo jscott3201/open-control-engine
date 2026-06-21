@@ -43,9 +43,8 @@ impl TemplateRef {
 #[non_exhaustive]
 pub struct LoadReport {
     /// Stable identity of the loaded model (re-exported `oce_store::DomainKey`; never a backend
-    /// type, R-API-8). Currently the empty `Default` key because `ModelGraph` carries no
-    /// model-level IRI yet; the ingest layer will derive it from the top-composite `@id` once that
-    /// field is carried through.
+    /// type, R-API-8). Until CXF model-level `@id` is carried through `ModelGraph`, this is a
+    /// deterministic synthetic key derived from the durable model projection.
     pub model_id: oce_store::DomainKey,
     /// `should`-level diagnostics from ingest + validation (the shared `oce-diag` vocabulary, AD-4).
     pub warnings: Vec<oce_diag::Diagnostic>,
