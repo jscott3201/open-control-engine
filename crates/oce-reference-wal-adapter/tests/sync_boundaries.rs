@@ -84,10 +84,12 @@ fn first_critical_write_fsyncs_wal_directory_entry() {
 
     let result = store.write_points(&[critical_write("point:critical:first", OcValue::Int(7))]);
     assert_durability(result, "simulated directory fsync failure");
+    assert_eq!(store.current_ordering_high_water(), 0);
     assert!(read_by_key(&store, "point:critical:first").is_none());
     drop(store);
 
     let recovered = ReferenceWalStore::open(dir.path()).expect("recover after dir fsync failure");
+    assert_eq!(recovered.current_ordering_high_water(), 0);
     assert!(read_by_key(&recovered, "point:critical:first").is_none());
     let wal_len = fs::metadata(dir.path().join("points.wal"))
         .expect("WAL file remains after truncating failed first record")
@@ -114,10 +116,12 @@ fn critical_file_sync_failure_truncates_failed_record_before_recovery() {
         critical_write("point:critical:3", OcValue::Int(3)),
     ]);
     assert_durability(result, "simulated file fsync failure");
+    assert_eq!(store.current_ordering_high_water(), 2);
     assert!(read_by_key(&store, "point:critical:2").is_none());
     drop(store);
 
     let recovered = ReferenceWalStore::open(dir.path()).expect("recover file-sync prefix");
+    assert_eq!(recovered.current_ordering_high_water(), 2);
     assert_eq!(
         read_by_key(&recovered, "point:critical:0")
             .expect("prefix 0")

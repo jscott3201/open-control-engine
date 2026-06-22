@@ -67,6 +67,24 @@ fn read_by_key(store: &ReferenceWalStore, key: &str) -> Option<PointSample> {
         .read_by_key(&DomainKey::new(key))
 }
 
+fn assert_durability_exhausted<T: std::fmt::Debug>(result: Result<T, StoreError>) {
+    match result {
+        Err(StoreError::Durability(message)) => assert!(
+            message.contains("exhausted"),
+            "expected exhausted Durability error, got {message:?}"
+        ),
+        other => panic!("expected exhausted Durability error, got {other:?}"),
+    }
+}
+
+fn write_max_high_water_snapshot(dir: &TestDir) {
+    fs::write(
+        dir.path().join("snapshot.json"),
+        r#"{"format_version":1,"ordering_high_water":18446744073709551615,"models":[],"point_keys":["point:seed"],"point_samples":[null]}"#,
+    )
+    .expect("write max high-water snapshot");
+}
+
 #[test]
 fn critical_ordering_high_water_survives_kill_recover_and_next_stamp_increases() {
     let dir = TestDir::new("critical-kill-recover");
@@ -188,6 +206,15 @@ fn commit_snapshot_persists_ordering_high_water() {
 
     let recovered = ReferenceWalStore::open(dir.path()).expect("recover snapshot");
     assert_eq!(recovered.current_ordering_high_water(), 2);
+    recovered
+        .write_points(&[write(
+            "point:after-snapshot",
+            OcValue::Int(3),
+            oce_store::Durability::Critical,
+            30,
+        )])
+        .expect("post-snapshot critical write");
+    assert_eq!(recovered.current_ordering_high_water(), 3);
 }
 
 #[test]
@@ -224,4 +251,41 @@ fn failed_torn_critical_write_does_not_advance_high_water() {
     let recovered = ReferenceWalStore::open(dir.path()).expect("recover durable prefix");
     assert_eq!(recovered.current_ordering_high_water(), 1);
     assert!(read_by_key(&recovered, "point:critical:failed").is_none());
+}
+
+#[test]
+fn critical_ordering_overflow_is_a_typed_durability_error() {
+    let dir = TestDir::new("critical-overflow");
+    write_max_high_water_snapshot(&dir);
+    let store = ReferenceWalStore::open(dir.path()).expect("open max high-water store");
+    assert_eq!(store.current_ordering_high_water(), u64::MAX);
+
+    assert_durability_exhausted(store.write_points(&[write(
+        "point:critical:overflow",
+        OcValue::Int(1),
+        oce_store::Durability::Critical,
+        10,
+    )]));
+    assert_eq!(store.current_ordering_high_water(), u64::MAX);
+    assert!(read_by_key(&store, "point:critical:overflow").is_none());
+}
+
+#[test]
+fn telemetry_flush_ordering_overflow_is_a_typed_durability_error() {
+    let dir = TestDir::new("telemetry-overflow");
+    write_max_high_water_snapshot(&dir);
+    let store = ReferenceWalStore::open(dir.path()).expect("open max high-water store");
+    assert_eq!(store.current_ordering_high_water(), u64::MAX);
+
+    store
+        .write_points(&[write(
+            "point:telemetry:overflow",
+            OcValue::Int(2),
+            oce_store::Durability::Telemetry,
+            20,
+        )])
+        .expect("pending telemetry write");
+    assert_eq!(store.current_ordering_high_water(), u64::MAX);
+    assert_durability_exhausted(store.flush());
+    assert_eq!(store.current_ordering_high_water(), u64::MAX);
 }
