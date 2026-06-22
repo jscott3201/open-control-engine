@@ -34,6 +34,8 @@ ahu.misc.supply
 vav.zone.temp
 ";
 
+// Cosine bits are pinned because this fixture uses only IEEE-754 correctly-rounded arithmetic
+// (mul/add/div/sqrt, no FMA), making the rendered f64 scores portable across arm64 and x86_64.
 const EMBEDDING_GOLDEN: &str = "\
 ahu.sat.temp\t1.0\t0x3ff0000000000000
 ahu.sat.setpoint\t0.9969418670859622\t0x3fefe6f2a164b764
@@ -231,6 +233,18 @@ fn empty_document_model(id: &str) -> oce_store::ResolvedModel {
     )
 }
 
+fn partial_tag_model(id: &str) -> oce_store::ResolvedModel {
+    model(
+        id,
+        vec![point(PointSpec {
+            key: "tag.partial",
+            search_text: Some("partial tag fixture"),
+            tags_json: Some(r#"{"a":"present"}"#),
+            embedding: None,
+        })],
+    )
+}
+
 fn save_retrieval_model(store: &ReferenceWalStore) {
     store
         .save_model(&retrieval_model("model:retrieval"))
@@ -332,6 +346,31 @@ fn tag_contains_matches_json_numbers_by_exact_representation() {
         },
     );
     assert_eq!(render_scores(&float_hits), TAG_FLOAT_NUMBER_GOLDEN);
+}
+
+#[test]
+fn tag_contains_object_needles_require_every_key() {
+    let dir = TestDir::new("tag-object-and");
+    let store = ReferenceWalStore::open(dir.path()).expect("open store");
+    store
+        .save_model(&partial_tag_model("model:partial-tag"))
+        .expect("save partial-tag model");
+
+    let single_key_hits = retrieve(
+        &store,
+        SemanticQuery::TagContains {
+            containment_json: r#"{"a":"present"}"#.to_owned(),
+        },
+    );
+    assert_eq!(render_scores(&single_key_hits), "tag.partial\t1.0\n");
+
+    let two_key_hits = retrieve(
+        &store,
+        SemanticQuery::TagContains {
+            containment_json: r#"{"a":"present","b":"missing"}"#.to_owned(),
+        },
+    );
+    assert!(two_key_hits.is_empty());
 }
 
 #[test]
