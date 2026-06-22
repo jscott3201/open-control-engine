@@ -37,6 +37,14 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  determinism-matrix:
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -295,6 +303,13 @@ remove_no_db_gate() {
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
+remove_determinism_matrix() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'oce-blocks -p oce-expr' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 empty_crate_dir_only() {
   _dir="$1"
   _deny="$2"
@@ -343,6 +358,8 @@ run_case missing-crate-lib-forbid fail remove_crate_lib_forbid \
   "line 1 must be #![forbid(unsafe_code)]"
 run_case missing-no-db-gate fail remove_no_db_gate \
   "run default-no-db smoke"
+run_case missing-determinism-matrix fail remove_determinism_matrix \
+  "debug determinism subset with hard-fail-on-zero-tests"
 run_case empty-crate-dir-only fail empty_crate_dir_only \
   "no crate Cargo.toml files found under"
 run_case missing-crate-lib-files fail remove_crate_lib_files \

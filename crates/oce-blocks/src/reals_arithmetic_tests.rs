@@ -4,7 +4,8 @@
 use oce_model::Value;
 
 use super::{
-    Abs, AddParameter, Block, Ctx, Divide, Line, Max, Min, Multiply, NoopDiagnostics, read_real,
+    Abs, Add, AddParameter, Block, Constant, Ctx, Divide, Limiter, Line, Max, Min, Multiply,
+    MultiplyByParameter, NoopDiagnostics, Subtract, Switch, read_real,
 };
 
 fn real_out(block: &dyn Block, inputs: &[Value]) -> f64 {
@@ -79,6 +80,39 @@ fn multiply_edges_are_ieee_and_panic_free() {
 }
 
 #[test]
+fn real_emit_canonicalizes_nan_bits_across_algebraic_sources() {
+    let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
+
+    assert_real_bits(&Constant { k: negative_nan }, &[], 0x7ff8000000000000);
+    assert_real_bits(
+        &Add,
+        &[f64::INFINITY, f64::NEG_INFINITY],
+        0x7ff8000000000000,
+    );
+    assert_real_bits(
+        &Subtract,
+        &[f64::INFINITY, f64::INFINITY],
+        0x7ff8000000000000,
+    );
+    assert_real_bits(
+        &MultiplyByParameter { k: 0.0 },
+        &[f64::INFINITY],
+        0x7ff8000000000000,
+    );
+    assert_real_bits(&Abs, &[negative_nan], 0x7ff8000000000000);
+
+    let y = real_out(
+        &Switch,
+        &[
+            Value::Real(negative_nan),
+            Value::Boolean(true),
+            Value::Real(1.0),
+        ],
+    );
+    assert_eq!(y.to_bits(), 0x7ff8000000000000);
+}
+
+#[test]
 fn divide_edges_are_ieee_and_panic_free() {
     assert_real_bits(&Divide, &[1.0, 0.0], f64::INFINITY.to_bits());
     assert_real_bits(&Divide, &[1.0, -0.0], f64::NEG_INFINITY.to_bits());
@@ -136,6 +170,32 @@ fn min_max_edges_follow_scalar_expression_policy() {
     assert_real_bits(&Min, &[0.0, -0.0], (-0.0f64).to_bits());
     assert_real_bits(&Max, &[-0.0, 0.0], 0.0f64.to_bits());
     assert_real_bits(&Max, &[0.0, -0.0], 0.0f64.to_bits());
+}
+
+#[test]
+fn limiter_signed_zero_clamp_boundaries_are_pinned() {
+    assert_real_bits(
+        &Limiter {
+            u_min: -0.0,
+            u_max: 1.0,
+        },
+        &[0.0],
+        0.0f64.to_bits(),
+    );
+    assert_real_bits(
+        &Limiter {
+            u_min: -1.0,
+            u_max: -0.0,
+        },
+        &[0.0],
+        (-0.0f64).to_bits(),
+    );
+}
+
+#[test]
+fn line_signed_zero_clamp_boundaries_follow_current_formula() {
+    assert_real_bits(&Line, &[-0.0, 0.0, 1.0, 1.0, -0.0], 0.0f64.to_bits());
+    assert_real_bits(&Line, &[-1.0, -1.0, -0.0, -0.0, 0.0], 0.0f64.to_bits());
 }
 
 #[test]

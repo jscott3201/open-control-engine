@@ -8,7 +8,7 @@
 use oce_model::{ParamTable, Value};
 
 use crate::dynamics::{PREV_T_UNSET, forward_euler_accumulate, tick_dt};
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const X_WORD: usize = 0;
 const PREV_T_WORD: usize = 1;
@@ -63,7 +63,7 @@ impl Block for IntegratorWithReset {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Real(f64::from_bits(region[X_WORD])));
+        emit_real(0, f64::from_bits(region[X_WORD]), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {

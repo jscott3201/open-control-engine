@@ -213,6 +213,19 @@ fn hold_delay_goldens_pin_boundaries_and_clear_priority() {
         assert_bool(&got[0], want);
     }
 }
+
+#[test]
+fn timing_duration_floor_canonicalizes_negative_zero_to_positive_zero() {
+    let delay = TrueDelay {
+        delay_time: -0.0,
+        delay_on_init: true,
+    };
+    let mut region = init_region(&delay);
+    let trace = tick_at(&delay, &mut region, 0.0, vec![Value::Boolean(true)]);
+
+    assert_bool(&trace[0], true);
+    assert_eq!(region[0], 0.0f64.to_bits());
+}
 #[test]
 fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     let one = 1.0f64.to_bits();

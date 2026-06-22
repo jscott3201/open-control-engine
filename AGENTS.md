@@ -80,9 +80,10 @@ fresh context, resume, or compaction.
   cannot run doctests). Config lives at `.config/nextest.toml` (`default` profile = fast local
   fail-fast; `ci` profile = the release gate). CI is **dev-light / release-heavy**: per-PR gates
   into `development` (`ci.yml`) run fmt/clippy/build/rustdoc/file-size/no-secret/default-no-db
-  (+ cargo-deny on manifest change) but **no tests**; the **full test suite runs only on
-  `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the light
-  gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
+  (+ cargo-deny on manifest change) plus the targeted `determinism-matrix` nextest subset for
+  `oce-blocks`/`oce-expr` on x86_64 and arm64 in debug and release codegen; the **full test suite
+  runs only on `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the
+  light gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
   git hooks — keep commits and pushes fast.
 
 ### Naming, modularization & docs

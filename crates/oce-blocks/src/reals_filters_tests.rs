@@ -106,6 +106,40 @@ fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
 }
 
 #[test]
+fn dynamic_reals_outputs_canonicalize_nan_bits() {
+    let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
+
+    let derivative = Derivative {
+        y_start: negative_nan,
+        ..Derivative::default()
+    };
+    assert_real_bits(
+        &emit_real(&derivative, &init_region(&derivative), 0.0, 1.0),
+        0x7ff8000000000000,
+    );
+
+    let slew = LimitSlewRate {
+        enable: false,
+        ..LimitSlewRate::default()
+    };
+    assert_real_bits(
+        &emit_real(&slew, &init_region(&slew), 0.0, negative_nan),
+        0x7ff8000000000000,
+    );
+
+    let moving_average = MovingAverage::default();
+    assert_real_bits(
+        &emit_real(
+            &moving_average,
+            &init_region(&moving_average),
+            0.0,
+            negative_nan,
+        ),
+        0x7ff8000000000000,
+    );
+}
+
+#[test]
 fn derivative_yd_start_implicit_filter_and_bounded_regime_are_pinned() {
     let yd = Derivative {
         k: 2.0,

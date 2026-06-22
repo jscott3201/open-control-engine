@@ -5,7 +5,10 @@
 //! rather than a debug-mode panic or a release-mode silent wrap). CDL numeric promotion (§7.1):
 //! `Integer op Integer → Integer` for `+ - *`; `/` is always `Real`; any `Real` operand promotes.
 
-use oce_model::Value;
+use oce_model::{
+    Value,
+    determinism::{canonicalize_real, det_max, det_min},
+};
 
 use crate::{BinOp, Builtin, BuiltinConst, EvalResult, ExprAst, ExprError, Scope, UnOp};
 
@@ -72,6 +75,17 @@ fn const_value(c: BuiltinConst) -> f64 {
     }
 }
 
+fn real(y: f64) -> Value {
+    Value::Real(canonicalize_real(y))
+}
+
+fn canonicalize_value(v: &Value) -> Value {
+    match v {
+        Value::Real(r) => real(*r),
+        other => other.clone(),
+    }
+}
+
 /// Evaluate `ast` to a scalar [`EvalResult`].
 pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     Ok(EvalResult::Scalar(eval_value(ast, scope)?))
@@ -80,13 +94,13 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 /// Evaluate `ast` to a ground [`Value`].
 fn eval_value(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
-        ExprAst::Real(r) => Ok(Value::Real(*r)),
+        ExprAst::Real(r) => Ok(real(*r)),
         ExprAst::Int(i) => Ok(Value::Integer(*i)),
         ExprAst::Bool(b) => Ok(Value::Boolean(*b)),
         ExprAst::Str(s) => Ok(Value::String(s.clone())),
-        ExprAst::Const(c) => Ok(Value::Real(const_value(*c))),
+        ExprAst::Const(c) => Ok(real(const_value(*c))),
         ExprAst::Ident(name) => match scope.lookup(name) {
-            Some(EvalResult::Scalar(v)) => Ok(v.clone()),
+            Some(EvalResult::Scalar(v)) => Ok(canonicalize_value(v)),
             None => Err(ExprError::UnknownIdent(name.to_string())),
         },
         ExprAst::Unary(op, e) => eval_unary(*op, &eval_value(e, scope)?),
@@ -104,7 +118,7 @@ fn eval_unary(op: UnOp, v: &Value) -> Result<Value, ExprError> {
                 i.checked_neg()
                     .ok_or(ExprError::DomainError("integer overflow in unary minus"))?,
             )),
-            Num::R(r) => Ok(Value::Real(-r)),
+            Num::R(r) => Ok(real(-r)),
         },
         UnOp::Not => Ok(Value::Boolean(!bool_of(v)?)),
     }
@@ -115,7 +129,7 @@ fn eval_binary(op: BinOp, a: &Value, b: &Value) -> Result<Value, ExprError> {
         BinOp::Add | BinOp::Sub | BinOp::Mul => arith(op, num_of(a)?, num_of(b)?),
         // The `/` operator always yields Real (§6.1); IEEE semantics for a zero divisor (the
         // `div`/`mod`/`rem` built-ins are the ones that raise DivisionByZero).
-        BinOp::Div => Ok(Value::Real(num_of(a)?.as_f64() / num_of(b)?.as_f64())),
+        BinOp::Div => Ok(real(num_of(a)?.as_f64() / num_of(b)?.as_f64())),
         BinOp::Gt | BinOp::Ge | BinOp::Lt | BinOp::Le => {
             Ok(Value::Boolean(compare_rel(op, num_of(a)?, num_of(b)?)))
         }
@@ -166,7 +180,7 @@ fn arith(op: BinOp, a: Num, b: Num) -> Result<Value, ExprError> {
         }
         _ => {
             let (x, y) = (a.as_f64(), b.as_f64());
-            Ok(Value::Real(match op {
+            Ok(real(match op {
                 BinOp::Add => x + y,
                 BinOp::Sub => x - y,
                 _ => x * y,
@@ -206,8 +220,8 @@ fn eval_call(b: Builtin, args: &[ExprAst], scope: &dyn Scope) -> Result<Value, E
         (Builtin::Abs, [v]) => builtin_abs(v),
         (Builtin::Sign, [v]) => Ok(Value::Integer(builtin_sign(num_of(v)?))),
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),
-        (Builtin::Floor, [v]) => Ok(Value::Real(num_of(v)?.as_f64().floor())),
-        (Builtin::Ceil, [v]) => Ok(Value::Real(num_of(v)?.as_f64().ceil())),
+        (Builtin::Floor, [v]) => Ok(real(num_of(v)?.as_f64().floor())),
+        (Builtin::Ceil, [v]) => Ok(real(num_of(v)?.as_f64().ceil())),
         (Builtin::Integer, [v]) => Ok(Value::Integer(builtin_integer(num_of(v)?))),
         (Builtin::Div, [x, y]) => builtin_div(num_of(x)?, num_of(y)?),
         (Builtin::Mod, [x, y]) => builtin_mod(num_of(x)?, num_of(y)?),
@@ -226,7 +240,7 @@ fn builtin_abs(v: &Value) -> Result<Value, ExprError> {
             i.checked_abs()
                 .ok_or(ExprError::DomainError("integer overflow in abs"))?,
         )),
-        Num::R(r) => Ok(Value::Real(r.abs())),
+        Num::R(r) => Ok(real(r.abs())),
     }
 }
 
@@ -248,7 +262,7 @@ fn builtin_sqrt(n: Num) -> Result<Value, ExprError> {
     if f < 0.0 {
         Err(ExprError::DomainError("sqrt of a negative value"))
     } else {
-        Ok(Value::Real(f.sqrt()))
+        Ok(real(f.sqrt()))
     }
 }
 
@@ -277,7 +291,7 @@ fn builtin_div(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(Value::Real((a / b).trunc()))
+            Ok(real((a / b).trunc()))
         }
     }
 }
@@ -301,7 +315,7 @@ fn builtin_mod(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(Value::Real(a - (a / b).floor() * b))
+            Ok(real(a - (a / b).floor() * b))
         }
     }
 }
@@ -323,7 +337,7 @@ fn builtin_rem(x: Num, y: Num) -> Result<Value, ExprError> {
             if b == 0.0 {
                 return Err(ExprError::DivisionByZero);
             }
-            Ok(Value::Real(a - (a / b).trunc() * b))
+            Ok(real(a - (a / b).trunc() * b))
         }
     }
 }
@@ -343,16 +357,20 @@ fn ifloordiv_i128(x: i128, y: i128) -> i128 {
 
 /// Scalar `min`/`max`: Integer iff both Integer, else Real (promoted). `want_min` selects min.
 ///
-/// A NaN operand (only reachable via a scope identifier already bound to `Real(NaN)`) follows
-/// `f64::min`/`f64::max`, which return the non-NaN operand — total and deterministic, never a
-/// panic. The same total/deterministic policy holds for NaN flowing through `floor`/`ceil` and
-/// the relational operators; ground binding values are not normally NaN.
+/// A single NaN operand (only reachable via a scope identifier already bound to `Real(NaN)`) is
+/// dropped; a NaN-only Real result is canonicalized for bit-stable determinism. The same Real-output
+/// canonicalization applies to NaN flowing through arithmetic and `floor`/`ceil`; ground binding
+/// values are not normally NaN.
 fn min_max(x: Num, y: Num, want_min: bool) -> Value {
     match (x, y) {
         (Num::I(a), Num::I(b)) => Value::Integer(if want_min { a.min(b) } else { a.max(b) }),
         _ => {
             let (a, b) = (x.as_f64(), y.as_f64());
-            Value::Real(if want_min { a.min(b) } else { a.max(b) })
+            if want_min {
+                real(det_min(a, b))
+            } else {
+                real(det_max(a, b))
+            }
         }
     }
 }

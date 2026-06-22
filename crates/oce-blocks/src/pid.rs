@@ -29,13 +29,16 @@
 //! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
 //! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.
 
-use oce_model::{ParamTable, SimpleController, Value};
+use oce_model::{
+    ParamTable, SimpleController, Value,
+    determinism::{canonicalize_real, det_max, det_min},
+};
 
 use crate::dynamics::{
     PREV_T_UNSET, first_order_filter_implicit, forward_euler_accumulate,
     is_first_tick as prev_t_is_unset, tick_dt,
 };
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const CDL_EPS: f64 = 1e-15;
 const MIN_PARAM: f64 = 100.0 * CDL_EPS;
@@ -91,6 +94,8 @@ impl ControllerConfig {
     }
 
     fn guarded_positive(x: f64) -> f64 {
+        // Internal positive-floor clamp: the effective parameter is always > 0 and is not a
+        // signed-zero/NaN-bearing Real output, so raw max is deterministic enough here.
         x.max(MIN_PARAM)
     }
 
@@ -124,7 +129,7 @@ impl ControllerConfig {
     }
 
     fn limit(self, y_u: f64) -> f64 {
-        y_u.max(self.y_min).min(self.y_max)
+        det_min(det_max(y_u, self.y_min), self.y_max)
     }
 
     fn derivative_gain(self) -> f64 {
@@ -247,7 +252,7 @@ fn emit_pid(
     emit: &mut dyn FnMut(usize, Value),
 ) {
     let (_, _, _, _, _, y) = current_terms(inputs, config, region, state);
-    emit(0, Value::Real(y));
+    emit_real(0, y, emit);
 }
 
 fn update_pid_state(
@@ -274,7 +279,7 @@ fn update_pid_state(
             let err_i2 = e - ant_win_gai;
             forward_euler_accumulate(y_i, (config.k_eff() / config.ti_eff()) * err_i2, step_dt)
         };
-        region[i] = next_i.to_bits();
+        region[i] = canonicalize_real(next_i).to_bits();
     }
 
     if let Some(d) = state.d {
@@ -284,7 +289,7 @@ fn update_pid_state(
             f64::from_bits(region[d])
         };
         let next_d = first_order_filter_implicit(x, e, config.derivative_time(), step_dt);
-        region[d] = next_d.to_bits();
+        region[d] = canonicalize_real(next_d).to_bits();
     }
 
     if let Some(prev_t) = state.prev_t {

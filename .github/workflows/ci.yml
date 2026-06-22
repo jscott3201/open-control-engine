@@ -5,19 +5,21 @@
 #
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, cargo-machete unused-dependency detection, and gate-script
-# behavior fixtures, and stale crate-status header lint. It runs NO engine tests — keeping
-# per-change PRs into `development` fast. The
-# heavy test suite (cargo nextest run for unit + integration tests, cargo nextest run with release
-# codegen for panic-freedom regressions, and cargo test --doc for doctests — nextest cannot run
-# doctests) lives in the development -> main release gate at .github/workflows/release-gate.yml.
+# behavior fixtures, stale crate-status header lint, and a targeted cross-arch determinism subset
+# for oce-blocks/oce-expr. It does NOT run the full engine test suite — keeping per-change PRs into
+# `development` fast. The heavy test suite (cargo nextest run for unit + integration tests, cargo
+# nextest run with release codegen for panic-freedom regressions, and cargo test --doc for doctests
+# — nextest cannot run doctests) lives in the development -> main release gate at
+# .github/workflows/release-gate.yml.
 # That gate also runs daily against the `development` tip so regressions surface before the next
 # release PR. It re-runs these light correctness gates against the release tip and runs cargo-deny
 # unconditionally, since a `development` -> `main` PR matches no other workflow.
 #
 # Gates that always run: rustfmt, file-size cap (700 LOC), no-secret scan, rustdoc (-D warnings),
 # clippy -D warnings, a workspace build, cargo-machete, gate-script fixtures, stale crate-status
-# header lint, and the default-no-db gate (the default — and only — build links no database / tokio /
-# async-std anywhere in the workspace). When dependency manifests change, cargo-deny runs too.
+# header lint, the targeted two-arch determinism matrix, and the default-no-db gate (the default —
+# and only — build links no database / tokio / async-std anywhere in the workspace). When dependency
+# manifests change, cargo-deny runs too.
 #
 # Deferred until first publish: the cargo-about THIRDPARTY.md attribution-currency gate (plus
 # about.toml/about.hbs) is intentionally NOT wired yet — attribution hygiene is most valuable near
@@ -142,6 +144,26 @@ jobs:
         with:
           tool: cargo-machete
       - run: cargo machete
+
+  determinism-matrix:
+    name: determinism-matrix (${{ matrix.runner }})
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.133
+      - name: cargo nextest determinism subset
+        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+      - name: cargo nextest determinism subset --release
+        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail
 
   clippy:
     name: clippy (-D warnings)

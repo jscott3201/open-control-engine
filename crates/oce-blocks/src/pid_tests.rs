@@ -303,6 +303,39 @@ fn pid_limiter_boundaries_are_pinned() {
 }
 
 #[test]
+fn pid_output_limiter_signed_zero_boundaries_are_pinned() {
+    use oce_model::SimpleController::P;
+
+    let lower_floor = Pid {
+        config: ControllerConfig {
+            controller_type: P,
+            k: 1.0,
+            y_min: -0.0,
+            y_max: 1.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let upper_ceiling = Pid {
+        config: ControllerConfig {
+            controller_type: P,
+            k: 1.0,
+            y_min: -1.0,
+            y_max: -0.0,
+            ..ControllerConfig::default()
+        },
+    };
+
+    assert_real_bits(
+        &emit_real(&lower_floor, &pid_inputs(0.0, 0.0), &[], 0.0),
+        0.0f64.to_bits(),
+    );
+    assert_real_bits(
+        &emit_real(&upper_ceiling, &pid_inputs(0.0, 0.0), &[], 0.0),
+        (-0.0f64).to_bits(),
+    );
+}
+
+#[test]
 fn stateful_pid_feeds_through_current_setpoint_and_measurement() {
     use oce_model::SimpleController::Pi;
     let block = Pid {
@@ -601,6 +634,7 @@ fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
     };
 
     let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
+    let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
     let (nan_trace, nan_region) = drive_pid_with_reset(
         &block,
         &[
@@ -610,6 +644,16 @@ fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
     );
     assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
     assert_eq!(nan_region[0], 0x7ff8_0000_0000_0000);
+
+    let (negative_nan_trace, negative_nan_region) = drive_pid_with_reset(
+        &block,
+        &[
+            (0.0, 1.0, 0.0, false, 0.0),
+            (1.0, 1.0, 0.0, true, negative_nan),
+        ],
+    );
+    assert_trace_bits(&negative_nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
+    assert_eq!(negative_nan_region[0], 0x7ff8_0000_0000_0000);
 
     let (inf_trace, inf_region) = drive_pid_with_reset(
         &block,
