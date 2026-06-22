@@ -1,0 +1,2 @@
+{"format_version":1,"record":{"kind":"point_write","durability":"Critical","key":"point:sat","sample":{"value":{"type":"real_bits","value":9223372036854775808},"status":"Ok","at_unix_nanos":123}}}
+{"format_version":1,"record":{"kind":"point_write","durability":"Critical","key":"point:subnormal","sample":{"value":{"type":"real_bits","value":1},"status":"Ok","at_unix_nanos":124}}}
