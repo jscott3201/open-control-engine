@@ -609,7 +609,6 @@ fn semantic_store_methods_return_typed_deferral_errors() {
         store.get_semantic_payloads(&payload.subject),
         graph_deferred,
     );
-    assert_unsupported(store.point_list(Some("ahu")), graph_deferred);
     assert_retrieval_unsupported(
         store.retrieve(&SemanticQuery::FuzzyText {
             query: "supply air temperature".to_owned(),
