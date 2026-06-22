@@ -130,6 +130,20 @@ fn unit_delay_holds_prior_sample() {
     assert!(emit(&ud, &[Value::Real(7.0)], &region)[0].bit_eq(&Value::Real(99.0))); // prior sample
 }
 
+#[test]
+fn unit_delay_real_output_canonicalizes_held_nan_bits() {
+    let ud = UnitDelay {
+        y_start: f64::from_bits(0xfff8_0000_0000_0000),
+    };
+    let mut region = vec![0u64; ud.state_len()];
+    ud.init_state(&mut region, &ParamTable::default());
+
+    assert!(
+        emit(&ud, &[Value::Real(0.0)], &region)[0]
+            .bit_eq(&Value::Real(f64::from_bits(0x7ff8_0000_0000_0000)))
+    );
+}
+
 // ---- Edge (rising-edge detector, `01` §11.2) -----------------------------------------------
 
 #[test]

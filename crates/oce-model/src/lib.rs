@@ -13,6 +13,8 @@
 
 use std::sync::Arc;
 
+pub mod determinism;
+
 /// Identifies an enumeration *class* (e.g. `CDL.Types.SimpleController`) in the flattened
 /// model's enum registry. Resolved at flatten time; stable for the run.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]

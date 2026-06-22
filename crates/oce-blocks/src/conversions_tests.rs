@@ -81,6 +81,15 @@ fn conversions_follow_spec_and_real_to_integer_half_away_table() {
 }
 
 #[test]
+fn conversion_real_outputs_canonicalize_nan_bits() {
+    let b2r = BooleanToReal {
+        real_true: f64::from_bits(0xfff8_0000_0000_0000),
+        real_false: 1.0,
+    };
+    assert_eq!(real_bits(&b2r, &[b(true)]), 0x7ff8000000000000);
+}
+
+#[test]
 fn real_to_integer_non_finite_and_out_of_range_cast_policy_is_pinned() {
     assert_eq!(int_out(&RealToInteger, &[r(f64::NAN)]), 0);
     assert_eq!(int_out(&RealToInteger, &[r(f64::INFINITY)]), i64::MAX);

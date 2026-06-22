@@ -1,12 +1,16 @@
 //! Scalar algebraic `CDL.Reals` blocks (`03` §4.1).
 //!
 //! Non-finite policy is intentionally local: `Min`/`Max` absorb a single NaN operand to match
-//! `oce-expr`, while `Divide` and the `Line` slope/intercept arithmetic preserve IEEE NaN/±Inf
-//! behavior. Centralized non-finite validation/diagnostics is deferred to the future seam.
+//! `oce-expr`, arithmetic follows IEEE NaN/±Inf value behavior, and every Real output canonicalizes
+//! NaN bits for cross-architecture determinism. Centralized non-finite validation/diagnostics is
+//! deferred to the future seam.
 
-use oce_model::Value;
+use oce_model::{
+    Value,
+    determinism::{det_max, det_min},
+};
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 /// `CDL.Reals.Sources.Constant` — the only truly stateless source: `y = k` (`03` §4.1).
 #[derive(Clone, Copy, Debug)]
@@ -36,7 +40,7 @@ impl Block for Constant {
         _inputs: &[Value],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Real(self.k));
+        emit_real(0, self.k, emit);
     }
 }
 
@@ -61,7 +65,7 @@ impl Block for Add {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0) + read_real(inputs, 1)));
+        emit_real(0, read_real(inputs, 0) + read_real(inputs, 1), emit);
     }
 }
 
@@ -86,7 +90,7 @@ impl Block for Subtract {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0) - read_real(inputs, 1)));
+        emit_real(0, read_real(inputs, 0) - read_real(inputs, 1), emit);
     }
 }
 
@@ -111,7 +115,7 @@ impl Block for Multiply {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0) * read_real(inputs, 1)));
+        emit_real(0, read_real(inputs, 0) * read_real(inputs, 1), emit);
     }
 }
 
@@ -137,7 +141,7 @@ impl Block for Divide {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0) / read_real(inputs, 1)));
+        emit_real(0, read_real(inputs, 0) / read_real(inputs, 1), emit);
     }
 }
 
@@ -165,7 +169,7 @@ impl Block for AddParameter {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0) + self.p));
+        emit_real(0, read_real(inputs, 0) + self.p, emit);
     }
 }
 
@@ -192,7 +196,7 @@ impl Block for MultiplyByParameter {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(self.k * read_real(inputs, 0)));
+        emit_real(0, self.k * read_real(inputs, 0), emit);
     }
 }
 
@@ -217,12 +221,12 @@ impl Block for Abs {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_real(inputs, 0).abs()));
+        emit_real(0, read_real(inputs, 0).abs(), emit);
     }
 }
 
 /// `CDL.Reals.Min` — `y = min(u1,u2)` (`03` §4.1). Stateless `[A]`, full feedthrough. NaN handling
-/// follows the scalar expression evaluator: `f64::min` returns the non-NaN operand.
+/// follows the scalar expression evaluator: a single NaN operand is dropped.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Min;
 
@@ -243,15 +247,12 @@ impl Block for Min {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(
-            0,
-            Value::Real(read_real(inputs, 0).min(read_real(inputs, 1))),
-        );
+        emit_real(0, det_min(read_real(inputs, 0), read_real(inputs, 1)), emit);
     }
 }
 
 /// `CDL.Reals.Max` — `y = max(u1,u2)` (`03` §4.1). Stateless `[A]`, full feedthrough. NaN handling
-/// follows the scalar expression evaluator: `f64::max` returns the non-NaN operand.
+/// follows the scalar expression evaluator: a single NaN operand is dropped.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Max;
 
@@ -272,10 +273,7 @@ impl Block for Max {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(
-            0,
-            Value::Real(read_real(inputs, 0).max(read_real(inputs, 1))),
-        );
+        emit_real(0, det_max(read_real(inputs, 0), read_real(inputs, 1)), emit);
     }
 }
 
@@ -305,8 +303,8 @@ impl Block for Limiter {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        let y = read_real(inputs, 0).max(self.u_min).min(self.u_max);
-        emit(0, Value::Real(y));
+        let y = det_min(det_max(read_real(inputs, 0), self.u_min), self.u_max);
+        emit_real(0, y, emit);
     }
 }
 
@@ -345,11 +343,11 @@ impl Block for Line {
         let x2 = read_real(inputs, 2);
         let f2 = read_real(inputs, 3);
         let u = read_real(inputs, 4);
-        let x_lim = u.max(x1).min(x2);
+        let x_lim = det_min(det_max(u, x1), x2);
         let b = (f2 - f1) / (x2 - x1);
         // The canonical point-slope vs slope-intercept form is still a compatibility decision.
         let a = f2 - b * x2;
-        emit(0, Value::Real(a + b * x_lim));
+        emit_real(0, a + b * x_lim, emit);
     }
 }
 /// `CDL.Reals.Switch` — `y = u1 if u2 else u3`, with the Boolean selector `u2` in the **middle**
@@ -379,6 +377,6 @@ impl Block for Switch {
         } else {
             read_real(inputs, 2)
         };
-        emit(0, Value::Real(y));
+        emit_real(0, y, emit);
     }
 }

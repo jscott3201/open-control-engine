@@ -5,7 +5,9 @@
 
 use oce_model::Value;
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_int, read_real};
+use crate::{
+    Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_int, read_real,
+};
 
 /// `CDL.Conversions.BooleanToInteger` — true→`integerTrue`, false→`integerFalse`.
 /// Stateless `[A]`, full feedthrough.
@@ -89,7 +91,7 @@ impl Block for BooleanToReal {
         } else {
             self.real_false
         };
-        emit(0, Value::Real(y));
+        emit_real(0, y, emit);
     }
 }
 
@@ -114,7 +116,7 @@ impl Block for IntegerToReal {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit(0, Value::Real(read_int(inputs, 0) as f64));
+        emit_real(0, read_int(inputs, 0) as f64, emit);
     }
 }
 

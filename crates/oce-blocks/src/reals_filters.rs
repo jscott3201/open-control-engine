@@ -4,12 +4,15 @@
 //! computed from prior state plus the current input; `update_state` stores the same next state so
 //! no block in this module is a feedback loop cut.
 
-use oce_model::{ParamTable, Value};
+use oce_model::{
+    ParamTable, Value,
+    determinism::{det_max, det_min},
+};
 
 use crate::dynamics::{
     PREV_T_UNSET, first_order_filter_implicit, forward_euler_accumulate, is_first_tick, tick_dt,
 };
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_real};
 
 const EPS: f64 = 1e-15;
 const MIN_PARAM: f64 = 100.0 * EPS;
@@ -20,6 +23,8 @@ const PREV_T_WORD: usize = 1;
 const TWO_WORD_STATE: usize = 2;
 
 fn positive(x: f64) -> f64 {
+    // Internal positive-floor clamp: the effective parameter is always > 0 and is not a
+    // signed-zero/NaN-bearing Real output, so raw max is deterministic enough here.
     x.max(MIN_PARAM)
 }
 
@@ -110,7 +115,7 @@ impl Block for Derivative {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Real(self.output(read_real(inputs, 0), region)));
+        emit_real(0, self.output(read_real(inputs, 0), region), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
@@ -169,7 +174,10 @@ impl LimitSlewRate {
         }
         let y = f64::from_bits(region[X_WORD]);
         let filtered = first_order_filter_implicit(y, u, self.td_eff(), dt);
-        let dy = (filtered - y).clamp(self.falling() * dt, self.rising() * dt);
+        let dy = det_min(
+            det_max(filtered - y, self.falling() * dt),
+            self.rising() * dt,
+        );
         y + dy
     }
 }
@@ -210,10 +218,7 @@ impl Block for LimitSlewRate {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let dt = tick_dt(ctx.t(), region[PREV_T_WORD]);
-        emit(
-            0,
-            Value::Real(self.next_y(read_real(inputs, 0), region, dt)),
-        );
+        emit_real(0, self.next_y(read_real(inputs, 0), region, dt), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
@@ -365,6 +370,7 @@ impl Default for MovingAverage {
 
 impl MovingAverage {
     fn delta_eff(self) -> f64 {
+        // Internal positive-floor clamp: the effective window is always > 0 before any division.
         self.delta.max(MIN_DELTA)
     }
 
@@ -387,9 +393,10 @@ impl MovingAverage {
         let mu_del = ma_mu_at(region, t - delta, t, mu_now);
         let denom = if t >= t_start + delta {
             let retained_lo = ma_oldest_time(region).unwrap_or(t_start);
-            let t_lo = (t - delta).max(retained_lo).max(t_start);
+            let t_lo = det_max(det_max(t - delta, retained_lo), t_start);
             // `MIN_DELTA` is only a division-by-zero guard for a collapsed retained span; legal
             // non-overflow windows divide by their true `delta`, even when `delta < 1e-3`.
+            // The positive floor is internal and cannot surface a signed-zero Real output.
             (t - t_lo).max(MIN_DELTA)
         } else {
             t - t_start + 1e-3
@@ -436,7 +443,7 @@ impl Block for MovingAverage {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit(0, Value::Real(self.output(ctx, inputs, region)));
+        emit_real(0, self.output(ctx, inputs, region), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {

@@ -18,7 +18,7 @@
 //! CDL class path. The remaining CDL catalog breadth is added family-by-family behind the same
 //! trait and registry contracts.
 
-use oce_model::{ParamTable, Value};
+use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
 mod conversions;
 mod discrete;
@@ -272,6 +272,11 @@ pub(crate) fn read_real(inputs: &[Value], i: usize) -> f64 {
             0.0
         }
     }
+}
+
+/// Emit a `Real` output after canonicalizing target-dependent NaN encodings.
+pub(crate) fn emit_real(port: usize, y: f64, emit: &mut dyn FnMut(usize, Value)) {
+    emit(port, Value::Real(canonicalize_real(y)));
 }
 
 /// Read input `i` as a `Boolean`, defaulting to `false` on a (validation-prevented) type mismatch.

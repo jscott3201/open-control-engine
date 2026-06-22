@@ -56,6 +56,14 @@ fn assert_real(s: &str, expected: f64) {
 }
 
 #[track_caller]
+fn assert_real_bits(value: Value, expected_bits: u64) {
+    let Value::Real(got) = value else {
+        panic!("expected Real output, got {value:?}");
+    };
+    assert_eq!(got.to_bits(), expected_bits, "got {got:?}");
+}
+
+#[track_caller]
 fn assert_int(s: &str, expected: i64) {
     let v = run(s).expect("should evaluate");
     assert!(
@@ -191,6 +199,102 @@ fn min_max_scalar_promotion() {
     assert_int("max(2, 3)", 3);
     assert_real("min(2, 3.0)", 2.0); // mixed → Real
     assert_real("max(2.0, 3)", 3.0);
+}
+
+#[test]
+fn scalar_min_max_pin_nan_and_signed_zero_policy() {
+    let nan = Value::Real(f64::from_bits(0xfff8_0000_0000_0000));
+    let pos = Value::Real(2.0);
+
+    assert_real_bits(
+        run_in("min(a, b)", &[("a", nan.clone()), ("b", pos.clone())]),
+        2.0f64.to_bits(),
+    );
+    assert_real_bits(
+        run_in("min(a, b)", &[("a", pos.clone()), ("b", nan.clone())]),
+        2.0f64.to_bits(),
+    );
+    assert_real_bits(
+        run_in("max(a, b)", &[("a", nan.clone()), ("b", pos.clone())]),
+        2.0f64.to_bits(),
+    );
+    assert_real_bits(
+        run_in("max(a, b)", &[("a", pos.clone()), ("b", nan.clone())]),
+        2.0f64.to_bits(),
+    );
+    assert_real_bits(
+        run_in(
+            "min(a, b)",
+            &[("a", nan.clone()), ("b", Value::Real(f64::NAN))],
+        ),
+        0x7ff8000000000000,
+    );
+    assert_real_bits(
+        run_in("max(a, b)", &[("a", nan), ("b", Value::Real(f64::NAN))]),
+        0x7ff8000000000000,
+    );
+
+    assert_real_bits(
+        run_in(
+            "min(a, b)",
+            &[("a", Value::Real(-0.0)), ("b", Value::Real(0.0))],
+        ),
+        (-0.0f64).to_bits(),
+    );
+    assert_real_bits(
+        run_in(
+            "min(a, b)",
+            &[("a", Value::Real(0.0)), ("b", Value::Real(-0.0))],
+        ),
+        (-0.0f64).to_bits(),
+    );
+    assert_real_bits(
+        run_in(
+            "max(a, b)",
+            &[("a", Value::Real(-0.0)), ("b", Value::Real(0.0))],
+        ),
+        0.0f64.to_bits(),
+    );
+    assert_real_bits(
+        run_in(
+            "max(a, b)",
+            &[("a", Value::Real(0.0)), ("b", Value::Real(-0.0))],
+        ),
+        0.0f64.to_bits(),
+    );
+}
+
+#[test]
+fn scalar_real_outputs_canonicalize_generated_and_propagated_nan_bits() {
+    let pairs = [
+        (
+            "a + b",
+            Value::Real(f64::INFINITY),
+            Value::Real(f64::NEG_INFINITY),
+        ),
+        (
+            "a - b",
+            Value::Real(f64::INFINITY),
+            Value::Real(f64::INFINITY),
+        ),
+        ("a * b", Value::Real(0.0), Value::Real(f64::INFINITY)),
+        ("a / b", Value::Real(0.0), Value::Real(0.0)),
+        (
+            "a / b",
+            Value::Real(f64::INFINITY),
+            Value::Real(f64::INFINITY),
+        ),
+    ];
+    for (expr, a, b) in pairs {
+        assert_real_bits(run_in(expr, &[("a", a), ("b", b)]), 0x7ff8000000000000);
+    }
+
+    let negative_nan = Value::Real(f64::from_bits(0xfff8_0000_0000_0000));
+    assert_real_bits(
+        run_in("a", &[("a", negative_nan.clone())]),
+        0x7ff8000000000000,
+    );
+    assert_real_bits(run_in("abs(a)", &[("a", negative_nan)]), 0x7ff8000000000000);
 }
 
 #[test]

@@ -303,6 +303,39 @@ fn pid_limiter_boundaries_are_pinned() {
 }
 
 #[test]
+fn pid_output_limiter_signed_zero_boundaries_are_pinned() {
+    use oce_model::SimpleController::P;
+
+    let lower_floor = Pid {
+        config: ControllerConfig {
+            controller_type: P,
+            k: 1.0,
+            y_min: -0.0,
+            y_max: 1.0,
+            ..ControllerConfig::default()
+        },
+    };
+    let upper_ceiling = Pid {
+        config: ControllerConfig {
+            controller_type: P,
+            k: 1.0,
+            y_min: -1.0,
+            y_max: -0.0,
+            ..ControllerConfig::default()
+        },
+    };
+
+    assert_real_bits(
+        &emit_real(&lower_floor, &pid_inputs(0.0, 0.0), &[], 0.0),
+        0.0f64.to_bits(),
+    );
+    assert_real_bits(
+        &emit_real(&upper_ceiling, &pid_inputs(0.0, 0.0), &[], 0.0),
+        (-0.0f64).to_bits(),
+    );
+}
+
+#[test]
 fn stateful_pid_feeds_through_current_setpoint_and_measurement() {
     use oce_model::SimpleController::Pi;
     let block = Pid {

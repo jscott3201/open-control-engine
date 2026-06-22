@@ -3,10 +3,10 @@
 //! The time-based blocks all use the shared `dynamics` tick-delta convention: `dt=0` on the first
 //! tick and otherwise `ctx.t() - prev_t`. No block assumes a fixed internal step.
 
-use oce_model::{ParamTable, Value};
+use oce_model::{ParamTable, Value, determinism::det_max};
 
 use crate::dynamics::{PREV_T_UNSET, is_first_tick, tick_dt};
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool};
 
 fn bool_word(b: bool) -> u64 {
     u64::from(b)
@@ -17,7 +17,7 @@ fn word_bool(w: u64) -> bool {
 }
 
 fn positive_duration(x: f64) -> f64 {
-    x.max(0.0)
+    det_max(x, 0.0)
 }
 
 const ACC_WORD: usize = 0;
@@ -87,7 +87,7 @@ impl Block for Timer {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
-        emit(0, Value::Real(y));
+        emit_real(0, y, emit);
         emit(1, Value::Boolean(y >= self.t));
     }
 
@@ -166,7 +166,7 @@ impl Block for TimerAccumulating {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
-        emit(0, Value::Real(y));
+        emit_real(0, y, emit);
         emit(1, Value::Boolean(y >= self.t));
     }
 

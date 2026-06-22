@@ -105,6 +105,12 @@ require_pattern "$ci" 'check-golden-gen-anti-tautology\.sh' 'run golden-gen anti
 require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-status fixture tests'
 require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
+require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
+require_pattern "$ci" 'ubuntu-24\.04-arm' 'arm64 determinism matrix runner'
+require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+  'debug determinism subset with hard-fail-on-zero-tests'
+require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
+  'release determinism subset with hard-fail-on-zero-tests'
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
