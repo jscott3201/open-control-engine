@@ -399,8 +399,39 @@ impl SemanticStore for ReferenceWalStore {
         Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
     }
 
-    fn point_list(&self, _controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
-        Err(StoreError::Unsupported(SEMANTIC_GRAPH_DEFERRED))
+    /// Project point-list rows from persisted [`ResolvedModel::points`].
+    ///
+    /// This adapter has no semantic graph write path yet; `point_list` is a read-only in-memory
+    /// projection over loaded models. It keeps only points whose `in_pointlist` flag is true, applies
+    /// exact `controlled_device` equality when a filter is provided, derives `name` from the leaf of
+    /// the point key, and returns rows sorted ascending by point key for deterministic output.
+    fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
+        let state = self.state.read().map_err(backend_err)?;
+        let mut rows = Vec::new();
+        for model in state.models.values() {
+            for point in &model.points {
+                if !point.in_pointlist {
+                    continue;
+                }
+                if let Some(device) = controlled_device
+                    && point.controlled_device.as_deref() != Some(device)
+                {
+                    continue;
+                }
+                let key = point.key.as_str();
+                rows.push(PointListRow {
+                    controlled_device: point.controlled_device.clone(),
+                    point: point.key.clone(),
+                    name: key.rsplit('.').next().unwrap_or(key).to_owned(),
+                    point_type: point.point_type,
+                    hardwired: point.hardwired,
+                    trend_interval_s: point.trend_interval_s,
+                    description: point.description.clone(),
+                });
+            }
+        }
+        rows.sort_by(|a, b| a.point.as_str().cmp(b.point.as_str()));
+        Ok(rows)
     }
 
     fn retrieve(&self, _q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
