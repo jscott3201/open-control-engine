@@ -206,10 +206,12 @@ fn telemetry_is_lost_without_flush_and_survives_flush_or_commit() {
             oce_store::Durability::Telemetry,
         )])
         .expect("telemetry write");
+    assert_eq!(store.current_ordering_high_water(), 0);
     drop(store);
 
     let reopened = ReferenceWalStore::open(dir.path()).expect("reopen store");
     assert!(read_by_key(&reopened, "point:telemetry:lost").is_none());
+    assert_eq!(reopened.current_ordering_high_water(), 0);
 
     reopened
         .write_points(&[write(
@@ -219,10 +221,12 @@ fn telemetry_is_lost_without_flush_and_survives_flush_or_commit() {
         )])
         .expect("telemetry write");
     reopened.flush().expect("flush telemetry");
+    assert_eq!(reopened.current_ordering_high_water(), 1);
     drop(reopened);
 
     let committed = ReferenceWalStore::open(dir.path()).expect("reopen after flush");
     assert!(read_by_key(&committed, "point:telemetry:flushed").is_some());
+    assert_eq!(committed.current_ordering_high_water(), 1);
     committed
         .write_points(&[write(
             "point:telemetry:committed",
@@ -230,12 +234,15 @@ fn telemetry_is_lost_without_flush_and_survives_flush_or_commit() {
             oce_store::Durability::Telemetry,
         )])
         .expect("telemetry write before commit");
+    assert_eq!(committed.current_ordering_high_water(), 1);
     committed.commit().expect("commit telemetry");
+    assert_eq!(committed.current_ordering_high_water(), 2);
     drop(committed);
 
     let recovered = ReferenceWalStore::open(dir.path()).expect("reopen after commit");
     assert!(read_by_key(&recovered, "point:telemetry:flushed").is_some());
     assert!(read_by_key(&recovered, "point:telemetry:committed").is_some());
+    assert_eq!(recovered.current_ordering_high_water(), 2);
 }
 
 #[test]
@@ -352,9 +359,11 @@ fn critical_partial_failure_recovers_only_the_durable_prefix() {
         ),
     ]);
     assert!(matches!(result, Err(StoreError::Durability(_))));
+    assert_eq!(store.current_ordering_high_water(), 2);
     drop(store);
 
     let recovered = ReferenceWalStore::open(dir.path()).expect("recover prefix");
+    assert_eq!(recovered.current_ordering_high_water(), 2);
     assert_eq!(
         read_by_key(&recovered, "point:critical:0")
             .expect("prefix 0")

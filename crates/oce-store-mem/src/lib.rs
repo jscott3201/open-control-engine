@@ -301,6 +301,29 @@ mod tests {
     }
 
     #[test]
+    fn recover_is_noop_and_restores_no_point_state() {
+        let key = DomainKey::new("pt:critical");
+        {
+            let store = MemStore::new();
+            store
+                .write_points(&[PointWrite {
+                    key: key.clone(),
+                    sample: sample(9.0),
+                    durability: Durability::Critical,
+                }])
+                .unwrap();
+            assert_eq!(
+                store.snapshot().unwrap().read_by_key(&key).unwrap().value,
+                OcValue::Real(9.0)
+            );
+        }
+
+        let recovered = MemStore::new();
+        recovered.recover().unwrap();
+        assert!(recovered.snapshot().unwrap().read_by_key(&key).is_none());
+    }
+
+    #[test]
     fn semantic_store_methods_return_typed_deferral_errors() {
         let store = MemStore::new();
         let equipment = EquipmentDto {

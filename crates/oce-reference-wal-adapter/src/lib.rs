@@ -69,6 +69,7 @@ struct AdapterState {
     models: HashMap<DomainKey, ResolvedModel>,
     points: PointState,
     pending_telemetry: Vec<PendingPointWrite>,
+    ordering_high_water: u64,
 }
 
 #[derive(Clone, Default)]
@@ -134,6 +135,20 @@ impl ReferenceWalStore {
         store.recover()?;
         Ok(store)
     }
+
+    /// Return the adapter-private durable write-order high-water mark.
+    ///
+    /// This accessor exists only on the verification-only `publish = false` adapter. It is not part
+    /// of the frozen `oce-store` seam, and production code should continue to observe ordering only
+    /// through adapter behavior. It does not panic if a previous test panicked while holding the
+    /// state lock; it reports the recovered inner high-water mark.
+    #[must_use]
+    pub fn current_ordering_high_water(&self) -> u64 {
+        match self.state.read() {
+            Ok(state) => state.ordering_high_water,
+            Err(poisoned) => poisoned.into_inner().ordering_high_water,
+        }
+    }
 }
 
 impl PointState {
@@ -165,7 +180,12 @@ impl AdapterState {
             .iter()
             .map(|sample| sample.as_ref().map(StoredPointSample::from))
             .collect();
-        SnapshotFile::new(models, self.points.keys_by_handle.clone(), point_samples)
+        SnapshotFile::new(
+            models,
+            self.points.keys_by_handle.clone(),
+            point_samples,
+            self.ordering_high_water,
+        )
     }
 
     fn from_snapshot(snapshot: Option<SnapshotFile>) -> StoreResult<Self> {
@@ -173,6 +193,7 @@ impl AdapterState {
         let Some(snapshot) = snapshot else {
             return Ok(state);
         };
+        state.ordering_high_water = snapshot.ordering_high_water.unwrap_or(0);
 
         for model in snapshot.models {
             state.models.insert(model.model_id.clone(), model);
@@ -194,12 +215,21 @@ impl AdapterState {
     }
 
     fn apply_wal_record(&mut self, record: WalRecord) -> StoreResult<()> {
+        self.ordering_high_water = self
+            .ordering_high_water
+            .max(record.ordering_high_water.unwrap_or(0));
         match record.record {
             WalRecordKind::PointWrite { key, sample, .. } => {
                 self.points.set_sample(&key, sample.to_sample());
                 Ok(())
             }
         }
+    }
+
+    fn next_ordering_stamp(&self) -> StoreResult<u64> {
+        self.ordering_high_water
+            .checked_add(1)
+            .ok_or_else(|| StoreError::Durability("ordering high-water exhausted".to_owned()))
     }
 }
 
@@ -305,17 +335,29 @@ impl PointStore for ReferenceWalStore {
             .iter()
             .filter(|write| write.durability == Durability::Critical)
         {
-            let record =
-                WalRecord::point_write(Durability::Critical, write.key.clone(), &write.sample);
             let mut failure = self.fsync_failure.lock().map_err(backend_err)?;
             if failure.should_write_torn_tail() {
+                let record = WalRecord::point_write(
+                    Durability::Critical,
+                    write.key.clone(),
+                    &write.sample,
+                    None,
+                );
                 wal_append::append_torn_record(&self.root, &record)?;
                 return Err(StoreError::Durability(
                     "simulated Critical fsync failure after durable prefix".to_owned(),
                 ));
             }
+            let stamp = state.next_ordering_stamp()?;
+            let record = WalRecord::point_write(
+                Durability::Critical,
+                write.key.clone(),
+                &write.sample,
+                Some(stamp),
+            );
             wal_append::append_record_and_sync(&self.root, &record, failure.sync_options())?;
             failure.record_critical_success();
+            state.ordering_high_water = stamp;
             state.points.set_sample(&write.key, write.sample.clone());
             accepted += 1;
         }
@@ -400,14 +442,21 @@ fn flush_telemetry(root: &Path, state: &mut AdapterState) -> StoreResult<()> {
         return Ok(());
     }
 
-    let records: Vec<_> = state
-        .pending_telemetry
-        .iter()
-        .map(|write| {
-            WalRecord::point_write(Durability::Telemetry, write.key.clone(), &write.sample)
-        })
-        .collect();
+    let mut next_stamp = state.ordering_high_water;
+    let mut records = Vec::with_capacity(state.pending_telemetry.len());
+    for write in &state.pending_telemetry {
+        next_stamp = next_stamp
+            .checked_add(1)
+            .ok_or_else(|| StoreError::Durability("ordering high-water exhausted".to_owned()))?;
+        records.push(WalRecord::point_write(
+            Durability::Telemetry,
+            write.key.clone(),
+            &write.sample,
+            Some(next_stamp),
+        ));
+    }
     wal_append::append_records_and_sync(root, &records)?;
+    state.ordering_high_water = next_stamp;
     state.pending_telemetry.clear();
     Ok(())
 }
