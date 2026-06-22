@@ -14,14 +14,23 @@ use oce_store::{
 static NEXT_DIR: AtomicUsize = AtomicUsize::new(0);
 
 const ALL_ROWS_GOLDEN: &str = "\
+ahu.bool.di\tdi\tDi\tfalse\tEverySeconds(0)\tahu\tDI zero interval
+ahu.bool.do\tdo\tDo\tfalse\tEverySeconds(15)\tahu\tDO output
 ahu.mode.op\top\tMode\tfalse\tOnChange\t\t
 ahu.pid.u\tu\tAi\ttrue\tOnChange\tahu\tPID input
 ahu.pid.y\ty\tAo\tfalse\tEverySeconds(60)\tahu\tPID output
 ";
 
 const AHU_ROWS_GOLDEN: &str = "\
+ahu.bool.di\tdi\tDi\tfalse\tEverySeconds(0)\tahu\tDI zero interval
+ahu.bool.do\tdo\tDo\tfalse\tEverySeconds(15)\tahu\tDO output
 ahu.pid.u\tu\tAi\ttrue\tOnChange\tahu\tPID input
 ahu.pid.y\ty\tAo\tfalse\tEverySeconds(60)\tahu\tPID output
+";
+
+const DUPLICATE_KEY_ROWS_GOLDEN: &str = "\
+ahu.pid.u\tu\tAi\tfalse\tOnChange\tmodel-a\tfrom model a
+ahu.pid.u\tu\tAi\tfalse\tOnChange\tmodel-z\tfrom model z
 ";
 
 struct TestDir {
@@ -113,12 +122,43 @@ fn point_list_model(id: &str) -> ResolvedModel {
                 is_library: true,
                 shape_json: "{}".to_owned(),
             },
+            BlockClassDto {
+                class_iri: "CDL.Logical.Sources.Constant".to_owned(),
+                kind: BlockKind::Elementary,
+                is_library: true,
+                shape_json: "{}".to_owned(),
+            },
         ],
         blocks: vec![
             block("ahu.pid", "CDL.Reals.PID"),
             block("ahu.mode", "CDL.Integers.Sources.Constant"),
+            block("ahu.bool", "CDL.Logical.Sources.Constant"),
         ],
         points: vec![
+            point(PointSpec {
+                key: "ahu.bool.di",
+                owner_block: "ahu.bool",
+                direction: PointDirection::In,
+                value_type: PointValueType::Bool,
+                point_type: PointType::Di,
+                hardwired: false,
+                trend_interval_s: TrendInterval::EverySeconds(0),
+                description: Some("DI zero interval"),
+                controlled_device: Some("ahu"),
+                in_pointlist: true,
+            }),
+            point(PointSpec {
+                key: "ahu.bool.do",
+                owner_block: "ahu.bool",
+                direction: PointDirection::Out,
+                value_type: PointValueType::Bool,
+                point_type: PointType::Do,
+                hardwired: false,
+                trend_interval_s: TrendInterval::EverySeconds(15),
+                description: Some("DO output"),
+                controlled_device: Some("ahu"),
+                in_pointlist: true,
+            }),
             point(PointSpec {
                 key: "ahu.pid.u",
                 owner_block: "ahu.pid",
@@ -194,6 +234,46 @@ fn dotless_point_model(id: &str) -> ResolvedModel {
     model
 }
 
+fn duplicate_key_model(
+    id: &str,
+    controlled_device: &'static str,
+    description: &'static str,
+) -> ResolvedModel {
+    let mut model = point_list_model(id);
+    model.points = vec![point(PointSpec {
+        key: "ahu.pid.u",
+        owner_block: "ahu.pid",
+        direction: PointDirection::In,
+        value_type: PointValueType::Real,
+        point_type: PointType::Ai,
+        hardwired: false,
+        trend_interval_s: TrendInterval::OnChange,
+        description: Some(description),
+        controlled_device: Some(controlled_device),
+        in_pointlist: true,
+    })];
+    model.connections.clear();
+    model
+}
+
+fn all_excluded_model(id: &str) -> ResolvedModel {
+    let mut model = point_list_model(id);
+    model.points = vec![point(PointSpec {
+        key: "ahu.pid.excluded",
+        owner_block: "ahu.pid",
+        direction: PointDirection::Out,
+        value_type: PointValueType::Real,
+        point_type: PointType::Ao,
+        hardwired: false,
+        trend_interval_s: TrendInterval::EverySeconds(5),
+        description: Some("excluded"),
+        controlled_device: Some("ahu"),
+        in_pointlist: false,
+    })];
+    model.connections.clear();
+    model
+}
+
 fn render_rows(rows: &[PointListRow]) -> String {
     let mut out = String::new();
     for row in rows {
@@ -215,6 +295,12 @@ fn render_rows(rows: &[PointListRow]) -> String {
     out
 }
 
+fn row<'a>(rows: &'a [PointListRow], key: &str) -> &'a PointListRow {
+    rows.iter()
+        .find(|row| row.point.as_str() == key)
+        .expect("point-list row")
+}
+
 #[test]
 fn point_list_projects_sorted_rows_from_resolved_model_points() {
     let dir = TestDir::new("projection-golden");
@@ -229,11 +315,25 @@ fn point_list_projects_sorted_rows_from_resolved_model_points() {
             .iter()
             .all(|row| row.point.as_str() != "ahu.pid.excluded")
     );
-    assert_eq!(all_rows[0].point_type, PointType::Mode);
-    assert_eq!(all_rows[1].trend_interval_s, TrendInterval::OnChange);
+    assert_eq!(row(&all_rows, "ahu.mode.op").point_type, PointType::Mode);
+    assert_eq!(
+        row(&all_rows, "ahu.bool.di").trend_interval_s,
+        TrendInterval::EverySeconds(0)
+    );
+    assert_eq!(row(&all_rows, "ahu.bool.do").point_type, PointType::Do);
+    assert_eq!(
+        row(&all_rows, "ahu.pid.u").trend_interval_s,
+        TrendInterval::OnChange
+    );
 
     let ahu_rows = store.point_list(Some("ahu")).expect("list AHU rows");
     assert_eq!(render_rows(&ahu_rows), AHU_ROWS_GOLDEN);
+    assert!(
+        store
+            .point_list(Some("AHU"))
+            .expect("list case-mismatched controlled device")
+            .is_empty()
+    );
     assert!(
         store
             .point_list(Some("nonexistent"))
@@ -259,8 +359,36 @@ fn point_list_derives_name_from_dotless_key_without_panic() {
 
     let rows = store.point_list(None).expect("list dotless point");
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].point.as_str(), "conn#5");
-    assert_eq!(rows[0].name, "conn#5");
+    assert_eq!(
+        render_rows(&rows),
+        "conn#5\tconn#5\tDo\tfalse\tEverySeconds(15)\tahu\tdotless\n"
+    );
+}
+
+#[test]
+fn point_list_breaks_cross_model_duplicate_key_ties_by_model_id() {
+    let dir = TestDir::new("duplicate-key-tie");
+    let store = ReferenceWalStore::open(dir.path()).expect("open store");
+    store
+        .save_model(&duplicate_key_model("model-z", "model-z", "from model z"))
+        .expect("save later-sorted model first");
+    store
+        .save_model(&duplicate_key_model("model-a", "model-a", "from model a"))
+        .expect("save earlier-sorted model second");
+
+    let rows = store.point_list(None).expect("list duplicate point keys");
+    assert_eq!(render_rows(&rows), DUPLICATE_KEY_ROWS_GOLDEN);
+    let rerun_rows = store.point_list(None).expect("list duplicate keys again");
+    assert_eq!(render_rows(&rerun_rows), DUPLICATE_KEY_ROWS_GOLDEN);
+
+    store.commit().expect("commit duplicate-key models");
+    drop(store);
+
+    let reopened = ReferenceWalStore::open(dir.path()).expect("reopen store");
+    let reopened_rows = reopened
+        .point_list(None)
+        .expect("list duplicate point keys after reopen");
+    assert_eq!(render_rows(&reopened_rows), DUPLICATE_KEY_ROWS_GOLDEN);
 }
 
 #[test]
@@ -268,4 +396,20 @@ fn point_list_on_empty_store_is_empty() {
     let dir = TestDir::new("empty");
     let store = ReferenceWalStore::open(dir.path()).expect("open empty store");
     assert!(store.point_list(None).expect("list empty store").is_empty());
+}
+
+#[test]
+fn point_list_with_only_excluded_points_is_empty() {
+    let dir = TestDir::new("all-excluded");
+    let store = ReferenceWalStore::open(dir.path()).expect("open store");
+    store
+        .save_model(&all_excluded_model("model:excluded"))
+        .expect("save excluded-only model");
+
+    assert!(
+        store
+            .point_list(None)
+            .expect("list excluded-only model")
+            .is_empty()
+    );
 }

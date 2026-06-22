@@ -402,13 +402,17 @@ impl SemanticStore for ReferenceWalStore {
     /// Project point-list rows from persisted [`ResolvedModel::points`].
     ///
     /// This adapter has no semantic graph write path yet; `point_list` is a read-only in-memory
-    /// projection over loaded models. It keeps only points whose `in_pointlist` flag is true, applies
-    /// exact `controlled_device` equality when a filter is provided, derives `name` from the leaf of
-    /// the point key, and returns rows sorted ascending by point key for deterministic output.
+    /// projection over all loaded models. It visits models in `model_id` order, emits every point
+    /// whose `in_pointlist` flag is true, applies exact `controlled_device` equality when a filter is
+    /// provided, and derives `name` from the leaf of the point key. The v1 projection does not dedup
+    /// point keys across models: a key present in N models yields N rows, sorted by point key with
+    /// cross-model ties broken by `model_id`.
     fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
         let state = self.state.read().map_err(backend_err)?;
+        let mut models: Vec<_> = state.models.values().collect();
+        models.sort_by(|a, b| a.model_id.as_str().cmp(b.model_id.as_str()));
         let mut rows = Vec::new();
-        for model in state.models.values() {
+        for model in models {
             for point in &model.points {
                 if !point.in_pointlist {
                     continue;
