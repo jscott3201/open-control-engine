@@ -11,7 +11,7 @@ use oce_store::{
     BlockClassDto, BlockInstanceDto, BlockKind, ConnectionDto, DomainKey, Durable, EquipmentDto,
     ModelStore, OcValue, PointDirection, PointDto, PointHandle, PointSample, PointStatus,
     PointStore, PointType, PointValueType, RelationDto, RelationKind, ResolvedModel,
-    SemanticPayloadDto, SemanticQuery, SemanticStore, Store, StoreError, TrendInterval,
+    SemanticPayloadDto, SemanticStore, Store, StoreError, TrendInterval,
 };
 
 static NEXT_DIR: AtomicUsize = AtomicUsize::new(0);
@@ -154,16 +154,6 @@ fn assert_unsupported<T: std::fmt::Debug>(result: Result<T, StoreError>, expecte
     match result {
         Err(StoreError::Unsupported(actual)) => assert_eq!(actual, expected),
         other => panic!("expected Unsupported({expected}), got {other:?}"),
-    }
-}
-
-fn assert_retrieval_unsupported<T: std::fmt::Debug>(
-    result: Result<T, StoreError>,
-    expected: &'static str,
-) {
-    match result {
-        Err(StoreError::RetrievalUnsupported(actual)) => assert_eq!(actual, expected),
-        other => panic!("expected RetrievalUnsupported({expected}), got {other:?}"),
     }
 }
 
@@ -581,7 +571,6 @@ fn semantic_store_methods_return_typed_deferral_errors() {
     let store = ReferenceWalStore::open(dir.path()).expect("open store");
     let graph_deferred =
         "ReferenceWalStore: semantic graph operations deferred to pointlist-export";
-    let retrieval_deferred = "ReferenceWalStore: semantic retrieval deferred to retrieval-recipes";
     let equipment = EquipmentDto {
         key: DomainKey::new("equip:ahu"),
         subtype: Some("AHU".to_owned()),
@@ -608,13 +597,6 @@ fn semantic_store_methods_return_typed_deferral_errors() {
     assert_unsupported(
         store.get_semantic_payloads(&payload.subject),
         graph_deferred,
-    );
-    assert_retrieval_unsupported(
-        store.retrieve(&SemanticQuery::FuzzyText {
-            query: "supply air temperature".to_owned(),
-            k: 3,
-        }),
-        retrieval_deferred,
     );
     assert_unsupported(store.match_template(&[]), graph_deferred);
 }
