@@ -12,6 +12,7 @@
 
 mod codec;
 mod fs_sync;
+mod retrieval;
 mod snapshot_file;
 mod wal_append;
 
@@ -36,8 +37,6 @@ pub const TELEMETRY_GROUP_COMMIT_SAMPLE_COUNT: usize = 1024;
 
 const SEMANTIC_GRAPH_DEFERRED: &str =
     "ReferenceWalStore: semantic graph operations deferred to pointlist-export";
-const SEMANTIC_RETRIEVAL_DEFERRED: &str =
-    "ReferenceWalStore: semantic retrieval deferred to retrieval-recipes";
 
 /// Construction options for [`ReferenceWalStore`].
 #[derive(Clone, Debug, Default)]
@@ -438,10 +437,9 @@ impl SemanticStore for ReferenceWalStore {
         Ok(rows)
     }
 
-    fn retrieve(&self, _q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
-        Err(StoreError::RetrievalUnsupported(
-            SEMANTIC_RETRIEVAL_DEFERRED,
-        ))
+    fn retrieve(&self, q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
+        let state = self.state.read().map_err(backend_err)?;
+        retrieval::retrieve(&state.models, q)
     }
 
     fn match_template(&self, _required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>> {
