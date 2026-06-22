@@ -11,6 +11,7 @@
 //! Status: verification-only adapter for M3 durability port tests.
 
 mod codec;
+mod fs_sync;
 mod snapshot_file;
 mod wal_append;
 
@@ -45,6 +46,15 @@ pub struct ReferenceWalOptions {
     /// Critical write appends a deliberately torn final WAL record and returns
     /// [`StoreError::Durability`]. `None` disables injection.
     pub fail_critical_fsync_after: Option<usize>,
+    /// Test-oriented failure injection: after this many successful Critical record fsyncs, the next
+    /// Critical write appends a complete WAL record, fails the file fsync boundary, truncates the
+    /// unsynced record, and returns [`StoreError::Durability`]. `None` disables injection.
+    pub fail_critical_file_sync_after: Option<usize>,
+    /// Test-oriented failure injection: after this many successful Critical record fsyncs, the next
+    /// Critical write appends and fsyncs the WAL file, fails the parent-directory fsync boundary,
+    /// truncates the unsynced record, and returns [`StoreError::Durability`]. `None` disables
+    /// injection.
+    pub fail_critical_directory_sync_after: Option<usize>,
 }
 
 /// Verification-only file-backed implementation of all `oce-store` ports.
@@ -76,7 +86,9 @@ struct PendingPointWrite {
 
 #[derive(Default)]
 struct FsyncFailure {
-    fail_after: Option<usize>,
+    torn_tail_after: Option<usize>,
+    file_sync_after: Option<usize>,
+    directory_sync_after: Option<usize>,
     successful_critical_fsyncs: usize,
 }
 
@@ -112,7 +124,9 @@ impl ReferenceWalStore {
             root: path.as_ref().to_path_buf(),
             state: RwLock::new(AdapterState::default()),
             fsync_failure: Mutex::new(FsyncFailure {
-                fail_after: options.fail_critical_fsync_after,
+                torn_tail_after: options.fail_critical_fsync_after,
+                file_sync_after: options.fail_critical_file_sync_after,
+                directory_sync_after: options.fail_critical_directory_sync_after,
                 successful_critical_fsyncs: 0,
             }),
         };
@@ -190,9 +204,20 @@ impl AdapterState {
 }
 
 impl FsyncFailure {
-    fn should_fail_next_critical(&self) -> bool {
-        self.fail_after
+    fn should_write_torn_tail(&self) -> bool {
+        self.torn_tail_after
             .is_some_and(|limit| self.successful_critical_fsyncs >= limit)
+    }
+
+    fn sync_options(&self) -> wal_append::WalSyncOptions {
+        wal_append::WalSyncOptions {
+            fail_file_sync: self
+                .file_sync_after
+                .is_some_and(|limit| self.successful_critical_fsyncs >= limit),
+            fail_directory_sync: self
+                .directory_sync_after
+                .is_some_and(|limit| self.successful_critical_fsyncs >= limit),
+        }
     }
 
     fn record_critical_success(&mut self) {
@@ -283,13 +308,13 @@ impl PointStore for ReferenceWalStore {
             let record =
                 WalRecord::point_write(Durability::Critical, write.key.clone(), &write.sample);
             let mut failure = self.fsync_failure.lock().map_err(backend_err)?;
-            if failure.should_fail_next_critical() {
+            if failure.should_write_torn_tail() {
                 wal_append::append_torn_record(&self.root, &record)?;
                 return Err(StoreError::Durability(
                     "simulated Critical fsync failure after durable prefix".to_owned(),
                 ));
             }
-            wal_append::append_record_and_sync(&self.root, &record)?;
+            wal_append::append_record_and_sync(&self.root, &record, failure.sync_options())?;
             failure.record_critical_success();
             state.points.set_sample(&write.key, write.sample.clone());
             accepted += 1;

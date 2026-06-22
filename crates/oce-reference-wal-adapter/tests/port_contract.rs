@@ -324,6 +324,7 @@ fn critical_partial_failure_recovers_only_the_durable_prefix() {
         dir.path(),
         ReferenceWalOptions {
             fail_critical_fsync_after: Some(2),
+            ..ReferenceWalOptions::default()
         },
     )
     .expect("open store");
@@ -455,11 +456,18 @@ fn wal_record_encoding_matches_the_byte_stable_golden() {
     let dir = TestDir::new("wal-golden");
     let store = ReferenceWalStore::open(dir.path()).expect("open store");
     store
-        .write_points(&[oce_store::PointWrite {
-            key: DomainKey::new("point:sat"),
-            sample: sample(OcValue::Real(-0.0), 123),
-            durability: oce_store::Durability::Critical,
-        }])
+        .write_points(&[
+            oce_store::PointWrite {
+                key: DomainKey::new("point:sat"),
+                sample: sample(OcValue::Real(-0.0), 123),
+                durability: oce_store::Durability::Critical,
+            },
+            oce_store::PointWrite {
+                key: DomainKey::new("point:subnormal"),
+                sample: sample(OcValue::Real(f64::from_bits(0x0000_0000_0000_0001)), 124),
+                durability: oce_store::Durability::Critical,
+            },
+        ])
         .expect("write golden record");
     let actual = fs::read_to_string(dir.path().join("points.wal")).expect("read WAL");
     let expected = include_str!("fixtures/critical_real_record.jsonl");
@@ -476,23 +484,66 @@ fn point_sample_round_trip_preserves_bits_and_value_domains() {
             sample(OcValue::Real(f64::from_bits(0x7ff8_0000_0000_0001)), 1),
         ),
         (
+            "point:real:signaling_nan",
+            sample(OcValue::Real(f64::from_bits(0x7ff0_0000_0000_0001)), 2),
+        ),
+        (
             "point:real:pos_inf",
-            sample(OcValue::Real(f64::INFINITY), 2),
+            sample(OcValue::Real(f64::INFINITY), 3),
         ),
         (
             "point:real:neg_inf",
-            sample(OcValue::Real(f64::NEG_INFINITY), 3),
+            sample(OcValue::Real(f64::NEG_INFINITY), 4),
         ),
-        ("point:real:neg_zero", sample(OcValue::Real(-0.0), 4)),
+        ("point:real:neg_zero", sample(OcValue::Real(-0.0), 5)),
+        (
+            "point:real:min_subnormal",
+            sample(OcValue::Real(f64::from_bits(0x0000_0000_0000_0001)), 6),
+        ),
+        (
+            "point:real:max_subnormal",
+            sample(OcValue::Real(f64::from_bits(0x000f_ffff_ffff_ffff)), 7),
+        ),
+        (
+            "point:real:min_positive",
+            sample(OcValue::Real(f64::from_bits(0x0010_0000_0000_0000)), 8),
+        ),
+        (
+            "point:real:max_finite",
+            sample(OcValue::Real(f64::from_bits(0x7fef_ffff_ffff_ffff)), 9),
+        ),
+        (
+            "point:real:most_negative_finite",
+            sample(OcValue::Real(f64::from_bits(0xffef_ffff_ffff_ffff)), 10),
+        ),
         (
             "point:decimal",
-            sample(OcValue::Decimal("1234567890.0000000001".to_owned()), 5),
+            sample(OcValue::Decimal("1234567890.0000000001".to_owned()), 11),
         ),
-        ("point:int:min", sample(OcValue::Int(i64::MIN), 6)),
-        ("point:int:max", sample(OcValue::Int(i64::MAX), 7)),
+        ("point:int:min", sample(OcValue::Int(i64::MIN), 12)),
+        ("point:int:max", sample(OcValue::Int(i64::MAX), 13)),
         (
             "point:int:past-two-pow-53",
-            sample(OcValue::Int(9_007_199_254_740_993), 8),
+            sample(OcValue::Int(9_007_199_254_740_993), 14),
+        ),
+        ("point:bool:true", sample(OcValue::Bool(true), 15)),
+        ("point:bool:false", sample(OcValue::Bool(false), 16)),
+        (
+            "point:enum:unicode",
+            sample(
+                OcValue::Enum {
+                    type_iri: "urn:enum:\"operating-mode\"".to_owned(),
+                    literal: "wärme\"betrieb".to_owned(),
+                },
+                17,
+            ),
+        ),
+        (
+            "point:string:newline",
+            sample(
+                OcValue::String("line one\nline two\\nliteral".to_owned()),
+                18,
+            ),
         ),
     ];
     let point_writes: Vec<_> = writes

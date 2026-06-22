@@ -7,6 +7,7 @@ use std::path::Path;
 use oce_store::{StoreError, StoreResult};
 
 use crate::codec::{FORMAT_VERSION, SnapshotFile};
+use crate::fs_sync::sync_directory;
 
 pub(crate) const SNAPSHOT_FILE: &str = "snapshot.json";
 pub(crate) const SNAPSHOT_TEMP_FILE: &str = "snapshot.json.tmp";
@@ -43,11 +44,6 @@ pub(crate) fn write_atomic(root: &Path, snapshot: &SnapshotFile) -> StoreResult<
     fs::rename(&temp_path, &snapshot_path).map_err(backend_err)?;
     sync_directory(root)?;
     Ok(())
-}
-
-fn sync_directory(root: &Path) -> StoreResult<()> {
-    let dir = File::open(root).map_err(backend_err)?;
-    dir.sync_all().map_err(durability_err)
 }
 
 fn backend_err(error: impl std::fmt::Display) -> StoreError {

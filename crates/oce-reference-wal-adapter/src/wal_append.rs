@@ -7,15 +7,37 @@ use std::path::Path;
 use oce_store::{StoreError, StoreResult};
 
 use crate::codec::{FORMAT_VERSION, WalRecord};
+use crate::fs_sync::{sync_directory, sync_directory_with_failure};
 
 pub(crate) const WAL_FILE: &str = "points.wal";
 
-pub(crate) fn append_record_and_sync(root: &Path, record: &WalRecord) -> StoreResult<()> {
+#[derive(Clone, Copy, Default)]
+pub(crate) struct WalSyncOptions {
+    pub(crate) fail_file_sync: bool,
+    pub(crate) fail_directory_sync: bool,
+}
+
+pub(crate) fn append_record_and_sync(
+    root: &Path,
+    record: &WalRecord,
+    options: WalSyncOptions,
+) -> StoreResult<()> {
     fs::create_dir_all(root).map_err(backend_err)?;
     let line = record.encode_line().map_err(backend_err)?;
     let mut file = open_wal_for_append(root)?;
+    let start_len = file.metadata().map_err(backend_err)?.len();
     file.write_all(&line).map_err(backend_err)?;
-    file.sync_all().map_err(durability_err)
+    if let Err(error) =
+        sync_file_with_failure(&file, options.fail_file_sync).map_err(durability_err)
+    {
+        truncate_file_to(root, start_len)?;
+        return Err(error);
+    }
+    if let Err(error) = sync_directory_with_failure(root, options.fail_directory_sync) {
+        truncate_file_to(root, start_len)?;
+        return Err(error);
+    }
+    Ok(())
 }
 
 pub(crate) fn append_records_and_sync(root: &Path, records: &[WalRecord]) -> StoreResult<()> {
@@ -25,11 +47,20 @@ pub(crate) fn append_records_and_sync(root: &Path, records: &[WalRecord]) -> Sto
 
     fs::create_dir_all(root).map_err(backend_err)?;
     let mut file = open_wal_for_append(root)?;
+    let start_len = file.metadata().map_err(backend_err)?.len();
     for record in records {
         let line = record.encode_line().map_err(backend_err)?;
         file.write_all(&line).map_err(backend_err)?;
     }
-    file.sync_all().map_err(durability_err)
+    if let Err(error) = file.sync_all().map_err(durability_err) {
+        truncate_file_to(root, start_len)?;
+        return Err(error);
+    }
+    if let Err(error) = sync_directory(root) {
+        truncate_file_to(root, start_len)?;
+        return Err(error);
+    }
+    Ok(())
 }
 
 pub(crate) fn append_torn_record(root: &Path, record: &WalRecord) -> StoreResult<()> {
@@ -88,16 +119,22 @@ pub(crate) fn replay(
 pub(crate) fn truncate(root: &Path) -> StoreResult<()> {
     fs::create_dir_all(root).map_err(backend_err)?;
     let file = File::create(root.join(WAL_FILE)).map_err(backend_err)?;
-    file.sync_all().map_err(durability_err)
+    file.sync_all().map_err(durability_err)?;
+    sync_directory(root)
 }
 
 fn truncate_to(root: &Path, len: usize) -> StoreResult<()> {
+    truncate_file_to(root, len as u64)
+}
+
+fn truncate_file_to(root: &Path, len: u64) -> StoreResult<()> {
     let file = OpenOptions::new()
         .write(true)
         .open(root.join(WAL_FILE))
         .map_err(backend_err)?;
-    file.set_len(len as u64).map_err(backend_err)?;
-    file.sync_all().map_err(durability_err)
+    file.set_len(len).map_err(backend_err)?;
+    file.sync_all().map_err(durability_err)?;
+    sync_directory(root)
 }
 
 fn open_wal_for_append(root: &Path) -> StoreResult<File> {
@@ -108,10 +145,37 @@ fn open_wal_for_append(root: &Path) -> StoreResult<File> {
         .map_err(backend_err)
 }
 
+fn sync_file_with_failure(file: &File, fail_sync: bool) -> Result<(), SyncError> {
+    if fail_sync {
+        return Err(SyncError::Simulated);
+    }
+    file.sync_all().map_err(SyncError::from)
+}
+
 fn backend_err(error: impl std::fmt::Display) -> StoreError {
     StoreError::Backend(error.to_string())
 }
 
 fn durability_err(error: impl std::fmt::Display) -> StoreError {
     StoreError::Durability(error.to_string())
+}
+
+enum SyncError {
+    Simulated,
+    Io(std::io::Error),
+}
+
+impl From<std::io::Error> for SyncError {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value)
+    }
+}
+
+impl std::fmt::Display for SyncError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Simulated => f.write_str("simulated file fsync failure"),
+            Self::Io(error) => error.fmt(f),
+        }
+    }
 }
