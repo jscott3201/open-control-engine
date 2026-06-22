@@ -49,7 +49,7 @@ FORBIDDEN='(^|[[:space:]])(selene-db[-a-z]*|selene_[a-z]*|tokio[-a-z]*|async-std
 load_metadata() {
   local mode="$1"
   local output_file="$2"
-  local metadata=""
+  local stderr_file=""
 
   if ! command -v jq >/dev/null 2>&1; then
     echo "FAIL: jq is required to inspect cargo metadata"
@@ -63,19 +63,29 @@ load_metadata() {
     fi
     cat "$OCE_NO_DB_METADATA_FILE" > "$output_file"
   elif [ "$mode" = "no_deps" ]; then
-    if ! metadata="$(cargo metadata --no-deps --format-version 1 2>&1)"; then
+    stderr_file="$(mktemp "${TMPDIR:-/tmp}/oce-no-db-metadata-stderr.XXXXXX")"
+    if ! cargo metadata --no-deps --format-version 1 > "$output_file" 2> "$stderr_file"; then
       echo "FAIL: cargo metadata --no-deps failed (gate fails closed, not open):"
-      printf '%s\n' "$metadata"
+      cat "$stderr_file"
+      rm -f "$stderr_file"
       return 1
     fi
-    printf '%s\n' "$metadata" > "$output_file"
+    if [ -s "$stderr_file" ]; then
+      cat "$stderr_file" >&2
+    fi
+    rm -f "$stderr_file"
   elif [ "$mode" = "full" ]; then
-    if ! metadata="$(cargo metadata --format-version 1 2>&1)"; then
+    stderr_file="$(mktemp "${TMPDIR:-/tmp}/oce-no-db-metadata-stderr.XXXXXX")"
+    if ! cargo metadata --format-version 1 > "$output_file" 2> "$stderr_file"; then
       echo "FAIL: cargo metadata failed (gate fails closed, not open):"
-      printf '%s\n' "$metadata"
+      cat "$stderr_file"
+      rm -f "$stderr_file"
       return 1
     fi
-    printf '%s\n' "$metadata" > "$output_file"
+    if [ -s "$stderr_file" ]; then
+      cat "$stderr_file" >&2
+    fi
+    rm -f "$stderr_file"
   else
     echo "BUG: unknown cargo metadata mode '$mode'"
     return 1
