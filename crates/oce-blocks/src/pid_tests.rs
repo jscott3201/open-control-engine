@@ -634,6 +634,7 @@ fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
     };
 
     let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
+    let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
     let (nan_trace, nan_region) = drive_pid_with_reset(
         &block,
         &[
@@ -643,6 +644,16 @@ fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
     );
     assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
     assert_eq!(nan_region[0], 0x7ff8_0000_0000_0000);
+
+    let (negative_nan_trace, negative_nan_region) = drive_pid_with_reset(
+        &block,
+        &[
+            (0.0, 1.0, 0.0, false, 0.0),
+            (1.0, 1.0, 0.0, true, negative_nan),
+        ],
+    );
+    assert_trace_bits(&negative_nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
+    assert_eq!(negative_nan_region[0], 0x7ff8_0000_0000_0000);
 
     let (inf_trace, inf_region) = drive_pid_with_reset(
         &block,

@@ -31,7 +31,7 @@
 
 use oce_model::{
     ParamTable, SimpleController, Value,
-    determinism::{det_max, det_min},
+    determinism::{canonicalize_real, det_max, det_min},
 };
 
 use crate::dynamics::{
@@ -279,7 +279,7 @@ fn update_pid_state(
             let err_i2 = e - ant_win_gai;
             forward_euler_accumulate(y_i, (config.k_eff() / config.ti_eff()) * err_i2, step_dt)
         };
-        region[i] = next_i.to_bits();
+        region[i] = canonicalize_real(next_i).to_bits();
     }
 
     if let Some(d) = state.d {
@@ -289,7 +289,7 @@ fn update_pid_state(
             f64::from_bits(region[d])
         };
         let next_d = first_order_filter_implicit(x, e, config.derivative_time(), step_dt);
-        region[d] = next_d.to_bits();
+        region[d] = canonicalize_real(next_d).to_bits();
     }
 
     if let Some(prev_t) = state.prev_t {
