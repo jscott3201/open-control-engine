@@ -22,10 +22,11 @@ impl SnapshotFile {
         models: Vec<ResolvedModel>,
         point_keys: Vec<DomainKey>,
         point_samples: Vec<Option<StoredPointSample>>,
+        ordering_high_water: u64,
     ) -> Self {
         Self {
             format_version: FORMAT_VERSION,
-            ordering_high_water: None,
+            ordering_high_water: Some(ordering_high_water),
             models,
             point_keys,
             point_samples,
@@ -47,10 +48,11 @@ impl WalRecord {
         durability: Durability,
         key: DomainKey,
         sample: &PointSample,
+        ordering_high_water: Option<u64>,
     ) -> Self {
         Self {
             format_version: FORMAT_VERSION,
-            ordering_high_water: None,
+            ordering_high_water,
             record: WalRecordKind::PointWrite {
                 durability: StoredDurability::from(durability),
                 key,

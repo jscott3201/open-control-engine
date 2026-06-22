@@ -52,6 +52,8 @@ impl RecordingState {
 
 #[derive(Default)]
 struct StoreCalls {
+    // Inherent adapter-only accessors are outside this trait harness by construction; if an ordering
+    // accessor joins the frozen Store trait and is read on tick, add it here before relaxing bounds.
     save_model: AtomicUsize,
     load_model: AtomicUsize,
     list_models: AtomicUsize,
