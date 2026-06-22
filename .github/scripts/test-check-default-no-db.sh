@@ -71,6 +71,69 @@ run_fixture() {
   esac
 }
 
+run_live_cargo_fixture() {
+  name="$1"
+  expected="$2"
+  fixture="$3"
+  expected_message="${4:-}"
+  members="$tmp/$name.live.members"
+  trees="$tmp/$name.live.trees"
+  shim_dir="$tmp/$name.path"
+  metadata="$tmp/$name.live.metadata"
+
+  mkdir -p "$trees" "$shim_dir"
+  write_clean_metadata "$metadata"
+  "$fixture" "$members" "$trees" "$shim_dir" "$metadata"
+
+  set +e
+  output="$(
+    unset OCE_NO_DB_METADATA_FILE
+    OCE_NO_DB_MEMBERS_FILE="$members" \
+    OCE_NO_DB_TREE_DIR="$trees" \
+    PATH="$shim_dir:$PATH" \
+    bash "$SCRIPT" 2>&1
+  )"
+  status=$?
+  set -e
+
+  case "$expected" in
+    pass)
+      if [ "$status" -ne 0 ]; then
+        echo "FAIL: live-cargo fixture '$name' should pass but exited $status"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      if ! printf '%s\n' "$output" | grep -q '^OK:'; then
+        echo "FAIL: live-cargo fixture '$name' passed without the OK line"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      ;;
+    fail)
+      if [ "$status" -eq 0 ]; then
+        echo "FAIL: live-cargo fixture '$name' should fail but exited 0"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      if ! printf '%s\n' "$output" | grep -q '^FAIL:'; then
+        echo "FAIL: live-cargo fixture '$name' failed without a FAIL line"
+        printf '%s\n' "$output"
+        exit 1
+      fi
+      ;;
+    *)
+      echo "BUG: unknown expectation '$expected'"
+      exit 1
+      ;;
+  esac
+
+  if [ -n "$expected_message" ] && ! printf '%s\n' "$output" | grep -Fq -- "$expected_message"; then
+    echo "FAIL: live-cargo fixture '$name' output lacked expected substring: $expected_message"
+    printf '%s\n' "$output"
+    exit 1
+  fi
+}
+
 write_clean_metadata() {
   metadata="$1"
   cat > "$metadata" <<'EOF'
@@ -482,6 +545,43 @@ missing_facade_metadata_fixture() {
 EOF
 }
 
+live_cargo_failure_fixture() {
+  members="$1"
+  trees="$2"
+  shim_dir="$3"
+  _metadata="$4"
+  positive_fixture "$members" "$trees"
+  cat > "$shim_dir/cargo" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = "metadata" ]; then
+  echo "simulated cargo metadata stderr" >&2
+  exit 42
+fi
+echo "unexpected cargo command: $*" >&2
+exit 99
+EOF
+  chmod +x "$shim_dir/cargo"
+}
+
+live_cargo_warning_metadata_fixture() {
+  members="$1"
+  trees="$2"
+  shim_dir="$3"
+  metadata="$4"
+  positive_fixture "$members" "$trees"
+  cat > "$shim_dir/cargo" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "metadata" ]; then
+  echo "simulated benign cargo metadata warning" >&2
+  cat "$metadata"
+  exit 0
+fi
+echo "unexpected cargo command: \$*" >&2
+exit 99
+EOF
+  chmod +x "$shim_dir/cargo"
+}
+
 run_fixture positive pass positive_fixture
 run_fixture forbidden-non-facade fail forbidden_non_facade_fixture \
   "FAIL: 'oce-conformance' default build links a database / async runtime / parallelism runtime"
@@ -508,5 +608,9 @@ run_fixture zero-shipped-metadata fail zero_shipped_metadata_fixture \
   "cargo metadata contained no shipped crates (publish == null)"
 run_fixture missing-facade-metadata fail missing_facade_metadata_fixture \
   "cargo metadata shipped set did not include the canonical facade crate 'oce-api'"
+run_live_cargo_fixture live-cargo-failure fail live_cargo_failure_fixture \
+  "simulated cargo metadata stderr"
+run_live_cargo_fixture live-cargo-warning pass live_cargo_warning_metadata_fixture \
+  "simulated benign cargo metadata warning"
 
 echo "OK: check-default-no-db gate fixtures passed."

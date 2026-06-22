@@ -55,6 +55,8 @@ pub(crate) fn retrieve(
 }
 
 fn candidates(models: &HashMap<DomainKey, ResolvedModel>) -> Vec<Candidate<'_>> {
+    // Belt-and-suspenders determinism matching point_list: the total hit comparator makes retrieval
+    // output independent of candidate enumeration, but model_id order keeps the scan itself stable.
     let mut ordered_models: Vec<_> = models.values().collect();
     ordered_models.sort_by(|a, b| a.model_id.as_str().cmp(b.model_id.as_str()));
     let mut out = Vec::new();
@@ -256,6 +258,8 @@ fn cosine_score(query: &[f32], document: &[f32]) -> f64 {
     if !cos.is_finite() {
         return 0.0;
     }
+    // Defensive against a last-bit rounding excursion outside [-1, 1] for nearly identical vectors;
+    // mathematically normal cosine inputs should already be inside the interval.
     (0.5 * (cos + 1.0)).clamp(0.0, 1.0)
 }
 
