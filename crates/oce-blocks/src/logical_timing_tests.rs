@@ -153,6 +153,93 @@ fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
 }
 
 #[test]
+fn timer_threshold_zero_passed_is_false_while_idle() {
+    let timer = Timer { t: 0.0 };
+    let (trace, _) = run(
+        &timer,
+        &[
+            (0.0, vec![Value::Boolean(true)]),
+            (0.1, vec![Value::Boolean(false)]),
+            (0.2, vec![Value::Boolean(false)]),
+            (0.3, vec![Value::Boolean(true)]),
+            (0.4, vec![Value::Boolean(false)]),
+        ],
+    );
+    let expected = [
+        (0x0000_0000_0000_0000, true),
+        (0x0000_0000_0000_0000, false),
+        (0x0000_0000_0000_0000, false),
+        (0x0000_0000_0000_0000, true),
+        (0x0000_0000_0000_0000, false),
+    ];
+    for (got, (bits, passed)) in trace.iter().zip(expected) {
+        assert_real_bits(&got[0], bits);
+        assert_bool(&got[1], passed);
+    }
+}
+
+#[test]
+fn timer_accumulating_passed_latch_holds_and_reset_sets_threshold_value() {
+    let acc = TimerAccumulating { t: 0.0 };
+    let (trace, _) = run(
+        &acc,
+        &[
+            (0.0, vec![Value::Boolean(false), Value::Boolean(false)]),
+            (0.1, vec![Value::Boolean(true), Value::Boolean(false)]),
+            (0.2, vec![Value::Boolean(false), Value::Boolean(false)]),
+            (0.3, vec![Value::Boolean(false), Value::Boolean(true)]),
+            (0.4, vec![Value::Boolean(false), Value::Boolean(false)]),
+        ],
+    );
+    for got in &trace {
+        assert_real_bits(&got[0], 0x0000_0000_0000_0000);
+        assert_bool(&got[1], true);
+    }
+
+    let acc = TimerAccumulating { t: 0.5 };
+    let (trace, _) = run(
+        &acc,
+        &[
+            (0.0, vec![Value::Boolean(false), Value::Boolean(true)]),
+            (0.25, vec![Value::Boolean(true), Value::Boolean(false)]),
+            (0.75, vec![Value::Boolean(true), Value::Boolean(false)]),
+            (1.0, vec![Value::Boolean(false), Value::Boolean(false)]),
+            (1.25, vec![Value::Boolean(false), Value::Boolean(false)]),
+            (1.5, vec![Value::Boolean(false), Value::Boolean(true)]),
+            (1.75, vec![Value::Boolean(false), Value::Boolean(false)]),
+        ],
+    );
+    let expected = [
+        (0x0000_0000_0000_0000, false),
+        (0x0000_0000_0000_0000, false),
+        (0x3fe0_0000_0000_0000, true),
+        (0x3fe0_0000_0000_0000, true),
+        (0x3fe0_0000_0000_0000, true),
+        (0x0000_0000_0000_0000, false),
+        (0x0000_0000_0000_0000, false),
+    ];
+    for (got, (bits, passed)) in trace.iter().zip(expected) {
+        assert_real_bits(&got[0], bits);
+        assert_bool(&got[1], passed);
+    }
+}
+
+#[test]
+fn timer_accumulating_passed_hold_is_stateful_not_running_gated() {
+    let acc = TimerAccumulating { t: 1.0 };
+    let held_passed_region = [0x3fe0_0000_0000_0000, 0.0f64.to_bits(), 0, 0, 1];
+    let got = emit_at(
+        &acc,
+        &held_passed_region,
+        1.0,
+        &[Value::Boolean(false), Value::Boolean(false)],
+    );
+
+    assert_real_bits(&got[0], 0x3fe0_0000_0000_0000);
+    assert_bool(&got[1], true);
+}
+
+#[test]
 fn hold_delay_goldens_pin_boundaries_and_clear_priority() {
     let delay = TrueDelay {
         delay_time: 1.0,
@@ -278,7 +365,7 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     assert_real_bits(
         &emit_at(
             &acc,
-            &[half, zero, 1, 0],
+            &[half, zero, 1, 0, 0],
             1.0,
             &[Value::Boolean(true), Value::Boolean(false)],
         )[0],
@@ -287,7 +374,7 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     assert_real_bits(
         &emit_at(
             &acc,
-            &[half, zero, 1, 0],
+            &[half, zero, 1, 0, 0],
             1.0,
             &[Value::Boolean(true), Value::Boolean(true)],
         )[0],

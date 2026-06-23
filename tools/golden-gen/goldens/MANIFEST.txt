@@ -77,6 +77,15 @@ CDL.Logical.Switch y -> goldens/CDL/Logical/Switch/y.csv
 CDL.Logical.Timer passed -> goldens/CDL/Logical/Timer/passed.csv
 CDL.Logical.Timer reference -> goldens/CDL/Logical/Timer/reference.csv
 CDL.Logical.Timer y -> goldens/CDL/Logical/Timer/y.csv
+CDL.Logical.Timer/threshold_zero passed -> goldens/CDL/Logical/Timer/threshold_zero/passed.csv
+CDL.Logical.Timer/threshold_zero reference -> goldens/CDL/Logical/Timer/threshold_zero/reference.csv
+CDL.Logical.Timer/threshold_zero y -> goldens/CDL/Logical/Timer/threshold_zero/y.csv
+CDL.Logical.TimerAccumulating/latch_reset passed -> goldens/CDL/Logical/TimerAccumulating/latch_reset/passed.csv
+CDL.Logical.TimerAccumulating/latch_reset reference -> goldens/CDL/Logical/TimerAccumulating/latch_reset/reference.csv
+CDL.Logical.TimerAccumulating/latch_reset y -> goldens/CDL/Logical/TimerAccumulating/latch_reset/y.csv
+CDL.Logical.TimerAccumulating/threshold_zero passed -> goldens/CDL/Logical/TimerAccumulating/threshold_zero/passed.csv
+CDL.Logical.TimerAccumulating/threshold_zero reference -> goldens/CDL/Logical/TimerAccumulating/threshold_zero/reference.csv
+CDL.Logical.TimerAccumulating/threshold_zero y -> goldens/CDL/Logical/TimerAccumulating/threshold_zero/y.csv
 CDL.Logical.Toggle reference -> goldens/CDL/Logical/Toggle/reference.csv
 CDL.Logical.Toggle y -> goldens/CDL/Logical/Toggle/y.csv
 CDL.Logical.TrueDelay reference -> goldens/CDL/Logical/TrueDelay/reference.csv

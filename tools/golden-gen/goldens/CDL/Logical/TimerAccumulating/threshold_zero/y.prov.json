@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Logical.TimerAccumulating",
+  "scenario": "threshold_zero",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "reset", "y", "passed"],
+  "inputs": [
+    { "name": "u", "value_kind": "Boolean", "values": [0.0, 1.0, 0.0, 0.0, 0.0] },
+    { "name": "reset", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 0.0] }
+  ],
+  "input": "threshold t=0; t=[0,0.1,0.2,0.3,0.4], u=[F,T,F,F,F], reset=[F,F,F,T,F]",
+  "reference_rule": "y = if u then yAcc + time - entryTime else yAcc; reset rising clears yAcc; Buildings Logical/TimerAccumulating.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

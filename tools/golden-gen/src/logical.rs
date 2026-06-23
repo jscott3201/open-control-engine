@@ -26,6 +26,55 @@ fn ticks60(n: usize) -> Vec<f64> {
     (0..n).map(|k| (k as f64) * 60.0).collect()
 }
 
+fn timer_accumulating_reference(
+    time: &[f64],
+    u: &[bool],
+    reset: &[bool],
+    threshold: f64,
+) -> (Vec<Sample>, Vec<Sample>) {
+    assert_eq!(time.len(), u.len(), "TimerAccumulating u length");
+    assert_eq!(time.len(), reset.len(), "TimerAccumulating reset length");
+
+    let mut entry_time = time[0];
+    let mut y_acc = 0.0_f64;
+    let mut passed = threshold <= 0.0;
+    let mut pre_u = false;
+    let mut pre_reset = false;
+    let mut pre_y = 0.0_f64;
+    let mut y = Vec::with_capacity(time.len());
+    let mut passed_samples = Vec::with_capacity(time.len());
+
+    for k in 0..time.len() {
+        let reset_rising = reset[k] && !pre_reset;
+        let u_rising = u[k] && !pre_u;
+        if reset_rising {
+            entry_time = time[k];
+            passed = threshold <= 0.0;
+            y_acc = 0.0;
+        } else if u_rising {
+            entry_time = time[k];
+            passed = threshold <= y_acc;
+        } else if u[k] && time[k] >= threshold + entry_time - y_acc {
+            passed = true;
+        } else if !u[k] {
+            y_acc = pre_y;
+        }
+
+        let yk = if u[k] {
+            y_acc + time[k] - entry_time
+        } else {
+            y_acc
+        };
+        y.push(r(yk));
+        passed_samples.push(b(passed));
+        pre_y = yk;
+        pre_u = u[k];
+        pre_reset = reset[k];
+    }
+
+    (y, passed_samples)
+}
+
 /// Build all CDL.Logical goldens.
 pub fn goldens() -> Vec<Golden> {
     let mut out = Vec::new();
@@ -318,6 +367,124 @@ fn timing() -> Vec<Golden> {
                 "passed = (y >= t) AND running; _spec/03 §4.3 Timer (canonical Buildings >=)",
             )
             .with_inputs(vec![input_b("u", u)]),
+        );
+    }
+
+    // Timer scenario variant: default threshold t=0, proving idle ticks gate passed false.
+    {
+        let t = [0.0, 0.1, 0.2, 0.3, 0.4];
+        let u = [true, false, false, true, false];
+        let threshold = 0.0;
+        let mut entry_time = 0.0_f64;
+        let mut pre_u = false;
+        let mut y = Vec::new();
+        let mut passed = Vec::new();
+        for k in 0..t.len() {
+            if u[k] && !pre_u {
+                entry_time = t[k];
+            }
+            let yk = if u[k] { t[k] - entry_time } else { 0.0 };
+            y.push(r(yk));
+            passed.push(b(u[k] && yk >= threshold));
+            pre_u = u[k];
+        }
+        out.push(
+            Golden::new(
+                "CDL.Logical.Timer",
+                "y",
+                ValueKind::Real,
+                t.to_vec(),
+                y,
+                "threshold t=0; t=[0,0.1,0.2,0.3,0.4], u=[T,F,F,T,F]; idle ticks remain y=0",
+                "y = if u then time - entryTime else 0; entryTime set on rising edge of u; Buildings Logical/Timer.mo",
+            )
+            .with_scenario("threshold_zero")
+            .with_inputs(vec![input_b("u", u)]),
+        );
+        out.push(
+            Golden::new(
+                "CDL.Logical.Timer",
+                "passed",
+                ValueKind::Boolean,
+                t.to_vec(),
+                passed,
+                "threshold t=0; same trace as Timer.y; idle ticks must keep passed=false",
+                "passed is gated by running input: u AND (y >= t); Buildings Logical/Timer.mo elsewhen not u",
+            )
+            .with_scenario("threshold_zero")
+            .with_inputs(vec![input_b("u", u)]),
+        );
+    }
+
+    // TimerAccumulating scenario variant: t=0 initializes and resets passed to true, then holds it
+    // across u-false idle ticks. This distinguishes it from the non-accumulating Timer gate.
+    {
+        let t = [0.0, 0.1, 0.2, 0.3, 0.4];
+        let u = [false, true, false, false, false];
+        let reset = [false, false, false, true, false];
+        let threshold = 0.0;
+        let (y, passed) = timer_accumulating_reference(&t, &u, &reset, threshold);
+        out.push(
+            Golden::new(
+                "CDL.Logical.TimerAccumulating",
+                "y",
+                ValueKind::Real,
+                t.to_vec(),
+                y,
+                "threshold t=0; t=[0,0.1,0.2,0.3,0.4], u=[F,T,F,F,F], reset=[F,F,F,T,F]",
+                "y = if u then yAcc + time - entryTime else yAcc; reset rising clears yAcc; Buildings Logical/TimerAccumulating.mo",
+            )
+            .with_scenario("threshold_zero")
+            .with_inputs(vec![input_b("u", u), input_b("reset", reset)]),
+        );
+        out.push(
+            Golden::new(
+                "CDL.Logical.TimerAccumulating",
+                "passed",
+                ValueKind::Boolean,
+                t.to_vec(),
+                passed,
+                "threshold t=0; same trace as TimerAccumulating.y; reset sets passed back to t<=0",
+                "passed is a discrete latch: reset -> (t<=0), u rising samples yAcc, u-threshold crossing sets true, not u holds pre(passed); Buildings Logical/TimerAccumulating.mo",
+            )
+            .with_scenario("threshold_zero")
+            .with_inputs(vec![input_b("u", u), input_b("reset", reset)]),
+        );
+    }
+
+    // TimerAccumulating scenario variant: positive threshold proves passed latches across u=false
+    // after crossing and clears to false on reset.
+    {
+        let t = [0.0, 0.25, 0.75, 1.0, 1.25, 1.5, 1.75];
+        let u = [false, true, true, false, false, false, false];
+        let reset = [true, false, false, false, false, true, false];
+        let threshold = 0.5;
+        let (y, passed) = timer_accumulating_reference(&t, &u, &reset, threshold);
+        out.push(
+            Golden::new(
+                "CDL.Logical.TimerAccumulating",
+                "y",
+                ValueKind::Real,
+                t.to_vec(),
+                y,
+                "threshold t=0.5; t=[0,0.25,0.75,1,1.25,1.5,1.75], u=[F,T,T,F,F,F,F], reset=[T,F,F,F,F,T,F]",
+                "y accumulates while u is true, holds while u is false, and reset rising clears yAcc; Buildings Logical/TimerAccumulating.mo",
+            )
+            .with_scenario("latch_reset")
+            .with_inputs(vec![input_b("u", u), input_b("reset", reset)]),
+        );
+        out.push(
+            Golden::new(
+                "CDL.Logical.TimerAccumulating",
+                "passed",
+                ValueKind::Boolean,
+                t.to_vec(),
+                passed,
+                "threshold t=0.5; same trace as TimerAccumulating.y; passed holds true across u-false and reset clears to false",
+                "passed follows Modelica event priority reset > u-rising > threshold crossing > hold pre(passed); Buildings Logical/TimerAccumulating.mo",
+            )
+            .with_scenario("latch_reset")
+            .with_inputs(vec![input_b("u", u), input_b("reset", reset)]),
         );
     }
 
