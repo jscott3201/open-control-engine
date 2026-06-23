@@ -54,7 +54,7 @@ fn raw_edge(from: u32, to: u32) -> Connection {
 fn build_model_validate_error(model: ModelGraph) -> oce_validate::ValidationError {
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let mut eng = Engine::in_memory();
-        eng.build_model_in_memory(model)
+        eng.build_model_in_memory(model, None)
     }));
     let err = outcome
         .expect("build_model_in_memory must return a typed error, not panic")

@@ -20,6 +20,7 @@ const MODEL_ID_PREFIX: &str = "model:fnv1a128:";
 pub(crate) fn project_resolved_model(
     model: &ModelGraph,
     semantics: &ResolvedSemantics,
+    model_iri: Option<&str>,
 ) -> StoreResult<ResolvedModel> {
     let metadata_by_connector = metadata_index(semantics)?;
     let classes = project_classes(model);
@@ -35,7 +36,9 @@ pub(crate) fn project_resolved_model(
         connections,
         containment: Vec::new(),
     };
-    resolved.model_id = synthesize_model_id(&resolved);
+    resolved.model_id = model_iri
+        .map(DomainKey::new)
+        .unwrap_or_else(|| synthesize_model_id(&resolved));
     Ok(resolved)
 }
 

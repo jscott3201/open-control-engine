@@ -98,7 +98,8 @@ impl<S: Store> Engine<S> {
     }
 
     /// Load a **hand-built**, already-flattened [`ModelGraph`] directly inside the crate, with **no
-    /// parser** in front of it (CXF ingest in [`Engine::load_cxf`] shares this tail).
+    /// parser** in front of it (CXF ingest in [`Engine::load_cxf`] shares this tail and supplies its
+    /// top-composite model IRI).
     ///
     /// Instantiates each block from the `oce-blocks` registry by its `class_iri`, runs the
     /// `oce-graph` BUILD (direct-feedthrough DAG → deterministic Kahn schedule, hard-rejecting
@@ -113,12 +114,21 @@ impl<S: Store> Engine<S> {
     /// gate before `oce-graph` consumes the graph, so malformed hand-built graphs become typed
     /// [`OcError::Validate`] failures instead of reaching hot-path arena indexing.
     ///
+    /// # Model identity
+    /// `model_iri` is `Some` only for CXF loads, where it is the top-composite `@id` from the
+    /// resolver side-channel. `None` preserves the deterministic synthetic stable-hash fallback used
+    /// by hand-built, resumed, and future non-CXF load paths.
+    ///
     /// # Errors
     /// [`OcError::Validate`] if the graph is malformed; [`OcError::Load`] if a block's `class_iri` is
     /// not in the registry or semantic resolution fails; [`OcError::Build`] if the graph has an
     /// algebraic loop; [`OcError::Store`] if the store's `recover`/`save_model` fails. Never panics
     /// on host input covered by the validation seam (R-ERR-1).
-    pub(crate) fn build_model_in_memory(&mut self, model: ModelGraph) -> Result<(), OcError> {
+    pub(crate) fn build_model_in_memory(
+        &mut self,
+        model: ModelGraph,
+        model_iri: Option<&str>,
+    ) -> Result<(), OcError> {
         // Defense in depth for every in-crate caller: `oce-graph` assumes a validated graph and keeps
         // the tick/build arenas lean, so malformed hand-built graphs stop here as typed diagnostics.
         let _validate_warnings = oce_validate::validate(&model)?;
@@ -134,7 +144,7 @@ impl<S: Store> Engine<S> {
         let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
             detail: format!("semantic resolution failed: {err}"),
         })?;
-        let resolved_model = project_resolved_model(&model, &semantics)?;
+        let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
         let semantic_warnings = semantics.diagnostics;
         // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
         self.store.recover()?;
@@ -158,8 +168,9 @@ impl<S: Store> Engine<S> {
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve →
     /// `oce-flatten` → `oce-validate`), builds the `oce-graph` schedule via the shared crate-private
-    /// build tail, and returns a [`LoadReport`]. Replaces all per-run state, so calling it again
-    /// reloads a fresh model.
+    /// build tail, and returns a [`LoadReport`]. The returned `model_id` is the raw CXF
+    /// top-composite `@id` carried by the resolver side-channel. Replaces all per-run state, so
+    /// calling it again reloads a fresh model.
     ///
     /// # Errors
     /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
@@ -168,6 +179,7 @@ impl<S: Store> Engine<S> {
     pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
+        let model_iri = report.model_iri.clone();
         // 2. Flatten (scalar identity; array-parameter normalization is resolver-owned).
         let mut model = oce_flatten::flatten(model)?;
         // 3. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
@@ -177,7 +189,7 @@ impl<S: Store> Engine<S> {
         //    This intentionally re-runs pure `validate`: `load_cxf` needs `unify_and_validate` above to
         //    capture warnings after §7.10 propagation, while the shared tail must defend every caller
         //    against malformed hand-built graphs before `oce-graph` indexes raw arenas.
-        self.build_model_in_memory(model)?;
+        self.build_model_in_memory(model, model_iri.as_deref())?;
         let stateful_blocks = self
             .blocks
             .iter()

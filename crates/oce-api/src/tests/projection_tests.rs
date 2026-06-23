@@ -28,7 +28,7 @@ const MINIMAL_LOOP: &str = include_str!("../../../oce-cxf/tests/fixtures/minimal
 #[test]
 fn projection_maps_effective_metadata_to_resolved_model_golden() {
     let (model, semantics) = fully_populated_projection_fixture();
-    let resolved = project_resolved_model(&model, &semantics).expect("projection succeeds");
+    let resolved = project_resolved_model(&model, &semantics, None).expect("projection succeeds");
 
     assert_eq!(canonical_json(&resolved), PROJECTION_GOLDEN);
     assert_eq!(
@@ -67,8 +67,10 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
     let (model, _, _, _) = build_accumulator_model();
     let semantics = oce_semantics::resolve(&model).expect("semantics resolves");
 
-    let first = project_resolved_model(&model, &semantics).expect("first projection succeeds");
-    let second = project_resolved_model(&model, &semantics).expect("second projection succeeds");
+    let first =
+        project_resolved_model(&model, &semantics, None).expect("first projection succeeds");
+    let second =
+        project_resolved_model(&model, &semantics, None).expect("second projection succeeds");
 
     assert_eq!(canonical_json(&first), canonical_json(&second));
     assert_eq!(first.model_id, second.model_id);
@@ -96,8 +98,10 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
 fn iri_keyed_projection_is_deterministic_and_coherent_with_io_inventory() {
     let (model, semantics) = fully_populated_projection_fixture();
 
-    let first = project_resolved_model(&model, &semantics).expect("first projection succeeds");
-    let second = project_resolved_model(&model, &semantics).expect("second projection succeeds");
+    let first =
+        project_resolved_model(&model, &semantics, None).expect("first projection succeeds");
+    let second =
+        project_resolved_model(&model, &semantics, None).expect("second projection succeeds");
 
     assert_eq!(canonical_json(&first), canonical_json(&second));
     assert_eq!(first.model_id, second.model_id);
@@ -120,10 +124,19 @@ fn iri_keyed_projection_is_deterministic_and_coherent_with_io_inventory() {
 }
 
 #[test]
+fn source_model_iri_becomes_projection_model_id() {
+    let (model, semantics) = fully_populated_projection_fixture();
+    let resolved = project_resolved_model(&model, &semantics, Some("http://example.org#ahu"))
+        .expect("projection succeeds");
+
+    assert_eq!(resolved.model_id, DomainKey::new("http://example.org#ahu"));
+}
+
+#[test]
 fn empty_model_projects_to_empty_collections_with_stable_model_id() {
     let model = ModelGraph::new();
     let semantics = oce_semantics::resolve(&model).expect("empty semantics resolves");
-    let resolved = project_resolved_model(&model, &semantics).expect("empty model projects");
+    let resolved = project_resolved_model(&model, &semantics, None).expect("empty model projects");
 
     assert!(resolved.classes.is_empty());
     assert!(resolved.blocks.is_empty());
@@ -133,7 +146,7 @@ fn empty_model_projects_to_empty_collections_with_stable_model_id() {
     assert!(resolved.model_id.as_str().starts_with("model:fnv1a128:"));
     assert_eq!(
         resolved.model_id,
-        project_resolved_model(&model, &semantics)
+        project_resolved_model(&model, &semantics, None)
             .expect("second empty projection")
             .model_id
     );
@@ -143,7 +156,7 @@ fn empty_model_projects_to_empty_collections_with_stable_model_id() {
 fn string_connectors_are_metadata_only_and_skipped() {
     let model = string_only_model();
     let semantics = oce_semantics::resolve(&model).expect("semantics resolves");
-    let resolved = project_resolved_model(&model, &semantics).expect("projection succeeds");
+    let resolved = project_resolved_model(&model, &semantics, None).expect("projection succeeds");
 
     assert!(semantics.points.is_empty());
     assert!(resolved.points.is_empty());
@@ -305,9 +318,9 @@ fn zero_second_semantic_trend_projects_as_on_change_with_stable_model_id() {
     zero_seconds_semantics.points[0].trend.interval = SemanticTrendInterval::EverySeconds(0);
 
     let on_change =
-        project_resolved_model(&model, &on_change_semantics).expect("OnChange projects");
-    let zero_seconds =
-        project_resolved_model(&model, &zero_seconds_semantics).expect("zero seconds projects");
+        project_resolved_model(&model, &on_change_semantics, None).expect("OnChange projects");
+    let zero_seconds = project_resolved_model(&model, &zero_seconds_semantics, None)
+        .expect("zero seconds projects");
 
     assert_eq!(
         zero_seconds.points[0].trend_interval_s,
@@ -322,7 +335,7 @@ fn zero_second_semantic_trend_projects_as_on_change_with_stable_model_id() {
 #[test]
 fn adapter_validation_is_elective_not_memstore_mandated() {
     let (model, semantics) = fully_populated_projection_fixture();
-    let resolved = project_resolved_model(&model, &semantics).expect("projection succeeds");
+    let resolved = project_resolved_model(&model, &semantics, None).expect("projection succeeds");
     let mem = MemStore::new();
     let validating = ValidatingModelStore;
 
@@ -606,7 +619,7 @@ fn assert_projection_validation(
     needle: &str,
     context: &str,
 ) {
-    let err = project_resolved_model(model, semantics).expect_err(context);
+    let err = project_resolved_model(model, semantics, None).expect_err(context);
     assert!(
         matches!(err, StoreError::Validation(_)),
         "expected StoreError::Validation, got {err:?}"
