@@ -25,6 +25,13 @@ const U_CLR: &[Port] = &[
         kind: B,
     },
 ];
+const U_RESET: &[Port] = &[
+    Port { name: "u", kind: B },
+    Port {
+        name: "reset",
+        kind: B,
+    },
+];
 const SWITCH_INPUTS: &[Port] = &[
     Port {
         name: "u1",
@@ -51,6 +58,14 @@ const BOOL_Y: &[Port] = &[Port { name: "y", kind: B }];
 const TIMER_PARAMS: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Real("0.25"),
+}];
+const TIMER_ZERO_PARAMS: &[Param] = &[Param {
+    name: "t",
+    value: ParamValue::Real("0.0"),
+}];
+const TIMER_ACCUMULATING_LATCH_PARAMS: &[Param] = &[Param {
+    name: "t",
+    value: ParamValue::Real("0.5"),
 }];
 const TRUE_DELAY_PARAMS: &[Param] = &[Param {
     name: "delayTime",
@@ -136,6 +151,30 @@ const CASES: &[BlockCase] = &[
         TIMER_OUTPUTS,
     ),
     case(
+        "logical_timer_threshold_zero",
+        "CDL.Logical.Timer",
+        "Timer/threshold_zero",
+        U,
+        TIMER_ZERO_PARAMS,
+        TIMER_OUTPUTS,
+    ),
+    case(
+        "logical_timer_accumulating_threshold_zero",
+        "CDL.Logical.TimerAccumulating",
+        "TimerAccumulating/threshold_zero",
+        U_RESET,
+        TIMER_ZERO_PARAMS,
+        TIMER_OUTPUTS,
+    ),
+    case(
+        "logical_timer_accumulating_latch_reset",
+        "CDL.Logical.TimerAccumulating",
+        "TimerAccumulating/latch_reset",
+        U_RESET,
+        TIMER_ACCUMULATING_LATCH_PARAMS,
+        TIMER_OUTPUTS,
+    ),
+    case(
         "logical_true_delay",
         "CDL.Logical.TrueDelay",
         "TrueDelay",
@@ -176,6 +215,9 @@ const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
     "logical_latch",
     "logical_toggle",
     "logical_timer",
+    "logical_timer_threshold_zero",
+    "logical_timer_accumulating_threshold_zero",
+    "logical_timer_accumulating_latch_reset",
     "logical_true_delay",
     "logical_true_false_hold",
     "logical_true_hold_with_reset",

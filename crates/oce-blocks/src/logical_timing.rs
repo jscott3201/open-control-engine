@@ -29,8 +29,11 @@ const PREV_U_WORD: usize = 2;
 /// Buildings `Controls/OBC/CDL/Logical/Timer.mo` computes elapsed time as
 /// `time - entryTime`, a single subtraction from the stored rising-edge timestamp, instead of a
 /// per-tick accumulation. The output resets to zero while `u` is false.
-/// Outputs `(y, passed)` where `passed` uses the Buildings threshold boundary `y >= t`.
-/// `[S]`, feedthrough `y,passed <- {u}`, not a loop cut.
+/// Outputs `(y, passed)` where `passed` uses the Buildings threshold boundary `y >= t` only while
+/// `u` is true. While `u` is false, operation drives `passed=false`; the Modelica
+/// `pre(passed)=t<=0` initial equation is only the initialization value before the `elsewhen not u`
+/// clause drives the steady-state false output. `[S]`, feedthrough `y,passed <- {u}`, not a loop
+/// cut.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Timer {
     pub(crate) t: f64,
@@ -87,8 +90,9 @@ impl Block for Timer {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
+        let u = read_bool(inputs, 0);
         emit_real(0, y, emit);
-        emit(1, Value::Boolean(y >= self.t));
+        emit(1, Value::Boolean(u && y >= self.t));
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
@@ -102,10 +106,14 @@ impl Block for Timer {
 }
 
 const TA_PREV_RESET_WORD: usize = 3;
+const TA_PASSED_WORD: usize = 4;
 
 /// `CDL.Logical.TimerAccumulating` — accumulated true-time, cleared by a reset rising edge.
-/// Outputs `(y, passed)` with `passed` true at `y >= t`. `[S]`, feedthrough `y,passed <- {u,reset}`,
-/// not a loop cut.
+/// Outputs `(y, passed)`. `y` accumulates true-time and holds while `u` is false; reset clears the
+/// accumulation to zero. `passed` is a Modelica discrete latch: reset sets it to `t <= 0`, a rising
+/// `u` samples the accumulated value before the new interval, crossing the threshold while `u` is
+/// true sets it, and `not u` holds the previous value. `[S]`, feedthrough
+/// `y,passed <- {u,reset}`, not a loop cut.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TimerAccumulating {
     pub(crate) t: f64,
@@ -124,6 +132,23 @@ impl TimerAccumulating {
             acc
         } else {
             acc + tick_dt(ctx.t(), region[PREV_T_WORD])
+        }
+    }
+
+    fn passed_now(self, inputs: &[Value], region: &[u64], live_y: f64) -> bool {
+        let u = read_bool(inputs, 0);
+        let reset = read_bool(inputs, 1);
+        let reset_rising = reset && !word_bool(region[TA_PREV_RESET_WORD]);
+        let u_rising = u && !word_bool(region[PREV_U_WORD]);
+        let pre_passed = word_bool(region[TA_PASSED_WORD]);
+        if reset_rising {
+            self.t <= 0.0
+        } else if u_rising {
+            self.t <= f64::from_bits(region[ACC_WORD])
+        } else if u && live_y >= self.t {
+            true
+        } else {
+            pre_passed
         }
     }
 }
@@ -148,7 +173,7 @@ impl Block for TimerAccumulating {
     }
 
     fn state_len(&self) -> usize {
-        4
+        5
     }
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
@@ -156,6 +181,7 @@ impl Block for TimerAccumulating {
         region[PREV_T_WORD] = PREV_T_UNSET;
         region[PREV_U_WORD] = 0;
         region[TA_PREV_RESET_WORD] = 0;
+        region[TA_PASSED_WORD] = bool_word(self.t <= 0.0);
     }
 
     fn emit_from_state(
@@ -166,15 +192,19 @@ impl Block for TimerAccumulating {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
+        let passed = self.passed_now(inputs, region, y);
         emit_real(0, y, emit);
-        emit(1, Value::Boolean(y >= self.t));
+        emit(1, Value::Boolean(passed));
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[ACC_WORD] = self.y_now(ctx, inputs, region).to_bits();
+        let y = self.y_now(ctx, inputs, region);
+        let passed = self.passed_now(inputs, region, y);
+        region[ACC_WORD] = y.to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
         region[PREV_U_WORD] = bool_word(read_bool(inputs, 0));
         region[TA_PREV_RESET_WORD] = bool_word(read_bool(inputs, 1));
+        region[TA_PASSED_WORD] = bool_word(passed);
     }
 }
 

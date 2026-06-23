@@ -1,0 +1,8 @@
+#1
+# columns: time u y passed
+double CDL_Logical_Timer_threshold_zero_reference(5,4)
+0.0 1.0 0.0 1.0
+0.1 0.0 0.0 0.0
+0.2 0.0 0.0 0.0
+0.3 1.0 0.0 1.0
+0.4 0.0 0.0 0.0
