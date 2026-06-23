@@ -52,8 +52,8 @@ pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use pid::{Pid, PidWithReset};
 pub use reals_arithmetic::{
-    Abs, Add, AddParameter, Constant, Divide, Limiter, Line, Max, Min, Multiply,
-    MultiplyByParameter, Subtract, Switch,
+    Abs, Add, AddParameter, Average, Constant, Divide, Limiter, Line, Max, Min, Modulo, Multiply,
+    MultiplyByParameter, Round, Sqrt, Subtract, Switch,
 };
 pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};

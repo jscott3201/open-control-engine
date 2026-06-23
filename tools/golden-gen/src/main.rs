@@ -15,6 +15,7 @@ mod integers_conversions;
 mod logical;
 mod oracle;
 mod reals;
+mod reals_scalar_arithmetic;
 mod reals_pid;
 mod sequences;
 
@@ -42,6 +43,7 @@ fn main() {
     // Re-derive every golden (closed-form spec math).
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
+    goldens.extend(reals_scalar_arithmetic::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(integers_conversions::goldens());

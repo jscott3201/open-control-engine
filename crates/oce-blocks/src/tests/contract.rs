@@ -130,6 +130,10 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Subtract",
         "CDL.Reals.Multiply",
         "CDL.Reals.Divide",
+        "CDL.Reals.Sqrt",
+        "CDL.Reals.Average",
+        "CDL.Reals.Modulo",
+        "CDL.Reals.Round",
         "CDL.Reals.AddParameter",
         "CDL.Reals.MultiplyByParameter",
         "CDL.Reals.Abs",
@@ -196,7 +200,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 70, "registry count");
+    assert_eq!(PATHS.len(), 74, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -302,6 +306,12 @@ fn registry_make_resolves_parameters() {
     };
     let add_param = (lookup("CDL.Reals.AddParameter").unwrap().make)(&add_params);
     assert!(outs(add_param.as_ref(), &[Value::Real(1.5)])[0].bit_eq(&Value::Real(4.0)));
+
+    let round_params = ParamTable {
+        values: vec![(Arc::from("n"), Value::Integer(2))],
+    };
+    let round = (lookup("CDL.Reals.Round").unwrap().make)(&round_params);
+    assert!(outs(round.as_ref(), &[Value::Real(1.125)])[0].bit_eq(&Value::Real(1.13)));
 
     let delay_params = ParamTable {
         values: vec![(Arc::from("y_start"), Value::Real(1.25))],
