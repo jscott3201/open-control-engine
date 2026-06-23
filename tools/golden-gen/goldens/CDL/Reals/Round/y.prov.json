@@ -1,0 +1,20 @@
+{
+  "class_path": "CDL.Reals.Round",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [1.125, -1.125, 0.0, 1.234, -1.234] }
+  ],
+  "input": "param n=2; u=[1.125,-1.125,0,1.234,-1.234]; half boundaries and non-half decimals",
+  "reference_rule": "fac built by repeated *10.0; y = floor(u*fac+0.5)/fac if u>0, +0 if u==0, else ceil(u*fac-0.5)/fac; Buildings Reals/Round.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -4,8 +4,8 @@
 use oce_model::Value;
 
 use super::{
-    Abs, Add, AddParameter, Block, Constant, Ctx, Divide, Limiter, Line, Max, Min, Multiply,
-    MultiplyByParameter, NoopDiagnostics, Subtract, Switch, read_real,
+    Abs, Add, AddParameter, Average, Block, Constant, Ctx, Divide, Limiter, Line, Max, Min, Modulo,
+    Multiply, MultiplyByParameter, NoopDiagnostics, Round, Sqrt, Subtract, Switch, read_real,
 };
 
 fn real_out(block: &dyn Block, inputs: &[Value]) -> f64 {
@@ -61,6 +61,10 @@ fn reals_arithmetic_hand_derived_golden_bits() {
 fn reals_arithmetic_feedthrough_perturbation_matches_declared_contract() {
     assert_perturb_moves(&Multiply, &[2.0, 3.0], &[(0, 4.0), (1, 5.0)]);
     assert_perturb_moves(&Divide, &[8.0, 4.0], &[(0, 12.0), (1, 2.0)]);
+    assert_perturb_moves(&Sqrt, &[4.0], &[(0, 9.0)]);
+    assert_perturb_moves(&Average, &[2.0, 4.0], &[(0, 6.0), (1, 8.0)]);
+    assert_perturb_moves(&Modulo, &[5.0, 3.0], &[(0, 7.0), (1, 2.0)]);
+    assert_perturb_moves(&Round { n: 1 }, &[1.24], &[(0, 1.26)]);
     assert_perturb_moves(&AddParameter { p: 2.0 }, &[3.0], &[(0, 4.0)]);
     assert_perturb_moves(&Abs, &[-2.0], &[(0, 3.0)]);
     assert_perturb_moves(&Min, &[4.0, 2.0], &[(0, 1.0), (1, 6.0)]);
@@ -70,6 +74,50 @@ fn reals_arithmetic_feedthrough_perturbation_matches_declared_contract() {
         &[0.0, 2.0, 4.0, 10.0, 1.5],
         &[(0, 0.5), (1, 3.0), (2, 5.0), (3, 12.0), (4, 2.0)],
     );
+}
+
+#[test]
+fn sqrt_edges_are_ieee_and_panic_free() {
+    assert_real_bits(&Sqrt, &[0.0], 0.0f64.to_bits());
+    assert_real_bits(&Sqrt, &[4.0], 2.0f64.to_bits());
+    assert_real_bits(&Sqrt, &[-1.0], 0x7ff8000000000000);
+    assert_real_bits(&Sqrt, &[f64::INFINITY], f64::INFINITY.to_bits());
+}
+
+#[test]
+fn average_edges_follow_sum_then_half_formula() {
+    assert_real_bits(&Average, &[2.0, 4.0], 3.0f64.to_bits());
+    assert_real_bits(&Average, &[-2.0, -4.0], (-3.0f64).to_bits());
+    assert_real_bits(&Average, &[f64::MAX, f64::MAX], f64::INFINITY.to_bits());
+    assert_real_bits(&Average, &[1.0, f64::NAN], 0x7ff8000000000000);
+}
+
+#[test]
+fn modulo_uses_floored_modelica_sign_rule() {
+    assert_real_bits(&Modulo, &[-5.0, 3.0], 1.0f64.to_bits());
+    assert_real_bits(&Modulo, &[5.0, -3.0], (-1.0f64).to_bits());
+    assert_real_bits(&Modulo, &[-5.0, -3.0], (-2.0f64).to_bits());
+}
+
+#[test]
+fn modulo_zero_edges_are_ieee_and_panic_free() {
+    assert_real_bits(&Modulo, &[0.0, 3.0], 0.0f64.to_bits());
+    assert_real_bits(&Modulo, &[1.0, 0.0], 0x7ff8000000000000);
+}
+
+#[test]
+fn round_half_boundaries_are_away_from_zero() {
+    assert_real_bits(&Round { n: 0 }, &[2.5], 3.0f64.to_bits());
+    assert_real_bits(&Round { n: 0 }, &[-2.5], (-3.0f64).to_bits());
+    assert_real_bits(&Round { n: 0 }, &[0.0], 0.0f64.to_bits());
+}
+
+#[test]
+fn round_decimal_digits_use_deterministic_integer_factor() {
+    assert_real_bits(&Round { n: 0 }, &[-2.4], (-2.0f64).to_bits());
+    assert_real_bits(&Round { n: 1 }, &[1.25], 1.3f64.to_bits());
+    assert_real_bits(&Round { n: 2 }, &[1.125], 1.13f64.to_bits());
+    assert_real_bits(&Round { n: -1 }, &[149.0], 150.0f64.to_bits());
 }
 #[test]
 fn multiply_edges_are_ieee_and_panic_free() {
@@ -236,6 +284,10 @@ fn reals_arithmetic_outputs_are_bit_deterministic_across_reruns() {
     let cases: &[(&dyn Block, &[f64])] = &[
         (&Multiply, &[0.1, 0.2]),
         (&Divide, &[0.0, 0.0]),
+        (&Sqrt, &[-1.0]),
+        (&Average, &[f64::MAX, f64::MAX]),
+        (&Modulo, &[-5.0, -3.0]),
+        (&Round { n: 2 }, &[1.125]),
         (&AddParameter { p: 0.2 }, &[0.1]),
         (&Abs, &[-0.0]),
         (&Min, &[f64::NAN, 2.0]),

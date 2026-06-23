@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Reals_Average_y(5,2)
+0.0 3.0
+60.0 -3.0
+120.0 inf
+180.0 NaN
+240.0 -2.0

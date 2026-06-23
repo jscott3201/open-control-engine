@@ -145,6 +145,148 @@ impl Block for Divide {
     }
 }
 
+/// `CDL.Reals.Sqrt` computes `y = sqrt(u)`.
+///
+/// The block is stateless `[A]`, fully feedthrough, and uses IEEE-754 `f64::sqrt`, which is
+/// correctly rounded and bit-portable for the determinism matrix. Domain violations such as
+/// `u < 0` produce NaN; the engine canonicalizes emitted NaN bits and never panics.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Sqrt;
+
+impl Block for Sqrt {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Sqrt",
+            inputs: &[PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_real(0, read_real(inputs, 0).sqrt(), emit);
+    }
+}
+
+/// `CDL.Reals.Average` computes `y = 0.5 * (u1 + u2)`.
+///
+/// The block is stateless `[A]`, fully feedthrough, has no parameters, and follows ordinary
+/// IEEE-754 addition and multiplication semantics. Overflow, infinities, and NaN propagation are
+/// not clamped; emitted NaN bits are canonicalized and the block never panics.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Average;
+
+impl Block for Average {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Average",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_real(0, 0.5 * (read_real(inputs, 0) + read_real(inputs, 1)), emit);
+    }
+}
+
+/// `CDL.Reals.Modulo` computes Modelica `mod(u1, u2)`.
+///
+/// The block is stateless `[A]`, fully feedthrough, and intentionally uses the floored Modelica
+/// definition `u1 - floor(u1 / u2) * u2`, so the result sign follows the divisor rather than Rust's
+/// truncated-remainder `%` behavior. A zero divisor degrades through IEEE NaN and never panics.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Modulo;
+
+impl Block for Modulo {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Modulo",
+            inputs: &[PortKind::Real, PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let u1 = read_real(inputs, 0);
+        let u2 = read_real(inputs, 1);
+        emit_real(0, u1 - (u1 / u2).floor() * u2, emit);
+    }
+}
+
+/// `CDL.Reals.Round` rounds `u` to decimal digit count `n`.
+///
+/// The block is stateless `[A]`, fully feedthrough, and implements the Buildings formula:
+/// `fac = 10^n`; positive `u` uses `floor(u * fac + 0.5) / fac`, negative `u` uses
+/// `ceil(u * fac - 0.5) / fac`, and exact zero returns `+0.0`. The factor is built with
+/// deterministic repeated `* 10.0` operations, then reciprocated for negative `n`; no `powi`/`powf`
+/// is used. Non-finite values and overflow follow IEEE behavior, emitted NaN bits are
+/// canonicalized, and the block never panics.
+#[derive(Clone, Copy, Debug)]
+pub struct Round {
+    pub(crate) n: i64,
+}
+
+impl Block for Round {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Round",
+            inputs: &[PortKind::Real],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let u = read_real(inputs, 0);
+        let fac = decimal_factor(self.n);
+        let y = if u == 0.0 {
+            0.0
+        } else if u > 0.0 {
+            (u * fac + 0.5).floor() / fac
+        } else {
+            (u * fac - 0.5).ceil() / fac
+        };
+        emit_real(0, y, emit);
+    }
+}
+
+fn decimal_factor(n: i64) -> f64 {
+    let mut factor = 1.0_f64;
+    let mut remaining = n.unsigned_abs();
+    while remaining > 0 && factor.is_finite() {
+        factor *= 10.0;
+        remaining -= 1;
+    }
+    if n >= 0 { factor } else { 1.0 / factor }
+}
+
 /// `CDL.Reals.AddParameter` — `y = u + p`, offset `p` (`03` §4.1). Stateless `[A]`, full
 /// feedthrough.
 #[derive(Clone, Copy, Debug)]

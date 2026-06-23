@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Reals_Sqrt_y(5,2)
+0.0 0.0
+60.0 2.0
+120.0 1.5
+180.0 NaN
+240.0 inf

@@ -93,6 +93,8 @@ CDL.Reals.Add reference -> goldens/CDL/Reals/Add/reference.csv
 CDL.Reals.Add y -> goldens/CDL/Reals/Add/y.csv
 CDL.Reals.AddParameter reference -> goldens/CDL/Reals/AddParameter/reference.csv
 CDL.Reals.AddParameter y -> goldens/CDL/Reals/AddParameter/y.csv
+CDL.Reals.Average reference -> goldens/CDL/Reals/Average/reference.csv
+CDL.Reals.Average y -> goldens/CDL/Reals/Average/y.csv
 CDL.Reals.Divide reference -> goldens/CDL/Reals/Divide/reference.csv
 CDL.Reals.Divide y -> goldens/CDL/Reals/Divide/y.csv
 CDL.Reals.Greater reference -> goldens/CDL/Reals/Greater/reference.csv
@@ -129,6 +131,8 @@ CDL.Reals.Max reference -> goldens/CDL/Reals/Max/reference.csv
 CDL.Reals.Max y -> goldens/CDL/Reals/Max/y.csv
 CDL.Reals.Min reference -> goldens/CDL/Reals/Min/reference.csv
 CDL.Reals.Min y -> goldens/CDL/Reals/Min/y.csv
+CDL.Reals.Modulo reference -> goldens/CDL/Reals/Modulo/reference.csv
+CDL.Reals.Modulo y -> goldens/CDL/Reals/Modulo/y.csv
 CDL.Reals.Multiply reference -> goldens/CDL/Reals/Multiply/reference.csv
 CDL.Reals.Multiply y -> goldens/CDL/Reals/Multiply/y.csv
 CDL.Reals.MultiplyByParameter reference -> goldens/CDL/Reals/MultiplyByParameter/reference.csv
@@ -137,8 +141,12 @@ CDL.Reals.PID/pi_recurrence reference -> goldens/CDL/Reals/PID/pi_recurrence/ref
 CDL.Reals.PID/pi_recurrence y -> goldens/CDL/Reals/PID/pi_recurrence/y.csv
 CDL.Reals.PIDWithReset/pi_reset_recurrence reference -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/reference.csv
 CDL.Reals.PIDWithReset/pi_reset_recurrence y -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/y.csv
+CDL.Reals.Round reference -> goldens/CDL/Reals/Round/reference.csv
+CDL.Reals.Round y -> goldens/CDL/Reals/Round/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv
 CDL.Reals.Sources.Constant y -> goldens/CDL/Reals/Sources/Constant/y.csv
+CDL.Reals.Sqrt reference -> goldens/CDL/Reals/Sqrt/reference.csv
+CDL.Reals.Sqrt y -> goldens/CDL/Reals/Sqrt/y.csv
 CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv
 CDL.Reals.Subtract y -> goldens/CDL/Reals/Subtract/y.csv
 CDL.Reals.Switch reference -> goldens/CDL/Reals/Switch/reference.csv

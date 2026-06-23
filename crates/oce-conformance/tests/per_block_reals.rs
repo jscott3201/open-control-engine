@@ -95,6 +95,10 @@ const CONSTANT_K: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Real("21.5"),
 }];
+const ROUND_N_TWO: &[Param] = &[Param {
+    name: "n",
+    value: ParamValue::Integer("2"),
+}];
 const LIMITER_PARAMS: &[Param] = &[
     Param {
         name: "uMin",
@@ -234,6 +238,31 @@ const CASES: &[BlockCase] = &[
         "Divide",
         U1_U2,
         &[],
+        REAL_Y,
+    ),
+    case("reals_sqrt", "CDL.Reals.Sqrt", "Sqrt", U, &[], REAL_Y),
+    case(
+        "reals_average",
+        "CDL.Reals.Average",
+        "Average",
+        U1_U2,
+        &[],
+        REAL_Y,
+    ),
+    case(
+        "reals_modulo",
+        "CDL.Reals.Modulo",
+        "Modulo",
+        U1_U2,
+        &[],
+        REAL_Y,
+    ),
+    case(
+        "reals_round",
+        "CDL.Reals.Round",
+        "Round",
+        U,
+        ROUND_N_TWO,
         REAL_Y,
     ),
     case(

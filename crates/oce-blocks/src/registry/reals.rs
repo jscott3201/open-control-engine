@@ -1,10 +1,10 @@
 use oce_model::ParamTable;
 
-use super::{bool_param, real_param};
+use super::{bool_param, int_param, real_param};
 use crate::{
-    Abs, Add, AddParameter, Block, Constant, Divide, Greater, GreaterThreshold, Hysteresis, Less,
-    LessThreshold, Limiter, Line, Max, Min, Multiply, MultiplyByParameter, ParamRule,
-    RegistryEntry, Subtract, Switch,
+    Abs, Add, AddParameter, Average, Block, Constant, Divide, Greater, GreaterThreshold,
+    Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Modulo, Multiply,
+    MultiplyByParameter, ParamRule, RegistryEntry, Round, Sqrt, Subtract, Switch,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -27,6 +27,22 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Divide",
         make: make_divide,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sqrt",
+        make: make_sqrt,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Average",
+        make: make_average,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Modulo",
+        make: make_modulo,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Round",
+        make: make_round,
     },
     RegistryEntry {
         class_path: "CDL.Reals.AddParameter",
@@ -113,6 +129,24 @@ fn make_multiply(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_divide(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Divide)
+}
+
+fn make_sqrt(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Sqrt)
+}
+
+fn make_average(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Average)
+}
+
+fn make_modulo(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Modulo)
+}
+
+fn make_round(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Round {
+        n: int_param(p, "n", 0),
+    })
 }
 
 fn make_add_parameter(p: &ParamTable) -> Box<dyn Block> {
