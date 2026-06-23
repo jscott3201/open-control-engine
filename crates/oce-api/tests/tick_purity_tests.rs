@@ -184,9 +184,10 @@ fn assert_simulate_uses_no_forbidden_store_methods() {
     for fixture in G36_FIXTURES {
         let store = Arc::new(RecordingStore::default());
         let mut engine = Engine::with_store(Arc::clone(&store));
-        engine
+        let report = engine
             .load_cxf(fixture.cxf.as_bytes())
             .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+        let input_count = report.io.analog_inputs + report.io.digital_inputs;
 
         store.reset_calls();
         store.arm_hot_path_guard();
@@ -202,17 +203,22 @@ fn assert_simulate_uses_no_forbidden_store_methods() {
             .unwrap_or_else(|e| panic!("{} fixture simulates: {e:?}", fixture.name));
 
         assert_eq!(metrics.ticks, fixture.t_stop + 1, "{}", fixture.name);
-        assert_tick_store_pure(store.calls(), metrics.ticks);
+        let calls = store.calls();
+        assert_tick_store_pure(calls, metrics.ticks);
+        assert_store_backed_read_counts(calls, metrics.ticks, input_count, fixture.name);
     }
 }
 
 fn assert_manual_g36_tick_allocates_nothing() {
     for fixture in G36_FIXTURES {
         let store = Arc::new(RecordingStore::default());
-        let mut engine = Engine::with_store(store);
+        let mut engine = Engine::with_store(Arc::clone(&store));
         engine
             .load_cxf(fixture.cxf.as_bytes())
             .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+        let _snapshot = store
+            .snapshot()
+            .unwrap_or_else(|e| panic!("{} fixture warms recording snapshot: {e:?}", fixture.name));
 
         for step in 0..=fixture.t_stop {
             let t = step as f64;
@@ -246,10 +252,9 @@ fn assert_tick_store_pure(calls: StoreCallSnapshot, ticks: u64) {
     assert_eq!(calls.delete_model, 0, "delete_model is off-tick only");
     assert_eq!(calls.resolve_points, 0, "resolve_points is load-time only");
     assert_eq!(calls.write_points, 0, "write_points is off-tick only");
-    // This becomes a >= ticks lower bound once every tick reads pre-resolved store handles.
-    assert_eq!(
-        calls.read_resolved, 0,
-        "read_resolved is not wired onto the hot path yet"
+    assert!(
+        calls.read_resolved >= calls.snapshot,
+        "read_resolved calls should come from tick snapshots: calls={calls:?}"
     );
     assert_eq!(calls.read_by_key, 0, "read_by_key is not a hot-path read");
     assert_eq!(
@@ -277,6 +282,24 @@ fn assert_tick_store_pure(calls: StoreCallSnapshot, ticks: u64) {
     assert_eq!(calls.commit, 0, "commit is off-tick only");
     assert_eq!(calls.flush, 0, "flush is off-tick only");
     assert_eq!(calls.recover, 0, "recover is load/open only");
+}
+
+fn assert_store_backed_read_counts(
+    calls: StoreCallSnapshot,
+    ticks: u64,
+    input_count: usize,
+    fixture: &str,
+) {
+    let ticks = usize::try_from(ticks).expect("test tick count fits usize");
+    assert_eq!(
+        calls.snapshot, ticks,
+        "{fixture} must acquire exactly one store snapshot per tick"
+    );
+    assert_eq!(
+        calls.read_resolved,
+        ticks * input_count,
+        "{fixture} must read every pre-resolved input handle once per tick"
+    );
 }
 
 fn assert_no_heap_traffic(stats: Stats, fixture: &str, t: f64) {

@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, NoopDiagnostics, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
-use oce_model::{Dir, ModelGraph};
-use oce_store::{DomainKey, PointHandle, Store};
+use oce_model::{ConnectorId, Dir, ModelGraph, Value, ValueType};
+use oce_store::{DomainKey, OcValue, PointHandle, PointSample, PointSnapshot, Store, StoreError};
 use oce_store_mem::MemStore;
 
 use crate::error::OcError;
@@ -18,6 +18,14 @@ use crate::loading::LoadReport;
 use crate::params::{ParamTable, RunMode};
 use crate::projection::project_resolved_model;
 use crate::sim::Outputs;
+
+/// One input connector's load-time store handle and model-state slot.
+#[derive(Clone, Debug)]
+pub(crate) struct StoreInputHandle {
+    connector_id: ConnectorId,
+    handle: PointHandle,
+    path: String,
+}
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB, D-OWNER-1).
 /// Not `Clone` (it owns mutable run state); intended to be shared across threads as `Arc<Engine<S>>`.
@@ -41,8 +49,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) outputs: Outputs,
     /// Previous tick's absolute model time — enforces the monotonic-`t_now` contract (CDL §7.16).
     pub(crate) prev_t: Option<f64>,
-    /// Hot point handles, pre-resolved at load (FRAME §3.3) — opaque, no DB type.
-    pub(crate) handles: Vec<PointHandle>,
+    /// Store-backed input handles, pre-resolved at load; tick reads only these opaque handles.
+    pub(crate) store_inputs: Vec<StoreInputHandle>,
     /// Stable durable identity of the loaded model projection.
     pub(crate) model_id: DomainKey,
     /// Should-level semantic diagnostics from the load-time resolver.
@@ -79,7 +87,7 @@ impl<S: Store> Engine<S> {
             state: RunState::default(),
             outputs: Outputs::default(),
             prev_t: None,
-            handles: Vec::new(),
+            store_inputs: Vec::new(),
             model_id: DomainKey::default(),
             semantic_warnings: Vec::new(),
             params: ParamTable::default(),
@@ -131,6 +139,7 @@ impl<S: Store> Engine<S> {
         // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
         self.store.recover()?;
         self.store.save_model(&resolved_model)?;
+        let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
         self.model = Arc::new(model);
         self.blocks = blocks;
         self.schedule = schedule;
@@ -143,10 +152,7 @@ impl<S: Store> Engine<S> {
         self.prev_t = None;
         self.model_id = resolved_model.model_id;
         self.semantic_warnings = semantic_warnings;
-        // The current facade stages no store-backed inputs through either `load_cxf` or this shared
-        // tail, so no hot point handles are resolved yet; clear any from a prior/future load so
-        // reloads never carry stale handles.
-        self.handles = Vec::new();
+        self.store_inputs = store_inputs;
         Ok(())
     }
 
@@ -218,6 +224,7 @@ impl<S: Store> Engine<S> {
         {
             return Err(OcError::TimeRegression { now: t_now, prev });
         }
+        self.stage_store_inputs()?;
         {
             let mut ctx = EvalContext {
                 model: &self.model,
@@ -231,6 +238,19 @@ impl<S: Store> Engine<S> {
         self.prev_t = Some(t_now);
         self.outputs.refresh_from(&self.state);
         Ok(&self.outputs)
+    }
+
+    fn stage_store_inputs(&mut self) -> Result<(), OcError> {
+        if self.store_inputs.is_empty() {
+            return Ok(());
+        }
+        let snapshot = self.store.snapshot()?;
+        stage_store_inputs_from_snapshot(
+            &self.store_inputs,
+            snapshot.as_ref(),
+            &self.model,
+            &mut self.state,
+        )
     }
 
     /// The frozen schedule (for trace tooling / determinism assertions; D6).
@@ -264,6 +284,72 @@ pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block
         blocks.push((entry.make)(&blk.params));
     }
     Ok(blocks)
+}
+
+fn resolve_store_inputs<S: Store>(
+    store: &S,
+    io: &IoInventory,
+) -> Result<Vec<StoreInputHandle>, OcError> {
+    let inputs = io.input_bindings();
+    if inputs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let keys: Vec<DomainKey> = inputs
+        .iter()
+        .map(|input| DomainKey::new(input.path.clone()))
+        .collect();
+    let handles = store.resolve_points(&keys)?;
+    if handles.len() != inputs.len() {
+        return Err(StoreError::Validation(format!(
+            "PointStore::resolve_points returned {} handles for {} input points",
+            handles.len(),
+            inputs.len()
+        ))
+        .into());
+    }
+    Ok(inputs
+        .into_iter()
+        .zip(handles)
+        .map(|(input, handle)| StoreInputHandle {
+            connector_id: input.connector_id,
+            handle,
+            path: input.path,
+        })
+        .collect())
+}
+
+fn stage_store_inputs_from_snapshot(
+    inputs: &[StoreInputHandle],
+    snapshot: &dyn PointSnapshot,
+    model: &ModelGraph,
+    state: &mut RunState,
+) -> Result<(), OcError> {
+    for input in inputs {
+        let Some(sample) = snapshot.read_resolved(input.handle) else {
+            continue;
+        };
+        let connector = &model.connectors[input.connector_id.0 as usize];
+        let value = sample_to_value(sample, connector.value_type, &input.path)?;
+        state.values[input.connector_id.0 as usize] = value;
+    }
+    Ok(())
+}
+
+fn sample_to_value(sample: PointSample, want: ValueType, path: &str) -> Result<Value, OcError> {
+    match (sample.value, want) {
+        (OcValue::Real(v), ValueType::Real) => Ok(Value::Real(v)),
+        (OcValue::Int(v), ValueType::Integer) => Ok(Value::Integer(v)),
+        (OcValue::Bool(v), ValueType::Boolean) => Ok(Value::Boolean(v)),
+        (OcValue::String(v), ValueType::String) => Ok(Value::String(Arc::from(v))),
+        (OcValue::Int(v), ValueType::Enum(class)) => {
+            let ordinal = u32::try_from(v)
+                .ok()
+                .filter(|ordinal| *ordinal > 0)
+                .ok_or_else(|| OcError::InputType(path.to_owned()))?;
+            Ok(Value::Enum { class, ordinal })
+        }
+        _ => Err(OcError::InputType(path.to_owned())),
+    }
 }
 
 /// The output-connector paths in `connectors.filter(Out)` order — the keys for [`Outputs::to_map`].
