@@ -3,8 +3,8 @@
 //! This module derives the limited PI recurrence from `_spec/03` R-REALS-2 and the Buildings
 //! `PID.mo` / `PIDWithReset.mo` block wiring. It intentionally does not import or call any
 //! `oce-*` code. The emitted traces exercise non-dyadic forward-Euler integral accumulation,
-//! limiter back-calculation anti-windup, and the local `PIDWithReset` trigger + `y_reset_in`
-//! interface.
+//! limiter back-calculation anti-windup, and the local `PIDWithReset` trigger plus `y_reset`
+//! parameter reset path.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
@@ -53,7 +53,7 @@ struct PiConfig {
 
 struct ResetInputs<'a> {
     trigger: &'a [bool],
-    y_reset_in: &'a [f64],
+    y_reset: f64,
 }
 
 fn pi_outputs(
@@ -67,7 +67,6 @@ fn pi_outputs(
     assert_eq!(time.len(), u_m.len());
     if let Some(reset) = &reset {
         assert_eq!(time.len(), reset.trigger.len());
-        assert_eq!(time.len(), reset.y_reset_in.len());
     }
 
     let mut y_i = config.xi_start;
@@ -89,7 +88,7 @@ fn pi_outputs(
 
         y_i = if rising_reset {
             let reset = reset.as_ref().expect("rising reset has reset inputs");
-            reset.y_reset_in[idx] - y_p
+            reset.y_reset - y_p
         } else {
             let delta_y = (y_u - y) / (config.k * config.ni);
             let err_i = e - delta_y;
@@ -138,7 +137,7 @@ fn pid_with_reset_pi_recurrence() -> Golden {
     let u_s = [0.20, 0.22, 0.95, 0.18, 0.18, -1.38, 1.10, -0.40, -0.40, 0.025];
     let u_m = [0.0; 10];
     let trigger = [false, false, false, true, true, false, false, true, true, false];
-    let y_reset_in = [0.0, 0.0, 0.0, -0.123, -0.123, 0.0, 0.0, 0.275, 0.275, 0.0];
+    let y_reset = 0.275;
     let config = PiConfig {
         k: K,
         ti: TI,
@@ -154,7 +153,7 @@ fn pid_with_reset_pi_recurrence() -> Golden {
         config,
         Some(ResetInputs {
             trigger: &trigger,
-            y_reset_in: &y_reset_in,
+            y_reset,
         }),
     );
 
@@ -164,15 +163,14 @@ fn pid_with_reset_pi_recurrence() -> Golden {
         ValueKind::Real,
         time,
         y,
-        "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.11, yMin=-0.35, yMax=0.45; trigger rises at t=0.3 and t=0.7; y_reset_in=-0.123 then 0.275; dt=0.1 decimal grid",
-        "Same limited PI recurrence as PID, with a rising trigger applying the local reset interface during state update: xI := y_reset_in - yP. Rows t=0.4 and t=0.8 hold the same current P term as the reset row, so emitted y pins the reset target on the next tick.",
+        "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.11, y_reset=0.275, yMin=-0.35, yMax=0.45; trigger rises at t=0.3 and t=0.7; dt=0.1 decimal grid",
+        "Same limited PI recurrence as PID, with a rising trigger applying the canonical PIDWithReset.mo parameter reset during state update: xI := y_reset - yP. Rows t=0.4 and t=0.8 hold the same current P term as the reset row, so emitted y pins the parameter reset target on the next tick.",
     )
     .with_scenario("pi_reset_recurrence")
     .with_inputs(vec![
         input_r("u_s", u_s),
         input_r("u_m", u_m),
         input_b("trigger", trigger),
-        input_r("y_reset_in", y_reset_in),
     ])
     .with_provenance("fp_residue_note", fp_residue_note("PIDWithReset row 5 drives lower saturation after a non-dyadic reset state, so anti-windup contributes a non-dyadic correction before later reset-target rows."))
 }

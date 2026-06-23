@@ -7,17 +7,16 @@
   "value_kind": "Real",
   "compare_regime": "bit-exact Tier-1 f64 recurrence oracle (Value::bit_eq)",
   "n_samples": 10,
-  "n_reference_columns": 6,
+  "n_reference_columns": 5,
   "reference_csv": "reference.csv",
-  "reference_columns": ["time", "u_s", "u_m", "trigger", "y_reset_in", "y"],
+  "reference_columns": ["time", "u_s", "u_m", "trigger", "y"],
   "inputs": [
     { "name": "u_s", "value_kind": "Real", "values": [0.2, 0.22, 0.95, 0.18, 0.18, -1.38, 1.1, -0.4, -0.4, 0.025] },
     { "name": "u_m", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
-    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0] },
-    { "name": "y_reset_in", "value_kind": "Real", "values": [0.0, 0.0, 0.0, -0.123, -0.123, 0.0, 0.0, 0.275, 0.275, 0.0] }
+    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0] }
   ],
-  "input": "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.11, yMin=-0.35, yMax=0.45; trigger rises at t=0.3 and t=0.7; y_reset_in=-0.123 then 0.275; dt=0.1 decimal grid",
-  "reference_rule": "Same limited PI recurrence as PID, with a rising trigger applying the local reset interface during state update: xI := y_reset_in - yP. Rows t=0.4 and t=0.8 hold the same current P term as the reset row, so emitted y pins the reset target on the next tick.",
+  "input": "default controllerType=PI; k=0.37, Ti=0.3, Ni=default 0.9, xi_start=0.11, y_reset=0.275, yMin=-0.35, yMax=0.45; trigger rises at t=0.3 and t=0.7; dt=0.1 decimal grid",
+  "reference_rule": "Same limited PI recurrence as PID, with a rising trigger applying the canonical PIDWithReset.mo parameter reset during state update: xI := y_reset - yP. Rows t=0.4 and t=0.8 hold the same current P term as the reset row, so emitted y pins the parameter reset target on the next tick.",
   "fp_residue_note": "The stimulus avoids the G36 dyadic PID cone: k=0.37, Ti=0.3, Ni=0.9, and dt=0.1 are all non-dyadic decimal literals in binary64, so k/Ti and the accumulated xI values carry rounding residue. PIDWithReset row 5 drives lower saturation after a non-dyadic reset state, so anti-windup contributes a non-dyadic correction before later reset-target rows.",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",

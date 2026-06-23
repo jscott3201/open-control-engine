@@ -20,13 +20,8 @@ fn pid_inputs(u_s: f64, u_m: f64) -> [Value; 2] {
     [Value::Real(u_s), Value::Real(u_m)]
 }
 
-fn pid_reset_inputs(u_s: f64, u_m: f64, trigger: bool, y_reset_in: f64) -> [Value; 4] {
-    [
-        Value::Real(u_s),
-        Value::Real(u_m),
-        Value::Boolean(trigger),
-        Value::Real(y_reset_in),
-    ]
+fn pid_reset_inputs(u_s: f64, u_m: f64, trigger: bool) -> [Value; 3] {
+    [Value::Real(u_s), Value::Real(u_m), Value::Boolean(trigger)]
 }
 
 fn init_region(block: &dyn Block) -> Vec<u64> {
@@ -87,14 +82,14 @@ fn drive_pid(block: &dyn Block, steps: &[(f64, f64, f64)]) -> (Vec<Value>, Vec<u
 
 fn drive_pid_with_reset(
     block: &dyn Block,
-    steps: &[(f64, f64, f64, bool, f64)],
+    steps: &[(f64, f64, f64, bool)],
 ) -> (Vec<Value>, Vec<u64>) {
     let mut region = init_region(block);
     let mut trace = Vec::with_capacity(steps.len());
-    for &(t, u_s, u_m, trigger, y_reset_in) in steps {
+    for &(t, u_s, u_m, trigger) in steps {
         trace.push(tick(
             block,
-            &pid_reset_inputs(u_s, u_m, trigger, y_reset_in),
+            &pid_reset_inputs(u_s, u_m, trigger),
             &mut region,
             t,
         ));
@@ -135,10 +130,10 @@ fn pid_contract_feedthrough_and_state_layout_are_param_dependent() {
     assert_eq!(p_reset.signature().class_path, "CDL.Reals.PIDWithReset");
     assert_eq!(p_reset.kind(), BlockKind::Algebraic);
     assert_eq!(p_reset.state_len(), 0);
+    assert_eq!(p_reset.signature().inputs.len(), 3);
     assert!(p_reset.feeds_through(0, 0));
     assert!(p_reset.feeds_through(1, 0));
     assert!(!p_reset.feeds_through(2, 0));
-    assert!(!p_reset.feeds_through(3, 0));
 
     assert_eq!(PidWithReset { config: cfg(Pi) }.state_len(), 3);
     assert_eq!(PidWithReset { config: cfg(Pd) }.state_len(), 2);
@@ -527,20 +522,21 @@ fn pid_with_reset_back_solves_next_output_and_held_high_does_not_re_reset() {
             controller_type: Pi,
             k: 1.0,
             ti: 1.0,
+            y_reset: 7.0,
             y_min: -100.0,
             y_max: 100.0,
             ..ControllerConfig::default()
         },
     };
     let steps = [
-        (0.0, 2.0, 0.0, false, 0.0),
-        (1.0, 2.0, 0.0, true, 7.0),
-        (2.0, 2.0, 0.0, true, 11.0),
-        (3.0, 2.0, 0.0, false, 0.0),
+        (0.0, 2.0, 0.0, false),
+        (1.0, 2.0, 0.0, true),
+        (2.0, 2.0, 0.0, true),
+        (3.0, 2.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
     // Rising trigger at t=1 emits the pre-reset output 2, then stores xI=7-yP=5. Held high at
-    // t=2 emits 7 and integrates instead of resetting to 11.
+    // t=2 emits 7 and integrates instead of re-resetting.
     assert_trace_bits(
         &trace,
         &[
@@ -564,16 +560,17 @@ fn pid_with_reset_pid_mode_pins_derivative_ordering_across_reset() {
             ti: 1.0,
             td: 1.0,
             nd: 1.0,
+            y_reset: 5.0,
             y_min: -100.0,
             y_max: 100.0,
             ..ControllerConfig::default()
         },
     };
     let steps = [
-        (0.0, 1.0, 0.0, false, 0.0),
-        (1.0, 2.0, 0.0, true, 5.0),
-        (2.0, 2.0, 0.0, true, 9.0),
-        (3.0, 2.0, 0.0, false, 0.0),
+        (0.0, 1.0, 0.0, false),
+        (1.0, 2.0, 0.0, true),
+        (2.0, 2.0, 0.0, true),
+        (3.0, 2.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
     // At t=1 the reset back-solve uses old yD=1, storing xI=5-(yP+yD)=2, then
@@ -601,15 +598,16 @@ fn pid_with_reset_extreme_reset_value_is_bit_pinned() {
             controller_type: Pi,
             k: 1.0,
             ti: 1.0,
+            y_reset: f64::MAX,
             y_min: f64::NEG_INFINITY,
             y_max: f64::INFINITY,
             ..ControllerConfig::default()
         },
     };
     let steps = [
-        (0.0, 1.0, 0.0, false, 0.0),
-        (1.0, 1.0, 0.0, true, f64::MAX),
-        (2.0, 1.0, 0.0, false, 0.0),
+        (0.0, 1.0, 0.0, false),
+        (1.0, 1.0, 0.0, true),
+        (2.0, 1.0, 0.0, false),
     ];
     let (trace, region) = drive_pid_with_reset(&block, &steps);
     assert_trace_bits(
@@ -620,47 +618,47 @@ fn pid_with_reset_extreme_reset_value_is_bit_pinned() {
 }
 
 #[test]
-fn pid_with_reset_non_finite_reset_value_path_is_pinned() {
+fn pid_with_reset_non_finite_reset_parameter_path_is_pinned() {
     use oce_model::SimpleController::Pi;
-    let block = PidWithReset {
-        config: ControllerConfig {
-            controller_type: Pi,
-            k: 1.0,
-            ti: 1.0,
-            y_min: f64::NEG_INFINITY,
-            y_max: f64::INFINITY,
-            ..ControllerConfig::default()
-        },
-    };
+
+    fn block(y_reset: f64) -> PidWithReset {
+        PidWithReset {
+            config: ControllerConfig {
+                controller_type: Pi,
+                k: 1.0,
+                ti: 1.0,
+                y_reset,
+                y_min: f64::NEG_INFINITY,
+                y_max: f64::INFINITY,
+                ..ControllerConfig::default()
+            },
+        }
+    }
 
     let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
     let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
-    let (nan_trace, nan_region) = drive_pid_with_reset(
-        &block,
-        &[
-            (0.0, 1.0, 0.0, false, 0.0),
-            (1.0, 1.0, 0.0, true, quiet_nan),
-        ],
-    );
+
+    let nan_block = block(quiet_nan);
+    let (nan_trace, nan_region) =
+        drive_pid_with_reset(&nan_block, &[(0.0, 1.0, 0.0, false), (1.0, 1.0, 0.0, true)]);
     assert_trace_bits(&nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
     assert_eq!(nan_region[0], 0x7ff8_0000_0000_0000);
 
+    let negative_nan_block = block(negative_nan);
     let (negative_nan_trace, negative_nan_region) = drive_pid_with_reset(
-        &block,
-        &[
-            (0.0, 1.0, 0.0, false, 0.0),
-            (1.0, 1.0, 0.0, true, negative_nan),
-        ],
+        &negative_nan_block,
+        &[(0.0, 1.0, 0.0, false), (1.0, 1.0, 0.0, true)],
     );
     assert_trace_bits(&negative_nan_trace, &[1.0f64.to_bits(), 1.0f64.to_bits()]);
     assert_eq!(negative_nan_region[0], 0x7ff8_0000_0000_0000);
 
+    let inf_block = block(f64::INFINITY);
     let (inf_trace, inf_region) = drive_pid_with_reset(
-        &block,
+        &inf_block,
         &[
-            (0.0, 1.0, 0.0, false, 0.0),
-            (1.0, 1.0, 0.0, true, f64::INFINITY),
-            (2.0, 1.0, 0.0, false, 0.0),
+            (0.0, 1.0, 0.0, false),
+            (1.0, 1.0, 0.0, true),
+            (2.0, 1.0, 0.0, false),
         ],
     );
     assert_trace_bits(
