@@ -385,6 +385,19 @@ fn sample_to_value(sample: PointSample, want: ValueType, path: &str) -> Result<V
     }
 }
 
+/// The output-connector paths in `connectors.filter(Out)` order — the keys for [`Outputs::to_map`].
+/// Derived from the model connectors (NOT the IO inventory, which excludes `String` connectors), so
+/// it is always the same length and order as the `Outputs` value entries.
+#[must_use]
+pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
+    model
+        .connectors
+        .iter()
+        .filter(|c| c.dir == Dir::Out)
+        .map(|c| crate::io::connector_path(c.iri.as_deref(), c.id))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use oce_model::{BlockId, Connector, EnumClassId};
@@ -624,17 +637,4 @@ mod tests {
             self.inner.recover()
         }
     }
-}
-
-/// The output-connector paths in `connectors.filter(Out)` order — the keys for [`Outputs::to_map`].
-/// Derived from the model connectors (NOT the IO inventory, which excludes `String` connectors), so
-/// it is always the same length and order as the `Outputs` value entries.
-#[must_use]
-pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
-    model
-        .connectors
-        .iter()
-        .filter(|c| c.dir == Dir::Out)
-        .map(|c| crate::io::connector_path(c.iri.as_deref(), c.id))
-        .collect()
 }
