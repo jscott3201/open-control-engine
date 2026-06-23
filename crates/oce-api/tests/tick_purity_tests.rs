@@ -29,6 +29,43 @@ const AHU_SAT_RESET: &str =
 const AHU_ECONOMIZER: &str = include_str!("../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld");
 const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
+const NO_STORE_INPUTS: &str = r##"{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#NoStoreInputs",
+      "@type": "S231:Block",
+      "S231:label": "NoStoreInputs",
+      "S231:containsBlock": { "@id": "http://example.org#NoStoreInputs.con" },
+      "S231:hasOutput": { "@id": "http://example.org#NoStoreInputs.y" }
+    },
+    {
+      "@id": "http://example.org#NoStoreInputs.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#NoStoreInputs.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#NoStoreInputs.con.y" }
+    },
+    {
+      "@id": "http://example.org#NoStoreInputs.con.k",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#NoStoreInputs.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#NoStoreInputs.y" }
+    },
+    {
+      "@id": "http://example.org#NoStoreInputs.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}"##;
 
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
@@ -76,6 +113,34 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
     assert_simulate_uses_no_forbidden_store_methods();
     assert_manual_g36_tick_allocates_nothing();
     assert_real_mem_store_tick_allocates_snapshot_floor();
+}
+
+#[test]
+fn no_store_input_tick_path_skips_snapshot_and_reads() {
+    let store = Arc::new(RecordingStore::default());
+    let mut engine = Engine::with_store(Arc::clone(&store));
+    let report = engine
+        .load_cxf(NO_STORE_INPUTS.as_bytes())
+        .unwrap_or_else(|e| panic!("no-store-input fixture loads: {e:?}"));
+    let input_count = report.io.analog_inputs + report.io.digital_inputs;
+    assert_eq!(input_count, 0, "fixture must have no store-backed inputs");
+
+    store.reset_calls();
+    store.arm_hot_path_guard();
+    let metrics = engine
+        .simulate(&SimSpec {
+            t_start: 0.0,
+            t_stop: 3.0,
+            step: 1.0,
+            inputs: InputSource::Closure(Box::new(no_inputs)),
+            collect: CollectSpec::All { stride: 1 },
+        })
+        .unwrap_or_else(|e| panic!("no-store-input fixture simulates: {e:?}"));
+
+    assert_eq!(metrics.ticks, 4);
+    let calls = store.calls();
+    assert_tick_store_pure(calls);
+    assert_store_backed_read_counts(calls, metrics.ticks, input_count, "no_store_inputs");
 }
 
 fn assert_recording_store_guard_and_counters_are_live() {
@@ -209,7 +274,7 @@ fn assert_simulate_uses_no_forbidden_store_methods() {
 
         assert_eq!(metrics.ticks, fixture.t_stop + 1, "{}", fixture.name);
         let calls = store.calls();
-        assert_tick_store_pure(calls, metrics.ticks);
+        assert_tick_store_pure(calls);
         assert_store_backed_read_counts(calls, metrics.ticks, input_count, fixture.name);
     }
 }
@@ -267,14 +332,7 @@ fn assert_real_mem_store_tick_allocates_snapshot_floor() {
     }
 }
 
-fn assert_tick_store_pure(calls: StoreCallSnapshot, ticks: u64) {
-    let snapshot_limit = usize::try_from(ticks).expect("test tick count fits usize");
-    // Keep the historical upper-bound gate here; exact-per-tick tightening is the follow-up lane.
-    assert!(
-        calls.snapshot <= snapshot_limit,
-        "snapshot calls must be <= one per tick: calls={calls:?}, ticks={ticks}"
-    );
-
+fn assert_tick_store_pure(calls: StoreCallSnapshot) {
     assert_eq!(calls.save_model, 0, "save_model is off-tick only");
     assert_eq!(calls.load_model, 0, "load_model is off-tick only");
     assert_eq!(calls.list_models, 0, "list_models is off-tick only");
@@ -320,9 +378,10 @@ fn assert_store_backed_read_counts(
     fixture: &str,
 ) {
     let ticks = usize::try_from(ticks).expect("test tick count fits usize");
+    let expected_snapshots = if input_count == 0 { 0 } else { ticks };
     assert_eq!(
-        calls.snapshot, ticks,
-        "{fixture} must acquire exactly one store snapshot per tick"
+        calls.snapshot, expected_snapshots,
+        "{fixture} must acquire one store snapshot per tick only when it has input handles"
     );
     assert_eq!(
         calls.read_resolved,
@@ -454,6 +513,10 @@ fn oc_value(value: Value) -> OcValue {
 
 fn pair(path: &str, value: Value) -> (String, Value) {
     (path.to_owned(), value)
+}
+
+fn no_inputs(_t: f64) -> Vec<(String, Value)> {
+    Vec::new()
 }
 
 #[derive(Default)]
