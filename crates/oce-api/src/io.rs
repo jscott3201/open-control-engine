@@ -120,6 +120,13 @@ pub struct IoInventory {
     by_path: HashMap<String, usize>,
 }
 
+/// Load-time binding from a store point key to an input connector arena slot.
+#[derive(Clone, Debug)]
+pub(crate) struct InputPointBinding {
+    pub(crate) path: String,
+    pub(crate) connector_id: ConnectorId,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct PointInventoryRow {
     pub(crate) info: PointInfo,
@@ -246,6 +253,20 @@ impl IoInventory {
             .zip(&self.conn_id)
             .filter(|(p, _)| p.direction == PointDirection::Out)
             .map(|(p, &cid)| (p.path.clone(), cid))
+            .collect()
+    }
+
+    /// The store point keys for every input connector, in inventory order. This is resolved once at
+    /// load; the tick keeps only opaque handles and connector slots.
+    pub(crate) fn input_bindings(&self) -> Vec<InputPointBinding> {
+        self.points
+            .iter()
+            .zip(&self.conn_id)
+            .filter(|(p, _)| p.direction == PointDirection::In)
+            .map(|(p, &cid)| InputPointBinding {
+                path: p.path.clone(),
+                connector_id: cid,
+            })
             .collect()
     }
 

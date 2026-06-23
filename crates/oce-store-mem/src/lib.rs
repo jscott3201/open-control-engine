@@ -17,7 +17,7 @@
 //! silent success.
 
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use oce_store::{
     DomainKey, Durable, EquipmentDto, ModelStore, PointHandle, PointListRow, PointSample,
@@ -29,7 +29,7 @@ use oce_store::{
 #[derive(Default)]
 pub struct MemStore {
     models: RwLock<HashMap<DomainKey, ResolvedModel>>,
-    points: RwLock<MemPointState>,
+    points: RwLock<Arc<MemPointState>>,
 }
 
 /// Runtime point state: a dense `by_handle` array (the handle is its index) plus the
@@ -70,17 +70,20 @@ const SEMANTIC_RETRIEVAL_DEFERRED: &str = "MemStore: semantic retrieval deferred
 
 /// An immutable point-state snapshot handed to the hot read path.
 struct MemSnapshot {
-    by_handle: Vec<Option<PointSample>>,
-    by_key: HashMap<DomainKey, u64>,
+    state: Arc<MemPointState>,
 }
 
 impl PointSnapshot for MemSnapshot {
     fn read_resolved(&self, handle: PointHandle) -> Option<PointSample> {
-        self.by_handle.get(handle.0 as usize).cloned().flatten()
+        self.state
+            .by_handle
+            .get(handle.0 as usize)
+            .cloned()
+            .flatten()
     }
     fn read_by_key(&self, key: &DomainKey) -> Option<PointSample> {
-        let idx = *self.by_key.get(key)?;
-        self.by_handle.get(idx as usize).cloned().flatten()
+        let idx = *self.state.by_key.get(key)?;
+        self.state.by_handle.get(idx as usize).cloned().flatten()
     }
 }
 
@@ -119,25 +122,24 @@ impl ModelStore for MemStore {
 impl PointStore for MemStore {
     fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
         let mut state = self.points.write().map_err(backend_err)?;
+        let points = Arc::make_mut(&mut *state);
         Ok(keys
             .iter()
-            .map(|k| PointHandle(state.handle_for(k)))
+            .map(|k| PointHandle(points.handle_for(k)))
             .collect())
     }
     fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
-        let state = self.points.read().map_err(backend_err)?;
-        Ok(Box::new(MemSnapshot {
-            by_handle: state.by_handle.clone(),
-            by_key: state.by_key.clone(),
-        }))
+        let state = Arc::clone(&*self.points.read().map_err(backend_err)?);
+        Ok(Box::new(MemSnapshot { state }))
     }
     fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
         // The in-memory store offers no crash durability (§5 R-6): it accepts every write into the
         // live map regardless of `Durability` intent, and returns the count accepted.
         let mut state = self.points.write().map_err(backend_err)?;
+        let points = Arc::make_mut(&mut *state);
         for w in batch {
-            let idx = state.handle_for(&w.key) as usize;
-            state.by_handle[idx] = Some(w.sample.clone());
+            let idx = points.handle_for(&w.key) as usize;
+            points.by_handle[idx] = Some(w.sample.clone());
         }
         Ok(batch.len())
     }

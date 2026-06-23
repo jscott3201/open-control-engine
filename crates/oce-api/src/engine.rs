@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use oce_blocks::{Block, BlockKind, NoopDiagnostics, lookup};
 use oce_graph::{EvalContext, RunState, Schedule, allocate_state, compile, eval_tick};
-use oce_model::{Dir, ModelGraph};
-use oce_store::{DomainKey, PointHandle, Store};
+use oce_model::{ConnectorId, Dir, ModelGraph, Value, ValueType};
+use oce_store::{DomainKey, OcValue, PointHandle, PointSample, PointSnapshot, Store, StoreError};
 use oce_store_mem::MemStore;
 
 use crate::error::OcError;
@@ -18,6 +18,14 @@ use crate::loading::LoadReport;
 use crate::params::{ParamTable, RunMode};
 use crate::projection::project_resolved_model;
 use crate::sim::Outputs;
+
+/// One input connector's load-time store handle and model-state slot.
+#[derive(Clone, Debug)]
+pub(crate) struct StoreInputHandle {
+    connector_id: ConnectorId,
+    handle: PointHandle,
+    path: String,
+}
 
 /// The single owned facade handle, generic over a `Store`; default `MemStore` (no DB, D-OWNER-1).
 /// Not `Clone` (it owns mutable run state); intended to be shared across threads as `Arc<Engine<S>>`.
@@ -41,8 +49,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) outputs: Outputs,
     /// Previous tick's absolute model time — enforces the monotonic-`t_now` contract (CDL §7.16).
     pub(crate) prev_t: Option<f64>,
-    /// Hot point handles, pre-resolved at load (FRAME §3.3) — opaque, no DB type.
-    pub(crate) handles: Vec<PointHandle>,
+    /// Store-backed input handles, pre-resolved at load; tick reads only these opaque handles.
+    pub(crate) store_inputs: Vec<StoreInputHandle>,
     /// Stable durable identity of the loaded model projection.
     pub(crate) model_id: DomainKey,
     /// Should-level semantic diagnostics from the load-time resolver.
@@ -79,7 +87,7 @@ impl<S: Store> Engine<S> {
             state: RunState::default(),
             outputs: Outputs::default(),
             prev_t: None,
-            handles: Vec::new(),
+            store_inputs: Vec::new(),
             model_id: DomainKey::default(),
             semantic_warnings: Vec::new(),
             params: ParamTable::default(),
@@ -131,6 +139,7 @@ impl<S: Store> Engine<S> {
         // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
         self.store.recover()?;
         self.store.save_model(&resolved_model)?;
+        let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
         self.model = Arc::new(model);
         self.blocks = blocks;
         self.schedule = schedule;
@@ -143,10 +152,7 @@ impl<S: Store> Engine<S> {
         self.prev_t = None;
         self.model_id = resolved_model.model_id;
         self.semantic_warnings = semantic_warnings;
-        // The current facade stages no store-backed inputs through either `load_cxf` or this shared
-        // tail, so no hot point handles are resolved yet; clear any from a prior/future load so
-        // reloads never carry stale handles.
-        self.handles = Vec::new();
+        self.store_inputs = store_inputs;
         Ok(())
     }
 
@@ -218,6 +224,7 @@ impl<S: Store> Engine<S> {
         {
             return Err(OcError::TimeRegression { now: t_now, prev });
         }
+        self.stage_store_inputs()?;
         {
             let mut ctx = EvalContext {
                 model: &self.model,
@@ -231,6 +238,19 @@ impl<S: Store> Engine<S> {
         self.prev_t = Some(t_now);
         self.outputs.refresh_from(&self.state);
         Ok(&self.outputs)
+    }
+
+    fn stage_store_inputs(&mut self) -> Result<(), OcError> {
+        if self.store_inputs.is_empty() {
+            return Ok(());
+        }
+        let snapshot = self.store.snapshot()?;
+        stage_store_inputs_from_snapshot(
+            &self.store_inputs,
+            snapshot.as_ref(),
+            &self.model,
+            &mut self.state,
+        )
     }
 
     /// The frozen schedule (for trace tooling / determinism assertions; D6).
@@ -266,6 +286,105 @@ pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block
     Ok(blocks)
 }
 
+fn resolve_store_inputs<S: Store>(
+    store: &S,
+    io: &IoInventory,
+) -> Result<Vec<StoreInputHandle>, OcError> {
+    let inputs = io.input_bindings();
+    if inputs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let keys: Vec<DomainKey> = inputs
+        .iter()
+        .map(|input| DomainKey::new(input.path.clone()))
+        .collect();
+    let handles = store.resolve_points(&keys)?;
+    if handles.len() != inputs.len() {
+        return Err(StoreError::Validation(format!(
+            "PointStore::resolve_points returned {} handles for {} input points",
+            handles.len(),
+            inputs.len()
+        ))
+        .into());
+    }
+    Ok(inputs
+        .into_iter()
+        .zip(handles)
+        .map(|(input, handle)| StoreInputHandle {
+            connector_id: input.connector_id,
+            handle,
+            path: input.path,
+        })
+        .collect())
+}
+
+/// Stage store-backed input samples from one tick snapshot into the run state.
+///
+/// Missing samples deliberately leave the connector's current value untouched: before the first
+/// sample this preserves the type's `zero_value()`, and after any prior staging it is the engine's
+/// hold-last policy. The engine is also status-agnostic by design: [`oce_store::PointStatus`] is
+/// quality metadata for the consuming app/BMS layer, so a staged [`Value`] is derived from the
+/// sample's value regardless of status.
+///
+/// # Invariants
+/// `inputs` are load-time resolved from the [`IoInventory`], so each connector id is in range for
+/// `model.connectors` and `state.values`. `snapshot` must be the single per-tick snapshot.
+///
+/// # Panics
+/// Does not panic when those load-time invariants hold.
+fn stage_store_inputs_from_snapshot(
+    inputs: &[StoreInputHandle],
+    snapshot: &dyn PointSnapshot,
+    model: &ModelGraph,
+    state: &mut RunState,
+) -> Result<(), OcError> {
+    for input in inputs {
+        let Some(sample) = snapshot.read_resolved(input.handle) else {
+            // Deliberate hold-last: no store sample means no overwrite of the current state value.
+            continue;
+        };
+        // StoreInputHandle connector ids are inventory-sourced and in range for the loaded model.
+        let connector = &model.connectors[input.connector_id.0 as usize];
+        let value = sample_to_value(sample, connector.value_type, &input.path)?;
+        state.values[input.connector_id.0 as usize] = value;
+    }
+    Ok(())
+}
+
+/// Convert a store sample into the target engine value type.
+///
+/// The conversion is intentionally status-agnostic: the returned [`Value`] depends only on the
+/// sample value and target type, never on [`oce_store::PointStatus`]. Point quality/fault handling
+/// lives above the engine in the consuming app/BMS layer. M3 supports native Real/Integer/Boolean
+/// carriers, a String carrier for the total helper path, and the current Int-as-enum-ordinal
+/// assumption; native store enum literals and decimal carriers return [`OcError::InputType`].
+///
+/// # Panics
+/// Never panics; mismatches and unsupported carriers return [`OcError::InputType`].
+fn sample_to_value(sample: PointSample, want: ValueType, path: &str) -> Result<Value, OcError> {
+    let PointSample {
+        value,
+        status: _,
+        at_unix_nanos: _,
+    } = sample;
+    match (value, want) {
+        (OcValue::Real(v), ValueType::Real) => Ok(Value::Real(v)),
+        (OcValue::Int(v), ValueType::Integer) => Ok(Value::Integer(v)),
+        (OcValue::Bool(v), ValueType::Boolean) => Ok(Value::Boolean(v)),
+        // String connectors are excluded from store-backed input bindings; this arm keeps the
+        // conversion helper total for direct callers and future non-signal uses.
+        (OcValue::String(v), ValueType::String) => Ok(Value::String(Arc::from(v))),
+        (OcValue::Int(v), ValueType::Enum(class)) => {
+            let ordinal = u32::try_from(v)
+                .ok()
+                .filter(|ordinal| *ordinal > 0)
+                .ok_or_else(|| OcError::InputType(path.to_owned()))?;
+            Ok(Value::Enum { class, ordinal })
+        }
+        _ => Err(OcError::InputType(path.to_owned())),
+    }
+}
+
 /// The output-connector paths in `connectors.filter(Out)` order — the keys for [`Outputs::to_map`].
 /// Derived from the model connectors (NOT the IO inventory, which excludes `String` connectors), so
 /// it is always the same length and order as the `Outputs` value entries.
@@ -277,4 +396,245 @@ pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
         .filter(|c| c.dir == Dir::Out)
         .map(|c| crate::io::connector_path(c.iri.as_deref(), c.id))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use oce_model::{BlockId, Connector, EnumClassId};
+    use oce_store::{
+        Durable, EquipmentDto, ModelStore, PointListRow, PointStatus, PointStore, PointWrite,
+        RelationDto, ResolvedModel, RetrievalHit, SemanticPayloadDto, SemanticQuery, SemanticStore,
+        StoreResult, TemplatePointReq,
+    };
+
+    use super::*;
+
+    const PATH: &str = "test:input";
+
+    fn sample(value: OcValue) -> PointSample {
+        PointSample {
+            value,
+            status: PointStatus::Fault,
+            at_unix_nanos: 42,
+        }
+    }
+
+    fn assert_input_type(result: Result<Value, OcError>) {
+        match result {
+            Err(OcError::InputType(path)) => assert_eq!(path, PATH),
+            other => panic!("expected InputType for {PATH}, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sample_to_value_accepts_native_signal_carriers_and_string_helper_path() {
+        match sample_to_value(sample(OcValue::Real(1.25)), ValueType::Real, PATH).unwrap() {
+            Value::Real(v) => assert_eq!(v.to_bits(), 1.25f64.to_bits()),
+            other => panic!("expected real value, got {other:?}"),
+        }
+        match sample_to_value(sample(OcValue::Int(7)), ValueType::Integer, PATH).unwrap() {
+            Value::Integer(v) => assert_eq!(v, 7),
+            other => panic!("expected integer value, got {other:?}"),
+        }
+        match sample_to_value(sample(OcValue::Bool(true)), ValueType::Boolean, PATH).unwrap() {
+            Value::Boolean(v) => assert!(v),
+            other => panic!("expected boolean value, got {other:?}"),
+        }
+        match sample_to_value(
+            sample(OcValue::String("metadata".to_owned())),
+            ValueType::String,
+            PATH,
+        )
+        .unwrap()
+        {
+            Value::String(v) => assert_eq!(&*v, "metadata"),
+            other => panic!("expected string value, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sample_to_value_accepts_positive_integer_enum_ordinals() {
+        let class = EnumClassId(9);
+        match sample_to_value(sample(OcValue::Int(3)), ValueType::Enum(class), PATH).unwrap() {
+            Value::Enum {
+                class: actual_class,
+                ordinal,
+            } => {
+                assert_eq!(actual_class, class);
+                assert_eq!(ordinal, 3);
+            }
+            other => panic!("expected enum value, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn sample_to_value_rejects_invalid_integer_enum_ordinals() {
+        let class = EnumClassId(9);
+        for ordinal in [0, -1, i64::from(u32::MAX) + 1] {
+            assert_input_type(sample_to_value(
+                sample(OcValue::Int(ordinal)),
+                ValueType::Enum(class),
+                PATH,
+            ));
+        }
+    }
+
+    #[test]
+    fn sample_to_value_rejects_type_mismatch_pairs() {
+        let class = EnumClassId(4);
+        let cases = [
+            (OcValue::Real(1.0), ValueType::Integer),
+            (OcValue::Real(1.0), ValueType::Boolean),
+            (OcValue::Real(1.0), ValueType::String),
+            (OcValue::Real(1.0), ValueType::Enum(class)),
+            (OcValue::Int(1), ValueType::Real),
+            (OcValue::Int(1), ValueType::Boolean),
+            (OcValue::Int(1), ValueType::String),
+            (OcValue::Bool(true), ValueType::Real),
+            (OcValue::Bool(true), ValueType::Integer),
+            (OcValue::Bool(true), ValueType::String),
+            (OcValue::Bool(true), ValueType::Enum(class)),
+            (OcValue::String("value".to_owned()), ValueType::Real),
+            (OcValue::String("value".to_owned()), ValueType::Integer),
+            (OcValue::String("value".to_owned()), ValueType::Boolean),
+            (OcValue::String("value".to_owned()), ValueType::Enum(class)),
+        ];
+
+        for (value, want) in cases {
+            assert_input_type(sample_to_value(sample(value), want, PATH));
+        }
+    }
+
+    #[test]
+    fn sample_to_value_rejects_native_enum_and_decimal_store_carriers() {
+        let class = EnumClassId(4);
+        let wants = [
+            ValueType::Real,
+            ValueType::Integer,
+            ValueType::Boolean,
+            ValueType::String,
+            ValueType::Enum(class),
+        ];
+        for want in wants {
+            assert_input_type(sample_to_value(
+                sample(OcValue::Enum {
+                    type_iri: "CDL.Types.SimpleController".to_owned(),
+                    literal: "PI".to_owned(),
+                }),
+                want,
+                PATH,
+            ));
+            assert_input_type(sample_to_value(
+                sample(OcValue::Decimal("1.25".to_owned())),
+                want,
+                PATH,
+            ));
+        }
+    }
+
+    #[test]
+    fn resolve_store_inputs_rejects_mismatched_handle_count() {
+        let store = MismatchedHandleStore::default();
+        let mut model = ModelGraph::new();
+        model.connectors.push(
+            Connector::new(ConnectorId(0), BlockId(0), Dir::In, ValueType::Real, 0).with_iri(PATH),
+        );
+        let io = IoInventory::build_at_load(&model);
+
+        let err = resolve_store_inputs(&store, &io).unwrap_err();
+        match err {
+            OcError::Store(StoreError::Validation(detail)) => {
+                assert!(detail.contains("0 handles for 1 input points"));
+            }
+            other => panic!("expected StoreError::Validation, got {other:?}"),
+        }
+    }
+
+    #[derive(Default)]
+    struct MismatchedHandleStore {
+        inner: MemStore,
+    }
+
+    impl ModelStore for MismatchedHandleStore {
+        fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
+            self.inner.save_model(model)
+        }
+
+        fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
+            self.inner.load_model(model_id)
+        }
+
+        fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
+            self.inner.list_models()
+        }
+
+        fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
+            self.inner.delete_model(model_id)
+        }
+    }
+
+    impl PointStore for MismatchedHandleStore {
+        fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
+            let _ = self.inner.resolve_points(keys)?;
+            Ok(Vec::new())
+        }
+
+        fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
+            self.inner.snapshot()
+        }
+
+        fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
+            self.inner.write_points(batch)
+        }
+    }
+
+    impl SemanticStore for MismatchedHandleStore {
+        fn upsert_equipment(&self, eq: &EquipmentDto) -> StoreResult<()> {
+            self.inner.upsert_equipment(eq)
+        }
+
+        fn add_relation(&self, rel: &RelationDto) -> StoreResult<()> {
+            self.inner.add_relation(rel)
+        }
+
+        fn put_semantic_payload(&self, p: &SemanticPayloadDto) -> StoreResult<()> {
+            self.inner.put_semantic_payload(p)
+        }
+
+        fn get_semantic_payloads(
+            &self,
+            subject: &DomainKey,
+        ) -> StoreResult<Vec<SemanticPayloadDto>> {
+            self.inner.get_semantic_payloads(subject)
+        }
+
+        fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
+            self.inner.point_list(controlled_device)
+        }
+
+        fn retrieve(&self, q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
+            self.inner.retrieve(q)
+        }
+
+        fn match_template(
+            &self,
+            required_points: &[TemplatePointReq],
+        ) -> StoreResult<Vec<DomainKey>> {
+            self.inner.match_template(required_points)
+        }
+    }
+
+    impl Durable for MismatchedHandleStore {
+        fn commit(&self) -> StoreResult<()> {
+            self.inner.commit()
+        }
+
+        fn flush(&self) -> StoreResult<()> {
+            self.inner.flush()
+        }
+
+        fn recover(&self) -> StoreResult<()> {
+            self.inner.recover()
+        }
+    }
 }
