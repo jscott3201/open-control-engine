@@ -65,8 +65,9 @@ pub fn write_document(doc: &CxfDocument) -> Result<Vec<u8>, CxfError> {
 /// lossless Layer-A DTO directly via the §7.1 resolver. Ground mode evaluates every parameter
 /// binding to a ground literal.
 ///
-/// Returns `Ok((graph, report))` where `report` carries `Warning`/`Info` diagnostics only (zero
-/// errors). On any [`oce_diag::Severity::Error`] diagnostic — or any `Warning` when
+/// Returns `Ok((graph, report))` where `report` carries the top-composite model `@id` plus
+/// `Warning`/`Info` diagnostics only (zero errors). On any [`oce_diag::Severity::Error`]
+/// diagnostic — or any `Warning` when
 /// [`ResolveOptions::deny_warnings`] is set — returns [`CxfError::Validation`] instead, with the
 /// graph withheld because it may be structurally unsound.
 ///

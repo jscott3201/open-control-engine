@@ -16,12 +16,13 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
     let (m2, _, _, _) = build_accumulator_model();
 
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m1)
+    eng.build_model_in_memory(m1, None)
         .expect("BUILD must succeed for an acyclic (loop-broken) graph");
 
     // Determinism: an independent compile of the same model is byte-identical.
     let mut eng2 = Engine::in_memory();
-    eng2.build_model_in_memory(m2).expect("BUILD must succeed");
+    eng2.build_model_in_memory(m2, None)
+        .expect("BUILD must succeed");
     assert_eq!(
         eng.schedule().order,
         eng2.schedule().order,
@@ -95,7 +96,7 @@ fn hand_built_graph_builds_advances_and_is_byte_identical() {
 fn injected_algebraic_loop_is_rejected() {
     let mut eng = Engine::in_memory();
     let err = eng
-        .build_model_in_memory(build_algebraic_loop_model())
+        .build_model_in_memory(build_algebraic_loop_model(), None)
         .expect_err("a feedthrough cycle with no loop-breaker must be rejected (CDL §7.16)");
     assert!(
         matches!(err, OcError::Build(BuildError::AlgebraicLoop { .. })),
@@ -109,7 +110,7 @@ fn unknown_block_class_is_a_typed_load_error() {
     mb.block("CDL.Reals.NotARealBlock", &[], &[ValueType::Real], vec![]);
     let mut eng = Engine::in_memory();
     let err = eng
-        .build_model_in_memory(mb.finish())
+        .build_model_in_memory(mb.finish(), None)
         .expect_err("an unknown class IRI must not panic");
     assert!(
         matches!(err, OcError::Load { .. }),
@@ -121,7 +122,7 @@ fn unknown_block_class_is_a_typed_load_error() {
 fn tick_time_must_be_monotonic() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m).unwrap();
+    eng.build_model_in_memory(m, None).unwrap();
 
     eng.tick(0.0).unwrap();
     eng.tick(5.0).unwrap();
@@ -139,7 +140,7 @@ fn tick_time_must_be_monotonic() {
 fn non_finite_tick_time_is_rejected() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m).unwrap();
+    eng.build_model_in_memory(m, None).unwrap();
 
     // NaN/∞ are rejected up front: a NaN would otherwise slip past `t_now < prev` and silently
     // disable the monotonic guard. The rejected tick must not advance the model time.
@@ -159,7 +160,7 @@ fn non_finite_tick_time_is_rejected() {
 fn engine_store_round_trips_and_durability_is_noop() {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m).unwrap();
+    eng.build_model_in_memory(m, None).unwrap();
 
     // Exit #5: a model round-trips through the engine's wired store…
     let rm = ResolvedModel {

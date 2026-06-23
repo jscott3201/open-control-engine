@@ -122,7 +122,7 @@ fn assert_model(message: &str) -> ModelGraph {
 
 fn loaded_assert_engine(message: &str) -> Engine<MemStore> {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(assert_model(message))
+    eng.build_model_in_memory(assert_model(message), None)
         .expect("zero-output Assert model builds");
     eng
 }

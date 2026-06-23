@@ -14,6 +14,9 @@ use oce_api::{ConnectorId, Engine, OcError, Value};
 
 // One source of truth for the canonical fixture shared across resolver and facade tests.
 const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
+const AHU_SUPPLY_AIR_TEMP_RESET: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
+const AHU_SUPPLY_AIR_TEMP_RESET_ID: &str = "http://example.org#g36.ahu_supply_air_temp_reset";
 
 /// Resolve the `add.y` (feedback sum) output connector id **structurally** from the model — the
 /// output of the `CDL.Reals.Add` block — rather than hardcoding `ConnectorId(3)`. This stays
@@ -51,6 +54,20 @@ fn load_cxf_minimal_loop_report() {
     );
     assert_eq!(report.block_count, 5, "con, add, del, gain, gt");
     assert_eq!(report.stateful_blocks, 1, "only the UnitDelay is stateful");
+}
+
+#[test]
+fn load_cxf_uses_top_composite_id_as_model_id() {
+    let mut eng = Engine::in_memory();
+    let report = eng
+        .load_cxf(AHU_SUPPLY_AIR_TEMP_RESET.as_bytes())
+        .expect("G36 supply-air temperature reset must load end-to-end");
+
+    assert_eq!(
+        report.model_id.as_str(),
+        AHU_SUPPLY_AIR_TEMP_RESET_ID,
+        "load_cxf must use the CXF top-composite @id as the durable model id"
+    );
 }
 
 #[test]

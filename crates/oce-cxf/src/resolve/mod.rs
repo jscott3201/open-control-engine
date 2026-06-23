@@ -68,9 +68,19 @@ pub struct ResolveOptions {
 
 /// The resolver's diagnostics in deterministic order. On the `Ok` path it carries `Warning`/`Info`
 /// only — any `Error` is returned inside [`CxfError::Validation`] instead, with the graph withheld
-/// (it may be structurally unsound). Invariant enforced by construction in the resolver.
+/// (it may be structurally unsound). Invariant enforced by construction in the resolver. The report
+/// also carries the model identity side-channel for consumers that need durable identity without
+/// polluting [`ModelGraph`] execution state.
 #[derive(Clone, Debug, Default)]
 pub struct ValidationReport {
+    /// The top-composite `@id` that names the CXF model.
+    ///
+    /// This is the raw DTO [`Node::id`] value as authored in the document. The resolver currently
+    /// carries context entries losslessly but does not perform general JSON-LD `@id` expansion, so
+    /// callers that need a durable model key should treat this as the source CXF model IRI for M3.
+    /// It is `Some` on every successful resolver-owned import path and `None` only for manually
+    /// default-constructed reports.
+    pub model_iri: Option<String>,
     /// The (sorted, error-free on the `Ok` path) diagnostics.
     pub diagnostics: Vec<Diagnostic>,
 }
@@ -555,7 +565,13 @@ pub(crate) fn resolve(
         connections,
         external_inputs,
     };
-    Ok((graph, ValidationReport { diagnostics: diags }))
+    Ok((
+        graph,
+        ValidationReport {
+            model_iri: Some(top.id.clone()),
+            diagnostics: diags,
+        },
+    ))
 }
 
 /// Derive a connector's [`ValueType`], preferring `isOfDataType`, falling back to the `@type` port

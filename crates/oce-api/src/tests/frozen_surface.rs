@@ -17,7 +17,8 @@ use super::common::*;
 fn loaded_accumulator() -> Engine<MemStore> {
     let (m, _, _, _) = build_accumulator_model();
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(m).expect("BUILD must succeed");
+    eng.build_model_in_memory(m, None)
+        .expect("BUILD must succeed");
     eng
 }
 
@@ -85,7 +86,7 @@ fn empty_engine_surface_is_inert_not_panicking() {
 #[test]
 fn set_input_resolves_validates_and_rejects() {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     // conn#0 = Add.u0 (Real input). A wrong-typed value is a typed error — no coercion.
     assert!(matches!(
         eng.set_input("conn#0", Value::Boolean(true)),
@@ -116,7 +117,7 @@ fn set_input_resolves_validates_and_rejects() {
 #[test]
 fn get_output_on_input_point_is_unknown_point() {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     eng.set_input("conn#0", Value::Real(5.0)).unwrap();
     assert!(matches!(
         eng.get_output("conn#0"),
@@ -199,7 +200,7 @@ fn param_lifecycle_halt_set_resume_refolds() {
 #[test]
 fn positive_param_rules_surface_attrs_and_reject_zero_at_rest() {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(sample_trigger_model(1.0))
+    eng.build_model_in_memory(sample_trigger_model(1.0), None)
         .expect("valid SampleTrigger loads");
     let (_, period_value, period_attrs) = eng
         .params()
@@ -377,7 +378,7 @@ fn simulate_rejects_bad_spec_without_panicking() {
 #[test]
 fn collect_named_rejects_input_point() {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     let spec = SimSpec {
         t_start: 0.0,
         t_stop: 1.0,
@@ -394,7 +395,7 @@ fn collect_named_rejects_input_point() {
 #[test]
 fn get_output_on_valid_output_returns_bit_exact_value() {
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     eng.set_input("conn#0", Value::Real(3.0)).unwrap();
     eng.set_input("conn#1", Value::Real(4.0)).unwrap();
     eng.tick(0.0).unwrap();
@@ -437,7 +438,7 @@ fn set_input_flows_through_to_an_undriven_output() {
     // On the free-Add model, staged inputs are NOT overwritten by a connection, so they reach the
     // output: set 3 + 4, tick, read conn#2 == 7 bit-exactly.
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     eng.set_input("conn#0", Value::Real(3.0)).unwrap();
     eng.set_input("conn#1", Value::Real(4.0)).unwrap();
     eng.tick(0.0).unwrap();
@@ -448,7 +449,7 @@ fn set_input_flows_through_to_an_undriven_output() {
 fn simulate_constant_input_source_flows_through() {
     // InputSource::Constant is a live path: stage a fixed (point,value) each step.
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     let spec = SimSpec {
         t_start: 0.0,
         t_stop: 1.0,
@@ -475,7 +476,7 @@ fn simulate_constant_input_source_flows_through() {
 fn constant_input_source_propagates_type_error() {
     // A wrong-typed Constant pair surfaces as OcError::InputType through stage_inputs -> set_input.
     let mut eng = Engine::in_memory();
-    eng.build_model_in_memory(free_add_model()).unwrap();
+    eng.build_model_in_memory(free_add_model(), None).unwrap();
     let spec = SimSpec {
         t_start: 0.0,
         t_stop: 1.0,
