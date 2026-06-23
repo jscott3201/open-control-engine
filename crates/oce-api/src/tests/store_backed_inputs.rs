@@ -1,4 +1,8 @@
 //! Store-backed input equivalence tests for stateful G36 fixtures.
+//!
+//! `ahu_supply_air_temp_reset` is the stateless control case in this set. These tests check
+//! host-vs-store equivalence for the same input values, not an absolute transcendental-sensitive
+//! golden.
 
 use std::sync::Arc;
 
@@ -67,6 +71,77 @@ fn store_backed_inputs_match_host_staged_output_trace_for_stateful_g36_fixtures(
     }
 }
 
+#[test]
+fn store_backed_input_staging_is_status_agnostic() {
+    for status in [
+        PointStatus::Ok,
+        PointStatus::Fault,
+        PointStatus::Stale,
+        PointStatus::Uninitialized,
+        PointStatus::Override,
+    ] {
+        let store = Arc::new(MemStore::new());
+        let mut engine = Engine::with_store(Arc::clone(&store));
+        engine
+            .load_cxf(AHU_SAT_RESET.as_bytes())
+            .unwrap_or_else(|err| panic!("ahu_supply_air_temp_reset loads: {err:?}"));
+
+        write_input(store.as_ref(), SAT_ZONE_TEMP, Value::Real(31.25), status, 0);
+        engine.tick(0.0).unwrap_or_else(|err| {
+            panic!("ahu_supply_air_temp_reset ticks with status {status:?}: {err:?}")
+        });
+
+        assert_input_real(&engine, SAT_ZONE_TEMP, 31.25, "status-agnostic staging");
+    }
+}
+
+#[test]
+fn missing_store_sample_holds_prior_input_value() {
+    let store = Arc::new(MemStore::new());
+    let mut engine = Engine::with_store(Arc::clone(&store));
+    engine
+        .load_cxf(AHU_SAT_RESET.as_bytes())
+        .unwrap_or_else(|err| panic!("ahu_supply_air_temp_reset loads: {err:?}"));
+    engine
+        .set_input(SAT_COOLING_SETPOINT, Value::Real(19.5))
+        .unwrap_or_else(|err| panic!("host prior input stages: {err:?}"));
+
+    write_input(
+        store.as_ref(),
+        SAT_ZONE_TEMP,
+        Value::Real(22.0),
+        PointStatus::Ok,
+        0,
+    );
+    engine
+        .tick(0.0)
+        .unwrap_or_else(|err| panic!("ahu_supply_air_temp_reset ticks first subset: {err:?}"));
+    assert_input_real(&engine, SAT_ZONE_TEMP, 22.0, "written subset input");
+    assert_input_real(
+        &engine,
+        SAT_COOLING_SETPOINT,
+        19.5,
+        "unwritten input holds prior value",
+    );
+
+    write_input(
+        store.as_ref(),
+        SAT_ZONE_TEMP,
+        Value::Real(23.0),
+        PointStatus::Ok,
+        1,
+    );
+    engine
+        .tick(1.0)
+        .unwrap_or_else(|err| panic!("ahu_supply_air_temp_reset ticks second subset: {err:?}"));
+    assert_input_real(
+        &engine,
+        SAT_COOLING_SETPOINT,
+        19.5,
+        "unwritten input keeps holding prior value",
+    );
+}
+
 fn host_staged_trace(fixture: &StoreFixture) -> OutputTrace {
     let mut engine = Engine::in_memory();
     engine
@@ -124,6 +199,35 @@ fn write_inputs(store: &MemStore, inputs: Vec<(String, Value)>, stamp: u64) {
     store
         .write_points(&writes)
         .expect("MemStore accepts off-tick input writes");
+}
+
+fn write_input(store: &MemStore, path: &str, value: Value, status: PointStatus, stamp: u64) {
+    store
+        .write_points(&[PointWrite {
+            key: oce_store::DomainKey::new(path),
+            sample: PointSample {
+                value: oc_value(value),
+                status,
+                at_unix_nanos: stamp,
+            },
+            durability: Durability::Telemetry,
+        }])
+        .expect("MemStore accepts off-tick input write");
+}
+
+fn assert_input_real(engine: &Engine, path: &str, expected: f64, label: &str) {
+    let connector = engine
+        .io
+        .resolve_input(path)
+        .unwrap_or_else(|| panic!("{label}: {path} resolves as input"));
+    let actual = engine.state.values[connector.0 as usize]
+        .as_real()
+        .unwrap_or_else(|err| panic!("{label}: {path} remains real: {err:?}"));
+    assert_eq!(
+        actual.to_bits(),
+        expected.to_bits(),
+        "{label}: {path} staged value"
+    );
 }
 
 fn oc_value(value: Value) -> OcValue {

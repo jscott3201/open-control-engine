@@ -1,6 +1,5 @@
 //! Recording `Store` test double for tick-purity assertions.
 
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -12,10 +11,6 @@ use oce_api::oce_store::{
     SemanticPayloadDto, SemanticQuery, SemanticStore, StoreResult, TemplatePointReq,
 };
 use oce_store_mem::MemStore;
-
-thread_local! {
-    static SNAPSHOT_STATE: RefCell<Option<Arc<RecordingState>>> = const { RefCell::new(None) };
-}
 
 #[derive(Default)]
 pub(crate) struct RecordingStore {
@@ -41,7 +36,7 @@ impl RecordingStore {
 struct RecordingState {
     calls: StoreCalls,
     panic_on_forbidden: AtomicBool,
-    points: RwLock<RecordingPointState>,
+    points: RwLock<Arc<RecordingPointState>>,
 }
 
 impl RecordingState {
@@ -203,6 +198,7 @@ impl PointStore for RecordingStore {
         self.state
             .count_forbidden(&self.state.calls.resolve_points, "resolve_points");
         let mut points = self.state.points.write().expect("recording points lock");
+        let points = Arc::make_mut(&mut *points);
         Ok(keys
             .iter()
             .map(|key| PointHandle(points.handle_for(key)))
@@ -211,16 +207,18 @@ impl PointStore for RecordingStore {
 
     fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
         self.state.count_allowed(&self.state.calls.snapshot);
-        SNAPSHOT_STATE.with(|slot| {
-            slot.replace(Some(Arc::clone(&self.state)));
-        });
-        Ok(Box::new(RecordingSnapshot))
+        let points = Arc::clone(&*self.state.points.read().expect("recording points lock"));
+        Ok(Box::new(RecordingSnapshot {
+            state: Arc::clone(&self.state),
+            points,
+        }))
     }
 
     fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
         self.state
             .count_forbidden(&self.state.calls.write_points, "write_points");
         let mut points = self.state.points.write().expect("recording points lock");
+        let points = Arc::make_mut(&mut *points);
         for write in batch {
             let idx = points.handle_for(&write.key) as usize;
             points.by_handle[idx] = Some(write.sample.clone());
@@ -229,28 +227,26 @@ impl PointStore for RecordingStore {
     }
 }
 
-struct RecordingSnapshot;
+struct RecordingSnapshot {
+    state: Arc<RecordingState>,
+    points: Arc<RecordingPointState>,
+}
 
 impl PointSnapshot for RecordingSnapshot {
     fn read_resolved(&self, handle: PointHandle) -> Option<PointSample> {
-        SNAPSHOT_STATE.with(|slot| {
-            let state = slot.borrow();
-            let state = state.as_ref().expect("recording snapshot state");
-            state.count_allowed(&state.calls.read_resolved);
-            let points = state.points.read().expect("recording points lock");
-            points.by_handle.get(handle.0 as usize).cloned().flatten()
-        })
+        self.state.count_allowed(&self.state.calls.read_resolved);
+        self.points
+            .by_handle
+            .get(handle.0 as usize)
+            .cloned()
+            .flatten()
     }
 
     fn read_by_key(&self, key: &DomainKey) -> Option<PointSample> {
-        SNAPSHOT_STATE.with(|slot| {
-            let state = slot.borrow();
-            let state = state.as_ref().expect("recording snapshot state");
-            state.count_forbidden(&state.calls.read_by_key, "read_by_key");
-            let points = state.points.read().expect("recording points lock");
-            let idx = *points.by_key.get(key)?;
-            points.by_handle.get(idx as usize).cloned().flatten()
-        })
+        self.state
+            .count_forbidden(&self.state.calls.read_by_key, "read_by_key");
+        let idx = *self.points.by_key.get(key)?;
+        self.points.by_handle.get(idx as usize).cloned().flatten()
     }
 }
 

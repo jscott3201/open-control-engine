@@ -11,7 +11,11 @@ use std::alloc::System;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
-use oce_api::oce_store::{DomainKey, Durable, PointHandle, PointStore};
+use oce_api::oce_store::{
+    DomainKey, Durability, Durable, EquipmentDto, ModelStore, OcValue, PointHandle, PointListRow,
+    PointSample, PointSnapshot, PointStatus, PointStore, PointWrite, RelationDto, ResolvedModel,
+    RetrievalHit, SemanticPayloadDto, SemanticQuery, SemanticStore, StoreResult, TemplatePointReq,
+};
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 use oce_store_mem::MemStore;
 use stats_alloc::{INSTRUMENTED_SYSTEM, Region, Stats, StatsAlloc};
@@ -71,6 +75,7 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
     assert_load_saves_model_once_and_tick_does_not_save_again();
     assert_simulate_uses_no_forbidden_store_methods();
     assert_manual_g36_tick_allocates_nothing();
+    assert_real_mem_store_tick_allocates_snapshot_floor();
 }
 
 fn assert_recording_store_guard_and_counters_are_live() {
@@ -211,14 +216,11 @@ fn assert_simulate_uses_no_forbidden_store_methods() {
 
 fn assert_manual_g36_tick_allocates_nothing() {
     for fixture in G36_FIXTURES {
-        let store = Arc::new(RecordingStore::default());
+        let store = Arc::new(AllocationStore::default());
         let mut engine = Engine::with_store(Arc::clone(&store));
         engine
             .load_cxf(fixture.cxf.as_bytes())
             .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
-        let _snapshot = store
-            .snapshot()
-            .unwrap_or_else(|e| panic!("{} fixture warms recording snapshot: {e:?}", fixture.name));
 
         for step in 0..=fixture.t_stop {
             let t = step as f64;
@@ -237,10 +239,37 @@ fn assert_manual_g36_tick_allocates_nothing() {
     }
 }
 
+fn assert_real_mem_store_tick_allocates_snapshot_floor() {
+    for fixture in G36_FIXTURES {
+        let store = Arc::new(MemStore::new());
+        let mut engine = Engine::with_store(Arc::clone(&store));
+        engine
+            .load_cxf(fixture.cxf.as_bytes())
+            .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+
+        for step in 0..=fixture.t_stop {
+            let t = step as f64;
+            write_inputs_to_store(store.as_ref(), (fixture.inputs)(t), step);
+
+            let snapshot_floor = snapshot_alloc_stats(store.as_ref(), fixture.name, t);
+            assert_box_snapshot_floor(snapshot_floor, fixture.name, t);
+
+            let region = Region::new(GLOBAL);
+            engine.tick(t).unwrap_or_else(|e| {
+                panic!(
+                    "{} real MemStore fixture ticks at t={t}: {e:?}",
+                    fixture.name
+                )
+            });
+            let tick_stats = region.change();
+            assert_same_alloc_stats(tick_stats, snapshot_floor, fixture.name, t);
+        }
+    }
+}
+
 fn assert_tick_store_pure(calls: StoreCallSnapshot, ticks: u64) {
     let snapshot_limit = usize::try_from(ticks).expect("test tick count fits usize");
-    // Snapshot calls are 0 today because the tick is still store-decoupled. The <= ticks bound is
-    // the standing future contract; tighten it to equality when the store-backed read path lands.
+    // Keep the historical upper-bound gate here; exact-per-tick tightening is the follow-up lane.
     assert!(
         calls.snapshot <= snapshot_limit,
         "snapshot calls must be <= one per tick: calls={calls:?}, ticks={ticks}"
@@ -329,8 +358,195 @@ fn assert_no_heap_traffic(stats: Stats, fixture: &str, t: f64) {
     );
 }
 
+fn snapshot_alloc_stats(store: &MemStore, fixture: &str, t: f64) -> Stats {
+    let region = Region::new(GLOBAL);
+    {
+        let _snapshot = store
+            .snapshot()
+            .unwrap_or_else(|e| panic!("{fixture} snapshot floor at t={t}: {e:?}"));
+    }
+    region.change()
+}
+
+fn assert_box_snapshot_floor(stats: Stats, fixture: &str, t: f64) {
+    // The frozen `Box<dyn PointSnapshot>` seam leaves one small Box allocation per tick. The point
+    // state itself is Arc-backed, so this bound is O(1) and independent of point count.
+    assert_eq!(
+        stats.allocations, 1,
+        "{fixture} snapshot floor at t={t} must allocate exactly one Box: {stats:?}"
+    );
+    assert_eq!(
+        stats.reallocations, 0,
+        "{fixture} snapshot floor at t={t} must not reallocate: {stats:?}"
+    );
+    assert_eq!(
+        stats.deallocations, 1,
+        "{fixture} snapshot floor at t={t} must deallocate exactly one Box: {stats:?}"
+    );
+    assert!(
+        stats.bytes_allocated <= 128,
+        "{fixture} snapshot floor at t={t} allocated too many bytes: {stats:?}"
+    );
+    assert_eq!(
+        stats.bytes_reallocated, 0,
+        "{fixture} snapshot floor at t={t} must not reallocate bytes: {stats:?}"
+    );
+    assert!(
+        stats.bytes_deallocated <= 128,
+        "{fixture} snapshot floor at t={t} deallocated too many bytes: {stats:?}"
+    );
+}
+
+fn assert_same_alloc_stats(actual: Stats, expected: Stats, fixture: &str, t: f64) {
+    assert_eq!(
+        actual.allocations, expected.allocations,
+        "{fixture} real MemStore tick at t={t} allocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+    assert_eq!(
+        actual.reallocations, expected.reallocations,
+        "{fixture} real MemStore tick at t={t} reallocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+    assert_eq!(
+        actual.deallocations, expected.deallocations,
+        "{fixture} real MemStore tick at t={t} deallocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+    assert_eq!(
+        actual.bytes_allocated, expected.bytes_allocated,
+        "{fixture} real MemStore tick at t={t} allocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+    assert_eq!(
+        actual.bytes_reallocated, expected.bytes_reallocated,
+        "{fixture} real MemStore tick at t={t} reallocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+    assert_eq!(
+        actual.bytes_deallocated, expected.bytes_deallocated,
+        "{fixture} real MemStore tick at t={t} deallocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
+    );
+}
+
+fn write_inputs_to_store(store: &MemStore, inputs: Vec<(String, Value)>, stamp: u64) {
+    let writes: Vec<PointWrite> = inputs
+        .into_iter()
+        .map(|(path, value)| PointWrite {
+            key: DomainKey::new(path),
+            sample: PointSample {
+                value: oc_value(value),
+                status: PointStatus::Ok,
+                at_unix_nanos: stamp,
+            },
+            durability: Durability::Telemetry,
+        })
+        .collect();
+    store
+        .write_points(&writes)
+        .expect("MemStore accepts off-tick input writes");
+}
+
+fn oc_value(value: Value) -> OcValue {
+    match value {
+        Value::Real(v) => OcValue::Real(v),
+        Value::Integer(v) => OcValue::Int(v),
+        Value::Boolean(v) => OcValue::Bool(v),
+        Value::String(v) => OcValue::String(v.to_string()),
+        Value::Enum { ordinal, .. } => OcValue::Int(i64::from(ordinal)),
+    }
+}
+
 fn pair(path: &str, value: Value) -> (String, Value) {
     (path.to_owned(), value)
+}
+
+#[derive(Default)]
+struct AllocationStore {
+    inner: MemStore,
+}
+
+struct EmptySnapshot;
+
+impl PointSnapshot for EmptySnapshot {
+    fn read_resolved(&self, _handle: PointHandle) -> Option<PointSample> {
+        None
+    }
+
+    fn read_by_key(&self, _key: &DomainKey) -> Option<PointSample> {
+        None
+    }
+}
+
+impl ModelStore for AllocationStore {
+    fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
+        self.inner.save_model(model)
+    }
+
+    fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
+        self.inner.load_model(model_id)
+    }
+
+    fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
+        self.inner.list_models()
+    }
+
+    fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
+        self.inner.delete_model(model_id)
+    }
+}
+
+impl PointStore for AllocationStore {
+    fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
+        self.inner.resolve_points(keys)
+    }
+
+    fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
+        Ok(Box::new(EmptySnapshot))
+    }
+
+    fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
+        self.inner.write_points(batch)
+    }
+}
+
+impl SemanticStore for AllocationStore {
+    fn upsert_equipment(&self, eq: &EquipmentDto) -> StoreResult<()> {
+        self.inner.upsert_equipment(eq)
+    }
+
+    fn add_relation(&self, rel: &RelationDto) -> StoreResult<()> {
+        self.inner.add_relation(rel)
+    }
+
+    fn put_semantic_payload(&self, p: &SemanticPayloadDto) -> StoreResult<()> {
+        self.inner.put_semantic_payload(p)
+    }
+
+    fn get_semantic_payloads(&self, subject: &DomainKey) -> StoreResult<Vec<SemanticPayloadDto>> {
+        self.inner.get_semantic_payloads(subject)
+    }
+
+    fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
+        self.inner.point_list(controlled_device)
+    }
+
+    fn retrieve(&self, q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
+        self.inner.retrieve(q)
+    }
+
+    fn match_template(&self, required_points: &[TemplatePointReq]) -> StoreResult<Vec<DomainKey>> {
+        self.inner.match_template(required_points)
+    }
+}
+
+impl Durable for AllocationStore {
+    fn commit(&self) -> StoreResult<()> {
+        self.inner.commit()
+    }
+
+    fn flush(&self) -> StoreResult<()> {
+        self.inner.flush()
+    }
+
+    fn recover(&self) -> StoreResult<()> {
+        self.inner.recover()
+    }
 }
 
 fn sat_inputs(t: f64) -> Vec<(String, Value)> {
