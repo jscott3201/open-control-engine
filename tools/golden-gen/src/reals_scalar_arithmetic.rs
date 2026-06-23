@@ -88,7 +88,7 @@ pub fn goldens() -> Vec<Golden> {
                 ticks(5),
                 y,
                 "param n=2; u=[1.125,-1.125,0,1.234,-1.234]; half boundaries and non-half decimals",
-                "fac built by repeated *10.0; y = floor(u*fac+0.5)/fac if u>0, +0 if u==0, else ceil(u*fac-0.5)/fac; Buildings Reals/Round.mo",
+                "fac built by repeated *10.0; y = floor(u*fac+0.5)/fac if u>0 else ceil(u*fac-0.5)/fac; Buildings Reals/Round.mo",
             )
             .with_inputs(vec![input_r("u", u)]),
         );
@@ -117,9 +117,7 @@ fn decimal_factor(n: i64) -> f64 {
 
 fn round_cdl(u: f64, n: i64) -> f64 {
     let fac = decimal_factor(n);
-    if u == 0.0 {
-        0.0
-    } else if u > 0.0 {
+    if u > 0.0 {
         (u * fac + 0.5).floor() / fac
     } else {
         (u * fac - 0.5).ceil() / fac

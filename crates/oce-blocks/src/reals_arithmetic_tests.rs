@@ -109,7 +109,7 @@ fn modulo_zero_edges_are_ieee_and_panic_free() {
 fn round_half_boundaries_are_away_from_zero() {
     assert_real_bits(&Round { n: 0 }, &[2.5], 3.0f64.to_bits());
     assert_real_bits(&Round { n: 0 }, &[-2.5], (-3.0f64).to_bits());
-    assert_real_bits(&Round { n: 0 }, &[0.0], 0.0f64.to_bits());
+    assert_real_bits(&Round { n: 0 }, &[0.0], (-0.0f64).to_bits());
 }
 
 #[test]

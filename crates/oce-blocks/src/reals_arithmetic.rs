@@ -237,11 +237,11 @@ impl Block for Modulo {
 /// `CDL.Reals.Round` rounds `u` to decimal digit count `n`.
 ///
 /// The block is stateless `[A]`, fully feedthrough, and implements the Buildings formula:
-/// `fac = 10^n`; positive `u` uses `floor(u * fac + 0.5) / fac`, negative `u` uses
-/// `ceil(u * fac - 0.5) / fac`, and exact zero returns `+0.0`. The factor is built with
-/// deterministic repeated `* 10.0` operations, then reciprocated for negative `n`; no `powi`/`powf`
-/// is used. Non-finite values and overflow follow IEEE behavior, emitted NaN bits are
-/// canonicalized, and the block never panics.
+/// `fac = 10^n`; positive `u` uses `floor(u * fac + 0.5) / fac`, and all other values use
+/// `ceil(u * fac - 0.5) / fac`, so exact zero yields `-0.0` through `ceil(-0.5)`. The factor is
+/// built with deterministic repeated `* 10.0` operations, then reciprocated for negative `n`; no
+/// `powi`/`powf` is used. Non-finite values and overflow follow IEEE behavior, emitted NaN bits
+/// are canonicalized, and the block never panics.
 #[derive(Clone, Copy, Debug)]
 pub struct Round {
     pub(crate) n: i64,
@@ -266,9 +266,7 @@ impl Block for Round {
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
         let fac = decimal_factor(self.n);
-        let y = if u == 0.0 {
-            0.0
-        } else if u > 0.0 {
+        let y = if u > 0.0 {
             (u * fac + 0.5).floor() / fac
         } else {
             (u * fac - 0.5).ceil() / fac

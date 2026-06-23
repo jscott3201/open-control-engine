@@ -13,7 +13,7 @@
     { "name": "u", "value_kind": "Real", "values": [1.125, -1.125, 0.0, 1.234, -1.234] }
   ],
   "input": "param n=2; u=[1.125,-1.125,0,1.234,-1.234]; half boundaries and non-half decimals",
-  "reference_rule": "fac built by repeated *10.0; y = floor(u*fac+0.5)/fac if u>0, +0 if u==0, else ceil(u*fac-0.5)/fac; Buildings Reals/Round.mo",
+  "reference_rule": "fac built by repeated *10.0; y = floor(u*fac+0.5)/fac if u>0 else ceil(u*fac-0.5)/fac; Buildings Reals/Round.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false
