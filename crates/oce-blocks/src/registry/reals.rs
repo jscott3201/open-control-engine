@@ -180,8 +180,11 @@ fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
     })
 }
 
-fn make_line(_p: &ParamTable) -> Box<dyn Block> {
-    Box::new(Line)
+fn make_line(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Line {
+        limit_below: bool_param(p, "limitBelow", true),
+        limit_above: bool_param(p, "limitAbove", true),
+    })
 }
 
 fn make_greater(p: &ParamTable) -> Box<dyn Block> {

@@ -45,12 +45,13 @@ fn feedthrough_classification_matches_spec() {
         }
         .feeds_through(0, 0)
     );
+    let line = Line::default();
     assert!(
-        Line.feeds_through(0, 0)
-            && Line.feeds_through(1, 0)
-            && Line.feeds_through(2, 0)
-            && Line.feeds_through(3, 0)
-            && Line.feeds_through(4, 0)
+        line.feeds_through(0, 0)
+            && line.feeds_through(1, 0)
+            && line.feeds_through(2, 0)
+            && line.feeds_through(3, 0)
+            && line.feeds_through(4, 0)
     );
     assert!(Greater::default().feeds_through(0, 0) && Greater::default().feeds_through(1, 0));
     assert!(

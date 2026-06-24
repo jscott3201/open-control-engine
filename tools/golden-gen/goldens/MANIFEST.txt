@@ -144,6 +144,12 @@ CDL.Reals.Limiter reference -> goldens/CDL/Reals/Limiter/reference.csv
 CDL.Reals.Limiter y -> goldens/CDL/Reals/Limiter/y.csv
 CDL.Reals.Line reference -> goldens/CDL/Reals/Line/reference.csv
 CDL.Reals.Line y -> goldens/CDL/Reals/Line/y.csv
+CDL.Reals.Line/limit_above_only reference -> goldens/CDL/Reals/Line/limit_above_only/reference.csv
+CDL.Reals.Line/limit_above_only y -> goldens/CDL/Reals/Line/limit_above_only/y.csv
+CDL.Reals.Line/limit_below_only reference -> goldens/CDL/Reals/Line/limit_below_only/reference.csv
+CDL.Reals.Line/limit_below_only y -> goldens/CDL/Reals/Line/limit_below_only/y.csv
+CDL.Reals.Line/unlimited reference -> goldens/CDL/Reals/Line/unlimited/reference.csv
+CDL.Reals.Line/unlimited y -> goldens/CDL/Reals/Line/unlimited/y.csv
 CDL.Reals.Max reference -> goldens/CDL/Reals/Max/reference.csv
 CDL.Reals.Max y -> goldens/CDL/Reals/Max/y.csv
 CDL.Reals.Min reference -> goldens/CDL/Reals/Min/reference.csv

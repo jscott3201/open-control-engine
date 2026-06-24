@@ -1,0 +1,25 @@
+{
+  "class_path": "CDL.Reals.Line",
+  "scenario": "limit_below_only",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 3,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "x1", "f1", "x2", "f2", "u", "y"],
+  "inputs": [
+    { "name": "x1", "value_kind": "Real", "values": [0.0, 0.0, 0.0] },
+    { "name": "f1", "value_kind": "Real", "values": [0.0, 0.0, 0.0] },
+    { "name": "x2", "value_kind": "Real", "values": [10.0, 10.0, 10.0] },
+    { "name": "f2", "value_kind": "Real", "values": [10.0, 10.0, 10.0] },
+    { "name": "u", "value_kind": "Real", "values": [-5.0, 5.0, 15.0] }
+  ],
+  "input": "limitBelow=true, limitAbove=false; (x1,f1,x2,f2)=(0,0,10,10), u below/in/above range",
+  "reference_rule": "xLim=max(x1,u); above x2 extrapolates; b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

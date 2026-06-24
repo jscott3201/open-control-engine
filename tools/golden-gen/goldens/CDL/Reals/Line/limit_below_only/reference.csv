@@ -1,0 +1,6 @@
+#1
+# columns: time x1 f1 x2 f2 u y
+double CDL_Reals_Line_limit_below_only_reference(3,7)
+0.0 0.0 0.0 10.0 10.0 -5.0 0.0
+60.0 0.0 0.0 10.0 10.0 5.0 5.0
+120.0 0.0 0.0 10.0 10.0 15.0 15.0
