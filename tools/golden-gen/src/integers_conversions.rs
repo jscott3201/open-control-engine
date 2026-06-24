@@ -127,24 +127,6 @@ fn integer_arithmetic() -> Vec<Golden> {
             .with_inputs(vec![input_i("u", u)]),
         );
     }
-    // MultiplyByParameter.
-    {
-        let k = -3_i64;
-        let u = [0_i64, 7, -100, 715827882];
-        let y: Vec<Sample> = u.iter().map(|&x| i(k * x)).collect();
-        out.push(
-            Golden::new(
-                "CDL.Integers.MultiplyByParameter",
-                "y",
-                ValueKind::Integer,
-                ticks(4),
-                y,
-                "k=-3; u=[0,7,-100,715827882]",
-                "y = k * u (exact i64 mul); _spec/03 §4.2 MultiplyByParameter",
-            )
-            .with_inputs(vec![input_i("u", u)]),
-        );
-    }
     // Abs.
     {
         let u = [

@@ -5,8 +5,7 @@ use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold,
     IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax,
-    IntegerMin, IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
-    OnCounter, RegistryEntry,
+    IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch, OnCounter, RegistryEntry,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -33,10 +32,6 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.AddParameter",
         make: make_integer_add_parameter,
-    },
-    RegistryEntry {
-        class_path: "CDL.Integers.MultiplyByParameter",
-        make: make_integer_multiply_by_parameter,
     },
     RegistryEntry {
         class_path: "CDL.Integers.Max",
@@ -117,12 +112,6 @@ fn make_integer_multiply(_p: &ParamTable) -> Box<dyn Block> {
 fn make_integer_add_parameter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerAddParameter {
         p: int_param(p, "p", 0),
-    })
-}
-
-fn make_integer_multiply_by_parameter(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(IntegerMultiplyByParameter {
-        k: int_param(p, "k", 1),
     })
 }
 

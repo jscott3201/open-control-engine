@@ -408,9 +408,10 @@ const THR_PREV_T_WORD: usize = 2;
 /// `CDL.Logical.TrueHoldWithReset` — true output is held for at least `duration`; `clr` resets.
 /// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut.
 ///
-/// This class is spec-authoritative here: it is absent from current Buildings master. Its canonical
-/// min-hold behavior is equivalent to [`TrueFalseHold`] with `falseHoldDuration = 0`, plus the
-/// explicit clear input.
+/// This class is spec-authoritative here: the oracle is the CDL specification's Logical block
+/// catalog for `TrueHoldWithReset` (`obc.lbl.gov/specification`, §7.6 Elementary Blocks), not current
+/// Buildings master, where this class is absent. Its canonical min-hold behavior is equivalent to
+/// [`TrueFalseHold`] with `falseHoldDuration = 0`, plus the explicit clear input.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrueHoldWithReset {
     pub(crate) duration: f64,

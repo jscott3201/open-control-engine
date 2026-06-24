@@ -42,7 +42,7 @@ pub use integers::{
     IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
     IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin,
-    IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
+    IntegerMultiply, IntegerSubtract, IntegerSwitch,
 };
 pub use integers_edge::{IntegerChange, OnCounter};
 pub use logical::{

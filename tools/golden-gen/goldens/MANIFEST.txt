@@ -46,8 +46,6 @@ CDL.Integers.MultiSum reference -> goldens/CDL/Integers/MultiSum/reference.csv
 CDL.Integers.MultiSum y -> goldens/CDL/Integers/MultiSum/y.csv
 CDL.Integers.Multiply reference -> goldens/CDL/Integers/Multiply/reference.csv
 CDL.Integers.Multiply y -> goldens/CDL/Integers/Multiply/y.csv
-CDL.Integers.MultiplyByParameter reference -> goldens/CDL/Integers/MultiplyByParameter/reference.csv
-CDL.Integers.MultiplyByParameter y -> goldens/CDL/Integers/MultiplyByParameter/y.csv
 CDL.Integers.OnCounter reference -> goldens/CDL/Integers/OnCounter/reference.csv
 CDL.Integers.OnCounter y -> goldens/CDL/Integers/OnCounter/y.csv
 CDL.Integers.OnCounter/held_reset reference -> goldens/CDL/Integers/OnCounter/held_reset/reference.csv
