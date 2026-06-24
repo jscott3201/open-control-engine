@@ -74,10 +74,6 @@ const PID_RESET_INPUTS: &[Port] = &[
         name: "trigger",
         kind: B,
     },
-    Port {
-        name: "y_reset_in",
-        kind: R,
-    },
 ];
 
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
@@ -195,6 +191,10 @@ const PID_RESET_PI_RECURRENCE_PARAMS: &[Param] = &[
     Param {
         name: "xi_start",
         value: ParamValue::Real("0.11"),
+    },
+    Param {
+        name: "y_reset",
+        value: ParamValue::Real("0.275"),
     },
     Param {
         name: "yMin",

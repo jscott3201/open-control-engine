@@ -222,7 +222,7 @@ fn pre_and_unit_delay_loop_cut_case() -> ModelBuilder {
 
 fn realistic_ahu_loop_case() -> ModelBuilder {
     realistic_ahu_loop_case_with_connections(&[
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
     ])
 }
 
@@ -295,10 +295,9 @@ fn realistic_ahu_loop_case_with_connections(order: &[usize]) -> ModelBuilder {
         (trimmed_out[0], command_in[0]),
         (enabled_out[0], command_in[1]),
         (fallback_out[0], command_in[2]),
-        // Real feedback edges that must not create same-tick emit dependencies: UnitDelay cuts its
-        // input, and PIDWithReset's reset value is a non-feedthrough state-update input.
+        // Real feedback edge that must not create same-tick emit dependencies: UnitDelay cuts its
+        // input.
         (command_out[0], delay_in[0]),
-        (command_out[0], controller_in[3]),
     ];
     for &idx in order {
         let (from, to) = edges[idx];
@@ -515,13 +514,13 @@ fn schedule_is_independent_of_connection_insertion_order_for_tied_diamond() {
 #[test]
 fn real_control_sequence_schedule_is_independent_of_connection_insertion_order() {
     let forward = realistic_ahu_loop_case_with_connections(&[
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
     ]);
     let reversed = realistic_ahu_loop_case_with_connections(&[
-        17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+        16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
     ]);
     let rotated = realistic_ahu_loop_case_with_connections(&[
-        10, 14, 1, 16, 5, 12, 3, 8, 17, 0, 6, 11, 4, 13, 2, 15, 7, 9,
+        10, 14, 1, 16, 5, 12, 3, 8, 0, 6, 11, 4, 13, 2, 15, 7, 9,
     ]);
     let cases = [
         ("forward", forward),

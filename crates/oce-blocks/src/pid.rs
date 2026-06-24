@@ -21,10 +21,11 @@
 //! `xD(k+1) = (xD(k) + (dt/(Td/Nd))*e) / (1 + dt/(Td/Nd))`
 //!
 //! `PIDWithReset` applies reset during `update_state`: on a rising trigger, the integrator state is
-//! back-solved to `y_reset_in - (yP + yD)`, so the reset target is visible at the next emit when the
-//! current P/D path is unchanged; with derivative enabled, the next emit also reflects the updated
-//! derivative filter state. This matches the arena loop-cut timing used by reset/integrator blocks;
-//! `trigger` and `y_reset_in` do not feed through.
+//! back-solved to the build-time parameter `y_reset - (yP + yD)`, so the reset target is visible at
+//! the next emit when the current P/D path is unchanged; with derivative enabled, the next emit also
+//! reflects the updated derivative filter state. This matches the canonical Buildings
+//! `PIDWithReset.mo` wiring: `trigger` is the only reset input, while `y_reset` is a parameter that
+//! defaults to the resolved `xi_start`.
 //!
 //! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
 //! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.
@@ -56,6 +57,7 @@ pub(crate) struct ControllerConfig {
     pub(crate) nd: f64,
     pub(crate) xi_start: f64,
     pub(crate) yd_start: f64,
+    pub(crate) y_reset: f64,
     pub(crate) reverse_acting: bool,
 }
 
@@ -73,6 +75,7 @@ impl Default for ControllerConfig {
             nd: 10.0,
             xi_start: 0.0,
             yd_start: 0.0,
+            y_reset: 0.0,
             reverse_acting: true,
         }
     }
@@ -272,8 +275,7 @@ fn update_pid_state(
             .prev_trigger
             .is_some_and(|prev_trigger| read_bool(inputs, 2) && region[prev_trigger] == 0);
         let next_i = if rising_reset {
-            let reset_target = read_real(inputs, 3);
-            reset_target - (y_p + y_d)
+            config.y_reset - (y_p + y_d)
         } else {
             let ant_win_gai = (y_u - y) / (config.k_eff() * config.ni_eff());
             let err_i2 = e - ant_win_gai;
@@ -370,9 +372,11 @@ impl Block for Pid {
 }
 
 /// `CDL.Reals.PIDWithReset` — limited PID plus a rising-edge integrator reset. The data path
-/// remains feedthrough on `u_s,u_m`; `trigger` and `y_reset_in` are state-routed and never
-/// feed through. In modes without integral action, reset is dormant and no trigger state is
-/// allocated.
+/// remains feedthrough on `u_s,u_m`; `trigger` is state-routed and never feeds through. The reset
+/// target is the build-time `y_reset` parameter, which follows `PIDWithReset.mo` and defaults to
+/// the resolved `xi_start`; on a rising trigger the integrator back-solves to
+/// `y_reset - (yP + yD)`. In modes without integral action, reset is dormant and no trigger state
+/// is allocated.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PidWithReset {
     pub(crate) config: ControllerConfig,
@@ -382,12 +386,7 @@ impl Block for PidWithReset {
     fn signature(&self) -> &'static BlockSignature {
         static SIG: BlockSignature = BlockSignature {
             class_path: "CDL.Reals.PIDWithReset",
-            inputs: &[
-                PortKind::Real,
-                PortKind::Real,
-                PortKind::Boolean,
-                PortKind::Real,
-            ],
+            inputs: &[PortKind::Real, PortKind::Real, PortKind::Boolean],
             outputs: &[PortKind::Real],
             stateful: true,
         };

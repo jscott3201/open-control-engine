@@ -114,7 +114,6 @@ fn feedthrough_classification_matches_spec() {
         PidWithReset::default().feeds_through(0, 0)
             && PidWithReset::default().feeds_through(1, 0)
             && !PidWithReset::default().feeds_through(2, 0)
-            && !PidWithReset::default().feeds_through(3, 0)
     );
     assert_eq!(Assert::default().kind(), BlockKind::Algebraic);
     assert!(!Assert::default().feeds_through(0, 0));
@@ -370,6 +369,32 @@ fn registry_make_resolves_parameters() {
     });
     assert_eq!(p_reset.kind(), BlockKind::Algebraic);
     assert_eq!(p_reset.state_len(), 0);
+
+    let pi_reset = (lookup("CDL.Reals.PIDWithReset").unwrap().make)(&ParamTable {
+        values: vec![
+            (
+                Arc::from("controllerType"),
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.SimpleController.PI",
+                )),
+            ),
+            (Arc::from("k"), Value::Real(1.0)),
+            (Arc::from("Ti"), Value::Real(1.0)),
+            (Arc::from("xi_start"), Value::Real(4.25)),
+            (Arc::from("yMin"), Value::Real(-100.0)),
+            (Arc::from("yMax"), Value::Real(100.0)),
+        ],
+    });
+    let mut region = vec![0u64; pi_reset.state_len()];
+    pi_reset.init_state(&mut region, &ParamTable::default());
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    let inputs = [Value::Real(1.0), Value::Real(0.0), Value::Boolean(true)];
+    pi_reset.update_state(&cx, &inputs, &mut region);
+    assert!(
+        emit(pi_reset.as_ref(), &inputs, &region)[0].bit_eq(&Value::Real(4.25)),
+        "PIDWithReset.y_reset must default to the resolved xi_start parameter"
+    );
 
     fn tick_real(block: &dyn Block, region: &mut [u64], t: Time, u: f64) -> Value {
         let diag = NoopDiagnostics;

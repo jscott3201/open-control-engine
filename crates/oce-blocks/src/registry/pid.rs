@@ -38,6 +38,7 @@ pub(super) const PID_WITH_RESET_PARAM_RULES: &[ParamRule] = &[
 ];
 
 fn pid_config(p: &ParamTable) -> ControllerConfig {
+    let xi_start = real_param(p, "xi_start", 0.0);
     ControllerConfig {
         controller_type: controller_type_param(p, "controllerType", SimpleController::Pi),
         k: real_param(p, "k", 1.0),
@@ -48,8 +49,9 @@ fn pid_config(p: &ParamTable) -> ControllerConfig {
         y_min: real_param(p, "yMin", 0.0),
         ni: real_param(p, "Ni", 0.9),
         nd: real_param(p, "Nd", 10.0),
-        xi_start: real_param(p, "xi_start", 0.0),
+        xi_start,
         yd_start: real_param(p, "yd_start", 0.0),
+        y_reset: 0.0,
         reverse_acting: bool_param(p, "reverseActing", true),
     }
 }
@@ -61,7 +63,7 @@ fn make_pid(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn make_pid_with_reset(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(PidWithReset {
-        config: pid_config(p),
-    })
+    let mut config = pid_config(p);
+    config.y_reset = real_param(p, "y_reset", config.xi_start);
+    Box::new(PidWithReset { config })
 }

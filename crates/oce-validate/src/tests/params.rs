@@ -118,23 +118,13 @@ fn strict_positive_param_rules_reject_zero() {
         ),
         (
             "CDL.Reals.PIDWithReset",
-            &[
-                ValueType::Real,
-                ValueType::Real,
-                ValueType::Boolean,
-                ValueType::Real,
-            ],
+            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
             &[ValueType::Real],
             "Td",
         ),
         (
             "CDL.Reals.PIDWithReset",
-            &[
-                ValueType::Real,
-                ValueType::Real,
-                ValueType::Boolean,
-                ValueType::Real,
-            ],
+            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
             &[ValueType::Real],
             "Nd",
         ),
@@ -165,12 +155,7 @@ fn strict_positive_param_rules_reject_zero() {
 fn pid_with_reset_zero_td_is_rejected() {
     let model = one_block_model(
         "CDL.Reals.PIDWithReset",
-        &[
-            ValueType::Real,
-            ValueType::Real,
-            ValueType::Boolean,
-            ValueType::Real,
-        ],
+        &[ValueType::Real, ValueType::Real, ValueType::Boolean],
         &[ValueType::Real],
         vec![rp("Td", 0.0)],
     );
