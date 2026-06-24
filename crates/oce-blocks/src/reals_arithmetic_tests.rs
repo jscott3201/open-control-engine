@@ -54,7 +54,11 @@ fn reals_arithmetic_hand_derived_golden_bits() {
     assert_real_bits(&Abs, &[-7.25], 0x401d000000000000);
     assert_real_bits(&Min, &[4.25, -3.5], 0xc00c000000000000);
     assert_real_bits(&Max, &[4.25, -3.5], 0x4011000000000000);
-    assert_real_bits(&Line, &[0.0, 0.1, 3.0, 1.1, 1.0], 0x3fdbbbbbbbbbbbbd);
+    assert_real_bits(
+        &Line::default(),
+        &[0.0, 0.1, 3.0, 1.1, 1.0],
+        0x3fdbbbbbbbbbbbbd,
+    );
 }
 
 #[test]
@@ -70,7 +74,7 @@ fn reals_arithmetic_feedthrough_perturbation_matches_declared_contract() {
     assert_perturb_moves(&Min, &[4.0, 2.0], &[(0, 1.0), (1, 6.0)]);
     assert_perturb_moves(&Max, &[4.0, 2.0], &[(0, 1.0), (1, 6.0)]);
     assert_perturb_moves(
-        &Line,
+        &Line::default(),
         &[0.0, 2.0, 4.0, 10.0, 1.5],
         &[(0, 0.5), (1, 3.0), (2, 5.0), (3, 12.0), (4, 2.0)],
     );
@@ -242,21 +246,29 @@ fn limiter_signed_zero_clamp_boundaries_are_pinned() {
 
 #[test]
 fn line_signed_zero_clamp_boundaries_follow_current_formula() {
-    assert_real_bits(&Line, &[-0.0, 0.0, 1.0, 1.0, -0.0], 0.0f64.to_bits());
-    assert_real_bits(&Line, &[-1.0, -1.0, -0.0, -0.0, 0.0], 0.0f64.to_bits());
+    assert_real_bits(
+        &Line::default(),
+        &[-0.0, 0.0, 1.0, 1.0, -0.0],
+        0.0f64.to_bits(),
+    );
+    assert_real_bits(
+        &Line::default(),
+        &[-1.0, -1.0, -0.0, -0.0, 0.0],
+        0.0f64.to_bits(),
+    );
 }
 
 #[test]
 fn line_clamps_at_breakpoints_and_degrades_on_degenerate_domain() {
     let inputs = |u| [2.0, 10.0, 6.0, 18.0, u];
-    assert_real_bits(&Line, &inputs(1.0), 10.0f64.to_bits());
-    assert_real_bits(&Line, &inputs(2.0), 10.0f64.to_bits());
-    assert_real_bits(&Line, &inputs(5.0), 16.0f64.to_bits());
-    assert_real_bits(&Line, &inputs(6.0), 18.0f64.to_bits());
-    assert_real_bits(&Line, &inputs(7.0), 18.0f64.to_bits());
+    assert_real_bits(&Line::default(), &inputs(1.0), 10.0f64.to_bits());
+    assert_real_bits(&Line::default(), &inputs(2.0), 10.0f64.to_bits());
+    assert_real_bits(&Line::default(), &inputs(5.0), 16.0f64.to_bits());
+    assert_real_bits(&Line::default(), &inputs(6.0), 18.0f64.to_bits());
+    assert_real_bits(&Line::default(), &inputs(7.0), 18.0f64.to_bits());
 
     let degenerate = real_out(
-        &Line,
+        &Line::default(),
         &[
             Value::Real(3.0),
             Value::Real(4.0),
@@ -269,18 +281,64 @@ fn line_clamps_at_breakpoints_and_degrades_on_degenerate_domain() {
 }
 
 #[test]
+fn line_limit_flags_gate_clamping_and_extrapolation() {
+    let inputs = |u| [0.0, 0.0, 10.0, 10.0, u];
+
+    let default_both = Line::default();
+    let explicit_both = Line {
+        limit_below: true,
+        limit_above: true,
+    };
+    let below_only = Line {
+        limit_below: true,
+        limit_above: false,
+    };
+    let above_only = Line {
+        limit_below: false,
+        limit_above: true,
+    };
+    let neither = Line {
+        limit_below: false,
+        limit_above: false,
+    };
+
+    assert_real_bits(&default_both, &inputs(-5.0), 0.0f64.to_bits());
+    assert_real_bits(&default_both, &inputs(15.0), 10.0f64.to_bits());
+    assert_real_bits(&explicit_both, &inputs(-5.0), 0.0f64.to_bits());
+    assert_real_bits(&explicit_both, &inputs(15.0), 10.0f64.to_bits());
+
+    assert_real_bits(&below_only, &inputs(-5.0), 0.0f64.to_bits());
+    assert_real_bits(&below_only, &inputs(15.0), 15.0f64.to_bits());
+
+    assert_real_bits(&above_only, &inputs(-5.0), (-5.0f64).to_bits());
+    assert_real_bits(&above_only, &inputs(15.0), 10.0f64.to_bits());
+
+    assert_real_bits(&neither, &inputs(-5.0), (-5.0f64).to_bits());
+    assert_real_bits(&neither, &inputs(15.0), 15.0f64.to_bits());
+}
+
+#[test]
 fn line_pins_current_endpoint_nan_and_inverted_domain_behavior() {
     // Pins the current slope-intercept endpoint behavior pending the canonical-form decision.
     let non_power_two = |u| [0.0, 0.1, 3.0, 1.1, u];
-    assert_real_bits(&Line, &non_power_two(-1.0), 0x3fb99999999999a0);
-    assert_real_bits(&Line, &non_power_two(4.0), 1.1f64.to_bits());
-    assert_real_bits(&Line, &non_power_two(f64::NAN), 0x3fb99999999999a0);
+    assert_real_bits(&Line::default(), &non_power_two(-1.0), 0x3fb99999999999a0);
+    assert_real_bits(&Line::default(), &non_power_two(4.0), 1.1f64.to_bits());
+    assert_real_bits(
+        &Line::default(),
+        &non_power_two(f64::NAN),
+        0x3fb99999999999a0,
+    );
 
-    assert_real_bits(&Line, &[5.0, 0.0, 2.0, 10.0, 3.0], 10.0f64.to_bits());
+    assert_real_bits(
+        &Line::default(),
+        &[5.0, 0.0, 2.0, 10.0, 3.0],
+        10.0f64.to_bits(),
+    );
 }
 
 #[test]
 fn reals_arithmetic_outputs_are_bit_deterministic_across_reruns() {
+    let line = Line::default();
     let cases: &[(&dyn Block, &[f64])] = &[
         (&Multiply, &[0.1, 0.2]),
         (&Divide, &[0.0, 0.0]),
@@ -292,7 +350,7 @@ fn reals_arithmetic_outputs_are_bit_deterministic_across_reruns() {
         (&Abs, &[-0.0]),
         (&Min, &[f64::NAN, 2.0]),
         (&Max, &[0.0, -0.0]),
-        (&Line, &[3.0, 4.0, 3.0, 8.0, 3.0]),
+        (&line, &[3.0, 4.0, 3.0, 8.0, 3.0]),
     ];
     for &(block, inputs) in cases {
         let first = real_out(block, &real_inputs(inputs));

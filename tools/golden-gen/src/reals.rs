@@ -285,6 +285,39 @@ fn algebraic() -> Vec<Golden> {
         ]));
     }
 
+    // Line scenario variants: structural limit gates from Buildings Reals/Line.mo.
+    {
+        let segs = [
+            (0.0_f64, 0.0_f64, 10.0_f64, 10.0_f64, -5.0_f64),
+            (0.0, 0.0, 10.0, 10.0, 5.0),
+            (0.0, 0.0, 10.0, 10.0, 15.0),
+        ];
+        out.push(line_golden(
+            "limit_below_only",
+            &segs,
+            true,
+            false,
+            "limitBelow=true, limitAbove=false; (x1,f1,x2,f2)=(0,0,10,10), u below/in/above range",
+            "xLim=max(x1,u); above x2 extrapolates; b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
+        ));
+        out.push(line_golden(
+            "limit_above_only",
+            &segs,
+            false,
+            true,
+            "limitBelow=false, limitAbove=true; (x1,f1,x2,f2)=(0,0,10,10), u below/in/above range",
+            "xLim=min(x2,u); below x1 extrapolates; b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
+        ));
+        out.push(line_golden(
+            "unlimited",
+            &segs,
+            false,
+            false,
+            "limitBelow=false, limitAbove=false; (x1,f1,x2,f2)=(0,0,10,10), u below/in/above range",
+            "xLim=u; both sides extrapolate; b=(f2-f1)/(x2-x1); a=f2-b*x2; y=a+b*xLim; Buildings Reals/Line.mo",
+        ));
+    }
+
     // Switch (Reals): y = u1 if u2 else u3 (u2 Boolean selector). Output is Real.
     {
         // (u1, sel u2, u3) per tick.
@@ -317,6 +350,47 @@ fn algebraic() -> Vec<Golden> {
     }
 
     out
+}
+
+fn line_golden(
+    scenario: &'static str,
+    segs: &[(f64, f64, f64, f64, f64)],
+    limit_below: bool,
+    limit_above: bool,
+    input_desc: &'static str,
+    rule_desc: &'static str,
+) -> Golden {
+    let y: Vec<Sample> = segs
+        .iter()
+        .map(|&(x1, f1, x2, f2, u)| {
+            let x_lim = match (limit_below, limit_above) {
+                (true, true) => u.max(x1).min(x2),
+                (true, false) => u.max(x1),
+                (false, true) => u.min(x2),
+                (false, false) => u,
+            };
+            let b = (f2 - f1) / (x2 - x1);
+            let a = f2 - b * x2;
+            r(a + b * x_lim)
+        })
+        .collect();
+    Golden::new(
+        "CDL.Reals.Line",
+        "y",
+        ValueKind::Real,
+        ticks(segs.len()),
+        y,
+        input_desc,
+        rule_desc,
+    )
+    .with_scenario(scenario)
+    .with_inputs(vec![
+        input_r("x1", segs.iter().map(|row| row.0)),
+        input_r("f1", segs.iter().map(|row| row.1)),
+        input_r("x2", segs.iter().map(|row| row.2)),
+        input_r("f2", segs.iter().map(|row| row.3)),
+        input_r("u", segs.iter().map(|row| row.4)),
+    ])
 }
 
 fn comparators() -> Vec<Golden> {

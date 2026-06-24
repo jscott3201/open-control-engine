@@ -105,6 +105,36 @@ const LIMITER_PARAMS: &[Param] = &[
         value: ParamValue::Real("5.5"),
     },
 ];
+const LINE_LIMIT_BELOW_ONLY_PARAMS: &[Param] = &[
+    Param {
+        name: "limitBelow",
+        value: ParamValue::Boolean("true"),
+    },
+    Param {
+        name: "limitAbove",
+        value: ParamValue::Boolean("false"),
+    },
+];
+const LINE_LIMIT_ABOVE_ONLY_PARAMS: &[Param] = &[
+    Param {
+        name: "limitBelow",
+        value: ParamValue::Boolean("false"),
+    },
+    Param {
+        name: "limitAbove",
+        value: ParamValue::Boolean("true"),
+    },
+];
+const LINE_UNLIMITED_PARAMS: &[Param] = &[
+    Param {
+        name: "limitBelow",
+        value: ParamValue::Boolean("false"),
+    },
+    Param {
+        name: "limitAbove",
+        value: ParamValue::Boolean("false"),
+    },
+];
 const THRESHOLD_PARAMS: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Real("4.5"),
@@ -298,6 +328,30 @@ const CASES: &[BlockCase] = &[
         "Line",
         LINE_INPUTS,
         &[],
+        REAL_Y,
+    ),
+    case(
+        "reals_line_limit_below_only",
+        "CDL.Reals.Line",
+        "Line/limit_below_only",
+        LINE_INPUTS,
+        LINE_LIMIT_BELOW_ONLY_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_line_limit_above_only",
+        "CDL.Reals.Line",
+        "Line/limit_above_only",
+        LINE_INPUTS,
+        LINE_LIMIT_ABOVE_ONLY_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_line_unlimited",
+        "CDL.Reals.Line",
+        "Line/unlimited",
+        LINE_INPUTS,
+        LINE_UNLIMITED_PARAMS,
         REAL_Y,
     ),
     case(

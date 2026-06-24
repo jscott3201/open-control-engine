@@ -16,7 +16,7 @@ fn arithmetic_blocks() {
     assert!(outs(&Max, &[Value::Real(2.0), Value::Real(5.0)])[0].bit_eq(&Value::Real(5.0)));
     assert!(
         outs(
-            &Line,
+            &Line::default(),
             &[
                 Value::Real(0.0),
                 Value::Real(2.0),

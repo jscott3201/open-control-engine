@@ -448,12 +448,27 @@ impl Block for Limiter {
     }
 }
 
-/// `CDL.Reals.Line` — line through `(x1,f1),(x2,f2)` evaluated at `u`, with `u` clamped into
-/// `[x1,x2]` before interpolation (`03` §4.1). Stateless `[A]`, full feedthrough. A degenerate
-/// `x1 == x2` follows the same `f64` formula and degrades to IEEE NaN/Inf rather than panicking.
-/// A NaN `u` takes the lower-clamp path; an inverted `x1 > x2` domain collapses to `f2`.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Line;
+/// `CDL.Reals.Line` — line through `(x1,f1),(x2,f2)` evaluated at `u`, with the input limit gates
+/// from Buildings `Line.mo` (`03` §4.1). `limitBelow` clamps `u` to be at least `x1`, `limitAbove`
+/// clamps `u` to be at most `x2`, both enabled clamps to `[x1,x2]`, and both disabled extrapolates
+/// freely. Stateless `[A]`, full feedthrough. A degenerate `x1 == x2` follows the same `f64` formula
+/// and degrades to IEEE NaN/Inf rather than panicking. A NaN `u` follows the deterministic min/max
+/// policy in whichever limit gates are enabled; an inverted `x1 > x2` domain follows the same IEEE
+/// formula without adding a runtime assertion.
+#[derive(Clone, Copy, Debug)]
+pub struct Line {
+    pub(crate) limit_below: bool,
+    pub(crate) limit_above: bool,
+}
+
+impl Default for Line {
+    fn default() -> Self {
+        Self {
+            limit_below: true,
+            limit_above: true,
+        }
+    }
+}
 
 impl Block for Line {
     fn signature(&self) -> &'static BlockSignature {
@@ -483,7 +498,12 @@ impl Block for Line {
         let x2 = read_real(inputs, 2);
         let f2 = read_real(inputs, 3);
         let u = read_real(inputs, 4);
-        let x_lim = det_min(det_max(u, x1), x2);
+        let x_lim = match (self.limit_below, self.limit_above) {
+            (true, true) => det_min(det_max(u, x1), x2),
+            (true, false) => det_max(u, x1),
+            (false, true) => det_min(u, x2),
+            (false, false) => u,
+        };
         let b = (f2 - f1) / (x2 - x1);
         // The canonical point-slope vs slope-intercept form is still a compatibility decision.
         let a = f2 - b * x2;
