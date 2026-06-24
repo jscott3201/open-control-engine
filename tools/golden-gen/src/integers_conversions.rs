@@ -428,40 +428,49 @@ fn integer_comparators() -> Vec<Golden> {
 fn integer_stateful() -> Vec<Golden> {
     let mut out = Vec::new();
 
-    // OnCounter: emit start-of-tick count; rising(trigger) increments next tick; rising(reset)
-    // dominates and sets count to y_start. Two-pass emit-from-prior-state.
+    // OnCounter: emit start-of-tick count; after the first tick, either input's rising edge fires
+    // the Modelica `when {trigger,reset}`. The branch uses the current reset level, not reset's
+    // edge status.
     {
         let trigger = [false, true, true, false, true, true, false];
-        let reset = [false, false, false, false, false, true, false];
+        let reset = [false, false, false, false, true, true, false];
         let y_start = 0_i64;
-        let mut count = y_start;
-        let mut pre_trig = false;
-        let mut pre_reset = false;
-        let mut y = Vec::new();
-        for k in 0..trigger.len() {
-            // emit prior state
-            y.push(i(count));
-            // update state from this tick's edges (reset dominates)
-            let trig_rise = trigger[k] && !pre_trig;
-            let reset_rise = reset[k] && !pre_reset;
-            if reset_rise {
-                count = y_start;
-            } else if trig_rise {
-                count += 1;
-            }
-            pre_trig = trigger[k];
-            pre_reset = reset[k];
-        }
-        out.push(Golden::new(
-            "CDL.Integers.OnCounter",
-            "y",
-            ValueKind::Integer,
-            ticks(7),
-            y,
-            "y_start=0; trigger=[F,T,T,F,T,T,F], reset=[F,F,F,F,F,T,F]; rising edges only",
-            "emit start-of-tick count; rising(trigger)++ ; rising(reset)->y_start (dominant); _spec/03 §4.2 OnCounter",
-        )
-        .with_inputs(vec![input_b("trigger", trigger), input_b("reset", reset)]));
+        out.push(on_counter_golden(
+            None,
+            &trigger,
+            &reset,
+            y_start,
+            "y_start=0; trigger=[F,T,T,F,T,T,F], reset=[F,F,F,F,T,T,F]; includes simultaneous trigger/reset rise",
+            "emit start-of-tick count; no when fires at t0; on trigger-or-reset rising edge, y := if reset then y_start else pre(y)+1; reset level has priority; Buildings Integers/OnCounter.mo",
+        ));
+    }
+
+    // Held reset suppresses trigger rising edges because the when-branch tests reset's level.
+    {
+        let trigger = [false, false, true, true, false, true, true];
+        let reset = [true, true, true, true, true, true, true];
+        out.push(on_counter_golden(
+            Some("held_reset"),
+            &trigger,
+            &reset,
+            3,
+            "scenario=held_reset, y_start=3; reset is high for the full trace while trigger rises twice",
+            "Modelica when fires on trigger rising edges, but the current reset level is true, so y := y_start and increments are suppressed; Buildings Integers/OnCounter.mo",
+        ));
+    }
+
+    // A condition that is already true at the initial tick does not fire a Modelica `when`.
+    {
+        let trigger = [true, true, false, true, true];
+        let reset = [false, false, false, false, false];
+        out.push(on_counter_golden(
+            Some("trigger_initially_true"),
+            &trigger,
+            &reset,
+            2,
+            "scenario=trigger_initially_true, y_start=2; trigger starts true at t0, then falls and rises again",
+            "No when event fires for trigger already true at the initial tick; the later false->true transition increments by one; Buildings Integers/OnCounter.mo",
+        ));
     }
 
     // Change (Integer): y = u != prev, up = u > prev, down = u < prev; prev seeded to first sample.
@@ -518,6 +527,62 @@ fn integer_stateful() -> Vec<Golden> {
     }
 
     out
+}
+
+fn on_counter_golden(
+    scenario: Option<&'static str>,
+    trigger: &[bool],
+    reset: &[bool],
+    y_start: i64,
+    input_desc: &'static str,
+    rule_desc: &'static str,
+) -> Golden {
+    let y = on_counter_y(trigger, reset, y_start);
+    let mut golden = Golden::new(
+        "CDL.Integers.OnCounter",
+        "y",
+        ValueKind::Integer,
+        ticks(trigger.len()),
+        y,
+        input_desc,
+        rule_desc,
+    )
+    .with_inputs(vec![
+        input_b("trigger", trigger.iter().copied()),
+        input_b("reset", reset.iter().copied()),
+    ]);
+    if let Some(scenario) = scenario {
+        golden = golden.with_scenario(scenario);
+    }
+    golden
+}
+
+fn on_counter_y(trigger: &[bool], reset: &[bool], y_start: i64) -> Vec<Sample> {
+    assert_eq!(trigger.len(), reset.len());
+    let mut count = y_start;
+    let mut pre_trigger = false;
+    let mut pre_reset = false;
+    let mut has_history = false;
+    let mut y = Vec::with_capacity(trigger.len());
+    for (&trigger, &reset) in trigger.iter().zip(reset) {
+        y.push(i(count));
+        if has_history {
+            let trigger_rising = trigger && !pre_trigger;
+            let reset_rising = reset && !pre_reset;
+            let event = trigger_rising || reset_rising;
+            if event {
+                count = if reset {
+                    y_start
+                } else {
+                    count.wrapping_add(1)
+                };
+            }
+        }
+        pre_trigger = trigger;
+        pre_reset = reset;
+        has_history = true;
+    }
+    y
 }
 
 fn conversions() -> Vec<Golden> {

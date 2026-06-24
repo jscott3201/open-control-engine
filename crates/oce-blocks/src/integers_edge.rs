@@ -11,6 +11,7 @@ use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_int
 const COUNT_WORD: usize = 0;
 const PREV_TRIGGER_WORD: usize = 1;
 const PREV_RESET_WORD: usize = 2;
+const HAS_HISTORY_WORD: usize = 3;
 
 fn bool_word(value: bool) -> u64 {
     u64::from(value)
@@ -28,11 +29,15 @@ fn word_i64(word: u64) -> i64 {
     word.cast_signed()
 }
 
-/// `CDL.Integers.OnCounter` — count rising edges on `trigger`, reset on a rising `reset`.
+/// `CDL.Integers.OnCounter` — count rising edges on `trigger` unless `reset` is high.
 ///
 /// Stateful `[S]` loop cut: `y` is purely the prior accumulated count, so neither `trigger` nor
-/// `reset` feed through to the same-tick output. If trigger and reset rise on the same tick, reset
-/// has priority. Count overflow wraps two's-complement like the integer arithmetic family.
+/// `reset` feed through to the same-tick output. Per Buildings `OnCounter.mo`, an event fires when
+/// either `trigger` or `reset` rises; if `reset` is currently high, `y_start` is stored, otherwise
+/// the count increments. Reset therefore has priority on simultaneous events and while held high
+/// across a trigger edge. A condition already true at the initial tick does not fire a Modelica
+/// `when`, so the first update only captures the initial input levels as history. Count overflow
+/// wraps two's-complement like the integer arithmetic family.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OnCounter {
     pub(crate) y_start: i64,
@@ -58,13 +63,14 @@ impl Block for OnCounter {
     }
 
     fn state_len(&self) -> usize {
-        3
+        4
     }
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[COUNT_WORD] = i64_word(self.y_start);
         region[PREV_TRIGGER_WORD] = 0;
         region[PREV_RESET_WORD] = 0;
+        region[HAS_HISTORY_WORD] = 0;
     }
 
     fn emit_from_state(
@@ -86,17 +92,25 @@ impl Block for OnCounter {
         let reset_rising = reset && !prev_reset;
 
         let count = word_i64(region[COUNT_WORD]);
-        let next_count = if reset_rising {
-            self.y_start
-        } else if trigger_rising {
-            count.wrapping_add(1)
-        } else {
+        let next_count = if !word_bool(region[HAS_HISTORY_WORD]) {
             count
+        } else {
+            let event = trigger_rising || reset_rising;
+            if event {
+                if reset {
+                    self.y_start
+                } else {
+                    count.wrapping_add(1)
+                }
+            } else {
+                count
+            }
         };
 
         region[COUNT_WORD] = i64_word(next_count);
         region[PREV_TRIGGER_WORD] = bool_word(trigger);
         region[PREV_RESET_WORD] = bool_word(reset);
+        region[HAS_HISTORY_WORD] = 1;
     }
 }
 

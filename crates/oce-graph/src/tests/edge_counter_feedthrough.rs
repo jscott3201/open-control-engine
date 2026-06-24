@@ -29,7 +29,7 @@ fn integer_on_counter_cuts_feedback_loop_without_separate_delay() {
     let state = allocate_state(&b.model, &b.blocks);
     let slot = state.slot_of[counter.0 as usize];
     assert_ne!(slot, usize::MAX);
-    assert_eq!(state.slots[slot].len, 3);
+    assert_eq!(state.slots[slot].len, 4);
 }
 
 #[test]
