@@ -7,8 +7,7 @@ use super::{
     Block, BlockKind, Ctx, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant,
     IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold,
     IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax,
-    IntegerMin, IntegerMultiply, IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch,
-    NoopDiagnostics,
+    IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch, NoopDiagnostics,
 };
 
 fn out(block: &dyn Block, inputs: &[Value]) -> Value {
@@ -87,8 +86,6 @@ fn integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
     assert_one_out(&IntegerMultiply, &[i(i64::MAX), i(2)], i(-2));
     assert_one_out(&IntegerAddParameter { p: -4 }, &[i(9)], i(5));
     assert_one_out(&IntegerAddParameter { p: 1 }, &[i(i64::MAX)], i(i64::MIN));
-    assert_one_out(&IntegerMultiplyByParameter { k: -3 }, &[i(7)], i(-21));
-    assert_one_out(&IntegerMultiplyByParameter { k: 2 }, &[i(i64::MAX)], i(-2));
     assert_one_out(&IntegerMax, &[i(i64::MIN), i(0)], i(0));
     assert_one_out(&IntegerMin, &[i(i64::MIN), i(0)], i(i64::MIN));
 }

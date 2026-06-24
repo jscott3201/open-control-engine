@@ -1,7 +1,0 @@
-#1
-# columns: time u y
-double CDL_Integers_MultiplyByParameter_reference(4,3)
-0.0 0.0 0.0
-1.0 7.0 -21.0
-2.0 -100.0 300.0
-3.0 715827882.0 -2147483646.0

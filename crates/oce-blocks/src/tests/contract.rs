@@ -183,7 +183,6 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.Subtract",
         "CDL.Integers.Multiply",
         "CDL.Integers.AddParameter",
-        "CDL.Integers.MultiplyByParameter",
         "CDL.Integers.Max",
         "CDL.Integers.Min",
         "CDL.Integers.Switch",
@@ -200,7 +199,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 74, "registry count");
+    assert_eq!(PATHS.len(), 73, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

@@ -174,40 +174,6 @@ impl Block for IntegerAddParameter {
     }
 }
 
-/// `CDL.Integers.MultiplyByParameter` — `y = k*u` with wrapping overflow.
-/// Stateless `[A]`, full feedthrough.
-#[derive(Clone, Copy, Debug)]
-pub struct IntegerMultiplyByParameter {
-    pub(crate) k: i64,
-}
-
-impl Default for IntegerMultiplyByParameter {
-    fn default() -> Self {
-        Self { k: 1 }
-    }
-}
-
-impl Block for IntegerMultiplyByParameter {
-    fn signature(&self) -> &'static BlockSignature {
-        static SIG: BlockSignature = BlockSignature {
-            class_path: "CDL.Integers.MultiplyByParameter",
-            inputs: &[PortKind::Integer],
-            outputs: &[PortKind::Integer],
-            stateful: false,
-        };
-        &SIG
-    }
-    fn kind(&self) -> BlockKind {
-        BlockKind::Algebraic
-    }
-    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
-        true
-    }
-    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        emit_int(self.k.wrapping_mul(read_int(inputs, 0)), emit);
-    }
-}
-
 /// `CDL.Integers.Max` — `y = max(u1, u2)`. Stateless `[A]`, full feedthrough.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IntegerMax;

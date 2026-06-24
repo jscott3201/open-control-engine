@@ -10,8 +10,8 @@ use super::{
     IntegerAddParameter, IntegerConstant, IntegerGreater, IntegerGreaterEqual,
     IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess, IntegerLessEqual,
     IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply,
-    IntegerMultiplyByParameter, IntegerSubtract, IntegerSwitch, IntegerToReal, LogicalConstant,
-    LogicalSwitch, Nand, NoopDiagnostics, Nor, Or, RealToInteger, Xor, lookup,
+    IntegerSubtract, IntegerSwitch, IntegerToReal, LogicalConstant, LogicalSwitch, Nand,
+    NoopDiagnostics, Nor, Or, RealToInteger, Xor, lookup,
 };
 
 fn out(block: &dyn Block, inputs: &[Value]) -> Value {
@@ -138,7 +138,6 @@ fn algebraic_feedthrough_perturbation_matches_declared_contracts() {
     assert_perturb_moves(&IntegerSubtract, &[i(5), i(2)], &[(0, i(6)), (1, i(3))]);
     assert_perturb_moves(&IntegerMultiply, &[i(2), i(3)], &[(0, i(4)), (1, i(5))]);
     assert_perturb_moves(&IntegerAddParameter { p: 1 }, &[i(2)], &[(0, i(3))]);
-    assert_perturb_moves(&IntegerMultiplyByParameter { k: 2 }, &[i(3)], &[(0, i(4))]);
     assert_perturb_moves(&IntegerMax, &[i(3), i(1)], &[(0, i(0)), (1, i(4))]);
     assert_perturb_moves(&IntegerMin, &[i(3), i(1)], &[(0, i(0)), (1, i(4))]);
     assert_perturb_moves(&IntegerGreater, &[i(2), i(1)], &[(0, i(0)), (1, i(3))]);
@@ -179,7 +178,6 @@ fn algebraic_outputs_are_bit_deterministic_across_reruns() {
         (&IntegerSubtract, &[i(i64::MIN), i(1)]),
         (&IntegerMultiply, &[i(i64::MAX), i(2)]),
         (&IntegerAddParameter { p: 1 }, &[i(i64::MAX)]),
-        (&IntegerMultiplyByParameter { k: 2 }, &[i(i64::MAX)]),
         (&IntegerMax, &[i(i64::MIN), i(0)]),
         (&IntegerMin, &[i(i64::MIN), i(0)]),
         (&IntegerSwitch, &[i(1), b(false), i(9)]),
@@ -235,11 +233,6 @@ fn registry_constructs_logical_conversion_and_integer_classes() {
         values: vec![(Arc::from("p"), i(5))],
     });
     assert_one_out(addp.as_ref(), &[i(7)], i(12));
-
-    let mulp = (lookup("CDL.Integers.MultiplyByParameter").unwrap().make)(&ParamTable {
-        values: vec![(Arc::from("k"), i(-2))],
-    });
-    assert_one_out(mulp.as_ref(), &[i(7)], i(-14));
 
     let gt = (lookup("CDL.Integers.GreaterThreshold").unwrap().make)(&ParamTable {
         values: vec![(Arc::from("t"), i(3))],

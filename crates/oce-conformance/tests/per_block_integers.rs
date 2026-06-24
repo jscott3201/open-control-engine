@@ -61,10 +61,6 @@ const P_1000: &[Param] = &[Param {
     name: "p",
     value: ParamValue::Integer("1000"),
 }];
-const K_NEG3: &[Param] = &[Param {
-    name: "k",
-    value: ParamValue::Integer("-3"),
-}];
 const K_NEG_12345: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Integer("-12345"),
@@ -115,14 +111,6 @@ const CASES: &[BlockCase] = &[
         "AddParameter",
         U,
         P_1000,
-        INTEGER_Y,
-    ),
-    case(
-        "integers_multiply_by_parameter",
-        "CDL.Integers.MultiplyByParameter",
-        "MultiplyByParameter",
-        U,
-        K_NEG3,
         INTEGER_Y,
     ),
     case("integers_abs", "CDL.Integers.Abs", "Abs", U, &[], INTEGER_Y),
