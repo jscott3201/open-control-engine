@@ -76,6 +76,10 @@ CDL.Logical.Or reference -> goldens/CDL/Logical/Or/reference.csv
 CDL.Logical.Or y -> goldens/CDL/Logical/Or/y.csv
 CDL.Logical.Sources.SampleTrigger reference -> goldens/CDL/Logical/Sources/SampleTrigger/reference.csv
 CDL.Logical.Sources.SampleTrigger y -> goldens/CDL/Logical/Sources/SampleTrigger/y.csv
+CDL.Logical.Sources.SampleTrigger/negative_shift reference -> goldens/CDL/Logical/Sources/SampleTrigger/negative_shift/reference.csv
+CDL.Logical.Sources.SampleTrigger/negative_shift y -> goldens/CDL/Logical/Sources/SampleTrigger/negative_shift/y.csv
+CDL.Logical.Sources.SampleTrigger/shift_after_period reference -> goldens/CDL/Logical/Sources/SampleTrigger/shift_after_period/reference.csv
+CDL.Logical.Sources.SampleTrigger/shift_after_period y -> goldens/CDL/Logical/Sources/SampleTrigger/shift_after_period/y.csv
 CDL.Logical.Switch reference -> goldens/CDL/Logical/Switch/reference.csv
 CDL.Logical.Switch y -> goldens/CDL/Logical/Switch/y.csv
 CDL.Logical.Timer passed -> goldens/CDL/Logical/Timer/passed.csv

@@ -332,7 +332,7 @@ impl Block for Edge {
 /// Relative epsilon for [`SampleTrigger`]'s boundary test (`01` §11.1 req 3 — a *fixed, documented*
 /// epsilon that is part of the discrete-block conformance contract). It is added to the
 /// **period-normalized** sample position, so it is inherently relative to `period`: a tick that lands
-/// a hair below an exact sample instant `shift + k·period` (floating-point rounding) still counts as
+/// a hair below an exact sample instant `phase + k·period` (floating-point rounding) still counts as
 /// having reached boundary `k`, so the trigger never silently skips a sample.
 ///
 /// The rounding is **symmetric**: because the epsilon is folded into the period-normalized quotient
@@ -345,8 +345,9 @@ impl Block for Edge {
 const SAMPLE_INDEX_EPS: f64 = 1e-9;
 
 /// `CDL.Logical.Sources.SampleTrigger` — a parameter-clocked Boolean pulse that is `true` on exactly
-/// the tick that first reaches each periodic sample instant `shift + k·period` (`k ≥ 0`), and `false`
-/// otherwise (`03` §4.3 Sources; the `sample(start, period)` primitive of `01` §11.1). It is the
+/// the tick that first reaches each periodic sample instant `phase + k·period` (`k ≥ 0`), where
+/// `phase = mod(shift, period)` is the floored Modelica modulo in `[0, period)` at CDL start time
+/// `0`. This matches Buildings `SampleTrigger.mo`'s `t0 = mod(shift, period)` anchoring. It is the
 /// trigger generator that drives the `Discrete.*` / triggered families. A **source** (no inputs), so
 /// `feeds_through` is vacuously `false` (the `Constant` convention). Stateful `[S]`: the last sample
 /// index already fired lives in one `[S]` state word as an `i64` (seeded to `-1` = "no sample yet").
@@ -377,16 +378,18 @@ impl Default for SampleTrigger {
 }
 
 impl SampleTrigger {
-    /// Current sample index `k = floor((t − shift)/period + ε)`, or a value `< 0` before the first
-    /// instant. A pure function of `t_now` and the block's parameters (`01` §11.1 req 1) — it never
-    /// panics, including on a non-positive or NaN `period`: `period` is **input-derived**, so the
-    /// degraded path stays panic-free in *all* builds (no `debug_assert`), and the `f64 → i64` cast
-    /// saturates rather than wrapping at extreme horizons.
+    /// Current sample index `k = floor((t − phase)/period + ε)`, where
+    /// `phase = mod(shift, period)` is the floored Modelica modulo in `[0, period)` for a positive
+    /// period, or a value `< 0` before the first instant. A pure function of `t_now` and the block's
+    /// parameters (`01` §11.1 req 1) — it never panics, including on a non-positive or NaN `period`:
+    /// `period` is **input-derived**, so the degraded path stays panic-free in *all* builds (no
+    /// `debug_assert`), and the `f64 → i64` cast saturates rather than wrapping at extreme horizons.
     fn sample_index(&self, t_now: Time) -> i64 {
         // The `> 0.0` test (not a negated `<=`) is deliberate: the else-branch also catches a NaN
         // `period`, since `NaN > 0.0` is false. `f64 → i64` saturates (no UB) at extreme horizons.
         if self.period > 0.0 {
-            ((t_now - self.shift) / self.period + SAMPLE_INDEX_EPS).floor() as i64
+            let phase = self.shift - (self.shift / self.period).floor() * self.period;
+            ((t_now - phase) / self.period + SAMPLE_INDEX_EPS).floor() as i64
         } else {
             // `period > 0` is REQUIRED by CDL but is NOT yet enforced by oce-validate here; until
             // that rule lands, a non-positive or NaN `period` degrades safely to "one sample

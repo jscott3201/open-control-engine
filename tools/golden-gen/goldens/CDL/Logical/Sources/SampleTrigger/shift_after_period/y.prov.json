@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Logical.Sources.SampleTrigger",
+  "scenario": "shift_after_period",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0 (atoly=0)",
+  "n_samples": 6,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "scenario=shift_after_period; period=1.0, shift=2.0; ticks t=[0,1,2,3,4,5]",
+  "reference_rule": "phase=mod(2.0,1.0)=0.0 with floored Modelica mod, so y fires at t=0,1,2,...; raw-shift behavior would skip t=0 and t=1",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

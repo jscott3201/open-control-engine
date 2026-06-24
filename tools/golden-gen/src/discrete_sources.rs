@@ -91,38 +91,87 @@ pub fn goldens() -> Vec<Golden> {
         ));
     }
 
-    // SampleTrigger: true exactly on new sample boundary start+k*period; period=2, shift=1.
+    // SampleTrigger: true exactly on new sample boundary phase+k*period; period=2, shift=1.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
         let period = 2.0_f64;
-        let start = 1.0_f64; // = shift
-        let eps = 1e-9 * period; // documented epsilon (_spec/01 §11.1 req 3), comfortably clear here
-        let mut last_k: i64 = -1;
-        let mut y = Vec::new();
-        for &now in &t {
-            let fired = if now + eps >= start {
-                let k = ((now - start) / period + eps / period).floor() as i64;
-                if k > last_k {
-                    last_k = k;
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-            y.push(b(fired));
-        }
-        out.push(Golden::new(
-            "CDL.Logical.Sources.SampleTrigger",
-            "y",
-            ValueKind::Boolean,
+        let shift = 1.0_f64;
+        out.push(sample_trigger_golden(
+            None,
             t,
-            y,
+            period,
+            shift,
             "period=2.0, shift=1.0; ticks t=[0,1,2,3,4,5] (boundary + intervening)",
             "y true iff tick crosses new instant start+k*period (k>last_k); _spec/03 §4.3 + _spec/01 §11.1 SampleTrigger",
         ));
     }
 
+    // SampleTrigger scenario: shift >= period folds to phase 0.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        out.push(sample_trigger_golden(
+            Some("shift_after_period"),
+            t,
+            1.0,
+            2.0,
+            "scenario=shift_after_period; period=1.0, shift=2.0; ticks t=[0,1,2,3,4,5]",
+            "phase=mod(2.0,1.0)=0.0 with floored Modelica mod, so y fires at t=0,1,2,...; raw-shift behavior would skip t=0 and t=1",
+        ));
+    }
+
+    // SampleTrigger scenario: negative shift folds into the positive period interval.
+    {
+        let t = vec![0.0, 0.5, 1.0, 1.5, 2.0];
+        out.push(sample_trigger_golden(
+            Some("negative_shift"),
+            t,
+            1.0,
+            -0.5,
+            "scenario=negative_shift; period=1.0, shift=-0.5; ticks t=[0,0.5,1,1.5,2]",
+            "phase=mod(-0.5,1.0)=0.5 with floored Modelica mod, so y fires at t=0.5,1.5,...; raw-shift behavior would fire at t=0",
+        ));
+    }
+
     out
+}
+
+fn sample_trigger_golden(
+    scenario: Option<&'static str>,
+    t: Vec<f64>,
+    period: f64,
+    shift: f64,
+    input_desc: &'static str,
+    rule_desc: &'static str,
+) -> Golden {
+    let y = sample_trigger_y(&t, period, shift);
+    let mut golden = Golden::new(
+        "CDL.Logical.Sources.SampleTrigger",
+        "y",
+        ValueKind::Boolean,
+        t,
+        y,
+        input_desc,
+        rule_desc,
+    );
+    if let Some(scenario) = scenario {
+        golden = golden.with_scenario(scenario);
+    }
+    golden
+}
+
+fn sample_trigger_y(t: &[f64], period: f64, shift: f64) -> Vec<Sample> {
+    assert!(period > 0.0);
+    let phase = shift - (shift / period).floor() * period;
+    let eps = 1e-9 * period;
+    let mut last_k: i64 = -1;
+    let mut y = Vec::with_capacity(t.len());
+    for &now in t {
+        let k = ((now - phase) / period + eps / period).floor() as i64;
+        let fired = k > last_k;
+        if fired {
+            last_k = k;
+        }
+        y.push(b(fired));
+    }
+    y
 }

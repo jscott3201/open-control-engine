@@ -239,6 +239,31 @@ fn sample_trigger_respects_shift_and_never_fires_before_it() {
 }
 
 #[test]
+fn sample_trigger_shift_after_period_folds_to_zero_phase() {
+    // Buildings SampleTrigger.mo anchors t0 at mod(shift, period), so period=1, shift=2 folds to
+    // phase=0 and fires at every integer tick from t=0. A raw-shift implementation would skip t=0
+    // and t=1.
+    let st = SampleTrigger {
+        period: 1.0,
+        shift: 2.0,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0]));
+    assert_eq!(trace, vec![true, true, true, true, true, true]);
+}
+
+#[test]
+fn sample_trigger_negative_shift_folds_to_positive_phase() {
+    // Modelica mod is floored: mod(-0.5, 1.0)=0.5, so samples fire at t=0.5, 1.5, ...
+    // A raw-shift implementation would incorrectly fire at t=0.
+    let st = SampleTrigger {
+        period: 1.0,
+        shift: -0.5,
+    };
+    let trace = drive_bool(&st, &ticks(&[0.0, 0.5, 1.0, 1.5, 2.0]));
+    assert_eq!(trace, vec![false, true, false, true, false]);
+}
+
+#[test]
 fn sample_trigger_epsilon_makes_boundaries_deterministic() {
     // period = 0.1: 0.3 is not exactly representable — 0.3/0.1 == 2.9999999999999996, so a bare floor
     // yields k=2 and the t=0.3 sample would be silently skipped (a safety-critical wrong-value class).
