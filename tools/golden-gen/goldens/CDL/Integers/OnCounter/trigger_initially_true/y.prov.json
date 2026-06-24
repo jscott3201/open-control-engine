@@ -1,20 +1,21 @@
 {
   "class_path": "CDL.Integers.OnCounter",
+  "scenario": "trigger_initially_true",
   "signal": "y",
   "tier": "A",
   "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
   "value_kind": "Integer",
   "compare_regime": "exact (atoly=0)",
-  "n_samples": 7,
+  "n_samples": 5,
   "n_reference_columns": 4,
   "reference_csv": "reference.csv",
   "reference_columns": ["time", "trigger", "reset", "y"],
   "inputs": [
-    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0] },
-    { "name": "reset", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0] }
+    { "name": "trigger", "value_kind": "Boolean", "values": [1.0, 1.0, 0.0, 1.0, 1.0] },
+    { "name": "reset", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 0.0] }
   ],
-  "input": "y_start=0; trigger=[F,T,T,F,T,T,F], reset=[F,F,F,F,T,T,F]; includes simultaneous trigger/reset rise",
-  "reference_rule": "emit start-of-tick count; no when fires at t0; on trigger-or-reset rising edge, y := if reset then y_start else pre(y)+1; reset level has priority; Buildings Integers/OnCounter.mo",
+  "input": "scenario=trigger_initially_true, y_start=2; trigger starts true at t0, then falls and rises again",
+  "reference_rule": "No when event fires for trigger already true at the initial tick; the later false->true transition increments by one; Buildings Integers/OnCounter.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

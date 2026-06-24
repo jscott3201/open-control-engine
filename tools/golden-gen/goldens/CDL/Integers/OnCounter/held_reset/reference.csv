@@ -1,0 +1,10 @@
+#1
+# columns: time trigger reset y
+double CDL_Integers_OnCounter_held_reset_reference(7,4)
+0.0 0.0 1.0 3.0
+1.0 0.0 1.0 3.0
+2.0 1.0 1.0 3.0
+3.0 1.0 1.0 3.0
+4.0 0.0 1.0 3.0
+5.0 1.0 1.0 3.0
+6.0 1.0 1.0 3.0

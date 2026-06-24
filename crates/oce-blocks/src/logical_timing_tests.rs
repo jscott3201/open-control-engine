@@ -441,13 +441,13 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
     let counter = OnCounter { y_start: 5 };
     let no_trigger = emit_at(
         &counter,
-        &[5i64.cast_unsigned(), 0, 0],
+        &[5i64.cast_unsigned(), 0, 0, 1],
         0.0,
         &[Value::Boolean(false), Value::Boolean(false)],
     );
     let trigger = emit_at(
         &counter,
-        &[5i64.cast_unsigned(), 0, 0],
+        &[5i64.cast_unsigned(), 0, 0, 1],
         0.0,
         &[Value::Boolean(true), Value::Boolean(false)],
     );

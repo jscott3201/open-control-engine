@@ -73,6 +73,14 @@ const T_10: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Integer("10"),
 }];
+const COUNTER_Y_START_TWO: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Integer("2"),
+}];
+const COUNTER_Y_START_THREE: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Integer("3"),
+}];
 
 // This table covers registered `CDL.Integers` blocks with checked-in reference tables.
 // MultiSum is vector-shaped and remains deferred.
@@ -215,6 +223,22 @@ const CASES: &[BlockCase] = &[
         INTEGER_Y,
     ),
     case(
+        "integers_on_counter_held_reset",
+        "CDL.Integers.OnCounter",
+        "OnCounter/held_reset",
+        COUNTER_INPUTS,
+        COUNTER_Y_START_THREE,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_on_counter_trigger_initially_true",
+        "CDL.Integers.OnCounter",
+        "OnCounter/trigger_initially_true",
+        COUNTER_INPUTS,
+        COUNTER_Y_START_TWO,
+        INTEGER_Y,
+    ),
+    case(
         "integers_change",
         "CDL.Integers.Change",
         "Change",
@@ -232,7 +256,12 @@ const CASES: &[BlockCase] = &[
     ),
 ];
 
-const STATEFUL_INTEGERS_SLUGS: &[&str] = &["integers_on_counter", "integers_change"];
+const STATEFUL_INTEGERS_SLUGS: &[&str] = &[
+    "integers_on_counter",
+    "integers_on_counter_held_reset",
+    "integers_on_counter_trigger_initially_true",
+    "integers_change",
+];
 
 #[test]
 fn integers_reference_blocks_match_exact_oracle() {
