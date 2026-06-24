@@ -95,6 +95,26 @@ const SAMPLE_TRIGGER_PARAMS: &[Param] = &[
         value: ParamValue::Real("1.0"),
     },
 ];
+const SAMPLE_TRIGGER_SHIFT_AFTER_PERIOD_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("2.0"),
+    },
+];
+const SAMPLE_TRIGGER_NEGATIVE_SHIFT_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("-0.5"),
+    },
+];
 
 const CASES: &[BlockCase] = &[
     case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
@@ -206,6 +226,22 @@ const CASES: &[BlockCase] = &[
         SAMPLE_TRIGGER_PARAMS,
         BOOL_Y,
     ),
+    case(
+        "logical_sample_trigger_shift_after_period",
+        "CDL.Logical.Sources.SampleTrigger",
+        "Sources/SampleTrigger/shift_after_period",
+        &[],
+        SAMPLE_TRIGGER_SHIFT_AFTER_PERIOD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_sample_trigger_negative_shift",
+        "CDL.Logical.Sources.SampleTrigger",
+        "Sources/SampleTrigger/negative_shift",
+        &[],
+        SAMPLE_TRIGGER_NEGATIVE_SHIFT_PARAMS,
+        BOOL_Y,
+    ),
 ];
 
 const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
@@ -222,6 +258,8 @@ const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
     "logical_true_false_hold",
     "logical_true_hold_with_reset",
     "logical_sample_trigger",
+    "logical_sample_trigger_shift_after_period",
+    "logical_sample_trigger_negative_shift",
 ];
 
 #[test]
