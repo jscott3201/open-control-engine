@@ -42,6 +42,7 @@
           "Add",
           "AddParameter",
           "Change",
+          "Equal",
           "Greater",
           "GreaterEqual",
           "GreaterEqualThreshold",
@@ -59,7 +60,6 @@
         ]
       },
       "missing": [
-        "Equal",
         "MultiSum",
         "Stage"
       ]

@@ -50,6 +50,8 @@ fn main() {
     goldens.extend(discrete_sources::goldens());
     goldens.extend(sequences::goldens());
 
+    assert_integer_csv_cells_are_exact(&goldens);
+
     // Clean and recreate the goldens tree so removed entries never linger (deterministic output).
     if goldens_root.exists() {
         fs::remove_dir_all(&goldens_root).expect("clear goldens tree");
@@ -384,6 +386,42 @@ fn extra_provenance_json(g: &Golden) -> String {
 
 fn is_pid_recurrence(g: &Golden) -> bool {
     matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset")
+}
+
+fn assert_integer_csv_cells_are_exact(goldens: &[Golden]) {
+    for golden in goldens {
+        // This conversion intentionally probes i64 -> f64 rounding beyond 2^53; its provenance
+        // documents the CSV input loss and the unit tier pins the exact integer source behavior.
+        if golden.class_path == "CDL.Conversions.IntegerToReal" {
+            continue;
+        }
+        for (idx, sample) in golden.samples.iter().enumerate() {
+            assert_integer_sample_is_csv_safe(sample, golden, golden.signal, idx);
+        }
+        for input in &golden.inputs {
+            for (idx, sample) in input.samples.iter().enumerate() {
+                assert_integer_sample_is_csv_safe(sample, golden, input.name, idx);
+            }
+        }
+    }
+}
+
+fn assert_integer_sample_is_csv_safe(
+    sample: &Sample,
+    golden: &Golden,
+    signal: &str,
+    sample_idx: usize,
+) {
+    let Sample::Integer(value) = sample else {
+        return;
+    };
+    const MAX_EXACT_CSV_INTEGER: i64 = 9_007_199_254_740_992;
+    assert!(
+        *value >= -MAX_EXACT_CSV_INTEGER && *value <= MAX_EXACT_CSV_INTEGER,
+        "{} {} sample {sample_idx} integer {value} is outside the exact f64 CSV range",
+        golden.class_path,
+        signal
+    );
 }
 
 /// Build the per-golden provenance JSON record.
