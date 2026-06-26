@@ -86,6 +86,11 @@ fn feedthrough_classification_matches_spec() {
     // this backwards would let the DAG scheduler treat it as a cut and corrupt the schedule.
     assert!(Edge::default().feeds_through(0, 0));
     assert_eq!(Edge::default().kind(), BlockKind::Stateful);
+    assert!(Proof::default().feeds_through(0, 0));
+    assert!(Proof::default().feeds_through(0, 1));
+    assert!(Proof::default().feeds_through(1, 0));
+    assert!(Proof::default().feeds_through(1, 1));
+    assert_eq!(Proof::default().kind(), BlockKind::Stateful);
     // SampleTrigger is a stateful source: no inputs, so it does not feed through (Constant convention).
     assert!(!SampleTrigger::default().feeds_through(0, 0));
     assert_eq!(SampleTrigger::default().kind(), BlockKind::Stateful);
@@ -166,6 +171,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Logical.FallingEdge",
         "CDL.Logical.Change",
         "CDL.Logical.Latch",
+        "CDL.Logical.Proof",
         "CDL.Logical.Toggle",
         "CDL.Logical.Timer",
         "CDL.Logical.TimerAccumulating",
@@ -200,7 +206,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 74, "registry count");
+    assert_eq!(PATHS.len(), 75, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -235,6 +241,19 @@ fn registry_exposes_block_param_rules() {
             ParamRule::RealEqualWarning {
                 left: "uMin",
                 right: "uMax",
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Logical.Proof").unwrap().param_rules(),
+        &[
+            ParamRule::Required { name: "debounce" },
+            ParamRule::Required {
+                name: "feedbackDelay",
+            },
+            ParamRule::RealLessOrEqualWarning {
+                lower: "debounce",
+                upper: "feedbackDelay",
             },
         ]
     );
@@ -422,6 +441,15 @@ fn registry_make_resolves_parameters() {
     assert!(tick_real(slew.as_ref(), &mut region, 0.0, 0.0).bit_eq(&Value::Real(0.0)));
     assert!(tick_real(slew.as_ref(), &mut region, 1.0, 10.0).bit_eq(&Value::Real(2.0)));
     assert!(tick_real(slew.as_ref(), &mut region, 2.0, -10.0).bit_eq(&Value::Real(-1.0)));
+
+    let proof = (lookup("CDL.Logical.Proof").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("debounce"), Value::Real(2.0)),
+            (Arc::from("feedbackDelay"), Value::Real(5.0)),
+        ],
+    });
+    assert_eq!(proof.kind(), BlockKind::Stateful);
+    assert_eq!(proof.state_len(), 24);
 
     let moving_average = (lookup("CDL.Reals.MovingAverage").unwrap().make)(&ParamTable {
         values: vec![(Arc::from("delta"), Value::Real(0.25))],

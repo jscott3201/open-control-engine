@@ -27,6 +27,7 @@ mod integers;
 mod integers_edge;
 mod logical;
 mod logical_latch;
+mod logical_proof;
 mod logical_timing;
 mod pid;
 mod reals_arithmetic;
@@ -49,6 +50,7 @@ pub use logical::{
     And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
 };
 pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
+pub use logical_proof::Proof;
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use pid::{Pid, PidWithReset};
 pub use reals_arithmetic::{
@@ -230,6 +232,13 @@ pub enum ParamRule {
         /// Upper-bound parameter name.
         upper: &'static str,
     },
+    /// The two named `Real` parameters should satisfy `lower <= upper`; violations warn only.
+    RealLessOrEqualWarning {
+        /// Lower-bound parameter name.
+        lower: &'static str,
+        /// Upper-bound parameter name.
+        upper: &'static str,
+    },
     /// Equal `Real` parameter values are permitted but should produce a warning.
     RealEqualWarning {
         /// Left-hand parameter name.
@@ -323,6 +332,9 @@ mod integers_tests;
 
 #[cfg(test)]
 mod logical_latch_tests;
+
+#[cfg(test)]
+mod logical_proof_tests;
 
 #[cfg(test)]
 mod logical_timing_tests;

@@ -32,6 +32,16 @@ const U_RESET: &[Port] = &[
         kind: B,
     },
 ];
+const PROOF_INPUTS: &[Port] = &[
+    Port {
+        name: "u_s",
+        kind: B,
+    },
+    Port {
+        name: "u_m",
+        kind: B,
+    },
+];
 const SWITCH_INPUTS: &[Port] = &[
     Port {
         name: "u1",
@@ -54,6 +64,16 @@ const TIMER_OUTPUTS: &[Port] = &[
     },
 ];
 const BOOL_Y: &[Port] = &[Port { name: "y", kind: B }];
+const PROOF_OUTPUTS: &[Port] = &[
+    Port {
+        name: "yLocFal",
+        kind: B,
+    },
+    Port {
+        name: "yLocTru",
+        kind: B,
+    },
+];
 
 const TIMER_PARAMS: &[Param] = &[Param {
     name: "t",
@@ -85,6 +105,26 @@ const TRUE_HOLD_WITH_RESET_PARAMS: &[Param] = &[Param {
     name: "duration",
     value: ParamValue::Real("200.0"),
 }];
+const PROOF_PARAMS: &[Param] = &[
+    Param {
+        name: "debounce",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "feedbackDelay",
+        value: ParamValue::Real("5.0"),
+    },
+];
+const PROOF_INVERTED_DELAY_PARAMS: &[Param] = &[
+    Param {
+        name: "debounce",
+        value: ParamValue::Real("5.0"),
+    },
+    Param {
+        name: "feedbackDelay",
+        value: ParamValue::Real("2.0"),
+    },
+];
 const SAMPLE_TRIGGER_PARAMS: &[Param] = &[
     Param {
         name: "period",
@@ -219,6 +259,46 @@ const CASES: &[BlockCase] = &[
         BOOL_Y,
     ),
     case(
+        "logical_proof_stable_equal_no_alarm",
+        "CDL.Logical.Proof",
+        "Proof/stable_equal_no_alarm",
+        PROOF_INPUTS,
+        PROOF_PARAMS,
+        PROOF_OUTPUTS,
+    ),
+    case(
+        "logical_proof_mismatch_latches_clear_on_equal",
+        "CDL.Logical.Proof",
+        "Proof/mismatch_latches_clear_on_equal",
+        PROOF_INPUTS,
+        PROOF_PARAMS,
+        PROOF_OUTPUTS,
+    ),
+    case(
+        "logical_proof_debounce_before_feedback",
+        "CDL.Logical.Proof",
+        "Proof/debounce_before_feedback",
+        PROOF_INPUTS,
+        PROOF_PARAMS,
+        PROOF_OUTPUTS,
+    ),
+    case(
+        "logical_proof_feedback_before_debounce_then_unstable_both",
+        "CDL.Logical.Proof",
+        "Proof/feedback_before_debounce_then_unstable_both",
+        PROOF_INPUTS,
+        PROOF_PARAMS,
+        PROOF_OUTPUTS,
+    ),
+    case(
+        "logical_proof_inverted_delay_warning_only",
+        "CDL.Logical.Proof",
+        "Proof/inverted_delay_warning_only",
+        PROOF_INPUTS,
+        PROOF_INVERTED_DELAY_PARAMS,
+        PROOF_OUTPUTS,
+    ),
+    case(
         "logical_sample_trigger",
         "CDL.Logical.Sources.SampleTrigger",
         "Sources/SampleTrigger",
@@ -257,6 +337,11 @@ const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
     "logical_true_delay",
     "logical_true_false_hold",
     "logical_true_hold_with_reset",
+    "logical_proof_stable_equal_no_alarm",
+    "logical_proof_mismatch_latches_clear_on_equal",
+    "logical_proof_debounce_before_feedback",
+    "logical_proof_feedback_before_debounce_then_unstable_both",
+    "logical_proof_inverted_delay_warning_only",
     "logical_sample_trigger",
     "logical_sample_trigger_shift_after_period",
     "logical_sample_trigger_negative_shift",

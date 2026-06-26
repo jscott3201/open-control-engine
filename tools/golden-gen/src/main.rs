@@ -13,10 +13,11 @@ mod csv;
 mod discrete_sources;
 mod integers_conversions;
 mod logical;
+mod logical_proof;
 mod oracle;
 mod reals;
-mod reals_scalar_arithmetic;
 mod reals_pid;
+mod reals_scalar_arithmetic;
 mod sequences;
 
 use std::fs;
@@ -46,6 +47,7 @@ fn main() {
     goldens.extend(reals_scalar_arithmetic::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
+    goldens.extend(logical_proof::goldens());
     goldens.extend(integers_conversions::goldens());
     goldens.extend(discrete_sources::goldens());
     goldens.extend(sequences::goldens());
