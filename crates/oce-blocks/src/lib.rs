@@ -39,7 +39,7 @@ mod utilities;
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::UnitDelay;
 pub use integers::{
-    IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerGreater,
+    IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
     IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin,
     IntegerMultiply, IntegerSubtract, IntegerSwitch,

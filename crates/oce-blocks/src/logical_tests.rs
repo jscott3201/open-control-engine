@@ -7,7 +7,7 @@ use oce_model::{ParamTable, Value};
 
 use super::{
     Block, BlockKind, BooleanToInteger, BooleanToReal, Ctx, IntegerAbs, IntegerAdd,
-    IntegerAddParameter, IntegerConstant, IntegerGreater, IntegerGreaterEqual,
+    IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater, IntegerGreaterEqual,
     IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess, IntegerLessEqual,
     IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply,
     IntegerSubtract, IntegerSwitch, IntegerToReal, LogicalConstant, LogicalSwitch, Nand,
@@ -140,6 +140,7 @@ fn algebraic_feedthrough_perturbation_matches_declared_contracts() {
     assert_perturb_moves(&IntegerAddParameter { p: 1 }, &[i(2)], &[(0, i(3))]);
     assert_perturb_moves(&IntegerMax, &[i(3), i(1)], &[(0, i(0)), (1, i(4))]);
     assert_perturb_moves(&IntegerMin, &[i(3), i(1)], &[(0, i(0)), (1, i(4))]);
+    assert_perturb_moves(&IntegerEqual, &[i(2), i(2)], &[(0, i(1)), (1, i(3))]);
     assert_perturb_moves(&IntegerGreater, &[i(2), i(1)], &[(0, i(0)), (1, i(3))]);
     assert_perturb_moves(&IntegerGreaterThreshold { t: 1 }, &[i(2)], &[(0, i(1))]);
     assert_perturb_moves(&IntegerGreaterEqual, &[i(2), i(1)], &[(0, i(0)), (1, i(3))]);
@@ -181,6 +182,10 @@ fn algebraic_outputs_are_bit_deterministic_across_reruns() {
         (&IntegerMax, &[i(i64::MIN), i(0)]),
         (&IntegerMin, &[i(i64::MIN), i(0)]),
         (&IntegerSwitch, &[i(1), b(false), i(9)]),
+        (
+            &IntegerEqual,
+            &[i(9_007_199_254_740_993), i(9_007_199_254_740_993)],
+        ),
         (&IntegerGreater, &[i(3), i(2)]),
         (&IntegerGreaterThreshold { t: 2 }, &[i(3)]),
         (&IntegerGreaterEqual, &[i(2), i(2)]),

@@ -3,9 +3,10 @@ use oce_model::ParamTable;
 use super::int_param;
 use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
-    IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold,
-    IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax,
-    IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch, OnCounter, RegistryEntry,
+    IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
+    IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch,
+    OnCounter, RegistryEntry,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -44,6 +45,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Switch",
         make: make_integer_switch,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Equal",
+        make: make_integer_equal,
     },
     RegistryEntry {
         class_path: "CDL.Integers.Greater",
@@ -125,6 +130,10 @@ fn make_integer_min(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_integer_switch(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerSwitch)
+}
+
+fn make_integer_equal(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerEqual)
 }
 
 fn make_integer_greater(_p: &ParamTable) -> Box<dyn Block> {

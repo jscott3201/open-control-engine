@@ -22,6 +22,8 @@ CDL.Integers.Change down -> goldens/CDL/Integers/Change/down.csv
 CDL.Integers.Change reference -> goldens/CDL/Integers/Change/reference.csv
 CDL.Integers.Change up -> goldens/CDL/Integers/Change/up.csv
 CDL.Integers.Change y -> goldens/CDL/Integers/Change/y.csv
+CDL.Integers.Equal reference -> goldens/CDL/Integers/Equal/reference.csv
+CDL.Integers.Equal y -> goldens/CDL/Integers/Equal/y.csv
 CDL.Integers.Greater reference -> goldens/CDL/Integers/Greater/reference.csv
 CDL.Integers.Greater y -> goldens/CDL/Integers/Greater/y.csv
 CDL.Integers.GreaterEqual reference -> goldens/CDL/Integers/GreaterEqual/reference.csv

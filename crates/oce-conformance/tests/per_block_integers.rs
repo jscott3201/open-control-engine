@@ -147,6 +147,14 @@ const CASES: &[BlockCase] = &[
         BOOL_Y,
     ),
     case(
+        "integers_equal",
+        "CDL.Integers.Equal",
+        "Equal",
+        U1_U2,
+        &[],
+        BOOL_Y,
+    ),
+    case(
         "integers_greater_equal",
         "CDL.Integers.GreaterEqual",
         "GreaterEqual",

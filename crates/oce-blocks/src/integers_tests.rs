@@ -1,13 +1,16 @@
 //! Exact algebraic tests for `CDL.Integers` blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
 
+use std::sync::Arc;
+
 use oce_model::Value;
 
 use super::{
     Block, BlockKind, Ctx, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant,
-    IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold,
-    IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax,
-    IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch, NoopDiagnostics,
+    IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
+    IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch,
+    NoopDiagnostics, PortKind,
 };
 
 fn out(block: &dyn Block, inputs: &[Value]) -> Value {
@@ -103,6 +106,37 @@ fn integer_switch_selector_order_and_non_leakage_are_pinned() {
 
 #[test]
 fn integer_comparators_are_pure_combinational_boundary_goldens() {
+    assert_eq!(
+        IntegerEqual.signature().inputs,
+        &[PortKind::Integer, PortKind::Integer]
+    );
+    assert_eq!(IntegerEqual.signature().outputs, &[PortKind::Boolean]);
+    assert_eq!(IntegerEqual.kind(), BlockKind::Algebraic);
+    assert_eq!(IntegerEqual.state_len(), 0);
+    assert!(IntegerEqual.feeds_through(0, 0));
+    assert!(IntegerEqual.feeds_through(1, 0));
+
+    assert!(bool_out(&IntegerEqual, &[i(0), i(0)]));
+    assert!(bool_out(&IntegerEqual, &[i(-42), i(-42)]));
+    assert!(bool_out(
+        &IntegerEqual,
+        &[i(9_007_199_254_740_993), i(9_007_199_254_740_993)]
+    ));
+    assert!(bool_out(&IntegerEqual, &[i(i64::MAX), i(i64::MAX)]));
+    assert!(bool_out(&IntegerEqual, &[i(i64::MIN), i(i64::MIN)]));
+    assert!(!bool_out(&IntegerEqual, &[i(0), i(1)]));
+    assert!(!bool_out(
+        &IntegerEqual,
+        &[i(9_007_199_254_740_993), i(9_007_199_254_740_992)]
+    ));
+    assert!(!bool_out(
+        &IntegerEqual,
+        &[i(-9_007_199_254_740_993), i(-9_007_199_254_740_992)]
+    ));
+    assert!(!bool_out(&IntegerEqual, &[i(i64::MAX), i(i64::MAX - 1)]));
+    assert!(!bool_out(&IntegerEqual, &[i(i64::MIN), i(i64::MIN + 1)]));
+    assert!(!bool_out(&IntegerEqual, &[i(i64::MAX), i(i64::MIN)]));
+
     assert!(bool_out(&IntegerGreater, &[i(3), i(2)]));
     assert!(!bool_out(&IntegerGreater, &[i(2), i(2)]));
     assert!(bool_out(&IntegerGreaterThreshold { t: 2 }, &[i(3)]));
@@ -124,6 +158,7 @@ fn integer_comparators_are_pure_combinational_boundary_goldens() {
     assert!(!bool_out(&IntegerLessEqualThreshold { t: 2 }, &[i(3)]));
 
     for block in [
+        &IntegerEqual as &dyn Block,
         &IntegerGreater as &dyn Block,
         &IntegerGreaterThreshold { t: 0 },
         &IntegerGreaterEqual,
@@ -136,4 +171,33 @@ fn integer_comparators_are_pure_combinational_boundary_goldens() {
         assert_eq!(block.kind(), BlockKind::Algebraic);
         assert_eq!(block.state_len(), 0);
     }
+}
+
+#[cfg(debug_assertions)]
+#[test]
+fn integer_equal_rejects_non_integer_inputs_in_debug_builds() {
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _ = out(&IntegerEqual, &[Value::Real(1.0), i(1)]);
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _ = out(&IntegerEqual, &[Value::String(Arc::from("1")), i(1)]);
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _ = out(&IntegerEqual, &[i(1), Value::Real(1.0)]);
+        })
+        .is_err()
+    );
+    assert!(
+        std::panic::catch_unwind(|| {
+            let _ = out(&IntegerEqual, &[i(1), Value::String(Arc::from("1"))]);
+        })
+        .is_err()
+    );
 }

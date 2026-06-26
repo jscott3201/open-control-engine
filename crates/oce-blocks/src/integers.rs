@@ -280,6 +280,31 @@ impl Block for IntegerGreater {
     }
 }
 
+/// `CDL.Integers.Equal` — `y = u1 == u2`. Stateless `[A]`, full feedthrough.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct IntegerEqual;
+
+impl Block for IntegerEqual {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Integers.Equal",
+            inputs: &[PortKind::Integer, PortKind::Integer],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        true
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_bool(read_int(inputs, 0) == read_int(inputs, 1), emit);
+    }
+}
+
 /// `CDL.Integers.GreaterThreshold` — `y = u > t`. Stateless `[A]`, full feedthrough.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct IntegerGreaterThreshold {
