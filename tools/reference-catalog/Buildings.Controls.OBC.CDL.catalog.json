@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "catalog": "Buildings.Controls.OBC.CDL",
+  "runtime_source_rule": "Buildings/Controls/OBC/<class_path with dots after CDL as slashes>.mo",
+  "runtime_packages": [
+    {
+      "package": "CDL.Conversions",
+      "package_order": "Buildings/Controls/OBC/CDL/Conversions/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "BooleanToInteger",
+          "BooleanToReal",
+          "IntegerToReal",
+          "RealToInteger"
+        ]
+      },
+      "missing": []
+    },
+    {
+      "package": "CDL.Discrete",
+      "package_order": "Buildings/Controls/OBC/CDL/Discrete/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "UnitDelay"
+        ]
+      },
+      "missing": [
+        "FirstOrderHold",
+        "Sampler",
+        "TriggeredMax",
+        "TriggeredMovingMean",
+        "TriggeredSampler",
+        "ZeroOrderHold"
+      ]
+    },
+    {
+      "package": "CDL.Integers",
+      "package_order": "Buildings/Controls/OBC/CDL/Integers/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "Abs",
+          "Add",
+          "AddParameter",
+          "Change",
+          "Greater",
+          "GreaterEqual",
+          "GreaterEqualThreshold",
+          "GreaterThreshold",
+          "Less",
+          "LessEqual",
+          "LessEqualThreshold",
+          "LessThreshold",
+          "Max",
+          "Min",
+          "Multiply",
+          "OnCounter",
+          "Subtract",
+          "Switch"
+        ]
+      },
+      "missing": [
+        "Equal",
+        "MultiSum",
+        "Stage"
+      ]
+    },
+    {
+      "package": "CDL.Integers.Sources",
+      "package_order": "Buildings/Controls/OBC/CDL/Integers/Sources/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "Constant"
+        ]
+      },
+      "missing": [
+        "Pulse",
+        "TimeTable"
+      ]
+    },
+    {
+      "package": "CDL.Logical",
+      "package_order": "Buildings/Controls/OBC/CDL/Logical/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "And",
+          "Change",
+          "Edge",
+          "FallingEdge",
+          "Latch",
+          "Not",
+          "Or",
+          "Switch",
+          "Timer",
+          "TimerAccumulating",
+          "Toggle",
+          "TrueDelay",
+          "TrueFalseHold",
+          "Xor"
+        ],
+        "legacy_evidence_exemption": [
+          "Nand",
+          "Nor",
+          "Pre"
+        ]
+      },
+      "missing": [
+        "MultiAnd",
+        "MultiOr",
+        "Proof",
+        "VariablePulse"
+      ]
+    },
+    {
+      "package": "CDL.Logical.Sources",
+      "package_order": "Buildings/Controls/OBC/CDL/Logical/Sources/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "SampleTrigger"
+        ],
+        "legacy_evidence_exemption": [
+          "Constant"
+        ]
+      },
+      "missing": [
+        "Pulse",
+        "TimeTable"
+      ]
+    },
+    {
+      "package": "CDL.Psychrometrics",
+      "package_order": "Buildings/Controls/OBC/CDL/Psychrometrics/package.order",
+      "implemented": {},
+      "missing": [
+        "DewPoint_TDryBulPhi",
+        "SpecificEnthalpy_TDryBulPhi",
+        "WetBulb_TDryBulPhi"
+      ]
+    },
+    {
+      "package": "CDL.Reals",
+      "package_order": "Buildings/Controls/OBC/CDL/Reals/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "Abs",
+          "Add",
+          "AddParameter",
+          "Average",
+          "Divide",
+          "Greater",
+          "GreaterThreshold",
+          "Hysteresis",
+          "Less",
+          "LessThreshold",
+          "Limiter",
+          "Line",
+          "Max",
+          "Min",
+          "Modulo",
+          "Multiply",
+          "MultiplyByParameter",
+          "PID",
+          "PIDWithReset",
+          "Round",
+          "Sqrt",
+          "Subtract",
+          "Switch"
+        ],
+        "legacy_evidence_exemption": [
+          "Derivative",
+          "IntegratorWithReset",
+          "LimitSlewRate",
+          "MovingAverage"
+        ]
+      },
+      "missing": [
+        "Acos",
+        "Asin",
+        "Atan",
+        "Atan2",
+        "Cos",
+        "Exp",
+        "Log",
+        "Log10",
+        "MatrixGain",
+        "MatrixMax",
+        "MatrixMin",
+        "MultiMax",
+        "MultiMin",
+        "MultiSum",
+        "Ramp",
+        "Sin",
+        "Sort",
+        "Tan"
+      ]
+    },
+    {
+      "package": "CDL.Reals.Sources",
+      "package_order": "Buildings/Controls/OBC/CDL/Reals/Sources/package.order",
+      "implemented": {
+        "golden_manifest": [
+          "Constant"
+        ]
+      },
+      "missing": [
+        "CalendarTime",
+        "CivilTime",
+        "Pulse",
+        "Ramp",
+        "Sin",
+        "TimeTable"
+      ]
+    },
+    {
+      "package": "CDL.Routing",
+      "package_order": "Buildings/Controls/OBC/CDL/Routing/package.order",
+      "implemented": {},
+      "missing": [
+        "BooleanExtractSignal",
+        "BooleanExtractor",
+        "BooleanScalarReplicator",
+        "BooleanVectorFilter",
+        "BooleanVectorReplicator",
+        "IntegerExtractSignal",
+        "IntegerExtractor",
+        "IntegerScalarReplicator",
+        "IntegerVectorFilter",
+        "IntegerVectorReplicator",
+        "RealExtractSignal",
+        "RealExtractor",
+        "RealScalarReplicator",
+        "RealVectorFilter",
+        "RealVectorReplicator"
+      ]
+    },
+    {
+      "package": "CDL.Utilities",
+      "package_order": "Buildings/Controls/OBC/CDL/Utilities/package.order",
+      "implemented": {
+        "legacy_evidence_exemption": [
+          "Assert"
+        ]
+      },
+      "missing": [
+        "SunRiseSet"
+      ]
+    }
+  ],
+  "validation_packages": [
+    "CDL.Conversions.Validation",
+    "CDL.Discrete.Validation",
+    "CDL.Integers.Validation",
+    "CDL.Integers.Sources.Validation",
+    "CDL.Logical.Validation",
+    "CDL.Logical.Sources.Validation",
+    "CDL.Psychrometrics.Validation",
+    "CDL.Reals.Validation",
+    "CDL.Reals.Sources.Validation",
+    "CDL.Routing.Validation",
+    "CDL.Utilities.Validation"
+  ],
+  "deferred_oracle_goldens": [
+    {
+      "class_path": "CDL.Integers.MultiSum",
+      "status": "runtime_missing",
+      "evidence": "golden_manifest",
+      "rationale": "tools/golden-gen carries a future oracle fixture for this class, but oce-blocks does not register it until vector gathering support lands."
+    }
+  ],
+  "structural": {
+    "constants": {
+      "class_path": "CDL.Constants",
+      "source": "Buildings/Controls/OBC/CDL/Constants.mo",
+      "status": "structural",
+      "values": {
+        "pi": 3.141592653589793,
+        "eps": 1e-15,
+        "small": 1e-37
+      },
+      "extension_aliases": {
+        "inf": {
+          "status": "modelica_alias",
+          "source": "Modelica.Constants.inf",
+          "value": 1.7976931348623157e308,
+          "rationale": "Not defined in Buildings CDL.Constants.mo; retained as a closed-world Modelica.Constants alias for existing expression bindings."
+        }
+      }
+    },
+    "types": [
+      {
+        "class_path": "CDL.Types.SimpleController",
+        "source": "Buildings/Controls/OBC/CDL/Types/SimpleController.mo",
+        "status": "structural",
+        "members": ["P", "PI", "PD", "PID"]
+      },
+      {
+        "class_path": "CDL.Types.Extrapolation",
+        "source": "Buildings/Controls/OBC/CDL/Types/Extrapolation.mo",
+        "status": "structural",
+        "members": ["HoldLastPoint", "LastTwoPoints", "Periodic"]
+      },
+      {
+        "class_path": "CDL.Types.Smoothness",
+        "source": "Buildings/Controls/OBC/CDL/Types/Smoothness.mo",
+        "status": "structural",
+        "members": ["LinearSegments", "ConstantSegments"]
+      },
+      {
+        "class_path": "CDL.Types.ZeroTime",
+        "source": "Buildings/Controls/OBC/CDL/Types/ZeroTime.mo",
+        "status": "structural",
+        "members": [
+          "UnixTimeStamp",
+          "UnixTimeStampGMT",
+          "Custom",
+          "NY2010",
+          "NY2011",
+          "NY2012",
+          "NY2013",
+          "NY2014",
+          "NY2015",
+          "NY2016",
+          "NY2017",
+          "NY2018",
+          "NY2019",
+          "NY2020",
+          "NY2021",
+          "NY2022",
+          "NY2023",
+          "NY2024",
+          "NY2025",
+          "NY2026",
+          "NY2027",
+          "NY2028",
+          "NY2029",
+          "NY2030",
+          "NY2031",
+          "NY2032",
+          "NY2033",
+          "NY2034",
+          "NY2035",
+          "NY2036",
+          "NY2037",
+          "NY2038",
+          "NY2039",
+          "NY2040",
+          "NY2041",
+          "NY2042",
+          "NY2043",
+          "NY2044",
+          "NY2045",
+          "NY2046",
+          "NY2047",
+          "NY2048",
+          "NY2049",
+          "NY2050"
+        ]
+      }
+    ],
+    "interfaces": [
+      {
+        "class_path": "CDL.Interfaces.BooleanInput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/BooleanInput.mo",
+        "status": "structural",
+        "direction": "input",
+        "value_type": "Boolean"
+      },
+      {
+        "class_path": "CDL.Interfaces.BooleanOutput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/BooleanOutput.mo",
+        "status": "structural",
+        "direction": "output",
+        "value_type": "Boolean"
+      },
+      {
+        "class_path": "CDL.Interfaces.IntegerInput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/IntegerInput.mo",
+        "status": "structural",
+        "direction": "input",
+        "value_type": "Integer"
+      },
+      {
+        "class_path": "CDL.Interfaces.IntegerOutput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/IntegerOutput.mo",
+        "status": "structural",
+        "direction": "output",
+        "value_type": "Integer"
+      },
+      {
+        "class_path": "CDL.Interfaces.RealInput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo",
+        "status": "structural",
+        "direction": "input",
+        "value_type": "Real"
+      },
+      {
+        "class_path": "CDL.Interfaces.RealOutput",
+        "source": "Buildings/Controls/OBC/CDL/Interfaces/RealOutput.mo",
+        "status": "structural",
+        "direction": "output",
+        "value_type": "Real"
+      }
+    ]
+  },
+  "extensions": [
+    {
+      "class_path": "CDL.Logical.TrueHoldWithReset",
+      "status": "legacy_compat",
+      "kind": "runtime",
+      "source": "not present in Buildings/Controls/OBC/CDL/Logical/package.order at the pinned reference commit",
+      "evidence": "golden_manifest",
+      "rationale": "Retained for compatibility with already-supported CDL/spec-era models; current Buildings master omits this class and the v2 inventory requires explicit drift classification."
+    }
+  ]
+}

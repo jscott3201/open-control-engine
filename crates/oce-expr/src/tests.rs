@@ -322,9 +322,12 @@ fn named_constants() {
     assert_real("pi", std::f64::consts::PI);
     assert_real("Modelica.Constants.pi", std::f64::consts::PI);
     assert_real("CDL.Constants.eps", 1e-15);
-    assert_real("small", 1e-60);
-    assert_real("inf", 1e60);
-    assert_real("-inf", -1e60);
+    assert_real("small", 1e-37);
+    assert_real("CDL.Constants.small", 1e-37);
+    assert_real("Buildings.Controls.OBC.CDL.Constants.small", 1e-37);
+    assert_real("inf", f64::MAX);
+    assert_real("CDL.Constants.inf", f64::MAX);
+    assert_real("-inf", -f64::MAX);
     // A qualified name whose final package is not `Constants` is not a constant.
     assert!(matches!(run("Foo.pi"), Err(ExprError::Parse(_))));
 }

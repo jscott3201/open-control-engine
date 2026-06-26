@@ -465,9 +465,9 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
 /// gives an evaluator (oce-expr) its reference values.
 fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) {
     // CDL.Constants: the canonical Buildings CDL.Constants.mo values (eps=1E-15, small=1E-37,
-    // pi=2*asin(1.0)). Modelica.Constants.{eps,small,inf} are _spec/02 §7.3 aliases that RESOLVE to
-    // these CDL constants, so the CDL values are authoritative — NOT the Modelica standard-library
-    // machine values (eps=2.22e-16, small=1e-60). `inf` is not defined in Buildings CDL.Constants;
+    // pi=2*asin(1.0)). Modelica.Constants.{eps,small} aliases resolve to these CDL constants, so
+    // the CDL values are authoritative — NOT the Modelica standard-library machine values
+    // (eps=2.22e-16, small=1e-60). `inf` is not defined in Buildings CDL.Constants;
     // its value is Modelica.Constants.inf = f64::MAX (largest representable FINITE real, not IEEE
     // +Inf), surfaced via the §7.3 alias whitelist.
     let constants_dir = goldens_root.join("CDL/Constants");
@@ -481,7 +481,7 @@ fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) 
             "{{\n",
             "  \"class_path\": \"CDL.Constants\",\n",
             "  \"tier\": \"A\",\n",
-            "  \"source\": \"Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.* are _spec/02 §7.3 aliases resolving to these\",\n",
+            "  \"source\": \"Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.eps/small are _spec/02 §7.3 aliases resolving to these\",\n",
             "  \"value_kind\": \"Real\",\n",
             "  \"steppable\": false,\n",
             "  \"values\": {{\n",
@@ -527,9 +527,9 @@ fn write_constants_types(goldens_root: &Path, manifest_lines: &mut Vec<String>) 
             "    \"SimpleController\": { \"P\": 1, \"PI\": 2, \"PD\": 3, \"PID\": 4 },\n",
             "    \"Smoothness\": { \"LinearSegments\": 1, \"ConstantSegments\": 2 },\n",
             "    \"Extrapolation\": { \"HoldLastPoint\": 1, \"LastTwoPoints\": 2, \"Periodic\": 3 },\n",
-            "    \"ZeroTime\": { \"UnixTimeStamp\": 1, \"UnixTimeStampGMT\": 2, \"Custom\": 3, \"NY2010\": 4 }\n",
+            "    \"ZeroTime\": { \"UnixTimeStamp\": 1, \"UnixTimeStampGMT\": 2, \"Custom\": 3, \"NY2010\": 4, \"NY2011\": 5, \"NY2012\": 6, \"NY2013\": 7, \"NY2014\": 8, \"NY2015\": 9, \"NY2016\": 10, \"NY2017\": 11, \"NY2018\": 12, \"NY2019\": 13, \"NY2020\": 14, \"NY2021\": 15, \"NY2022\": 16, \"NY2023\": 17, \"NY2024\": 18, \"NY2025\": 19, \"NY2026\": 20, \"NY2027\": 21, \"NY2028\": 22, \"NY2029\": 23, \"NY2030\": 24, \"NY2031\": 25, \"NY2032\": 26, \"NY2033\": 27, \"NY2034\": 28, \"NY2035\": 29, \"NY2036\": 30, \"NY2037\": 31, \"NY2038\": 32, \"NY2039\": 33, \"NY2040\": 34, \"NY2041\": 35, \"NY2042\": 36, \"NY2043\": 37, \"NY2044\": 38, \"NY2045\": 39, \"NY2046\": 40, \"NY2047\": 41, \"NY2048\": 42, \"NY2049\": 43, \"NY2050\": 44 }\n",
             "  },\n",
-            "  \"note\": \"FLAG: ZeroTime members beyond NY2010 exist in the Buildings library; only the spec-cited prefix is pinned here.\",\n",
+            "  \"note\": \"ZeroTime ordinals are pinned through NY2050 from the source-verified Buildings CDL.Types.ZeroTime.mo file.\",\n",
         ),
         generator = GENERATOR_VERSION,
     );

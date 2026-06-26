@@ -1,7 +1,7 @@
 {
   "class_path": "CDL.Constants",
   "tier": "A",
-  "source": "Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.* are _spec/02 §7.3 aliases resolving to these",
+  "source": "Buildings CDL.Constants.mo canonical values (eps=1E-15, small=1E-37, pi=2*asin(1.0)); Modelica.Constants.eps/small are _spec/02 §7.3 aliases resolving to these",
   "value_kind": "Real",
   "steppable": false,
   "values": {

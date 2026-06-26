@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "catalog": "Buildings.Controls.OBC.CDL",
+  "repository": "https://github.com/lbl-srg/modelica-buildings",
+  "branch": "master",
+  "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "fetched_at": "2026-06-26",
+  "catalog_fingerprint": "00d56d0995db8a5b",
+  "package_order_files": [
+    "Buildings/Controls/OBC/CDL/package.order",
+    "Buildings/Controls/OBC/CDL/Conversions/package.order",
+    "Buildings/Controls/OBC/CDL/Discrete/package.order",
+    "Buildings/Controls/OBC/CDL/Integers/package.order",
+    "Buildings/Controls/OBC/CDL/Integers/Sources/package.order",
+    "Buildings/Controls/OBC/CDL/Logical/package.order",
+    "Buildings/Controls/OBC/CDL/Logical/Sources/package.order",
+    "Buildings/Controls/OBC/CDL/Psychrometrics/package.order",
+    "Buildings/Controls/OBC/CDL/Reals/package.order",
+    "Buildings/Controls/OBC/CDL/Reals/Sources/package.order",
+    "Buildings/Controls/OBC/CDL/Routing/package.order",
+    "Buildings/Controls/OBC/CDL/Utilities/package.order",
+    "Buildings/Controls/OBC/CDL/Types/package.order",
+    "Buildings/Controls/OBC/CDL/Interfaces/package.order"
+  ],
+  "structural_source_files": [
+    "Buildings/Controls/OBC/CDL/Constants.mo",
+    "Buildings/Controls/OBC/CDL/Types/SimpleController.mo",
+    "Buildings/Controls/OBC/CDL/Types/Extrapolation.mo",
+    "Buildings/Controls/OBC/CDL/Types/Smoothness.mo",
+    "Buildings/Controls/OBC/CDL/Types/ZeroTime.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/BooleanInput.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/BooleanOutput.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/IntegerInput.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/IntegerOutput.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo",
+    "Buildings/Controls/OBC/CDL/Interfaces/RealOutput.mo"
+  ],
+  "drift_source_files": [
+    "Buildings/Resources/Scripts/Conversion/ConvertBuildings_from_10_to_11.0.0.mos"
+  ],
+  "external_source_files": [
+    {
+      "repository": "https://github.com/lbl-srg/modelica-buildings",
+      "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "path": "Buildings/package.mo",
+      "evidence": "uses(Modelica(version=\"4.1.0\"))"
+    },
+    {
+      "repository": "https://github.com/modelica/ModelicaStandardLibrary",
+      "tag": "v4.1.0",
+      "commit": "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a",
+      "path": "Modelica/Constants.mo",
+      "evidence": "Modelica.Constants.inf = ModelicaServices.Machine.inf"
+    },
+    {
+      "repository": "https://github.com/modelica/ModelicaStandardLibrary",
+      "tag": "v4.1.0",
+      "commit": "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a",
+      "path": "ModelicaServices/package.mo",
+      "evidence": "ModelicaServices.Machine.inf = 1.7976931348623157E+308"
+    }
+  ],
+  "notes": [
+    "CDL.Constants.mo defines eps=1E-15, small=1E-37, and pi=2*Modelica.Math.asin(1.0); it does not define inf.",
+    "CDL.Logical.TrueHoldWithReset is a legacy compatibility extension in Open Control Engine, not a current Buildings runtime class at this reference commit.",
+    "The catalog is checked in for non-network CI; update only after re-fetching the named upstream files."
+  ]
+}

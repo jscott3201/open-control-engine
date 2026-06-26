@@ -138,6 +138,7 @@ name = "oce-blocks"
 version = "0.0.0"
 dependencies = [
  "oce-model",
+ "serde_json",
 ]
 
 [[package]]
