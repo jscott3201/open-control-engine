@@ -15,7 +15,9 @@
 //! parameter/constant bindings (`02-type-system-and-values.md` §6–7):
 //!
 //! - **Literals** — `Real`, `Integer`, `Boolean`, `String`.
-//! - **Constants** — `pi`/`eps`/`small`/`inf` (bare or `…Constants.<name>` qualified), [`BuiltinConst`].
+//! - **Constants** — `pi`/`eps`/`small` from Buildings `CDL.Constants`, plus the retained
+//!   `inf` Modelica-alias compatibility constant (bare or `…Constants.<name>` qualified),
+//!   [`BuiltinConst`].
 //! - **Identifier references** — resolved against a [`Scope`] (other in-scope params/constants).
 //! - **Operators** — unary `-`/`not`; binary `+ - * /`, relational `> >= < <= == <>`, `and`/`or`.
 //! - **Scalar built-ins** — `abs sign sqrt div mod rem floor ceil integer min max` (2-arg
@@ -65,28 +67,27 @@ pub enum ExprAst {
     Call(Builtin, Vec<ExprAst>),
 }
 
-/// A named CDL constant from `CDL.Constants` (§6.1). Each folds to a ground `Real`.
+/// A named fold-time constant from Buildings `CDL.Constants` (§6.1), plus the retained
+/// `inf` compatibility alias. Each folds to a ground `Real`.
 ///
-/// Values track the Buildings `Buildings.Controls.OBC.CDL.Constants` module (the conformance
-/// oracle), which uses round decimal literals — **not** `ModelicaServices.Machine.*`. The exact
-/// bit-values are **owner-ratifiable, pending an `oce-conformance` cross-check** against the
-/// library source (see `_spec/11-m1-cxf-plan.md`); `eps` in particular is the CDL comparison
-/// tolerance, whose value (the Buildings literal `1e-15` vs the Modelica machine epsilon
-/// `≈2.22e-16`) must be confirmed before it is locked.
+/// `pi`, `eps`, and `small` track the source-verified Buildings
+/// `Buildings.Controls.OBC.CDL.Constants` module. `inf` is not defined by that package; Open Control
+/// Engine retains it as a closed-world `Modelica.Constants.inf` alias for compatibility with
+/// existing expression bindings, and pins it to the largest finite `f64`.
 ///
-/// Note: this `inf` is the **Modelica/CDL constant** (`1e60`, a large *finite* real), distinct
-/// from an IEEE `±∞` literal. The spelled-out `-Inf`/`+Inf` Real literals of §6.1 are a CXF
-/// typed-value serialization concern parsed by `oce-cxf`, not part of this expression grammar.
+/// Note: this `inf` is distinct from an IEEE `±∞` literal. The spelled-out `-Inf`/`+Inf` Real
+/// literals of §6.1 are a CXF typed-value serialization concern parsed by `oce-cxf`, not part of
+/// this expression grammar.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum BuiltinConst {
     /// `pi` — the ratio of a circle's circumference to its diameter (`2·asin(1)`, == `f64` `PI`).
     Pi,
-    /// `eps` — the CDL comparison tolerance (Buildings literal `1e-15`; value owner-ratifiable).
+    /// `eps` — the Buildings CDL comparison tolerance (`1e-15`).
     Eps,
-    /// `small` — smallest number such that `small` and `-small` are representable (`1e-60`).
+    /// `small` — the Buildings CDL representability floor (`1e-37`).
     Small,
-    /// `inf` — the large finite real the library treats as "infinity" (`1e60`); not IEEE `∞`.
+    /// `inf` — retained `Modelica.Constants.inf` alias (`f64::MAX`); not IEEE `∞`.
     Inf,
 }
 

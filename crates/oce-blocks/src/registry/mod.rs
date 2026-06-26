@@ -17,6 +17,11 @@ mod reals_filters;
 mod reals_integrator;
 mod utilities;
 
+#[cfg(test)]
+mod catalog_guard_support;
+#[cfg(test)]
+mod catalog_tests;
+
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
 /// (an unresolved external / extension block — never a panic; R-IMPL-2).
 #[must_use]

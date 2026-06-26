@@ -446,8 +446,9 @@ impl Parser {
     }
 }
 
-/// Recognize `pi`/`eps`/`small`/`inf` either bare or qualified as `…Constants.<name>`. A
-/// qualified name whose final package segment is not `Constants` is not a constant.
+/// Recognize `pi`/`eps`/`small` either bare or qualified as `…Constants.<name>`, plus the retained
+/// `inf` compatibility alias. A qualified name whose final package segment is not `Constants` is
+/// not a constant.
 fn recognize_const(name: &str) -> Option<BuiltinConst> {
     let mut it = name.rsplitn(2, '.');
     let leaf = it.next()?;

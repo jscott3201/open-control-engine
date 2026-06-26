@@ -70,8 +70,8 @@ fn const_value(c: BuiltinConst) -> f64 {
         // 2·asin(1.0) is π to f64; use the library constant for bit-exactness.
         BuiltinConst::Pi => std::f64::consts::PI,
         BuiltinConst::Eps => 1e-15,
-        BuiltinConst::Small => 1e-60,
-        BuiltinConst::Inf => 1e60,
+        BuiltinConst::Small => 1e-37,
+        BuiltinConst::Inf => f64::MAX,
     }
 }
 
