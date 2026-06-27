@@ -1,0 +1,7 @@
+#1
+# columns: time y
+double CDL_Reals_Sources_Ramp_negative_height_start_reference(4,2)
+-2.0 10.0
+-1.0 10.0
+0.0 9.0
+1.0 8.0

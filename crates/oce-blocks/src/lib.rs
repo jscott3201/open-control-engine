@@ -37,6 +37,7 @@ mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;
+mod reals_sources;
 mod registry;
 mod utilities;
 
@@ -66,6 +67,7 @@ pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThr
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
+pub use reals_sources::{CivilTime, SourceRamp};
 pub use registry::lookup;
 pub use utilities::Assert;
 
@@ -395,6 +397,9 @@ mod reals_filters_tests;
 
 #[cfg(test)]
 mod reals_ramp_tests;
+
+#[cfg(test)]
+mod reals_sources_tests;
 
 #[cfg(test)]
 mod discrete_tests;

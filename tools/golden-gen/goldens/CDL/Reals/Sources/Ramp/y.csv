@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Reals_Sources_Ramp_y(5,2)
+0.0 0.5
+1.0 0.5
+2.5 1.5
+4.0 2.5
+5.0 2.5

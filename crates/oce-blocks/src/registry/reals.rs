@@ -1,16 +1,25 @@
 use oce_model::ParamTable;
 
 use super::{bool_param, int_param, real_param};
+use crate::reals_sources::MIN_SOURCE_RAMP_DURATION;
 use crate::{
-    Abs, Add, AddParameter, Average, Block, Constant, Divide, Greater, GreaterThreshold,
+    Abs, Add, AddParameter, Average, Block, CivilTime, Constant, Divide, Greater, GreaterThreshold,
     Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Modulo, Multiply,
-    MultiplyByParameter, ParamRule, RegistryEntry, Round, Sqrt, Subtract, Switch,
+    MultiplyByParameter, ParamRule, RegistryEntry, Round, SourceRamp, Sqrt, Subtract, Switch,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.Constant",
         make: make_constant,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.CivilTime",
+        make: make_civil_time,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.Ramp",
+        make: make_source_ramp,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Add",
@@ -109,9 +118,30 @@ pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+pub(super) const SOURCE_RAMP_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "duration" },
+    ParamRule::RealGreaterOrEqual {
+        name: "duration",
+        min: MIN_SOURCE_RAMP_DURATION,
+    },
+];
+
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Constant {
         k: real_param(p, "k", 0.0),
+    })
+}
+
+fn make_civil_time(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(CivilTime)
+}
+
+fn make_source_ramp(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(SourceRamp {
+        height: real_param(p, "height", 1.0),
+        duration: real_param(p, "duration", 1.0),
+        offset: real_param(p, "offset", 0.0),
+        start_time: real_param(p, "startTime", 0.0),
     })
 }
 
