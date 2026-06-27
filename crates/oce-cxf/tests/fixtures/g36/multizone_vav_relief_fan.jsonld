@@ -1,0 +1,686 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
+      "S231:label": "multizone_vav_relief_fan",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFanSpe_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSet" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.hys" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBui" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yDpBui" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFanSpe_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:max": { "@value": "30", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "12", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.hys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.005", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBui",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yDpBui",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelDam",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MovingAverage",
+      "S231:label": "movMea",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.delta" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.delta",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "300", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.movMea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yDpBui" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "dpBuiSetPoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "dpBuiSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dpBuiSetPoi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:label": "div1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.div1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_m" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "conOne",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conOne.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_s" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "conP",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.controllerType" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.reverseActing" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_s" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_m" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.P"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "k"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.conP.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.t" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.05", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "hys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.t" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.005", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "hys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.t" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.u" },
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.y" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.passed" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "300", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.tim.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.clr" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.clr" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr2",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.t" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "relFanSpe_min + 0.15"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "hys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.greThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "upTim",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.t" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.u" },
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.y" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.passed" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "420", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.upTim.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr3",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.t" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "relFanSpe_min"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "hys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lesThr3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "dowTim",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.t" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.u" },
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.y" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.passed" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "300", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.dowTim.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.clr" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.clr" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.lat1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "relDam",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelDam" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "relFan",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relFan.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.relDam.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "booToRea2",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.booToRea2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "pro1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_fan.pro1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan" }
+    }
+  ]
+}
