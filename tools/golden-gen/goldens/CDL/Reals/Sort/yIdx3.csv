@@ -1,0 +1,7 @@
+#1
+# columns: time yIdx3
+double CDL_Reals_Sort_yIdx3(4,2)
+0.0 1.0
+60.0 2.0
+120.0 2.0
+180.0 3.0

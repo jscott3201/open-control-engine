@@ -40,6 +40,7 @@ mod reals_arithmetic;
 mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
+mod reals_matrix;
 mod reals_ramp;
 mod reals_sources;
 mod reals_transcendental;
@@ -79,6 +80,7 @@ pub use reals_arithmetic::{
 pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
+pub use reals_matrix::{MatrixGain, MatrixMax, MatrixMin, MatrixReductionAxis, Sort};
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
@@ -355,6 +357,11 @@ pub enum ParamRule {
         /// Flattened array base name, for example `"extract"` matching `extract_1`, ...
         base: &'static str,
     },
+    /// The named parameter, when present, must be a Boolean value.
+    Boolean {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+    },
     /// The named parameter, when present, must be numeric and usable as a `Real`.
     Real {
         /// Parameter name as it appears in CDL / the resolved model.
@@ -434,6 +441,23 @@ pub enum ParamRule {
         base: &'static str,
         /// Integer parameter carrying the resolved array length.
         len: &'static str,
+    },
+    /// Present members of a flattened two-dimensional Real matrix parameter must be numeric values.
+    ///
+    /// Flattened CXF names use one-based row-major keys such as `K_1_1`, `K_1_2`, `K_2_1`, ...
+    /// Sparse matrices are allowed only where the source block defines defaults for omitted
+    /// members. Supplied members accept CDL integer-to-real promotion.
+    RealMatrixElements {
+        /// Flattened matrix base name, for example `"K"` matching `K_1_1`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved row count.
+        rows: &'static str,
+        /// Source default row count when `rows` is omitted.
+        default_rows: i64,
+        /// Integer parameter carrying the resolved column count.
+        cols: &'static str,
+        /// Source default column count when `cols` is omitted.
+        default_cols: i64,
     },
     /// Present members of a flattened Boolean array parameter must be Boolean values.
     BooleanArrayElements {
@@ -607,6 +631,9 @@ mod reals_comparators_tests;
 
 #[cfg(test)]
 mod reals_transcendental_tests;
+
+#[cfg(test)]
+mod reals_matrix_tests;
 
 #[cfg(test)]
 mod reals_vector_reductions_tests;

@@ -2,11 +2,11 @@
 
 use std::cmp::Ordering;
 
-use oce_blocks::{MAX_RESOLVED_PORT_WIDTH, ParamRule, lookup};
+use oce_blocks::{ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value};
 
-use super::block_subject_of;
+use super::{block_subject_of, params_flattened};
 
 /// Check raw resolved block parameters against the registry-published class rules.
 ///
@@ -40,6 +40,21 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
         ParamRule::Required { .. } => {}
         ParamRule::Structural { .. } => {}
         ParamRule::StructuralArrayElements { .. } => {}
+        ParamRule::Boolean { name } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            if boolean_value(value).is_none() {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be Boolean",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
         ParamRule::Real { name } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
@@ -186,31 +201,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             }
         }
         ParamRule::IntegerArrayElements { base, len } => {
-            let Some(value) = find_param(&blk.params, len) else {
-                return;
-            };
-            let Some(n) = integer_value(value) else {
-                return;
-            };
-            let Ok(n) = usize::try_from(n) else {
-                return;
-            };
-            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-                let name = format!("{base}_{idx}");
-                let Some(value) = find_param(&blk.params, &name) else {
-                    continue;
-                };
-                if integer_value(value).is_none() {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be an integer array element",
-                            blk.class_iri
-                        ),
-                    );
-                }
-            }
+            params_flattened::check_integer_array_elements(blk, diags, base, len);
         }
         ParamRule::IntegerArrayElementsInRange {
             base,
@@ -221,102 +212,44 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             max_default,
             default_to_index,
         } => {
-            let Some(n) = integer_param_or_default(&blk.params, len, len_default) else {
-                return;
-            };
-            let Some(upper) = integer_param_or_default(&blk.params, max, max_default) else {
-                return;
-            };
-            let Ok(n) = usize::try_from(n) else {
-                return;
-            };
-            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-                let name = format!("{base}_{idx}");
-                let member = match find_param(&blk.params, &name) {
-                    Some(value) => {
-                        let Some(value) = integer_value(value) else {
-                            push_range_error(
-                                blk,
-                                diags,
-                                format!(
-                                    "parameter `{name}` on block `{}` must be an integer array \
-                                     element",
-                                    blk.class_iri
-                                ),
-                            );
-                            continue;
-                        };
-                        value
-                    }
-                    None if default_to_index => idx as i64,
-                    None => continue,
-                };
-                if member < min || member > upper {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be in range {min}..={upper}; \
-                             got {member}",
-                            blk.class_iri
-                        ),
-                    );
-                }
-            }
+            params_flattened::check_integer_array_elements_in_range(
+                blk,
+                diags,
+                params_flattened::IntegerArrayRangeRule {
+                    base,
+                    len,
+                    len_default,
+                    min,
+                    max,
+                    max_default,
+                    default_to_index,
+                },
+            );
         }
         ParamRule::RealArrayElements { base, len } => {
-            let Some(value) = find_param(&blk.params, len) else {
-                return;
-            };
-            let Some(n) = integer_value(value) else {
-                return;
-            };
-            let Ok(n) = usize::try_from(n) else {
-                return;
-            };
-            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-                let name = format!("{base}_{idx}");
-                let Some(value) = find_param(&blk.params, &name) else {
-                    continue;
-                };
-                if real_value(value).is_none() {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be a numeric real array element",
-                            blk.class_iri
-                        ),
-                    );
-                }
-            }
+            params_flattened::check_real_array_elements(blk, diags, base, len);
+        }
+        ParamRule::RealMatrixElements {
+            base,
+            rows,
+            default_rows,
+            cols,
+            default_cols,
+        } => {
+            params_flattened::check_real_matrix_elements(
+                blk,
+                diags,
+                params_flattened::RealMatrixRule {
+                    base,
+                    rows,
+                    default_rows,
+                    cols,
+                    default_cols,
+                },
+            );
         }
         ParamRule::BooleanArrayElements { base, len } => {
-            let Some(value) = find_param(&blk.params, len) else {
-                return;
-            };
-            let Some(n) = integer_value(value) else {
-                return;
-            };
-            let Ok(n) = usize::try_from(n) else {
-                return;
-            };
-            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
-                let name = format!("{base}_{idx}");
-                let Some(value) = find_param(&blk.params, &name) else {
-                    continue;
-                };
-                if boolean_value(value).is_none() {
-                    push_range_error(
-                        blk,
-                        diags,
-                        format!(
-                            "parameter `{name}` on block `{}` must be a Boolean array element",
-                            blk.class_iri
-                        ),
-                    );
-                }
-            }
+            params_flattened::check_boolean_array_elements(blk, diags, base, len);
         }
         ParamRule::BooleanArrayTrueCountEquals {
             base,
@@ -324,48 +257,9 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             count,
             default,
         } => {
-            let (Some(len_raw), Some(count_raw)) =
-                (find_param(&blk.params, len), find_param(&blk.params, count))
-            else {
-                return;
-            };
-            let (Some(n), Some(expected)) = (integer_value(len_raw), integer_value(count_raw))
-            else {
-                return;
-            };
-            let Ok(n) = usize::try_from(n) else {
-                return;
-            };
-            if n > MAX_RESOLVED_PORT_WIDTH {
-                return;
-            }
-            let mut true_count = 0_i64;
-            for idx in 1..=n {
-                let name = format!("{base}_{idx}");
-                let value = match find_param(&blk.params, &name) {
-                    Some(value) => {
-                        let Some(value) = boolean_value(value) else {
-                            return;
-                        };
-                        value
-                    }
-                    None => default,
-                };
-                if value {
-                    true_count += 1;
-                }
-            }
-            if true_count != expected {
-                push_range_error(
-                    blk,
-                    diags,
-                    format!(
-                        "Boolean mask `{base}` on block `{}` has true count {true_count}, \
-                         expected `{count}` = {expected}",
-                        blk.class_iri
-                    ),
-                );
-            }
+            params_flattened::check_boolean_array_true_count_equals(
+                blk, diags, base, len, count, default,
+            );
         }
         ParamRule::EnumMembers { name, members } => {
             let Some(value) = find_param(&blk.params, name) else {
@@ -649,10 +543,6 @@ fn integer_value(value: &Value) -> Option<i64> {
         Value::Integer(v) => Some(*v),
         _ => None,
     }
-}
-
-fn integer_param_or_default(params: &ParamTable, name: &str, default: i64) -> Option<i64> {
-    find_param(params, name).map_or(Some(default), integer_value)
 }
 
 fn boolean_value(value: &Value) -> Option<bool> {

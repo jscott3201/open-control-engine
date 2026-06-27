@@ -53,6 +53,12 @@ fn feedthrough_classification_matches_spec() {
     assert!(!MultiSum::new(vec![1.0, 2.0, 3.0]).feeds_through(3, 0));
     assert!(MultiMin::new(2).feeds_through(1, 0));
     assert!(MultiMax::new(2).feeds_through(1, 0));
+    assert!(MatrixGain::new(2, 2, vec![1.0, 0.0, 0.0, 1.0]).feeds_through(1, 1));
+    assert!(MatrixMax::new(2, 3, MatrixReductionAxis::Rows).feeds_through(2, 0));
+    assert!(!MatrixMax::new(2, 3, MatrixReductionAxis::Rows).feeds_through(3, 0));
+    assert!(MatrixMin::new(2, 3, MatrixReductionAxis::Columns).feeds_through(3, 0));
+    assert!(!MatrixMin::new(2, 3, MatrixReductionAxis::Columns).feeds_through(3, 1));
+    assert!(Sort::new(3, true).feeds_through(2, 5));
     assert!(RealExtractSignal::new(3, 2, vec![3, 1]).feeds_through(2, 0));
     assert!(RealExtractSignal::new(3, 2, vec![3, 1]).feeds_through(0, 1));
     assert!(RealExtractor::new(3).feeds_through(0, 0));
@@ -171,6 +177,10 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.MultiMax",
         "CDL.Reals.MultiMin",
         "CDL.Reals.MultiSum",
+        "CDL.Reals.MatrixGain",
+        "CDL.Reals.MatrixMax",
+        "CDL.Reals.MatrixMin",
+        "CDL.Reals.Sort",
         "CDL.Reals.Limiter",
         "CDL.Reals.Line",
         "CDL.Reals.Greater",
@@ -266,7 +276,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Utilities.Assert",
         "CDL.Utilities.SunRiseSet",
     ];
-    assert_eq!(PATHS.len(), 116, "registry count");
+    assert_eq!(PATHS.len(), 120, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

@@ -5,9 +5,10 @@ use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::{
     Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CalendarTime, CivilTime,
     Constant, Cos, Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold,
-    Limiter, Line, Log, Log10, MAX_RESOLVED_PORT_WIDTH, Max, Min, Modulo, MultiMax, MultiMin,
-    MultiSum, Multiply, MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, Sin,
-    SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
+    Limiter, Line, Log, Log10, MAX_RESOLVED_PORT_WIDTH, MatrixGain, MatrixMax, MatrixMin,
+    MatrixReductionAxis, Max, Min, Modulo, MultiMax, MultiMin, MultiSum, Multiply,
+    MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, Sin, Sort, SourceRamp,
+    SourceSin, Sqrt, Subtract, Switch, Tan,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -140,6 +141,22 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
         make: make_multi_sum,
     },
     RegistryEntry {
+        class_path: "CDL.Reals.MatrixGain",
+        make: make_matrix_gain,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.MatrixMax",
+        make: make_matrix_max,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.MatrixMin",
+        make: make_matrix_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sort",
+        make: make_sort,
+    },
+    RegistryEntry {
         class_path: "CDL.Reals.Limiter",
         make: make_limiter,
     },
@@ -243,6 +260,112 @@ pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
     ParamRule::RealArrayElements {
         base: "k",
         len: "nin",
+    },
+];
+
+pub(super) const MATRIX_GAIN_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nout" },
+    ParamRule::Structural { name: "nin" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nout",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nout",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerProductLessOrEqualConstant {
+        left: "nout",
+        right: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::RealMatrixElements {
+        base: "K",
+        rows: "nout",
+        default_rows: 2,
+        cols: "nin",
+        default_cols: 2,
+    },
+];
+
+pub(super) const MATRIX_MAX_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "nRow" },
+    ParamRule::Required { name: "nCol" },
+    ParamRule::Structural { name: "nRow" },
+    ParamRule::Structural { name: "nCol" },
+    ParamRule::Structural { name: "rowMax" },
+    ParamRule::Boolean { name: "rowMax" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nRow",
+        min: 1,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nRow",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nCol",
+        min: 1,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nCol",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerProductLessOrEqualConstant {
+        left: "nRow",
+        right: "nCol",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+];
+
+pub(super) const MATRIX_MIN_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "nRow" },
+    ParamRule::Required { name: "nCol" },
+    ParamRule::Structural { name: "nRow" },
+    ParamRule::Structural { name: "nCol" },
+    ParamRule::Structural { name: "rowMin" },
+    ParamRule::Boolean { name: "rowMin" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nRow",
+        min: 1,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nRow",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nCol",
+        min: 1,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nCol",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerProductLessOrEqualConstant {
+        left: "nRow",
+        right: "nCol",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+];
+
+pub(super) const SORT_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nin" },
+    ParamRule::Boolean { name: "ascending" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
     },
 ];
 
@@ -407,6 +530,59 @@ fn make_multi_sum(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MultiSum::new(gains))
 }
 
+fn make_matrix_gain(p: &ParamTable) -> Box<dyn Block> {
+    let nout = bounded_usize_param(p, "nout", 2);
+    let nin = bounded_usize_param(p, "nin", 2);
+    let Some(product) = nout.checked_mul(nin) else {
+        return Box::new(MatrixGain::new(0, 0, Vec::new()));
+    };
+    if product > MAX_RESOLVED_PORT_WIDTH {
+        return Box::new(MatrixGain::new(0, 0, Vec::new()));
+    }
+    let gains = (1..=nout)
+        .flat_map(|row| (1..=nin).map(move |col| (row, col)))
+        .map(|(row, col)| {
+            real_param(
+                p,
+                &format!("K_{row}_{col}"),
+                if row == col { 1.0 } else { 0.0 },
+            )
+        })
+        .collect();
+    Box::new(MatrixGain::new(nin, nout, gains))
+}
+
+fn make_matrix_max(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MatrixMax::new(
+        bounded_usize_param(p, "nRow", 1),
+        bounded_usize_param(p, "nCol", 1),
+        if bool_param(p, "rowMax", true) {
+            MatrixReductionAxis::Rows
+        } else {
+            MatrixReductionAxis::Columns
+        },
+    ))
+}
+
+fn make_matrix_min(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MatrixMin::new(
+        bounded_usize_param(p, "nRow", 1),
+        bounded_usize_param(p, "nCol", 1),
+        if bool_param(p, "rowMin", true) {
+            MatrixReductionAxis::Rows
+        } else {
+            MatrixReductionAxis::Columns
+        },
+    ))
+}
+
+fn make_sort(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Sort::new(
+        bounded_usize_param(p, "nin", 0),
+        bool_param(p, "ascending", true),
+    ))
+}
+
 fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Limiter {
         u_min: real_param(p, "uMin", f64::NEG_INFINITY),
@@ -466,6 +642,12 @@ fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
 fn bounded_nin(p: &ParamTable) -> usize {
     let raw = int_param(p, "nin", 0);
     usize::try_from(raw)
+        .unwrap_or(0)
+        .min(MAX_RESOLVED_PORT_WIDTH)
+}
+
+fn bounded_usize_param(p: &ParamTable, name: &str, default: i64) -> usize {
+    usize::try_from(int_param(p, name, default))
         .unwrap_or(0)
         .min(MAX_RESOLVED_PORT_WIDTH)
 }

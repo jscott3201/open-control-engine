@@ -16,6 +16,7 @@ use oce_diag::Diagnostic;
 use oce_model::{BlockInstance, Connector, ConnectorId, ModelGraph};
 
 mod params;
+mod params_flattened;
 mod structural;
 mod unify;
 

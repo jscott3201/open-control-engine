@@ -58,6 +58,26 @@ fn real_multi_sum_model() -> ModelGraph {
     model
 }
 
+fn matrix_gain_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Reals.MatrixGain",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real, ValueType::Real],
+        vec![
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("K_1_1"), Value::Real(1.0)),
+            (Arc::from("K_1_2"), Value::Real(0.0)),
+            (Arc::from("K_2_1"), Value::Real(0.0)),
+            (Arc::from("K_2_2"), Value::Real(1.0)),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
 fn real_extract_signal_model() -> ModelGraph {
     let mut mb = Mb::new();
     let (_, inputs, _) = mb.block(
@@ -280,6 +300,17 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
     ));
     eng.set_param("b0.k_1", Value::Real(-0.25))
         .expect("non-structural Real gain edit is accepted at rest");
+
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(matrix_gain_model(), None)
+        .expect("valid MatrixGain loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.nout", Value::Integer(3)),
+        Err(OcError::ParamStructural { .. })
+    ));
+    eng.set_param("b0.K_1_1", Value::Real(2.0))
+        .expect("MatrixGain K entries are value-only coefficient edits");
 }
 
 #[test]

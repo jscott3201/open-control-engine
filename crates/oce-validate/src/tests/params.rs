@@ -188,6 +188,72 @@ fn vector_width_and_flattened_gain_parameters_are_checked() {
             .expect("integer literal k_i promotes to Real parameter")
             .is_empty()
     );
+
+    let bad_matrix_gain = one_block_model(
+        "CDL.Reals.MatrixGain",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real, ValueType::Real],
+        vec![
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("K_1_1"), Value::Real(1.0)),
+            (Arc::from("K_1_2"), Value::Boolean(true)),
+        ],
+    );
+    let err = validate(&bad_matrix_gain).expect_err("K_1_2 must be numeric");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`K_1_2`"));
+}
+
+#[test]
+fn matrix_and_sort_dimensions_are_required_or_bounded() {
+    let missing_matrix_dims = one_block_model(
+        "CDL.Reals.MatrixMax",
+        &[ValueType::Real],
+        &[ValueType::Real],
+        vec![],
+    );
+    let err = validate(&missing_matrix_dims).expect_err("nRow and nCol are required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![
+            DiagCode::MissingRequiredParameter,
+            DiagCode::MissingRequiredParameter,
+        ]
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .any(|diag| diag.message.contains("`nRow`"))
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .any(|diag| diag.message.contains("`nCol`"))
+    );
+
+    let zero_row = one_block_model(
+        "CDL.Reals.MatrixMin",
+        &[],
+        &[],
+        vec![
+            (Arc::from("nRow"), Value::Integer(0)),
+            (Arc::from("nCol"), Value::Integer(1)),
+        ],
+    );
+    let err = validate(&zero_row).expect_err("nRow=0 must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`nRow`"));
+
+    let bad_sort = one_block_model(
+        "CDL.Reals.Sort",
+        &[],
+        &[],
+        vec![(Arc::from("nin"), Value::Integer(-1))],
+    );
+    let err = validate(&bad_sort).expect_err("negative Sort nin must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`nin`"));
 }
 
 #[test]

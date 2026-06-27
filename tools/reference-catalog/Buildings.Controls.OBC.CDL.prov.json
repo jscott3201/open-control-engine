@@ -5,7 +5,7 @@
   "branch": "master",
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-26",
-  "catalog_fingerprint": "cbe3ba4d306be9b5",
+  "catalog_fingerprint": "9599c3c9aa4aaa07",
   "package_order_files": [
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -51,6 +51,13 @@
       "commit": "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a",
       "path": "Modelica/Constants.mo",
       "evidence": "Modelica.Constants.inf = ModelicaServices.Machine.inf"
+    },
+    {
+      "repository": "https://github.com/modelica/ModelicaStandardLibrary",
+      "tag": "v4.1.0",
+      "commit": "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a",
+      "path": "Modelica/Math/package.mo",
+      "evidence": "Modelica.Math.Vectors.sort shellsort algorithm used by CDL.Reals.Sort"
     },
     {
       "repository": "https://github.com/modelica/ModelicaStandardLibrary",

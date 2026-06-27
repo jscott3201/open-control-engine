@@ -19,6 +19,7 @@ mod logical_variable_pulse;
 mod oracle;
 mod psychrometrics;
 mod reals;
+mod reals_matrix;
 mod reals_pid;
 mod reals_ramp;
 mod reals_scalar_arithmetic;
@@ -59,6 +60,7 @@ fn main() {
     goldens.extend(reals_ramp::goldens());
     goldens.extend(reals_transcendental::goldens());
     goldens.extend(reals_vector_reductions::goldens());
+    goldens.extend(reals_matrix::goldens());
     goldens.extend(routing::goldens());
     goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
