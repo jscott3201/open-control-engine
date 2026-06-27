@@ -269,9 +269,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the default SupplyFan parameterization with have_perZonRehBox=false, controllerType=PI, explicit maxSet=410 Pa, and nested TrimAndRespond have_hol=false; perimeter-zone reheating and non-PI variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
@@ -331,6 +332,24 @@
         "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
         "The oracle follows the literal source wiring: fan-off selects deadband, 0 < uOpeMod < 3 selects reset, uOpeMod == 3 selects cooldown, and 3 < uOpeMod < 6 selects warmup/setback."
       ]
+    },
+    {
+      "name": "multizone_vav_supply_fan",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_fan",
+      "supported_variant": "source-verified explicit CXF for default SupplyFan parameters with have_perZonRehBox=false, controllerType=PI, explicit maxSet=410 Pa, and nested TrimAndRespond have_hol=false",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_fan.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_fan.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
+        "The supported variant uses the default no-perimeter branch: y1SupFan is true for operation modes 1/2/3, false otherwise, and ySupFan is zero when the fan is disabled.",
+        "The oracle covers the pressure TrimAndRespond -> FirstOrderHold -> PI PIDWithReset cone for controllerType=PI only."
+      ]
     }
   ],
   "composite_import_fixtures": [
@@ -383,6 +402,35 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, nested TrimAndRespond flattening, facade load support, independent oracle matching, and determinism golden coverage.",
         "Evidence does not claim arbitrary .mo parsing, non-default SupplyTemperature parameters, or named operation-mode enum semantics where the source literals differ from the current package constants."
+      ]
+    },
+    {
+      "name": "multizone_vav_supply_fan",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_fan",
+      "source_child_count": 23,
+      "active_block_count": 65,
+      "input_count": 3,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for default SupplyFan parameters with have_perZonRehBox=false, controllerType=PI, explicit maxSet=410 Pa, and nested TrimAndRespond have_hol=false",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_fan.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_composite.rs",
+      "api_test": "crates/oce-api/tests/composite_import.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "nested_composites": [
+        {
+          "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+          "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+          "variant": "have_hol=false"
+        }
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, nested TrimAndRespond flattening, facade load support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim arbitrary .mo parsing, have_perZonRehBox=true perimeter reheating, non-PI controller variants, or source defaults for maxSet; maxSet is explicit at 410 Pa in the fixture."
       ]
     }
   ],
@@ -467,27 +515,27 @@
       "parameters": [
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMin",
-          "value": 0.0
+          "value": 0
         },
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMax",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.x1.k",
-          "value": 0.0
+          "value": 0
         },
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.f1.k",
-          "value": 16.0
+          "value": 16
         },
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.x2.k",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.ahu_supply_air_temp_reset.f2.k",
-          "value": 12.0
+          "value": 12
         }
       ],
       "known_deferred_branches": [
@@ -629,11 +677,11 @@
       "parameters": [
         {
           "path": "http://example.org#g36.ahu_economizer.favorable.uLow",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.ahu_economizer.favorable.uHigh",
-          "value": 3.0
+          "value": 3
         },
         {
           "path": "http://example.org#g36.ahu_economizer.modeIdentity.p",
@@ -645,11 +693,11 @@
         },
         {
           "path": "http://example.org#g36.ahu_economizer.delay.delayTime",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.ahu_economizer.damperOpen.k",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.ahu_economizer.damperMinimum.k",
@@ -777,7 +825,7 @@
       "parameters": [
         {
           "path": "http://example.org#g36.vav_single_zone.zoneSignal.p",
-          "value": 0.0
+          "value": 0
         },
         {
           "path": "http://example.org#g36.vav_single_zone.coolingPid.k",
@@ -785,15 +833,15 @@
         },
         {
           "path": "http://example.org#g36.vav_single_zone.coolingPid.Ti",
-          "value": 20.0
+          "value": 20
         },
         {
           "path": "http://example.org#g36.vav_single_zone.coolingPid.yMin",
-          "value": 0.0
+          "value": 0
         },
         {
           "path": "http://example.org#g36.vav_single_zone.coolingPid.yMax",
-          "value": 1.0
+          "value": 1
         },
         {
           "path": "http://example.org#g36.vav_single_zone.coolingPid.reverseActing",
@@ -817,7 +865,7 @@
         },
         {
           "path": "http://example.org#g36.vav_single_zone.damperLimiter.uMax",
-          "value": 1.0
+          "value": 1
         }
       ],
       "known_deferred_branches": [

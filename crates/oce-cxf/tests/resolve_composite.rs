@@ -13,11 +13,14 @@ const G36_TRIM_AND_RESPOND: &str =
     include_str!("fixtures/g36/trim_and_respond_have_hol_false.jsonld");
 const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("fixtures/g36/multizone_vav_supply_temperature.jsonld");
+const G36_SUPPLY_FAN: &str = include_str!("fixtures/g36/multizone_vav_supply_fan.jsonld");
 const NESTED_GOLDEN_REL: &str = "tests/fixtures/golden/nested_composite.modelgraph.txt";
 const G36_TRIM_AND_RESPOND_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt";
 const G36_SUPPLY_TEMPERATURE_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt";
+const G36_SUPPLY_FAN_GOLDEN_REL: &str =
+    "tests/fixtures/golden/g36_multizone_vav_supply_fan.modelgraph.txt";
 const MODEL: &str = "http://example.org#g36.profile.nested_composite";
 const G36_TRIM_AND_RESPOND_MODEL: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false";
@@ -26,6 +29,9 @@ const G36_TRIM_AND_RESPOND_CLASS: &str =
 const G36_SUPPLY_TEMPERATURE_MODEL: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature";
 const G36_SUPPLY_TEMPERATURE_CLASS: &str = "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature";
+const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
+const G36_SUPPLY_FAN_CLASS: &str =
+    "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan";
 
 fn import_ok(src: &str) -> ModelGraph {
     let (graph, report) = import_cxf(src.as_bytes(), &ResolveOptions::default())
@@ -366,6 +372,117 @@ fn golden_g36_multizone_vav_supply_temperature_modelgraph() {
     assert_eq!(
         actual, expected,
         "source-verified G36 SupplyTemperature ModelGraph diverged from golden"
+    );
+}
+
+#[test]
+fn source_verified_g36_multizone_vav_supply_fan_imports_nested_trim_and_respond() {
+    let parsed: JsonValue = serde_json::from_str(G36_SUPPLY_FAN).expect("G36 fixture JSON");
+    let top = parsed["@graph"]
+        .as_array()
+        .expect("@graph array")
+        .iter()
+        .find(|node| node["@id"] == json!(G36_SUPPLY_FAN_MODEL))
+        .expect("top G36 SupplyFan composite node");
+    assert_eq!(top["@type"], json!(G36_SUPPLY_FAN_CLASS));
+    assert_eq!(
+        top["S231:containsBlock"]
+            .as_array()
+            .expect("children")
+            .len(),
+        23,
+        "SupplyFan source transcription should preserve the 23 declared child components"
+    );
+
+    let graph = import_ok(G36_SUPPLY_FAN);
+    assert_eq!(
+        graph.blocks.len(),
+        65,
+        "SupplyFan should flatten 44 active TrimAndRespond leaves plus 21 top-level leaves"
+    );
+    let instances: Vec<&str> = graph
+        .blocks
+        .iter()
+        .map(|block| block.instance_iri.as_deref().expect("source path"))
+        .collect();
+    assert!(
+        instances
+            .iter()
+            .any(|iri| iri.ends_with(".staPreSetRes.tim"))
+    );
+    assert!(instances.iter().any(|iri| iri.ends_with(".conSpe")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".firOrdHol")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".con")));
+    assert!(!instances.iter().any(|iri| iri.ends_with(".or2")));
+    assert!(
+        !instances
+            .iter()
+            .any(|iri| iri.ends_with(".staPreSetRes.truHol"))
+    );
+
+    assert!(
+        block_param(&graph, ".staPreSetRes.tim", "delayTime").bit_eq(&Value::Real(720.0)),
+        "nested TrimAndRespond delay must ground delTim + samplePeriod"
+    );
+    assert!(
+        block_param(&graph, ".staPreSetRes.uniDel", "y_start").bit_eq(&Value::Real(120.0)),
+        "nested TrimAndRespond initial pressure setpoint must inherit iniSet"
+    );
+    assert!(
+        block_param(&graph, ".staPreSetRes.maxSetCon", "k").bit_eq(&Value::Real(410.0)),
+        "nested TrimAndRespond maximum pressure setpoint must inherit explicit maxSet"
+    );
+    assert!(
+        block_param(&graph, ".conSpe", "yMax").bit_eq(&Value::Real(1.0)),
+        "PIDWithReset yMax must inherit maxSpe"
+    );
+    assert!(
+        block_param(&graph, ".conSpe", "yMin").bit_eq(&Value::Real(0.1)),
+        "PIDWithReset yMin must inherit minSpe"
+    );
+    assert!(
+        block_param(&graph, ".conSpe", "y_reset").bit_eq(&Value::Real(0.1)),
+        "PIDWithReset reset target must inherit iniSpe"
+    );
+    assert!(
+        block_param(&graph, ".firOrdHol", "samplePeriod").bit_eq(&Value::Real(120.0)),
+        "FirstOrderHold must inherit samplePeriod"
+    );
+    assert!(
+        block_param(&graph, ".gaiNor", "k").bit_eq(&Value::Real(410.0)),
+        "normalization gain must use the explicit duct-pressure maxSet"
+    );
+    assert!(
+        block_param(&graph, ".con", "k").bit_eq(&Value::Boolean(false)),
+        "default have_perZonRehBox=false branch should keep source Constant false"
+    );
+
+    let counts = connector_iri_counts(&graph);
+    assert!(counts.contains(&(format!("{G36_SUPPLY_FAN_MODEL}.uOpeMod"), 5)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_FAN_MODEL}.dpDuc"), 1)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_FAN_MODEL}.uZonPreResReq"), 1)));
+    assert!(
+        !counts
+            .iter()
+            .any(|(iri, _)| iri.ends_with(".staPreSetRes.uHol")),
+        "inactive nested have_hol=false optional input must not survive flattening"
+    );
+}
+
+#[test]
+fn golden_g36_multizone_vav_supply_fan_modelgraph() {
+    let actual = render(&import_ok(G36_SUPPLY_FAN));
+    let path = golden_path(G36_SUPPLY_FAN_GOLDEN_REL);
+    if std::env::var_os("OCE_BLESS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, &actual).unwrap();
+        return;
+    }
+    let expected = std::fs::read_to_string(path)
+        .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
+    assert_eq!(
+        actual, expected,
+        "source-verified G36 SupplyFan ModelGraph diverged from golden"
     );
 }
 

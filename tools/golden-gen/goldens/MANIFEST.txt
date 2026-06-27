@@ -450,6 +450,9 @@ G36/ahu_economizer reference -> goldens/G36/ahu_economizer/reference.csv
 G36/ahu_supply_air_temp_reset cooling_demand -> goldens/G36/ahu_supply_air_temp_reset/cooling_demand.csv
 G36/ahu_supply_air_temp_reset reference -> goldens/G36/ahu_supply_air_temp_reset/reference.csv
 G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_reset/sat_setpoint.csv
+G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
+G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
+G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv
 G36/multizone_vav_supply_temperature reference -> goldens/G36/multizone_vav_supply_temperature/reference.csv
 G36/multizone_vav_supply_temperature supply_air_temperature_setpoint -> goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv
 G36/vav_single_zone PID cone deferred -> goldens/G36/vav_single_zone/pid_cone_deferred.prov.json

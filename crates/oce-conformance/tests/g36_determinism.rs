@@ -21,6 +21,8 @@ const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
 const SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
+const SUPPLY_FAN: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 
 const GOLDEN_DIR: &str = "tests/fixtures/golden/g36_traces";
 const PROVENANCE_SOURCE: &str =
@@ -70,6 +72,16 @@ const SUPPLY_TEMPERATURE_REQUESTS: &str =
 const SUPPLY_TEMPERATURE_SETPOINT: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.TAirSupSet";
 const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
+const SUPPLY_FAN_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
+const SUPPLY_FAN_DUCT_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
+const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
+const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_supply_fan.y1SupFan";
+const SUPPLY_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_supply_fan.ySupFan";
+const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#110";
+const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#107";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -113,6 +125,15 @@ const SUPPLY_TEMPERATURE_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
     SUPPLY_TEMPERATURE_SETPOINT,
     SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
 )];
+const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
+    PointSpec::integer(SUPPLY_FAN_OPERATING_MODE),
+    PointSpec::real(SUPPLY_FAN_DUCT_PRESSURE),
+    PointSpec::integer(SUPPLY_FAN_PRESSURE_REQUESTS),
+];
+const SUPPLY_FAN_OUTPUTS: &[PointSpec] = &[
+    PointSpec::boolean_alias(SUPPLY_FAN_STATUS, SUPPLY_FAN_STATUS_RUNTIME),
+    PointSpec::real_alias(SUPPLY_FAN_SPEED, SUPPLY_FAN_SPEED_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -146,6 +167,14 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: SUPPLY_TEMPERATURE_INPUTS,
         outputs: SUPPLY_TEMPERATURE_OUTPUTS,
         input_fn: supply_temperature_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_supply_fan",
+        cxf: SUPPLY_FAN,
+        t_stop: 900,
+        inputs: SUPPLY_FAN_INPUTS,
+        outputs: SUPPLY_FAN_OUTPUTS,
+        input_fn: supply_fan_inputs,
     },
 ];
 
@@ -301,6 +330,29 @@ fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
         pair(SUPPLY_TEMPERATURE_FAN_STATUS, Value::Boolean(true)),
         pair(SUPPLY_TEMPERATURE_OPERATING_MODE, Value::Integer(1)),
         pair(SUPPLY_TEMPERATURE_REQUESTS, Value::Integer(requests)),
+    ]
+}
+
+fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
+    let operating_mode = match t as u32 {
+        300..=359 => 4,
+        _ => 1,
+    };
+    let pressure_requests = if t >= 840.0 {
+        5
+    } else if t >= 720.0 {
+        3
+    } else {
+        0
+    };
+    let duct_pressure = if t >= 720.0 { 80.0 } else { 120.0 };
+    vec![
+        pair(SUPPLY_FAN_OPERATING_MODE, Value::Integer(operating_mode)),
+        pair(SUPPLY_FAN_DUCT_PRESSURE, Value::Real(duct_pressure)),
+        pair(
+            SUPPLY_FAN_PRESSURE_REQUESTS,
+            Value::Integer(pressure_requests),
+        ),
     ]
 }
 
