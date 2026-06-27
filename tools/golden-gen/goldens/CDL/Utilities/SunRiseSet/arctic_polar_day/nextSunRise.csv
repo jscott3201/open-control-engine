@@ -1,0 +1,6 @@
+#1
+# columns: time nextSunRise
+double CDL_Utilities_SunRiseSet_arctic_polar_day_nextSunRise(3,2)
+14860800.0 18404934.815812074
+16630768.241439546 18404934.815812074
+18400796.48287909 18404934.815812074

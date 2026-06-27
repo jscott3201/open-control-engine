@@ -53,6 +53,32 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 );
             }
         }
+        ParamRule::RealFinite { name } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            let Some(v) = real_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be numeric and finite",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if !v.is_finite() {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be finite; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
         ParamRule::RealGreaterThan { name, min } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;

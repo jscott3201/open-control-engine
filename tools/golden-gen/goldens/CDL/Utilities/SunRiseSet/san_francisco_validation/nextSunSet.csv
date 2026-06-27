@@ -1,0 +1,6 @@
+#1
+# columns: time nextSunSet
+double CDL_Utilities_SunRiseSet_san_francisco_validation_nextSunSet(3,2)
+15552000.0 15622013.75653061
+15569806.371060496 15622013.75653061
+15622073.75653061 15708409.423565522

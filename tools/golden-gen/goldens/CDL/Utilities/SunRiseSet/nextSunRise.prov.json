@@ -1,0 +1,20 @@
+{
+  "class_path": "CDL.Utilities.SunRiseSet",
+  "signal": "nextSunRise",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 3,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "nextSunRise", "nextSunSet", "sunUp"],
+  "inputs": [],
+  "input": "default equator/UTC parameters; samples cover initialization, sunrise crossing, and sunset crossing",
+  "reference_rule": "stateful Buildings SunRiseSet recurrence: initialize nextSunRise/nextSunSet from computeSunRise/computeSunSet(time-86400), apply polar-day nextSunSet-86400 branch when cosHou<-1, update each held event time when t>=pre(event), and emit sunUp=nextSunSet<nextSunRise",
+  "parameters": "lat=0 rad, lon=0 rad, timZon=0 s",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic trig",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
