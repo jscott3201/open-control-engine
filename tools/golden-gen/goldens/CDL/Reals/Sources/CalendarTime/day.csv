@@ -1,0 +1,7 @@
+#1
+# columns: time day
+double CDL_Reals_Sources_CalendarTime_day(4,2)
+172799.0 2.0
+172800.0 3.0
+172801.0 3.0
+345600.0 5.0

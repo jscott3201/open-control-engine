@@ -150,6 +150,10 @@ fn feedthrough_classification_matches_spec() {
     assert!(!SunRiseSet::default().feeds_through(0, 0));
     assert!(SunRiseSet::default().signature().inputs.is_empty());
     assert_eq!(SunRiseSet::default().signature().outputs.len(), 3);
+    assert_eq!(CalendarTime::default().kind(), BlockKind::Algebraic);
+    assert!(!CalendarTime::default().feeds_through(0, 0));
+    assert!(CalendarTime::default().signature().inputs.is_empty());
+    assert_eq!(CalendarTime::default().signature().outputs.len(), 6);
     assert_eq!(Add.kind(), BlockKind::Algebraic);
 }
 
@@ -161,6 +165,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Sources.Pulse",
         "CDL.Reals.Sources.Ramp",
         "CDL.Reals.Sources.Sin",
+        "CDL.Reals.Sources.CalendarTime",
         "CDL.Reals.Add",
         "CDL.Reals.Subtract",
         "CDL.Reals.Multiply",
@@ -251,7 +256,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Utilities.Assert",
         "CDL.Utilities.SunRiseSet",
     ];
-    assert_eq!(PATHS.len(), 94, "registry count");
+    assert_eq!(PATHS.len(), 95, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

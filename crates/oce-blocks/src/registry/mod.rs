@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use oce_model::{ParamTable, SimpleController, Value};
+use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
@@ -49,6 +49,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
         "CDL.Reals.Sources.Ramp" => reals::SOURCE_RAMP_PARAM_RULES,
         "CDL.Reals.Sources.Sin" => reals::SOURCE_SIN_PARAM_RULES,
+        "CDL.Reals.Sources.CalendarTime" => reals::CALENDAR_TIME_PARAM_RULES,
         "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
         "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,
@@ -144,13 +145,25 @@ pub(super) fn controller_type_param(
     }
 }
 
+pub(super) fn zero_time_param(params: &ParamTable, name: &str, default: ZeroTime) -> ZeroTime {
+    match find(params, name) {
+        Some(Value::Enum { ordinal, .. }) => ZeroTime::from_ordinal(*ordinal).unwrap_or(default),
+        Some(Value::Integer(ordinal)) => u32::try_from(*ordinal)
+            .ok()
+            .and_then(ZeroTime::from_ordinal)
+            .unwrap_or(default),
+        Some(Value::String(s)) => ZeroTime::from_qualified(s).unwrap_or(default),
+        _ => default,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use oce_model::{EnumClassId, SimpleController, Value};
+    use oce_model::{EnumClassId, SimpleController, Value, ZeroTime};
 
-    use super::{controller_type_param, int_param, string_param};
+    use super::{controller_type_param, int_param, string_param, zero_time_param};
     use crate::ParamTable;
 
     #[test]
@@ -217,6 +230,52 @@ mod tests {
         assert_eq!(
             controller_type_param(&unknown, "controllerType", SimpleController::Pd),
             SimpleController::Pd
+        );
+    }
+
+    #[test]
+    fn zero_time_param_reads_enum_integer_and_qualified_string_ordinals() {
+        let enum_params = ParamTable {
+            values: vec![(
+                Arc::from("zerTim"),
+                Value::Enum {
+                    class: EnumClassId::ZERO_TIME,
+                    ordinal: 11,
+                },
+            )],
+        };
+        assert_eq!(
+            zero_time_param(&enum_params, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::NewYear(2017)
+        );
+
+        let int_params = ParamTable {
+            values: vec![(Arc::from("zerTim"), Value::Integer(44))],
+        };
+        assert_eq!(
+            zero_time_param(&int_params, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::NewYear(2050)
+        );
+
+        let string_params = ParamTable {
+            values: vec![(
+                Arc::from("zerTim"),
+                Value::String(Arc::from(
+                    "Buildings.Controls.OBC.CDL.Types.ZeroTime.UnixTimeStampGMT",
+                )),
+            )],
+        };
+        assert_eq!(
+            zero_time_param(&string_params, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::UnixTimeStampGmt
+        );
+
+        let invalid = ParamTable {
+            values: vec![(Arc::from("zerTim"), Value::Integer(45))],
+        };
+        assert_eq!(
+            zero_time_param(&invalid, "zerTim", ZeroTime::NewYear(2016)),
+            ZeroTime::NewYear(2016)
         );
     }
 

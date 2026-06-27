@@ -2,6 +2,17 @@
 
 use super::common::*;
 
+fn calendar_time_outputs() -> [ValueType; 6] {
+    [
+        ValueType::Integer,
+        ValueType::Integer,
+        ValueType::Integer,
+        ValueType::Integer,
+        ValueType::Real,
+        ValueType::Integer,
+    ]
+}
+
 #[test]
 fn real_source_ramp_duration_is_required_and_at_least_small() {
     let missing = one_block_model("CDL.Reals.Sources.Ramp", &[], &[ValueType::Real], vec![]);
@@ -39,6 +50,118 @@ fn real_source_ramp_duration_is_required_and_at_least_small() {
         .expect("Sources.Ramp duration lower bound is inclusive")
         .is_empty()
     );
+}
+
+#[test]
+fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
+    let outputs = calendar_time_outputs();
+    let missing = one_block_model("CDL.Reals.Sources.CalendarTime", &[], &outputs, vec![]);
+    let err = validate(&missing).expect_err("CalendarTime zerTim is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`zerTim`"));
+
+    for value in [
+        Value::Integer(0),
+        Value::Integer(45),
+        Value::String(Arc::from(
+            "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2051",
+        )),
+        Value::Boolean(true),
+    ] {
+        let invalid = one_block_model(
+            "CDL.Reals.Sources.CalendarTime",
+            &[],
+            &outputs,
+            vec![(Arc::from("zerTim"), value)],
+        );
+        let err = validate(&invalid).expect_err("invalid ZeroTime value must fail");
+        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains("`zerTim`"));
+    }
+
+    for value in [
+        Value::Integer(2009),
+        Value::Integer(2032),
+        Value::Real(2016.0),
+    ] {
+        let invalid = one_block_model(
+            "CDL.Reals.Sources.CalendarTime",
+            &[],
+            &outputs,
+            vec![
+                (Arc::from("zerTim"), Value::Integer(11)),
+                (Arc::from("yearRef"), value),
+            ],
+        );
+        let err = validate(&invalid).expect_err("invalid CalendarTime yearRef must fail");
+        assert!(
+            codes(&err.diagnostics)
+                .iter()
+                .all(|code| *code == DiagCode::ParameterOutOfRange)
+        );
+        assert!(
+            err.diagnostics
+                .iter()
+                .all(|diag| diag.severity == Severity::Error)
+        );
+        assert!(
+            err.diagnostics
+                .iter()
+                .all(|diag| diag.message.contains("`yearRef`"))
+        );
+    }
+
+    for value in [
+        Value::Real(f64::NAN),
+        Value::Real(f64::INFINITY),
+        Value::Real(f64::NEG_INFINITY),
+        Value::Boolean(false),
+    ] {
+        let invalid = one_block_model(
+            "CDL.Reals.Sources.CalendarTime",
+            &[],
+            &outputs,
+            vec![
+                (Arc::from("zerTim"), Value::Integer(11)),
+                (Arc::from("offset"), value),
+            ],
+        );
+        let err = validate(&invalid).expect_err("invalid CalendarTime offset must fail");
+        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains("`offset`"));
+    }
+
+    for zer_tim in [
+        Value::Integer(11),
+        Value::Enum {
+            class: oce_model::EnumClassId::ZERO_TIME,
+            ordinal: 11,
+        },
+        Value::String(Arc::from(
+            "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017",
+        )),
+    ] {
+        assert!(
+            validate(&one_block_model(
+                "CDL.Reals.Sources.CalendarTime",
+                &[],
+                &outputs,
+                vec![
+                    (Arc::from("zerTim"), zer_tim),
+                    (Arc::from("yearRef"), Value::Integer(2031)),
+                    (Arc::from("offset"), Value::Integer(0)),
+                ],
+            ))
+            .expect("valid CalendarTime parameters pass")
+            .is_empty()
+        );
+    }
 }
 
 #[test]

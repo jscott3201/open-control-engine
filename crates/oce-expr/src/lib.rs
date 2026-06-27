@@ -42,7 +42,7 @@ mod parse;
 mod tests;
 
 /// A parsed binding expression. Unknown functions are **not representable** — they are
-/// rejected during parse/resolve (R9). Array constructs (`02` §7.4: `EnumRef`, `ArrayLit`,
+/// rejected during parse/resolve (R9). Array constructs (`02` §7.4: `ArrayLit`,
 /// `Comprehension`, `Index`, `Range`) are reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
@@ -59,6 +59,8 @@ pub enum ExprAst {
     Ident(Arc<str>),
     /// A named CDL constant (`pi`/`eps`/`small`/`inf`), folded to a `Real` at evaluation.
     Const(BuiltinConst),
+    /// A qualified enum reference such as `CDL.Types.ZeroTime.NY2017`.
+    EnumRef(Arc<str>),
     /// A unary operator applied to one operand.
     Unary(UnOp, Box<ExprAst>),
     /// A binary operator applied to two operands.

@@ -389,6 +389,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation"
     } else if g.class_path == "CDL.Reals.Sources.Sin" {
         "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation"
+    } else if g.class_path == "CDL.Reals.Sources.CalendarTime" {
+        "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; independent re-derivation"
     } else if g.class_path.starts_with("CDL.Psychrometrics.") {
         "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation"
     } else {

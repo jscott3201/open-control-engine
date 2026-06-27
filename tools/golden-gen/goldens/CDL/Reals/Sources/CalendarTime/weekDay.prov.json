@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Reals.Sources.CalendarTime",
+  "signal": "weekDay",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "year", "month", "day", "hour", "minute", "weekDay"],
+  "inputs": [],
+  "input": "zerTim=NY2017, yearRef=2016 ignored, offset=0; validation-month start, +/-1s, and stop boundary",
+  "reference_rule": "unixTimeStampLocal = time + offset + timOff(NY2017); decompose with Buildings.Utilities.Time.CalendarTime table and Monday=1 weekDay convention",
+  "source_snapshot": "Buildings.Controls.OBC.CDL.Reals.Sources.CalendarTime.mo plus Buildings.Utilities.Time.CalendarTime.mo at a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

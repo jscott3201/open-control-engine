@@ -73,7 +73,7 @@ pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThr
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
-pub use reals_sources::{CivilTime, SourceRamp, SourceSin};
+pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
 pub use registry::lookup;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
@@ -265,6 +265,20 @@ pub enum ParamRule {
         name: &'static str,
         /// Inclusive lower bound.
         min: i64,
+    },
+    /// The named `Integer` parameter must be less than or equal to `max`.
+    IntegerLessOrEqualConstant {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Inclusive upper bound.
+        max: i64,
+    },
+    /// The named enum parameter must be one of the source-verified members.
+    EnumMembers {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Allowed member names in source ordinal order.
+        members: &'static [&'static str],
     },
     /// The named `Real` parameter must be greater than or equal to `min`.
     RealGreaterOrEqual {

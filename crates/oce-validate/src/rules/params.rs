@@ -157,6 +157,48 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 );
             }
         }
+        ParamRule::IntegerLessOrEqualConstant { name, max } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            let Some(v) = integer_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be an integer and <= {max}",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if v > max {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be <= {max}; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
+        ParamRule::EnumMembers { name, members } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            if !enum_member_value(value, members) {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be one of {} source enum members",
+                        blk.class_iri,
+                        members.len()
+                    ),
+                );
+            }
+        }
         ParamRule::RealGreaterOrEqual { name, min } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
@@ -387,6 +429,22 @@ fn integer_value(value: &Value) -> Option<i64> {
     match value {
         Value::Integer(v) => Some(*v),
         _ => None,
+    }
+}
+
+fn enum_member_value(value: &Value, members: &[&str]) -> bool {
+    match value {
+        Value::Enum { ordinal, .. } => {
+            usize::try_from(*ordinal).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
+        }
+        Value::Integer(v) => {
+            usize::try_from(*v).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
+        }
+        Value::String(s) => s
+            .rsplit('.')
+            .next()
+            .is_some_and(|member| members.contains(&member)),
+        _ => false,
     }
 }
 

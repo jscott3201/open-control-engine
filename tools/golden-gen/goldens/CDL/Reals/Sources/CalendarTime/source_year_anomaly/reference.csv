@@ -1,0 +1,5 @@
+#1
+# columns: time year month day hour minute weekDay
+double CDL_Reals_Sources_CalendarTime_source_year_anomaly_reference(2,7)
+0.0 2023.0 1.0 1.0 0.0 0.0 7.0
+86400.0 2023.0 1.0 2.0 0.0 0.0 1.0

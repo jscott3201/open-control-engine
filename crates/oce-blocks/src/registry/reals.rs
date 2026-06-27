@@ -1,12 +1,12 @@
 use oce_model::ParamTable;
 
-use super::{bool_param, int_param, real_param};
-use crate::reals_sources::MIN_SOURCE_RAMP_DURATION;
+use super::{bool_param, int_param, real_param, zero_time_param};
+use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::{
-    Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CivilTime, Constant, Cos,
-    Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold, Limiter, Line, Log,
-    Log10, Max, Min, Modulo, Multiply, MultiplyByParameter, ParamRule, RealPulse, RegistryEntry,
-    Round, Sin, SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
+    Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CalendarTime, CivilTime,
+    Constant, Cos, Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold,
+    Limiter, Line, Log, Log10, Max, Min, Modulo, Multiply, MultiplyByParameter, ParamRule,
+    RealPulse, RegistryEntry, Round, Sin, SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -29,6 +29,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.Sin",
         make: make_source_sin,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.CalendarTime",
+        make: make_calendar_time,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Add",
@@ -184,6 +188,23 @@ pub(super) const SOURCE_SIN_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Real { name: "startTime" },
 ];
 
+pub(super) const CALENDAR_TIME_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "zerTim" },
+    ParamRule::EnumMembers {
+        name: "zerTim",
+        members: ZERO_TIME_MEMBERS,
+    },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "yearRef",
+        min: 2010,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "yearRef",
+        max: 2031,
+    },
+    ParamRule::RealFinite { name: "offset" },
+];
+
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Constant {
         k: real_param(p, "k", 0.0),
@@ -220,6 +241,14 @@ fn make_source_sin(p: &ParamTable) -> Box<dyn Block> {
         phase: real_param(p, "phase", 0.0),
         offset: real_param(p, "offset", 0.0),
         start_time: real_param(p, "startTime", 0.0),
+    })
+}
+
+fn make_calendar_time(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(CalendarTime {
+        zer_tim: zero_time_param(p, "zerTim", oce_model::ZeroTime::NewYear(2016)),
+        year_ref: int_param(p, "yearRef", 2016),
+        offset: real_param(p, "offset", 0.0),
     })
 }
 

@@ -14,42 +14,25 @@
 use std::sync::Arc;
 
 pub mod determinism;
+pub mod types;
 
 /// Identifies an enumeration *class* (e.g. `CDL.Types.SimpleController`) in the flattened
 /// model's enum registry. Resolved at flatten time; stable for the run.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct EnumClassId(pub u32);
 
-/// CDL `Types.SimpleController` enumeration (`03` §4.9).
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SimpleController {
-    /// Proportional.
-    P,
-    /// Proportional-integral.
-    Pi,
-    /// Proportional-derivative.
-    Pd,
-    /// Proportional-integral-derivative.
-    Pid,
+impl EnumClassId {
+    /// Stable class id for `CDL.Types.SimpleController`.
+    pub const SIMPLE_CONTROLLER: Self = Self(1);
+    /// Stable class id for `CDL.Types.Smoothness`.
+    pub const SMOOTHNESS: Self = Self(2);
+    /// Stable class id for `CDL.Types.Extrapolation`.
+    pub const EXTRAPOLATION: Self = Self(3);
+    /// Stable class id for `CDL.Types.ZeroTime`.
+    pub const ZERO_TIME: Self = Self(4);
 }
 
-impl SimpleController {
-    /// Parse a CXF-qualified `CDL.Types.SimpleController.*` value by its trailing member.
-    #[must_use]
-    pub fn from_qualified(s: &str) -> Option<Self> {
-        let (prefix, member) = s.rsplit_once('.')?;
-        if prefix.is_empty() || member.is_empty() {
-            return None;
-        }
-        match member {
-            "P" => Some(Self::P),
-            "PI" => Some(Self::Pi),
-            "PD" => Some(Self::Pd),
-            "PID" => Some(Self::Pid),
-            _ => None,
-        }
-    }
-}
+pub use types::{SimpleController, ZeroTime, enum_class_id, enum_member_ordinal};
 
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and
 /// never travel on the hot path (CDL §7.17).

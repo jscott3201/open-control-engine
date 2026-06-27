@@ -1,0 +1,5 @@
+#1
+# columns: time hour
+double CDL_Reals_Sources_CalendarTime_source_year_anomaly_hour(2,2)
+0.0 0.0
+86400.0 0.0

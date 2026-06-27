@@ -99,6 +99,7 @@ fn eval_value(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
         ExprAst::Bool(b) => Ok(Value::Boolean(*b)),
         ExprAst::Str(s) => Ok(Value::String(s.clone())),
         ExprAst::Const(c) => Ok(real(const_value(*c))),
+        ExprAst::EnumRef(name) => eval_enum_ref(name, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
             Some(EvalResult::Scalar(v)) => Ok(canonicalize_value(v)),
             None => Err(ExprError::UnknownIdent(name.to_string())),
@@ -109,6 +110,19 @@ fn eval_value(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
         }
         ExprAst::Call(b, args) => eval_call(*b, args, scope),
     }
+}
+
+fn eval_enum_ref(name: &str, scope: &dyn Scope) -> Result<Value, ExprError> {
+    let (class_name, literal) = name
+        .rsplit_once('.')
+        .ok_or_else(|| ExprError::UnknownIdent(name.to_owned()))?;
+    let class = scope
+        .enum_class(class_name)
+        .ok_or_else(|| ExprError::UnknownIdent(class_name.to_owned()))?;
+    let ordinal = scope
+        .enum_ordinal(class, literal)
+        .ok_or_else(|| ExprError::UnknownIdent(name.to_owned()))?;
+    Ok(Value::Enum { class, ordinal })
 }
 
 fn eval_unary(op: UnOp, v: &Value) -> Result<Value, ExprError> {
@@ -199,11 +213,21 @@ fn values_equal(a: &Value, b: &Value) -> Result<bool, ExprError> {
         (Value::Integer(x), Value::Integer(y)) => Ok(x == y),
         (Value::Boolean(x), Value::Boolean(y)) => Ok(x == y),
         (Value::String(x), Value::String(y)) => Ok(x == y),
+        (
+            Value::Enum {
+                class: cx,
+                ordinal: ox,
+            },
+            Value::Enum {
+                class: cy,
+                ordinal: oy,
+            },
+        ) => Ok(cx == cy && ox == oy),
         (Value::Real(_) | Value::Integer(_), Value::Real(_) | Value::Integer(_)) => {
             Ok(num_of(a)?.as_f64() == num_of(b)?.as_f64())
         }
         _ => Err(ExprError::TypeError {
-            expected: "two numbers, two Booleans, or two Strings",
+            expected: "two numbers, two Booleans, two Strings, or two Enums",
             found: type_name(a),
         }),
     }
