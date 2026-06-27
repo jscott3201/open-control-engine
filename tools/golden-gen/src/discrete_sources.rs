@@ -120,6 +120,68 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
+    // TriggeredMovingMean: initial() samples once, then false->true trigger edges update a ring.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        let u = [0.1, 0.2, 99.0, 0.4, 0.7, -3.0, 1.1];
+        let trigger = [false, true, true, false, true, false, true];
+        let y = triggered_moving_mean_y(3, &u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredMovingMean",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "n=3; u=[0.1,0.2,99,0.4,0.7,-3,1.1]; trigger=[false,true,true,false,true,false,true]",
+                "when {initial(),trigger}: initial sample once, then false->true edges; update ring slot mod(pre(iSample),n)+1, sum full ySample vector in index order, divide by saturated counter; Buildings TriggeredMovingMean.mo",
+            )
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
+    // TriggeredMovingMean scenario: initially true trigger is still one initial sample, not two.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0];
+        let u = [0.9, 3.0, 6.0, 1.2];
+        let trigger = [true, true, false, true];
+        let y = triggered_moving_mean_y(3, &u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredMovingMean",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "scenario=trigger_initially_true; n=3; u=[0.9,3,6,1.2]; trigger=[true,true,false,true]",
+                "the initial() member of the when-vector samples once even when trigger is already true; held true does not resample",
+            )
+            .with_scenario("trigger_initially_true")
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
+    // TriggeredMovingMean scenario: n=1 degenerates to the latest triggered sample.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let u = [4.0, 5.0, -2.0, 7.0, 8.0, 1.25];
+        let trigger = [false, false, true, true, false, true];
+        let y = triggered_moving_mean_y(1, &u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredMovingMean",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "scenario=n_one; n=1; u=[4,5,-2,7,8,1.25]; trigger=[false,false,true,true,false,true]",
+                "with n=1 the saturated counter is 1 and the single ring slot is overwritten on each sample event",
+            )
+            .with_scenario("n_one")
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
     // TriggeredSampler: y = y_start until a false->true trigger, then the current u is held.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
@@ -250,6 +312,30 @@ fn triggered_sampler_y(y_start: f64, u: &[f64], trigger: &[bool]) -> Vec<Sample>
     for (&cur, &trig) in u.iter().zip(trigger) {
         if trig && !prev_trigger {
             held = cur;
+        }
+        y.push(r(held));
+        prev_trigger = trig;
+    }
+    y
+}
+
+fn triggered_moving_mean_y(n: usize, u: &[f64], trigger: &[bool]) -> Vec<Sample> {
+    assert!(n >= 1);
+    assert_eq!(u.len(), trigger.len());
+    let mut samples = vec![0.0; n];
+    let mut counter = 0usize;
+    let mut next_index = 0usize;
+    let mut prev_trigger = false;
+    let mut held = 0.0;
+    let mut y = Vec::with_capacity(u.len());
+    for (&cur, &trig) in u.iter().zip(trigger) {
+        let sample = counter == 0 || (trig && !prev_trigger);
+        if sample {
+            samples[next_index] = cur;
+            counter = (counter + 1).min(n);
+            let sum = samples.iter().fold(0.0, |acc, value| acc + value);
+            held = sum / counter as f64;
+            next_index = (next_index + 1) % n;
         }
         y.push(r(held));
         prev_trigger = trig;

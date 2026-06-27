@@ -32,6 +32,14 @@ const TRIGGERED_SAMPLER_INITIAL_TRUE_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("-7.0"),
 }];
+const TRIGGERED_MOVING_MEAN_PARAMS: &[Param] = &[Param {
+    name: "n",
+    value: ParamValue::Integer("3"),
+}];
+const TRIGGERED_MOVING_MEAN_N_ONE_PARAMS: &[Param] = &[Param {
+    name: "n",
+    value: ParamValue::Integer("1"),
+}];
 const NO_PARAMS: &[Param] = &[];
 
 // The checked-in goldens pin one-sample-delay dynamics, state latching,
@@ -85,6 +93,30 @@ const CASES: &[BlockCase] = &[
         NO_PARAMS,
         REAL_Y,
     ),
+    case(
+        "discrete_triggered_moving_mean",
+        "CDL.Discrete.TriggeredMovingMean",
+        "TriggeredMovingMean",
+        U_TRIGGER,
+        TRIGGERED_MOVING_MEAN_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_triggered_moving_mean_initial_true",
+        "CDL.Discrete.TriggeredMovingMean",
+        "TriggeredMovingMean/trigger_initially_true",
+        U_TRIGGER,
+        TRIGGERED_MOVING_MEAN_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_triggered_moving_mean_n_one",
+        "CDL.Discrete.TriggeredMovingMean",
+        "TriggeredMovingMean/n_one",
+        U_TRIGGER,
+        TRIGGERED_MOVING_MEAN_N_ONE_PARAMS,
+        REAL_Y,
+    ),
 ];
 
 const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
@@ -94,6 +126,9 @@ const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
     "discrete_triggered_sampler_initial_true",
     "discrete_triggered_max",
     "discrete_triggered_max_initial_true",
+    "discrete_triggered_moving_mean",
+    "discrete_triggered_moving_mean_initial_true",
+    "discrete_triggered_moving_mean_n_one",
 ];
 
 #[test]

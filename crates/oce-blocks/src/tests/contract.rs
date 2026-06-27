@@ -79,6 +79,8 @@ fn feedthrough_classification_matches_spec() {
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
     assert!(TriggeredMax.feeds_through(0, 0)); // current u seeds initial y and trigger samples
     assert!(TriggeredMax.feeds_through(1, 0)); // current trigger selects same-tick event
+    assert!(TriggeredMovingMean::default().feeds_through(0, 0)); // initial/event sample includes current u
+    assert!(TriggeredMovingMean::default().feeds_through(1, 0)); // current trigger selects event
     assert!(TriggeredSampler::default().feeds_through(0, 0)); // current u sampled on a trigger
     assert!(TriggeredSampler::default().feeds_through(1, 0)); // current trigger chooses sampling
     assert!(!IntegratorWithReset::default().feeds_through(0, 0)); // integrating loop cut
@@ -115,6 +117,7 @@ fn feedthrough_classification_matches_spec() {
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
     assert_eq!(TriggeredMax.kind(), BlockKind::Stateful);
+    assert_eq!(TriggeredMovingMean::default().kind(), BlockKind::Stateful);
     assert_eq!(TriggeredSampler::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
     assert_eq!(Derivative::default().kind(), BlockKind::Stateful);
@@ -217,11 +220,12 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.Change",
         "CDL.Integers.Stage",
         "CDL.Discrete.TriggeredMax",
+        "CDL.Discrete.TriggeredMovingMean",
         "CDL.Discrete.TriggeredSampler",
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 79, "registry count");
+    assert_eq!(PATHS.len(), 80, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -359,6 +363,15 @@ fn registry_exposes_block_param_rules() {
             },
         ]
     );
+    assert_eq!(
+        lookup("CDL.Discrete.TriggeredMovingMean")
+            .unwrap()
+            .param_rules(),
+        &[
+            ParamRule::Required { name: "n" },
+            ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
+        ]
+    );
     assert!(
         lookup("CDL.Reals.Sources.Constant")
             .unwrap()
@@ -407,6 +420,32 @@ fn registry_make_resolves_parameters() {
             &region,
         )[0]
         .bit_eq(&Value::Real(-2.0))
+    );
+
+    let moving_mean_params = ParamTable {
+        values: vec![(Arc::from("n"), Value::Integer(3))],
+    };
+    let moving_mean =
+        (lookup("CDL.Discrete.TriggeredMovingMean").unwrap().make)(&moving_mean_params);
+    assert_eq!(moving_mean.kind(), BlockKind::Stateful);
+    assert_eq!(moving_mean.state_len(), 7);
+    let mut region = vec![0u64; moving_mean.state_len()];
+    moving_mean.init_state(&mut region, &moving_mean_params);
+    assert!(
+        emit(
+            moving_mean.as_ref(),
+            &[Value::Real(6.0), Value::Boolean(false)],
+            &region,
+        )[0]
+        .bit_eq(&Value::Real(6.0))
+    );
+
+    let moving_mean_default =
+        (lookup("CDL.Discrete.TriggeredMovingMean").unwrap().make)(&ParamTable::default());
+    assert_eq!(
+        moving_mean_default.state_len(),
+        5,
+        "direct construction without validated n falls back to n=1"
     );
 
     let sampler = (lookup("CDL.Discrete.TriggeredSampler").unwrap().make)(&delay_params);

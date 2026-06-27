@@ -2,7 +2,7 @@ use oce_model::{ParamTable, Value};
 
 use oce_model::determinism::CANONICAL_NAN_BITS;
 
-use super::{Block, Ctx, NoopDiagnostics, TriggeredMax, TriggeredSampler};
+use super::{Block, Ctx, NoopDiagnostics, TriggeredMax, TriggeredMovingMean, TriggeredSampler};
 
 fn sample_tick(block: &dyn Block, region: &mut [u64], u: f64, trigger: bool) -> Value {
     let diag = NoopDiagnostics;
@@ -215,4 +215,114 @@ fn triggered_max_signed_zero_policy_matches_deterministic_max() {
 
     assert_real_bits(&sample_tick(&max, &mut region, -0.0, false), -0.0);
     assert_real_bits(&sample_tick(&max, &mut region, -0.0, true), 0.0);
+}
+
+#[test]
+fn triggered_moving_mean_initial_sample_is_included_before_trigger_edges() {
+    let mean = TriggeredMovingMean { n: 3 };
+    assert_eq!(mean.state_len(), 7);
+    let mut region = vec![0u64; mean.state_len()];
+    mean.init_state(&mut region, &ParamTable::default());
+
+    let trace = [
+        sample_tick(&mean, &mut region, 6.0, false),
+        sample_tick(&mean, &mut region, 3.0, true),
+        sample_tick(&mean, &mut region, 99.0, true),
+        sample_tick(&mean, &mut region, 9.0, false),
+        sample_tick(&mean, &mut region, 12.0, true),
+        sample_tick(&mean, &mut region, 15.0, false),
+        sample_tick(&mean, &mut region, 18.0, true),
+    ];
+    let expected = [6.0, 4.5, 4.5, 4.5, 7.0, 7.0, 11.0];
+    for (idx, (got, want)) in trace.iter().zip(expected).enumerate() {
+        assert!(
+            got.bit_eq(&Value::Real(want)),
+            "trace[{idx}] got {got:?}, want {want}"
+        );
+    }
+}
+
+#[test]
+fn triggered_moving_mean_initial_true_samples_once_not_twice() {
+    let mean = TriggeredMovingMean { n: 3 };
+    let mut region = vec![0u64; mean.state_len()];
+    mean.init_state(&mut region, &ParamTable::default());
+
+    assert_real_bits(&sample_tick(&mean, &mut region, 9.0, true), 9.0);
+    assert_real_bits(&sample_tick(&mean, &mut region, 3.0, true), 9.0);
+    assert_real_bits(&sample_tick(&mean, &mut region, 3.0, false), 9.0);
+    assert_real_bits(&sample_tick(&mean, &mut region, 6.0, true), 7.5);
+}
+
+#[test]
+fn triggered_moving_mean_window_one_and_zero_direct_window_degrade_to_current_sample() {
+    for mean in [TriggeredMovingMean { n: 1 }, TriggeredMovingMean { n: 0 }] {
+        let mut region = vec![0u64; mean.state_len()];
+        mean.init_state(&mut region, &ParamTable::default());
+
+        assert_real_bits(&sample_tick(&mean, &mut region, 4.0, false), 4.0);
+        assert_real_bits(&sample_tick(&mean, &mut region, 5.0, false), 4.0);
+        assert_real_bits(&sample_tick(&mean, &mut region, -2.0, true), -2.0);
+        assert_real_bits(&sample_tick(&mean, &mut region, 7.0, true), -2.0);
+        assert_real_bits(&sample_tick(&mean, &mut region, 8.0, false), -2.0);
+        assert_real_bits(&sample_tick(&mean, &mut region, 8.0, true), 8.0);
+    }
+}
+
+#[test]
+fn triggered_moving_mean_emit_pass_is_pure_for_initial_sample() {
+    let mean = TriggeredMovingMean { n: 3 };
+    let mut region = vec![0u64; mean.state_len()];
+    mean.init_state(&mut region, &ParamTable::default());
+    let inputs = [Value::Real(6.0), Value::Boolean(false)];
+
+    let a = emit_once(&mean, &inputs, &region);
+    let b = emit_once(&mean, &inputs, &region);
+    assert_real_bits(&a[0], 6.0);
+    assert!(a[0].bit_eq(&b[0]));
+    assert_eq!(
+        region,
+        vec![
+            0.0f64.to_bits(),
+            0,
+            0,
+            0,
+            0.0f64.to_bits(),
+            0.0f64.to_bits(),
+            0.0f64.to_bits()
+        ],
+        "emit_from_state must not mutate the sample ring or counters"
+    );
+}
+
+#[test]
+fn triggered_moving_mean_non_finite_samples_follow_ordered_sum_policy() {
+    let mean = TriggeredMovingMean { n: 2 };
+    let mut region = vec![0u64; mean.state_len()];
+    mean.init_state(&mut region, &ParamTable::default());
+    let noncanonical_nan = f64::from_bits(0xfff8_0000_0000_0001);
+    let canonical_nan = f64::from_bits(CANONICAL_NAN_BITS);
+
+    assert_real_bits(
+        &sample_tick(&mean, &mut region, noncanonical_nan, false),
+        canonical_nan,
+    );
+    assert_eq!(
+        region[4], CANONICAL_NAN_BITS,
+        "sample ring stores canonical NaN payloads"
+    );
+
+    assert_real_bits(&sample_tick(&mean, &mut region, 5.0, true), canonical_nan);
+
+    let mean = TriggeredMovingMean { n: 2 };
+    let mut region = vec![0u64; mean.state_len()];
+    mean.init_state(&mut region, &ParamTable::default());
+    assert_real_bits(
+        &sample_tick(&mean, &mut region, f64::INFINITY, false),
+        f64::INFINITY,
+    );
+    assert_real_bits(
+        &sample_tick(&mean, &mut region, f64::NEG_INFINITY, true),
+        canonical_nan,
+    );
 }

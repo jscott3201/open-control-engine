@@ -110,6 +110,50 @@ fn missing_required_stage_parameters_are_errors() {
 }
 
 #[test]
+fn triggered_moving_mean_n_parameter_is_required_and_positive() {
+    let missing = one_block_model(
+        "CDL.Discrete.TriggeredMovingMean",
+        &[ValueType::Real, ValueType::Boolean],
+        &[ValueType::Real],
+        vec![],
+    );
+    let err = validate(&missing).expect_err("TriggeredMovingMean n is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`n`"));
+
+    let invalid = one_block_model(
+        "CDL.Discrete.TriggeredMovingMean",
+        &[ValueType::Real, ValueType::Boolean],
+        &[ValueType::Real],
+        vec![(Arc::from("n"), Value::Integer(0))],
+    );
+    let err = validate(&invalid).expect_err("TriggeredMovingMean n=0 must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("`CDL.Discrete.TriggeredMovingMean`")
+    );
+    assert!(err.diagnostics[0].message.contains("`n`"));
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Discrete.TriggeredMovingMean",
+            &[ValueType::Real, ValueType::Boolean],
+            &[ValueType::Real],
+            vec![(Arc::from("n"), Value::Integer(1))],
+        ))
+        .expect("TriggeredMovingMean n=1 is valid")
+        .is_empty()
+    );
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",
