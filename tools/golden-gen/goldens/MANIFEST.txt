@@ -467,6 +467,9 @@ G36/multizone_vav_relief_fan reference -> goldens/G36/multizone_vav_relief_fan/r
 G36/multizone_vav_relief_fan relief_damper_status -> goldens/G36/multizone_vav_relief_fan/relief_damper_status.csv
 G36/multizone_vav_relief_fan relief_fan_speed -> goldens/G36/multizone_vav_relief_fan/relief_fan_speed.csv
 G36/multizone_vav_relief_fan relief_fan_status -> goldens/G36/multizone_vav_relief_fan/relief_fan_status.csv
+G36/multizone_vav_return_fan_airflow_tracking reference -> goldens/G36/multizone_vav_return_fan_airflow_tracking/reference.csv
+G36/multizone_vav_return_fan_airflow_tracking return_fan_speed -> goldens/G36/multizone_vav_return_fan_airflow_tracking/return_fan_speed.csv
+G36/multizone_vav_return_fan_airflow_tracking return_fan_status -> goldens/G36/multizone_vav_return_fan_airflow_tracking/return_fan_status.csv
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv

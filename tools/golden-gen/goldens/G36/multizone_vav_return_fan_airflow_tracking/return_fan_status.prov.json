@@ -1,0 +1,26 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_return_fan_airflow_tracking",
+  "signal": "return_fan_status",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0",
+  "n_samples": 8,
+  "n_reference_columns": 6,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "supply_airflow", "return_airflow", "supply_fan_status", "return_fan_speed", "return_fan_status"],
+  "inputs": [
+    { "name": "supply_airflow", "value_kind": "Real", "values": [5.0, 5.25, 5.0, 4.75, 5.5, 5.0, 4.5, 4.5] },
+    { "name": "return_airflow", "value_kind": "Real", "values": [4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0, 4.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0] }
+  ],
+  "input": "ReturnFanAirflowTracking: y1RetFan is the source boundary alias of u1SupFan",
+  "reference_rule": "Pinned ReturnFanAirflowTracking.mo connects u1SupFan directly to y1RetFan; the checked-in explicit-CXF fixture uses a pure Boolean identity bridge because OCE exposes boundary outputs through block output connectors",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
