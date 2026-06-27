@@ -77,6 +77,39 @@ fn missing_required_proof_parameters_are_errors() {
 }
 
 #[test]
+fn missing_required_stage_parameters_are_errors() {
+    let model = one_block_model(
+        "CDL.Integers.Stage",
+        &[ValueType::Real],
+        &[ValueType::Integer],
+        vec![],
+    );
+    let err = validate(&model).expect_err("Stage n and holdDuration are required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![
+            DiagCode::MissingRequiredParameter,
+            DiagCode::MissingRequiredParameter,
+        ]
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.severity == Severity::Error)
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .any(|diag| diag.message.contains("`n`"))
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .any(|diag| diag.message.contains("`holdDuration`"))
+    );
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",
@@ -106,6 +139,93 @@ fn sample_trigger_period_zero_rejection_is_pinned() {
                 .to_string()
         ]
     );
+}
+
+#[test]
+fn stage_dependent_parameter_bounds_are_pinned() {
+    let valid_base = || {
+        vec![
+            (Arc::from("n"), Value::Integer(4)),
+            (Arc::from("holdDuration"), Value::Real(0.0)),
+        ]
+    };
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Integers.Stage",
+            &[ValueType::Real],
+            &[ValueType::Integer],
+            valid_base(),
+        ))
+        .expect("Stage n=4, holdDuration=0, default h is valid")
+        .is_empty()
+    );
+
+    for h in [0.001 / 4.0, 0.5 / 4.0] {
+        let mut params = valid_base();
+        params.push(rp("h", h));
+        assert!(
+            validate(&one_block_model(
+                "CDL.Integers.Stage",
+                &[ValueType::Real],
+                &[ValueType::Integer],
+                params,
+            ))
+            .expect("Stage h boundary is inclusive")
+            .is_empty(),
+            "h={h}"
+        );
+    }
+
+    let cases = [
+        (
+            vec![
+                (Arc::from("n"), Value::Integer(0)),
+                (Arc::from("holdDuration"), Value::Real(0.0)),
+            ],
+            "`n`",
+        ),
+        (
+            vec![
+                (Arc::from("n"), Value::Integer(4)),
+                (Arc::from("holdDuration"), Value::Real(-1.0)),
+            ],
+            "`holdDuration`",
+        ),
+        (
+            vec![
+                (Arc::from("n"), Value::Integer(4)),
+                (Arc::from("holdDuration"), Value::Real(0.0)),
+                rp("h", 0.0002),
+            ],
+            "`h`",
+        ),
+        (
+            vec![
+                (Arc::from("n"), Value::Integer(4)),
+                (Arc::from("holdDuration"), Value::Real(0.0)),
+                rp("h", 0.126),
+            ],
+            "`h`",
+        ),
+    ];
+
+    for (params, expected_param) in cases {
+        let err = validate(&one_block_model(
+            "CDL.Integers.Stage",
+            &[ValueType::Real],
+            &[ValueType::Integer],
+            params,
+        ))
+        .expect_err("invalid Stage params must fail");
+        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(
+            err.diagnostics[0].message.contains(expected_param),
+            "unexpected diagnostic: {:?}",
+            err.diagnostics
+        );
+    }
 }
 
 #[test]

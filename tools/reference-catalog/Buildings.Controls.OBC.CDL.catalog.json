@@ -55,13 +55,13 @@
           "Min",
           "Multiply",
           "OnCounter",
+          "Stage",
           "Subtract",
           "Switch"
         ]
       },
       "missing": [
-        "MultiSum",
-        "Stage"
+        "MultiSum"
       ]
     },
     {

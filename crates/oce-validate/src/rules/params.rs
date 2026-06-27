@@ -25,20 +25,19 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
 
 fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>) {
     match rule {
-        ParamRule::Required { name } => {
-            if find_param(&blk.params, name).is_none() {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::MissingRequiredParameter,
-                        format!(
-                            "block `{}` is missing required parameter `{name}`",
-                            blk.class_iri
-                        ),
-                    )
-                    .with_subject(block_subject_of(blk)),
-                );
-            }
+        ParamRule::Required { name } if find_param(&blk.params, name).is_none() => {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MissingRequiredParameter,
+                    format!(
+                        "block `{}` is missing required parameter `{name}`",
+                        blk.class_iri
+                    ),
+                )
+                .with_subject(block_subject_of(blk)),
+            );
         }
+        ParamRule::Required { .. } => {}
         ParamRule::RealGreaterThan { name, min } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
@@ -60,6 +59,97 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                     diags,
                     format!(
                         "parameter `{name}` on block `{}` must be > {min}; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
+        ParamRule::IntegerGreaterOrEqual { name, min } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            let Some(v) = integer_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be an integer and >= {min}",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if v < min {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be >= {min}; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
+        ParamRule::RealGreaterOrEqual { name, min } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            let Some(v) = real_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be numeric and >= {min}",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if !real_greater_or_equal(v, min) {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be >= {min}; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
+        ParamRule::RealTimesIntegerInclusiveRange {
+            real,
+            integer,
+            min,
+            max,
+        } => {
+            let (Some(real_raw), Some(integer_raw)) = (
+                find_param(&blk.params, real),
+                find_param(&blk.params, integer),
+            ) else {
+                return;
+            };
+            let (Some(real_param), Some(integer_param)) =
+                (real_value(real_raw), integer_value(integer_raw))
+            else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameters `{real}` and `{integer}` on block `{}` must be numeric \
+                         and integer, respectively",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            let scaled = real_param * integer_param as f64;
+            if !real_greater_or_equal(scaled, min) || !real_less_or_equal(scaled, max) {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{real}` on block `{}` must satisfy {min} <= \
+                         {real}*{integer} <= {max}; got {scaled}",
                         blk.class_iri
                     ),
                 );
@@ -144,6 +234,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 );
             }
         }
+        _ => {}
     }
 }
 
@@ -163,8 +254,22 @@ fn real_value(value: &Value) -> Option<f64> {
     }
 }
 
+fn integer_value(value: &Value) -> Option<i64> {
+    match value {
+        Value::Integer(v) => Some(*v),
+        _ => None,
+    }
+}
+
 fn real_greater_than(value: f64, min: f64) -> bool {
     matches!(value.partial_cmp(&min), Some(Ordering::Greater))
+}
+
+fn real_greater_or_equal(value: f64, min: f64) -> bool {
+    matches!(
+        value.partial_cmp(&min),
+        Some(Ordering::Greater | Ordering::Equal)
+    )
 }
 
 fn real_less_or_equal(lower: f64, upper: f64) -> bool {

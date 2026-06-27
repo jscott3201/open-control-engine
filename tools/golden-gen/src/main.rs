@@ -12,6 +12,7 @@
 mod csv;
 mod discrete_sources;
 mod integers_conversions;
+mod integers_stage;
 mod logical;
 mod logical_proof;
 mod oracle;
@@ -49,6 +50,7 @@ fn main() {
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());
     goldens.extend(integers_conversions::goldens());
+    goldens.extend(integers_stage::goldens());
     goldens.extend(discrete_sources::goldens());
     goldens.extend(sequences::goldens());
 

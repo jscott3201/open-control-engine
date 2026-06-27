@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Integers.Stage",
+  "scenario": "threshold_boundaries",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, 0.24999999999999997, 0.0, 0.25] }
+  ],
+  "input": "scenario=threshold_boundaries; n=4, holdDuration=0, h=0.001; u=[0,next_down(0.25),0,0.25]",
+  "reference_rule": "the full when condition must re-arm; first event below staThr[2] selects y=1, while exact staThr[2] later remains inside the upper hysteresis deadband",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
