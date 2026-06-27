@@ -144,6 +144,77 @@ fn psychrometric_specific_enthalpy_atmospheric_pressure_must_be_finite_positive_
 }
 
 #[test]
+fn sun_rise_set_parameters_are_required_bounded_and_finite() {
+    let missing = one_block_model(
+        "CDL.Utilities.SunRiseSet",
+        &[],
+        &[ValueType::Real, ValueType::Real, ValueType::Boolean],
+        vec![],
+    );
+    let err = validate(&missing).expect_err("SunRiseSet coordinates and timezone are required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![
+            DiagCode::MissingRequiredParameter,
+            DiagCode::MissingRequiredParameter,
+            DiagCode::MissingRequiredParameter,
+        ]
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.severity == Severity::Error)
+    );
+    assert!(err.diagnostics[0].message.contains("`lat`"));
+    assert!(err.diagnostics[1].message.contains("`lon`"));
+    assert!(err.diagnostics[2].message.contains("`timZon`"));
+
+    for (name, value) in [
+        ("lat", std::f64::consts::FRAC_PI_2 + 0.001),
+        ("lat", -std::f64::consts::FRAC_PI_2 - 0.001),
+        ("lon", std::f64::consts::PI + 0.001),
+        ("lon", -std::f64::consts::PI - 0.001),
+        ("timZon", f64::NAN),
+        ("timZon", f64::INFINITY),
+        ("timZon", f64::NEG_INFINITY),
+    ] {
+        let params = match name {
+            "lat" => vec![rp("lat", value), rp("lon", 0.0), rp("timZon", 0.0)],
+            "lon" => vec![rp("lat", 0.0), rp("lon", value), rp("timZon", 0.0)],
+            "timZon" => vec![rp("lat", 0.0), rp("lon", 0.0), rp("timZon", value)],
+            _ => unreachable!("test table only uses known SunRiseSet params"),
+        };
+        let invalid = one_block_model(
+            "CDL.Utilities.SunRiseSet",
+            &[],
+            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
+            params,
+        );
+        let err = validate(&invalid).expect_err(&format!(
+            "SunRiseSet parameter {name}={value} must be rejected"
+        ));
+        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains(&format!("`{name}`")));
+    }
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Utilities.SunRiseSet",
+            &[],
+            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
+            vec![
+                rp("lat", std::f64::consts::FRAC_PI_2),
+                rp("lon", -std::f64::consts::PI),
+                rp("timZon", -18_000.0),
+            ],
+        ))
+        .expect("source physical coordinate bounds are inclusive")
+        .is_empty()
+    );
+}
+
+#[test]
 fn typed_source_pulse_period_and_width_rules_match_cdl_bounds() {
     for (class, output) in [
         ("CDL.Logical.Sources.Pulse", ValueType::Boolean),

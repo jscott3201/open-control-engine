@@ -237,13 +237,14 @@
       "package": "CDL.Utilities",
       "package_order": "Buildings/Controls/OBC/CDL/Utilities/package.order",
       "implemented": {
+        "golden_manifest": [
+          "SunRiseSet"
+        ],
         "legacy_evidence_exemption": [
           "Assert"
         ]
       },
-      "missing": [
-        "SunRiseSet"
-      ]
+      "missing": []
     }
   ],
   "validation_packages": [

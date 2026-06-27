@@ -1,0 +1,6 @@
+#1
+# columns: time nextSunRise
+double CDL_Utilities_SunRiseSet_san_francisco_validation_nextSunRise(3,2)
+15552000.0 15569746.371060496
+15569806.371060496 15656176.032699034
+15622073.75653061 15656176.032699034

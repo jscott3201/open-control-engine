@@ -292,6 +292,15 @@ impl<S: Store> Engine<S> {
                     return true;
                 }
                 ParamRule::Real { .. } => {}
+                ParamRule::RealFinite { name } if edited.name.as_ref() == name => {
+                    let Some(v) = real_param_value(value) else {
+                        return true;
+                    };
+                    if !v.is_finite() {
+                        return true;
+                    }
+                }
+                ParamRule::RealFinite { .. } => {}
                 ParamRule::RealGreaterThan { name, min } if edited.name.as_ref() == name => {
                     let Some(v) = real_param_value(value) else {
                         return true;

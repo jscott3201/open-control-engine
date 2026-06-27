@@ -1,0 +1,6 @@
+#1
+# columns: time sunUp
+double CDL_Utilities_SunRiseSet_san_francisco_validation_sunUp(3,2)
+15552000.0 0.0
+15569806.371060496 1.0
+15622073.75653061 0.0

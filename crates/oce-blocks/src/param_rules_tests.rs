@@ -139,6 +139,31 @@ fn registry_exposes_block_param_rules() {
         }]
     );
     assert_eq!(
+        lookup("CDL.Utilities.SunRiseSet").unwrap().param_rules(),
+        &[
+            ParamRule::Required { name: "lat" },
+            ParamRule::Required { name: "lon" },
+            ParamRule::Required { name: "timZon" },
+            ParamRule::RealGreaterOrEqual {
+                name: "lat",
+                min: -std::f64::consts::FRAC_PI_2,
+            },
+            ParamRule::RealLessOrEqualConstant {
+                name: "lat",
+                max: std::f64::consts::FRAC_PI_2,
+            },
+            ParamRule::RealGreaterOrEqual {
+                name: "lon",
+                min: -std::f64::consts::PI,
+            },
+            ParamRule::RealLessOrEqualConstant {
+                name: "lon",
+                max: std::f64::consts::PI,
+            },
+            ParamRule::RealFinite { name: "timZon" },
+        ]
+    );
+    assert_eq!(
         lookup("CDL.Discrete.TriggeredMovingMean")
             .unwrap()
             .param_rules(),

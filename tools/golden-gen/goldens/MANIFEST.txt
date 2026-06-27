@@ -286,6 +286,18 @@ CDL.Reals.Switch y -> goldens/CDL/Reals/Switch/y.csv
 CDL.Reals.Tan reference -> goldens/CDL/Reals/Tan/reference.csv
 CDL.Reals.Tan y -> goldens/CDL/Reals/Tan/y.csv
 CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json
+CDL.Utilities.SunRiseSet nextSunRise -> goldens/CDL/Utilities/SunRiseSet/nextSunRise.csv
+CDL.Utilities.SunRiseSet nextSunSet -> goldens/CDL/Utilities/SunRiseSet/nextSunSet.csv
+CDL.Utilities.SunRiseSet reference -> goldens/CDL/Utilities/SunRiseSet/reference.csv
+CDL.Utilities.SunRiseSet sunUp -> goldens/CDL/Utilities/SunRiseSet/sunUp.csv
+CDL.Utilities.SunRiseSet/arctic_polar_day nextSunRise -> goldens/CDL/Utilities/SunRiseSet/arctic_polar_day/nextSunRise.csv
+CDL.Utilities.SunRiseSet/arctic_polar_day nextSunSet -> goldens/CDL/Utilities/SunRiseSet/arctic_polar_day/nextSunSet.csv
+CDL.Utilities.SunRiseSet/arctic_polar_day reference -> goldens/CDL/Utilities/SunRiseSet/arctic_polar_day/reference.csv
+CDL.Utilities.SunRiseSet/arctic_polar_day sunUp -> goldens/CDL/Utilities/SunRiseSet/arctic_polar_day/sunUp.csv
+CDL.Utilities.SunRiseSet/san_francisco_validation nextSunRise -> goldens/CDL/Utilities/SunRiseSet/san_francisco_validation/nextSunRise.csv
+CDL.Utilities.SunRiseSet/san_francisco_validation nextSunSet -> goldens/CDL/Utilities/SunRiseSet/san_francisco_validation/nextSunSet.csv
+CDL.Utilities.SunRiseSet/san_francisco_validation reference -> goldens/CDL/Utilities/SunRiseSet/san_francisco_validation/reference.csv
+CDL.Utilities.SunRiseSet/san_francisco_validation sunUp -> goldens/CDL/Utilities/SunRiseSet/san_francisco_validation/sunUp.csv
 G36/ahu_economizer damper_command -> goldens/G36/ahu_economizer/damper_command.csv
 G36/ahu_economizer economizer_enabled -> goldens/G36/ahu_economizer/economizer_enabled.csv
 G36/ahu_economizer oa_temperature_delta -> goldens/G36/ahu_economizer/oa_temperature_delta.csv

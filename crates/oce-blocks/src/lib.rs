@@ -77,7 +77,7 @@ pub use reals_sources::{CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
 pub use registry::lookup;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
-pub use utilities::Assert;
+pub use utilities::{Assert, SunRiseSet};
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
 pub type Time = f64;
@@ -237,6 +237,11 @@ pub enum ParamRule {
     },
     /// The named parameter, when present, must be numeric and usable as a `Real`.
     Real {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+    },
+    /// The named parameter, when present, must be numeric and finite as a `Real`.
+    RealFinite {
         /// Parameter name as it appears in CDL / the resolved model.
         name: &'static str,
     },

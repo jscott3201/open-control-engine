@@ -10,8 +10,6 @@
 
 use super::common::*;
 
-// ============================ frozen-surface fill ============================
-
 /// Load the canonical accumulator model into a fresh in-memory engine. Connector paths are
 /// `conn#<id>` (hand-built, no `iri`); param paths are `b<id>.<name>` (no `instance_iri`).
 fn loaded_accumulator() -> Engine<MemStore> {
@@ -109,11 +107,7 @@ fn stage_model_default_h(n: i64, hold_duration: f64) -> ModelGraph {
     model
 }
 
-// ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,
-// Clone family, owned-snapshot enumeration, and the Engine<MemStore>: Send + Sync assertion) live in
-// the NON-test module `crate::guards` so a drift fails the normal `cargo build`, not only this
-// release-gate test target. This smoke test documents that intent; the real enforcement is that
-// `guards.rs` compiles.
+// Frozen API shape guards live in `crate::guards`, where drift fails normal `cargo build`.
 #[test]
 fn frozen_surface_guards_compile() {
     // Intentionally empty — the assertions are compile-time in `crate::guards`.

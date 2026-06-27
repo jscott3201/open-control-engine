@@ -58,6 +58,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
             psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
         }
+        "CDL.Utilities.SunRiseSet" => utilities::SUN_RISE_SET_RULES,
         "CDL.Discrete.FirstOrderHold" | "CDL.Discrete.Sampler" | "CDL.Discrete.ZeroOrderHold" => {
             discrete::SAMPLED_PARAM_RULES
         }

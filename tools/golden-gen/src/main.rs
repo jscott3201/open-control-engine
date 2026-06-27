@@ -26,6 +26,7 @@ mod reals_sources;
 mod reals_transcendental;
 mod sequences;
 mod source_pulse;
+mod utilities;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -58,6 +59,7 @@ fn main() {
     goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(psychrometrics::goldens());
+    goldens.extend(utilities::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());
     goldens.extend(logical_variable_pulse::goldens());
