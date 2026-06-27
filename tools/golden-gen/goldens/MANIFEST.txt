@@ -460,6 +460,8 @@ G36/multizone_vav_plant_requests chiller_plant_request -> goldens/G36/multizone_
 G36/multizone_vav_plant_requests hot_water_plant_request -> goldens/G36/multizone_vav_plant_requests/hot_water_plant_request.csv
 G36/multizone_vav_plant_requests hot_water_reset_request -> goldens/G36/multizone_vav_plant_requests/hot_water_reset_request.csv
 G36/multizone_vav_plant_requests reference -> goldens/G36/multizone_vav_plant_requests/reference.csv
+G36/multizone_vav_relief_damper reference -> goldens/G36/multizone_vav_relief_damper/reference.csv
+G36/multizone_vav_relief_damper relief_damper_command -> goldens/G36/multizone_vav_relief_damper/relief_damper_command.csv
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv

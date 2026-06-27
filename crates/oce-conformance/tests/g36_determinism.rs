@@ -29,6 +29,8 @@ const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 const OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
+const RELIEF_DAMPER: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 
 // The facade exposes flattened runtime connector IDs, while the goldens and provenance preserve
 // the fixture-declared output names.
@@ -141,6 +143,13 @@ const OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME: &str = "conn#6";
 const OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME: &str = "conn#24";
 const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME: &str = "conn#29";
 const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME: &str = "conn#32";
+const RELIEF_DAMPER_BUILDING_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_damper.dpBui";
+const RELIEF_DAMPER_SUPPLY_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan";
+const RELIEF_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam";
+const RELIEF_DAMPER_COMMAND_RUNTIME: &str = "conn#3";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -240,6 +249,14 @@ const OUTDOOR_AIRFLOW_OUTPUTS: &[PointSpec] = &[
         OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME,
     ),
 ];
+const RELIEF_DAMPER_INPUTS: &[PointSpec] = &[
+    PointSpec::real(RELIEF_DAMPER_BUILDING_PRESSURE),
+    PointSpec::boolean(RELIEF_DAMPER_SUPPLY_FAN_STATUS),
+];
+const RELIEF_DAMPER_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
+    RELIEF_DAMPER_COMMAND,
+    RELIEF_DAMPER_COMMAND_RUNTIME,
+)];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -313,6 +330,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: OUTDOOR_AIRFLOW_INPUTS,
         outputs: OUTDOOR_AIRFLOW_OUTPUTS,
         input_fn: outdoor_airflow_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_relief_damper",
+        cxf: RELIEF_DAMPER,
+        t_stop: 5,
+        sample_step: 1.0,
+        inputs: RELIEF_DAMPER_INPUTS,
+        outputs: RELIEF_DAMPER_OUTPUTS,
+        input_fn: relief_damper_inputs,
     },
 ];
 
@@ -494,5 +520,21 @@ fn outdoor_airflow_inputs(t: f64) -> Vec<(String, Value)> {
         pair(OUTDOOR_AIRFLOW_PRIMARY_FLOW, Value::Real(primary)),
         pair(OUTDOOR_AIRFLOW_MAX_FRACTION, Value::Real(fraction)),
         pair(OUTDOOR_AIRFLOW_MEASURED_FLOW, Value::Real(measured)),
+    ]
+}
+
+fn relief_damper_inputs(t: f64) -> Vec<(String, Value)> {
+    let (pressure, fan_status) = match t as u32 {
+        0 => (10.0, false),
+        1 => (12.0, true),
+        2 => (13.0, true),
+        3 => (14.0, true),
+        4 => (15.0, true),
+        _ => (20.0, false),
+    };
+
+    vec![
+        pair(RELIEF_DAMPER_BUILDING_PRESSURE, Value::Real(pressure)),
+        pair(RELIEF_DAMPER_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
     ]
 }

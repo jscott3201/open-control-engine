@@ -7,6 +7,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod plant_requests;
 mod outdoor_airflow_ahu;
+mod relief_damper;
 mod supply_fan;
 mod supply_signals;
 mod vav_single_zone;
@@ -19,6 +20,7 @@ const SUPPLY_FAN: &str = "multizone_vav_supply_fan";
 const SUPPLY_SIGNALS: &str = "multizone_vav_supply_signals";
 const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const OUTDOOR_AIRFLOW_AHU: &str = "multizone_vav_outdoor_airflow_ahu";
+const RELIEF_DAMPER: &str = "multizone_vav_relief_damper";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -42,6 +44,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(supply_signals::goldens());
     out.extend(plant_requests::goldens());
     out.extend(outdoor_airflow_ahu::goldens());
+    out.extend(relief_damper::goldens());
     out
 }
 
@@ -235,13 +238,19 @@ fn source_files(sequence: &str) -> &'static str {
         SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
         PLANT_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
         OUTDOOR_AIRFLOW_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+        RELIEF_DAMPER => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
 
 fn fixture_status(sequence: &str) -> &'static str {
     match sequence {
-        SUPPLY_TEMP | SUPPLY_FAN | SUPPLY_SIGNALS | PLANT_REQUESTS | OUTDOOR_AIRFLOW_AHU => {
+        SUPPLY_TEMP
+        | SUPPLY_FAN
+        | SUPPLY_SIGNALS
+        | PLANT_REQUESTS
+        | OUTDOOR_AIRFLOW_AHU
+        | RELIEF_DAMPER => {
             "supported-runtime-sequence source-verified composite"
         }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",

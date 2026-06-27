@@ -1,0 +1,241 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
+      "S231:label": "multizone_vav_relief_damper",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.k" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBui" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:max": { "@value": "30", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "12", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBui",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "conErr",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_m" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "conP",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.controllerType" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.reverseActing" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_s" },
+        { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_m" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.P"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "k"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zerDam",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zerDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.swi.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "dpBuiSetPoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "dpBuiSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conErr.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_relief_damper.zer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_relief_damper.conP.u_s" }
+    }
+  ]
+}

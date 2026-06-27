@@ -266,9 +266,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar no-fan relief damper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switch; relief fan/group and return-fan variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
@@ -399,6 +400,24 @@
       ]
     },
     {
+      "name": "multizone_vav_relief_damper",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_relief_damper",
+      "supported_variant": "source-verified explicit CXF for scalar ReliefDamper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and u1SupFan switching the damper command to zero when disabled",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_relief_damper.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_relief_damper.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_relief_damper/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_relief_damper_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar ReliefDamper composite, not arbitrary Modelica parsing.",
+        "The supported variant covers the P-only pressure-controller cone and supply-fan Boolean switch from the pinned source defaults.",
+        "The oracle covers disabled low/high rows, setpoint equality, proportional response, and upper clamp behavior."
+      ]
+    },
+    {
       "name": "multizone_vav_plant_requests",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
@@ -491,6 +510,28 @@
       "notes": [
         "Evidence proves restricted explicit-CXF scalar composite import, conditional measured-outdoor-air branch retention, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "Evidence does not claim package-level OutdoorAirFlow support, ASHRAE62_1.SumZone zone/group aggregation, Title24 variants, or arbitrary .mo parsing."
+      ]
+    },
+    {
+      "name": "multizone_vav_relief_damper",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_relief_damper",
+      "source_child_count": 6,
+      "active_block_count": 6,
+      "input_count": 2,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for scalar ReliefDamper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switching",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_relief_damper.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_relief_damper.rs",
+      "api_test": "crates/oce-api/tests/g36_relief_damper.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim arbitrary .mo parsing, relief fan/group logic, return-fan variants, alternate PID controller types, or non-default ReliefDamper parameterizations."
       ]
     },
     {
