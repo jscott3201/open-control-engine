@@ -68,11 +68,11 @@
       "package_order": "Buildings/Controls/OBC/CDL/Integers/Sources/package.order",
       "implemented": {
         "golden_manifest": [
-          "Constant"
+          "Constant",
+          "Pulse"
         ]
       },
       "missing": [
-        "Pulse",
         "TimeTable"
       ]
     },
@@ -114,6 +114,7 @@
       "package_order": "Buildings/Controls/OBC/CDL/Logical/Sources/package.order",
       "implemented": {
         "golden_manifest": [
+          "Pulse",
           "SampleTrigger"
         ],
         "legacy_evidence_exemption": [
@@ -121,7 +122,6 @@
         ]
       },
       "missing": [
-        "Pulse",
         "TimeTable"
       ]
     },
@@ -199,12 +199,12 @@
         "golden_manifest": [
           "CivilTime",
           "Constant",
+          "Pulse",
           "Ramp"
         ]
       },
       "missing": [
         "CalendarTime",
-        "Pulse",
         "Sin",
         "TimeTable"
       ]

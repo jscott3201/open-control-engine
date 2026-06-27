@@ -1,0 +1,7 @@
+#1
+# columns: time y
+double CDL_Integers_Sources_Pulse_reference(4,2)
+0.0 1.0
+0.25 -2.0
+0.75 1.0
+1.25 -2.0

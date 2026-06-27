@@ -22,6 +22,7 @@ mod reals_ramp;
 mod reals_scalar_arithmetic;
 mod reals_sources;
 mod sequences;
+mod source_pulse;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -50,6 +51,7 @@ fn main() {
     goldens.extend(reals_scalar_arithmetic::goldens());
     goldens.extend(reals_sources::goldens());
     goldens.extend(reals_ramp::goldens());
+    goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());

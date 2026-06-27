@@ -152,6 +152,7 @@ fn registry_resolves_canonical_paths() {
     const PATHS: &[&str] = &[
         "CDL.Reals.Sources.Constant",
         "CDL.Reals.Sources.CivilTime",
+        "CDL.Reals.Sources.Pulse",
         "CDL.Reals.Sources.Ramp",
         "CDL.Reals.Add",
         "CDL.Reals.Subtract",
@@ -182,6 +183,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
         "CDL.Logical.Sources.Constant",
+        "CDL.Logical.Sources.Pulse",
         "CDL.Logical.And",
         "CDL.Logical.Or",
         "CDL.Logical.Not",
@@ -207,6 +209,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Conversions.IntegerToReal",
         "CDL.Conversions.RealToInteger",
         "CDL.Integers.Sources.Constant",
+        "CDL.Integers.Sources.Pulse",
         "CDL.Integers.Abs",
         "CDL.Integers.Add",
         "CDL.Integers.Subtract",
@@ -236,7 +239,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.ZeroOrderHold",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 85, "registry count");
+    assert_eq!(PATHS.len(), 88, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

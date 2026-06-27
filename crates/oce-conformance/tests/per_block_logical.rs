@@ -155,6 +155,48 @@ const SAMPLE_TRIGGER_NEGATIVE_SHIFT_PARAMS: &[Param] = &[
         value: ParamValue::Real("-0.5"),
     },
 ];
+const SOURCE_PULSE_PARAMS: &[Param] = &[
+    Param {
+        name: "width",
+        value: ParamValue::Real("0.2"),
+    },
+    Param {
+        name: "period",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("0.6"),
+    },
+];
+const SOURCE_PULSE_NEGATIVE_SHIFT_PARAMS: &[Param] = &[
+    Param {
+        name: "width",
+        value: ParamValue::Real("0.2"),
+    },
+    Param {
+        name: "period",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("-1.9"),
+    },
+];
+const SOURCE_PULSE_WIDTH_ONE_PARAMS: &[Param] = &[
+    Param {
+        name: "width",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "period",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("0.6"),
+    },
+];
 
 const CASES: &[BlockCase] = &[
     case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
@@ -320,6 +362,30 @@ const CASES: &[BlockCase] = &[
         "Sources/SampleTrigger/negative_shift",
         &[],
         SAMPLE_TRIGGER_NEGATIVE_SHIFT_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_source_pulse",
+        "CDL.Logical.Sources.Pulse",
+        "Sources/Pulse",
+        &[],
+        SOURCE_PULSE_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_source_pulse_negative_shift_folded",
+        "CDL.Logical.Sources.Pulse",
+        "Sources/Pulse/negative_shift_folded",
+        &[],
+        SOURCE_PULSE_NEGATIVE_SHIFT_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_source_pulse_width_one",
+        "CDL.Logical.Sources.Pulse",
+        "Sources/Pulse/width_one",
+        &[],
+        SOURCE_PULSE_WIDTH_ONE_PARAMS,
         BOOL_Y,
     ),
 ];

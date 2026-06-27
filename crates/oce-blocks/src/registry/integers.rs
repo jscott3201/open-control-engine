@@ -6,8 +6,8 @@ use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
-    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerStage, IntegerSubtract,
-    IntegerSwitch, OnCounter, ParamRule, RegistryEntry,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerPulse, IntegerStage,
+    IntegerSubtract, IntegerSwitch, OnCounter, ParamRule, RegistryEntry,
 };
 
 pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
@@ -32,6 +32,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Sources.Constant",
         make: make_integer_constant,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Sources.Pulse",
+        make: make_integer_pulse,
     },
     RegistryEntry {
         class_path: "CDL.Integers.Abs",
@@ -118,6 +122,16 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 fn make_integer_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerConstant {
         k: int_param(p, "k", 0),
+    })
+}
+
+fn make_integer_pulse(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerPulse {
+        amplitude: int_param(p, "amplitude", 1),
+        width: real_param(p, "width", 0.5),
+        period: real_param(p, "period", 1.0),
+        shift: real_param(p, "shift", 0.0),
+        offset: int_param(p, "offset", 0),
     })
 }
 

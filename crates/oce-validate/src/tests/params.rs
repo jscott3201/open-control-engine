@@ -229,6 +229,70 @@ fn real_source_ramp_duration_is_required_and_at_least_small() {
 }
 
 #[test]
+fn typed_source_pulse_period_and_width_rules_match_cdl_bounds() {
+    for (class, output) in [
+        ("CDL.Logical.Sources.Pulse", ValueType::Boolean),
+        ("CDL.Reals.Sources.Pulse", ValueType::Real),
+        ("CDL.Integers.Sources.Pulse", ValueType::Integer),
+    ] {
+        let missing = one_block_model(class, &[], &[output], vec![]);
+        let err = validate(&missing).expect_err("Sources.Pulse period is required");
+        assert_eq!(
+            codes(&err.diagnostics),
+            vec![DiagCode::MissingRequiredParameter],
+            "{class}"
+        );
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains("`period`"));
+
+        for params in [
+            vec![rp("period", 0.0)],
+            vec![rp("period", 1e-38)],
+            vec![rp("period", 1.0), rp("width", 0.0)],
+            vec![rp("period", 1.0), rp("width", 1.1)],
+        ] {
+            let invalid = one_block_model(class, &[], &[output], params);
+            let err = validate(&invalid).expect_err("invalid pulse timing parameter must fail");
+            assert_eq!(
+                codes(&err.diagnostics),
+                vec![DiagCode::ParameterOutOfRange],
+                "{class}"
+            );
+            assert_eq!(err.diagnostics[0].severity, Severity::Error);
+            assert!(
+                err.diagnostics[0].message.contains("`period`")
+                    || err.diagnostics[0].message.contains("`width`"),
+                "{class}: {}",
+                err.diagnostics[0].message
+            );
+        }
+
+        assert!(
+            validate(&one_block_model(
+                class,
+                &[],
+                &[output],
+                vec![rp("period", 1e-37), rp("width", 1e-37)],
+            ))
+            .expect("lower bounds are inclusive")
+            .is_empty(),
+            "{class}"
+        );
+        assert!(
+            validate(&one_block_model(
+                class,
+                &[],
+                &[output],
+                vec![rp("period", 1.0), rp("width", 1.0)],
+            ))
+            .expect("width upper bound is inclusive")
+            .is_empty(),
+            "{class}"
+        );
+    }
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",

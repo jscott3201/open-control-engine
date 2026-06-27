@@ -78,6 +78,8 @@ CDL.Integers.OnCounter/trigger_initially_true reference -> goldens/CDL/Integers/
 CDL.Integers.OnCounter/trigger_initially_true y -> goldens/CDL/Integers/OnCounter/trigger_initially_true/y.csv
 CDL.Integers.Sources.Constant reference -> goldens/CDL/Integers/Sources/Constant/reference.csv
 CDL.Integers.Sources.Constant y -> goldens/CDL/Integers/Sources/Constant/y.csv
+CDL.Integers.Sources.Pulse reference -> goldens/CDL/Integers/Sources/Pulse/reference.csv
+CDL.Integers.Sources.Pulse y -> goldens/CDL/Integers/Sources/Pulse/y.csv
 CDL.Integers.Stage/hold_duration reference -> goldens/CDL/Integers/Stage/hold_duration/reference.csv
 CDL.Integers.Stage/hold_duration y -> goldens/CDL/Integers/Stage/hold_duration/y.csv
 CDL.Integers.Stage/hysteresis_hold reference -> goldens/CDL/Integers/Stage/hysteresis_hold/reference.csv
@@ -121,6 +123,12 @@ CDL.Logical.Proof/mismatch_latches_clear_on_equal yLocTru -> goldens/CDL/Logical
 CDL.Logical.Proof/stable_equal_no_alarm reference -> goldens/CDL/Logical/Proof/stable_equal_no_alarm/reference.csv
 CDL.Logical.Proof/stable_equal_no_alarm yLocFal -> goldens/CDL/Logical/Proof/stable_equal_no_alarm/yLocFal.csv
 CDL.Logical.Proof/stable_equal_no_alarm yLocTru -> goldens/CDL/Logical/Proof/stable_equal_no_alarm/yLocTru.csv
+CDL.Logical.Sources.Pulse reference -> goldens/CDL/Logical/Sources/Pulse/reference.csv
+CDL.Logical.Sources.Pulse y -> goldens/CDL/Logical/Sources/Pulse/y.csv
+CDL.Logical.Sources.Pulse/negative_shift_folded reference -> goldens/CDL/Logical/Sources/Pulse/negative_shift_folded/reference.csv
+CDL.Logical.Sources.Pulse/negative_shift_folded y -> goldens/CDL/Logical/Sources/Pulse/negative_shift_folded/y.csv
+CDL.Logical.Sources.Pulse/width_one reference -> goldens/CDL/Logical/Sources/Pulse/width_one/reference.csv
+CDL.Logical.Sources.Pulse/width_one y -> goldens/CDL/Logical/Sources/Pulse/width_one/y.csv
 CDL.Logical.Sources.SampleTrigger reference -> goldens/CDL/Logical/Sources/SampleTrigger/reference.csv
 CDL.Logical.Sources.SampleTrigger y -> goldens/CDL/Logical/Sources/SampleTrigger/y.csv
 CDL.Logical.Sources.SampleTrigger/negative_shift reference -> goldens/CDL/Logical/Sources/SampleTrigger/negative_shift/reference.csv
@@ -225,6 +233,8 @@ CDL.Reals.Sources.CivilTime reference -> goldens/CDL/Reals/Sources/CivilTime/ref
 CDL.Reals.Sources.CivilTime y -> goldens/CDL/Reals/Sources/CivilTime/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv
 CDL.Reals.Sources.Constant y -> goldens/CDL/Reals/Sources/Constant/y.csv
+CDL.Reals.Sources.Pulse reference -> goldens/CDL/Reals/Sources/Pulse/reference.csv
+CDL.Reals.Sources.Pulse y -> goldens/CDL/Reals/Sources/Pulse/y.csv
 CDL.Reals.Sources.Ramp reference -> goldens/CDL/Reals/Sources/Ramp/reference.csv
 CDL.Reals.Sources.Ramp y -> goldens/CDL/Reals/Sources/Ramp/y.csv
 CDL.Reals.Sources.Ramp/negative_height_start reference -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/reference.csv
