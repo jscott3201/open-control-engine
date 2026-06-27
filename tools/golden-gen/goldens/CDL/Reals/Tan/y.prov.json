@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Reals.Tan",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
+  "n_samples": 7,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": ["-inf", -0.0, 0.0, 0.5, 1.25, "inf", "NaN"] }
+  ],
+  "input": "u=[-Inf,-0.0,0.0,0.5,1.25,+Inf,NaN]; signed zero, finite angles, non-finite edges",
+  "reference_rule": "y = Modelica.Math.tan(u), evaluated with deterministic libm 0.2.16",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic math",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

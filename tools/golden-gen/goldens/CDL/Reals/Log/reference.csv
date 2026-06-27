@@ -1,0 +1,11 @@
+#1
+# columns: time u y
+double CDL_Reals_Log_reference(8,3)
+0.0 -inf NaN
+60.0 0.0 -inf
+120.0 -0.0 -inf
+180.0 -1.0 NaN
+240.0 1.0 0.0
+300.0 2.718281828459045 1.0
+360.0 inf inf
+420.0 NaN NaN

@@ -141,10 +141,16 @@
       "implemented": {
         "golden_manifest": [
           "Abs",
+          "Acos",
           "Add",
           "AddParameter",
+          "Asin",
+          "Atan",
+          "Atan2",
           "Average",
+          "Cos",
           "Divide",
+          "Exp",
           "Greater",
           "GreaterThreshold",
           "Hysteresis",
@@ -152,6 +158,8 @@
           "LessThreshold",
           "Limiter",
           "Line",
+          "Log",
+          "Log10",
           "Max",
           "Min",
           "Modulo",
@@ -161,9 +169,11 @@
           "PIDWithReset",
           "Ramp",
           "Round",
+          "Sin",
           "Sqrt",
           "Subtract",
-          "Switch"
+          "Switch",
+          "Tan"
         ],
         "legacy_evidence_exemption": [
           "Derivative",
@@ -173,23 +183,13 @@
         ]
       },
       "missing": [
-        "Acos",
-        "Asin",
-        "Atan",
-        "Atan2",
-        "Cos",
-        "Exp",
-        "Log",
-        "Log10",
         "MatrixGain",
         "MatrixMax",
         "MatrixMin",
         "MultiMax",
         "MultiMin",
         "MultiSum",
-        "Sin",
-        "Sort",
-        "Tan"
+        "Sort"
       ]
     },
     {

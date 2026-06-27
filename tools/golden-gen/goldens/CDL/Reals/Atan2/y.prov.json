@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Reals.Atan2",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
+  "n_samples": 22,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u1", "u2", "y"],
+  "inputs": [
+    { "name": "u1", "value_kind": "Real", "values": [1.0, 1.0, -1.0, -1.0, 0.0, -0.0, 1.0, -1.0, 0.0, -0.0, 0.0, -0.0, 0.0, -0.0, "NaN", 1.0, "inf", "-inf", 1.0, 1.0, "inf", "-inf"] },
+    { "name": "u2", "value_kind": "Real", "values": [1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, -0.0, -0.0, 1.0, "NaN", 1.0, 1.0, "inf", "-inf", "inf", "inf"] }
+  ],
+  "input": "u1=[1,1,-1,-1,0,-0,1,-1,0,-0,0,-0,0,-0,NaN,1,+Inf,-Inf,1,1,+Inf,-Inf], u2=[1,-1,-1,1,1,1,0,0,-1,-1,0,0,-0,-0,1,NaN,1,1,+Inf,-Inf,+Inf,+Inf]; interior quadrants, axes, signed zero, NaN, infinities",
+  "reference_rule": "y = Modelica.Math.atan2(u1, u2), evaluated with deterministic libm 0.2.16; Buildings docs forbid simultaneous zero, and Open Control Engine emits a runtime warning for those rows before returning the deterministic branch value",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic math",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

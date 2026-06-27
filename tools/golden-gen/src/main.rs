@@ -22,6 +22,7 @@ mod reals_pid;
 mod reals_ramp;
 mod reals_scalar_arithmetic;
 mod reals_sources;
+mod reals_transcendental;
 mod sequences;
 mod source_pulse;
 
@@ -52,6 +53,7 @@ fn main() {
     goldens.extend(reals_scalar_arithmetic::goldens());
     goldens.extend(reals_sources::goldens());
     goldens.extend(reals_ramp::goldens());
+    goldens.extend(reals_transcendental::goldens());
     goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
@@ -402,6 +404,22 @@ fn is_pid_recurrence(g: &Golden) -> bool {
     matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset")
 }
 
+fn is_reals_transcendental(g: &Golden) -> bool {
+    matches!(
+        g.class_path,
+        "CDL.Reals.Acos"
+            | "CDL.Reals.Asin"
+            | "CDL.Reals.Atan"
+            | "CDL.Reals.Atan2"
+            | "CDL.Reals.Cos"
+            | "CDL.Reals.Exp"
+            | "CDL.Reals.Log"
+            | "CDL.Reals.Log10"
+            | "CDL.Reals.Sin"
+            | "CDL.Reals.Tan"
+    )
+}
+
 fn assert_integer_csv_cells_are_exact(goldens: &[Golden]) {
     for golden in goldens {
         // This conversion intentionally probes i64 -> f64 rounding beyond 2^53; its provenance
@@ -455,6 +473,8 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         }
     } else if is_pid_recurrence(g) {
         "bit-exact Tier-1 f64 recurrence oracle (Value::bit_eq)"
+    } else if is_reals_transcendental(g) {
+        "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class"
     } else {
         match g.kind {
             ValueKind::Real if has_non_finite => {

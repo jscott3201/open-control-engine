@@ -39,6 +39,7 @@ mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;
 mod reals_sources;
+mod reals_transcendental;
 mod registry;
 mod source_pulse;
 mod utilities;
@@ -71,6 +72,7 @@ pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CivilTime, SourceRamp};
+pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
 pub use registry::lookup;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use utilities::Assert;
@@ -377,6 +379,9 @@ mod reals_arithmetic_tests;
 
 #[cfg(test)]
 mod reals_comparators_tests;
+
+#[cfg(test)]
+mod reals_transcendental_tests;
 
 #[cfg(test)]
 mod logical_tests;

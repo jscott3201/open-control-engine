@@ -3,10 +3,10 @@ use oce_model::ParamTable;
 use super::{bool_param, int_param, real_param};
 use crate::reals_sources::MIN_SOURCE_RAMP_DURATION;
 use crate::{
-    Abs, Add, AddParameter, Average, Block, CivilTime, Constant, Divide, Greater, GreaterThreshold,
-    Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Modulo, Multiply,
-    MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, SourceRamp, Sqrt, Subtract,
-    Switch,
+    Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CivilTime, Constant, Cos,
+    Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold, Limiter, Line, Log,
+    Log10, Max, Min, Modulo, Multiply, MultiplyByParameter, ParamRule, RealPulse, RegistryEntry,
+    Round, Sin, SourceRamp, Sqrt, Subtract, Switch, Tan,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -45,6 +45,46 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sqrt",
         make: make_sqrt,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sin",
+        make: make_sin,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Cos",
+        make: make_cos,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Tan",
+        make: make_tan,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Asin",
+        make: make_asin,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Acos",
+        make: make_acos,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Atan",
+        make: make_atan,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Atan2",
+        make: make_atan2,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Exp",
+        make: make_exp,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Log",
+        make: make_log,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Log10",
+        make: make_log10,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Average",
@@ -178,6 +218,46 @@ fn make_divide(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_sqrt(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Sqrt)
+}
+
+fn make_sin(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Sin)
+}
+
+fn make_cos(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Cos)
+}
+
+fn make_tan(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Tan)
+}
+
+fn make_asin(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Asin)
+}
+
+fn make_acos(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Acos)
+}
+
+fn make_atan(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Atan)
+}
+
+fn make_atan2(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Atan2)
+}
+
+fn make_exp(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Exp)
+}
+
+fn make_log(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Log)
+}
+
+fn make_log10(_p: &ParamTable) -> Box<dyn Block> {
+    Box::new(Log10)
 }
 
 fn make_average(_p: &ParamTable) -> Box<dyn Block> {
