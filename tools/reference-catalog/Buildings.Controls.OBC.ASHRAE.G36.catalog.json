@@ -871,22 +871,19 @@
       "known_deferred_branches": [
         "heating-loop PIDWithReset and full zone-state calculation",
         "SingleZone.VAV.SetPoints.Supply fan-speed reset and slew limiting",
-        "economizer, ventilation, coil, freeze protection, relief/return fan, and plant-request subsequences",
-        "cooling PID/cooling-branch Tier-B oracle equivalence"
+        "economizer, ventilation, coil, freeze protection, relief/return fan, and plant-request subsequences"
       ],
       "unsupported_variants": [
         "canonical SingleZone.VAV.Controller composite import",
         "full SetPoints.Supply fan speed and supply-temperature outputs",
-        "heating/cooling coil and pressure-control variants",
-        "OpenModelica-equivalent cooling PID cone"
+        "heating/cooling coil and pressure-control variants"
       ],
       "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.csv",
       "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.prov.json",
       "oracle_reference": "tools/golden-gen/goldens/G36/vav_single_zone/reference.csv",
-      "oracle_status": "partial",
-      "oracle_exception": "tools/golden-gen/goldens/G36/vav_single_zone/pid_cone_deferred.prov.json",
+      "oracle_status": "complete",
       "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
-      "oracle_explanation": "Tier-A oracle covers heating_enabled exactly and masks heating-branch airflow/damper rows by heating_enabled. Cooling_signal and cooling-branch airflow/damper rows remain deferred in pid_cone_deferred.prov.json."
+      "oracle_explanation": "Hand-derived Tier-A oracle covers heating_enabled, cooling_signal/internal coolingPid.y, cooling/minimum/heating airflow selection, and damper limiting exactly for the checked-in fixture-local PI variant."
     }
   ],
   "profile_fixtures": [

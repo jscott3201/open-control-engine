@@ -5,7 +5,7 @@
   "tier": "A",
   "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
   "value_kind": "Real",
-  "compare_regime": "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
   "n_samples": 6,
   "n_reference_columns": 8,
   "reference_csv": "reference.csv",

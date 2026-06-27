@@ -40,6 +40,7 @@ const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooli
 const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heating_setpoint";
 const VAV_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
 const VAV_AIRFLOW_SETPOINT_RUNTIME: &str = "conn#16";
+const VAV_COOLING_SIGNAL_RUNTIME: &str = "conn#4";
 const VAV_HEATING_ENABLED_RUNTIME: &str = "conn#11";
 const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
@@ -85,13 +86,11 @@ const VAV_INPUTS: &[PointSpec] = &[
     PointSpec::real("cooling_setpoint", VAV_COOLING_SETPOINT),
     PointSpec::real("heating_setpoint", VAV_HEATING_SETPOINT),
 ];
-const VAV_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::boolean(
-    "heating_enabled",
-    VAV_HEATING_ENABLED_RUNTIME,
-)];
-const VAV_MASKED_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real("airflow_setpoint", VAV_AIRFLOW_SETPOINT_RUNTIME),
+const VAV_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::real("damper_command", VAV_DAMPER_COMMAND_RUNTIME),
+    PointSpec::real("airflow_setpoint", VAV_AIRFLOW_SETPOINT_RUNTIME),
+    PointSpec::real("cooling_signal", VAV_COOLING_SIGNAL_RUNTIME),
+    PointSpec::boolean("heating_enabled", VAV_HEATING_ENABLED_RUNTIME),
 ];
 const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_air_temperature", SUPPLY_TEMPERATURE_OUTDOOR_AIR),
@@ -139,7 +138,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         t_stop: 5,
         inputs: VAV_INPUTS,
         exact_outputs: VAV_EXACT_OUTPUTS,
-        masked_outputs: VAV_MASKED_OUTPUTS,
+        masked_outputs: &[],
     },
     SequenceSpec {
         name: "multizone_vav_supply_temperature",
@@ -513,26 +512,6 @@ fn assert_signal_provenance(spec: &SequenceSpec, reference: &CombiTimeTable) {
             "{} {} provenance reference columns",
             spec.name,
             output.reference_name
-        );
-    }
-
-    if spec.name == "vav_single_zone" {
-        let deferred = read_json(&reference_dir(spec).join("pid_cone_deferred.prov.json"));
-        assert_eq!(deferred["tier"], "B-deferred");
-        assert_eq!(deferred["depends_on_oce_blocks"], false);
-        assert!(
-            deferred["deferred_signals"]
-                .as_array()
-                .expect("deferred signals array")
-                .iter()
-                .any(|signal| signal == "internal coolingPid.y"),
-            "deferred provenance must call out internal coolingPid.y"
-        );
-        assert!(
-            deferred["fp_residue_note"]
-                .as_str()
-                .is_some_and(|note| note.contains("no add-rounding")),
-            "deferred provenance must record the E2 no-add-rounding carried debt"
         );
     }
 }

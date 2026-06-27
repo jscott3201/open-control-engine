@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod supply_fan;
+mod vav_single_zone;
 
 const SAT: &str = "ahu_supply_air_temp_reset";
 const ECON: &str = "ahu_economizer";
@@ -29,45 +30,15 @@ pub fn goldens() -> Vec<Golden> {
     let mut out = Vec::new();
     out.extend(sat_reset());
     out.extend(economizer());
-    out.extend(vav_single_zone());
+    out.extend(vav_single_zone::goldens());
     out.extend(multizone_vav_supply_temperature());
     out.extend(supply_fan::goldens());
     out
 }
 
 /// Provenance-only records for intentionally deferred sequence correctness coverage.
-pub fn deferred_provenance(generator_version: &str) -> Vec<DeferredProvenance> {
-    vec![DeferredProvenance {
-        relative_path: "G36/vav_single_zone/pid_cone_deferred.prov.json",
-        contents: format!(
-            concat!(
-                "{{\n",
-                "  \"sequence\": \"vav_single_zone\",\n",
-                "  \"tier\": \"B-deferred\",\n",
-                "  \"source\": \"no in-repo correctness oracle yet; deferred to the ",
-                "OpenModelica-Docker Tier-B spike and tracked PID derivative-term ",
-                "oracle follow-up\",\n",
-                "  \"depends_on_oce_blocks\": false,\n",
-                "  \"deferred_signals\": [\n",
-                "    \"cooling_signal\",\n",
-                "    \"cooling-branch airflow_setpoint\",\n",
-                "    \"cooling-branch damper_command\",\n",
-                "    \"internal coolingPid.y\"\n",
-                "  ],\n",
-                "  \"covered_here\": [\n",
-                "    \"heating_enabled\",\n",
-                "    \"heating-branch airflow_setpoint masked by heating_enabled\",\n",
-                "    \"heating-branch damper_command masked by heating_enabled\"\n",
-                "  ],\n",
-                "  \"fp_residue_note\": \"E2 Tier-A G36 references exercise no add-rounding; ",
-                "the dyadic/add-rounding residue concern remains B4 follow-up scope.\",\n",
-                "  \"generator\": \"{}\"\n",
-                "}}\n"
-            ),
-            generator_version
-        ),
-        manifest_line: "G36/vav_single_zone PID cone deferred -> goldens/G36/vav_single_zone/pid_cone_deferred.prov.json",
-    }]
+pub fn deferred_provenance(_generator_version: &str) -> Vec<DeferredProvenance> {
+    Vec::new()
 }
 
 fn sat_reset() -> Vec<Golden> {
@@ -178,50 +149,6 @@ fn economizer() -> Vec<Golden> {
             damper_command.into_iter().map(r).collect(),
             "Economizer damperSwitch: u1=1.0, u2=economizer_enabled, u3=0.2",
             "Reals.Switch selects u1 when enabled else u3; selected constants are compared exactly",
-            inputs,
-        ),
-    ]
-}
-
-fn vav_single_zone() -> Vec<Golden> {
-    let time = unit_ticks(6);
-    let zone_temp = [22.0, 27.0, 27.5, 19.0, 19.3, 21.0];
-    let cooling_setpoint = [24.0; 6];
-    let heating_setpoint = [20.0; 6];
-
-    let heating_enabled = less_hysteretic(&zone_temp, &heating_setpoint, 0.5, false);
-    let heating_branch = vec![0.6; time.len()];
-    let inputs = vav_inputs(&zone_temp, &cooling_setpoint, &heating_setpoint);
-
-    vec![
-        sequence_golden(
-            VAV,
-            "heating_enabled",
-            ValueKind::Boolean,
-            time.clone(),
-            heating_enabled.into_iter().map(b).collect(),
-            "VAV: zone_temp=[22,27,27.5,19,19.3,21], heating_setpoint=20, h=0.5",
-            "Buildings Reals/Less hysteresis: set when zone_temp<heating_setpoint; hold while previous true and zone_temp<heating_setpoint+h",
-            inputs.clone(),
-        ),
-        sequence_golden(
-            VAV,
-            "airflow_setpoint",
-            ValueKind::Real,
-            time.clone(),
-            heating_branch.iter().copied().map(r).collect(),
-            "VAV airflowSwitch heating branch only: heatingFlow.k=0.6; cooling branch is PID-contaminated and masked out",
-            "When heating_enabled is true, Reals.Switch selects heatingFlow.y=0.6 exactly; rows outside the mask are deferred Tier-B territory",
-            inputs.clone(),
-        ),
-        sequence_golden(
-            VAV,
-            "damper_command",
-            ValueKind::Real,
-            time,
-            heating_branch.into_iter().map(r).collect(),
-            "VAV damperLimiter heating branch only: airflowSwitch.y=0.6, uMin=0.2, uMax=1.0",
-            "When heating_enabled is true, Limiter clamps 0.6 to 0.6 exactly; cooling-branch rows are masked and deferred",
             inputs,
         ),
     ]
@@ -612,18 +539,6 @@ fn economizer_inputs(
         input_r("return_air_temp", return_air_temp.iter().copied()),
         input_r("outdoor_air_temp", outdoor_air_temp.iter().copied()),
         input_i("operating_mode", operating_mode.iter().copied()),
-    ]
-}
-
-fn vav_inputs(
-    zone_temp: &[f64],
-    cooling_setpoint: &[f64],
-    heating_setpoint: &[f64],
-) -> Vec<InputSeries> {
-    vec![
-        input_r("zone_temp", zone_temp.iter().copied()),
-        input_r("cooling_setpoint", cooling_setpoint.iter().copied()),
-        input_r("heating_setpoint", heating_setpoint.iter().copied()),
     ]
 }
 
