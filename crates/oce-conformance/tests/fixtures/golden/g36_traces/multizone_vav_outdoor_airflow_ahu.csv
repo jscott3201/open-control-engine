@@ -1,0 +1,8 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VUncOutAir_flow http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VEffAirOut_flow_min http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.effOutAir_normalized http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.outAir_normalized
+double multizone_vav_outdoor_airflow_ahu(5,5)
+0.0 2.0 1.6666666666666667 0.20833333333333334 0.5
+1.0 6.0 1.5789473684210527 0.19736842105263158 0.75
+2.0 0.003 0.002727272727272727 0.0003409090909090909 0.0125
+3.0 0.0 0.0 0.0 1.125
+4.0 6.0 8.0 1.0 1.1

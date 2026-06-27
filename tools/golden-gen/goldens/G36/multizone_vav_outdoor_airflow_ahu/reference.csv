@@ -1,0 +1,8 @@
+#1
+# columns: time population_flow area_flow primary_flow max_outdoor_air_fraction measured_outdoor_air uncorrected_outdoor_airflow effective_minimum_outdoor_airflow effective_outdoor_airflow_normalized measured_outdoor_airflow_normalized
+double G36_multizone_vav_outdoor_airflow_ahu_reference(5,10)
+0.0 1.0 1.0 5.0 0.2 4.0 2.0 1.6666666666666667 0.20833333333333334 0.5
+1.0 4.0 5.0 2.0 0.2 6.0 6.0 1.5789473684210527 0.19736842105263158 0.75
+2.0 0.002 0.001 0.0 0.4 0.1 0.003 0.002727272727272727 0.0003409090909090909 0.0125
+3.0 0.0 0.0 1.0 1.5 9.0 0.0 0.0 0.0 1.125
+4.0 5.0 5.0 100.0 0.99 8.8 6.0 8.0 1.0 1.1

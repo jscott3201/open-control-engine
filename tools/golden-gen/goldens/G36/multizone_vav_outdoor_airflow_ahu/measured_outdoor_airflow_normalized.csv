@@ -1,0 +1,8 @@
+#1
+# columns: time measured_outdoor_airflow_normalized
+double G36_multizone_vav_outdoor_airflow_ahu_measured_outdoor_airflow_normalized(5,2)
+0.0 0.5
+1.0 0.75
+2.0 0.0125
+3.0 1.125
+4.0 1.1
