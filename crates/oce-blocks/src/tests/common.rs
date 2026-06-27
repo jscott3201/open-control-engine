@@ -11,12 +11,13 @@ pub(super) use crate::{
     Ctx, Derivative, Diagnostics, Divide, Edge, FirstOrderHold, Greater, GreaterThreshold,
     Hysteresis, IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator, IntegerStage,
     IntegerVectorFilter, IntegerVectorReplicator, IntegratorWithReset, Less, LessThreshold,
-    LimitSlewRate, Limiter, Line, LogicalVariablePulse, Max, Min, MovingAverage, MultiAnd,
-    MultiMax, MultiMin, MultiOr, MultiSum, Multiply, MultiplyByParameter, NoopDiagnostics, Not,
-    Pid, PidWithReset, PortKind, PortShape, Pre, Proof, Ramp, RealExtractSignal, RealExtractor,
-    RealScalarReplicator, RealVectorFilter, RealVectorReplicator, SampleTrigger, Sampler, Subtract,
-    SunRiseSet, Switch, Time, TriggeredMax, TriggeredMovingMean, TriggeredSampler, UnitDelay,
-    ZeroOrderHold, lookup, read_int,
+    LimitSlewRate, Limiter, Line, LogicalVariablePulse, MatrixGain, MatrixMax, MatrixMin,
+    MatrixReductionAxis, Max, Min, MovingAverage, MultiAnd, MultiMax, MultiMin, MultiOr, MultiSum,
+    Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, PortKind, PortShape,
+    Pre, Proof, Ramp, RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter,
+    RealVectorReplicator, SampleTrigger, Sampler, Sort, Subtract, SunRiseSet, Switch, Time,
+    TriggeredMax, TriggeredMovingMean, TriggeredSampler, UnitDelay, ZeroOrderHold, lookup,
+    read_int,
 };
 
 #[derive(Default)]

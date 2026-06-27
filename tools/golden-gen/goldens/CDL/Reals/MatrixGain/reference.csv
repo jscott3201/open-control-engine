@@ -1,0 +1,7 @@
+#1
+# columns: time u1 u2 u3 y1 y2
+double CDL_Reals_MatrixGain_reference(4,6)
+0.0 4.0 -1.0 8.0 -8.0 14.0
+60.0 2e16 -5000000000000000.0 -1.0 1.0 6e16
+120.0 -0.0 5.0 0.0 10.0 0.0
+180.0 4.0 inf 8.0 inf NaN

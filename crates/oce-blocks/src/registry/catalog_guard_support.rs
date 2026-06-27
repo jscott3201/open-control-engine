@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "cbe3ba4d306be9b5";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "9599c3c9aa4aaa07";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -55,6 +55,7 @@ pub(super) const EXPECTED_DRIFT_SOURCE_FILES: &[&str] =
 pub(super) const EXPECTED_EXTERNAL_SOURCE_FILES: &[&str] = &[
     "Buildings/package.mo",
     "Modelica/Constants.mo",
+    "Modelica/Math/package.mo",
     "ModelicaServices/package.mo",
 ];
 const EXPECTED_MODELICA_COMMIT: &str = "8ae3d35c24e519cb2996cab20f3b13daf2b0c50a";
@@ -93,13 +94,13 @@ pub(super) fn validate_catalog(
         .iter()
         .filter(|entry| entry.status == "missing")
         .count();
-    if implemented.len() != 125 {
+    if implemented.len() != 129 {
         errors.push(format!(
             "implemented-reference-count: {}",
             implemented.len()
         ));
     }
-    if missing_count != 7 {
+    if missing_count != 3 {
         errors.push(format!("missing-reference-count: {missing_count}"));
     }
 
@@ -440,7 +441,11 @@ fn validate_external_sources(values: &[Value], errors: &mut Vec<String>) {
         errors.push("invalid-buildings-modelica-version-source".to_owned());
     }
 
-    for path in ["Modelica/Constants.mo", "ModelicaServices/package.mo"] {
+    for path in [
+        "Modelica/Constants.mo",
+        "Modelica/Math/package.mo",
+        "ModelicaServices/package.mo",
+    ] {
         let source = values.iter().find(|value| str_field(value, "path") == path);
         if source
             .map(|value| str_field(value, "commit") != EXPECTED_MODELICA_COMMIT)

@@ -11,6 +11,7 @@ mod common;
 mod determinism;
 mod params;
 mod params_sources;
+mod reals_matrix;
 mod routing_real;
 mod routing_typed;
 mod structural;

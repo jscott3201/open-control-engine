@@ -300,6 +300,7 @@ impl<S: Store> Engine<S> {
                 ParamRule::Required { .. }
                 | ParamRule::Structural { .. }
                 | ParamRule::StructuralArrayElements { .. }
+                | ParamRule::Boolean { .. }
                 | ParamRule::RealEqualWarning { .. }
                 | ParamRule::RealLessOrEqualWarning { .. }
                 | ParamRule::RealGreaterOrEqualScaledWarning { .. } => {}
@@ -388,6 +389,13 @@ impl<S: Store> Engine<S> {
                     return true;
                 }
                 ParamRule::RealArrayElements { .. } => {}
+                ParamRule::RealMatrixElements { base, .. }
+                    if flattened_array_element_name(edited.name.as_ref(), base)
+                        && real_param_value(value).is_none() =>
+                {
+                    return true;
+                }
+                ParamRule::RealMatrixElements { .. } => {}
                 ParamRule::BooleanArrayElements { base, .. }
                     if flattened_array_element_name(edited.name.as_ref(), base)
                         && !matches!(value, Value::Boolean(_)) =>
@@ -507,7 +515,10 @@ fn flattened_array_element_name(name: &str, base: &str) -> bool {
     let Some(suffix) = name.strip_prefix(base).and_then(|s| s.strip_prefix('_')) else {
         return false;
     };
-    !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit())
+    !suffix.is_empty()
+        && suffix
+            .split('_')
+            .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit()))
 }
 
 fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>) {

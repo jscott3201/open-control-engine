@@ -103,6 +103,94 @@ fn registry_exposes_block_param_rules() {
             },
         ]
     );
+    assert_eq!(
+        lookup("CDL.Reals.MatrixGain").unwrap().param_rules(),
+        &[
+            ParamRule::Structural { name: "nout" },
+            ParamRule::Structural { name: "nin" },
+            ParamRule::IntegerGreaterOrEqual {
+                name: "nout",
+                min: 0,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "nout",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+            ParamRule::IntegerGreaterOrEqual {
+                name: "nin",
+                min: 0,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "nin",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+            ParamRule::IntegerProductLessOrEqualConstant {
+                left: "nout",
+                right: "nin",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+            ParamRule::RealMatrixElements {
+                base: "K",
+                rows: "nout",
+                default_rows: 2,
+                cols: "nin",
+                default_cols: 2,
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Sort").unwrap().param_rules(),
+        &[
+            ParamRule::Structural { name: "nin" },
+            ParamRule::Boolean { name: "ascending" },
+            ParamRule::IntegerGreaterOrEqual {
+                name: "nin",
+                min: 0,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "nin",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+        ]
+    );
+    for (path, row_param) in [
+        ("CDL.Reals.MatrixMax", "rowMax"),
+        ("CDL.Reals.MatrixMin", "rowMin"),
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            &[
+                ParamRule::Required { name: "nRow" },
+                ParamRule::Required { name: "nCol" },
+                ParamRule::Structural { name: "nRow" },
+                ParamRule::Structural { name: "nCol" },
+                ParamRule::Structural { name: row_param },
+                ParamRule::Boolean { name: row_param },
+                ParamRule::IntegerGreaterOrEqual {
+                    name: "nRow",
+                    min: 1,
+                },
+                ParamRule::IntegerLessOrEqualConstant {
+                    name: "nRow",
+                    max: MAX_RESOLVED_PORT_WIDTH as i64,
+                },
+                ParamRule::IntegerGreaterOrEqual {
+                    name: "nCol",
+                    min: 1,
+                },
+                ParamRule::IntegerLessOrEqualConstant {
+                    name: "nCol",
+                    max: MAX_RESOLVED_PORT_WIDTH as i64,
+                },
+                ParamRule::IntegerProductLessOrEqualConstant {
+                    left: "nRow",
+                    right: "nCol",
+                    max: MAX_RESOLVED_PORT_WIDTH as i64,
+                },
+            ],
+            "{path}"
+        );
+    }
     let extract_signal_rules = &[
         ParamRule::Structural { name: "nin" },
         ParamRule::Structural { name: "nout" },

@@ -116,19 +116,19 @@ fn catalog_guard_mutations_cover_required_failures() {
     );
 
     let mut implemented_without_registry = catalog.clone();
-    let package = runtime_package_mut(&mut implemented_without_registry, "CDL.Reals");
-    let removed = remove_string(package["missing"].as_array_mut().unwrap(), "MatrixGain");
+    let package = runtime_package_mut(&mut implemented_without_registry, "CDL.Reals.Sources");
+    let removed = remove_string(package["missing"].as_array_mut().unwrap(), "TimeTable");
     assert!(removed);
     package["implemented"]["golden_manifest"]
         .as_array_mut()
         .unwrap()
-        .push(Value::String("MatrixGain".to_owned()));
+        .push(Value::String("TimeTable".to_owned()));
     assert_validation_error(
         &implemented_without_registry,
         &prov,
         GOLDEN_MANIFEST,
         &registry,
-        "implemented-class-without-registry-entry: CDL.Reals.MatrixGain",
+        "implemented-class-without-registry-entry: CDL.Reals.Sources.TimeTable",
     );
 
     let mut stale_manifest = catalog.clone();

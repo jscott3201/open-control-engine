@@ -1,0 +1,7 @@
+#1
+# columns: time y2
+double CDL_Reals_MatrixGain_y2(4,2)
+0.0 14.0
+60.0 6e16
+120.0 0.0
+180.0 NaN

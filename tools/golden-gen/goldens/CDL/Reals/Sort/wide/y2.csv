@@ -1,0 +1,7 @@
+#1
+# columns: time y2
+double CDL_Reals_Sort_wide_y2(4,2)
+0.0 2.0
+60.0 2.0
+120.0 -0.0
+180.0 9.0

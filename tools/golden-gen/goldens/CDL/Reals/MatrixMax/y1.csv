@@ -1,0 +1,7 @@
+#1
+# columns: time y1
+double CDL_Reals_MatrixMax_y1(4,2)
+0.0 3.0
+60.0 4.0
+120.0 6.0
+180.0 8.0
