@@ -1,8 +1,8 @@
 //! Output comparison policies for the facade-bound golden-trace driver.
 
 use crate::{
-    ExactResult, FunnelResult, Indicator, Mask, Series, VerifyConfig, compare, compare_exact,
-    compare_masked,
+    AlignedToleranceResult, ExactResult, FunnelResult, Indicator, Mask, Series, VerifyConfig,
+    compare, compare_aligned_tolerance, compare_exact, compare_masked,
 };
 
 use super::{CapturedTrace, DriverError, Plan, SignalComparison};
@@ -12,6 +12,8 @@ use super::{CapturedTrace, DriverError, Plan, SignalComparison};
 pub enum ComparisonMode {
     /// Funnel L1 tolerance-band comparison, including configured indicator masking.
     Funnel,
+    /// Aligned finite-Real tolerance comparison with exact time samples and non-finite class checks.
+    AlignedTolerance,
     /// Tier-1 exact comparison for closed-form block goldens.
     Exact,
 }
@@ -21,6 +23,8 @@ pub enum ComparisonMode {
 pub enum ComparisonResult {
     /// Funnel L1 tolerance-band verdict.
     Funnel(FunnelResult),
+    /// Aligned tolerant verdict.
+    AlignedTolerance(AlignedToleranceResult),
     /// Tier-1 exact verdict.
     Exact(ExactResult),
 }
@@ -31,6 +35,7 @@ impl ComparisonResult {
     pub fn passed(&self) -> bool {
         match self {
             Self::Funnel(result) => result.passed,
+            Self::AlignedTolerance(result) => result.passed,
             Self::Exact(result) => result.passed,
         }
     }
@@ -40,6 +45,7 @@ impl ComparisonResult {
     pub fn compared_points(&self) -> usize {
         match self {
             Self::Funnel(result) => result.compared_points,
+            Self::AlignedTolerance(result) => result.compared_points,
             Self::Exact(result) => result.compared_points,
         }
     }
@@ -93,6 +99,15 @@ pub(super) fn compare_outputs(
                     compare_masked(reference, test, &tolerance, &Mask { indicators })
                 };
                 (masked, ComparisonResult::Funnel(result))
+            }
+            ComparisonMode::AlignedTolerance => {
+                let result = compare_aligned_tolerance(reference, test, output.kind, &tolerance);
+                if result.compared_points == 0 {
+                    return Err(DriverError::NoComparedPoints {
+                        output: output.point.clone(),
+                    });
+                }
+                (false, ComparisonResult::AlignedTolerance(result))
             }
             ComparisonMode::Exact => {
                 let result = compare_exact(reference, test, output.kind);
