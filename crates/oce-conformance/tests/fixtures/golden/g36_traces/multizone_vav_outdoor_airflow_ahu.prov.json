@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "69189c5c4717d521ac81df22d4a60fb9567739c5",
+  "engine_rev": "c2ea22fbf643c396db46647307e94afc58b2042d",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VUncOutAir_flow",
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VEffAirOut_flow_min",

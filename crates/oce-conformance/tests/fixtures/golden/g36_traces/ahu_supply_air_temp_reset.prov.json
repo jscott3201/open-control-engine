@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "63b56a510b0927568f8381f3f1ec8d6b38607f8e",
+  "engine_rev": "c2ea22fbf643c396db46647307e94afc58b2042d",
   "reference_columns": [
     "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint",
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand"

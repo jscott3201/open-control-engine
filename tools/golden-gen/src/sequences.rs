@@ -9,6 +9,7 @@ mod plant_requests;
 mod outdoor_airflow_ahu;
 mod relief_damper;
 mod relief_fan;
+mod return_fan_airflow_tracking;
 mod supply_fan;
 mod supply_signals;
 mod vav_single_zone;
@@ -23,6 +24,7 @@ const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const OUTDOOR_AIRFLOW_AHU: &str = "multizone_vav_outdoor_airflow_ahu";
 const RELIEF_DAMPER: &str = "multizone_vav_relief_damper";
 const RELIEF_FAN: &str = "multizone_vav_relief_fan";
+const RETURN_FAN_AIRFLOW: &str = "multizone_vav_return_fan_airflow_tracking";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -48,6 +50,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(outdoor_airflow_ahu::goldens());
     out.extend(relief_damper::goldens());
     out.extend(relief_fan::goldens());
+    out.extend(return_fan_airflow_tracking::goldens());
     out
 }
 
@@ -243,6 +246,7 @@ fn source_files(sequence: &str) -> &'static str {
         OUTDOOR_AIRFLOW_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
         RELIEF_DAMPER => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
         RELIEF_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
+        RETURN_FAN_AIRFLOW => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
@@ -255,7 +259,8 @@ fn fixture_status(sequence: &str) -> &'static str {
         | PLANT_REQUESTS
         | OUTDOOR_AIRFLOW_AHU
         | RELIEF_DAMPER
-        | RELIEF_FAN => {
+        | RELIEF_FAN
+        | RETURN_FAN_AIRFLOW => {
             "supported-runtime-sequence source-verified composite"
         }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",

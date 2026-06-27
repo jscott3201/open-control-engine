@@ -32,6 +32,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo`
@@ -60,8 +61,12 @@ reviewed only for the scalar no-fan relief-damper variant with `dpBuiSet=12 Pa`,
 reviewed only for the scalar single-relief-fan variant with `relFanSpe_min=0.1`,
 `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`, `MovingAverage(delta=300)`, `controllerType=P`,
 `reverseActing=false`, relief-damper latch/clear timing, and relief-fan start/stop timing;
-`ReliefFanGroup`, return-fan, and freeze-protection sequences remain deferred. Each runtime claim
-must stay tied to its explicit checked-in CXF fixture and supported parameter variant.
+`ReturnFanAirflowTracking.mo` is reviewed only for the scalar airflow-tracking variant with
+`difFloSet=1 m3/s`, `conTyp=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`, `minSpe=0`, `maxSpe=1`,
+supply-fan proof switching, and the source boundary alias `y1RetFan = u1SupFan` represented by
+an explicit fixture-local Boolean identity bridge. `ReliefFanGroup`, `ReturnFanDirectPressure`,
+freeze-protection sequences, and non-default variants remain deferred. Each runtime claim must
+stay tied to its explicit checked-in CXF fixture and supported parameter variant.
 
 For representative-sequence hardening, the AHU supply-air-temperature reset, AHU economizer, and
 single-zone VAV fixtures are source-reviewed fragments of the listed upstream files. They remain

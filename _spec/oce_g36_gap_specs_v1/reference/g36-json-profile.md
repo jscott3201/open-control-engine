@@ -192,14 +192,23 @@ they are marked `supported-runtime-sequence`.
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper` with
   `dpBuiSet=12 Pa`, `k=0.5`, `controllerType=P`, `reverseActing=false`, and supply-fan proof
-  switching. Relief fan/group, return-fan, and non-default PID variants remain deferred.
+  switching. Relief fan/group, ReturnFanDirectPressure, and non-default PID variants remain
+  deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld` is a source-verified
   restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan` with
   `relFanSpe_min=0.1`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`, `MovingAverage(delta=300)`,
   `controllerType=P`, `reverseActing=false`, relief-damper latch/clear timing, and relief-fan
-  start/stop timing. ReliefFanGroup, return-fan, FreezeProtection, and non-default PID variants
-  remain deferred.
+  start/stop timing. ReliefFanGroup, ReturnFanDirectPressure, FreezeProtection, and non-default PID
+  variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanAirflowTracking` with
+  `difFloSet=1 m3/s`, `conTyp=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`, `minSpe=0`, `maxSpe=1`, and
+  supply-fan proof switching return-fan speed to zero. The source boundary alias
+  `y1RetFan = u1SupFan` is represented by a fixture-local Boolean identity bridge so the executable
+  graph can expose it as an output point. ReturnFanDirectPressure, ReliefFanGroup,
+  FreezeProtection, alternate controller types, and non-default parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

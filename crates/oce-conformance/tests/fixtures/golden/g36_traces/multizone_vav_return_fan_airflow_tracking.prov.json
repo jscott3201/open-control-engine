@@ -4,8 +4,7 @@
   "depends_on_oce_blocks": true,
   "engine_rev": "c2ea22fbf643c396db46647307e94afc58b2042d",
   "reference_columns": [
-    "http://example.org#g36.source.multizone_vav_supply_signals.uTSup",
-    "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi",
-    "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi"
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.yRetFan",
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan"
   ]
 }

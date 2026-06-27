@@ -33,6 +33,9 @@ const RELIEF_DAMPER: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 const RELIEF_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld");
+const RETURN_FAN_AIRFLOW: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld"
+);
 
 // The facade exposes flattened runtime connector IDs, while the goldens and provenance preserve
 // the fixture-declared output names.
@@ -167,6 +170,18 @@ const RELIEF_FAN_AVERAGED_PRESSURE_RUNTIME: &str = "conn#1";
 const RELIEF_FAN_DAMPER_STATUS_RUNTIME: &str = "conn#38";
 const RELIEF_FAN_FAN_SPEED_RUNTIME: &str = "conn#46";
 const RELIEF_FAN_FAN_STATUS_RUNTIME: &str = "conn#41";
+const RETURN_FAN_AIRFLOW_SUPPLY: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirSup_flow";
+const RETURN_FAN_AIRFLOW_RETURN: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirRet_flow";
+const RETURN_FAN_AIRFLOW_SUPPLY_FAN: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
+const RETURN_FAN_AIRFLOW_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.yRetFan";
+const RETURN_FAN_AIRFLOW_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
+const RETURN_FAN_AIRFLOW_SPEED_RUNTIME: &str = "conn#6";
+const RETURN_FAN_AIRFLOW_STATUS_RUNTIME: &str = "conn#14";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -287,6 +302,15 @@ const RELIEF_FAN_OUTPUTS: &[PointSpec] = &[
     PointSpec::boolean_alias(RELIEF_FAN_FAN_STATUS, RELIEF_FAN_FAN_STATUS_RUNTIME),
     PointSpec::real_alias(RELIEF_FAN_FAN_SPEED, RELIEF_FAN_FAN_SPEED_RUNTIME),
 ];
+const RETURN_FAN_AIRFLOW_INPUTS: &[PointSpec] = &[
+    PointSpec::real(RETURN_FAN_AIRFLOW_SUPPLY),
+    PointSpec::real(RETURN_FAN_AIRFLOW_RETURN),
+    PointSpec::boolean(RETURN_FAN_AIRFLOW_SUPPLY_FAN),
+];
+const RETURN_FAN_AIRFLOW_OUTPUTS: &[PointSpec] = &[
+    PointSpec::real_alias(RETURN_FAN_AIRFLOW_SPEED, RETURN_FAN_AIRFLOW_SPEED_RUNTIME),
+    PointSpec::boolean_alias(RETURN_FAN_AIRFLOW_STATUS, RETURN_FAN_AIRFLOW_STATUS_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -378,6 +402,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: RELIEF_FAN_INPUTS,
         outputs: RELIEF_FAN_OUTPUTS,
         input_fn: relief_fan_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_return_fan_airflow_tracking",
+        cxf: RETURN_FAN_AIRFLOW,
+        t_stop: 7,
+        sample_step: 1.0,
+        inputs: RETURN_FAN_AIRFLOW_INPUTS,
+        outputs: RETURN_FAN_AIRFLOW_OUTPUTS,
+        input_fn: return_fan_airflow_inputs,
     },
 ];
 
@@ -591,5 +624,26 @@ fn relief_fan_inputs(t: f64) -> Vec<(String, Value)> {
     vec![
         pair(RELIEF_FAN_BUILDING_PRESSURE, Value::Real(pressure)),
         pair(RELIEF_FAN_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
+    ]
+}
+
+fn return_fan_airflow_inputs(t: f64) -> Vec<(String, Value)> {
+    let (supply_airflow, return_airflow, supply_fan_status) = match t as u32 {
+        0 => (5.0, 4.0, false),
+        1 => (5.25, 4.0, true),
+        2 => (5.0, 4.0, true),
+        3 => (4.75, 4.0, true),
+        4 => (5.5, 4.0, false),
+        5 => (5.0, 4.0, true),
+        _ => (4.5, 4.0, true),
+    };
+
+    vec![
+        pair(RETURN_FAN_AIRFLOW_SUPPLY, Value::Real(supply_airflow)),
+        pair(RETURN_FAN_AIRFLOW_RETURN, Value::Real(return_airflow)),
+        pair(
+            RETURN_FAN_AIRFLOW_SUPPLY_FAN,
+            Value::Boolean(supply_fan_status),
+        ),
     ]
 }
