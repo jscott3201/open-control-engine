@@ -1,0 +1,25 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_relief_fan",
+  "signal": "relief_fan_status",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0",
+  "n_samples": 30,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "building_pressure", "supply_fan_status", "averaged_building_pressure", "relief_damper_status", "relief_fan_status", "relief_fan_speed"],
+  "inputs": [
+    { "name": "building_pressure", "value_kind": "Real", "values": [12.0, 12.0, 12.0, 12.0, 12.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] }
+  ],
+  "input": "ReliefFan fan staging: greThr2 must hold above relFanSpe_min+0.15 for 420s before fan start; lesThr3 below relFanSpe_min for 300s clears",
+  "reference_rule": "Pinned ReliefFan.mo: y1RelFan = u1SupFan AND lat1.y; lat1 set by upTim.passed and clear-dominant from dowTim.passed",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

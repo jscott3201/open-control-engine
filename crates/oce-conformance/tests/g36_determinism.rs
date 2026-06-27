@@ -31,6 +31,8 @@ const OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 const RELIEF_DAMPER: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
+const RELIEF_FAN: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld");
 
 // The facade exposes flattened runtime connector IDs, while the goldens and provenance preserve
 // the fixture-declared output names.
@@ -150,6 +152,21 @@ const RELIEF_DAMPER_SUPPLY_FAN_STATUS: &str =
 const RELIEF_DAMPER_COMMAND: &str =
     "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam";
 const RELIEF_DAMPER_COMMAND_RUNTIME: &str = "conn#3";
+const RELIEF_FAN_BUILDING_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.dpBui";
+const RELIEF_FAN_SUPPLY_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan";
+const RELIEF_FAN_AVERAGED_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.yDpBui";
+const RELIEF_FAN_DAMPER_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.y1RelDam";
+const RELIEF_FAN_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan";
+const RELIEF_FAN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan";
+const RELIEF_FAN_AVERAGED_PRESSURE_RUNTIME: &str = "conn#1";
+const RELIEF_FAN_DAMPER_STATUS_RUNTIME: &str = "conn#38";
+const RELIEF_FAN_FAN_SPEED_RUNTIME: &str = "conn#46";
+const RELIEF_FAN_FAN_STATUS_RUNTIME: &str = "conn#41";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -257,6 +274,19 @@ const RELIEF_DAMPER_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
     RELIEF_DAMPER_COMMAND,
     RELIEF_DAMPER_COMMAND_RUNTIME,
 )];
+const RELIEF_FAN_INPUTS: &[PointSpec] = &[
+    PointSpec::real(RELIEF_FAN_BUILDING_PRESSURE),
+    PointSpec::boolean(RELIEF_FAN_SUPPLY_FAN_STATUS),
+];
+const RELIEF_FAN_OUTPUTS: &[PointSpec] = &[
+    PointSpec::real_alias(
+        RELIEF_FAN_AVERAGED_PRESSURE,
+        RELIEF_FAN_AVERAGED_PRESSURE_RUNTIME,
+    ),
+    PointSpec::boolean_alias(RELIEF_FAN_DAMPER_STATUS, RELIEF_FAN_DAMPER_STATUS_RUNTIME),
+    PointSpec::boolean_alias(RELIEF_FAN_FAN_STATUS, RELIEF_FAN_FAN_STATUS_RUNTIME),
+    PointSpec::real_alias(RELIEF_FAN_FAN_SPEED, RELIEF_FAN_FAN_SPEED_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -339,6 +369,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: RELIEF_DAMPER_INPUTS,
         outputs: RELIEF_DAMPER_OUTPUTS,
         input_fn: relief_damper_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_relief_fan",
+        cxf: RELIEF_FAN,
+        t_stop: 29,
+        sample_step: 60.0,
+        inputs: RELIEF_FAN_INPUTS,
+        outputs: RELIEF_FAN_OUTPUTS,
+        input_fn: relief_fan_inputs,
     },
 ];
 
@@ -536,5 +575,21 @@ fn relief_damper_inputs(t: f64) -> Vec<(String, Value)> {
     vec![
         pair(RELIEF_DAMPER_BUILDING_PRESSURE, Value::Real(pressure)),
         pair(RELIEF_DAMPER_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
+    ]
+}
+
+fn relief_fan_inputs(t: f64) -> Vec<(String, Value)> {
+    let pressure = if t < 300.0 {
+        12.0
+    } else if t <= 1020.0 {
+        18.0
+    } else {
+        12.0
+    };
+    let fan_status = t >= 300.0;
+
+    vec![
+        pair(RELIEF_FAN_BUILDING_PRESSURE, Value::Real(pressure)),
+        pair(RELIEF_FAN_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
     ]
 }

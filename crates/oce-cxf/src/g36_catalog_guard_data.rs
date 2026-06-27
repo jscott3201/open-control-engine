@@ -26,6 +26,8 @@ pub(super) const G36_PLANT_REQUESTS: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 pub(super) const G36_RELIEF_DAMPER: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
+pub(super) const G36_RELIEF_FAN: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_relief_fan.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
@@ -38,7 +40,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "c27f71dc7db957c7";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "4f54c20634e0cc53";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -71,6 +73,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
@@ -152,6 +155,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_relief_damper",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld",
         text: G36_RELIEF_DAMPER,
+    },
+    FixtureSource {
+        name: "multizone_vav_relief_fan",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld",
+        text: G36_RELIEF_FAN,
     },
     FixtureSource {
         name: "multizone_vav_outdoor_airflow_ahu",

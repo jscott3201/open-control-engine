@@ -462,6 +462,11 @@ G36/multizone_vav_plant_requests hot_water_reset_request -> goldens/G36/multizon
 G36/multizone_vav_plant_requests reference -> goldens/G36/multizone_vav_plant_requests/reference.csv
 G36/multizone_vav_relief_damper reference -> goldens/G36/multizone_vav_relief_damper/reference.csv
 G36/multizone_vav_relief_damper relief_damper_command -> goldens/G36/multizone_vav_relief_damper/relief_damper_command.csv
+G36/multizone_vav_relief_fan averaged_building_pressure -> goldens/G36/multizone_vav_relief_fan/averaged_building_pressure.csv
+G36/multizone_vav_relief_fan reference -> goldens/G36/multizone_vav_relief_fan/reference.csv
+G36/multizone_vav_relief_fan relief_damper_status -> goldens/G36/multizone_vav_relief_fan/relief_damper_status.csv
+G36/multizone_vav_relief_fan relief_fan_speed -> goldens/G36/multizone_vav_relief_fan/relief_fan_speed.csv
+G36/multizone_vav_relief_fan relief_fan_status -> goldens/G36/multizone_vav_relief_fan/relief_fan_status.csv
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv

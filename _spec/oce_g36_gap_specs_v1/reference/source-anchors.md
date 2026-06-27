@@ -31,6 +31,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo`
@@ -55,7 +56,10 @@ hot-water reset/plant request logic under the WaterBased coil branches. `Outdoor
 is reviewed only for the scalar AHU leaf currently supported by an explicit-CXF fixture; its
 `SumZone` vector/matrix aggregation and Title24 package remain deferred. `ReliefDamper.mo` is
 reviewed only for the scalar no-fan relief-damper variant with `dpBuiSet=12 Pa`, `k=0.5`,
-`controllerType=P`, `reverseActing=false`, and supply-fan proof switching; `ReliefFan`,
+`controllerType=P`, `reverseActing=false`, and supply-fan proof switching. `ReliefFan.mo` is
+reviewed only for the scalar single-relief-fan variant with `relFanSpe_min=0.1`,
+`dpBuiSet=12 Pa`, `k=1`, `hys=0.005`, `MovingAverage(delta=300)`, `controllerType=P`,
+`reverseActing=false`, relief-damper latch/clear timing, and relief-fan start/stop timing;
 `ReliefFanGroup`, return-fan, and freeze-protection sequences remain deferred. Each runtime claim
 must stay tied to its explicit checked-in CXF fixture and supported parameter variant.
 
