@@ -22,6 +22,8 @@ const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
+const OUTDOOR_AIRFLOW_AHU: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 
@@ -84,6 +86,20 @@ const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
 const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
 const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
 const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
+const OUTDOOR_AIRFLOW_POPULATION_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjPopBreZon_flow";
+const OUTDOOR_AIRFLOW_AREA_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjAreBreZon_flow";
+const OUTDOOR_AIRFLOW_PRIMARY_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumZonPri_flow";
+const OUTDOOR_AIRFLOW_MAX_FRACTION: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uOutAirFra_max";
+const OUTDOOR_AIRFLOW_MEASURED_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VAirOut_flow";
+const OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME: &str = "conn#6";
+const OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME: &str = "conn#24";
+const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME: &str = "conn#29";
+const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME: &str = "conn#32";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
@@ -164,6 +180,31 @@ const PLANT_REQUESTS_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::integer("hot_water_reset_request", PLANT_REQUESTS_HOT_RESET_RUNTIME),
     PointSpec::integer("hot_water_plant_request", PLANT_REQUESTS_HOT_PLANT_RUNTIME),
 ];
+const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
+    PointSpec::real("population_flow", OUTDOOR_AIRFLOW_POPULATION_FLOW),
+    PointSpec::real("area_flow", OUTDOOR_AIRFLOW_AREA_FLOW),
+    PointSpec::real("primary_flow", OUTDOOR_AIRFLOW_PRIMARY_FLOW),
+    PointSpec::real("max_outdoor_air_fraction", OUTDOOR_AIRFLOW_MAX_FRACTION),
+    PointSpec::real("measured_outdoor_air", OUTDOOR_AIRFLOW_MEASURED_FLOW),
+];
+const OUTDOOR_AIRFLOW_EXACT_OUTPUTS: &[PointSpec] = &[
+    PointSpec::real(
+        "uncorrected_outdoor_airflow",
+        OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME,
+    ),
+    PointSpec::real(
+        "effective_minimum_outdoor_airflow",
+        OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME,
+    ),
+    PointSpec::real(
+        "effective_outdoor_airflow_normalized",
+        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME,
+    ),
+    PointSpec::real(
+        "measured_outdoor_airflow_normalized",
+        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME,
+    ),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -227,6 +268,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         sample_step: 60.0,
         inputs: PLANT_REQUESTS_INPUTS,
         exact_outputs: PLANT_REQUESTS_EXACT_OUTPUTS,
+        masked_outputs: &[],
+    },
+    SequenceSpec {
+        name: "multizone_vav_outdoor_airflow_ahu",
+        cxf: OUTDOOR_AIRFLOW_AHU,
+        t_stop: 4,
+        sample_step: 1.0,
+        inputs: OUTDOOR_AIRFLOW_INPUTS,
+        exact_outputs: OUTDOOR_AIRFLOW_EXACT_OUTPUTS,
         masked_outputs: &[],
     },
 ];

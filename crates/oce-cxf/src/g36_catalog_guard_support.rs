@@ -174,6 +174,18 @@ fn validate_package_orders(catalog: &Value, errors: &mut Vec<String>) {
             ],
         ),
         (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
+            &["ASHRAE62_1", "Title24"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
+            &["AHU", "SumZone", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24",
+            &["AHU", "SumZone", "Validation"],
+        ),
+        (
             "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints",
             &[
                 "CoolingCoil",

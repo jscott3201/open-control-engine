@@ -1,0 +1,8 @@
+#1
+# columns: time effective_minimum_outdoor_airflow
+double G36_multizone_vav_outdoor_airflow_ahu_effective_minimum_outdoor_airflow(5,2)
+0.0 1.6666666666666667
+1.0 1.5789473684210527
+2.0 0.002727272727272727
+3.0 0.0
+4.0 8.0

@@ -27,6 +27,8 @@ const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
+const OUTDOOR_AIRFLOW_AHU: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 
 // The facade exposes flattened runtime connector IDs, while the goldens and provenance preserve
 // the fixture-declared output names.
@@ -117,6 +119,28 @@ const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
 const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
 const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
 const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
+const OUTDOOR_AIRFLOW_POPULATION_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjPopBreZon_flow";
+const OUTDOOR_AIRFLOW_AREA_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjAreBreZon_flow";
+const OUTDOOR_AIRFLOW_PRIMARY_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumZonPri_flow";
+const OUTDOOR_AIRFLOW_MAX_FRACTION: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uOutAirFra_max";
+const OUTDOOR_AIRFLOW_MEASURED_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VAirOut_flow";
+const OUTDOOR_AIRFLOW_UNCORRECTED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VUncOutAir_flow";
+const OUTDOOR_AIRFLOW_EFFECTIVE: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VEffAirOut_flow_min";
+const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.effOutAir_normalized";
+const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.outAir_normalized";
+const OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME: &str = "conn#6";
+const OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME: &str = "conn#24";
+const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME: &str = "conn#29";
+const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME: &str = "conn#32";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -194,6 +218,28 @@ const PLANT_REQUESTS_OUTPUTS: &[PointSpec] = &[
     PointSpec::integer_alias(PLANT_REQUESTS_HOT_RESET, PLANT_REQUESTS_HOT_RESET_RUNTIME),
     PointSpec::integer_alias(PLANT_REQUESTS_HOT_PLANT, PLANT_REQUESTS_HOT_PLANT_RUNTIME),
 ];
+const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
+    PointSpec::real(OUTDOOR_AIRFLOW_POPULATION_FLOW),
+    PointSpec::real(OUTDOOR_AIRFLOW_AREA_FLOW),
+    PointSpec::real(OUTDOOR_AIRFLOW_PRIMARY_FLOW),
+    PointSpec::real(OUTDOOR_AIRFLOW_MAX_FRACTION),
+    PointSpec::real(OUTDOOR_AIRFLOW_MEASURED_FLOW),
+];
+const OUTDOOR_AIRFLOW_OUTPUTS: &[PointSpec] = &[
+    PointSpec::real_alias(
+        OUTDOOR_AIRFLOW_UNCORRECTED,
+        OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME,
+    ),
+    PointSpec::real_alias(OUTDOOR_AIRFLOW_EFFECTIVE, OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME),
+    PointSpec::real_alias(
+        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED,
+        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME,
+    ),
+    PointSpec::real_alias(
+        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED,
+        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME,
+    ),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -258,6 +304,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: PLANT_REQUESTS_INPUTS,
         outputs: PLANT_REQUESTS_OUTPUTS,
         input_fn: plant_requests_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_outdoor_airflow_ahu",
+        cxf: OUTDOOR_AIRFLOW_AHU,
+        t_stop: 4,
+        sample_step: 1.0,
+        inputs: OUTDOOR_AIRFLOW_INPUTS,
+        outputs: OUTDOOR_AIRFLOW_OUTPUTS,
+        input_fn: outdoor_airflow_inputs,
     },
 ];
 
@@ -421,5 +476,23 @@ fn plant_requests_inputs(t: f64) -> Vec<(String, Value)> {
             PLANT_REQUESTS_HEATING_VALVE,
             Value::Real(heating_coil_valve),
         ),
+    ]
+}
+
+fn outdoor_airflow_inputs(t: f64) -> Vec<(String, Value)> {
+    let (population, area, primary, fraction, measured) = match t as u32 {
+        0 => (1.0, 1.0, 5.0, 0.2, 4.0),
+        1 => (4.0, 5.0, 2.0, 0.2, 6.0),
+        2 => (0.002, 0.001, 0.0, 0.4, 0.1),
+        3 => (0.0, 0.0, 1.0, 1.5, 9.0),
+        _ => (5.0, 5.0, 100.0, 0.99, 8.8),
+    };
+
+    vec![
+        pair(OUTDOOR_AIRFLOW_POPULATION_FLOW, Value::Real(population)),
+        pair(OUTDOOR_AIRFLOW_AREA_FLOW, Value::Real(area)),
+        pair(OUTDOOR_AIRFLOW_PRIMARY_FLOW, Value::Real(primary)),
+        pair(OUTDOOR_AIRFLOW_MAX_FRACTION, Value::Real(fraction)),
+        pair(OUTDOOR_AIRFLOW_MEASURED_FLOW, Value::Real(measured)),
     ]
 }

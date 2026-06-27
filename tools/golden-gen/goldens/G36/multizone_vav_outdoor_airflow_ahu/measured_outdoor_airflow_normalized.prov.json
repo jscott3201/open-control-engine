@@ -1,0 +1,28 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_outdoor_airflow_ahu",
+  "signal": "measured_outdoor_airflow_normalized",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 5,
+  "n_reference_columns": 10,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "population_flow", "area_flow", "primary_flow", "max_outdoor_air_fraction", "measured_outdoor_air", "uncorrected_outdoor_airflow", "effective_minimum_outdoor_airflow", "effective_outdoor_airflow_normalized", "measured_outdoor_airflow_normalized"],
+  "inputs": [
+    { "name": "population_flow", "value_kind": "Real", "values": [1.0, 4.0, 0.002, 0.0, 5.0] },
+    { "name": "area_flow", "value_kind": "Real", "values": [1.0, 5.0, 0.001, 0.0, 5.0] },
+    { "name": "primary_flow", "value_kind": "Real", "values": [5.0, 2.0, 0.0, 1.0, 100.0] },
+    { "name": "max_outdoor_air_fraction", "value_kind": "Real", "values": [0.2, 0.2, 0.4, 1.5, 0.99] },
+    { "name": "measured_outdoor_air", "value_kind": "Real", "values": [4.0, 6.0, 0.1, 9.0, 8.8] }
+  ],
+  "input": "OutdoorAirFlow.ASHRAE62_1.AHU SingleDamper: measured outdoor-air normalization branch active because minOADes=SingleDamper",
+  "reference_rule": "Pinned AHU.mo conditional branch: outAir_normalized = VAirOut_flow / VDesTotOutAir_flow when minOADes is DedicatedDampersAirflow or SingleDamper",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

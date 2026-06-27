@@ -89,6 +89,32 @@
       ]
     },
     {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order",
+      "entries": [
+        "ASHRAE62_1",
+        "Title24"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order",
+      "entries": [
+        "AHU",
+        "SumZone",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order",
+      "entries": [
+        "AHU",
+        "SumZone",
+        "Validation"
+      ]
+    },
+    {
       "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
       "entries": [
@@ -293,7 +319,43 @@
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
       "status": "deferred",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "runtime_support": false,
+      "rationale": "OutdoorAirFlow is a package; only the nested ASHRAE62_1.AHU leaf has restricted runtime evidence in this catalog."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order",
+      "runtime_support": false,
+      "rationale": "Package-level support remains deferred until AHU plus SumZone aggregation are both supported."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU",
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the ASHRAE 62.1 scalar AHU-level calculation with minOADes=SingleDamper, VUncDesOutAir_flow=6 m3/s, and VDesTotOutAir_flow=8 m3/s; SumZone and Title24 branches remain deferred."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
+      "runtime_support": false,
+      "rationale": "Zone/group aggregation uses vector and matrix blocks and remains VEC-gated."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.Validation",
+      "status": "validation-only",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order",
+      "runtime_support": false,
+      "rationale": "Reference/test material only."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order",
+      "runtime_support": false,
+      "rationale": "Title24 outdoor-airflow AHU and SumZone branches are separate parameterized slices."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.Validation",
@@ -318,6 +380,24 @@
     }
   ],
   "runtime_sequences": [
+    {
+      "name": "multizone_vav_outdoor_airflow_ahu",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu",
+      "supported_variant": "source-verified explicit CXF for ASHRAE62_1.AHU with minOADes=SingleDamper, VUncDesOutAir_flow=6 m3/s, VDesTotOutAir_flow=8 m3/s, and measured outdoor-air normalization active",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_ahu.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_ahu.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_outdoor_airflow_ahu/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar AHU-level composite, not arbitrary Modelica parsing.",
+        "The supported variant uses SingleDamper so VAirOut_flow and outAir_normalized remain active and guarded by the OutdoorAirSection enum condition.",
+        "The oracle covers uncorrected outdoor airflow, effective minimum outdoor airflow, effective normalized outdoor airflow, and measured normalized outdoor airflow across nominal, design-cap, primary-flow guard, near-zero system-efficiency guard, and design-total cap rows."
+      ]
+    },
     {
       "name": "multizone_vav_plant_requests",
       "status": "supported-runtime-sequence",
@@ -391,6 +471,28 @@
     }
   ],
   "composite_import_fixtures": [
+    {
+      "name": "multizone_vav_outdoor_airflow_ahu",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu",
+      "source_child_count": 15,
+      "active_block_count": 15,
+      "input_count": 5,
+      "output_count": 4,
+      "supported_variant": "explicit CXF source transcription for ASHRAE62_1.AHU with minOADes=SingleDamper, VUncDesOutAir_flow=6, and VDesTotOutAir_flow=8",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_outdoor_airflow_ahu.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_outdoor_airflow_ahu.rs",
+      "api_test": "crates/oce-api/tests/g36_outdoor_airflow_ahu.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF scalar composite import, conditional measured-outdoor-air branch retention, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim package-level OutdoorAirFlow support, ASHRAE62_1.SumZone zone/group aggregation, Title24 variants, or arbitrary .mo parsing."
+      ]
+    },
     {
       "name": "multizone_vav_plant_requests",
       "status": "supported-runtime-sequence",
