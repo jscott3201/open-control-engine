@@ -696,6 +696,5 @@ fn conversions() -> Vec<Golden> {
         )
         .with_inputs(vec![input_r("u", u)]));
     }
-
     out
 }

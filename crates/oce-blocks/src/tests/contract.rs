@@ -91,6 +91,8 @@ fn feedthrough_classification_matches_spec() {
     assert!(Proof::default().feeds_through(1, 0));
     assert!(Proof::default().feeds_through(1, 1));
     assert_eq!(Proof::default().kind(), BlockKind::Stateful);
+    assert!(IntegerStage::default().feeds_through(0, 0));
+    assert_eq!(IntegerStage::default().kind(), BlockKind::Stateful);
     // SampleTrigger is a stateful source: no inputs, so it does not feed through (Constant convention).
     assert!(!SampleTrigger::default().feeds_through(0, 0));
     assert_eq!(SampleTrigger::default().kind(), BlockKind::Stateful);
@@ -203,10 +205,11 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.LessEqualThreshold",
         "CDL.Integers.OnCounter",
         "CDL.Integers.Change",
+        "CDL.Integers.Stage",
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 75, "registry count");
+    assert_eq!(PATHS.len(), 76, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -254,6 +257,26 @@ fn registry_exposes_block_param_rules() {
             ParamRule::RealLessOrEqualWarning {
                 lower: "debounce",
                 upper: "feedbackDelay",
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Integers.Stage").unwrap().param_rules(),
+        &[
+            ParamRule::Required { name: "n" },
+            ParamRule::Required {
+                name: "holdDuration",
+            },
+            ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
+            ParamRule::RealGreaterOrEqual {
+                name: "holdDuration",
+                min: 0.0,
+            },
+            ParamRule::RealTimesIntegerInclusiveRange {
+                real: "h",
+                integer: "n",
+                min: 0.001,
+                max: 0.5,
             },
         ]
     );
@@ -450,6 +473,22 @@ fn registry_make_resolves_parameters() {
     });
     assert_eq!(proof.kind(), BlockKind::Stateful);
     assert_eq!(proof.state_len(), 24);
+
+    let stage = (lookup("CDL.Integers.Stage").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("n"), Value::Integer(4)),
+            (Arc::from("holdDuration"), Value::Real(2.0)),
+            (Arc::from("pre_y_start"), Value::Integer(3)),
+        ],
+    });
+    assert_eq!(stage.kind(), BlockKind::Stateful);
+    assert_eq!(stage.state_len(), 8);
+    let mut region = vec![0u64; stage.state_len()];
+    stage.init_state(&mut region, &ParamTable::default());
+    assert!(
+        emit(stage.as_ref(), &[Value::Real(1.0)], &region)[0].bit_eq(&Value::Integer(3)),
+        "Stage.pre_y_start must seed the initial output until a post-initial tick updates"
+    );
 
     let moving_average = (lookup("CDL.Reals.MovingAverage").unwrap().make)(&ParamTable {
         values: vec![(Arc::from("delta"), Value::Real(0.25))],

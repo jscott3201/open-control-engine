@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Integers.Stage",
+  "scenario": "unclamped_zero",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 3,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, -0.1, 0.0] }
+  ],
+  "input": "scenario=unclamped_zero; n=4, holdDuration=0, h=0.05, pre_y_start=3; u=[0,-0.10,0]",
+  "reference_rule": "the authored pre_y_start is emitted on the initial tick and a re-armed out-of-range low input can emit y=0 despite IntegerOutput(min=1)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

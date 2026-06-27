@@ -7,10 +7,10 @@ pub(super) use oce_model::{ParamTable, Value};
 
 pub(super) use crate::{
     Abs, Add, AddParameter, And, Assert, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics,
-    Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegratorWithReset, Less, LessThreshold,
-    LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply, MultiplyByParameter,
-    NoopDiagnostics, Not, ParamRule, Pid, PidWithReset, Pre, Proof, SampleTrigger, Subtract,
-    Switch, Time, UnitDelay, lookup, read_int,
+    Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegerStage, IntegratorWithReset, Less,
+    LessThreshold, LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply,
+    MultiplyByParameter, NoopDiagnostics, Not, ParamRule, Pid, PidWithReset, Pre, Proof,
+    SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]

@@ -59,6 +59,39 @@ fn sample_trigger_model(period: f64) -> ModelGraph {
     mb.finish()
 }
 
+fn stage_model(n: i64, hold_duration: f64, h: f64) -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Integers.Stage",
+        &[ValueType::Real],
+        &[ValueType::Integer],
+        vec![
+            (Arc::from("n"), Value::Integer(n)),
+            rp("holdDuration", hold_duration),
+            rp("h", h),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
+fn stage_model_default_h(n: i64, hold_duration: f64) -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Integers.Stage",
+        &[ValueType::Real],
+        &[ValueType::Integer],
+        vec![
+            (Arc::from("n"), Value::Integer(n)),
+            rp("holdDuration", hold_duration),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
 // ---- R-PUB-7 / R-API-PY-1..8: the compile-shaped frozen-surface guards (frozen-signature pins,
 // Clone family, owned-snapshot enumeration, and the Engine<MemStore>: Send + Sync assertion) live in
 // the NON-test module `crate::guards` so a drift fails the normal `cargo build`, not only this
@@ -243,6 +276,68 @@ fn limiter_cross_param_rules_reject_inverted_at_rest() {
         eng.set_param("b5.uMin", Value::Real(1.0)),
         Err(OcError::ParamRange { .. })
     ));
+}
+
+#[test]
+fn stage_dependent_param_rules_reject_invalid_edits_at_rest() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(stage_model(4, 0.0, 0.02 / 4.0), None)
+        .expect("valid Stage loads");
+    let rows = eng.params().to_vec();
+    let (_, n_value, n_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.n")
+        .expect("n param must be present");
+    assert!(n_value.bit_eq(&Value::Integer(4)));
+    assert_eq!(n_attrs.min, Some(1.0));
+
+    let (_, hold_value, hold_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.holdDuration")
+        .expect("holdDuration param must be present");
+    assert!(hold_value.bit_eq(&Value::Real(0.0)));
+    assert_eq!(hold_attrs.min, Some(0.0));
+
+    let (_, h_value, h_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.h")
+        .expect("h param must be present");
+    assert!(h_value.bit_eq(&Value::Real(0.02 / 4.0)));
+    assert!(
+        h_attrs.min.is_none() && h_attrs.max.is_none(),
+        "dependent h bounds are enforced dynamically, not exposed as static attrs"
+    );
+
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.n", Value::Integer(0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.holdDuration", Value::Real(-1.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.h", Value::Real(0.0002)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.h", Value::Real(0.126)),
+        Err(OcError::ParamRange { .. })
+    ));
+    eng.set_param("b0.h", Value::Real(0.001 / 4.0))
+        .expect("lower h boundary is valid");
+    eng.set_param("b0.h", Value::Real(0.5 / 4.0))
+        .expect("upper h boundary is valid");
+
+    let mut default_h = Engine::in_memory();
+    default_h
+        .build_model_in_memory(stage_model_default_h(4, 0.0), None)
+        .expect("valid Stage with default h loads");
+    default_h.halt().unwrap();
+    default_h
+        .set_param("b0.n", Value::Integer(8))
+        .expect("editing n is valid when h is omitted and defaults from n");
 }
 
 // ---- simulation mode: real loop, golden trace, bit-determinism, adversarial specs ----

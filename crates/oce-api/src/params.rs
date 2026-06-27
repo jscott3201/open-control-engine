@@ -86,7 +86,7 @@ impl ParamTable {
                 .unwrap_or_else(|| format!("b{}", blk.id.0));
             for (name, value) in &blk.params.values {
                 let path = format!("{base}.{name}");
-                let (min, max) = static_real_bounds(&blk.class_iri, name);
+                let (min, max) = static_param_bounds(&blk.class_iri, name);
                 let declared = ParamAttrs {
                     value_type: value.value_type(),
                     min,
@@ -294,13 +294,69 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::RealGreaterThan { .. } => {}
+                ParamRule::IntegerGreaterOrEqual { name, min } if edited.name.as_ref() == name => {
+                    let Some(v) = int_param_value(value) else {
+                        return true;
+                    };
+                    if v < min {
+                        return true;
+                    }
+                }
+                ParamRule::IntegerGreaterOrEqual { .. } => {}
+                ParamRule::RealGreaterOrEqual { name, min } if edited.name.as_ref() == name => {
+                    let Some(v) = real_param_value(value) else {
+                        return true;
+                    };
+                    if !real_greater_or_equal(v, min) {
+                        return true;
+                    }
+                }
+                ParamRule::RealGreaterOrEqual { .. } => {}
+                ParamRule::RealTimesIntegerInclusiveRange {
+                    real,
+                    integer,
+                    min,
+                    max,
+                } if edited.name.as_ref() == real || edited.name.as_ref() == integer => {
+                    let real_value = block_param_real_value(
+                        &self.params.entries,
+                        edited.block,
+                        real,
+                        idx,
+                        value,
+                    );
+                    let integer_value = block_param_int_value(
+                        &self.params.entries,
+                        edited.block,
+                        integer,
+                        idx,
+                        value,
+                    );
+                    if let (Some(real_value), Some(integer_value)) = (real_value, integer_value) {
+                        let scaled = real_value * integer_value as f64;
+                        if !real_greater_or_equal(scaled, min) || !real_less_or_equal(scaled, max) {
+                            return true;
+                        }
+                    }
+                }
+                ParamRule::RealTimesIntegerInclusiveRange { .. } => {}
                 ParamRule::RealLessOrEqual { lower, upper }
                     if edited.name.as_ref() == lower || edited.name.as_ref() == upper =>
                 {
-                    let lower_value =
-                        block_param_value(&self.params.entries, edited.block, lower, idx, value);
-                    let upper_value =
-                        block_param_value(&self.params.entries, edited.block, upper, idx, value);
+                    let lower_value = block_param_real_value(
+                        &self.params.entries,
+                        edited.block,
+                        lower,
+                        idx,
+                        value,
+                    );
+                    let upper_value = block_param_real_value(
+                        &self.params.entries,
+                        edited.block,
+                        upper,
+                        idx,
+                        value,
+                    );
                     if let (Some(lower_value), Some(upper_value)) = (lower_value, upper_value)
                         && !real_less_or_equal(lower_value, upper_value)
                     {
@@ -308,13 +364,14 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::RealLessOrEqual { .. } => {}
+                _ => {}
             }
         }
         false
     }
 }
 
-fn static_real_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>) {
+fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>) {
     let Some(entry) = lookup(class_path) else {
         return (None, None);
     };
@@ -332,11 +389,34 @@ fn static_real_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>
                 None => lower,
             });
         }
+        if let ParamRule::RealGreaterOrEqual {
+            name: rule_name,
+            min: lower,
+        } = *rule
+            && rule_name == name
+        {
+            min = Some(match min {
+                Some(current) => current.max(lower),
+                None => lower,
+            });
+        }
+        if let ParamRule::IntegerGreaterOrEqual {
+            name: rule_name,
+            min: lower,
+        } = *rule
+            && rule_name == name
+        {
+            let lower = lower as f64;
+            min = Some(match min {
+                Some(current) => current.max(lower),
+                None => lower,
+            });
+        }
     }
     (min, max)
 }
 
-fn block_param_value(
+fn block_param_real_value(
     entries: &[ParamEntry],
     block: BlockId,
     name: &str,
@@ -356,6 +436,26 @@ fn block_param_value(
         })
 }
 
+fn block_param_int_value(
+    entries: &[ParamEntry],
+    block: BlockId,
+    name: &str,
+    edited_idx: usize,
+    edited_value: &Value,
+) -> Option<i64> {
+    entries
+        .iter()
+        .enumerate()
+        .find(|(_, entry)| entry.block == block && entry.name.as_ref() == name)
+        .and_then(|(idx, entry)| {
+            if idx == edited_idx {
+                int_param_value(edited_value)
+            } else {
+                int_param_value(&entry.value)
+            }
+        })
+}
+
 fn real_param_value(value: &Value) -> Option<f64> {
     match value {
         Value::Real(v) => Some(*v),
@@ -364,8 +464,22 @@ fn real_param_value(value: &Value) -> Option<f64> {
     }
 }
 
+fn int_param_value(value: &Value) -> Option<i64> {
+    match value {
+        Value::Integer(v) => Some(*v),
+        _ => None,
+    }
+}
+
 fn real_greater_than(value: f64, min: f64) -> bool {
     matches!(value.partial_cmp(&min), Some(Ordering::Greater))
+}
+
+fn real_greater_or_equal(value: f64, min: f64) -> bool {
+    matches!(
+        value.partial_cmp(&min),
+        Some(Ordering::Greater | Ordering::Equal)
+    )
 }
 
 fn real_less_or_equal(lower: f64, upper: f64) -> bool {

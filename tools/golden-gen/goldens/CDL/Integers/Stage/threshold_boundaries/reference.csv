@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Integers_Stage_threshold_boundaries_reference(4,3)
+0.0 0.0 0.0
+1.0 0.24999999999999997 1.0
+2.0 0.0 1.0
+3.0 0.25 1.0

@@ -1,13 +1,32 @@
 use oce_model::ParamTable;
 
 use super::int_param;
+use super::real_param;
 use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
-    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch,
-    OnCounter, RegistryEntry,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerStage, IntegerSubtract,
+    IntegerSwitch, OnCounter, ParamRule, RegistryEntry,
 };
+
+pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "n" },
+    ParamRule::Required {
+        name: "holdDuration",
+    },
+    ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
+    ParamRule::RealGreaterOrEqual {
+        name: "holdDuration",
+        min: 0.0,
+    },
+    ParamRule::RealTimesIntegerInclusiveRange {
+        real: "h",
+        integer: "n",
+        min: 0.001,
+        max: 0.5,
+    },
+];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -89,6 +108,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Change",
         make: make_integer_change,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Stage",
+        make: make_integer_stage,
     },
 ];
 
@@ -185,5 +208,15 @@ fn make_integer_on_counter(p: &ParamTable) -> Box<dyn Block> {
 fn make_integer_change(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerChange {
         pre_u_start: int_param(p, "pre_u_start", 0),
+    })
+}
+
+fn make_integer_stage(p: &ParamTable) -> Box<dyn Block> {
+    let n = int_param(p, "n", 1).max(1);
+    Box::new(IntegerStage {
+        n,
+        hold_duration: real_param(p, "holdDuration", 0.0),
+        h: real_param(p, "h", 0.02 / n as f64),
+        pre_y_start: int_param(p, "pre_y_start", 0),
     })
 }

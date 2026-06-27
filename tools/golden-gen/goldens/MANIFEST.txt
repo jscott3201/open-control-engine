@@ -56,6 +56,16 @@ CDL.Integers.OnCounter/trigger_initially_true reference -> goldens/CDL/Integers/
 CDL.Integers.OnCounter/trigger_initially_true y -> goldens/CDL/Integers/OnCounter/trigger_initially_true/y.csv
 CDL.Integers.Sources.Constant reference -> goldens/CDL/Integers/Sources/Constant/reference.csv
 CDL.Integers.Sources.Constant y -> goldens/CDL/Integers/Sources/Constant/y.csv
+CDL.Integers.Stage/hold_duration reference -> goldens/CDL/Integers/Stage/hold_duration/reference.csv
+CDL.Integers.Stage/hold_duration y -> goldens/CDL/Integers/Stage/hold_duration/y.csv
+CDL.Integers.Stage/hysteresis_hold reference -> goldens/CDL/Integers/Stage/hysteresis_hold/reference.csv
+CDL.Integers.Stage/hysteresis_hold y -> goldens/CDL/Integers/Stage/hysteresis_hold/y.csv
+CDL.Integers.Stage/n1_initial_zero reference -> goldens/CDL/Integers/Stage/n1_initial_zero/reference.csv
+CDL.Integers.Stage/n1_initial_zero y -> goldens/CDL/Integers/Stage/n1_initial_zero/y.csv
+CDL.Integers.Stage/threshold_boundaries reference -> goldens/CDL/Integers/Stage/threshold_boundaries/reference.csv
+CDL.Integers.Stage/threshold_boundaries y -> goldens/CDL/Integers/Stage/threshold_boundaries/y.csv
+CDL.Integers.Stage/unclamped_zero reference -> goldens/CDL/Integers/Stage/unclamped_zero/reference.csv
+CDL.Integers.Stage/unclamped_zero y -> goldens/CDL/Integers/Stage/unclamped_zero/y.csv
 CDL.Integers.Subtract reference -> goldens/CDL/Integers/Subtract/reference.csv
 CDL.Integers.Subtract y -> goldens/CDL/Integers/Subtract/y.csv
 CDL.Integers.Switch reference -> goldens/CDL/Integers/Switch/reference.csv

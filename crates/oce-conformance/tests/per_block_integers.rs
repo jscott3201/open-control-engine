@@ -3,7 +3,7 @@
 mod block_harness;
 
 use block_harness::{
-    B, BlockCase, I, Param, ParamValue, Port, assert_cases_are_deterministic,
+    B, BlockCase, I, Param, ParamValue, Port, R, assert_cases_are_deterministic,
     assert_cases_match_exact_oracle, case,
 };
 
@@ -42,6 +42,7 @@ const COUNTER_INPUTS: &[Port] = &[
         kind: B,
     },
 ];
+const STAGE_INPUTS: &[Port] = &[Port { name: "u", kind: R }];
 
 const INTEGER_Y: &[Port] = &[Port { name: "y", kind: I }];
 const BOOL_Y: &[Port] = &[Port { name: "y", kind: B }];
@@ -77,6 +78,80 @@ const COUNTER_Y_START_THREE: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Integer("3"),
 }];
+const STAGE_N1: &[Param] = &[
+    Param {
+        name: "n",
+        value: ParamValue::Integer("1"),
+    },
+    Param {
+        name: "holdDuration",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("0.02"),
+    },
+];
+const STAGE_THRESHOLD_PARAMS: &[Param] = &[
+    Param {
+        name: "n",
+        value: ParamValue::Integer("4"),
+    },
+    Param {
+        name: "holdDuration",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("0.001"),
+    },
+];
+const STAGE_N4_HOLD_ZERO: &[Param] = &[
+    Param {
+        name: "n",
+        value: ParamValue::Integer("4"),
+    },
+    Param {
+        name: "holdDuration",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("0.05"),
+    },
+];
+const STAGE_HOLD_DURATION: &[Param] = &[
+    Param {
+        name: "n",
+        value: ParamValue::Integer("4"),
+    },
+    Param {
+        name: "holdDuration",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("0.05"),
+    },
+];
+const STAGE_UNCLAMPED_ZERO: &[Param] = &[
+    Param {
+        name: "n",
+        value: ParamValue::Integer("4"),
+    },
+    Param {
+        name: "holdDuration",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "h",
+        value: ParamValue::Real("0.05"),
+    },
+    Param {
+        name: "pre_y_start",
+        value: ParamValue::Integer("3"),
+    },
+];
 
 // This table covers registered `CDL.Integers` blocks with checked-in reference tables.
 // MultiSum is vector-shaped and remains deferred.
@@ -243,6 +318,46 @@ const CASES: &[BlockCase] = &[
         CHANGE_OUTPUTS,
     ),
     case(
+        "integers_stage_n1_initial_zero",
+        "CDL.Integers.Stage",
+        "Stage/n1_initial_zero",
+        STAGE_INPUTS,
+        STAGE_N1,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_stage_threshold_boundaries",
+        "CDL.Integers.Stage",
+        "Stage/threshold_boundaries",
+        STAGE_INPUTS,
+        STAGE_THRESHOLD_PARAMS,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_stage_hysteresis_hold",
+        "CDL.Integers.Stage",
+        "Stage/hysteresis_hold",
+        STAGE_INPUTS,
+        STAGE_N4_HOLD_ZERO,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_stage_hold_duration",
+        "CDL.Integers.Stage",
+        "Stage/hold_duration",
+        STAGE_INPUTS,
+        STAGE_HOLD_DURATION,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_stage_unclamped_zero",
+        "CDL.Integers.Stage",
+        "Stage/unclamped_zero",
+        STAGE_INPUTS,
+        STAGE_UNCLAMPED_ZERO,
+        INTEGER_Y,
+    ),
+    case(
         "integers_constant",
         "CDL.Integers.Sources.Constant",
         "Sources/Constant",
@@ -257,6 +372,11 @@ const STATEFUL_INTEGERS_SLUGS: &[&str] = &[
     "integers_on_counter_held_reset",
     "integers_on_counter_trigger_initially_true",
     "integers_change",
+    "integers_stage_n1_initial_zero",
+    "integers_stage_threshold_boundaries",
+    "integers_stage_hysteresis_hold",
+    "integers_stage_hold_duration",
+    "integers_stage_unclamped_zero",
 ];
 
 #[test]

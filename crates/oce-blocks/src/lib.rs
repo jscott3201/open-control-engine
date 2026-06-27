@@ -25,6 +25,7 @@ mod discrete;
 mod dynamics;
 mod integers;
 mod integers_edge;
+mod integers_stage;
 mod logical;
 mod logical_latch;
 mod logical_proof;
@@ -46,6 +47,7 @@ pub use integers::{
     IntegerMultiply, IntegerSubtract, IntegerSwitch,
 };
 pub use integers_edge::{IntegerChange, OnCounter};
+pub use integers_stage::IntegerStage;
 pub use logical::{
     And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
 };
@@ -211,6 +213,7 @@ pub trait Block: Send + Sync {
 /// Rules are static metadata for resolved block parameters: `oce-validate` uses them at load time,
 /// and `oce-api` mirrors the single-parameter bounds into tune-at-rest metadata. They intentionally
 /// describe only CDL semantics, not storage or host UI policy.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ParamRule {
     /// The named parameter must appear in the resolved [`ParamTable`].
@@ -224,6 +227,31 @@ pub enum ParamRule {
         name: &'static str,
         /// Exclusive lower bound.
         min: f64,
+    },
+    /// The named `Integer` parameter must be greater than or equal to `min`.
+    IntegerGreaterOrEqual {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Inclusive lower bound.
+        min: i64,
+    },
+    /// The named `Real` parameter must be greater than or equal to `min`.
+    RealGreaterOrEqual {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Inclusive lower bound.
+        min: f64,
+    },
+    /// The named `Real` parameter, multiplied by an `Integer` parameter, must be in range.
+    RealTimesIntegerInclusiveRange {
+        /// Real-valued parameter name.
+        real: &'static str,
+        /// Integer-valued scale parameter name.
+        integer: &'static str,
+        /// Inclusive lower bound on `real * integer`.
+        min: f64,
+        /// Inclusive upper bound on `real * integer`.
+        max: f64,
     },
     /// The two named `Real` parameters must satisfy `lower <= upper`.
     RealLessOrEqual {
@@ -341,6 +369,9 @@ mod logical_timing_tests;
 
 #[cfg(test)]
 mod integers_edge_tests;
+
+#[cfg(test)]
+mod integers_stage_tests;
 
 #[cfg(test)]
 mod pid_tests;
