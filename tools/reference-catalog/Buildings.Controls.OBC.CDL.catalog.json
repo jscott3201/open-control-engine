@@ -52,6 +52,7 @@
           "LessThreshold",
           "Max",
           "Min",
+          "MultiSum",
           "Multiply",
           "OnCounter",
           "Stage",
@@ -59,9 +60,7 @@
           "Switch"
         ]
       },
-      "missing": [
-        "MultiSum"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Integers.Sources",
@@ -86,6 +85,8 @@
           "Edge",
           "FallingEdge",
           "Latch",
+          "MultiAnd",
+          "MultiOr",
           "Not",
           "Or",
           "Proof",
@@ -104,10 +105,7 @@
           "Pre"
         ]
       },
-      "missing": [
-        "MultiAnd",
-        "MultiOr"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Logical.Sources",
@@ -260,14 +258,7 @@
     "CDL.Routing.Validation",
     "CDL.Utilities.Validation"
   ],
-  "deferred_oracle_goldens": [
-    {
-      "class_path": "CDL.Integers.MultiSum",
-      "status": "runtime_missing",
-      "evidence": "golden_manifest",
-      "rationale": "tools/golden-gen carries a future oracle fixture for this class, but oce-blocks does not register it until vector gathering support lands."
-    }
-  ],
+  "deferred_oracle_goldens": [],
   "structural": {
     "constants": {
       "class_path": "CDL.Constants",

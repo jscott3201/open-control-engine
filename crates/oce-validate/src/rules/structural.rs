@@ -202,7 +202,7 @@ pub(crate) fn check_connections(model: &ModelGraph, diags: &mut Vec<Diagnostic>)
 // ---- Rule 3: block interface ↔ block-signature agreement (AD-8, §7.8) -----------------------
 
 /// Each block's port arity and connector [`ValueType`] must agree with the native block class's
-/// [`oce_blocks::BlockSignature`]. This is the **reason `oce-validate` depends on `oce-blocks`**
+/// resolved signature. This is the **reason `oce-validate` depends on `oce-blocks`**
 /// (AD-8): the resolver derives a connector's value type from the CXF `isOfDataType`,
 /// *independently* of the block class, so a document could type an input of `CDL.Reals.Add` as
 /// `Boolean` — the resolver would record it, and the `read_real` hot-path reader would then silently
@@ -220,7 +220,7 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
             continue; // unknown class → oce-api OcError::Load owns this
         };
         let probe = (entry.make)(&blk.params);
-        let sig = probe.signature();
+        let sig = probe.resolved_signature();
         let (got_in, got_out) = (blk.inputs.len(), blk.outputs.len());
         let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
         if got_in != want_in || got_out != want_out {
@@ -242,7 +242,7 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
             n,
             &blk.class_iri,
             &blk.inputs,
-            sig.inputs,
+            sig.inputs.as_ref(),
             "input",
         );
         check_ports_dir(
@@ -251,7 +251,7 @@ pub(crate) fn check_port_types(model: &ModelGraph, diags: &mut Vec<Diagnostic>) 
             n,
             &blk.class_iri,
             &blk.outputs,
-            sig.outputs,
+            sig.outputs.as_ref(),
             "output",
         );
     }

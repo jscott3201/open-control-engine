@@ -18,6 +18,8 @@
 //! CDL class path. The remaining CDL catalog breadth is added family-by-family behind the same
 //! trait and registry contracts.
 
+use std::borrow::Cow;
+
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
 mod conversions;
@@ -52,12 +54,13 @@ pub use integers::{
     IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
     IntegerLessEqual, IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin,
-    IntegerMultiply, IntegerSubtract, IntegerSwitch,
+    IntegerMultiSum, IntegerMultiply, IntegerSubtract, IntegerSwitch,
 };
 pub use integers_edge::{IntegerChange, OnCounter};
 pub use integers_stage::IntegerStage;
 pub use logical::{
-    And, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, Pre, SampleTrigger, Xor,
+    And, Edge, LogicalConstant, LogicalSwitch, MultiAnd, MultiOr, Nand, Nor, Not, Or, Pre,
+    SampleTrigger, Xor,
 };
 pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_proof::Proof;
@@ -103,9 +106,10 @@ pub enum PortKind {
     Boolean,
 }
 
-/// Static interface descriptor for an elementary block class. Built once at load time and
-/// consumed by `oce-graph` to size buffers and build the DAG. Carries no non-computational
-/// metadata (§7.17).
+/// Static interface descriptor for an elementary block class. Fixed-width blocks use this directly
+/// for their BUILD-time port contract. Parameter-width blocks publish their default-width class
+/// descriptor here and override [`Block::resolved_signature`] for the authoritative instance
+/// signature. Carries no non-computational metadata (§7.17).
 #[derive(Clone, Copy, Debug)]
 pub struct BlockSignature {
     /// Canonical class path, e.g. `"CDL.Reals.PID"`.
@@ -117,6 +121,79 @@ pub struct BlockSignature {
     /// Static class-level state hint. For parameter-dependent classes, use [`Block::kind`] on the
     /// resolved instance for the authoritative `[A]`/`[S]` allocation decision.
     pub stateful: bool,
+}
+
+/// Maximum resolved width of one vector-style CDL port accepted by native block constructors.
+///
+/// This bounds input-derived BUILD-time allocation for blocks such as `MultiAnd(nin=...)` while
+/// keeping any realistic equipment-control vector well inside the supported range.
+pub const MAX_RESOLVED_PORT_WIDTH: usize = 1 << 20;
+
+/// A BUILD-time port shape for vector-style CDL connector declarations after parameter resolution.
+///
+/// The engine still stores and ticks one scalar [`oce_model::ConnectorId`] per element. A shape only
+/// tells the block constructor or validator how many consecutive scalar ports a source connector such
+/// as `u[nin]` expands to, in source declaration order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PortShape {
+    /// Scalar value kind for each flattened element.
+    pub kind: PortKind,
+    /// Number of flattened scalar elements. `0` is legal for source-verified empty vectors.
+    pub width: usize,
+}
+
+impl PortShape {
+    /// Build a resolved shape for `width` consecutive scalar ports of `kind`.
+    #[must_use]
+    pub const fn new(kind: PortKind, width: usize) -> Self {
+        Self { kind, width }
+    }
+
+    /// Build a scalar one-element port shape.
+    #[must_use]
+    pub const fn scalar(kind: PortKind) -> Self {
+        Self::new(kind, 1)
+    }
+
+    /// Append this shape's flattened scalar port kinds to `out`.
+    pub fn extend_kinds(&self, out: &mut Vec<PortKind>) {
+        out.extend(std::iter::repeat_n(self.kind, self.width));
+    }
+
+    /// Return this shape as a vector of flattened scalar port kinds.
+    #[must_use]
+    pub fn to_kinds(self) -> Vec<PortKind> {
+        let mut out = Vec::with_capacity(self.width);
+        self.extend_kinds(&mut out);
+        out
+    }
+}
+
+/// Instance-resolved block interface descriptor used by BUILD-time validators.
+///
+/// Fixed-width blocks borrow their static [`BlockSignature`] slices without allocation. Dynamic
+/// blocks can borrow vectors stored on the immutable block instance, so port expansion happens once
+/// at load and never on the tick.
+#[derive(Clone, Debug)]
+pub struct ResolvedBlockSignature<'a> {
+    /// Canonical class path, e.g. `"CDL.Reals.PID"`.
+    pub class_path: &'static str,
+    /// Input port kinds in resolved declaration order.
+    pub inputs: Cow<'a, [PortKind]>,
+    /// Output port kinds in resolved declaration order.
+    pub outputs: Cow<'a, [PortKind]>,
+}
+
+impl<'a> ResolvedBlockSignature<'a> {
+    /// Borrow a fixed-width class signature as a resolved instance signature.
+    #[must_use]
+    pub fn from_static(signature: &'static BlockSignature) -> Self {
+        Self {
+            class_path: signature.class_path,
+            inputs: Cow::Borrowed(signature.inputs),
+            outputs: Cow::Borrowed(signature.outputs),
+        }
+    }
 }
 
 /// A diagnostics sink for `Utilities.Assert` and unit warnings — injected by the scheduler,
@@ -174,8 +251,17 @@ impl Diagnostics for NoopDiagnostics {
 /// and the frozen schedule is shareable across host threads as `Arc<Engine<S>>`. The bound is a
 /// zero-cost marker; it is what lets `oce-api`'s `_assert_send_sync` compile.
 pub trait Block: Send + Sync {
-    /// Class-level interface descriptor. Drives buffer sizing and the DAG.
+    /// Class-level interface descriptor. For fixed-width classes this is the same shape used at
+    /// BUILD. For parameter-width classes this is the default-width descriptor; call
+    /// [`Block::resolved_signature`] on the resolved instance for authoritative port arity.
     fn signature(&self) -> &'static BlockSignature;
+
+    /// Parameter-resolved interface descriptor. Validators use this after the registry constructor
+    /// has folded parameters such as `nin`, so variadic/vector CDL ports expand to scalar port kinds
+    /// before `oce-graph` indexes the flattened connector arenas.
+    fn resolved_signature(&self) -> ResolvedBlockSignature<'_> {
+        ResolvedBlockSignature::from_static(self.signature())
+    }
 
     /// Stateless `[A]` vs stateful `[S]` (CDL §7.2/§7.6). Queried on the parameter-resolved
     /// instance, never the bare class (`01` §4.2 design note).
@@ -272,6 +358,17 @@ pub enum ParamRule {
         name: &'static str,
         /// Inclusive upper bound.
         max: i64,
+    },
+    /// Present members of a flattened integer array parameter must be integer values.
+    ///
+    /// The array may be sparse because some CDL array parameters, such as `k[nin]=fill(1,nin)`, have
+    /// source defaults for every omitted element. When a member is supplied, this rule rejects a
+    /// non-integer value instead of letting the constructor silently fall back to that default.
+    IntegerArrayElements {
+        /// Flattened array base name, for example `"k"` matching `k_1`, `k_2`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved array length.
+        len: &'static str,
     },
     /// The named enum parameter must be one of the source-verified members.
     EnumMembers {

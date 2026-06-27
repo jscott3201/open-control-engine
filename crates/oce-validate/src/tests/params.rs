@@ -123,6 +123,45 @@ fn triggered_moving_mean_n_parameter_is_required_and_positive() {
 }
 
 #[test]
+fn vector_width_and_flattened_gain_parameters_are_checked() {
+    let negative = one_block_model(
+        "CDL.Logical.MultiAnd",
+        &[],
+        &[ValueType::Boolean],
+        vec![(Arc::from("nin"), Value::Integer(-1))],
+    );
+    let err = validate(&negative).expect_err("negative nin must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`nin`"));
+
+    let bad_gain = one_block_model(
+        "CDL.Integers.MultiSum",
+        &[ValueType::Integer, ValueType::Integer],
+        &[ValueType::Integer],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("k_1"), Value::Integer(2)),
+            (Arc::from("k_2"), Value::Real(3.0)),
+        ],
+    );
+    let err = validate(&bad_gain).expect_err("supplied k_2 must be an Integer");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`k_2`"));
+
+    let omitted_gains = one_block_model(
+        "CDL.Integers.MultiSum",
+        &[ValueType::Integer, ValueType::Integer],
+        &[ValueType::Integer],
+        vec![(Arc::from("nin"), Value::Integer(2))],
+    );
+    assert!(
+        validate(&omitted_gains)
+            .expect("omitted k_i elements default to fill(1,nin)")
+            .is_empty()
+    );
+}
+
+#[test]
 fn sampled_discrete_sample_period_is_required_and_at_least_one_millisecond() {
     for class in [
         "CDL.Discrete.FirstOrderHold",

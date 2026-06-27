@@ -104,6 +104,10 @@ CDL.Logical.FallingEdge reference -> goldens/CDL/Logical/FallingEdge/reference.c
 CDL.Logical.FallingEdge y -> goldens/CDL/Logical/FallingEdge/y.csv
 CDL.Logical.Latch reference -> goldens/CDL/Logical/Latch/reference.csv
 CDL.Logical.Latch y -> goldens/CDL/Logical/Latch/y.csv
+CDL.Logical.MultiAnd reference -> goldens/CDL/Logical/MultiAnd/reference.csv
+CDL.Logical.MultiAnd y -> goldens/CDL/Logical/MultiAnd/y.csv
+CDL.Logical.MultiOr reference -> goldens/CDL/Logical/MultiOr/reference.csv
+CDL.Logical.MultiOr y -> goldens/CDL/Logical/MultiOr/y.csv
 CDL.Logical.Not reference -> goldens/CDL/Logical/Not/reference.csv
 CDL.Logical.Not y -> goldens/CDL/Logical/Not/y.csv
 CDL.Logical.Or reference -> goldens/CDL/Logical/Or/reference.csv

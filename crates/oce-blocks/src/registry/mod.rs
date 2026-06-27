@@ -40,11 +40,13 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
+        "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => logical::MULTI_LOGICAL_PARAM_RULES,
         "CDL.Logical.Sources.Pulse" | "CDL.Reals.Sources.Pulse" | "CDL.Integers.Sources.Pulse" => {
             SOURCE_PULSE_PARAM_RULES
         }
         "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_RULES,
         "CDL.Logical.VariablePulse" => logical_variable_pulse::VARIABLE_PULSE_PARAM_RULES,
+        "CDL.Integers.MultiSum" => integers::MULTI_SUM_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
         "CDL.Reals.Sources.Ramp" => reals::SOURCE_RAMP_PARAM_RULES,

@@ -339,6 +339,13 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::IntegerLessOrEqualConstant { .. } => {}
+                ParamRule::IntegerArrayElements { base, .. }
+                    if flattened_array_element_name(edited.name.as_ref(), base)
+                        && int_param_value(value).is_none() =>
+                {
+                    return true;
+                }
+                ParamRule::IntegerArrayElements { .. } => {}
                 ParamRule::EnumMembers { name, members }
                     if edited.name.as_ref() == name && !enum_param_value(value, members) =>
                 {
@@ -422,6 +429,13 @@ impl<S: Store> Engine<S> {
         }
         false
     }
+}
+
+fn flattened_array_element_name(name: &str, base: &str) -> bool {
+    let Some(suffix) = name.strip_prefix(base).and_then(|s| s.strip_prefix('_')) else {
+        return false;
+    };
+    !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit())
 }
 
 fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64>) {

@@ -152,14 +152,15 @@ fn catalog_guard_mutations_cover_required_failures() {
         "stale-generated-manifest: CDL.Logical.Nand",
     );
 
-    let mut missing_deferred_oracle = catalog.clone();
-    missing_deferred_oracle["deferred_oracle_goldens"] = Value::Array(Vec::new());
+    let manifest_with_unclassified_class = format!(
+        "{GOLDEN_MANIFEST}CDL.Synthetic.Missing y -> goldens/CDL/Synthetic/Missing/y.csv\n"
+    );
     assert_validation_error(
-        &missing_deferred_oracle,
+        &catalog,
         &prov,
-        GOLDEN_MANIFEST,
+        &manifest_with_unclassified_class,
         &registry,
-        "generated-manifest-class-without-catalog-classification: CDL.Integers.MultiSum",
+        "generated-manifest-class-without-catalog-classification: CDL.Synthetic.Missing",
     );
 
     let mut missing_evidence = catalog.clone();
