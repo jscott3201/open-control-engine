@@ -13,6 +13,7 @@ mod integers;
 mod logical;
 mod logical_proof;
 mod logical_timing;
+mod logical_variable_pulse;
 mod pid;
 mod reals;
 mod reals_filters;
@@ -42,6 +43,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
             SOURCE_PULSE_PARAM_RULES
         }
         "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_RULES,
+        "CDL.Logical.VariablePulse" => logical_variable_pulse::VARIABLE_PULSE_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
         "CDL.Reals.Sources.Ramp" => reals::SOURCE_RAMP_PARAM_RULES,
@@ -67,6 +69,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     pid::ENTRIES,
     logical::ENTRIES,
     logical_proof::ENTRIES,
+    logical_variable_pulse::ENTRIES,
     logical_timing::ENTRIES,
     conversions::ENTRIES,
     integers::ENTRIES,

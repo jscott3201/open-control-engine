@@ -624,6 +624,57 @@ fn proof_feedback_delay_less_than_debounce_is_warning_only() {
 }
 
 #[test]
+fn variable_pulse_invalid_bounded_params_are_errors() {
+    let missing = one_block_model(
+        "CDL.Logical.VariablePulse",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![],
+    );
+    let err = validate(&missing).expect_err("VariablePulse period is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+
+    let bad_delta = one_block_model(
+        "CDL.Logical.VariablePulse",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("period", 10.0), rp("deltaU", 0.000_1)],
+    );
+    let err = validate(&bad_delta).expect_err("deltaU below source min must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`deltaU`"));
+
+    let bad_hold = one_block_model(
+        "CDL.Logical.VariablePulse",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("period", 10.0), rp("minTruFalHol", 0.0)],
+    );
+    let err = validate(&bad_hold).expect_err("minTruFalHol below Constants.small must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`minTruFalHol`"));
+}
+
+#[test]
+fn variable_pulse_short_period_is_warning_only() {
+    let model = one_block_model(
+        "CDL.Logical.VariablePulse",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("period", 0.0), rp("minTruFalHol", 1.0)],
+    );
+    let warnings = validate(&model).expect("Buildings source assert is warning-only");
+    assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(warnings[0].severity, Severity::Warning);
+    assert!(warnings[0].message.contains("period >= 2"));
+}
+
+#[test]
 fn integer_literals_are_valid_for_real_param_rules() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",

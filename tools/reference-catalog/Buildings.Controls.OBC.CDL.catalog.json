@@ -95,6 +95,7 @@
           "Toggle",
           "TrueDelay",
           "TrueFalseHold",
+          "VariablePulse",
           "Xor"
         ],
         "legacy_evidence_exemption": [
@@ -105,8 +106,7 @@
       },
       "missing": [
         "MultiAnd",
-        "MultiOr",
-        "VariablePulse"
+        "MultiOr"
       ]
     },
     {
