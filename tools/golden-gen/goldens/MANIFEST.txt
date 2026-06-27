@@ -8,6 +8,10 @@ CDL.Conversions.IntegerToReal reference -> goldens/CDL/Conversions/IntegerToReal
 CDL.Conversions.IntegerToReal y -> goldens/CDL/Conversions/IntegerToReal/y.csv
 CDL.Conversions.RealToInteger reference -> goldens/CDL/Conversions/RealToInteger/reference.csv
 CDL.Conversions.RealToInteger y -> goldens/CDL/Conversions/RealToInteger/y.csv
+CDL.Discrete.TriggeredMax reference -> goldens/CDL/Discrete/TriggeredMax/reference.csv
+CDL.Discrete.TriggeredMax y -> goldens/CDL/Discrete/TriggeredMax/y.csv
+CDL.Discrete.TriggeredMax/trigger_initially_true reference -> goldens/CDL/Discrete/TriggeredMax/trigger_initially_true/reference.csv
+CDL.Discrete.TriggeredMax/trigger_initially_true y -> goldens/CDL/Discrete/TriggeredMax/trigger_initially_true/y.csv
 CDL.Discrete.TriggeredSampler reference -> goldens/CDL/Discrete/TriggeredSampler/reference.csv
 CDL.Discrete.TriggeredSampler y -> goldens/CDL/Discrete/TriggeredSampler/y.csv
 CDL.Discrete.TriggeredSampler/trigger_initially_true reference -> goldens/CDL/Discrete/TriggeredSampler/trigger_initially_true/reference.csv

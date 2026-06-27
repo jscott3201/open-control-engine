@@ -1,6 +1,8 @@
 use oce_model::{ParamTable, Value};
 
-use super::{Block, Ctx, NoopDiagnostics, TriggeredSampler};
+use oce_model::determinism::CANONICAL_NAN_BITS;
+
+use super::{Block, Ctx, NoopDiagnostics, TriggeredMax, TriggeredSampler};
 
 fn sample_tick(block: &dyn Block, region: &mut [u64], u: f64, trigger: bool) -> Value {
     let diag = NoopDiagnostics;
@@ -13,6 +15,10 @@ fn sample_tick(block: &dyn Block, region: &mut [u64], u: f64, trigger: bool) -> 
     });
     block.update_state(&cx, &inputs, region);
     out.expect("single-output stateful block emits one value")
+}
+
+fn assert_real_bits(got: &Value, want: f64) {
+    assert!(got.bit_eq(&Value::Real(want)), "got {got:?}, want {want:?}");
 }
 
 fn emit_once(block: &dyn Block, inputs: &[Value], region: &[u64]) -> Vec<Value> {
@@ -123,4 +129,90 @@ fn infinite_samples_are_held_bit_exactly() {
         sample_tick(&sampler, &mut region, f64::NEG_INFINITY, true)
             .bit_eq(&Value::Real(f64::NEG_INFINITY))
     );
+}
+
+#[test]
+fn triggered_max_initial_false_emits_raw_current_input_before_any_trigger() {
+    let max = TriggeredMax;
+    assert_eq!(max.state_len(), 3);
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+
+    let first = sample_tick(&max, &mut region, -2.5, false);
+    assert_real_bits(&first, -2.5);
+
+    let held = sample_tick(&max, &mut region, -9.0, false);
+    assert_real_bits(&held, -2.5);
+
+    let rising = sample_tick(&max, &mut region, -9.0, true);
+    assert_real_bits(&rising, 9.0);
+}
+
+#[test]
+fn triggered_max_initial_true_applies_event_to_initial_value() {
+    let max = TriggeredMax;
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+
+    let first = sample_tick(&max, &mut region, -2.5, true);
+    assert_real_bits(&first, 2.5);
+    assert!(
+        sample_tick(&max, &mut region, 10.0, true).bit_eq(&Value::Real(2.5)),
+        "holding trigger high does not resample"
+    );
+    assert_real_bits(&sample_tick(&max, &mut region, 10.0, false), 2.5);
+    assert_real_bits(&sample_tick(&max, &mut region, 10.0, true), 10.0);
+}
+
+#[test]
+fn triggered_max_emit_pass_is_pure_for_initial_and_event_paths() {
+    let max = TriggeredMax;
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+    let inputs = [Value::Real(-4.0), Value::Boolean(true)];
+
+    let a = emit_once(&max, &inputs, &region);
+    let b = emit_once(&max, &inputs, &region);
+    assert_real_bits(&a[0], 4.0);
+    assert!(a[0].bit_eq(&b[0]));
+    assert_eq!(
+        region,
+        vec![0, 0, 0],
+        "emit_from_state must not mutate state"
+    );
+}
+
+#[test]
+fn triggered_max_non_finite_samples_follow_reals_max_policy() {
+    let max = TriggeredMax;
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+    let noncanonical_nan = f64::from_bits(0xfff8_0000_0000_0001);
+    let canonical_nan = f64::from_bits(CANONICAL_NAN_BITS);
+
+    assert_real_bits(
+        &sample_tick(&max, &mut region, noncanonical_nan, false),
+        canonical_nan,
+    );
+    assert_eq!(region[0], CANONICAL_NAN_BITS);
+
+    assert_real_bits(&sample_tick(&max, &mut region, 5.0, true), 5.0);
+    assert_real_bits(
+        &sample_tick(&max, &mut region, f64::NEG_INFINITY, false),
+        5.0,
+    );
+    assert_real_bits(
+        &sample_tick(&max, &mut region, f64::NEG_INFINITY, true),
+        f64::INFINITY,
+    );
+}
+
+#[test]
+fn triggered_max_signed_zero_policy_matches_deterministic_max() {
+    let max = TriggeredMax;
+    let mut region = vec![0u64; max.state_len()];
+    max.init_state(&mut region, &ParamTable::default());
+
+    assert_real_bits(&sample_tick(&max, &mut region, -0.0, false), -0.0);
+    assert_real_bits(&sample_tick(&max, &mut region, -0.0, true), 0.0);
 }

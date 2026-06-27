@@ -79,6 +79,47 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
+    // TriggeredMax: initial y = u, then y=max(pre(y),abs(u)) on false->true trigger edges.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let u = [-2.0, -3.0, 4.0, 5.0, -6.0, 7.0];
+        let trigger = [false, true, true, false, true, false];
+        let y = triggered_max_y(&u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredMax",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "u=[-2,-3,4,5,-6,7]; trigger=[false,true,true,false,true,false]",
+                "initial equation y=u; on false->true trigger edges y=max(pre(y),abs(u)); held true does not resample; Buildings TriggeredMax.mo",
+            )
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
+    // TriggeredMax scenario: an initially true trigger applies max(initial y, abs(u)).
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0];
+        let u = [-2.0, -10.0, 8.0, 7.0];
+        let trigger = [true, true, false, true];
+        let y = triggered_max_y(&u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredMax",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "scenario=trigger_initially_true; u=[-2,-10,8,7]; trigger=[true,true,false,true]",
+                "pre(trigger) is false at initialization; initial y=u is then used as pre(y) for the initial rising-trigger event, so negative u becomes abs(u)",
+            )
+            .with_scenario("trigger_initially_true")
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
     // TriggeredSampler: y = y_start until a false->true trigger, then the current u is held.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
@@ -180,6 +221,27 @@ pub fn goldens() -> Vec<Golden> {
     out
 }
 
+fn triggered_max_y(u: &[f64], trigger: &[bool]) -> Vec<Sample> {
+    assert_eq!(u.len(), trigger.len());
+    let mut prev_trigger = false;
+    let mut held = 0.0;
+    let mut has_history = false;
+    let mut y = Vec::with_capacity(u.len());
+    for (&cur, &trig) in u.iter().zip(trigger) {
+        let base = if has_history { held } else { cur };
+        let out = if trig && !prev_trigger {
+            oracle_max(base, cur.abs())
+        } else {
+            base
+        };
+        y.push(r(out));
+        held = out;
+        prev_trigger = trig;
+        has_history = true;
+    }
+    y
+}
+
 fn triggered_sampler_y(y_start: f64, u: &[f64], trigger: &[bool]) -> Vec<Sample> {
     assert_eq!(u.len(), trigger.len());
     let mut held = y_start;
@@ -193,6 +255,21 @@ fn triggered_sampler_y(y_start: f64, u: &[f64], trigger: &[bool]) -> Vec<Sample>
         prev_trigger = trig;
     }
     y
+}
+
+fn oracle_max(a: f64, b: f64) -> f64 {
+    if a.is_nan() {
+        return b;
+    }
+    if b.is_nan() {
+        return a;
+    }
+    let m = a.max(b);
+    if m == 0.0 && (a.is_sign_positive() || b.is_sign_positive()) {
+        0.0
+    } else {
+        m
+    }
 }
 
 fn sample_trigger_golden(

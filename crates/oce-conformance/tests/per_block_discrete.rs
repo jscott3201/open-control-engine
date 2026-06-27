@@ -32,6 +32,7 @@ const TRIGGERED_SAMPLER_INITIAL_TRUE_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("-7.0"),
 }];
+const NO_PARAMS: &[Param] = &[];
 
 // The checked-in goldens pin one-sample-delay dynamics, state latching,
 // triggered sampling, determinism, non-dyadic bit-exact values, and `y_start` parameter binding.
@@ -68,6 +69,22 @@ const CASES: &[BlockCase] = &[
         TRIGGERED_SAMPLER_INITIAL_TRUE_PARAMS,
         REAL_Y,
     ),
+    case(
+        "discrete_triggered_max",
+        "CDL.Discrete.TriggeredMax",
+        "TriggeredMax",
+        U_TRIGGER,
+        NO_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_triggered_max_initial_true",
+        "CDL.Discrete.TriggeredMax",
+        "TriggeredMax/trigger_initially_true",
+        U_TRIGGER,
+        NO_PARAMS,
+        REAL_Y,
+    ),
 ];
 
 const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
@@ -75,6 +92,8 @@ const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
     "discrete_unit_delay_nonzero_y_start",
     "discrete_triggered_sampler",
     "discrete_triggered_sampler_initial_true",
+    "discrete_triggered_max",
+    "discrete_triggered_max_initial_true",
 ];
 
 #[test]
