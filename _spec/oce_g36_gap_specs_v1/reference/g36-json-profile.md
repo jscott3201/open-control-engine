@@ -15,7 +15,9 @@ bar for full G36 runtime-sequence support.
 The profile covers:
 
 - source-proven G36 class and package identity;
-- fixture-only pre-flattened representative sequences already in the repo;
+- fixture-only pre-flattened representative sequences already in the repo, including
+  source-reviewed fragments with explicit upstream source, IO, parameter, and deferred-branch
+  manifests;
 - structural G36 enum and integer-constant packages;
 - profile-only examples for composite identity and parameter-gated connectors;
 - restricted explicit-CXF composite import after load-time specialization;
@@ -128,7 +130,9 @@ they are marked `supported-runtime-sequence`.
 
 : A checked-in pre-flattened CXF fixture loads today because all executable child instances are
   native `CDL.*` blocks. It has local deterministic and oracle evidence, but no canonical upstream
-  G36 composite import claim.
+  G36 composite import claim. When `source_mapping_status` is `source-reviewed-fragment`, the row
+  must also record the reviewed upstream source files, source commit, fixture-local required inputs,
+  outputs, active child components, parameters, known deferred branches, and unsupported variants.
 
 `supported-import-fixture`
 
@@ -166,6 +170,11 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond` for the explicit `have_hol=false`
   variant. Optional hold input/subgraph nodes are present as inactive post-specialization evidence
   and pruned before the executable graph is frozen.
+- `crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld`, and
+  `crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld` remain fixture-only representative
+  graphs. Their catalog rows are source-reviewed fragments of upstream G36 files, not canonical
+  runtime-sequence imports.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

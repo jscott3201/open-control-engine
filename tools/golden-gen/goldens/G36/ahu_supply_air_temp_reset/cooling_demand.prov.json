@@ -16,6 +16,9 @@
   ],
   "input": "SAT reset: same inputs; output is demandLimiter.y",
   "reference_rule": "cooling_demand=max(0,min(zone_temp-cooling_setpoint,1)); dyadic operands, no add-rounding coverage",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
+  "fixture_status": "supported-fixture-only source-reviewed fragment",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

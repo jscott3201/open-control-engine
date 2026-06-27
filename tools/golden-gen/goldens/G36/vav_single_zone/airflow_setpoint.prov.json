@@ -17,6 +17,9 @@
   ],
   "input": "VAV airflowSwitch heating branch only: heatingFlow.k=0.6; cooling branch is PID-contaminated and masked out",
   "reference_rule": "When heating_enabled is true, Reals.Switch selects heatingFlow.y=0.6 exactly; rows outside the mask are deferred Tier-B territory",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+  "fixture_status": "supported-fixture-only source-reviewed fragment",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

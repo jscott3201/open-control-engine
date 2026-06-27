@@ -19,6 +19,8 @@ mod arrays;
 mod bridge;
 pub mod dto;
 #[cfg(test)]
+mod g36_catalog_fixture_manifest;
+#[cfg(test)]
 mod g36_catalog_guard_data;
 #[cfg(test)]
 mod g36_catalog_guard_helpers;

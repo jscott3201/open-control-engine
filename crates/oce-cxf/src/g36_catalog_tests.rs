@@ -99,6 +99,39 @@ fn g36_catalog_guard_mutations_cover_required_failures() {
     );
     assert_validation_error(&missing_fixture, &prov, "fixture-path-set-drift");
 
+    let mut missing_source_review = catalog.clone();
+    let sat_fixture = fixture_record_mut(&mut missing_source_review, "ahu_supply_air_temp_reset");
+    sat_fixture["source_mapping_status"] = Value::String(String::new());
+    assert_validation_error(
+        &missing_source_review,
+        &prov,
+        "fixture-source-mapping-not-reviewed: ahu_supply_air_temp_reset",
+    );
+
+    let mut stale_fixture_manifest = catalog.clone();
+    let sat_fixture = fixture_record_mut(&mut stale_fixture_manifest, "ahu_supply_air_temp_reset");
+    sat_fixture["required_inputs"].as_array_mut().unwrap().pop();
+    assert_validation_error(
+        &stale_fixture_manifest,
+        &prov,
+        "fixture-input-manifest-drift: ahu_supply_air_temp_reset",
+    );
+
+    let mut unknown_fixture_source = catalog.clone();
+    let econ_fixture = fixture_record_mut(&mut unknown_fixture_source, "ahu_economizer");
+    econ_fixture["upstream_source_files"]
+        .as_array_mut()
+        .unwrap()
+        .push(Value::String(
+            "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Missing.mo"
+                .to_owned(),
+        ));
+    assert_validation_error(
+        &unknown_fixture_source,
+        &prov,
+        "fixture-source-not-in-provenance: ahu_economizer:Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Missing.mo",
+    );
+
     let mut missing_composite_fixture = catalog.clone();
     remove_path_entry(
         missing_composite_fixture["composite_import_fixtures"]
@@ -188,6 +221,15 @@ fn g36_catalog_guard_mutations_cover_required_failures() {
         "expected unknown guard parameter in errors:\n{}",
         errors.join("\n")
     );
+}
+
+fn fixture_record_mut<'a>(catalog: &'a mut Value, name: &str) -> &'a mut Value {
+    catalog["fixture_only_sequences"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|entry| str_field(entry, "name") == name)
+        .unwrap_or_else(|| panic!("missing fixture record {name}"))
 }
 
 const PARAMETER_GATED_UNKNOWN_PARAMETER: &str = r#"{

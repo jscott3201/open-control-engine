@@ -17,6 +17,9 @@
   ],
   "input": "Economizer: return_air_temp=24; outdoor_air_temp=[23,19,19,19,24,19]",
   "reference_rule": "returnMinusOutdoor.y = return_air_temp - outdoor_air_temp; dyadic operands, no add-rounding coverage",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+  "fixture_status": "supported-fixture-only source-reviewed fragment",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

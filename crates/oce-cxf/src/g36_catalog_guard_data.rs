@@ -26,7 +26,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "a04c770bd62acc68";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "328aff5c9e8b3243";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -34,9 +34,11 @@ pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
@@ -46,7 +48,14 @@ pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
 ];
 pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
 ];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
