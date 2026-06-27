@@ -32,7 +32,11 @@ impl EnumClassId {
     pub const ZERO_TIME: Self = Self(4);
 }
 
-pub use types::{SimpleController, ZeroTime, enum_class_id, enum_member_ordinal};
+pub use types::{
+    SimpleController, ZeroTime, enum_class_id, enum_member_ordinal, g36_enum_class_id,
+    g36_enum_literals, g36_integer_constant, g36_integer_constant_in_package,
+    is_g36_integer_constant_package, is_g36_type_path,
+};
 
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and
 /// never travel on the hot path (CDL §7.17).

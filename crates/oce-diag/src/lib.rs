@@ -82,6 +82,20 @@ pub enum DiagCode {
     /// A parameter binding could not be ground to a literal in `Ground` mode (§9.1.8) — e.g. an
     /// `oce-expr` evaluation failure or an unresolved symbol.
     GroundingFailed,
+    /// A declared enumeration type is outside the source-pinned closed-world registry.
+    UnknownEnumType,
+    /// A declared enumeration literal is not a member of its source-pinned type.
+    UnknownEnumLiteral,
+    /// A profile supplied a numeric stand-in where a canonical enum literal is required.
+    EnumIntegerStandin,
+    /// A conditional guard references a parameter not available in the load-time scope.
+    ConditionalGuardUnknownParameter,
+    /// A conditional guard uses syntax outside the load-time specialization subset.
+    ConditionalGuardUnsupported,
+    /// An inactive conditional connector/component was still supplied to active graph structure.
+    InactiveConditionalNode,
+    /// A connector/component required by the active conditional variant is missing.
+    MissingActiveConditionalNode,
     /// `isReplaceable=true` or an unevaluated `conditionalExpression` survived into `Ground` mode
     /// (unresolved polymorphism; §9.1.9).
     UnresolvedPolymorphism,
@@ -136,6 +150,13 @@ impl DiagCode {
             DiagCode::OverlayTargetNotFound => "overlay-target-not-found",
             DiagCode::ArrayFlattenCollision => "array-flatten-collision",
             DiagCode::GroundingFailed => "grounding-failed",
+            DiagCode::UnknownEnumType => "unknown-enum-type",
+            DiagCode::UnknownEnumLiteral => "unknown-enum-literal",
+            DiagCode::EnumIntegerStandin => "enum-integer-standin",
+            DiagCode::ConditionalGuardUnknownParameter => "conditional-guard-unknown-parameter",
+            DiagCode::ConditionalGuardUnsupported => "conditional-guard-unsupported",
+            DiagCode::InactiveConditionalNode => "inactive-conditional-node",
+            DiagCode::MissingActiveConditionalNode => "missing-active-conditional-node",
             DiagCode::UnresolvedPolymorphism => "unresolved-polymorphism",
             DiagCode::NonSubsetConstruct => "non-subset-construct",
             DiagCode::MalformedDocument => "malformed-document",

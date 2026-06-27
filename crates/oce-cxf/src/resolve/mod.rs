@@ -28,7 +28,7 @@ use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_expr::EvalResult;
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
-    ValueType,
+    ValueType, enum_class_id, is_g36_integer_constant_package,
 };
 
 use crate::arrays::expand_array_param;
@@ -38,9 +38,11 @@ use crate::{CxfError, bridge};
 
 mod attrs;
 mod diags;
+mod specialize;
 
 use attrs::connector_attrs;
 use diags::{finalize_diags, subject_of};
+use specialize::{specialize, validate_g36_parameter_value};
 
 /// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
@@ -126,7 +128,9 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
         "Real" => Some(ValueType::Real),
         "Integer" => Some(ValueType::Integer),
         "Boolean" => Some(ValueType::Boolean),
-        _ => None,
+        _ => enum_class_id(iri)
+            .map(ValueType::Enum)
+            .or_else(|| is_g36_integer_constant_package(iri).then_some(ValueType::Integer)),
     }
 }
 
@@ -178,9 +182,25 @@ pub(crate) fn resolve(
             )]));
         }
     };
-    let child_iris: Vec<&str> = top.contains_block.iter().map(|r| r.id.as_str()).collect();
-    let boundary_in: HashSet<&str> = top.has_input.iter().map(|r| r.id.as_str()).collect();
-    let boundary_out: HashSet<&str> = top.has_output.iter().map(|r| r.id.as_str()).collect();
+    let specialization = specialize(doc, &by_id, &mut diags);
+    let child_iris: Vec<&str> = top
+        .contains_block
+        .iter()
+        .map(|r| r.id.as_str())
+        .filter(|iri| !specialization.is_inactive(iri))
+        .collect();
+    let boundary_in: HashSet<&str> = top
+        .has_input
+        .iter()
+        .map(|r| r.id.as_str())
+        .filter(|iri| !specialization.is_inactive(iri))
+        .collect();
+    let boundary_out: HashSet<&str> = top
+        .has_output
+        .iter()
+        .map(|r| r.id.as_str())
+        .filter(|iri| !specialization.is_inactive(iri))
+        .collect();
 
     // --- Step 3: assign BlockId in containsBlock array order; bridge @type → class_path and check
     // the registry (Step 4 folded in). block_of_iri is lookup-only.
@@ -230,8 +250,18 @@ pub(crate) fn resolve(
         insts.push(Inst {
             id,
             node,
-            input_iris: node.has_input.iter().map(|r| r.id.as_str()).collect(),
-            output_iris: node.has_output.iter().map(|r| r.id.as_str()).collect(),
+            input_iris: node
+                .has_input
+                .iter()
+                .map(|r| r.id.as_str())
+                .filter(|iri| !specialization.is_inactive(iri))
+                .collect(),
+            output_iris: node
+                .has_output
+                .iter()
+                .map(|r| r.id.as_str())
+                .filter(|iri| !specialization.is_inactive(iri))
+                .collect(),
         });
         blocks.push(BlockInstance {
             id,
@@ -362,6 +392,7 @@ pub(crate) fn resolve(
                 );
                 continue;
             };
+            validate_g36_parameter_value(pnode, cxf_val, &mut diags);
             if pnode.is_array == Some(true) {
                 // A preserved array parameter expands to per-element scalar entries (doc 04 §3.6.1).
                 // Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
@@ -430,9 +461,31 @@ pub(crate) fn resolve(
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
     for node in &doc.graph {
         let source = node.id.as_str();
+        if specialization.is_inactive(source) {
+            if !node.is_connected_to.is_empty() {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::InactiveConditionalNode,
+                        "inactive conditional node still carries active connections",
+                    )
+                    .with_subject(source.to_owned()),
+                );
+            }
+            continue;
+        }
         let src_is_boundary_in = boundary_in.contains(source);
         for tref in node.is_connected_to.iter() {
             let target = tref.id.as_str();
+            if specialization.is_inactive(target) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::InactiveConditionalNode,
+                        "connection targets an inactive conditional node",
+                    )
+                    .with_subject(target.to_owned()),
+                );
+                continue;
+            }
             if src_is_boundary_in {
                 // boundary input → child input: elide; record external + attach boundary IRI (AD-2).
                 match conn_of_iri.get(target).copied() {
