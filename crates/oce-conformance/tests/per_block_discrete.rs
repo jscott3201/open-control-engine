@@ -3,11 +3,18 @@
 mod block_harness;
 
 use block_harness::{
-    BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
+    B, BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
     assert_cases_match_exact_oracle, case,
 };
 
 const U: &[Port] = &[Port { name: "u", kind: R }];
+const U_TRIGGER: &[Port] = &[
+    Port { name: "u", kind: R },
+    Port {
+        name: "trigger",
+        kind: B,
+    },
+];
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
 const UNIT_DELAY_PARAMS: &[Param] = &[Param {
     name: "y_start",
@@ -17,9 +24,17 @@ const UNIT_DELAY_NONZERO_START_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("2.5"),
 }];
+const TRIGGERED_SAMPLER_PARAMS: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Real("2.5"),
+}];
+const TRIGGERED_SAMPLER_INITIAL_TRUE_PARAMS: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Real("-7.0"),
+}];
 
 // The checked-in goldens pin one-sample-delay dynamics, state latching,
-// determinism, non-dyadic bit-exact values, and `y_start` parameter binding.
+// triggered sampling, determinism, non-dyadic bit-exact values, and `y_start` parameter binding.
 const CASES: &[BlockCase] = &[
     case(
         "discrete_unit_delay",
@@ -37,10 +52,30 @@ const CASES: &[BlockCase] = &[
         UNIT_DELAY_NONZERO_START_PARAMS,
         REAL_Y,
     ),
+    case(
+        "discrete_triggered_sampler",
+        "CDL.Discrete.TriggeredSampler",
+        "TriggeredSampler",
+        U_TRIGGER,
+        TRIGGERED_SAMPLER_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_triggered_sampler_initial_true",
+        "CDL.Discrete.TriggeredSampler",
+        "TriggeredSampler/trigger_initially_true",
+        U_TRIGGER,
+        TRIGGERED_SAMPLER_INITIAL_TRUE_PARAMS,
+        REAL_Y,
+    ),
 ];
 
-const STATEFUL_DISCRETE_SLUGS: &[&str] =
-    &["discrete_unit_delay", "discrete_unit_delay_nonzero_y_start"];
+const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
+    "discrete_unit_delay",
+    "discrete_unit_delay_nonzero_y_start",
+    "discrete_triggered_sampler",
+    "discrete_triggered_sampler_initial_true",
+];
 
 #[test]
 fn discrete_reference_blocks_match_exact_oracle() {

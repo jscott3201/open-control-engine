@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Discrete.TriggeredSampler",
+  "scenario": "trigger_initially_true",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "trigger", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [9.0, 10.0, 11.0, 12.0] },
+    { "name": "trigger", "value_kind": "Boolean", "values": [1.0, 1.0, 0.0, 1.0] }
+  ],
+  "input": "scenario=trigger_initially_true; y_start=-7.0; u=[9,10,11,12]; trigger=[true,true,false,true]",
+  "reference_rule": "pre(trigger) is false at initialization, so trigger=true at t=0 samples current u; held true does not resample until trigger falls and rises",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

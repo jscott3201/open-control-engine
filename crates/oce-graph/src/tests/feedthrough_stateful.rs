@@ -147,6 +147,31 @@ fn ramp_active_and_output_feedthrough_schedule_current_tick_inputs() {
 }
 
 #[test]
+fn triggered_sampler_feedback_requires_an_explicit_cut() {
+    let mut direct = ModelBuilder::default();
+    let (_sampler, sampler_in, sampler_out) = direct.block_real(make(
+        "CDL.Discrete.TriggeredSampler",
+        &[("y_start", Value::Real(0.0))],
+    ));
+    let (_trigger, _, trigger_out) = direct.block_real(make(
+        "CDL.Logical.Sources.Constant",
+        &[("k", Value::Boolean(true))],
+    ));
+    direct.connect(sampler_out[0], sampler_in[0]);
+    direct.connect(trigger_out[0], sampler_in[1]);
+
+    let err = compile(&direct.model, &direct.blocks)
+        .expect_err("TriggeredSampler is transparent on trigger edges and must not cut feedback");
+    assert!(
+        matches!(
+            err,
+            BuildError::AlgebraicLoop { .. } | BuildError::BlockAlgebraicLoop { .. }
+        ),
+        "expected algebraic loop rejection, got {err:?}"
+    );
+}
+
+#[test]
 fn h0_comparator_allocates_no_state_through_real_graph_build() {
     let mut b = ModelBuilder::default();
     let (greater, _, _) = b.block_real(make("CDL.Reals.Greater", &[]));

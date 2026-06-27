@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "00438e626b88f59d";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "4fe4b17787af3f7d";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -93,13 +93,13 @@ pub(super) fn validate_catalog(
         .iter()
         .filter(|entry| entry.status == "missing")
         .count();
-    if implemented.len() != 76 {
+    if implemented.len() != 77 {
         errors.push(format!(
             "implemented-reference-count: {}",
             implemented.len()
         ));
     }
-    if missing_count != 56 {
+    if missing_count != 55 {
         errors.push(format!("missing-reference-count: {missing_count}"));
     }
 

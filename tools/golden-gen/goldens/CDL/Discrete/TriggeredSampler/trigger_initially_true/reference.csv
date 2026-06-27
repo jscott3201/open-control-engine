@@ -1,0 +1,7 @@
+#1
+# columns: time u trigger y
+double CDL_Discrete_TriggeredSampler_trigger_initially_true_reference(4,4)
+0.0 9.0 1.0 9.0
+1.0 10.0 1.0 9.0
+2.0 11.0 0.0 9.0
+3.0 12.0 1.0 12.0

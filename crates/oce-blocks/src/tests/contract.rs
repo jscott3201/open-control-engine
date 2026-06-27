@@ -77,6 +77,8 @@ fn feedthrough_classification_matches_spec() {
     assert!(!Constant { k: 0.0 }.feeds_through(0, 0)); // no inputs
     assert!(!Pre::default().feeds_through(0, 0)); // THE cut
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
+    assert!(TriggeredSampler::default().feeds_through(0, 0)); // current u sampled on a trigger
+    assert!(TriggeredSampler::default().feeds_through(1, 0)); // current trigger chooses sampling
     assert!(!IntegratorWithReset::default().feeds_through(0, 0)); // integrating loop cut
     assert!(!IntegratorWithReset::default().feeds_through(1, 0)); // reset value is delayed
     assert!(!IntegratorWithReset::default().feeds_through(2, 0)); // trigger is delayed
@@ -110,6 +112,7 @@ fn feedthrough_classification_matches_spec() {
 
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
+    assert_eq!(TriggeredSampler::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
     assert_eq!(Derivative::default().kind(), BlockKind::Stateful);
     assert!(Derivative::default().feeds_through(0, 0));
@@ -210,10 +213,11 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.OnCounter",
         "CDL.Integers.Change",
         "CDL.Integers.Stage",
+        "CDL.Discrete.TriggeredSampler",
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 77, "registry count");
+    assert_eq!(PATHS.len(), 78, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -386,6 +390,20 @@ fn registry_make_resolves_parameters() {
     let mut region = vec![0u64; delay.state_len()];
     delay.init_state(&mut region, &delay_params);
     assert!(emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(1.25)));
+
+    let sampler = (lookup("CDL.Discrete.TriggeredSampler").unwrap().make)(&delay_params);
+    assert_eq!(sampler.kind(), BlockKind::Stateful);
+    assert_eq!(sampler.state_len(), 2);
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &delay_params);
+    assert!(
+        emit(
+            sampler.as_ref(),
+            &[Value::Real(0.0), Value::Boolean(false)],
+            &region,
+        )[0]
+        .bit_eq(&Value::Real(1.25))
+    );
 
     let integrator = (lookup("CDL.Reals.IntegratorWithReset").unwrap().make)(&delay_params);
     let mut region = vec![0u64; integrator.state_len()];
@@ -574,6 +592,19 @@ fn real_param_promotes_integer_to_real() {
     assert!(
         emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(5.0)),
         "Integer(5) y_start must seed the initial output to 5.0, not silently default to 0.0"
+    );
+
+    let sampler = (lookup("CDL.Discrete.TriggeredSampler").unwrap().make)(&y_int);
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &y_int);
+    assert!(
+        emit(
+            sampler.as_ref(),
+            &[Value::Real(0.0), Value::Boolean(false)],
+            &region,
+        )[0]
+        .bit_eq(&Value::Real(5.0)),
+        "Integer(5) TriggeredSampler.y_start must seed the initial held output"
     );
 }
 
