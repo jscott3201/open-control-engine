@@ -1,10 +1,9 @@
 //! Test-only helpers for the checked-in ASHRAE G36 sequence catalog guard.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use serde_json::Value;
 
-use crate::dto::CxfValue;
 use crate::{OneOrMany, bridge};
 
 pub(super) use crate::g36_catalog_guard_data::*;
@@ -13,15 +12,29 @@ pub(super) use crate::g36_catalog_guard_helpers::{
     string_set,
 };
 use crate::g36_catalog_guard_helpers::{
-    assert_usize_field, bool_field, constant_packages, enum_literals, jsonld_fragment,
-    package_order, parameter_names, parse_cxf, string_vec,
+    assert_usize_field, bool_field, constant_packages, enum_literals, package_order, parse_cxf,
+    string_vec,
 };
-const G36_TYPES_PREFIX: &str = "Buildings.Controls.OBC.ASHRAE.G36.Types.";
+use crate::g36_catalog_literal_guard::{
+    validate_conditional_guards, validate_g36_literals_in_fixture,
+};
+
+const G36_BRIDGE_PREFIX: &str = "ASHRAE.G36.";
+
+fn catalog_class_path(type_iri: &str) -> String {
+    let class_path = bridge::class_path_of(type_iri);
+    if class_path.starts_with(G36_BRIDGE_PREFIX) {
+        format!("Buildings.Controls.OBC.{class_path}")
+    } else {
+        class_path.to_owned()
+    }
+}
 
 pub(super) fn validate_g36_catalog(
     catalog: &Value,
     prov: &Value,
     runtime_fixtures: &[FixtureSource],
+    composite_import_fixtures: &[FixtureSource],
     profile_fixtures: &[FixtureSource],
 ) -> Vec<String> {
     let mut errors = validate_provenance(prov);
@@ -31,6 +44,7 @@ pub(super) fn validate_g36_catalog(
     validate_initial_paths(catalog, &mut errors);
     validate_type_registry(catalog, &mut errors);
     validate_fixture_records(catalog, runtime_fixtures, &mut errors);
+    validate_composite_import_fixture_records(catalog, composite_import_fixtures, &mut errors);
     validate_profile_fixture_records(catalog, profile_fixtures, &mut errors);
 
     let enum_literals = enum_literals(catalog);
@@ -39,6 +53,12 @@ pub(super) fn validate_g36_catalog(
         validate_runtime_fixture_shape(catalog, fixture, &mut errors);
         validate_fixture_cdl_types(fixture, &mut errors);
         validate_g36_literals_in_fixture(fixture, &enum_literals, &constant_packages, &mut errors);
+    }
+    for fixture in composite_import_fixtures {
+        validate_composite_import_fixture_shape(catalog, fixture, &mut errors);
+        validate_composite_import_fixture_types(catalog, fixture, &mut errors);
+        validate_g36_literals_in_fixture(fixture, &enum_literals, &constant_packages, &mut errors);
+        validate_conditional_guards(fixture, &enum_literals, &constant_packages, &mut errors);
     }
     for fixture in profile_fixtures {
         validate_fixture_cdl_types(fixture, &mut errors);
@@ -145,6 +165,15 @@ fn validate_package_orders(catalog: &Value, errors: &mut Vec<String>) {
             ],
         ),
         (
+            "Buildings.Controls.OBC.ASHRAE.G36.Generic",
+            &[
+                "AirEconomizerHighLimits",
+                "TimeSuppression",
+                "TrimAndRespond",
+                "Validation",
+            ],
+        ),
+        (
             "Buildings.Controls.OBC.ASHRAE.G36.Types",
             &[
                 "ASHRAEClimateZone",
@@ -190,12 +219,15 @@ fn validate_top_level_packages(catalog: &Value, errors: &mut Vec<String>) {
     if status("Buildings.Controls.OBC.ASHRAE.G36.AHUs") != "in-progress" {
         errors.push("invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.AHUs".to_owned());
     }
+    if status("Buildings.Controls.OBC.ASHRAE.G36.Generic") != "in-progress" {
+        errors
+            .push("invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.Generic".to_owned());
+    }
     if status("Buildings.Controls.OBC.ASHRAE.G36.Types") != "structural-type" {
         errors.push("invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.Types".to_owned());
     }
     for path in [
         "Buildings.Controls.OBC.ASHRAE.G36.FanCoilUnits",
-        "Buildings.Controls.OBC.ASHRAE.G36.Generic",
         "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
         "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
         "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones",
@@ -376,6 +408,70 @@ fn validate_fixture_records(
     }
 }
 
+fn validate_composite_import_fixture_records(
+    catalog: &Value,
+    composite_import_fixtures: &[FixtureSource],
+    errors: &mut Vec<String>,
+) {
+    let entries = array_field(catalog, "composite_import_fixtures");
+    let catalog_paths = entries
+        .iter()
+        .map(|entry| str_field(entry, "fixture").to_owned())
+        .collect::<BTreeSet<_>>();
+    let expected_paths = composite_import_fixtures
+        .iter()
+        .map(|fixture| fixture.path.to_owned())
+        .collect::<BTreeSet<_>>();
+    if catalog_paths != expected_paths {
+        errors.push("composite-import-fixture-path-set-drift".to_owned());
+    }
+
+    for fixture in composite_import_fixtures {
+        let Some(entry) = entries
+            .iter()
+            .find(|entry| str_field(entry, "fixture") == fixture.path)
+        else {
+            errors.push(format!(
+                "composite-import-fixture-missing-catalog-record: {}",
+                fixture.path
+            ));
+            continue;
+        };
+        if str_field(entry, "status") != "supported-import-fixture" {
+            errors.push(format!(
+                "composite-import-fixture-invalid-status: {}",
+                fixture.name
+            ));
+        }
+        if bool_field(entry, "supported_runtime_sequence") {
+            errors.push(format!(
+                "composite-import-fixture-marked-runtime-supported: {}",
+                fixture.name
+            ));
+        }
+        for required in [
+            "class_path",
+            "source",
+            "modelgraph_golden",
+            "resolver_test",
+            "api_test",
+        ] {
+            if str_field(entry, required).is_empty() {
+                errors.push(format!(
+                    "composite-import-fixture-missing-evidence: {}:{required}",
+                    fixture.name
+                ));
+            }
+        }
+        if str_field(entry, "oracle_status") != "import-structure-only" {
+            errors.push(format!(
+                "composite-import-fixture-overclaims-oracle: {}",
+                fixture.name
+            ));
+        }
+    }
+}
+
 fn validate_profile_fixture_records(
     catalog: &Value,
     profile_fixtures: &[FixtureSource],
@@ -399,6 +495,117 @@ fn validate_profile_fixture_records(
                 "profile-fixture-marked-runtime: {}",
                 str_field(entry, "name")
             ));
+        }
+    }
+}
+
+fn validate_composite_import_fixture_shape(
+    catalog: &Value,
+    fixture: &FixtureSource,
+    errors: &mut Vec<String>,
+) {
+    let document = parse_cxf(fixture, errors);
+    let Some(entry) = array_field(catalog, "composite_import_fixtures")
+        .iter()
+        .find(|entry| str_field(entry, "fixture") == fixture.path)
+    else {
+        return;
+    };
+    let top_id = str_field(entry, "top_id");
+    let Some(top) = document.graph.iter().find(|node| node.id == top_id) else {
+        errors.push(format!(
+            "composite-import-fixture-top-id-missing: {}",
+            fixture.name
+        ));
+        return;
+    };
+    if !top
+        .r#type
+        .as_ref()
+        .map(OneOrMany::as_slice)
+        .unwrap_or(&[])
+        .iter()
+        .map(|type_iri| catalog_class_path(type_iri))
+        .any(|class_path| class_path == str_field(entry, "class_path"))
+    {
+        errors.push(format!(
+            "composite-import-fixture-top-class-mismatch: {}",
+            fixture.name
+        ));
+    }
+    assert_usize_field(
+        top.contains_block.len(),
+        entry,
+        "source_child_count",
+        fixture,
+        errors,
+    );
+    assert_usize_field(top.has_input.len(), entry, "input_count", fixture, errors);
+    assert_usize_field(top.has_output.len(), entry, "output_count", fixture, errors);
+    match crate::import_cxf(fixture.text.as_bytes(), &crate::ResolveOptions::default()) {
+        Ok((model, report)) => {
+            if !report.diagnostics.is_empty() {
+                errors.push(format!(
+                    "composite-import-fixture-unexpected-diagnostics: {}",
+                    fixture.name
+                ));
+            }
+            assert_usize_field(
+                model.blocks.len(),
+                entry,
+                "active_block_count",
+                fixture,
+                errors,
+            );
+        }
+        Err(err) => errors.push(format!(
+            "composite-import-fixture-import-failed: {}:{err}",
+            fixture.name
+        )),
+    }
+}
+
+fn validate_composite_import_fixture_types(
+    catalog: &Value,
+    fixture: &FixtureSource,
+    errors: &mut Vec<String>,
+) {
+    let document = parse_cxf(fixture, errors);
+    let Some(entry) = array_field(catalog, "composite_import_fixtures")
+        .iter()
+        .find(|entry| str_field(entry, "fixture") == fixture.path)
+    else {
+        return;
+    };
+    let top_id = str_field(entry, "top_id");
+    let top_class = str_field(entry, "class_path");
+    for node in &document.graph {
+        for type_iri in node.r#type.as_ref().map(OneOrMany::as_slice).unwrap_or(&[]) {
+            if type_iri.starts_with("S231:") || type_iri.starts_with("http://data.ashrae.org/") {
+                continue;
+            }
+            let class_path = catalog_class_path(type_iri);
+            if class_path == top_class && node.id == top_id {
+                continue;
+            }
+            if class_path.starts_with("CDL.") {
+                if oce_blocks::lookup(&class_path).is_none() {
+                    errors.push(format!(
+                        "composite-import-fixture-cdl-type-unregistered: {}:{class_path}",
+                        fixture.name
+                    ));
+                }
+            } else if class_path.starts_with("Buildings.Controls.OBC.ASHRAE.G36.") {
+                errors.push(format!(
+                    "composite-import-fixture-contains-uncataloged-g36-runtime-type: {}:{class_path}",
+                    fixture.name
+                ));
+            } else {
+                errors.push(format!(
+                    "composite-import-fixture-unknown-runtime-type: {}:{class_path}",
+                    fixture.name
+                ));
+            }
         }
     }
 }
@@ -441,9 +648,9 @@ fn validate_fixture_cdl_types(fixture: &FixtureSource, errors: &mut Vec<String>)
             if type_iri.starts_with("S231:") || type_iri.starts_with("http://data.ashrae.org/") {
                 continue;
             }
-            let class_path = bridge::class_path_of(type_iri);
+            let class_path = catalog_class_path(type_iri);
             if class_path.starts_with("CDL.") {
-                if oce_blocks::lookup(class_path).is_none() {
+                if oce_blocks::lookup(&class_path).is_none() {
                     errors.push(format!(
                         "fixture-cdl-type-unregistered: {}:{class_path}",
                         fixture.name
@@ -464,189 +671,14 @@ fn validate_fixture_cdl_types(fixture: &FixtureSource, errors: &mut Vec<String>)
     }
 }
 
-fn validate_g36_literals_in_fixture(
-    fixture: &FixtureSource,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    let document = parse_cxf(fixture, errors);
-    for node in &document.graph {
-        if let Some(type_id) = node.is_of_data_type.as_ref().map(|iri| iri.id.as_str()) {
-            validate_type_id(type_id, fixture, enum_literals, constant_packages, errors);
-        }
-        if let Some(value) = &node.value {
-            validate_value(value, fixture, enum_literals, constant_packages, errors);
-        }
-        if let Some(value) = &node.min {
-            validate_value(value, fixture, enum_literals, constant_packages, errors);
-        }
-        if let Some(value) = &node.max {
-            validate_value(value, fixture, enum_literals, constant_packages, errors);
-        }
-    }
-}
-
-fn validate_type_id(
-    type_id: &str,
-    fixture: &FixtureSource,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    let type_id = jsonld_fragment(type_id);
-    if !type_id.starts_with(G36_TYPES_PREFIX) {
-        return;
-    }
-    if !enum_literals.contains_key(type_id) && !constant_packages.contains_key(type_id) {
-        errors.push(format!("unknown-g36-enum-type: {}:{type_id}", fixture.name));
-    }
-}
-
-fn validate_value(
-    value: &CxfValue,
-    fixture: &FixtureSource,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    match value {
-        CxfValue::Expr(expr) => {
-            if expr.starts_with(G36_TYPES_PREFIX) {
-                validate_g36_literal(expr, fixture, enum_literals, constant_packages, errors);
-            }
-        }
-        CxfValue::List(values) => {
-            for value in values {
-                validate_value(value, fixture, enum_literals, constant_packages, errors);
-            }
-        }
-        CxfValue::Bool(_) | CxfValue::Int(_) | CxfValue::Float(_) | CxfValue::Typed { .. } => {}
-    }
-}
-
-fn validate_conditional_guards(
-    fixture: &FixtureSource,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    let document = parse_cxf(fixture, errors);
-    let params = parameter_names(&document);
-    for node in document
-        .graph
-        .iter()
-        .filter(|node| node.is_conditional == Some(true))
-    {
-        let Some(expr) = node.cond_expr.as_deref() else {
-            errors.push(format!(
-                "conditional-guard-missing: {}:{}",
-                fixture.name, node.id
-            ));
-            continue;
-        };
-        validate_guard_expr(
-            fixture,
-            &node.id,
-            expr,
-            &params,
-            enum_literals,
-            constant_packages,
-            errors,
-        );
-    }
-}
-
-fn validate_guard_expr(
-    fixture: &FixtureSource,
-    node_id: &str,
-    expr: &str,
-    params: &BTreeSet<String>,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    if expr.contains("time") || expr.contains("sin(") || expr.contains("max(") || expr.contains('+')
-    {
-        errors.push(format!(
-            "unsupported-conditional-guard: {}:{node_id}",
-            fixture.name
-        ));
-        return;
-    }
-    let terms = expr
-        .replace('(', " ( ")
-        .replace(')', " ) ")
-        .split_whitespace()
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    if terms.is_empty() {
-        errors.push(format!(
-            "unsupported-conditional-guard: {}:{node_id}",
-            fixture.name
-        ));
-        return;
-    }
-    let mut saw_expression = false;
-    for (index, term) in terms.iter().enumerate() {
-        if term == "==" || term == "!=" {
-            saw_expression = true;
-            let left = terms
-                .get(index.wrapping_sub(1))
-                .map(String::as_str)
-                .unwrap_or("");
-            let right = terms.get(index + 1).map(String::as_str).unwrap_or("");
-            if !params.contains(left) {
-                errors.push(format!(
-                    "conditional-guard-unknown-parameter: {}:{left}",
-                    fixture.name
-                ));
-            }
-            validate_g36_literal(right, fixture, enum_literals, constant_packages, errors);
-        }
-    }
-    if !saw_expression {
-        let bare = expr.trim().trim_start_matches('!').trim();
-        if !params.contains(bare) {
-            errors.push(format!(
-                "conditional-guard-unknown-parameter: {}:{bare}",
-                fixture.name
-            ));
-        }
-    }
-}
-
-fn validate_g36_literal(
-    expr: &str,
-    fixture: &FixtureSource,
-    enum_literals: &BTreeMap<String, BTreeSet<String>>,
-    constant_packages: &BTreeMap<String, BTreeMap<String, i64>>,
-    errors: &mut Vec<String>,
-) {
-    let Some((type_path, literal)) = expr.rsplit_once('.') else {
-        errors.push(format!("unknown-g36-enum-literal: {}:{expr}", fixture.name));
-        return;
-    };
-    if let Some(literals) = enum_literals.get(type_path) {
-        if !literals.contains(literal) {
-            errors.push(format!("unknown-g36-enum-literal: {}:{expr}", fixture.name));
-        }
-        return;
-    }
-    if let Some(constants) = constant_packages.get(type_path) {
-        if !constants.contains_key(literal) {
-            errors.push(format!("unknown-g36-enum-literal: {}:{expr}", fixture.name));
-        }
-        return;
-    }
-    errors.push(format!(
-        "unknown-g36-enum-type: {}:{type_path}",
-        fixture.name
-    ));
-}
-
 pub(super) fn assert_validation_error(catalog: &Value, prov: &Value, expected: &str) {
-    let errors = validate_g36_catalog(catalog, prov, RUNTIME_FIXTURES, PROFILE_FIXTURES);
+    let errors = validate_g36_catalog(
+        catalog,
+        prov,
+        RUNTIME_FIXTURES,
+        COMPOSITE_IMPORT_FIXTURES,
+        PROFILE_FIXTURES,
+    );
     assert!(
         errors.iter().any(|err| err == expected),
         "expected `{expected}` in errors:\n{}",

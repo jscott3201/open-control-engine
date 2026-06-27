@@ -5,8 +5,9 @@
     "runtime_sequence_status": "not_yet_supported",
     "fixture_status": "supported-fixture-only",
     "notes": [
-      "This catalog is a sequence-level planning and guard artifact. It does not claim that canonical ASHRAE G36 composite classes can load through oce-cxf.",
+      "This catalog is a sequence-level planning and guard artifact. It does not claim supported-runtime-sequence status for any canonical ASHRAE G36 composite class.",
       "Current in-tree G36 examples are hand-authored, pre-flattened CXF graphs made from supported CDL elementary blocks.",
+      "A restricted source-verified composite import fixture tier exists for explicit CXF that has already been specialized; it is not arbitrary Modelica parsing and is not whole-sequence oracle support.",
       "A canonical G36 class path may be marked supported-runtime-sequence only after a source-proven composite importer, explicit parameter variants, fixture, provenance, golden trace, and oracle evidence all exist."
     ]
   },
@@ -95,6 +96,16 @@
       ]
     },
     {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
+      "entries": [
+        "AirEconomizerHighLimits",
+        "TimeSuppression",
+        "TrimAndRespond",
+        "Validation"
+      ]
+    },
+    {
       "package": "Buildings.Controls.OBC.ASHRAE.G36.Types",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
       "entries": [
@@ -128,8 +139,8 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
-      "status": "deferred",
-      "rationale": "Reusable G36 logic; implement after catalog/types/composite foundation."
+      "status": "in-progress",
+      "rationale": "Reusable G36 logic; TrimAndRespond has a restricted source-verified explicit-CXF import fixture, but no supported runtime sequence claim."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
@@ -275,6 +286,30 @@
     }
   ],
   "runtime_sequences": [],
+  "composite_import_fixtures": [
+    {
+      "name": "trim_and_respond_have_hol_false",
+      "status": "supported-import-fixture",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+      "top_id": "http://example.org#g36.source.trim_and_respond_have_hol_false",
+      "source_child_count": 45,
+      "active_block_count": 44,
+      "input_count": 3,
+      "output_count": 1,
+      "supported_variant": "explicit CXF after load-time specialization with have_hol=false; inactive uHol/truHol optional hold path is pruned",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_composite.rs",
+      "api_test": "crates/oce-api/tests/composite_import.rs",
+      "oracle_status": "import-structure-only",
+      "supported_runtime_sequence": false,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, deterministic flattening, parameter propagation, conditional pruning, and facade load support.",
+        "Evidence does not claim arbitrary .mo parsing, does not cover the full SupplyTemperature sequence, and does not provide an independent whole-sequence oracle."
+      ]
+    }
+  ],
   "fixture_only_sequences": [
     {
       "name": "ahu_supply_air_temp_reset",

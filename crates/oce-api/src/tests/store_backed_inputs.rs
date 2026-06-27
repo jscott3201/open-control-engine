@@ -216,18 +216,21 @@ fn write_input(store: &MemStore, path: &str, value: Value, status: PointStatus, 
 }
 
 fn assert_input_real(engine: &Engine, path: &str, expected: f64, label: &str) {
-    let connector = engine
+    let connectors = engine
         .io
-        .resolve_input(path)
+        .resolve_inputs(path)
         .unwrap_or_else(|| panic!("{label}: {path} resolves as input"));
-    let actual = engine.state.values[connector.0 as usize]
-        .as_real()
-        .unwrap_or_else(|err| panic!("{label}: {path} remains real: {err:?}"));
-    assert_eq!(
-        actual.to_bits(),
-        expected.to_bits(),
-        "{label}: {path} staged value"
-    );
+    for &connector in connectors {
+        let actual = engine.state.values[connector.0 as usize]
+            .as_real()
+            .unwrap_or_else(|err| panic!("{label}: {path} remains real: {err:?}"));
+        assert_eq!(
+            actual.to_bits(),
+            expected.to_bits(),
+            "{label}: {path} connector {} staged value",
+            connector.0
+        );
+    }
 }
 
 fn oc_value(value: Value) -> OcValue {

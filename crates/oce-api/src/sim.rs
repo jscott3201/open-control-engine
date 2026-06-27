@@ -397,16 +397,21 @@ impl<S: Store> Engine<S> {
     /// [`OcError::UnknownPoint`] if `point` is not an input in the inventory; [`OcError::InputType`]
     /// if `value`'s type does not match the connector. Never panics (R-ERR-1).
     pub fn set_input(&mut self, point: &str, value: Value) -> Result<(), OcError> {
-        let cid = self
+        let connectors = self
             .io
-            .resolve_input(point)
+            .resolve_inputs(point)
             .ok_or_else(|| OcError::UnknownPoint(point.to_string()))?;
-        // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
-        let want = self.model.connectors[cid.0 as usize].value_type;
-        if value.value_type() != want {
-            return Err(OcError::InputType(point.to_string()));
+        let connectors = connectors.to_vec();
+        for &cid in &connectors {
+            // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
+            let want = self.model.connectors[cid.0 as usize].value_type;
+            if value.value_type() != want {
+                return Err(OcError::InputType(point.to_string()));
+            }
         }
-        self.state.values[cid.0 as usize] = value;
+        for cid in connectors {
+            self.state.values[cid.0 as usize] = value.clone();
+        }
         Ok(())
     }
 

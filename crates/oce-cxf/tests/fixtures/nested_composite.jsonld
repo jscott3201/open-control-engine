@@ -1,0 +1,166 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.profile.nested_composite",
+      "@type": "S231:Block",
+      "S231:label": "nested_composite",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.profile.nested_composite.topK" },
+        { "@id": "http://example.org#g36.profile.nested_composite.venStd" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.profile.nested_composite.sub" },
+        { "@id": "http://example.org#g36.profile.nested_composite.post" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.topK",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.venStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.California_Title_24"
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub.u" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Profile.SubSequence",
+      "S231:label": "sub",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.innerK" },
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.venStdLocal" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.gain" },
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.sub.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.innerK",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "topK"
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.venStdLocal",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard"
+      },
+      "S231:value": "venStd"
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain.u" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.post.u" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasParameter": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "innerK"
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "enumCarrier",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.k" },
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.extra" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.k",
+      "@type": "S231:Parameter",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.extra",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard"
+      },
+      "S231:value": "venStdLocal"
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.post",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "post",
+      "S231:hasParameter": { "@id": "http://example.org#g36.profile.nested_composite.post.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.post.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.post.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.post.k",
+      "@type": "S231:Parameter",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.post.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.nested_composite.post.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.y" }
+    }
+  ]
+}

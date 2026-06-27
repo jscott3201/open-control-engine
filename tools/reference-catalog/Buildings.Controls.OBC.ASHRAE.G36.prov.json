@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "672115ca561226ec",
+  "catalog_fingerprint": "a04c770bd62acc68",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -15,6 +15,7 @@
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeProtectionStages/package.order",
@@ -22,7 +23,8 @@
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ZoneStates/package.order"
   ],
   "sequence_source_files": [
-    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo"
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"
   ],
   "type_source_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
@@ -44,6 +46,10 @@
     "crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld",
+    "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+    "crates/oce-cxf/tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt",
+    "crates/oce-cxf/tests/resolve_composite.rs",
+    "crates/oce-api/tests/composite_import.rs",
     "crates/oce-api/tests/g36_sequences.rs",
     "crates/oce-conformance/tests/g36_determinism.rs",
     "crates/oce-conformance/tests/g36_funnel.rs",
@@ -55,6 +61,7 @@
   ],
   "notes": [
     "Upstream files were re-fetched locally for this snapshot; tests must use only checked-in catalog/provenance/profile data.",
-    "Existing representative G36 examples are fixture-only pre-flattened CXF graphs. They are not canonical ASHRAE G36 composite import support."
+    "Existing representative G36 examples are fixture-only pre-flattened CXF graphs. They are not canonical ASHRAE G36 composite import support.",
+    "TrimAndRespond have_hol=false is recorded as restricted explicit-CXF composite import evidence only; it is not arbitrary Modelica parsing, not full SupplyTemperature support, and not a supported-runtime-sequence oracle claim."
   ]
 }

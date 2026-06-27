@@ -1,0 +1,2081 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+      "S231:label": "trim_and_respond_have_hol_false",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.have_hol"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.delTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samplePeriod"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmo"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmo"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxRes"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.dtHol"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uHol"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.have_hol",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "10.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "20.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.delTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "600.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "120.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReq",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": {
+        "@value": "2",
+        "@type": "http://www.w3.org/2001/XMLSchema#integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmo",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmo",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-0.2",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxRes",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-0.6",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.dtHol",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uHol",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_hol"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "tim",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.delayTime"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.delayOnInit"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "delTim + samplePeriod"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.delayOnInit",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.tim.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "netRes",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "resAmoCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "resAmo"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.resAmoCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "pro",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "pro1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "pro2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "uniDel",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.samplePeriod"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.y_start"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "iniSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.uniDel.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:label": "sampler",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.samplePeriod"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lesThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr2",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "iniSetCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "iniSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.iniSetCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.u3"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "numIgnReqCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "numIgnReq"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.numIgnReqCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "triAmoCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "triAmo"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.triAmoCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "maxResCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "maxRes"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxResCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "maxSetCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "maxSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxSetCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zerTri",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zerTri.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi1.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+      "S231:label": "intToRea",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.u",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.intToRea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.sampler.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "difReqIgnReq",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.difReqIgnReq.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.greThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:label": "minInp",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.gai.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:label": "min1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.min1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.netRes.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "minSetCon",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "minSet"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minSetCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:label": "maxInp",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.maxInp.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swi2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Trim amount \\\"triAmo\\\" and respond amount \\\"resAmo\\\" must have opposite signs.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Respond amount \\\"resAmo\\\" and maximum respond amount \\\"maxRes\\\" must have same sign.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.assMes2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:label": "abs",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.pro.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:label": "abs1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.abs1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.minInp.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.zer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "fal",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "!have_hol",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.fal.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swiHol",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.add1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "notHol",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHol.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.swiHol.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "S231:label": "truHol",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_hol",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.trueHoldDuration"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.falseHoldDuration"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.trueHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "dtHol"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.falseHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.truHol.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "notHolAndTic",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "S231:label": "samTri",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.period"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.shift"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.period",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.shift",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.samTri.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.lat.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.trim_and_respond_have_hol_false.notHolAndTic.u2"
+        }
+      ]
+    }
+  ]
+}

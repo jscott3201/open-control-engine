@@ -49,7 +49,13 @@ fn g36_catalog_provenance_pins_source_snapshot() {
 fn g36_catalog_profile_guard_is_closed_against_fixtures_and_types() {
     let catalog = parse(CATALOG_JSON);
     let prov = parse(PROV_JSON);
-    let errors = validate_g36_catalog(&catalog, &prov, RUNTIME_FIXTURES, PROFILE_FIXTURES);
+    let errors = validate_g36_catalog(
+        &catalog,
+        &prov,
+        RUNTIME_FIXTURES,
+        COMPOSITE_IMPORT_FIXTURES,
+        PROFILE_FIXTURES,
+    );
     assert!(
         errors.is_empty(),
         "G36 catalog guard failures:\n{}",
@@ -92,6 +98,20 @@ fn g36_catalog_guard_mutations_cover_required_failures() {
         "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
     );
     assert_validation_error(&missing_fixture, &prov, "fixture-path-set-drift");
+
+    let mut missing_composite_fixture = catalog.clone();
+    remove_path_entry(
+        missing_composite_fixture["composite_import_fixtures"]
+            .as_array_mut()
+            .unwrap(),
+        "fixture",
+        "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+    );
+    assert_validation_error(
+        &missing_composite_fixture,
+        &prov,
+        "composite-import-fixture-path-set-drift",
+    );
 
     let mut runtime_claim_without_evidence = catalog.clone();
     runtime_claim_without_evidence["runtime_sequences"]
@@ -153,7 +173,13 @@ fn g36_catalog_guard_mutations_cover_required_failures() {
         text: PARAMETER_GATED_UNKNOWN_PARAMETER,
     };
     let profile_fixtures = [PROFILE_FIXTURES[0], bad_guard];
-    let errors = validate_g36_catalog(&catalog, &prov, RUNTIME_FIXTURES, &profile_fixtures);
+    let errors = validate_g36_catalog(
+        &catalog,
+        &prov,
+        RUNTIME_FIXTURES,
+        COMPOSITE_IMPORT_FIXTURES,
+        &profile_fixtures,
+    );
     assert!(
         errors
             .iter()
