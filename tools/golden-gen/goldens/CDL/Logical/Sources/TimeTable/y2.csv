@@ -1,0 +1,8 @@
+#1
+# columns: time y2
+double CDL_Logical_Sources_TimeTable_y2(5,2)
+-0.5 1.0
+0.5 1.0
+1.0 0.0
+3.5 1.0
+4.25 1.0

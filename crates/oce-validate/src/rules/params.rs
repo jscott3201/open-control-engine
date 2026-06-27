@@ -248,6 +248,28 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 },
             );
         }
+        ParamRule::TimeTableMatrix {
+            base,
+            values,
+            time_scale,
+            period,
+            extrapolation,
+        } => {
+            params_flattened::check_time_table_matrix(
+                blk,
+                diags,
+                params_flattened::TimeTableRule {
+                    base,
+                    values,
+                    time_scale,
+                    period,
+                    extrapolation,
+                },
+            );
+        }
+        ParamRule::TimeTableOffset { base, table } => {
+            params_flattened::check_time_table_offset(blk, diags, base, table);
+        }
         ParamRule::BooleanArrayElements { base, len } => {
             params_flattened::check_boolean_array_elements(blk, diags, base, len);
         }

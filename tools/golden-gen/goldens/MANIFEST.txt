@@ -80,6 +80,9 @@ CDL.Integers.Sources.Constant reference -> goldens/CDL/Integers/Sources/Constant
 CDL.Integers.Sources.Constant y -> goldens/CDL/Integers/Sources/Constant/y.csv
 CDL.Integers.Sources.Pulse reference -> goldens/CDL/Integers/Sources/Pulse/reference.csv
 CDL.Integers.Sources.Pulse y -> goldens/CDL/Integers/Sources/Pulse/y.csv
+CDL.Integers.Sources.TimeTable reference -> goldens/CDL/Integers/Sources/TimeTable/reference.csv
+CDL.Integers.Sources.TimeTable y1 -> goldens/CDL/Integers/Sources/TimeTable/y1.csv
+CDL.Integers.Sources.TimeTable y2 -> goldens/CDL/Integers/Sources/TimeTable/y2.csv
 CDL.Integers.Stage/hold_duration reference -> goldens/CDL/Integers/Stage/hold_duration/reference.csv
 CDL.Integers.Stage/hold_duration y -> goldens/CDL/Integers/Stage/hold_duration/y.csv
 CDL.Integers.Stage/hysteresis_hold reference -> goldens/CDL/Integers/Stage/hysteresis_hold/reference.csv
@@ -139,6 +142,9 @@ CDL.Logical.Sources.SampleTrigger/negative_shift reference -> goldens/CDL/Logica
 CDL.Logical.Sources.SampleTrigger/negative_shift y -> goldens/CDL/Logical/Sources/SampleTrigger/negative_shift/y.csv
 CDL.Logical.Sources.SampleTrigger/shift_after_period reference -> goldens/CDL/Logical/Sources/SampleTrigger/shift_after_period/reference.csv
 CDL.Logical.Sources.SampleTrigger/shift_after_period y -> goldens/CDL/Logical/Sources/SampleTrigger/shift_after_period/y.csv
+CDL.Logical.Sources.TimeTable reference -> goldens/CDL/Logical/Sources/TimeTable/reference.csv
+CDL.Logical.Sources.TimeTable y1 -> goldens/CDL/Logical/Sources/TimeTable/y1.csv
+CDL.Logical.Sources.TimeTable y2 -> goldens/CDL/Logical/Sources/TimeTable/y2.csv
 CDL.Logical.Switch reference -> goldens/CDL/Logical/Switch/reference.csv
 CDL.Logical.Switch y -> goldens/CDL/Logical/Switch/y.csv
 CDL.Logical.Timer passed -> goldens/CDL/Logical/Timer/passed.csv
@@ -347,6 +353,11 @@ CDL.Reals.Sources.Ramp/negative_height_start reference -> goldens/CDL/Reals/Sour
 CDL.Reals.Sources.Ramp/negative_height_start y -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/y.csv
 CDL.Reals.Sources.Sin reference -> goldens/CDL/Reals/Sources/Sin/reference.csv
 CDL.Reals.Sources.Sin y -> goldens/CDL/Reals/Sources/Sin/y.csv
+CDL.Reals.Sources.TimeTable reference -> goldens/CDL/Reals/Sources/TimeTable/reference.csv
+CDL.Reals.Sources.TimeTable y1 -> goldens/CDL/Reals/Sources/TimeTable/y1.csv
+CDL.Reals.Sources.TimeTable y2 -> goldens/CDL/Reals/Sources/TimeTable/y2.csv
+CDL.Reals.Sources.TimeTable/periodic_scaled reference -> goldens/CDL/Reals/Sources/TimeTable/periodic_scaled/reference.csv
+CDL.Reals.Sources.TimeTable/periodic_scaled y -> goldens/CDL/Reals/Sources/TimeTable/periodic_scaled/y.csv
 CDL.Reals.Sqrt reference -> goldens/CDL/Reals/Sqrt/reference.csv
 CDL.Reals.Sqrt y -> goldens/CDL/Reals/Sqrt/y.csv
 CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv

@@ -2,13 +2,14 @@ use oce_model::ParamTable;
 
 use super::int_param;
 use super::real_param;
+use crate::source_timetable::MIN_TIMETABLE_PERIOD;
 use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
     IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiSum, IntegerMultiply, IntegerPulse,
-    IntegerStage, IntegerSubtract, IntegerSwitch, MAX_RESOLVED_PORT_WIDTH, OnCounter, ParamRule,
-    RegistryEntry,
+    IntegerStage, IntegerSubtract, IntegerSwitch, IntegerTimeTable, MAX_RESOLVED_PORT_WIDTH,
+    OnCounter, ParamRule, RegistryEntry, TimeTableValues,
 };
 
 pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
@@ -45,6 +46,29 @@ pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "period" },
+    ParamRule::TimeTableMatrix {
+        base: "table",
+        values: TimeTableValues::Integer,
+        time_scale: "timeScale",
+        period: Some("period"),
+        extrapolation: None,
+    },
+    ParamRule::RealFiniteGreaterThan {
+        name: "timeScale",
+        min: 0.0,
+    },
+    ParamRule::RealFiniteGreaterThan {
+        name: "period",
+        min: 0.0,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "period",
+        min: MIN_TIMETABLE_PERIOD,
+    },
+];
+
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Sources.Constant",
@@ -53,6 +77,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Sources.Pulse",
         make: make_integer_pulse,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.Sources.TimeTable",
+        make: make_integer_time_table,
     },
     RegistryEntry {
         class_path: "CDL.Integers.Abs",
@@ -154,6 +182,10 @@ fn make_integer_pulse(p: &ParamTable) -> Box<dyn Block> {
         shift: real_param(p, "shift", 0.0),
         offset: int_param(p, "offset", 0),
     })
+}
+
+fn make_integer_time_table(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(IntegerTimeTable::from_params(p))
 }
 
 fn make_integer_abs(_p: &ParamTable) -> Box<dyn Block> {

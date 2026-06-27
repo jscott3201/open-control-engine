@@ -1,0 +1,18 @@
+{
+  "class_path": "CDL.Reals.Sources.TimeTable",
+  "signal": "y1",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y1", "y2"],
+  "inputs": [],
+  "input": "table=[0,0,10;1,0,20;1,1,30;2,4,40;3,9,50], smoothness=LinearSegments, extrapolation=LastTwoPoints, offset=[0.5,-1]",
+  "reference_rule": "Buildings Reals/Sources/TimeTable.mo delegates to CombiTimeTable: duplicate timestamps use after-event row at sampled boundary; LastTwoPoints extrapolates linearly through first/last two distinct points",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

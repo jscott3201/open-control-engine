@@ -1,6 +1,8 @@
 //! Registry parameter-rule contract tests.
 
-use super::{MAX_RESOLVED_PORT_WIDTH, ParamRule, lookup, reals_sources::ZERO_TIME_MEMBERS};
+use super::{
+    MAX_RESOLVED_PORT_WIDTH, ParamRule, TimeTableValues, lookup, reals_sources::ZERO_TIME_MEMBERS,
+};
 
 #[test]
 fn registry_exposes_block_param_rules() {
@@ -13,6 +15,33 @@ fn registry_exposes_block_param_rules() {
             ParamRule::RealGreaterThan {
                 name: "period",
                 min: 0.0,
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Logical.Sources.TimeTable")
+            .unwrap()
+            .param_rules(),
+        &[
+            ParamRule::Required { name: "period" },
+            ParamRule::TimeTableMatrix {
+                base: "table",
+                values: TimeTableValues::Boolean,
+                time_scale: "timeScale",
+                period: Some("period"),
+                extrapolation: None,
+            },
+            ParamRule::RealFiniteGreaterThan {
+                name: "timeScale",
+                min: 0.0,
+            },
+            ParamRule::RealFiniteGreaterThan {
+                name: "period",
+                min: 0.0,
+            },
+            ParamRule::RealGreaterOrEqual {
+                name: "period",
+                min: 1.0e-6,
             },
         ]
     );
@@ -82,6 +111,33 @@ fn registry_exposes_block_param_rules() {
             ParamRule::IntegerArrayElements {
                 base: "k",
                 len: "nin",
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Integers.Sources.TimeTable")
+            .unwrap()
+            .param_rules(),
+        &[
+            ParamRule::Required { name: "period" },
+            ParamRule::TimeTableMatrix {
+                base: "table",
+                values: TimeTableValues::Integer,
+                time_scale: "timeScale",
+                period: Some("period"),
+                extrapolation: None,
+            },
+            ParamRule::RealFiniteGreaterThan {
+                name: "timeScale",
+                min: 0.0,
+            },
+            ParamRule::RealFiniteGreaterThan {
+                name: "period",
+                min: 0.0,
+            },
+            ParamRule::RealGreaterOrEqual {
+                name: "period",
+                min: 1.0e-6,
             },
         ]
     );
@@ -433,6 +489,34 @@ fn registry_exposes_block_param_rules() {
                 max: 2031,
             },
             ParamRule::RealFinite { name: "offset" },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Sources.TimeTable").unwrap().param_rules(),
+        &[
+            ParamRule::TimeTableMatrix {
+                base: "table",
+                values: TimeTableValues::Real,
+                time_scale: "timeScale",
+                period: None,
+                extrapolation: Some("extrapolation"),
+            },
+            ParamRule::TimeTableOffset {
+                base: "offset",
+                table: "table",
+            },
+            ParamRule::EnumMembers {
+                name: "smoothness",
+                members: &["LinearSegments", "ConstantSegments"],
+            },
+            ParamRule::EnumMembers {
+                name: "extrapolation",
+                members: &["HoldLastPoint", "LastTwoPoints", "Periodic"],
+            },
+            ParamRule::RealFiniteGreaterThan {
+                name: "timeScale",
+                min: 0.0,
+            },
         ]
     );
     assert_eq!(

@@ -29,6 +29,7 @@ mod reals_vector_reductions;
 mod routing;
 mod sequences;
 mod source_pulse;
+mod source_timetable;
 mod utilities;
 
 use std::fs;
@@ -63,6 +64,7 @@ fn main() {
     goldens.extend(reals_matrix::goldens());
     goldens.extend(routing::goldens());
     goldens.extend(source_pulse::goldens());
+    goldens.extend(source_timetable::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(psychrometrics::goldens());
     goldens.extend(utilities::goldens());
@@ -397,6 +399,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation"
     } else if g.class_path == "CDL.Reals.Sources.CalendarTime" {
         "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; independent re-derivation"
+    } else if g.class_path.ends_with(".Sources.TimeTable") {
+        "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation"
     } else if g.class_path.starts_with("CDL.Psychrometrics.") {
         "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation"
     } else {

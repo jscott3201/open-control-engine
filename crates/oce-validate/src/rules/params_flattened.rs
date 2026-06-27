@@ -1,6 +1,8 @@
 //! Validation helpers for flattened CDL array and matrix parameters.
 
-use oce_blocks::MAX_RESOLVED_PORT_WIDTH;
+use std::collections::HashMap;
+
+use oce_blocks::{MAX_RESOLVED_PORT_WIDTH, TimeTableValues};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ParamTable, Value};
 
@@ -22,6 +24,14 @@ pub(super) struct RealMatrixRule {
     pub(super) default_rows: i64,
     pub(super) cols: &'static str,
     pub(super) default_cols: i64,
+}
+
+pub(super) struct TimeTableRule {
+    pub(super) base: &'static str,
+    pub(super) values: TimeTableValues,
+    pub(super) time_scale: &'static str,
+    pub(super) period: Option<&'static str>,
+    pub(super) extrapolation: Option<&'static str>,
 }
 
 pub(super) fn check_integer_array_elements(
@@ -200,6 +210,232 @@ pub(super) fn check_real_matrix_elements(
     }
 }
 
+pub(super) fn check_time_table_matrix(
+    blk: &BlockInstance,
+    diags: &mut Vec<Diagnostic>,
+    rule: TimeTableRule,
+) {
+    let prefix = format!("{}_", rule.base);
+    let mut cells = HashMap::<(usize, usize), &Value>::new();
+    let mut n_row = 0_usize;
+    let mut n_col = 0_usize;
+    for (name, value) in &blk.params.values {
+        let name = name.as_ref();
+        let Some(suffix) = name.strip_prefix(&prefix) else {
+            continue;
+        };
+        let Some((row, col)) = parse_matrix_element_suffix(suffix) else {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` must use one-based `{}_row_col` \
+                     table-element naming",
+                    blk.class_iri, rule.base
+                ),
+            );
+            continue;
+        };
+        if row == 0 || col == 0 {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` must use positive one-based indexes",
+                    blk.class_iri
+                ),
+            );
+            continue;
+        }
+        n_row = n_row.max(row);
+        n_col = n_col.max(col);
+        cells.insert((row, col), value);
+    }
+    if cells.is_empty() {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::MissingRequiredParameter,
+                format!(
+                    "block `{}` is missing required flattened table parameter `{}`",
+                    blk.class_iri, rule.base
+                ),
+            )
+            .with_subject(block_subject_of(blk)),
+        );
+        return;
+    }
+    if n_col < 2 {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "table `{}` on block `{}` must have at least time plus one output column",
+                rule.base, blk.class_iri
+            ),
+        );
+        return;
+    }
+    if n_row
+        .checked_mul(n_col)
+        .is_none_or(|width| width > MAX_RESOLVED_PORT_WIDTH)
+    {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "table `{}` on block `{}` exceeds maximum flattened cell count {}",
+                rule.base, blk.class_iri, MAX_RESOLVED_PORT_WIDTH
+            ),
+        );
+        return;
+    }
+
+    let mut times = Vec::with_capacity(n_row);
+    for row in 1..=n_row {
+        for col in 1..=n_col {
+            let Some(value) = cells.get(&(row, col)).copied() else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "table `{}` on block `{}` is missing required cell {}_{}_{}",
+                        rule.base, blk.class_iri, rule.base, row, col
+                    ),
+                );
+                continue;
+            };
+            let Some(value) = real_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{}_{}_{}` on block `{}` must be numeric",
+                        rule.base, row, col, blk.class_iri
+                    ),
+                );
+                continue;
+            };
+            if col == 1 {
+                if !value.is_finite() {
+                    push_range_error(
+                        blk,
+                        diags,
+                        format!(
+                            "time cell `{}_{}_1` on block `{}` must be finite; got {value}",
+                            rule.base, row, blk.class_iri
+                        ),
+                    );
+                }
+                times.push(value);
+            } else {
+                check_table_output_value(blk, diags, rule.base, row, col, value, rule.values);
+            }
+        }
+    }
+    if times.len() != n_row {
+        return;
+    }
+    let time_scale = find_param(&blk.params, rule.time_scale)
+        .map_or(Some(1.0), real_value)
+        .filter(|value| value.is_finite() && *value > 0.0);
+    let Some(time_scale) = time_scale else {
+        return;
+    };
+    let scaled_times: Vec<f64> = times.iter().map(|time| time * time_scale).collect();
+    for idx in 1..scaled_times.len() {
+        if scaled_times[idx] < scaled_times[idx - 1] {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "table `{}` on block `{}` must have nondecreasing time values; row {} is \
+                     before row {}",
+                    rule.base,
+                    blk.class_iri,
+                    idx + 1,
+                    idx
+                ),
+            );
+            break;
+        }
+    }
+    if let Some(period_name) = rule.period {
+        validate_periodic_step_table(blk, diags, rule.base, period_name, &times, &scaled_times);
+    }
+    if let Some(extrapolation_name) = rule.extrapolation {
+        let periodic =
+            find_param(&blk.params, extrapolation_name).is_none_or(extrapolation_is_periodic);
+        if periodic
+            && scaled_times.len() > 1
+            && scaled_times[scaled_times.len() - 1] <= scaled_times[0]
+        {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "periodic table `{}` on block `{}` must span a positive time range",
+                    rule.base, blk.class_iri
+                ),
+            );
+        }
+    }
+}
+
+pub(super) fn check_time_table_offset(
+    blk: &BlockInstance,
+    diags: &mut Vec<Diagnostic>,
+    base: &str,
+    table: &str,
+) {
+    let Some((_, n_col)) = infer_matrix_shape(&blk.params, table) else {
+        return;
+    };
+    if n_col < 2 {
+        return;
+    }
+    let nout = n_col - 1;
+    let prefix = format!("{base}_");
+    for (name, value) in &blk.params.values {
+        let name = name.as_ref();
+        let Some(suffix) = name.strip_prefix(&prefix) else {
+            continue;
+        };
+        let Some(idx) = parse_array_element_suffix(suffix) else {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` must use one-based `{base}_index` \
+                     vector-element naming",
+                    blk.class_iri
+                ),
+            );
+            continue;
+        };
+        if idx == 0 || idx > nout {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` is outside resolved offset length {nout}",
+                    blk.class_iri
+                ),
+            );
+            continue;
+        }
+        if real_value(value).is_none() {
+            push_range_error(
+                blk,
+                diags,
+                format!(
+                    "parameter `{name}` on block `{}` must be a numeric Real offset element",
+                    blk.class_iri
+                ),
+            );
+        }
+    }
+}
+
 pub(super) fn check_boolean_array_elements(
     blk: &BlockInstance,
     diags: &mut Vec<Diagnostic>,
@@ -292,6 +528,23 @@ fn find_param<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
         .map(|(_, v)| v)
 }
 
+fn infer_matrix_shape(params: &ParamTable, base: &str) -> Option<(usize, usize)> {
+    let prefix = format!("{base}_");
+    let mut n_row = 0_usize;
+    let mut n_col = 0_usize;
+    for (name, _) in &params.values {
+        let Some(suffix) = name.as_ref().strip_prefix(&prefix) else {
+            continue;
+        };
+        let Some((row, col)) = parse_matrix_element_suffix(suffix) else {
+            continue;
+        };
+        n_row = n_row.max(row);
+        n_col = n_col.max(col);
+    }
+    Some((n_row, n_col)).filter(|(row, col)| *row > 0 && *col > 0)
+}
+
 fn real_value(value: &Value) -> Option<f64> {
     match value {
         Value::Real(v) => Some(*v),
@@ -317,6 +570,110 @@ fn parse_matrix_element_suffix(suffix: &str) -> Option<(usize, usize)> {
         return None;
     }
     Some((row.parse().ok()?, col.parse().ok()?))
+}
+
+fn parse_array_element_suffix(suffix: &str) -> Option<usize> {
+    if suffix.contains('_') {
+        return None;
+    }
+    suffix.parse().ok()
+}
+
+fn check_table_output_value(
+    blk: &BlockInstance,
+    diags: &mut Vec<Diagnostic>,
+    base: &str,
+    row: usize,
+    col: usize,
+    value: f64,
+    kind: TimeTableValues,
+) {
+    match kind {
+        TimeTableValues::Real => {}
+        TimeTableValues::Integer if integer_encoded(value) => {}
+        TimeTableValues::Integer => push_range_error(
+            blk,
+            diags,
+            format!(
+                "table value `{base}_{row}_{col}` on block `{}` must encode an Integer; got \
+                 {value}",
+                blk.class_iri
+            ),
+        ),
+        TimeTableValues::Boolean
+            if (value.abs() < TIMETABLE_SMALL) || ((value - 1.0).abs() < TIMETABLE_SMALL) => {}
+        TimeTableValues::Boolean => push_range_error(
+            blk,
+            diags,
+            format!(
+                "table value `{base}_{row}_{col}` on block `{}` must encode Boolean 0 or 1; got \
+                 {value}",
+                blk.class_iri
+            ),
+        ),
+    }
+}
+
+const TIMETABLE_SMALL: f64 = 1.0e-37;
+const MIN_TIMETABLE_PERIOD: f64 = 1.0e-6;
+
+fn integer_encoded(value: f64) -> bool {
+    value.is_finite() && (value - value.floor()).abs() < TIMETABLE_SMALL
+}
+
+fn validate_periodic_step_table(
+    blk: &BlockInstance,
+    diags: &mut Vec<Diagnostic>,
+    base: &str,
+    period_name: &str,
+    unscaled_times: &[f64],
+    scaled_times: &[f64],
+) {
+    if unscaled_times
+        .first()
+        .is_some_and(|first| first.abs() >= TIMETABLE_SMALL)
+    {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "table `{base}` on block `{}` must start at time 0 for periodic step lookup",
+                blk.class_iri
+            ),
+        );
+    }
+    let Some(period) = find_param(&blk.params, period_name).and_then(real_value) else {
+        return;
+    };
+    if !period.is_finite() || period < MIN_TIMETABLE_PERIOD {
+        return;
+    }
+    if scaled_times
+        .last()
+        .is_some_and(|last| period - *last <= TIMETABLE_SMALL)
+    {
+        push_range_error(
+            blk,
+            diags,
+            format!(
+                "last time stamp in table `{base}` on block `{}` must be smaller than \
+                 `{period_name}`",
+                blk.class_iri
+            ),
+        );
+    }
+}
+
+fn extrapolation_is_periodic(value: &Value) -> bool {
+    match value {
+        Value::Enum { ordinal: 3, .. } => true,
+        Value::Integer(3) => true,
+        Value::String(s) => s
+            .rsplit('.')
+            .next()
+            .is_some_and(|member| member == "Periodic"),
+        _ => false,
+    }
 }
 
 fn boolean_value(value: &Value) -> Option<bool> {
