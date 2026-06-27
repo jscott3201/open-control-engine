@@ -78,6 +78,37 @@ pub(super) fn rp(name: &str, value: f64) -> (Arc<str>, Value) {
     (Arc::from(name), Value::Real(value))
 }
 
+pub(super) fn one_block_model(
+    class: &str,
+    inputs: &[ValueType],
+    outputs: &[ValueType],
+    params: Vec<(Arc<str>, Value)>,
+) -> ModelGraph {
+    let mut connectors = Vec::with_capacity(inputs.len() + outputs.len());
+    let mut input_ids = Vec::with_capacity(inputs.len());
+    let mut output_ids = Vec::with_capacity(outputs.len());
+    for (idx, value_type) in inputs.iter().copied().enumerate() {
+        let id = idx as u32;
+        connectors.push(conn(id, 0, Dir::In, value_type));
+        input_ids.push(id);
+    }
+    for (offset, value_type) in outputs.iter().copied().enumerate() {
+        let id = (inputs.len() + offset) as u32;
+        connectors.push(conn(id, 0, Dir::Out, value_type));
+        output_ids.push(id);
+    }
+    ModelGraph {
+        blocks: vec![block_with_params(0, class, &input_ids, &output_ids, params)],
+        connectors,
+        connections: vec![],
+        external_inputs: input_ids.into_iter().map(ConnectorId).collect(),
+    }
+}
+
+pub(super) fn real_to_real_model(class: &str, params: Vec<(Arc<str>, Value)>) -> ModelGraph {
+    one_block_model(class, &[ValueType::Real], &[ValueType::Real], params)
+}
+
 pub(super) fn conn_edge(from: u32, to: u32) -> Connection {
     Connection {
         from: ConnectorId(from),

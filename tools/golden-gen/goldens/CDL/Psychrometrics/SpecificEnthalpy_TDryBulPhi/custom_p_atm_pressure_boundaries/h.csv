@@ -1,0 +1,10 @@
+#1
+# columns: time h
+double CDL_Psychrometrics_SpecificEnthalpy_TDryBulPhi_custom_p_atm_pressure_boundaries_h(7,2)
+0.0 40912.15658482215
+60.0 70958.58005359519
+120.0 1.0336205031156738e22
+180.0 NaN
+240.0 NaN
+300.0 NaN
+360.0 NaN

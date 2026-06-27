@@ -15,6 +15,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod pid;
+mod psychrometrics;
 mod reals;
 mod reals_filters;
 mod reals_integrator;
@@ -54,6 +55,9 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
         "CDL.Reals.PID" => pid::PID_PARAM_RULES,
         "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
+        "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
+            psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
+        }
         "CDL.Discrete.FirstOrderHold" | "CDL.Discrete.Sampler" | "CDL.Discrete.ZeroOrderHold" => {
             discrete::SAMPLED_PARAM_RULES
         }
@@ -68,6 +72,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     reals_filters::ENTRIES,
     reals_ramp::ENTRIES,
     pid::ENTRIES,
+    psychrometrics::ENTRIES,
     logical::ENTRIES,
     logical_proof::ENTRIES,
     logical_variable_pulse::ENTRIES,

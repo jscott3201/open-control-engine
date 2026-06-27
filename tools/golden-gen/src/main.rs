@@ -17,6 +17,7 @@ mod logical;
 mod logical_proof;
 mod logical_variable_pulse;
 mod oracle;
+mod psychrometrics;
 mod reals;
 mod reals_pid;
 mod reals_ramp;
@@ -56,6 +57,7 @@ fn main() {
     goldens.extend(reals_transcendental::goldens());
     goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
+    goldens.extend(psychrometrics::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());
     goldens.extend(logical_variable_pulse::goldens());
@@ -385,6 +387,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation"
     } else if g.class_path == "CDL.Reals.Sources.Sin" {
         "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation"
+    } else if g.class_path.starts_with("CDL.Psychrometrics.") {
+        "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation"
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }
@@ -406,7 +410,7 @@ fn is_pid_recurrence(g: &Golden) -> bool {
     matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset")
 }
 
-fn is_reals_transcendental(g: &Golden) -> bool {
+fn uses_aligned_tolerance_math(g: &Golden) -> bool {
     matches!(
         g.class_path,
         "CDL.Reals.Acos"
@@ -420,7 +424,7 @@ fn is_reals_transcendental(g: &Golden) -> bool {
             | "CDL.Reals.Sin"
             | "CDL.Reals.Sources.Sin"
             | "CDL.Reals.Tan"
-    )
+    ) || g.class_path.starts_with("CDL.Psychrometrics.")
 }
 
 fn assert_integer_csv_cells_are_exact(goldens: &[Golden]) {
@@ -476,7 +480,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         }
     } else if is_pid_recurrence(g) {
         "bit-exact Tier-1 f64 recurrence oracle (Value::bit_eq)"
-    } else if is_reals_transcendental(g) {
+    } else if uses_aligned_tolerance_math(g) {
         "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class"
     } else {
         match g.kind {

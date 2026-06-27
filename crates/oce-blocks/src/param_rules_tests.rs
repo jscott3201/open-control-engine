@@ -130,6 +130,15 @@ fn registry_exposes_block_param_rules() {
         ]
     );
     assert_eq!(
+        lookup("CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi")
+            .unwrap()
+            .param_rules(),
+        &[ParamRule::RealFiniteGreaterThan {
+            name: "pAtm",
+            min: 0.0,
+        }]
+    );
+    assert_eq!(
         lookup("CDL.Discrete.TriggeredMovingMean")
             .unwrap()
             .param_rules(),

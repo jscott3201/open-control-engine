@@ -10,5 +10,6 @@
 mod common;
 mod determinism;
 mod params;
+mod params_sources;
 mod structural;
 mod unification;

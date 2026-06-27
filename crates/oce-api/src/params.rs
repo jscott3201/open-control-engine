@@ -301,6 +301,15 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::RealGreaterThan { .. } => {}
+                ParamRule::RealFiniteGreaterThan { name, min } if edited.name.as_ref() == name => {
+                    let Some(v) = real_param_value(value) else {
+                        return true;
+                    };
+                    if !v.is_finite() || !real_greater_than(v, min) {
+                        return true;
+                    }
+                }
+                ParamRule::RealFiniteGreaterThan { .. } => {}
                 ParamRule::IntegerGreaterOrEqual { name, min } if edited.name.as_ref() == name => {
                     let Some(v) = int_param_value(value) else {
                         return true;
@@ -397,6 +406,17 @@ fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64
     let mut max = None::<f64>;
     for rule in entry.param_rules() {
         if let ParamRule::RealGreaterThan {
+            name: rule_name,
+            min: lower,
+        } = *rule
+            && rule_name == name
+        {
+            min = Some(match min {
+                Some(current) => current.max(lower),
+                None => lower,
+            });
+        }
+        if let ParamRule::RealFiniteGreaterThan {
             name: rule_name,
             min: lower,
         } = *rule
