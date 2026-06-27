@@ -279,6 +279,10 @@ impl<S: Store> Engine<S> {
             matches!(
                 rule,
                 ParamRule::Structural { name } if edited.name.as_ref() == *name
+            ) || matches!(
+                rule,
+                ParamRule::StructuralArrayElements { base }
+                    if flattened_array_element_name(edited.name.as_ref(), base)
             )
         })
     }
@@ -295,6 +299,7 @@ impl<S: Store> Engine<S> {
             match *rule {
                 ParamRule::Required { .. }
                 | ParamRule::Structural { .. }
+                | ParamRule::StructuralArrayElements { .. }
                 | ParamRule::RealEqualWarning { .. }
                 | ParamRule::RealLessOrEqualWarning { .. }
                 | ParamRule::RealGreaterOrEqualScaledWarning { .. } => {}
@@ -358,6 +363,24 @@ impl<S: Store> Engine<S> {
                     return true;
                 }
                 ParamRule::IntegerArrayElements { .. } => {}
+                ParamRule::IntegerArrayElementsInRange {
+                    base,
+                    min,
+                    max,
+                    max_default,
+                    ..
+                } if flattened_array_element_name(edited.name.as_ref(), base) => {
+                    let Some(v) = int_param_value(value) else {
+                        return true;
+                    };
+                    let upper =
+                        block_param_int_value(&self.params.entries, edited.block, max, idx, value)
+                            .unwrap_or(max_default);
+                    if v < min || v > upper {
+                        return true;
+                    }
+                }
+                ParamRule::IntegerArrayElementsInRange { .. } => {}
                 ParamRule::RealArrayElements { base, .. }
                     if flattened_array_element_name(edited.name.as_ref(), base)
                         && real_param_value(value).is_none() =>
@@ -365,6 +388,14 @@ impl<S: Store> Engine<S> {
                     return true;
                 }
                 ParamRule::RealArrayElements { .. } => {}
+                ParamRule::BooleanArrayElements { base, .. }
+                    if flattened_array_element_name(edited.name.as_ref(), base)
+                        && !matches!(value, Value::Boolean(_)) =>
+                {
+                    return true;
+                }
+                ParamRule::BooleanArrayElements { .. } => {}
+                ParamRule::BooleanArrayTrueCountEquals { .. } => {}
                 ParamRule::EnumMembers { name, members }
                     if edited.name.as_ref() == name && !enum_param_value(value, members) =>
                 {
@@ -419,6 +450,28 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::RealTimesIntegerInclusiveRange { .. } => {}
+                ParamRule::IntegerProductLessOrEqualConstant { left, right, max }
+                    if edited.name.as_ref() == left || edited.name.as_ref() == right =>
+                {
+                    let left_value =
+                        block_param_int_value(&self.params.entries, edited.block, left, idx, value);
+                    let right_value = block_param_int_value(
+                        &self.params.entries,
+                        edited.block,
+                        right,
+                        idx,
+                        value,
+                    );
+                    if let (Some(left_value), Some(right_value)) = (left_value, right_value) {
+                        let Some(product) = left_value.checked_mul(right_value) else {
+                            return true;
+                        };
+                        if product > max {
+                            return true;
+                        }
+                    }
+                }
+                ParamRule::IntegerProductLessOrEqualConstant { .. } => {}
                 ParamRule::RealLessOrEqual { lower, upper }
                     if edited.name.as_ref() == lower || edited.name.as_ref() == upper =>
                 {

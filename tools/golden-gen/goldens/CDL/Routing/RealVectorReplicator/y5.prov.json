@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Routing.RealVectorReplicator",
+  "signal": "y5",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "n_reference_columns": 9,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u1", "u2", "y1", "y2", "y3", "y4", "y5", "y6"],
+  "inputs": [
+    { "name": "u1", "value_kind": "Real", "values": [7.0, -7.0, 0.5, -0.0] },
+    { "name": "u2", "value_kind": "Real", "values": [8.0, -8.0, -0.5, 0.0] }
+  ],
+  "input": "params nin=2,nout=3; matrix y[3,2] flattened row-major to y1..y6",
+  "reference_rule": "y[row,col] = u[col], emitted as row-major scalar outputs",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

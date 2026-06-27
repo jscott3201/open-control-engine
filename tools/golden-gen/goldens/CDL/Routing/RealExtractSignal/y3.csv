@@ -1,0 +1,7 @@
+#1
+# columns: time y3
+double CDL_Routing_RealExtractSignal_y3(4,2)
+0.0 2.0
+60.0 20.0
+120.0 -0.0
+180.0 8.0

@@ -11,7 +11,8 @@ pub(super) use crate::{
     IntegratorWithReset, Less, LessThreshold, LimitSlewRate, Limiter, Line, LogicalVariablePulse,
     Max, Min, MovingAverage, MultiAnd, MultiMax, MultiMin, MultiOr, MultiSum, Multiply,
     MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, PortKind, PortShape, Pre, Proof,
-    Ramp, SampleTrigger, Sampler, Subtract, SunRiseSet, Switch, Time, TriggeredMax,
+    Ramp, RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter,
+    RealVectorReplicator, SampleTrigger, Sampler, Subtract, SunRiseSet, Switch, Time, TriggeredMax,
     TriggeredMovingMean, TriggeredSampler, UnitDelay, ZeroOrderHold, lookup, read_int,
 };
 

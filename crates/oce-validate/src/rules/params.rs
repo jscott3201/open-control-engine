@@ -39,6 +39,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
         }
         ParamRule::Required { .. } => {}
         ParamRule::Structural { .. } => {}
+        ParamRule::StructuralArrayElements { .. } => {}
         ParamRule::Real { name } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
@@ -211,6 +212,58 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 }
             }
         }
+        ParamRule::IntegerArrayElementsInRange {
+            base,
+            len,
+            len_default,
+            min,
+            max,
+            max_default,
+            default_to_index,
+        } => {
+            let Some(n) = integer_param_or_default(&blk.params, len, len_default) else {
+                return;
+            };
+            let Some(upper) = integer_param_or_default(&blk.params, max, max_default) else {
+                return;
+            };
+            let Ok(n) = usize::try_from(n) else {
+                return;
+            };
+            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
+                let name = format!("{base}_{idx}");
+                let member = match find_param(&blk.params, &name) {
+                    Some(value) => {
+                        let Some(value) = integer_value(value) else {
+                            push_range_error(
+                                blk,
+                                diags,
+                                format!(
+                                    "parameter `{name}` on block `{}` must be an integer array \
+                                     element",
+                                    blk.class_iri
+                                ),
+                            );
+                            continue;
+                        };
+                        value
+                    }
+                    None if default_to_index => idx as i64,
+                    None => continue,
+                };
+                if member < min || member > upper {
+                    push_range_error(
+                        blk,
+                        diags,
+                        format!(
+                            "parameter `{name}` on block `{}` must be in range {min}..={upper}; \
+                             got {member}",
+                            blk.class_iri
+                        ),
+                    );
+                }
+            }
+        }
         ParamRule::RealArrayElements { base, len } => {
             let Some(value) = find_param(&blk.params, len) else {
                 return;
@@ -236,6 +289,82 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                         ),
                     );
                 }
+            }
+        }
+        ParamRule::BooleanArrayElements { base, len } => {
+            let Some(value) = find_param(&blk.params, len) else {
+                return;
+            };
+            let Some(n) = integer_value(value) else {
+                return;
+            };
+            let Ok(n) = usize::try_from(n) else {
+                return;
+            };
+            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
+                let name = format!("{base}_{idx}");
+                let Some(value) = find_param(&blk.params, &name) else {
+                    continue;
+                };
+                if boolean_value(value).is_none() {
+                    push_range_error(
+                        blk,
+                        diags,
+                        format!(
+                            "parameter `{name}` on block `{}` must be a Boolean array element",
+                            blk.class_iri
+                        ),
+                    );
+                }
+            }
+        }
+        ParamRule::BooleanArrayTrueCountEquals {
+            base,
+            len,
+            count,
+            default,
+        } => {
+            let (Some(len_raw), Some(count_raw)) =
+                (find_param(&blk.params, len), find_param(&blk.params, count))
+            else {
+                return;
+            };
+            let (Some(n), Some(expected)) = (integer_value(len_raw), integer_value(count_raw))
+            else {
+                return;
+            };
+            let Ok(n) = usize::try_from(n) else {
+                return;
+            };
+            if n > MAX_RESOLVED_PORT_WIDTH {
+                return;
+            }
+            let mut true_count = 0_i64;
+            for idx in 1..=n {
+                let name = format!("{base}_{idx}");
+                let value = match find_param(&blk.params, &name) {
+                    Some(value) => {
+                        let Some(value) = boolean_value(value) else {
+                            return;
+                        };
+                        value
+                    }
+                    None => default,
+                };
+                if value {
+                    true_count += 1;
+                }
+            }
+            if true_count != expected {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "Boolean mask `{base}` on block `{}` has true count {true_count}, \
+                         expected `{count}` = {expected}",
+                        blk.class_iri
+                    ),
+                );
             }
         }
         ParamRule::EnumMembers { name, members } => {
@@ -340,6 +469,41 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                     format!(
                         "parameter `{real}` on block `{}` must satisfy {min} <= \
                          {real}*{integer} <= {max}; got {scaled}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
+        ParamRule::IntegerProductLessOrEqualConstant { left, right, max } => {
+            let (Some(left_raw), Some(right_raw)) = (
+                find_param(&blk.params, left),
+                find_param(&blk.params, right),
+            ) else {
+                return;
+            };
+            let (Some(left_value), Some(right_value)) =
+                (integer_value(left_raw), integer_value(right_raw))
+            else {
+                return;
+            };
+            let Some(product) = left_value.checked_mul(right_value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameters `{left}` and `{right}` on block `{}` overflow their product",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if product > max {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameters `{left}` and `{right}` on block `{}` must satisfy \
+                         {left}*{right} <= {max}; got {product}",
                         blk.class_iri
                     ),
                 );
@@ -483,6 +647,17 @@ fn real_value(value: &Value) -> Option<f64> {
 fn integer_value(value: &Value) -> Option<i64> {
     match value {
         Value::Integer(v) => Some(*v),
+        _ => None,
+    }
+}
+
+fn integer_param_or_default(params: &ParamTable, name: &str, default: i64) -> Option<i64> {
+    find_param(params, name).map_or(Some(default), integer_value)
+}
+
+fn boolean_value(value: &Value) -> Option<bool> {
+    match value {
+        Value::Boolean(v) => Some(*v),
         _ => None,
     }
 }

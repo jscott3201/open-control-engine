@@ -212,7 +212,15 @@
     {
       "package": "CDL.Routing",
       "package_order": "Buildings/Controls/OBC/CDL/Routing/package.order",
-      "implemented": {},
+      "implemented": {
+        "golden_manifest": [
+          "RealExtractSignal",
+          "RealExtractor",
+          "RealScalarReplicator",
+          "RealVectorFilter",
+          "RealVectorReplicator"
+        ]
+      },
       "missing": [
         "BooleanExtractSignal",
         "BooleanExtractor",
@@ -223,12 +231,7 @@
         "IntegerExtractor",
         "IntegerScalarReplicator",
         "IntegerVectorFilter",
-        "IntegerVectorReplicator",
-        "RealExtractSignal",
-        "RealExtractor",
-        "RealScalarReplicator",
-        "RealVectorFilter",
-        "RealVectorReplicator"
+        "IntegerVectorReplicator"
       ]
     },
     {

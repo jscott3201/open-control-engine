@@ -48,6 +48,20 @@ fn resolved_signature_uses_instance_width_for_vector_ports() {
         &[PortKind::Real, PortKind::Real]
     );
     assert_eq!(real_multi.outputs.as_ref(), &[PortKind::Real]);
+
+    let routing_block = RealVectorReplicator::new(2, 3);
+    let routing = routing_block.resolved_signature();
+    assert_eq!(routing.class_path, "CDL.Routing.RealVectorReplicator");
+    assert_eq!(routing.inputs.as_ref(), &[PortKind::Real, PortKind::Real]);
+    assert_eq!(routing.outputs.as_ref(), &[PortKind::Real; 6]);
+
+    let extractor_block = RealExtractor::new(2);
+    let extractor = extractor_block.resolved_signature();
+    assert_eq!(
+        extractor.inputs.as_ref(),
+        &[PortKind::Integer, PortKind::Real, PortKind::Real]
+    );
+    assert_eq!(extractor.outputs.as_ref(), &[PortKind::Real]);
 }
 
 #[test]
@@ -117,6 +131,13 @@ fn feedthrough_classification_matches_spec() {
     assert!(!MultiSum::new(vec![1.0, 2.0, 3.0]).feeds_through(3, 0));
     assert!(MultiMin::new(2).feeds_through(1, 0));
     assert!(MultiMax::new(2).feeds_through(1, 0));
+    assert!(RealExtractSignal::new(3, 2, vec![3, 1]).feeds_through(2, 0));
+    assert!(RealExtractSignal::new(3, 2, vec![3, 1]).feeds_through(0, 1));
+    assert!(RealExtractor::new(3).feeds_through(0, 0));
+    assert!(RealExtractor::new(3).feeds_through(3, 0));
+    assert!(RealScalarReplicator::new(2).feeds_through(0, 1));
+    assert!(RealVectorFilter::new(3, 2, vec![true, false, true]).feeds_through(2, 1));
+    assert!(RealVectorReplicator::new(2, 3).feeds_through(1, 5));
     assert!(Not.feeds_through(0, 0));
     assert!(Switch.feeds_through(0, 0) && Switch.feeds_through(1, 0) && Switch.feeds_through(2, 0));
 
@@ -243,6 +264,11 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.MovingAverage",
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
+        "CDL.Routing.RealExtractSignal",
+        "CDL.Routing.RealExtractor",
+        "CDL.Routing.RealScalarReplicator",
+        "CDL.Routing.RealVectorFilter",
+        "CDL.Routing.RealVectorReplicator",
         "CDL.Psychrometrics.DewPoint_TDryBulPhi",
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
         "CDL.Psychrometrics.WetBulb_TDryBulPhi",
@@ -308,7 +334,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Utilities.Assert",
         "CDL.Utilities.SunRiseSet",
     ];
-    assert_eq!(PATHS.len(), 101, "registry count");
+    assert_eq!(PATHS.len(), 106, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -588,6 +614,59 @@ fn registry_make_resolves_parameters() {
     assert!(tick_real(moving_average.as_ref(), &mut region, 0.0, 0.0).bit_eq(&Value::Real(0.0)));
     assert!(tick_real(moving_average.as_ref(), &mut region, 0.25, 4.0).bit_eq(&Value::Real(4.0)));
     assert!(tick_real(moving_average.as_ref(), &mut region, 0.5, 0.0).bit_eq(&Value::Real(0.0)));
+
+    let extract_signal = (lookup("CDL.Routing.RealExtractSignal").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("nin"), Value::Integer(3)),
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("extract_1"), Value::Integer(3)),
+            (Arc::from("extract_2"), Value::Integer(1)),
+        ],
+    });
+    assert_eq!(
+        extract_signal.resolved_signature().inputs.as_ref(),
+        &[PortKind::Real; 3]
+    );
+    assert!(
+        outs(
+            extract_signal.as_ref(),
+            &[Value::Real(1.0), Value::Real(2.0), Value::Real(3.0)]
+        )[0]
+        .bit_eq(&Value::Real(3.0))
+    );
+
+    let vector_filter = (lookup("CDL.Routing.RealVectorFilter").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("nin"), Value::Integer(3)),
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("msk_1"), Value::Boolean(true)),
+            (Arc::from("msk_2"), Value::Boolean(false)),
+            (Arc::from("msk_3"), Value::Boolean(true)),
+        ],
+    });
+    assert_eq!(
+        vector_filter.resolved_signature().outputs.as_ref(),
+        &[PortKind::Real; 2]
+    );
+    assert!(
+        outs(
+            vector_filter.as_ref(),
+            &[Value::Real(4.0), Value::Real(5.0), Value::Real(6.0)]
+        )[1]
+        .bit_eq(&Value::Real(6.0))
+    );
+
+    let vector_replicator =
+        (lookup("CDL.Routing.RealVectorReplicator").unwrap().make)(&ParamTable {
+            values: vec![
+                (Arc::from("nin"), Value::Integer(2)),
+                (Arc::from("nout"), Value::Integer(3)),
+            ],
+        });
+    assert_eq!(
+        vector_replicator.resolved_signature().outputs.as_ref(),
+        &[PortKind::Real; 6]
+    );
 }
 
 #[test]

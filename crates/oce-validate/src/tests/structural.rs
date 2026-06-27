@@ -480,6 +480,75 @@ fn reals_multi_reducer_resolved_signature_checks_port_kind() {
 }
 
 #[test]
+fn routing_real_resolved_signatures_accept_dynamic_vector_and_matrix_widths() {
+    let extract = one_block_model(
+        "CDL.Routing.RealExtractSignal",
+        &[ValueType::Real, ValueType::Real, ValueType::Real],
+        &[ValueType::Real, ValueType::Real],
+        vec![
+            (Arc::from("nin"), Value::Integer(3)),
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("extract_1"), Value::Integer(3)),
+            (Arc::from("extract_2"), Value::Integer(1)),
+        ],
+    );
+    assert!(
+        validate(&extract)
+            .expect("RealExtractSignal nin=3,nout=2 has 3 inputs and 2 outputs")
+            .is_empty()
+    );
+
+    let vector_replicator = one_block_model(
+        "CDL.Routing.RealVectorReplicator",
+        &[ValueType::Real, ValueType::Real],
+        &[
+            ValueType::Real,
+            ValueType::Real,
+            ValueType::Real,
+            ValueType::Real,
+            ValueType::Real,
+            ValueType::Real,
+        ],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("nout"), Value::Integer(3)),
+        ],
+    );
+    assert!(
+        validate(&vector_replicator)
+            .expect("RealVectorReplicator y[3,2] lowers to 6 Real outputs")
+            .is_empty()
+    );
+}
+
+#[test]
+fn routing_real_resolved_signatures_reject_arity_and_kind_mismatch() {
+    let arity = one_block_model(
+        "CDL.Routing.RealScalarReplicator",
+        &[ValueType::Real],
+        &[ValueType::Real],
+        vec![(Arc::from("nout"), Value::Integer(2))],
+    );
+    let err = validate(&arity).expect_err("RealScalarReplicator nout=2 requires two outputs");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("class requires 1/2"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+
+    let kind = one_block_model(
+        "CDL.Routing.RealExtractor",
+        &[ValueType::Real, ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![(Arc::from("nin"), Value::Integer(2))],
+    );
+    let err = validate(&kind).expect_err("RealExtractor index input must be Integer");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::PortKindMismatch]);
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#0"));
+}
+
+#[test]
 fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
     // CXF resolve already rejects these shapes for documents. The pure validate seam must also reject
     // hand-built ModelGraph callers before oce-graph reaches emit/gather by port index.
