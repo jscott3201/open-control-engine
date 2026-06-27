@@ -151,6 +151,8 @@ fn feedthrough_classification_matches_spec() {
 fn registry_resolves_canonical_paths() {
     const PATHS: &[&str] = &[
         "CDL.Reals.Sources.Constant",
+        "CDL.Reals.Sources.CivilTime",
+        "CDL.Reals.Sources.Ramp",
         "CDL.Reals.Add",
         "CDL.Reals.Subtract",
         "CDL.Reals.Multiply",
@@ -234,7 +236,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.ZeroOrderHold",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 83, "registry count");
+    assert_eq!(PATHS.len(), 85, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

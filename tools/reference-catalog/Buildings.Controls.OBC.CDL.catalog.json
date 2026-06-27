@@ -197,14 +197,14 @@
       "package_order": "Buildings/Controls/OBC/CDL/Reals/Sources/package.order",
       "implemented": {
         "golden_manifest": [
-          "Constant"
+          "CivilTime",
+          "Constant",
+          "Ramp"
         ]
       },
       "missing": [
         "CalendarTime",
-        "CivilTime",
         "Pulse",
-        "Ramp",
         "Sin",
         "TimeTable"
       ]

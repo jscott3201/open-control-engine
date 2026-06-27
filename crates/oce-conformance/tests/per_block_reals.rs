@@ -98,6 +98,42 @@ const CONSTANT_K: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Real("21.5"),
 }];
+const SOURCE_RAMP_PARAMS: &[Param] = &[
+    Param {
+        name: "height",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "duration",
+        value: ParamValue::Real("3.0"),
+    },
+    Param {
+        name: "offset",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "startTime",
+        value: ParamValue::Real("1.0"),
+    },
+];
+const SOURCE_RAMP_NEGATIVE_HEIGHT_PARAMS: &[Param] = &[
+    Param {
+        name: "height",
+        value: ParamValue::Real("-2.0"),
+    },
+    Param {
+        name: "duration",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "offset",
+        value: ParamValue::Real("10.0"),
+    },
+    Param {
+        name: "startTime",
+        value: ParamValue::Real("-1.0"),
+    },
+];
 const ROUND_N_TWO: &[Param] = &[Param {
     name: "n",
     value: ParamValue::Integer("2"),
@@ -306,6 +342,30 @@ const CASES: &[BlockCase] = &[
         "Sources/Constant",
         &[],
         CONSTANT_K,
+        REAL_Y,
+    ),
+    case(
+        "reals_civil_time",
+        "CDL.Reals.Sources.CivilTime",
+        "Sources/CivilTime",
+        &[],
+        &[],
+        REAL_Y,
+    ),
+    case(
+        "reals_source_ramp",
+        "CDL.Reals.Sources.Ramp",
+        "Sources/Ramp",
+        &[],
+        SOURCE_RAMP_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_source_ramp_negative_height_start",
+        "CDL.Reals.Sources.Ramp",
+        "Sources/Ramp/negative_height_start",
+        &[],
+        SOURCE_RAMP_NEGATIVE_HEIGHT_PARAMS,
         REAL_Y,
     ),
     case("reals_add", "CDL.Reals.Add", "Add", U1_U2, &[], REAL_Y),

@@ -221,8 +221,14 @@ CDL.Reals.Ramp/inactive_passthrough reference -> goldens/CDL/Reals/Ramp/inactive
 CDL.Reals.Ramp/inactive_passthrough y -> goldens/CDL/Reals/Ramp/inactive_passthrough/y.csv
 CDL.Reals.Round reference -> goldens/CDL/Reals/Round/reference.csv
 CDL.Reals.Round y -> goldens/CDL/Reals/Round/y.csv
+CDL.Reals.Sources.CivilTime reference -> goldens/CDL/Reals/Sources/CivilTime/reference.csv
+CDL.Reals.Sources.CivilTime y -> goldens/CDL/Reals/Sources/CivilTime/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv
 CDL.Reals.Sources.Constant y -> goldens/CDL/Reals/Sources/Constant/y.csv
+CDL.Reals.Sources.Ramp reference -> goldens/CDL/Reals/Sources/Ramp/reference.csv
+CDL.Reals.Sources.Ramp y -> goldens/CDL/Reals/Sources/Ramp/y.csv
+CDL.Reals.Sources.Ramp/negative_height_start reference -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/reference.csv
+CDL.Reals.Sources.Ramp/negative_height_start y -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/y.csv
 CDL.Reals.Sqrt reference -> goldens/CDL/Reals/Sqrt/reference.csv
 CDL.Reals.Sqrt y -> goldens/CDL/Reals/Sqrt/y.csv
 CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv

@@ -20,6 +20,7 @@ mod reals;
 mod reals_pid;
 mod reals_ramp;
 mod reals_scalar_arithmetic;
+mod reals_sources;
 mod sequences;
 
 use std::fs;
@@ -47,6 +48,7 @@ fn main() {
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
     goldens.extend(reals_scalar_arithmetic::goldens());
+    goldens.extend(reals_sources::goldens());
     goldens.extend(reals_ramp::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());

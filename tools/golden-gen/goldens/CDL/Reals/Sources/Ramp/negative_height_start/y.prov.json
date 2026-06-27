@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Reals.Sources.Ramp",
+  "scenario": "negative_height_start",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "scenario=negative_height_start; height=-2, duration=2, offset=10, startTime=-1",
+  "reference_rule": "same source piecewise equation with negative height and negative simulation start",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -190,6 +190,45 @@ fn sampled_discrete_sample_period_is_required_and_at_least_one_millisecond() {
 }
 
 #[test]
+fn real_source_ramp_duration_is_required_and_at_least_small() {
+    let missing = one_block_model("CDL.Reals.Sources.Ramp", &[], &[ValueType::Real], vec![]);
+    let err = validate(&missing).expect_err("Sources.Ramp duration is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`duration`"));
+
+    let invalid = one_block_model(
+        "CDL.Reals.Sources.Ramp",
+        &[],
+        &[ValueType::Real],
+        vec![rp("duration", 0.0)],
+    );
+    let err = validate(&invalid).expect_err("Sources.Ramp duration=0 must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`duration`"));
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("`CDL.Reals.Sources.Ramp`")
+    );
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Reals.Sources.Ramp",
+            &[],
+            &[ValueType::Real],
+            vec![rp("duration", 1e-37)],
+        ))
+        .expect("Sources.Ramp duration lower bound is inclusive")
+        .is_empty()
+    );
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",
