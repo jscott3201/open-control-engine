@@ -106,9 +106,10 @@ Rejected guard forms:
 - unknown parameters;
 - integer stand-ins for enum literals.
 
-Until the specialization importer lands, conditional examples are profile fixtures only. A runtime
-fixture that carries `S231:isConditionalComponent` or `S231:conditionalExpression` without a matching
-supported specialization path must fail closed or remain unaccepted.
+The specialization importer evaluates these guards during CXF load, prunes inactive graph nodes
+before block and connector ids are assigned, and emits typed diagnostics for unresolved or
+out-of-profile guards. Guard results are not stored in the executable `ModelGraph`, and no runtime
+tick path evaluates guard expressions.
 
 ## Validation Packages
 

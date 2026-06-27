@@ -17,7 +17,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use oce_expr::{EvalResult, Scope};
-use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
+use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal, g36_integer_constant};
 
 use crate::dto::CxfValue;
 
@@ -79,12 +79,17 @@ pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value,
         CxfValue::Typed {
             value, datatype, ..
         } => ground_typed(value, datatype),
-        CxfValue::Expr(text) => match oce_expr::eval_str(text, scope) {
-            // `EvalResult` is `#[non_exhaustive]`; the scalar subset only yields `Scalar`.
-            Ok(EvalResult::Scalar(v)) => Ok(v),
-            Ok(_) => Err(GroundErr::NonScalar),
-            Err(e) => Err(GroundErr::Expr(e)),
-        },
+        CxfValue::Expr(text) => {
+            if let Some(value) = g36_integer_constant(text) {
+                return Ok(Value::Integer(value));
+            }
+            match oce_expr::eval_str(text, scope) {
+                // `EvalResult` is `#[non_exhaustive]`; the scalar subset only yields `Scalar`.
+                Ok(EvalResult::Scalar(v)) => Ok(v),
+                Ok(_) => Err(GroundErr::NonScalar),
+                Err(e) => Err(GroundErr::Expr(e)),
+            }
+        }
         // A `List` is an array value. The resolver decodes an array-parameter's `List` per-element
         // BEFORE calling this — so a `List` reaching here is an array value on a
         // non-array (scalar) parameter node: a malformed binding, reported as a typed failure.
@@ -311,6 +316,51 @@ mod tests {
             &no_scope(),
         );
         assert!(matches!(invalid, Err(GroundErr::Expr(_))));
+    }
+
+    #[test]
+    fn expr_binding_resolves_g36_enum_reference() {
+        let v = ground_value(
+            &CxfValue::Expr(
+                "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.California_Title_24"
+                    .to_owned(),
+            ),
+            &no_scope(),
+        )
+        .unwrap();
+        assert!(v.bit_eq(&Value::Enum {
+            class: EnumClassId::G36_VENTILATION_STANDARD,
+            ordinal: 2,
+        }));
+
+        let invalid = ground_value(
+            &CxfValue::Expr(
+                "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.Title_25".to_owned(),
+            ),
+            &no_scope(),
+        );
+        assert!(matches!(invalid, Err(GroundErr::Expr(_))));
+    }
+
+    #[test]
+    fn expr_binding_resolves_g36_integer_constants() {
+        let occupied = ground_value(
+            &CxfValue::Expr(
+                "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied".to_owned(),
+            ),
+            &no_scope(),
+        )
+        .unwrap();
+        assert!(occupied.bit_eq(&Value::Integer(1)));
+
+        let cooling = ground_value(
+            &CxfValue::Expr(
+                "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling".to_owned(),
+            ),
+            &no_scope(),
+        )
+        .unwrap();
+        assert!(cooling.bit_eq(&Value::Integer(3)));
     }
 
     #[test]
