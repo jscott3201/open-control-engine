@@ -46,6 +46,9 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
         "CDL.Reals.PID" => pid::PID_PARAM_RULES,
         "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
+        "CDL.Discrete.FirstOrderHold" | "CDL.Discrete.Sampler" | "CDL.Discrete.ZeroOrderHold" => {
+            discrete::SAMPLED_PARAM_RULES
+        }
         "CDL.Discrete.TriggeredMovingMean" => discrete::TRIGGERED_MOVING_MEAN_PARAM_RULES,
         _ => &[],
     }

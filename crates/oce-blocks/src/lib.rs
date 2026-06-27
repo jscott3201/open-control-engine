@@ -22,6 +22,7 @@ use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
 mod conversions;
 mod discrete;
+mod discrete_sampled;
 mod dynamics;
 mod integers;
 mod integers_edge;
@@ -41,6 +42,7 @@ mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
 pub use discrete::{TriggeredMax, TriggeredMovingMean, TriggeredSampler, UnitDelay};
+pub use discrete_sampled::{FirstOrderHold, Sampler, ZeroOrderHold};
 pub use integers::{
     IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,

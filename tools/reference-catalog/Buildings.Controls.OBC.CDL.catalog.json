@@ -21,17 +21,16 @@
       "package_order": "Buildings/Controls/OBC/CDL/Discrete/package.order",
       "implemented": {
         "golden_manifest": [
+          "FirstOrderHold",
+          "Sampler",
           "TriggeredMax",
           "TriggeredMovingMean",
           "TriggeredSampler",
-          "UnitDelay"
+          "UnitDelay",
+          "ZeroOrderHold"
         ]
       },
-      "missing": [
-        "FirstOrderHold",
-        "Sampler",
-        "ZeroOrderHold"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Integers",

@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Discrete.FirstOrderHold",
+  "scenario": "negative_start",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 3,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [10.0, 12.0, 14.0] }
+  ],
+  "input": "scenario=negative_start; samplePeriod=1.0, start=-0.25; u=[10,12,14]",
+  "reference_rule": "t0=round(integer(-0.25/1.0)*1.0,n=6)=-1.0 using Modelica integer floor; the t=0 sample emits previous u=10, then the following interval uses slope (12-10)/1",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

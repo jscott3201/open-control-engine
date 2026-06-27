@@ -1,0 +1,20 @@
+{
+  "class_path": "CDL.Discrete.FirstOrderHold",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 6,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0] }
+  ],
+  "input": "samplePeriod=1.0, start=0.0; u=[0,1,2,3,4,5]",
+  "reference_rule": "pre(tSample)=t0, pre(uSample)=u, pre(pre_uSample)=u, pre(c)=0; on sample instants y emits the previous sample, then c=(uSample-pre_uSample)/samplePeriod for the following interval; Buildings FirstOrderHold.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

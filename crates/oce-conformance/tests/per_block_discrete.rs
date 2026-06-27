@@ -40,6 +40,10 @@ const TRIGGERED_MOVING_MEAN_N_ONE_PARAMS: &[Param] = &[Param {
     name: "n",
     value: ParamValue::Integer("1"),
 }];
+const SAMPLED_PARAMS: &[Param] = &[Param {
+    name: "samplePeriod",
+    value: ParamValue::Real("1.0"),
+}];
 const NO_PARAMS: &[Param] = &[];
 
 // The checked-in goldens pin one-sample-delay dynamics, state latching,
@@ -59,6 +63,38 @@ const CASES: &[BlockCase] = &[
         "UnitDelay/y_start_nonzero",
         U,
         UNIT_DELAY_NONZERO_START_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_sampler",
+        "CDL.Discrete.Sampler",
+        "Sampler",
+        U,
+        SAMPLED_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_zero_order_hold",
+        "CDL.Discrete.ZeroOrderHold",
+        "ZeroOrderHold",
+        U,
+        SAMPLED_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_first_order_hold",
+        "CDL.Discrete.FirstOrderHold",
+        "FirstOrderHold",
+        U,
+        SAMPLED_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "discrete_first_order_hold_negative_start",
+        "CDL.Discrete.FirstOrderHold",
+        "FirstOrderHold/negative_start",
+        U,
+        SAMPLED_PARAMS,
         REAL_Y,
     ),
     case(
@@ -122,6 +158,10 @@ const CASES: &[BlockCase] = &[
 const STATEFUL_DISCRETE_SLUGS: &[&str] = &[
     "discrete_unit_delay",
     "discrete_unit_delay_nonzero_y_start",
+    "discrete_sampler",
+    "discrete_zero_order_hold",
+    "discrete_first_order_hold",
+    "discrete_first_order_hold_negative_start",
     "discrete_triggered_sampler",
     "discrete_triggered_sampler_initial_true",
     "discrete_triggered_max",

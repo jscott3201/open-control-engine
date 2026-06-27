@@ -77,6 +77,9 @@ fn feedthrough_classification_matches_spec() {
     assert!(!Constant { k: 0.0 }.feeds_through(0, 0)); // no inputs
     assert!(!Pre::default().feeds_through(0, 0)); // THE cut
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
+    assert!(Sampler::default().feeds_through(0, 0)); // initial/sample instants emit current u
+    assert!(ZeroOrderHold::default().feeds_through(0, 0)); // conservative: initial tick feeds u
+    assert!(FirstOrderHold::default().feeds_through(0, 0)); // conservative: initial tick feeds u
     assert!(TriggeredMax.feeds_through(0, 0)); // current u seeds initial y and trigger samples
     assert!(TriggeredMax.feeds_through(1, 0)); // current trigger selects same-tick event
     assert!(TriggeredMovingMean::default().feeds_through(0, 0)); // initial/event sample includes current u
@@ -116,6 +119,9 @@ fn feedthrough_classification_matches_spec() {
 
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
+    assert_eq!(Sampler::default().kind(), BlockKind::Stateful);
+    assert_eq!(ZeroOrderHold::default().kind(), BlockKind::Stateful);
+    assert_eq!(FirstOrderHold::default().kind(), BlockKind::Stateful);
     assert_eq!(TriggeredMax.kind(), BlockKind::Stateful);
     assert_eq!(TriggeredMovingMean::default().kind(), BlockKind::Stateful);
     assert_eq!(TriggeredSampler::default().kind(), BlockKind::Stateful);
@@ -219,13 +225,16 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.OnCounter",
         "CDL.Integers.Change",
         "CDL.Integers.Stage",
+        "CDL.Discrete.FirstOrderHold",
+        "CDL.Discrete.Sampler",
         "CDL.Discrete.TriggeredMax",
         "CDL.Discrete.TriggeredMovingMean",
         "CDL.Discrete.TriggeredSampler",
         "CDL.Discrete.UnitDelay",
+        "CDL.Discrete.ZeroOrderHold",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 80, "registry count");
+    assert_eq!(PATHS.len(), 83, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -372,6 +381,22 @@ fn registry_exposes_block_param_rules() {
             ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
         ]
     );
+    let sampled_rules = &[
+        ParamRule::Required {
+            name: "samplePeriod",
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "samplePeriod",
+            min: 1e-3,
+        },
+    ];
+    for path in [
+        "CDL.Discrete.FirstOrderHold",
+        "CDL.Discrete.Sampler",
+        "CDL.Discrete.ZeroOrderHold",
+    ] {
+        assert_eq!(lookup(path).unwrap().param_rules(), sampled_rules, "{path}");
+    }
     assert!(
         lookup("CDL.Reals.Sources.Constant")
             .unwrap()
@@ -550,6 +575,33 @@ fn registry_make_resolves_parameters() {
         block.update_state(&cx, &inputs, region);
         out.expect("single-output stateful block emits one value")
     }
+
+    let sampled_params = ParamTable {
+        values: vec![(Arc::from("samplePeriod"), Value::Real(0.5))],
+    };
+    let sampler = (lookup("CDL.Discrete.Sampler").unwrap().make)(&sampled_params);
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &sampled_params);
+    assert!(tick_real(sampler.as_ref(), &mut region, 0.0, 1.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(sampler.as_ref(), &mut region, 0.25, 2.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(sampler.as_ref(), &mut region, 0.5, 3.0).bit_eq(&Value::Real(3.0)));
+    assert!(tick_real(sampler.as_ref(), &mut region, 0.75, 4.0).bit_eq(&Value::Real(3.0)));
+
+    let zero_hold = (lookup("CDL.Discrete.ZeroOrderHold").unwrap().make)(&sampled_params);
+    let mut region = vec![0u64; zero_hold.state_len()];
+    zero_hold.init_state(&mut region, &sampled_params);
+    assert!(tick_real(zero_hold.as_ref(), &mut region, 0.0, 1.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(zero_hold.as_ref(), &mut region, 0.25, 2.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(zero_hold.as_ref(), &mut region, 0.5, 3.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(zero_hold.as_ref(), &mut region, 0.75, 4.0).bit_eq(&Value::Real(3.0)));
+
+    let first_hold = (lookup("CDL.Discrete.FirstOrderHold").unwrap().make)(&sampled_params);
+    let mut region = vec![0u64; first_hold.state_len()];
+    first_hold.init_state(&mut region, &sampled_params);
+    assert!(tick_real(first_hold.as_ref(), &mut region, 0.0, 1.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(first_hold.as_ref(), &mut region, 0.25, 2.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(first_hold.as_ref(), &mut region, 0.5, 3.0).bit_eq(&Value::Real(1.0)));
+    assert!(tick_real(first_hold.as_ref(), &mut region, 0.75, 4.0).bit_eq(&Value::Real(2.0)));
 
     let slew = (lookup("CDL.Reals.LimitSlewRate").unwrap().make)(&ParamTable {
         values: vec![
