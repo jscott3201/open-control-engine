@@ -1,8 +1,9 @@
 # cargo-deny baseline for open-control.
 #
-# The library ships no first-party database; its build pulls only serde/serde_json/thiserror
-# from crates.io (D-OWNER-1). The allow-list below is kept deliberately broad so common
-# permissive licenses in any future transitive tree pass without churn.
+# The library ships no first-party database; its runtime/default build pulls only small
+# permissive crates such as serde/serde_json/thiserror/libm from crates.io (D-OWNER-1). The
+# allow-list below is kept deliberately broad so common permissive licenses in any future
+# transitive tree pass without churn.
 #   - dual MIT OR Apache-2.0 project license; permissive allow-list for transitive deps
 #   - crates.io is the only registry; the library declares no git sources. A consuming
 #     application that wires a git-sourced store adapter manages that in its own deny config.

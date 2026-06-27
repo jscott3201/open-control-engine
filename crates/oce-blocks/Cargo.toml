@@ -13,6 +13,7 @@ homepage.workspace = true
 workspace = true
 
 [dependencies]
+libm = { workspace = true }
 oce-model = { workspace = true }
 
 [dev-dependencies]

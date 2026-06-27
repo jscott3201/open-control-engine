@@ -30,6 +30,7 @@ name = "golden-gen"
 path = "src/main.rs"
 
 [dependencies]
+libm = { version = "0.2.16", default-features = false }
 # Same shortest-round-trip f64 formatter that `oce-conformance` uses, so finite-valued goldens are
 # byte-identical to what the conformance writer would produce. NOT a dependency on any oce crate.
 ryu = "1.0"

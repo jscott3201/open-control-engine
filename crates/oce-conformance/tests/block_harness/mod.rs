@@ -1,5 +1,7 @@
 //! Shared facade-bound exact conformance harness for one-block CDL fixtures.
 
+#![allow(dead_code)]
+
 use std::path::PathBuf;
 
 use oce_conformance::{
@@ -137,6 +139,57 @@ pub(crate) fn assert_cases_match_exact_oracle(
     }
 }
 
+pub(crate) fn assert_cases_match_aligned_tolerance_oracle(
+    cases: &[BlockCase],
+    family_dir: &str,
+    sequence: &str,
+) {
+    let tolerances = aligned_real_tolerances();
+    for case in cases {
+        let reference = read_reference(case, family_dir);
+        let cxf = build_cxf(case);
+        let run = drive_case_with_mode(
+            case,
+            sequence,
+            &cxf,
+            &reference,
+            ComparisonMode::AlignedTolerance,
+            tolerances,
+        );
+
+        assert_eq!(run.comparisons.len(), case.outputs.len(), "{}", case.slug);
+        for (idx, (comparison, output)) in
+            run.comparisons.iter().zip(case.outputs.iter()).enumerate()
+        {
+            assert_eq!(comparison.output, output_point(case, idx));
+            assert_eq!(comparison.reference_column, output.name);
+            assert!(
+                !comparison.masked,
+                "aligned per-block comparison is unmasked"
+            );
+            assert_eq!(comparison.tolerance, tolerances);
+
+            let ComparisonResult::AlignedTolerance(result) = &comparison.result else {
+                panic!(
+                    "{} {} did not use aligned tolerance comparison",
+                    case.slug, output.name
+                );
+            };
+            assert!(
+                result.passed,
+                "{} {} mismatch: {:?}",
+                case.slug, output.name, result
+            );
+            assert_eq!(
+                result.compared_points, reference.n_rows,
+                "{} {}",
+                case.slug, output.name
+            );
+            assert_eq!(result.first_mismatch, None, "{} {}", case.slug, output.name);
+        }
+    }
+}
+
 pub(crate) fn assert_cases_are_deterministic(
     cases: &[BlockCase],
     slugs: &[&str],
@@ -178,19 +231,42 @@ fn drive_case(
     cxf: &str,
     reference: &CombiTimeTable,
 ) -> oce_conformance::DriverRun {
+    drive_case_with_mode(
+        case,
+        sequence,
+        cxf,
+        reference,
+        ComparisonMode::Exact,
+        zero_tolerances(),
+    )
+}
+
+fn drive_case_with_mode(
+    case: &BlockCase,
+    sequence: &str,
+    cxf: &str,
+    reference: &CombiTimeTable,
+    comparison: ComparisonMode,
+    tolerances: Tolerances,
+) -> oce_conformance::DriverRun {
     drive_trace_with_options(
         cxf.as_bytes(),
-        &config(case, sequence),
+        &config(case, sequence, tolerances),
         reference,
         &DriverOptions {
-            comparison: ComparisonMode::Exact,
+            comparison,
             ..DriverOptions::default()
         },
     )
-    .unwrap_or_else(|err| panic!("{} should drive through exact mode: {err:?}", case.slug))
+    .unwrap_or_else(|err| {
+        panic!(
+            "{} should drive through {:?}: {err:?}",
+            case.slug, comparison
+        )
+    })
 }
 
-fn config(case: &BlockCase, sequence: &str) -> VerifyConfig {
+fn config(case: &BlockCase, sequence: &str, tolerances: Tolerances) -> VerifyConfig {
     let mut point_name_mapping = Vec::with_capacity(case.inputs.len() + case.outputs.len());
     for input in case.inputs {
         point_name_mapping.push(map(input.name, &input_point(case, input), input.kind));
@@ -205,14 +281,7 @@ fn config(case: &BlockCase, sequence: &str) -> VerifyConfig {
             sequence: sequence.to_string(),
             point_name_mapping,
         }],
-        tolerances: Tolerances {
-            atolx: 0.0,
-            atoly: 0.0,
-            rtolx: 0.0,
-            rtoly: 0.0,
-            ltolx: 0.0,
-            ltoly: 0.0,
-        },
+        tolerances,
         outputs: case
             .outputs
             .iter()
@@ -225,6 +294,28 @@ fn config(case: &BlockCase, sequence: &str) -> VerifyConfig {
         indicators: Vec::new(),
         sampling: None,
         run_controller: true,
+    }
+}
+
+fn zero_tolerances() -> Tolerances {
+    Tolerances {
+        atolx: 0.0,
+        atoly: 0.0,
+        rtolx: 0.0,
+        rtoly: 0.0,
+        ltolx: 0.0,
+        ltoly: 0.0,
+    }
+}
+
+fn aligned_real_tolerances() -> Tolerances {
+    Tolerances {
+        atolx: 0.0,
+        atoly: 1.0e-12,
+        rtolx: 0.0,
+        rtoly: 1.0e-12,
+        ltolx: 0.0,
+        ltoly: 1.0e-12,
     }
 }
 

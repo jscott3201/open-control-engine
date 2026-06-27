@@ -171,14 +171,26 @@ CDL.Logical.Xor reference -> goldens/CDL/Logical/Xor/reference.csv
 CDL.Logical.Xor y -> goldens/CDL/Logical/Xor/y.csv
 CDL.Reals.Abs reference -> goldens/CDL/Reals/Abs/reference.csv
 CDL.Reals.Abs y -> goldens/CDL/Reals/Abs/y.csv
+CDL.Reals.Acos reference -> goldens/CDL/Reals/Acos/reference.csv
+CDL.Reals.Acos y -> goldens/CDL/Reals/Acos/y.csv
 CDL.Reals.Add reference -> goldens/CDL/Reals/Add/reference.csv
 CDL.Reals.Add y -> goldens/CDL/Reals/Add/y.csv
 CDL.Reals.AddParameter reference -> goldens/CDL/Reals/AddParameter/reference.csv
 CDL.Reals.AddParameter y -> goldens/CDL/Reals/AddParameter/y.csv
+CDL.Reals.Asin reference -> goldens/CDL/Reals/Asin/reference.csv
+CDL.Reals.Asin y -> goldens/CDL/Reals/Asin/y.csv
+CDL.Reals.Atan reference -> goldens/CDL/Reals/Atan/reference.csv
+CDL.Reals.Atan y -> goldens/CDL/Reals/Atan/y.csv
+CDL.Reals.Atan2 reference -> goldens/CDL/Reals/Atan2/reference.csv
+CDL.Reals.Atan2 y -> goldens/CDL/Reals/Atan2/y.csv
 CDL.Reals.Average reference -> goldens/CDL/Reals/Average/reference.csv
 CDL.Reals.Average y -> goldens/CDL/Reals/Average/y.csv
+CDL.Reals.Cos reference -> goldens/CDL/Reals/Cos/reference.csv
+CDL.Reals.Cos y -> goldens/CDL/Reals/Cos/y.csv
 CDL.Reals.Divide reference -> goldens/CDL/Reals/Divide/reference.csv
 CDL.Reals.Divide y -> goldens/CDL/Reals/Divide/y.csv
+CDL.Reals.Exp reference -> goldens/CDL/Reals/Exp/reference.csv
+CDL.Reals.Exp y -> goldens/CDL/Reals/Exp/y.csv
 CDL.Reals.Greater reference -> goldens/CDL/Reals/Greater/reference.csv
 CDL.Reals.Greater y -> goldens/CDL/Reals/Greater/y.csv
 CDL.Reals.Greater/hysteretic reference -> goldens/CDL/Reals/Greater/hysteretic/reference.csv
@@ -215,6 +227,10 @@ CDL.Reals.Line/limit_below_only reference -> goldens/CDL/Reals/Line/limit_below_
 CDL.Reals.Line/limit_below_only y -> goldens/CDL/Reals/Line/limit_below_only/y.csv
 CDL.Reals.Line/unlimited reference -> goldens/CDL/Reals/Line/unlimited/reference.csv
 CDL.Reals.Line/unlimited y -> goldens/CDL/Reals/Line/unlimited/y.csv
+CDL.Reals.Log reference -> goldens/CDL/Reals/Log/reference.csv
+CDL.Reals.Log y -> goldens/CDL/Reals/Log/y.csv
+CDL.Reals.Log10 reference -> goldens/CDL/Reals/Log10/reference.csv
+CDL.Reals.Log10 y -> goldens/CDL/Reals/Log10/y.csv
 CDL.Reals.Max reference -> goldens/CDL/Reals/Max/reference.csv
 CDL.Reals.Max y -> goldens/CDL/Reals/Max/y.csv
 CDL.Reals.Min reference -> goldens/CDL/Reals/Min/reference.csv
@@ -239,6 +255,8 @@ CDL.Reals.Ramp/inactive_passthrough reference -> goldens/CDL/Reals/Ramp/inactive
 CDL.Reals.Ramp/inactive_passthrough y -> goldens/CDL/Reals/Ramp/inactive_passthrough/y.csv
 CDL.Reals.Round reference -> goldens/CDL/Reals/Round/reference.csv
 CDL.Reals.Round y -> goldens/CDL/Reals/Round/y.csv
+CDL.Reals.Sin reference -> goldens/CDL/Reals/Sin/reference.csv
+CDL.Reals.Sin y -> goldens/CDL/Reals/Sin/y.csv
 CDL.Reals.Sources.CivilTime reference -> goldens/CDL/Reals/Sources/CivilTime/reference.csv
 CDL.Reals.Sources.CivilTime y -> goldens/CDL/Reals/Sources/CivilTime/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv
@@ -255,6 +273,8 @@ CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv
 CDL.Reals.Subtract y -> goldens/CDL/Reals/Subtract/y.csv
 CDL.Reals.Switch reference -> goldens/CDL/Reals/Switch/reference.csv
 CDL.Reals.Switch y -> goldens/CDL/Reals/Switch/y.csv
+CDL.Reals.Tan reference -> goldens/CDL/Reals/Tan/reference.csv
+CDL.Reals.Tan y -> goldens/CDL/Reals/Tan/y.csv
 CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json
 G36/ahu_economizer damper_command -> goldens/G36/ahu_economizer/damper_command.csv
 G36/ahu_economizer economizer_enabled -> goldens/G36/ahu_economizer/economizer_enabled.csv
