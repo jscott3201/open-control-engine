@@ -3,4 +3,6 @@
 
 mod common;
 mod contract;
+mod primitive_contract;
+mod routing_typed_contract;
 mod sources_and_logical;

@@ -1,0 +1,7 @@
+#1
+# columns: time u y1 y2 y3
+double CDL_Routing_BooleanScalarReplicator_reference(4,5)
+0.0 1.0 1.0 1.0 1.0
+60.0 0.0 0.0 0.0 0.0
+120.0 1.0 1.0 1.0 1.0
+180.0 0.0 0.0 0.0 0.0

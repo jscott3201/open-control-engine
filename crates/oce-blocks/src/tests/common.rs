@@ -6,14 +6,17 @@ pub(super) use std::sync::Arc;
 pub(super) use oce_model::{ParamTable, Value};
 
 pub(super) use crate::{
-    Abs, Add, AddParameter, And, Assert, Block, BlockKind, CalendarTime, Constant, Ctx, Derivative,
-    Diagnostics, Divide, Edge, FirstOrderHold, Greater, GreaterThreshold, Hysteresis, IntegerStage,
-    IntegratorWithReset, Less, LessThreshold, LimitSlewRate, Limiter, Line, LogicalVariablePulse,
-    Max, Min, MovingAverage, MultiAnd, MultiMax, MultiMin, MultiOr, MultiSum, Multiply,
-    MultiplyByParameter, NoopDiagnostics, Not, Pid, PidWithReset, PortKind, PortShape, Pre, Proof,
-    Ramp, RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter,
-    RealVectorReplicator, SampleTrigger, Sampler, Subtract, SunRiseSet, Switch, Time, TriggeredMax,
-    TriggeredMovingMean, TriggeredSampler, UnitDelay, ZeroOrderHold, lookup, read_int,
+    Abs, Add, AddParameter, And, Assert, Block, BlockKind, BooleanExtractSignal, BooleanExtractor,
+    BooleanScalarReplicator, BooleanVectorFilter, BooleanVectorReplicator, CalendarTime, Constant,
+    Ctx, Derivative, Diagnostics, Divide, Edge, FirstOrderHold, Greater, GreaterThreshold,
+    Hysteresis, IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator, IntegerStage,
+    IntegerVectorFilter, IntegerVectorReplicator, IntegratorWithReset, Less, LessThreshold,
+    LimitSlewRate, Limiter, Line, LogicalVariablePulse, Max, Min, MovingAverage, MultiAnd,
+    MultiMax, MultiMin, MultiOr, MultiSum, Multiply, MultiplyByParameter, NoopDiagnostics, Not,
+    Pid, PidWithReset, PortKind, PortShape, Pre, Proof, Ramp, RealExtractSignal, RealExtractor,
+    RealScalarReplicator, RealVectorFilter, RealVectorReplicator, SampleTrigger, Sampler, Subtract,
+    SunRiseSet, Switch, Time, TriggeredMax, TriggeredMovingMean, TriggeredSampler, UnitDelay,
+    ZeroOrderHold, lookup, read_int,
 };
 
 #[derive(Default)]

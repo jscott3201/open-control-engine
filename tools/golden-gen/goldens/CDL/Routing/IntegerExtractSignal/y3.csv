@@ -1,0 +1,7 @@
+#1
+# columns: time y3
+double CDL_Routing_IntegerExtractSignal_y3(4,2)
+0.0 2.0
+60.0 -2.0
+120.0 20.0
+180.0 -9007199254740992.0

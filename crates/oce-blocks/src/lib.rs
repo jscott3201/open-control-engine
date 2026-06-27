@@ -46,6 +46,8 @@ mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
 mod routing;
+mod routing_boolean;
+mod routing_integer;
 mod source_pulse;
 mod utilities;
 
@@ -84,6 +86,14 @@ pub use reals_vector_reductions::{MultiMax, MultiMin, MultiSum};
 pub use registry::lookup;
 pub use routing::{
     RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter, RealVectorReplicator,
+};
+pub use routing_boolean::{
+    BooleanExtractSignal, BooleanExtractor, BooleanScalarReplicator, BooleanVectorFilter,
+    BooleanVectorReplicator,
+};
+pub use routing_integer::{
+    IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator, IntegerVectorFilter,
+    IntegerVectorReplicator,
 };
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use utilities::{Assert, SunRiseSet};
@@ -603,6 +613,12 @@ mod reals_vector_reductions_tests;
 
 #[cfg(test)]
 mod routing_tests;
+
+#[cfg(test)]
+mod routing_boolean_tests;
+
+#[cfg(test)]
+mod routing_integer_tests;
 
 #[cfg(test)]
 mod logical_tests;

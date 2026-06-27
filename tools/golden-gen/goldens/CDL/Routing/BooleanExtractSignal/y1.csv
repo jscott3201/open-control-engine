@@ -1,0 +1,7 @@
+#1
+# columns: time y1
+double CDL_Routing_BooleanExtractSignal_y1(4,2)
+0.0 1.0
+60.0 0.0
+120.0 1.0
+180.0 0.0

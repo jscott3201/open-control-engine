@@ -11,5 +11,7 @@ mod common;
 mod determinism;
 mod params;
 mod params_sources;
+mod routing_real;
+mod routing_typed;
 mod structural;
 mod unification;
