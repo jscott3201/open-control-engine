@@ -169,6 +169,14 @@ CDL.Logical.VariablePulse/minimum_hold reference -> goldens/CDL/Logical/Variable
 CDL.Logical.VariablePulse/minimum_hold y -> goldens/CDL/Logical/VariablePulse/minimum_hold/y.csv
 CDL.Logical.Xor reference -> goldens/CDL/Logical/Xor/reference.csv
 CDL.Logical.Xor y -> goldens/CDL/Logical/Xor/y.csv
+CDL.Psychrometrics.DewPoint_TDryBulPhi TDewPoi -> goldens/CDL/Psychrometrics/DewPoint_TDryBulPhi/TDewPoi.csv
+CDL.Psychrometrics.DewPoint_TDryBulPhi reference -> goldens/CDL/Psychrometrics/DewPoint_TDryBulPhi/reference.csv
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi h -> goldens/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi/h.csv
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi reference -> goldens/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi/reference.csv
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi/custom_p_atm_pressure_boundaries h -> goldens/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi/custom_p_atm_pressure_boundaries/h.csv
+CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi/custom_p_atm_pressure_boundaries reference -> goldens/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi/custom_p_atm_pressure_boundaries/reference.csv
+CDL.Psychrometrics.WetBulb_TDryBulPhi TWetBul -> goldens/CDL/Psychrometrics/WetBulb_TDryBulPhi/TWetBul.csv
+CDL.Psychrometrics.WetBulb_TDryBulPhi reference -> goldens/CDL/Psychrometrics/WetBulb_TDryBulPhi/reference.csv
 CDL.Reals.Abs reference -> goldens/CDL/Reals/Abs/reference.csv
 CDL.Reals.Abs y -> goldens/CDL/Reals/Abs/y.csv
 CDL.Reals.Acos reference -> goldens/CDL/Reals/Acos/reference.csv

@@ -128,12 +128,14 @@
     {
       "package": "CDL.Psychrometrics",
       "package_order": "Buildings/Controls/OBC/CDL/Psychrometrics/package.order",
-      "implemented": {},
-      "missing": [
-        "DewPoint_TDryBulPhi",
-        "SpecificEnthalpy_TDryBulPhi",
-        "WetBulb_TDryBulPhi"
-      ]
+      "implemented": {
+        "golden_manifest": [
+          "DewPoint_TDryBulPhi",
+          "SpecificEnthalpy_TDryBulPhi",
+          "WetBulb_TDryBulPhi"
+        ]
+      },
+      "missing": []
     },
     {
       "package": "CDL.Reals",

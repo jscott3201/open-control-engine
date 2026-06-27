@@ -33,6 +33,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod pid;
+mod psychrometrics;
 mod reals_arithmetic;
 mod reals_comparators;
 mod reals_filters;
@@ -63,6 +64,7 @@ pub use logical_proof::Proof;
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use logical_variable_pulse::LogicalVariablePulse;
 pub use pid::{Pid, PidWithReset};
+pub use psychrometrics::{DewPointTDryBulPhi, SpecificEnthalpyTDryBulPhi, WetBulbTDryBulPhi};
 pub use reals_arithmetic::{
     Abs, Add, AddParameter, Average, Constant, Divide, Limiter, Line, Max, Min, Modulo, Multiply,
     MultiplyByParameter, Round, Sqrt, Subtract, Switch,
@@ -245,6 +247,13 @@ pub enum ParamRule {
         /// Exclusive lower bound.
         min: f64,
     },
+    /// The named `Real` parameter must be finite and strictly greater than `min`.
+    RealFiniteGreaterThan {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Exclusive lower bound.
+        min: f64,
+    },
     /// The named `Integer` parameter must be greater than or equal to `min`.
     IntegerGreaterOrEqual {
         /// Parameter name as it appears in CDL / the resolved model.
@@ -417,6 +426,9 @@ mod integers_stage_tests;
 
 #[cfg(test)]
 mod pid_tests;
+
+#[cfg(test)]
+mod psychrometrics_tests;
 
 #[cfg(test)]
 mod reals_integrator_tests;

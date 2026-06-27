@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
+  "signal": "h",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
+  "n_samples": 13,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "TDryBul", "phi", "h"],
+  "inputs": [
+    { "name": "TDryBul", "value_kind": "Real", "values": [253.15, 273.15, 273.16, 293.15, 323.15, 373.16, 293.15, 293.15, "inf", "-inf", 293.15, 293.15, "NaN"] },
+    { "name": "phi", "value_kind": "Real", "values": [0.05, 0.0, 0.5, 0.5, 0.99, 1.0, 1.2, -0.05, 0.5, 0.5, "inf", "-inf", 0.5] }
+  ],
+  "input": "TDryBul=[253.15,273.15,273.16,293.15,323.15,373.16,293.15,293.15,+Inf,-Inf,293.15,293.15,NaN] K; phi=[0.05,0.0,0.5,0.5,0.99,1.0,1.2,-0.05,0.5,0.5,+Inf,-Inf,0.5]; default pAtm=101325 Pa, dry-air zero anchor, nonzero-humidity regStep transition, RH outside [0,1], non-finite input guard",
+  "reference_rule": "if TDryBul/phi/pAtm is non-finite, pAtm<=0, p_w non-finite, or pAtm-p_w<=0, h=NaN; otherwise TDryBul_degC=TDryBul-273.15; p_w=phi*saturationPressure(TDryBul); w=0.6219647130774989*p_w/(pAtm-p_w); h=1006*TDryBul_degC+w*(2501014.5+1860*TDryBul_degC)",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic math",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

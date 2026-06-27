@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Psychrometrics.WetBulb_TDryBulPhi",
+  "signal": "TWetBul",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
+  "n_samples": 13,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "TDryBul", "phi", "TWetBul"],
+  "inputs": [
+    { "name": "TDryBul", "value_kind": "Real", "values": [252.15, 253.15, 273.15, 293.15, 323.15, 324.15, 293.15, 293.15, "inf", "-inf", 293.15, 293.15, "NaN"] },
+    { "name": "phi", "value_kind": "Real", "values": [0.5, 0.05, 0.0, 0.5, 0.99, 0.5, 1.2, -0.05, 0.5, 0.5, "inf", "-inf", 0.5] }
+  ],
+  "input": "TDryBul=[252.15,253.15,273.15,293.15,323.15,324.15,293.15,293.15,+Inf,-Inf,293.15,293.15,NaN] K; phi=[0.5,0.05,0.0,0.5,0.99,0.5,1.2,-0.05,0.5,0.5,+Inf,-Inf,0.5]; below/at/inside/at/above documented Stull dry-bulb range, RH outside [0,1], non-finite input guard",
+  "reference_rule": "if TDryBul or phi is non-finite, TWetBul=NaN; otherwise TWetBul=273.15+TDryBul_degC*atan(0.151977*sqrt(100*phi+8.313659))+atan(TDryBul_degC+100*phi)-atan(100*phi-1.676331)+0.00391838*(100*phi)^1.5*atan(0.023101*100*phi)-4.686035",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic math",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

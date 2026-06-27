@@ -1,0 +1,10 @@
+#1
+# columns: time TDryBul phi h
+double CDL_Psychrometrics_SpecificEnthalpy_TDryBulPhi_custom_p_atm_pressure_boundaries_reference(7,4)
+0.0 293.15 0.5 40912.15658482215
+60.0 293.15 1.2 70958.58005359519
+120.0 373.16 0.8786455415343103 1.0336205031156738e22
+180.0 373.16 0.8786455415343104 NaN
+240.0 373.16 0.8786455415343105 NaN
+300.0 293.15 inf NaN
+360.0 293.15 -inf NaN

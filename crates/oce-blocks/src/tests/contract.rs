@@ -185,6 +185,9 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.MovingAverage",
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
+        "CDL.Psychrometrics.DewPoint_TDryBulPhi",
+        "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
+        "CDL.Psychrometrics.WetBulb_TDryBulPhi",
         "CDL.Logical.Sources.Constant",
         "CDL.Logical.Sources.Pulse",
         "CDL.Logical.And",
@@ -243,7 +246,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.ZeroOrderHold",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 90, "registry count");
+    assert_eq!(PATHS.len(), 93, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
