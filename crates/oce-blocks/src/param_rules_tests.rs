@@ -1,6 +1,6 @@
 //! Registry parameter-rule contract tests.
 
-use super::{ParamRule, lookup, reals_sources::ZERO_TIME_MEMBERS};
+use super::{MAX_RESOLVED_PORT_WIDTH, ParamRule, lookup, reals_sources::ZERO_TIME_MEMBERS};
 
 #[test]
 fn registry_exposes_block_param_rules() {
@@ -39,6 +39,40 @@ fn registry_exposes_block_param_rules() {
             ParamRule::RealLessOrEqualWarning {
                 lower: "debounce",
                 upper: "feedbackDelay",
+            },
+        ]
+    );
+    let multi_width_rules = &[
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nin",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nin",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+    ];
+    for path in ["CDL.Logical.MultiAnd", "CDL.Logical.MultiOr"] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            multi_width_rules,
+            "{path}"
+        );
+    }
+    assert_eq!(
+        lookup("CDL.Integers.MultiSum").unwrap().param_rules(),
+        &[
+            ParamRule::IntegerGreaterOrEqual {
+                name: "nin",
+                min: 0,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "nin",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+            ParamRule::IntegerArrayElements {
+                base: "k",
+                len: "nin",
             },
         ]
     );

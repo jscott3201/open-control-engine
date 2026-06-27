@@ -9,10 +9,10 @@ pub(super) use crate::{
     Abs, Add, AddParameter, And, Assert, Block, BlockKind, CalendarTime, Constant, Ctx, Derivative,
     Diagnostics, Divide, Edge, FirstOrderHold, Greater, GreaterThreshold, Hysteresis, IntegerStage,
     IntegratorWithReset, Less, LessThreshold, LimitSlewRate, Limiter, Line, LogicalVariablePulse,
-    Max, Min, MovingAverage, Multiply, MultiplyByParameter, NoopDiagnostics, Not, Pid,
-    PidWithReset, Pre, Proof, Ramp, SampleTrigger, Sampler, Subtract, SunRiseSet, Switch, Time,
-    TriggeredMax, TriggeredMovingMean, TriggeredSampler, UnitDelay, ZeroOrderHold, lookup,
-    read_int,
+    Max, Min, MovingAverage, MultiAnd, MultiOr, Multiply, MultiplyByParameter, NoopDiagnostics,
+    Not, Pid, PidWithReset, PortKind, PortShape, Pre, Proof, Ramp, SampleTrigger, Sampler,
+    Subtract, SunRiseSet, Switch, Time, TriggeredMax, TriggeredMovingMean, TriggeredSampler,
+    UnitDelay, ZeroOrderHold, lookup, read_int,
 };
 
 #[derive(Default)]

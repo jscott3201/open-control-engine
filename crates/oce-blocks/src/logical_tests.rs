@@ -10,8 +10,8 @@ use super::{
     IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater, IntegerGreaterEqual,
     IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess, IntegerLessEqual,
     IntegerLessEqualThreshold, IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply,
-    IntegerSubtract, IntegerSwitch, IntegerToReal, LogicalConstant, LogicalSwitch, Nand,
-    NoopDiagnostics, Nor, Or, RealToInteger, Xor, lookup,
+    IntegerSubtract, IntegerSwitch, IntegerToReal, LogicalConstant, LogicalSwitch, MultiAnd,
+    MultiOr, Nand, NoopDiagnostics, Nor, Or, RealToInteger, Xor, lookup,
 };
 
 fn out(block: &dyn Block, inputs: &[Value]) -> Value {
@@ -122,6 +122,47 @@ fn logical_switch_selector_order_and_non_leakage_are_pinned() {
     assert_unselected_does_not_leak(&sw, &[b(false), b(true), b(true)], 2, b(false));
     assert_unselected_does_not_leak(&sw, &[b(true), b(false), b(false)], 0, b(false));
 }
+
+#[test]
+fn logical_multi_reducers_handle_empty_single_and_ordered_vectors() {
+    let empty_and = (lookup("CDL.Logical.MultiAnd").unwrap().make)(&ParamTable::default());
+    let empty_or = (lookup("CDL.Logical.MultiOr").unwrap().make)(&ParamTable::default());
+    assert!(!bool_out(empty_and.as_ref(), &[]));
+    assert!(!bool_out(empty_or.as_ref(), &[]));
+
+    assert!(bool_out(&MultiAnd::new(1), &[b(true)]));
+    assert!(!bool_out(&MultiAnd::new(1), &[b(false)]));
+    assert!(bool_out(&MultiOr::new(1), &[b(true)]));
+    assert!(!bool_out(&MultiOr::new(1), &[b(false)]));
+
+    let multi_and = MultiAnd::new(4);
+    assert!(bool_out(&multi_and, &[b(true), b(true), b(true), b(true)]));
+    assert!(!bool_out(
+        &multi_and,
+        &[b(true), b(true), b(false), b(true)]
+    ));
+    assert_perturb_moves(
+        &multi_and,
+        &[b(true), b(true), b(true), b(true)],
+        &[(0, b(false)), (2, b(false)), (3, b(false))],
+    );
+
+    let multi_or = MultiOr::new(4);
+    assert!(!bool_out(
+        &multi_or,
+        &[b(false), b(false), b(false), b(false)]
+    ));
+    assert!(bool_out(
+        &multi_or,
+        &[b(false), b(false), b(true), b(false)]
+    ));
+    assert_perturb_moves(
+        &multi_or,
+        &[b(false), b(false), b(false), b(false)],
+        &[(0, b(true)), (2, b(true)), (3, b(true))],
+    );
+}
+
 #[test]
 fn algebraic_feedthrough_perturbation_matches_declared_contracts() {
     assert_perturb_moves(&Or, &[b(false), b(false)], &[(0, b(true)), (1, b(true))]);
@@ -248,18 +289,4 @@ fn registry_constructs_logical_conversion_and_integer_classes() {
         values: vec![(Arc::from("t"), i(3))],
     });
     assert_one_out(le.as_ref(), &[i(4)], b(false));
-}
-
-#[test]
-fn deferred_vector_blocks_remain_unregistered() {
-    for path in [
-        "CDL.Logical.MultiAnd",
-        "CDL.Logical.MultiOr",
-        "CDL.Integers.MultiSum",
-    ] {
-        assert!(
-            lookup(path).is_none(),
-            "{path} remains explicitly deferred until vector gathering support lands"
-        );
-    }
 }

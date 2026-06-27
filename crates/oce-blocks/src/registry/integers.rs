@@ -6,8 +6,9 @@ use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
-    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerPulse, IntegerStage,
-    IntegerSubtract, IntegerSwitch, OnCounter, ParamRule, RegistryEntry,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiSum, IntegerMultiply, IntegerPulse,
+    IntegerStage, IntegerSubtract, IntegerSwitch, MAX_RESOLVED_PORT_WIDTH, OnCounter, ParamRule,
+    RegistryEntry,
 };
 
 pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
@@ -25,6 +26,21 @@ pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
         integer: "n",
         min: 0.001,
         max: 0.5,
+    },
+];
+
+pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::IntegerArrayElements {
+        base: "k",
+        len: "nin",
     },
 ];
 
@@ -64,6 +80,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Integers.Min",
         make: make_integer_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Integers.MultiSum",
+        make: make_integer_multi_sum,
     },
     RegistryEntry {
         class_path: "CDL.Integers.Switch",
@@ -165,6 +185,17 @@ fn make_integer_min(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerMin)
 }
 
+fn make_integer_multi_sum(p: &ParamTable) -> Box<dyn Block> {
+    let nin = bounded_nin(p);
+    let gains = (1..=nin)
+        .map(|idx| {
+            let key = format!("k_{idx}");
+            int_param(p, &key, 1)
+        })
+        .collect();
+    Box::new(IntegerMultiSum::new(gains))
+}
+
 fn make_integer_switch(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerSwitch)
 }
@@ -233,4 +264,10 @@ fn make_integer_stage(p: &ParamTable) -> Box<dyn Block> {
         h: real_param(p, "h", 0.02 / n as f64),
         pre_y_start: int_param(p, "pre_y_start", 0),
     })
+}
+
+fn bounded_nin(p: &ParamTable) -> usize {
+    usize::try_from(int_param(p, "nin", 0).max(0))
+        .unwrap_or(MAX_RESOLVED_PORT_WIDTH)
+        .min(MAX_RESOLVED_PORT_WIDTH)
 }

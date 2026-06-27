@@ -19,6 +19,20 @@ const U1_U2: &[Port] = &[
         kind: B,
     },
 ];
+const U1_U2_U3: &[Port] = &[
+    Port {
+        name: "u1",
+        kind: B,
+    },
+    Port {
+        name: "u2",
+        kind: B,
+    },
+    Port {
+        name: "u3",
+        kind: B,
+    },
+];
 const U_CLR: &[Port] = &[
     Port { name: "u", kind: B },
     Port {
@@ -79,6 +93,10 @@ const PROOF_OUTPUTS: &[Port] = &[
 const TIMER_PARAMS: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Real("0.25"),
+}];
+const MULTI_NIN_3: &[Param] = &[Param {
+    name: "nin",
+    value: ParamValue::Integer("3"),
 }];
 const TIMER_ZERO_PARAMS: &[Param] = &[Param {
     name: "t",
@@ -258,6 +276,22 @@ const VARIABLE_PULSE_ADJUSTED_PERIOD_PARAMS: &[Param] = &[
 const CASES: &[BlockCase] = &[
     case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
     case("logical_or", "CDL.Logical.Or", "Or", U1_U2, &[], BOOL_Y),
+    case(
+        "logical_multi_and",
+        "CDL.Logical.MultiAnd",
+        "MultiAnd",
+        U1_U2_U3,
+        MULTI_NIN_3,
+        BOOL_Y,
+    ),
+    case(
+        "logical_multi_or",
+        "CDL.Logical.MultiOr",
+        "MultiOr",
+        U1_U2_U3,
+        MULTI_NIN_3,
+        BOOL_Y,
+    ),
     case("logical_xor", "CDL.Logical.Xor", "Xor", U1_U2, &[], BOOL_Y),
     case("logical_not", "CDL.Logical.Not", "Not", U, &[], BOOL_Y),
     case(

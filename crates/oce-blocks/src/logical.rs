@@ -1,10 +1,16 @@
-//! `CDL.Logical` blocks (`03` §4.3): combinational Boolean algebra `[A]`, the canonical
-//! loop-breaker `Pre` `[S]`, the rising-edge detector `Edge` `[S]`, and the parameter-clocked
-//! Boolean source `Sources.SampleTrigger` `[S]` — the two discrete primitives of `01` §11.
+//! `CDL.Logical` blocks (`03` §4.3): combinational Boolean algebra `[A]`, vector reductions,
+//! the canonical loop-breaker `Pre` `[S]`, the rising-edge detector `Edge` `[S]`, and the
+//! parameter-clocked Boolean source `Sources.SampleTrigger` `[S]` — the two discrete primitives of
+//! `01` §11.
+
+use std::borrow::Cow;
 
 use oce_model::{ParamTable, Value};
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, Time, read_bool};
+use crate::{
+    Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, Time,
+    read_bool,
+};
 
 /// `CDL.Logical.Sources.Constant` — `y = k`. Stateless `[A]` source, no feedthrough edges.
 #[derive(Clone, Copy, Debug, Default)]
@@ -91,6 +97,94 @@ impl Block for Or {
             0,
             Value::Boolean(read_bool(inputs, 0) || read_bool(inputs, 1)),
         );
+    }
+}
+
+/// `CDL.Logical.MultiAnd` — `y = u[1] ∧ ... ∧ u[nin]`; empty input yields `false`.
+#[derive(Clone, Debug, Default)]
+pub struct MultiAnd {
+    pub(crate) inputs: Vec<PortKind>,
+}
+
+impl MultiAnd {
+    pub(crate) fn new(nin: usize) -> Self {
+        Self {
+            inputs: PortShape::new(PortKind::Boolean, nin).to_kinds(),
+        }
+    }
+}
+
+impl Block for MultiAnd {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.MultiAnd",
+            inputs: &[],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn resolved_signature(&self) -> ResolvedBlockSignature<'_> {
+        static OUTPUTS: [PortKind; 1] = [PortKind::Boolean];
+        ResolvedBlockSignature {
+            class_path: self.signature().class_path,
+            inputs: Cow::Borrowed(self.inputs.as_slice()),
+            outputs: Cow::Borrowed(&OUTPUTS),
+        }
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        out_idx == 0 && in_idx < self.inputs.len()
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let y = !self.inputs.is_empty() && (0..self.inputs.len()).all(|i| read_bool(inputs, i));
+        emit(0, Value::Boolean(y));
+    }
+}
+
+/// `CDL.Logical.MultiOr` — `y = u[1] ∨ ... ∨ u[nin]`; empty input yields `false`.
+#[derive(Clone, Debug, Default)]
+pub struct MultiOr {
+    pub(crate) inputs: Vec<PortKind>,
+}
+
+impl MultiOr {
+    pub(crate) fn new(nin: usize) -> Self {
+        Self {
+            inputs: PortShape::new(PortKind::Boolean, nin).to_kinds(),
+        }
+    }
+}
+
+impl Block for MultiOr {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Logical.MultiOr",
+            inputs: &[],
+            outputs: &[PortKind::Boolean],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn resolved_signature(&self) -> ResolvedBlockSignature<'_> {
+        static OUTPUTS: [PortKind; 1] = [PortKind::Boolean];
+        ResolvedBlockSignature {
+            class_path: self.signature().class_path,
+            inputs: Cow::Borrowed(self.inputs.as_slice()),
+            outputs: Cow::Borrowed(&OUTPUTS),
+        }
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        out_idx == 0 && in_idx < self.inputs.len()
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let y = (0..self.inputs.len()).any(|i| read_bool(inputs, i));
+        emit(0, Value::Boolean(y));
     }
 }
 

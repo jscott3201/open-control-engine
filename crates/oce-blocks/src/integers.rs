@@ -1,11 +1,16 @@
-//! `CDL.Integers` exact scalar `[A]` blocks (`03` §4.2). Integer arithmetic is deliberately
-//! two's-complement wrapping (`wrapping_*`) so debug and release builds are bit-identical and
-//! panic-free on input-derived overflow. Checked/saturating arithmetic plus diagnostics is deferred
-//! to a future validation/diagnostic seam if the spec tightens this policy.
+//! `CDL.Integers` exact scalar and vector-reduction `[A]` blocks (`03` §4.2). Integer arithmetic is
+//! deliberately two's-complement wrapping (`wrapping_*`) so debug and release builds are
+//! bit-identical and panic-free on input-derived overflow. Checked/saturating arithmetic plus
+//! diagnostics is deferred to a future validation/diagnostic seam if the spec tightens this policy.
+
+use std::borrow::Cow;
 
 use oce_model::Value;
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, read_bool, read_int};
+use crate::{
+    Block, BlockKind, BlockSignature, Ctx, PortKind, PortShape, ResolvedBlockSignature, read_bool,
+    read_int,
+};
 
 fn emit_int(value: i64, emit: &mut dyn FnMut(usize, Value)) {
     emit(0, Value::Integer(value));
@@ -221,6 +226,58 @@ impl Block for IntegerMin {
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit_int(read_int(inputs, 0).min(read_int(inputs, 1)), emit);
+    }
+}
+
+/// `CDL.Integers.MultiSum` — `y = sum(k[i] * u[i])`; empty input yields `0`.
+#[derive(Clone, Debug, Default)]
+pub struct IntegerMultiSum {
+    pub(crate) inputs: Vec<PortKind>,
+    pub(crate) gains: Vec<i64>,
+}
+
+impl IntegerMultiSum {
+    pub(crate) fn new(gains: Vec<i64>) -> Self {
+        Self {
+            inputs: PortShape::new(PortKind::Integer, gains.len()).to_kinds(),
+            gains,
+        }
+    }
+}
+
+impl Block for IntegerMultiSum {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Integers.MultiSum",
+            inputs: &[],
+            outputs: &[PortKind::Integer],
+            stateful: false,
+        };
+        &SIG
+    }
+    fn resolved_signature(&self) -> ResolvedBlockSignature<'_> {
+        static OUTPUTS: [PortKind; 1] = [PortKind::Integer];
+        ResolvedBlockSignature {
+            class_path: self.signature().class_path,
+            inputs: Cow::Borrowed(self.inputs.as_slice()),
+            outputs: Cow::Borrowed(&OUTPUTS),
+        }
+    }
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        out_idx == 0 && in_idx < self.inputs.len()
+    }
+    fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        let y = self
+            .gains
+            .iter()
+            .enumerate()
+            .fold(0_i64, |acc, (idx, gain)| {
+                acc.wrapping_add(gain.wrapping_mul(read_int(inputs, idx)))
+            });
+        emit_int(y, emit);
     }
 }
 

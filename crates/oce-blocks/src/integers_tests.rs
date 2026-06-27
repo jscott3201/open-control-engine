@@ -1,17 +1,16 @@
 //! Exact algebraic tests for `CDL.Integers` blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
 
-#[cfg(debug_assertions)]
 use std::sync::Arc;
 
-use oce_model::Value;
+use oce_model::{ParamTable, Value};
 
 use super::{
     Block, BlockKind, Ctx, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
     IntegerGreaterThreshold, IntegerLess, IntegerLessEqual, IntegerLessEqualThreshold,
-    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiply, IntegerSubtract, IntegerSwitch,
-    NoopDiagnostics, PortKind,
+    IntegerLessThreshold, IntegerMax, IntegerMin, IntegerMultiSum, IntegerMultiply,
+    IntegerSubtract, IntegerSwitch, NoopDiagnostics, PortKind, lookup,
 };
 
 fn out(block: &dyn Block, inputs: &[Value]) -> Value {
@@ -92,6 +91,41 @@ fn integer_arithmetic_hand_derived_goldens_and_wrap_edges() {
     assert_one_out(&IntegerAddParameter { p: 1 }, &[i(i64::MAX)], i(i64::MIN));
     assert_one_out(&IntegerMax, &[i(i64::MIN), i(0)], i(0));
     assert_one_out(&IntegerMin, &[i(i64::MIN), i(0)], i(i64::MIN));
+}
+
+#[test]
+fn integer_multi_sum_uses_resolved_width_gains_and_wrapping_arithmetic() {
+    assert_one_out(&IntegerMultiSum::new(Vec::new()), &[], i(0));
+    assert_one_out(&IntegerMultiSum::new(vec![1]), &[i(-7)], i(-7));
+    assert_one_out(
+        &IntegerMultiSum::new(vec![2, -1, 3]),
+        &[i(10), i(4), i(-2)],
+        i(10),
+    );
+    assert_one_out(
+        &IntegerMultiSum::new(vec![1, 1, 1]),
+        &[i(i64::MAX), i(1), i(1)],
+        i(i64::MIN + 1),
+    );
+
+    let default_gains = (lookup("CDL.Integers.MultiSum").unwrap().make)(&ParamTable {
+        values: vec![(Arc::from("nin"), i(3))],
+    });
+    assert_one_out(default_gains.as_ref(), &[i(1), i(2), i(3)], i(6));
+
+    let explicit_gains = (lookup("CDL.Integers.MultiSum").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("nin"), i(3)),
+            (Arc::from("k_1"), i(2)),
+            (Arc::from("k_2"), i(-1)),
+            (Arc::from("k_3"), i(3)),
+        ],
+    });
+    assert_one_out(explicit_gains.as_ref(), &[i(10), i(4), i(-2)], i(10));
+    assert_eq!(
+        explicit_gains.resolved_signature().inputs.as_ref(),
+        &[PortKind::Integer, PortKind::Integer, PortKind::Integer]
+    );
 }
 
 #[test]

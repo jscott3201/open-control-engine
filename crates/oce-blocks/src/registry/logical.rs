@@ -1,9 +1,9 @@
 use oce_model::ParamTable;
 
-use super::{bool_param, real_param};
+use super::{bool_param, int_param, real_param};
 use crate::{
-    And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, Nand, Nor, Not, Or, ParamRule,
-    Pre, RegistryEntry, SampleTrigger, Xor,
+    And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, MAX_RESOLVED_PORT_WIDTH,
+    MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamRule, Pre, RegistryEntry, SampleTrigger, Xor,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -22,6 +22,14 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Or",
         make: make_or,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.MultiAnd",
+        make: make_multi_and,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.MultiOr",
+        make: make_multi_or,
     },
     RegistryEntry {
         class_path: "CDL.Logical.Not",
@@ -65,6 +73,17 @@ pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+pub(super) const MULTI_LOGICAL_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+];
+
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {
         k: bool_param(p, "k", false),
@@ -85,6 +104,14 @@ fn make_and(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_or(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Or)
+}
+
+fn make_multi_and(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MultiAnd::new(bounded_nin(p)))
+}
+
+fn make_multi_or(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MultiOr::new(bounded_nin(p)))
 }
 
 fn make_not(_p: &ParamTable) -> Box<dyn Block> {
@@ -127,4 +154,10 @@ fn make_sample_trigger(p: &ParamTable) -> Box<dyn Block> {
         period: real_param(p, "period", 1.0),
         shift: real_param(p, "shift", 0.0),
     })
+}
+
+fn bounded_nin(p: &ParamTable) -> usize {
+    usize::try_from(int_param(p, "nin", 0).max(0))
+        .unwrap_or(MAX_RESOLVED_PORT_WIDTH)
+        .min(MAX_RESOLVED_PORT_WIDTH)
 }

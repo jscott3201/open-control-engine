@@ -18,6 +18,20 @@ const U1_U2: &[Port] = &[
         kind: I,
     },
 ];
+const U1_U2_U3: &[Port] = &[
+    Port {
+        name: "u1",
+        kind: I,
+    },
+    Port {
+        name: "u2",
+        kind: I,
+    },
+    Port {
+        name: "u3",
+        kind: I,
+    },
+];
 const SWITCH_INPUTS: &[Port] = &[
     Port {
         name: "u1",
@@ -66,6 +80,24 @@ const K_NEG_12345: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Integer("-12345"),
 }];
+const MULTI_SUM_NIN_3_GAINS: &[Param] = &[
+    Param {
+        name: "nin",
+        value: ParamValue::Integer("3"),
+    },
+    Param {
+        name: "k_1",
+        value: ParamValue::Integer("2"),
+    },
+    Param {
+        name: "k_2",
+        value: ParamValue::Integer("-1"),
+    },
+    Param {
+        name: "k_3",
+        value: ParamValue::Integer("3"),
+    },
+];
 const SOURCE_PULSE_NEGATIVE_SHIFT_PARAMS: &[Param] = &[
     Param {
         name: "amplitude",
@@ -176,7 +208,6 @@ const STAGE_UNCLAMPED_ZERO: &[Param] = &[
 ];
 
 // This table covers registered `CDL.Integers` blocks with checked-in reference tables.
-// MultiSum is vector-shaped and remains deferred.
 const CASES: &[BlockCase] = &[
     case(
         "integers_add",
@@ -225,6 +256,14 @@ const CASES: &[BlockCase] = &[
         "Min",
         U1_U2,
         &[],
+        INTEGER_Y,
+    ),
+    case(
+        "integers_multi_sum",
+        "CDL.Integers.MultiSum",
+        "MultiSum",
+        U1_U2_U3,
+        MULTI_SUM_NIN_3_GAINS,
         INTEGER_Y,
     ),
     case(

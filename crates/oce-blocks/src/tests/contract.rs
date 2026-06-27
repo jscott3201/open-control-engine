@@ -13,6 +13,35 @@ fn ctx_warn_uses_scheduler_time_not_block_fabricated_time() {
 }
 
 #[test]
+fn port_shape_expands_to_resolved_scalar_port_kinds() {
+    let shape = PortShape::new(PortKind::Boolean, 3);
+    assert_eq!(
+        shape.to_kinds(),
+        vec![PortKind::Boolean, PortKind::Boolean, PortKind::Boolean]
+    );
+    let scalar = PortShape::scalar(PortKind::Real);
+    assert_eq!(scalar.to_kinds(), vec![PortKind::Real]);
+    let empty = PortShape::new(PortKind::Integer, 0);
+    assert!(empty.to_kinds().is_empty());
+}
+
+#[test]
+fn resolved_signature_uses_instance_width_for_vector_ports() {
+    let fixed = Add.resolved_signature();
+    assert_eq!(fixed.inputs.as_ref(), &[PortKind::Real, PortKind::Real]);
+    assert_eq!(fixed.outputs.as_ref(), &[PortKind::Real]);
+
+    let multi_and = MultiAnd::new(3);
+    let multi = multi_and.resolved_signature();
+    assert_eq!(multi.class_path, "CDL.Logical.MultiAnd");
+    assert_eq!(
+        multi.inputs.as_ref(),
+        &[PortKind::Boolean, PortKind::Boolean, PortKind::Boolean]
+    );
+    assert_eq!(multi.outputs.as_ref(), &[PortKind::Boolean]);
+}
+
+#[test]
 fn read_int_reads_integer_and_release_degrades_to_zero() {
     assert_eq!(read_int(&[Value::Integer(42)], 0), 42);
     assert_eq!(read_int(&[Value::Integer(-7)], 0), -7);
@@ -71,6 +100,10 @@ fn feedthrough_classification_matches_spec() {
     assert!(LessThreshold::default().feeds_through(0, 0));
     assert!(Hysteresis::default().feeds_through(0, 0));
     assert!(And.feeds_through(0, 0) && And.feeds_through(1, 0));
+    assert!(MultiAnd::new(3).feeds_through(0, 0));
+    assert!(MultiAnd::new(3).feeds_through(2, 0));
+    assert!(!MultiAnd::new(3).feeds_through(3, 0));
+    assert!(MultiOr::new(2).feeds_through(1, 0));
     assert!(Not.feeds_through(0, 0));
     assert!(Switch.feeds_through(0, 0) && Switch.feeds_through(1, 0) && Switch.feeds_through(2, 0));
 
@@ -201,6 +234,8 @@ fn registry_resolves_canonical_paths() {
         "CDL.Logical.Sources.Pulse",
         "CDL.Logical.And",
         "CDL.Logical.Or",
+        "CDL.Logical.MultiAnd",
+        "CDL.Logical.MultiOr",
         "CDL.Logical.Not",
         "CDL.Logical.Nand",
         "CDL.Logical.Nor",
@@ -233,6 +268,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.AddParameter",
         "CDL.Integers.Max",
         "CDL.Integers.Min",
+        "CDL.Integers.MultiSum",
         "CDL.Integers.Switch",
         "CDL.Integers.Equal",
         "CDL.Integers.Greater",
@@ -256,7 +292,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Utilities.Assert",
         "CDL.Utilities.SunRiseSet",
     ];
-    assert_eq!(PATHS.len(), 95, "registry count");
+    assert_eq!(PATHS.len(), 98, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

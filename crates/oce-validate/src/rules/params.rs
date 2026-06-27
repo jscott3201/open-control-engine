@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 
-use oce_blocks::{ParamRule, lookup};
+use oce_blocks::{MAX_RESOLVED_PORT_WIDTH, ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ModelGraph, ParamTable, Value};
 
@@ -181,6 +181,33 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                         blk.class_iri
                     ),
                 );
+            }
+        }
+        ParamRule::IntegerArrayElements { base, len } => {
+            let Some(value) = find_param(&blk.params, len) else {
+                return;
+            };
+            let Some(n) = integer_value(value) else {
+                return;
+            };
+            let Ok(n) = usize::try_from(n) else {
+                return;
+            };
+            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
+                let name = format!("{base}_{idx}");
+                let Some(value) = find_param(&blk.params, &name) else {
+                    continue;
+                };
+                if integer_value(value).is_none() {
+                    push_range_error(
+                        blk,
+                        diags,
+                        format!(
+                            "parameter `{name}` on block `{}` must be an integer array element",
+                            blk.class_iri
+                        ),
+                    );
+                }
             }
         }
         ParamRule::EnumMembers { name, members } => {

@@ -390,6 +390,51 @@ fn t30_output_port_mistyped_against_signature_is_port_kind_mismatch() {
 }
 
 #[test]
+fn t44_resolved_signature_accepts_dynamic_vector_width() {
+    let m = one_block_model(
+        "CDL.Logical.MultiAnd",
+        &[ValueType::Boolean, ValueType::Boolean, ValueType::Boolean],
+        &[ValueType::Boolean],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    assert!(
+        validate(&m)
+            .expect("MultiAnd nin=3 with three Boolean inputs is valid")
+            .is_empty()
+    );
+}
+
+#[test]
+fn t45_resolved_signature_rejects_dynamic_vector_arity_mismatch() {
+    let m = one_block_model(
+        "CDL.Logical.MultiAnd",
+        &[ValueType::Boolean, ValueType::Boolean],
+        &[ValueType::Boolean],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    let err = validate(&m).expect_err("MultiAnd nin=3 requires three inputs");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("class requires 3/1"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn t46_resolved_signature_checks_dynamic_vector_port_kind() {
+    let m = one_block_model(
+        "CDL.Logical.MultiOr",
+        &[ValueType::Boolean, ValueType::Real, ValueType::Boolean],
+        &[ValueType::Boolean],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    let err = validate(&m).expect_err("MultiOr input elements must all be Boolean");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::PortKindMismatch]);
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#1"));
+}
+
+#[test]
 fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
     // CXF resolve already rejects these shapes for documents. The pure validate seam must also reject
     // hand-built ModelGraph callers before oce-graph reaches emit/gather by port index.

@@ -227,15 +227,22 @@ shortest-round-trip f64 formatter with byte-exact CSV goldens (the Tier-2 bit-ex
     economizer/freeze/mode = scalar mode arithmetic. Buildings itself scalarized single-zone — `SupplyTemperature.mo`
     revision note: *"replaced multiAnd block with and3 block to avoid vector related implementation."*
     ⇒ **VEC → Routing deferrable, off the E1 path** (the schedule relief OD-VEC anticipated).
-  - **(2) Representation = OPTION iii (recommended, supersedes the `Value::Vector` framing): NO new `Value`
-    variant.** Add a Block-declared **`PortShape{kind, width, dims?}`** + a per-instance `resolve_ports(params)`
-    query resolved **once at BUILD** for param-dependent arity (ScalarReplicator `nout`, Multi `n`, matrix
-    dims); keep static `BlockSignature` for fixed arity. A width-`W` vector port expands to `W` consecutive
-    scalar `ConnectorId`s row-major — exactly the **flatten-to-scalar** contract `oce-flatten`/`oce-cxf`
-    already perform (`01` §3 inv 4). `Value`/tick/gather/`driver_of` unchanged. **Why not a `Value::Vector`
-    variant (options i/ii): R-IMPL-8 violation** — gather (`tick.rs` clones each input per tick) + emit would
-    heap-clone a `Vec`/slice **every tick**, breaking the zero-alloc tick.
-  - **(3) Re-bless: MOOT under Option iii** (no `Value` variant). ⚠ **Gate-gap finding (independent of VEC):**
+	  - **(2) Representation = OPTION iii (recommended, supersedes the `Value::Vector` framing): NO new `Value`
+	    variant.** Add a Block-declared **`PortShape{kind, width, dims?}`** + a per-instance `resolve_ports(params)`
+	    query resolved **once at BUILD** for param-dependent arity (ScalarReplicator `nout`, Multi `n`, matrix
+	    dims); keep static `BlockSignature` for fixed arity. A width-`W` vector port expands to `W` consecutive
+	    scalar `ConnectorId`s row-major — exactly the **flatten-to-scalar** contract `oce-flatten`/`oce-cxf`
+	    already perform (`01` §3 inv 4). `Value`/tick/gather/`driver_of` unchanged. **Why not a `Value::Vector`
+	    variant (options i/ii): R-IMPL-8 violation** — gather (`tick.rs` clones each input per tick) + emit would
+	    heap-clone a `Vec`/slice **every tick**, breaking the zero-alloc tick.
+	    **As-built 2026-06-27:** `oce-blocks` adds `PortShape` and `Block::resolved_signature()`; fixed-width
+	    blocks borrow their static `BlockSignature`, while parameter-width blocks store resolved scalar
+	    `PortKind` vectors on the immutable block instance. `oce-validate` checks the resolved signature.
+	    The first consumers are `CDL.Logical.MultiAnd`, `CDL.Logical.MultiOr`, and `CDL.Integers.MultiSum`
+	    (`nin`-dependent inputs, empty vector source behavior, `k_i` flattened gain elements). Native block
+	    constructors clamp resolved vector width to a load-time cap before validation, so malformed hand-built
+	    graphs cannot force unbounded allocation; the tick path remains scalar and allocation-free.
+	  - **(3) Re-bless: MOOT under Option iii** (no `Value` variant). ⚠ **Gate-gap finding (independent of VEC):**
     the armed frozen-surface gate is **blind to re-exported foreign-type variants** — `Value` enters `oce-api`
     via `pub use oce_model::{…Value…}`, and `cargo public-api` prints it as one line without expanding
     variants, so a `Value::Vector` add would pass the gate **silently**. Don't trust the gate for `Value`-shape

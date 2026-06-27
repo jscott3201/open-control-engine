@@ -123,6 +123,48 @@ fn combinational() -> Vec<Golden> {
             .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
         );
     }
+    // MultiAnd.
+    {
+        let u1 = [false, true, true, true];
+        let u2 = [true, true, false, true];
+        let u3 = [true, true, true, false];
+        let y: Vec<Sample> = (0..u1.len())
+            .map(|k| b(u1[k] && u2[k] && u3[k]))
+            .collect();
+        out.push(
+            Golden::new(
+                "CDL.Logical.MultiAnd",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "nin=3; u1=[F,T,T,T], u2=[T,T,F,T], u3=[T,T,T,F]",
+                "y = all_i u[i] in declaration order; empty-vector behavior is unit-tested from Buildings Logical/MultiAnd.mo",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2), input_b("u3", u3)]),
+        );
+    }
+    // MultiOr.
+    {
+        let u1 = [false, true, false, false];
+        let u2 = [false, false, true, false];
+        let u3 = [false, false, false, true];
+        let y: Vec<Sample> = (0..u1.len())
+            .map(|k| b(u1[k] || u2[k] || u3[k]))
+            .collect();
+        out.push(
+            Golden::new(
+                "CDL.Logical.MultiOr",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "nin=3; u1=[F,T,F,F], u2=[F,F,T,F], u3=[F,F,F,T]",
+                "y = any_i u[i] in declaration order; empty-vector behavior is unit-tested from Buildings Logical/MultiOr.mo",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2), input_b("u3", u3)]),
+        );
+    }
     // Not.
     {
         let u = [false, true, false];
