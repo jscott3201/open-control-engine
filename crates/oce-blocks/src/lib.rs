@@ -40,7 +40,7 @@ mod registry;
 mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
-pub use discrete::UnitDelay;
+pub use discrete::{TriggeredSampler, UnitDelay};
 pub use integers::{
     IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
@@ -393,6 +393,9 @@ mod reals_filters_tests;
 
 #[cfg(test)]
 mod reals_ramp_tests;
+
+#[cfg(test)]
+mod discrete_tests;
 
 #[cfg(test)]
 mod utilities_tests;

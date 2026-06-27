@@ -22,6 +22,10 @@ fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSe
     InputSeries::new(name, ValueKind::Real, values.into_iter().map(r).collect())
 }
 
+fn input_b(name: &'static str, values: impl IntoIterator<Item = bool>) -> InputSeries {
+    InputSeries::new(name, ValueKind::Boolean, values.into_iter().map(b).collect())
+}
+
 /// Build the steppable Discrete + Sources goldens.
 pub fn goldens() -> Vec<Golden> {
     let mut out = Vec::new();
@@ -72,6 +76,47 @@ pub fn goldens() -> Vec<Golden> {
             )
             .with_scenario("y_start_nonzero")
             .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // TriggeredSampler: y = y_start until a false->true trigger, then the current u is held.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let u = [1.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+        let trigger = [false, true, true, false, true, false];
+        let y = triggered_sampler_y(2.5, &u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredSampler",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "y_start=2.5; u=[1,3,4,5,6,7]; trigger=[false,true,true,false,true,false]",
+                "y starts at y_start and samples current u only on false->true trigger edges; Buildings TriggeredSampler.mo initial equation y=y_start, when trigger then y=u",
+            )
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
+        );
+    }
+
+    // TriggeredSampler scenario: trigger true at the initial tick is a rising edge from pre=false.
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0];
+        let u = [9.0, 10.0, 11.0, 12.0];
+        let trigger = [true, true, false, true];
+        let y = triggered_sampler_y(-7.0, &u, &trigger);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.TriggeredSampler",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "scenario=trigger_initially_true; y_start=-7.0; u=[9,10,11,12]; trigger=[true,true,false,true]",
+                "pre(trigger) is false at initialization, so trigger=true at t=0 samples current u; held true does not resample until trigger falls and rises",
+            )
+            .with_scenario("trigger_initially_true")
+            .with_inputs(vec![input_r("u", u), input_b("trigger", trigger)]),
         );
     }
 
@@ -133,6 +178,21 @@ pub fn goldens() -> Vec<Golden> {
     }
 
     out
+}
+
+fn triggered_sampler_y(y_start: f64, u: &[f64], trigger: &[bool]) -> Vec<Sample> {
+    assert_eq!(u.len(), trigger.len());
+    let mut held = y_start;
+    let mut prev_trigger = false;
+    let mut y = Vec::with_capacity(u.len());
+    for (&cur, &trig) in u.iter().zip(trigger) {
+        if trig && !prev_trigger {
+            held = cur;
+        }
+        y.push(r(held));
+        prev_trigger = trig;
+    }
+    y
 }
 
 fn sample_trigger_golden(

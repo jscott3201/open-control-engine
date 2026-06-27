@@ -1,8 +1,23 @@
-//! `CDL.Discrete` blocks (`03` §4.6): `UnitDelay`, the discrete one-sample loop-breaker.
+//! `CDL.Discrete` scalar blocks.
+//!
+//! `UnitDelay` is the discrete one-sample loop-breaker. `TriggeredSampler` is event-stateful but
+//! transparent on rising trigger instants: same-tick `u` and `trigger` can determine `y`, so it
+//! must not be treated as a graph cut.
 
-use oce_model::{ParamTable, Value};
+use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
-use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_real};
+use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
+
+const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
+const TRIGGERED_SAMPLER_PREV_TRIGGER_WORD: usize = 1;
+
+fn bool_word(value: bool) -> u64 {
+    u64::from(value)
+}
+
+fn word_bool(word: u64) -> bool {
+    word != 0
+}
 
 /// `CDL.Discrete.UnitDelay` — `y(k) = u(k−1)`, a one-sample `Real` delay and a discrete
 /// loop-breaker (`03` §4.6): stateful with `feeds_through == false`, so it cuts the
@@ -46,5 +61,77 @@ impl Block for UnitDelay {
     }
     fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         region[0] = read_real(inputs, 0).to_bits(); // latch the current input for next tick
+    }
+}
+
+/// `CDL.Discrete.TriggeredSampler` — sample `u` on a rising Boolean `trigger`.
+///
+/// Before the first trigger instant, `y` is the parameter `y_start` (default `0`). The first tick
+/// with `trigger = true` is a rising edge because the CDL source initializes `pre(trigger)` to
+/// `false`. The block owns two `[S]` words: the held `Real` output (`f64::to_bits`) and the
+/// previous trigger bit. It feeds through from both inputs to `y` because a same-tick rising trigger
+/// emits the current `u`. Real outputs and stored samples are NaN-canonicalized for deterministic
+/// traces. The block does not panic for finite or non-finite `Real` values; validated callers must
+/// provide a `Real` then a `Boolean` input.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TriggeredSampler {
+    pub(crate) y_start: f64,
+}
+
+impl TriggeredSampler {
+    fn output(inputs: &[Value], region: &[u64]) -> f64 {
+        let u = read_real(inputs, 0);
+        let trigger = read_bool(inputs, 1);
+        let prev_trigger = word_bool(region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD]);
+        if trigger && !prev_trigger {
+            u
+        } else {
+            f64::from_bits(region[TRIGGERED_SAMPLER_HELD_WORD])
+        }
+    }
+}
+
+impl Block for TriggeredSampler {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Discrete.TriggeredSampler",
+            inputs: &[PortKind::Real, PortKind::Boolean],
+            outputs: &[PortKind::Real],
+            stateful: true,
+        };
+        &SIG
+    }
+
+    fn kind(&self) -> BlockKind {
+        BlockKind::Stateful
+    }
+
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        in_idx < 2 && out_idx == 0
+    }
+
+    fn state_len(&self) -> usize {
+        2
+    }
+
+    fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
+        region[TRIGGERED_SAMPLER_HELD_WORD] = canonicalize_real(self.y_start).to_bits();
+        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(false);
+    }
+
+    fn emit_from_state(
+        &self,
+        _ctx: &Ctx<'_>,
+        inputs: &[Value],
+        region: &[u64],
+        emit: &mut dyn FnMut(usize, Value),
+    ) {
+        emit_real(0, Self::output(inputs, region), emit);
+    }
+
+    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        region[TRIGGERED_SAMPLER_HELD_WORD] =
+            canonicalize_real(Self::output(inputs, region)).to_bits();
+        region[TRIGGERED_SAMPLER_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
     }
 }
