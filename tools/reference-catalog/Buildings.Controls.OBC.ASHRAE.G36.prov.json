@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "328aff5c9e8b3243",
+  "catalog_fingerprint": "9b80ecc78b1167b0",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -56,7 +56,9 @@
     "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+    "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
     "crates/oce-cxf/tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt",
+    "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt",
     "crates/oce-cxf/tests/resolve_composite.rs",
     "crates/oce-api/tests/composite_import.rs",
     "crates/oce-api/tests/g36_sequences.rs",
@@ -66,11 +68,17 @@
     "tools/golden-gen/goldens/G36/ahu_supply_air_temp_reset/reference.csv",
     "tools/golden-gen/goldens/G36/ahu_economizer/reference.csv",
     "tools/golden-gen/goldens/G36/vav_single_zone/reference.csv",
-    "tools/golden-gen/goldens/G36/vav_single_zone/pid_cone_deferred.prov.json"
+    "tools/golden-gen/goldens/G36/vav_single_zone/pid_cone_deferred.prov.json",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/reference.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.prov.json",
+    "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.csv",
+    "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.prov.json"
   ],
   "notes": [
     "Upstream files were re-fetched locally for this snapshot; tests must use only checked-in catalog/provenance/profile data.",
     "Existing representative G36 examples are source-reviewed fixture-only pre-flattened CXF fragments. They are not canonical ASHRAE G36 composite import support.",
-    "TrimAndRespond have_hol=false is recorded as restricted explicit-CXF composite import evidence only; it is not arbitrary Modelica parsing, not full SupplyTemperature support, and not a supported-runtime-sequence oracle claim."
+    "Standalone TrimAndRespond have_hol=false is recorded as restricted explicit-CXF composite import evidence only; it remains import-structure-only without an independent whole-sequence oracle.",
+    "SupplyTemperature is recorded as a restricted source-verified explicit-CXF runtime sequence using the default parameterization and nested TrimAndRespond have_hol=false; it is not arbitrary Modelica parsing or a named operation-mode enum claim."
   ]
 }

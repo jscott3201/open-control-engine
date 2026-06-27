@@ -7,6 +7,7 @@ blocks: 5
   B2 decl=2 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#MinLoop.del")
     inputs=["ConnectorId(4)"] outputs=["ConnectorId(5)"]
     param y_start=Integer(0)
+    param samplePeriod=Real(0x3ff0000000000000)
   B3 decl=3 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#MinLoop.gain")
     inputs=["ConnectorId(6)"] outputs=["ConnectorId(7)"]
     param k=Real(0x3fe0000000000000)

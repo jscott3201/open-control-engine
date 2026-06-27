@@ -261,6 +261,7 @@ fn sampled_discrete_sample_period_is_required_and_at_least_one_millisecond() {
     for class in [
         "CDL.Discrete.FirstOrderHold",
         "CDL.Discrete.Sampler",
+        "CDL.Discrete.UnitDelay",
         "CDL.Discrete.ZeroOrderHold",
     ] {
         let missing = real_to_real_model(class, vec![]);

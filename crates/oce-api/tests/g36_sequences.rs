@@ -11,6 +11,8 @@ const AHU_SAT_RESET: &str =
 const AHU_ECONOMIZER: &str = include_str!("../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld");
 const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
+const SUPPLY_TEMPERATURE: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
@@ -22,6 +24,14 @@ const ECON_OPERATING_MODE: &str = "http://example.org#g36.ahu_economizer.operati
 const VAV_ZONE_TEMP: &str = "http://example.org#g36.vav_single_zone.zone_temp";
 const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooling_setpoint";
 const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heating_setpoint";
+const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
+const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan";
+const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
+const SUPPLY_TEMPERATURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
@@ -152,6 +162,13 @@ fn assert_real_bounds(metrics: &SimMetrics, path: &str, min: f64, max: f64) {
     }
 }
 
+fn assert_close(actual: f64, expected: f64, tolerance: f64) {
+    assert!(
+        (actual - expected).abs() <= tolerance,
+        "expected {actual} to be within {tolerance} of {expected}"
+    );
+}
+
 fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
     assert_eq!(left.trace.columns(), right.trace.columns());
     assert_eq!(
@@ -224,6 +241,22 @@ fn vav_inputs(t: f64) -> Vec<(String, Value)> {
     ]
 }
 
+fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
+    let requests = if t >= 840.0 {
+        6
+    } else if t >= 720.0 {
+        3
+    } else {
+        0
+    };
+    vec![
+        pair(SUPPLY_TEMPERATURE_OUTDOOR_AIR, Value::Real(289.15)),
+        pair(SUPPLY_TEMPERATURE_FAN_STATUS, Value::Boolean(true)),
+        pair(SUPPLY_TEMPERATURE_OPERATING_MODE, Value::Integer(1)),
+        pair(SUPPLY_TEMPERATURE_REQUESTS, Value::Integer(requests)),
+    ]
+}
+
 #[test]
 fn ahu_supply_air_temp_reset_loads_simulates_and_is_deterministic() {
     let (engine, _) = load(AHU_SAT_RESET, 7, 0);
@@ -278,6 +311,47 @@ fn ahu_supply_air_temp_reset_loads_simulates_and_is_deterministic() {
     assert!(
         real_at(&metrics_a, sat_demand, 4) > real_at(&metrics_a, sat_demand, 1),
         "cooling demand should increase with zone load"
+    );
+}
+
+#[test]
+fn multizone_vav_supply_temperature_loads_simulates_and_is_deterministic() {
+    let (engine, _) = load(SUPPLY_TEMPERATURE, 62, 5);
+    let outputs = [OutputRef {
+        label: "supply_air_temperature_setpoint",
+        ordinal: 50,
+    }];
+    let (schedule_a, paths, metrics_a) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_temperature_inputs)),
+        &outputs,
+        900.0,
+    );
+
+    let (engine, _) = load(SUPPLY_TEMPERATURE, 62, 5);
+    let (schedule_b, paths_b, metrics_b) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_temperature_inputs)),
+        &outputs,
+        900.0,
+    );
+
+    assert_eq!(paths, paths_b);
+    assert_eq!(
+        schedule_a, schedule_b,
+        "SupplyTemperature schedule is deterministic"
+    );
+    assert_trace_bit_eq(&metrics_a, &metrics_b);
+    let sat_setpoint = paths[0].as_str();
+    assert_real_bounds(&metrics_a, sat_setpoint, 285.15, 291.15);
+    assert_close(real_at(&metrics_a, sat_setpoint, 0), 291.15, 1e-12);
+    assert!(
+        real_at(&metrics_a, sat_setpoint, 720) < real_at(&metrics_a, sat_setpoint, 719),
+        "first active trim/respond sample should lower the reset endpoint"
+    );
+    assert!(
+        real_at(&metrics_a, sat_setpoint, 840) < real_at(&metrics_a, sat_setpoint, 839),
+        "larger request count should apply a larger negative response"
     );
 }
 

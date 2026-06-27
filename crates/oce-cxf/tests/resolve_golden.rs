@@ -314,12 +314,22 @@ fn unit_delay_bare_int_grounds_to_integer_not_real() {
     // so there is no longer a silent-default hole here.
     let g = import_ok(FIXTURE);
     let del_params = &g.blocks[2].params.values;
-    assert_eq!(del_params.len(), 1);
-    assert_eq!(del_params[0].0.as_ref(), "y_start");
+    let y_start = del_params
+        .iter()
+        .find(|(name, _)| name.as_ref() == "y_start")
+        .expect("UnitDelay y_start parameter");
     assert!(
-        del_params[0].1.bit_eq(&Value::Integer(0)),
+        y_start.1.bit_eq(&Value::Integer(0)),
         "bare-Int param grounds to Integer, not Real: got {:?}",
-        del_params[0].1
+        y_start.1
+    );
+    let sample_period = del_params
+        .iter()
+        .find(|(name, _)| name.as_ref() == "samplePeriod")
+        .expect("UnitDelay samplePeriod parameter");
+    assert!(
+        sample_period.1.bit_eq(&Value::Real(1.0)),
+        "UnitDelay samplePeriod must remain the explicit 1.0 fixture parameter"
     );
 }
 

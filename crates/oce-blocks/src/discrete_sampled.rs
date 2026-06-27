@@ -53,7 +53,7 @@ fn buildings_round_six(x: f64) -> f64 {
     }
 }
 
-fn initial_sample_time(t_start: Time, sample_period: f64) -> f64 {
+pub(crate) fn initial_sample_time(t_start: Time, sample_period: f64) -> f64 {
     let period = valid_sample_period(sample_period);
     buildings_round_six((t_start / period).floor() * period)
 }
@@ -62,7 +62,7 @@ fn sample_index(t_now: Time, t0: f64, sample_period: f64) -> i64 {
     ((t_now - t0) / valid_sample_period(sample_period) + SAMPLE_INDEX_EPS).floor() as i64
 }
 
-fn sample_due(t_now: Time, t0: f64, sample_period: f64, last_index: i64) -> (bool, i64) {
+pub(crate) fn sample_due(t_now: Time, t0: f64, sample_period: f64, last_index: i64) -> (bool, i64) {
     let index = sample_index(t_now, t0, sample_period);
     (index > last_index, index)
 }

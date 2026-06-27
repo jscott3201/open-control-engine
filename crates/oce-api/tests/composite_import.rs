@@ -7,9 +7,13 @@ const FANOUT: &str = include_str!("../../oce-cxf/tests/fixtures/boundary_fanout.
 const NESTED: &str = include_str!("../../oce-cxf/tests/fixtures/nested_composite.jsonld");
 const G36_TRIM_AND_RESPOND: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
+const G36_SUPPLY_TEMPERATURE: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const FANOUT_INPUT: &str = "http://example.org#g36.profile.boundary_fanout.u";
 const INPUT: &str = "http://example.org#g36.profile.nested_composite.u";
 const G36_TRIM_MODEL: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false";
+const G36_SUPPLY_TEMPERATURE_MODEL: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature";
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
@@ -142,5 +146,76 @@ fn source_verified_g36_trim_and_respond_fixture_loads_through_frozen_facade() {
     assert!(
         !paths.contains(&hold),
         "inactive have_hol=false optional input should not survive facade IO export"
+    );
+}
+
+#[test]
+fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() {
+    let mut engine = Engine::in_memory();
+    let report = engine
+        .load_cxf(G36_SUPPLY_TEMPERATURE.as_bytes())
+        .expect("source-verified G36 SupplyTemperature CXF fixture loads");
+    assert_eq!(report.block_count, 62);
+    assert_eq!(report.stateful_blocks, 5);
+    assert!(
+        report.warnings.is_empty(),
+        "fixture should not warn: {:?}",
+        report.warnings
+    );
+
+    let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
+    let outdoor_temp = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.TOut");
+    let fan_status = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.u1SupFan");
+    let operating_mode = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uOpeMod");
+    let requests = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uZonTemResReq");
+    let hold = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.maxSupTemRes.uHol");
+    for required in [&outdoor_temp, &fan_status, &operating_mode, &requests] {
+        assert!(paths.contains(required), "missing facade input {required}");
+    }
+    assert!(
+        !paths.contains(&hold),
+        "inactive nested have_hol=false optional input should not survive facade IO export"
+    );
+
+    let output = "conn#123";
+    assert!(
+        paths.contains(&output.to_owned()),
+        "SupplyTemperature output alias {output} should be visible"
+    );
+
+    engine
+        .set_input(&outdoor_temp, Value::Real(289.15))
+        .expect("outdoor temp stages");
+    engine
+        .set_input(&fan_status, Value::Boolean(true))
+        .expect("fan status stages");
+    engine
+        .set_input(&operating_mode, Value::Integer(1))
+        .expect("operating mode stages");
+    engine
+        .set_input(&requests, Value::Integer(0))
+        .expect("zone request stages");
+    engine.tick(0.0).expect("SupplyTemperature model ticks");
+    let occupied_output = engine
+        .get_output(output)
+        .expect("SupplyTemperature output exists");
+    match occupied_output {
+        Value::Real(value) => assert!(
+            (value - 291.15).abs() <= 1e-12,
+            "occupied/reset branch should start at TSupCoo_max when TOut is at TOut_min, got {value}"
+        ),
+        other => panic!("SupplyTemperature output must be Real, got {other:?}"),
+    }
+
+    engine
+        .set_input(&fan_status, Value::Boolean(false))
+        .expect("fan status stages");
+    engine.tick(1.0).expect("SupplyTemperature model ticks");
+    assert!(
+        engine
+            .get_output(output)
+            .expect("SupplyTemperature output exists")
+            .bit_eq(&Value::Real(299.15)),
+        "fan-off branch should emit the source deadband temperature"
     );
 }

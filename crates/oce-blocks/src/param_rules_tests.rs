@@ -607,6 +607,7 @@ fn registry_exposes_block_param_rules() {
     for path in [
         "CDL.Discrete.FirstOrderHold",
         "CDL.Discrete.Sampler",
+        "CDL.Discrete.UnitDelay",
         "CDL.Discrete.ZeroOrderHold",
     ] {
         assert_eq!(lookup(path).unwrap().param_rules(), sampled_rules, "{path}");

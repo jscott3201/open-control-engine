@@ -281,9 +281,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
-      "status": "deferred",
+      "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
-      "runtime_support": false
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the default SupplyTemperature parameterization with nested TrimAndRespond have_hol=false; literal operation-mode wiring is preserved while named enum interpretation remains deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
@@ -313,7 +314,25 @@
       "rationale": "Reference/test material only."
     }
   ],
-  "runtime_sequences": [],
+  "runtime_sequences": [
+    {
+      "name": "multizone_vav_supply_temperature",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_temperature",
+      "supported_variant": "source-verified explicit CXF for default SupplyTemperature parameters with nested TrimAndRespond have_hol=false and literal operation-mode branch wiring",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
+        "The oracle follows the literal source wiring: fan-off selects deadband, 0 < uOpeMod < 3 selects reset, uOpeMod == 3 selects cooldown, and 3 < uOpeMod < 6 selects warmup/setback."
+      ]
+    }
+  ],
   "composite_import_fixtures": [
     {
       "name": "trim_and_respond_have_hol_false",
@@ -334,7 +353,36 @@
       "supported_runtime_sequence": false,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, deterministic flattening, parameter propagation, conditional pruning, and facade load support.",
-        "Evidence does not claim arbitrary .mo parsing, does not cover the full SupplyTemperature sequence, and does not provide an independent whole-sequence oracle."
+        "Standalone TrimAndRespond evidence does not claim arbitrary .mo parsing or an independent whole-sequence oracle."
+      ]
+    },
+    {
+      "name": "multizone_vav_supply_temperature",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_temperature",
+      "source_child_count": 19,
+      "active_block_count": 62,
+      "input_count": 4,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for default SupplyTemperature parameters with nested TrimAndRespond have_hol=false",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_composite.rs",
+      "api_test": "crates/oce-api/tests/composite_import.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "nested_composites": [
+        {
+          "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+          "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+          "variant": "have_hol=false"
+        }
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, nested TrimAndRespond flattening, facade load support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim arbitrary .mo parsing, non-default SupplyTemperature parameters, or named operation-mode enum semantics where the source literals differ from the current package constants."
       ]
     }
   ],
@@ -448,9 +496,9 @@
         "supply-fan proven-on gating"
       ],
       "unsupported_variants": [
-        "canonical SetPoints.SupplyTemperature composite import",
+        "using this representative fragment as the canonical SetPoints.SupplyTemperature sequence",
         "non-default TrimAndRespond parameter variants",
-        "operation-mode-dependent SAT outputs"
+        "fixture-local operation-mode-dependent SAT outputs"
       ],
       "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.csv",
       "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.prov.json",
