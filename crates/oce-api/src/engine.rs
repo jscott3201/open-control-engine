@@ -19,10 +19,10 @@ use crate::params::{ParamTable, RunMode};
 use crate::projection::project_resolved_model;
 use crate::sim::Outputs;
 
-/// One input connector's load-time store handle and model-state slot.
+/// One logical input point's load-time store handle and model-state slots.
 #[derive(Clone, Debug)]
 pub(crate) struct StoreInputHandle {
-    connector_id: ConnectorId,
+    connector_ids: Vec<ConnectorId>,
     handle: PointHandle,
     path: String,
 }
@@ -323,7 +323,7 @@ fn resolve_store_inputs<S: Store>(
         .into_iter()
         .zip(handles)
         .map(|(input, handle)| StoreInputHandle {
-            connector_id: input.connector_id,
+            connector_ids: input.connector_ids,
             handle,
             path: input.path,
         })
@@ -355,10 +355,12 @@ fn stage_store_inputs_from_snapshot(
             // Deliberate hold-last: no store sample means no overwrite of the current state value.
             continue;
         };
-        // StoreInputHandle connector ids are inventory-sourced and in range for the loaded model.
-        let connector = &model.connectors[input.connector_id.0 as usize];
-        let value = sample_to_value(sample, connector.value_type, &input.path)?;
-        state.values[input.connector_id.0 as usize] = value;
+        for &connector_id in &input.connector_ids {
+            // StoreInputHandle connector ids are inventory-sourced and in range for the loaded model.
+            let connector = &model.connectors[connector_id.0 as usize];
+            let value = sample_to_value(sample.clone(), connector.value_type, &input.path)?;
+            state.values[connector_id.0 as usize] = value;
+        }
     }
     Ok(())
 }

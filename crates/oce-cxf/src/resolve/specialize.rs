@@ -61,7 +61,7 @@ pub(super) fn specialize(
                 }
             };
             if !active {
-                mark_inactive(child, &mut specialization.inactive);
+                mark_inactive(child, by_id, &mut specialization.inactive);
             }
         }
     }
@@ -69,7 +69,7 @@ pub(super) fn specialize(
     specialization
 }
 
-fn mark_inactive(node: &Node, inactive: &mut HashSet<String>) {
+fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashSet<String>) {
     inactive.insert(node.id.clone());
     for child in node
         .has_input
@@ -79,6 +79,12 @@ fn mark_inactive(node: &Node, inactive: &mut HashSet<String>) {
         .chain(node.has_constant.iter())
     {
         inactive.insert(child.id.clone());
+    }
+    for child in node.contains_block.iter().map(|r| r.id.as_str()) {
+        inactive.insert(child.to_owned());
+        if let Some(child_node) = by_id.get(child).copied() {
+            mark_inactive(child_node, by_id, inactive);
+        }
     }
 }
 
@@ -111,7 +117,7 @@ fn complete_scope(
             );
             continue;
         };
-        validate_g36_parameter_value(pnode, cxf_val, diags);
+        validate_g36_parameter_value(pnode, cxf_val, &ParamScope::new(&entries), diags);
         match ground_value(cxf_val, &ParamScope::new(&entries)) {
             Ok(value) => entries.push((Arc::from(local_name(piri)), EvalResult::Scalar(value))),
             Err(e) => diags.push(
@@ -127,13 +133,14 @@ fn complete_scope(
 pub(super) fn validate_g36_parameter_value(
     node: &Node,
     value: &CxfValue,
+    scope: &dyn Scope,
     diags: &mut Vec<Diagnostic>,
 ) {
     let Some(type_iri) = node.is_of_data_type.as_ref().map(|iri| iri.id.as_str()) else {
         return;
     };
     if let Some(class) = g36_enum_class_id(type_iri) {
-        validate_g36_enum_value(node, type_iri, class, value, diags);
+        validate_g36_enum_value(node, type_iri, class, value, scope, diags);
     } else if is_g36_type_path(type_iri) && !is_g36_integer_constant_package(type_iri) {
         diags.push(
             Diagnostic::error(
@@ -150,10 +157,13 @@ fn validate_g36_enum_value(
     type_iri: &str,
     declared: EnumClassId,
     value: &CxfValue,
+    scope: &dyn Scope,
     diags: &mut Vec<Diagnostic>,
 ) {
     match value {
-        CxfValue::Expr(text) => validate_g36_enum_expr(node, type_iri, declared, text, diags),
+        CxfValue::Expr(text) => {
+            validate_g36_enum_expr(node, type_iri, declared, text, scope, diags)
+        }
         CxfValue::Int(_) | CxfValue::Float(_) | CxfValue::Typed { .. } => diags.push(
             Diagnostic::error(
                 DiagCode::EnumIntegerStandin,
@@ -176,6 +186,7 @@ fn validate_g36_enum_expr(
     type_iri: &str,
     declared: EnumClassId,
     text: &str,
+    scope: &dyn Scope,
     diags: &mut Vec<Diagnostic>,
 ) {
     if g36_integer_constant(text).is_some() {
@@ -189,6 +200,21 @@ fn validate_g36_enum_expr(
         return;
     }
     let Some((class_path, literal)) = text.rsplit_once('.') else {
+        if let Some(EvalResult::Scalar(Value::Enum { class, .. })) = scope.lookup(text) {
+            if *class == declared {
+                return;
+            }
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::TypeMismatch,
+                    format!(
+                        "G36 enum parameter reference `{text}` does not match declared type `{type_iri}`"
+                    ),
+                )
+                .with_subject(node.id.clone()),
+            );
+            return;
+        }
         diags.push(
             Diagnostic::error(
                 DiagCode::UnknownEnumLiteral,

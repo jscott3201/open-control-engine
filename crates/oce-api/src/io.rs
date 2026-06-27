@@ -111,20 +111,22 @@ pub struct IoSummary {
 
 /// The typed IO surface, built at load from the model connectors. Dense arena keyed by point path;
 /// store-free, owned by `Engine`. A private parallel `conn_id` lets the engine stage `set_input` /
-/// read `get_output` by [`ConnectorId`] **without leaking it** (R-API-8); `by_path` is the O(1) name
-/// resolver (R-IO-4).
+/// read `get_output` by [`ConnectorId`] **without leaking it** (R-API-8). Composite boundary inputs
+/// may fan out to multiple internal input connectors; the host still sees one logical point path,
+/// while `input_by_path` preserves every staging target at load time.
 #[derive(Clone, Debug, Default)]
 pub struct IoInventory {
     points: Vec<PointInfo>,
     conn_id: Vec<ConnectorId>,
-    by_path: HashMap<String, usize>,
+    input_by_path: HashMap<String, Vec<ConnectorId>>,
+    output_by_path: HashMap<String, ConnectorId>,
 }
 
 /// Load-time binding from a store point key to an input connector arena slot.
 #[derive(Clone, Debug)]
 pub(crate) struct InputPointBinding {
     pub(crate) path: String,
-    pub(crate) connector_id: ConnectorId,
+    pub(crate) connector_ids: Vec<ConnectorId>,
 }
 
 #[derive(Clone, Debug)]
@@ -212,37 +214,43 @@ impl IoInventory {
     pub(crate) fn build_at_load(model: &ModelGraph) -> IoInventory {
         let mut points = Vec::with_capacity(model.connectors.len());
         let mut conn_id = Vec::with_capacity(model.connectors.len());
-        let mut by_path = HashMap::with_capacity(model.connectors.len());
+        let mut input_by_path: HashMap<String, Vec<ConnectorId>> =
+            HashMap::with_capacity(model.external_inputs.len());
+        let mut output_by_path = HashMap::with_capacity(model.connectors.len());
         for row in point_rows_at_load(model) {
             let path = row.info.path.clone();
-            let idx = points.len();
-            // First-wins on a duplicate path: a well-formed model has unique connector IRIs (the
-            // resolver/validate gate rejects duplicate @id), so this is only a defensive fallback.
-            by_path.entry(path.clone()).or_insert(idx);
+            if row.info.direction == PointDirection::In {
+                let connector_ids = input_by_path.entry(path.clone()).or_default();
+                connector_ids.push(row.connector_id);
+                if connector_ids.len() > 1 && model.external_inputs.contains(&row.connector_id) {
+                    continue;
+                }
+            } else {
+                output_by_path
+                    .entry(path.clone())
+                    .or_insert(row.connector_id);
+            }
             points.push(row.info);
             conn_id.push(row.connector_id);
         }
         IoInventory {
             points,
             conn_id,
-            by_path,
+            input_by_path,
+            output_by_path,
         }
     }
 
-    /// Resolve a point path to its [`ConnectorId`] **only if it is an input** (the `set_input`
-    /// staging target).
-    pub(crate) fn resolve_input(&self, path: &str) -> Option<ConnectorId> {
-        self.by_path.get(path).and_then(|&i| {
-            (self.points[i].direction == PointDirection::In).then_some(self.conn_id[i])
-        })
+    /// Resolve a point path to every [`ConnectorId`] it stages when it is an input. A composite
+    /// boundary input may map one host point to multiple internal connectors after CXF import.
+    pub(crate) fn resolve_inputs(&self, path: &str) -> Option<&[ConnectorId]> {
+        self.input_by_path.get(path).map(Vec::as_slice)
     }
 
     /// Resolve a point path to its [`ConnectorId`] **only if it is an output** (the `get_output`
     /// and `CollectSpec::Named` recording target).
     pub(crate) fn resolve_output(&self, path: &str) -> Option<ConnectorId> {
-        self.by_path.get(path).and_then(|&i| {
-            (self.points[i].direction == PointDirection::Out).then_some(self.conn_id[i])
-        })
+        self.output_by_path.get(path).copied()
     }
 
     /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
@@ -256,16 +264,16 @@ impl IoInventory {
             .collect()
     }
 
-    /// The store point keys for every input connector, in inventory order. This is resolved once at
-    /// load; the tick keeps only opaque handles and connector slots.
+    /// The store point keys for every logical input point, in inventory order. This is resolved once
+    /// at load; the tick keeps only opaque handles and connector slots. A boundary-input fanout has
+    /// one store key and multiple connector slots.
     pub(crate) fn input_bindings(&self) -> Vec<InputPointBinding> {
         self.points
             .iter()
-            .zip(&self.conn_id)
-            .filter(|(p, _)| p.direction == PointDirection::In)
-            .map(|(p, &cid)| InputPointBinding {
+            .filter(|p| p.direction == PointDirection::In)
+            .map(|p| InputPointBinding {
                 path: p.path.clone(),
-                connector_id: cid,
+                connector_ids: self.input_by_path.get(&p.path).cloned().unwrap_or_default(),
             })
             .collect()
     }

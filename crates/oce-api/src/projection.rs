@@ -1,6 +1,6 @@
 //! Load-time durable projection from the flat executable model into store DTOs.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use oce_model::{BlockInstance, ConnectorId, ModelGraph, Value};
 use oce_semantics::{
@@ -108,8 +108,16 @@ fn project_points(
     model: &ModelGraph,
     metadata_by_connector: &HashMap<ConnectorId, &EffectivePoint>,
 ) -> StoreResult<(Vec<PointDto>, Vec<Option<DomainKey>>)> {
+    #[derive(Clone)]
+    struct SeenPoint {
+        direction: oce_store::PointDirection,
+        value_type: oce_store::PointValueType,
+        key: DomainKey,
+        external_input: bool,
+    }
+
     let mut points = Vec::new();
-    let mut seen = HashSet::new();
+    let mut seen: HashMap<String, SeenPoint> = HashMap::new();
     let mut point_keys_by_connector = vec![None; model.connectors.len()];
     for row in point_rows_at_load(model) {
         let connector = model
@@ -135,7 +143,17 @@ fn project_points(
                 row.connector_id.0
             )));
         }
-        if !seen.insert(key.as_str().to_owned()) {
+        let is_external_input = row.info.direction == oce_store::PointDirection::In
+            && model.external_inputs.contains(&row.connector_id);
+        if let Some(existing) = seen.get(key.as_str()) {
+            if existing.external_input
+                && is_external_input
+                && existing.direction == row.info.direction
+                && existing.value_type == row.info.value_type
+            {
+                point_keys_by_connector[row.connector_id.0 as usize] = Some(existing.key.clone());
+                continue;
+            }
             return Err(StoreError::Validation(format!(
                 "duplicate point DomainKey: {}",
                 key.as_str()
@@ -152,6 +170,15 @@ fn project_points(
             })
             .map(block_key)?;
         point_keys_by_connector[row.connector_id.0 as usize] = Some(key.clone());
+        seen.insert(
+            key.as_str().to_owned(),
+            SeenPoint {
+                direction: row.info.direction,
+                value_type: row.info.value_type,
+                key: key.clone(),
+                external_input: is_external_input,
+            },
+        );
         points.push(PointDto {
             key,
             owner_block,

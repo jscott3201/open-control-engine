@@ -1,13 +1,14 @@
 # OCE G36 JSON/CXF Profile
 
 **Profile id:** `oce-g36-cxf-profile-v1`
-**Status:** catalog/profile foundation; runtime composite import is not implemented by this profile.
+**Status:** restricted explicit-CXF composite import evidence exists; no `supported-runtime-sequence`
+claims yet.
 
 This profile defines the checked-in JSON/CXF subset Open Control Engine will use for
 `Buildings.Controls.OBC.ASHRAE.G36` sequence work. It is deliberately narrower than arbitrary
-Modelica translation and deliberately broader than the current hand-authored representative
-fixtures, so later PRs can implement G36 types, load-time specialization, and composite flattening
-without changing the contract.
+Modelica translation and deliberately broader than the hand-authored representative fixtures. It now
+covers the first source-verified explicit-CXF composite import fixture while preserving the higher
+bar for full G36 runtime-sequence support.
 
 ## Scope
 
@@ -17,11 +18,15 @@ The profile covers:
 - fixture-only pre-flattened representative sequences already in the repo;
 - structural G36 enum and integer-constant packages;
 - profile-only examples for composite identity and parameter-gated connectors;
+- restricted explicit-CXF composite import after load-time specialization;
 - fail-closed decisions for validation packages, unsupported variants, and conditional guards.
 
-The profile does not add runtime support for canonical `Buildings.Controls.OBC.ASHRAE.G36.*`
-composite class loading. Today, `oce-cxf` still lowers already-flattened CXF graphs whose child
-instances resolve to native `CDL.*` registry entries.
+The profile does not add arbitrary `.mo` parsing or promote any canonical
+`Buildings.Controls.OBC.ASHRAE.G36.*` class to `supported-runtime-sequence`. `oce-cxf` supports a
+restricted explicit CXF subset: active nested composite nodes are specialized at load time, then
+lowered into native `CDL.*` registry blocks with deterministic source-path identity, parent
+parameter propagation, boundary connection expansion, and fail-closed diagnostics for unsupported
+Modelica constructs.
 
 ## Class Identity
 
@@ -125,6 +130,13 @@ they are marked `supported-runtime-sequence`.
   native `CDL.*` blocks. It has local deterministic and oracle evidence, but no canonical upstream
   G36 composite import claim.
 
+`supported-import-fixture`
+
+: A checked-in explicit CXF fixture has a canonical G36 top class, source `.mo` provenance, a
+  supported parameter variant, deterministic resolver/API import tests, and a modelgraph golden. It
+  proves restricted composite import behavior, but does not claim arbitrary `.mo` translation or
+  independent whole-sequence correctness.
+
 `supported-runtime-sequence`
 
 : A canonical `Buildings.Controls.OBC.ASHRAE.G36.*` class path loads, specializes, flattens,
@@ -149,6 +161,14 @@ they are marked `supported-runtime-sequence`.
   supported CDL child block.
 - `fixtures/parameter-gated-connector.jsonld` is a profile-only G36 enum parameter plus a conditional
   connector guard over that parameter.
+- `crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld` is the first
+  source-verified restricted composite import fixture. It encodes
+  `Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond` for the explicit `have_hol=false`
+  variant. Optional hold input/subgraph nodes are present as inactive post-specialization evidence
+  and pruned before the executable graph is frozen.
+- `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
+  top composite boundary input can fan out to multiple internal input connectors while the facade and
+  durable point projection expose one logical host point.
 
 The offline guard validates these examples against the catalog and enum literal registry. It does not
 load them as supported runtime sequences.

@@ -37,10 +37,12 @@ use crate::ground::{ParamScope, ground_value};
 use crate::{CxfError, bridge};
 
 mod attrs;
+mod composite;
 mod diags;
 mod specialize;
 
 use attrs::connector_attrs;
+use composite::lower;
 use diags::{finalize_diags, subject_of};
 use specialize::{specialize, validate_g36_parameter_value};
 
@@ -163,26 +165,27 @@ pub(crate) fn resolve(
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
 
-    // --- Step 2: classify — the top composite (G-1: presence of containsBlock) names the
-    // instances and the boundary ports. Exactly one composite is accepted (single level).
-    let composites: Vec<&Node> = doc
-        .graph
-        .iter()
-        .filter(|n| !n.contains_block.is_empty())
-        .collect();
-    let top = match composites.as_slice() {
-        [one] => *one,
-        _ => {
-            return Err(CxfError::Validation(vec![Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "expected exactly one top composite (containsBlock), found {}",
-                    composites.len()
-                ),
-            )]));
+    let specialization = specialize(doc, &by_id, &mut diags);
+    let lowered = lower(doc, &by_id, &specialization, &mut diags);
+    let doc = &lowered.doc;
+    let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
+    for node in &doc.graph {
+        by_id.insert(node.id.as_str(), node);
+    }
+
+    // --- Step 2: classify — the top composite selected by the pre-lowering pass names the flattened
+    // instances and boundary ports. The root may have zero active children after specialization, so it
+    // cannot be inferred from a non-empty `containsBlock` after pruning.
+    let top = match lowered
+        .root_iri
+        .as_deref()
+        .and_then(|root| by_id.get(root).copied())
+    {
+        Some(top) => top,
+        None => {
+            return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
         }
     };
-    let specialization = specialize(doc, &by_id, &mut diags);
     let child_iris: Vec<&str> = top
         .contains_block
         .iter()
@@ -212,6 +215,7 @@ pub(crate) fn resolve(
         node: &'a Node,
         input_iris: Vec<&'a str>,
         output_iris: Vec<&'a str>,
+        inherited_scope: Vec<(Arc<str>, EvalResult)>,
     }
     let mut insts: Vec<Inst> = Vec::with_capacity(child_iris.len());
     for (k, &child) in child_iris.iter().enumerate() {
@@ -262,6 +266,11 @@ pub(crate) fn resolve(
                 .map(|r| r.id.as_str())
                 .filter(|iri| !specialization.is_inactive(iri))
                 .collect(),
+            inherited_scope: lowered
+                .inherited_scope
+                .get(child)
+                .cloned()
+                .unwrap_or_default(),
         });
         blocks.push(BlockInstance {
             id,
@@ -364,7 +373,7 @@ pub(crate) fn resolve(
     // binding may reference an earlier one via the incrementally-built ParamScope.
     for inst in &insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
-        let mut scope_entries: Vec<(Arc<str>, EvalResult)> = Vec::new();
+        let mut scope_entries: Vec<(Arc<str>, EvalResult)> = inst.inherited_scope.clone();
         // Collected (not lazily iterated) so the array branch can build the sibling-name set for its
         // collision check. Order = hasParameter array order, then hasConstant array order.
         let param_iris: Vec<&str> = inst
@@ -392,7 +401,12 @@ pub(crate) fn resolve(
                 );
                 continue;
             };
-            validate_g36_parameter_value(pnode, cxf_val, &mut diags);
+            validate_g36_parameter_value(
+                pnode,
+                cxf_val,
+                &ParamScope::new(&scope_entries),
+                &mut diags,
+            );
             if pnode.is_array == Some(true) {
                 // A preserved array parameter expands to per-element scalar entries (doc 04 §3.6.1).
                 // Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.

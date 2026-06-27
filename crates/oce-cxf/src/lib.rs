@@ -25,6 +25,8 @@ mod g36_catalog_guard_helpers;
 #[cfg(test)]
 mod g36_catalog_guard_support;
 #[cfg(test)]
+mod g36_catalog_literal_guard;
+#[cfg(test)]
 mod g36_catalog_tests;
 mod ground;
 mod resolve;

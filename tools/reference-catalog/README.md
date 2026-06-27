@@ -8,8 +8,8 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   package-order files, selected structural `.mo` files, and a catalog content hash.
 - `Buildings.Controls.OBC.ASHRAE.G36.catalog.json` is the source-verified sequence/profile
   classification snapshot for the first G36 composite-sequence phase. It is intentionally
-  conservative: current in-tree G36 examples are `supported-fixture-only`, not canonical upstream
-  composite runtime support.
+  conservative: current in-tree G36 examples are either `supported-fixture-only` or restricted
+  `supported-import-fixture`, not full canonical upstream runtime-sequence support.
 - `Buildings.Controls.OBC.ASHRAE.G36.prov.json` pins the upstream G36 package/type files and local
   evidence files used by that sequence/profile snapshot.
 
@@ -24,4 +24,6 @@ G36 sequence entries have a separate support vocabulary. `supported-runtime-sequ
 canonical `Buildings.Controls.OBC.ASHRAE.G36.*` class path, source provenance, supported parameter
 variants, fixture, deterministic golden trace, and independent oracle evidence. `supported-fixture-only`
 means the current fixture is a hand-authored, pre-flattened CXF graph whose executable child blocks
-are native CDL entries.
+are native CDL entries. `supported-import-fixture` means a canonical G36 top class is proven through
+restricted explicit CXF import, modelgraph/API tests, and source provenance, but still lacks the
+whole-sequence oracle evidence required for `supported-runtime-sequence`.

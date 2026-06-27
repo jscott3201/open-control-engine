@@ -1,0 +1,108 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout",
+      "@type": "S231:Block",
+      "S231:label": "boundary_fanout",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo" },
+        { "@id": "http://example.org#g36.profile.boundary_fanout.gainThree" },
+        { "@id": "http://example.org#g36.profile.boundary_fanout.add" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.boundary_fanout.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.boundary_fanout.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.u" },
+        { "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.u" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gainTwo",
+      "S231:hasParameter": { "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.k",
+      "@type": "S231:Parameter",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainTwo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.boundary_fanout.add.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainThree",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gainThree",
+      "S231:hasParameter": { "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.k",
+      "@type": "S231:Parameter",
+      "S231:value": { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.gainThree.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.boundary_fanout.add.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.add",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.profile.boundary_fanout.add.u1" },
+        { "@id": "http://example.org#g36.profile.boundary_fanout.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.boundary_fanout.add.y" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.add.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.add.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.boundary_fanout.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.boundary_fanout.y" }
+    }
+  ]
+}

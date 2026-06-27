@@ -14,6 +14,8 @@ pub(super) const AHU_SAT_RESET: &str =
 pub(super) const AHU_ECONOMIZER: &str = include_str!("../tests/fixtures/g36/ahu_economizer.jsonld");
 pub(super) const VAV_SINGLE_ZONE: &str =
     include_str!("../tests/fixtures/g36/vav_single_zone.jsonld");
+pub(super) const G36_TRIM_AND_RESPOND: &str =
+    include_str!("../tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
 pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld"
@@ -24,7 +26,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "672115ca561226ec";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "a04c770bd62acc68";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -35,14 +37,17 @@ pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeProtectionStages/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/OperationModes/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ZoneStates/package.order",
 ];
-pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] =
-    &["Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo"];
+pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ControlEconomizer.mo",
@@ -84,6 +89,12 @@ pub(super) const RUNTIME_FIXTURES: &[FixtureSource] = &[
         text: VAV_SINGLE_ZONE,
     },
 ];
+
+pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[FixtureSource {
+    name: "trim_and_respond_have_hol_false",
+    path: "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+    text: G36_TRIM_AND_RESPOND,
+}];
 
 pub(super) const PROFILE_FIXTURES: &[FixtureSource] = &[
     FixtureSource {
