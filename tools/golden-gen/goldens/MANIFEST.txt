@@ -267,6 +267,8 @@ CDL.Reals.Sources.Ramp reference -> goldens/CDL/Reals/Sources/Ramp/reference.csv
 CDL.Reals.Sources.Ramp y -> goldens/CDL/Reals/Sources/Ramp/y.csv
 CDL.Reals.Sources.Ramp/negative_height_start reference -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/reference.csv
 CDL.Reals.Sources.Ramp/negative_height_start y -> goldens/CDL/Reals/Sources/Ramp/negative_height_start/y.csv
+CDL.Reals.Sources.Sin reference -> goldens/CDL/Reals/Sources/Sin/reference.csv
+CDL.Reals.Sources.Sin y -> goldens/CDL/Reals/Sources/Sin/y.csv
 CDL.Reals.Sqrt reference -> goldens/CDL/Reals/Sqrt/reference.csv
 CDL.Reals.Sqrt y -> goldens/CDL/Reals/Sqrt/y.csv
 CDL.Reals.Subtract reference -> goldens/CDL/Reals/Subtract/reference.csv

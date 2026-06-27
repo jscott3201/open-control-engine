@@ -229,6 +229,59 @@ fn real_source_ramp_duration_is_required_and_at_least_small() {
 }
 
 #[test]
+fn real_source_sin_frequency_is_required() {
+    let missing = one_block_model("CDL.Reals.Sources.Sin", &[], &[ValueType::Real], vec![]);
+    let err = validate(&missing).expect_err("Sources.Sin freqHz is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`freqHz`"));
+
+    let wrong_frequency_type = one_block_model(
+        "CDL.Reals.Sources.Sin",
+        &[],
+        &[ValueType::Real],
+        vec![(Arc::from("freqHz"), Value::Boolean(false))],
+    );
+    let err = validate(&wrong_frequency_type).expect_err("Sources.Sin freqHz must be Real");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`freqHz`"));
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("`CDL.Reals.Sources.Sin`")
+    );
+
+    let wrong_optional_type = one_block_model(
+        "CDL.Reals.Sources.Sin",
+        &[],
+        &[ValueType::Real],
+        vec![
+            rp("freqHz", 0.25),
+            (Arc::from("amplitude"), Value::Boolean(true)),
+        ],
+    );
+    let err = validate(&wrong_optional_type).expect_err("Sources.Sin amplitude must be Real");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`amplitude`"));
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Reals.Sources.Sin",
+            &[],
+            &[ValueType::Real],
+            vec![rp("freqHz", 0.25)],
+        ))
+        .expect("Sources.Sin has no source assertion on finite frequency")
+        .is_empty()
+    );
+}
+
+#[test]
 fn typed_source_pulse_period_and_width_rules_match_cdl_bounds() {
     for (class, output) in [
         ("CDL.Logical.Sources.Pulse", ValueType::Boolean),

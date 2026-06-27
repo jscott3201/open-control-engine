@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Reals.Sources.Sin",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
+  "n_samples": 6,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "amplitude=2, freqHz=0.25, phase=pi/2, offset=0.5, startTime=1; before start, observable start boundary, phase plumbing, and period samples",
+  "reference_rule": "y = offset + (if time < startTime then 0 else amplitude*sin(2*pi*freqHz*(time-startTime)+phase)); Buildings Reals/Sources/Sin.mo, deterministic libm 0.2.16",
+  "math_library": "libm 0.2.16, default-features=false, pure Rust deterministic math",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

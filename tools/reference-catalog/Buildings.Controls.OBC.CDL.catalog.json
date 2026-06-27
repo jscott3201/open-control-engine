@@ -200,12 +200,12 @@
           "CivilTime",
           "Constant",
           "Pulse",
-          "Ramp"
+          "Ramp",
+          "Sin"
         ]
       },
       "missing": [
         "CalendarTime",
-        "Sin",
         "TimeTable"
       ]
     },

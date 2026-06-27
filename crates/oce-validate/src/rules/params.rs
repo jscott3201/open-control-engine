@@ -38,6 +38,21 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             );
         }
         ParamRule::Required { .. } => {}
+        ParamRule::Real { name } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            if real_value(value).is_none() {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be numeric",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
         ParamRule::RealGreaterThan { name, min } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
