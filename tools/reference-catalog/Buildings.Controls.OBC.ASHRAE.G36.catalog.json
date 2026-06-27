@@ -1,0 +1,540 @@
+{
+  "schema": "oce-g36-catalog-v1",
+  "namespace": "Buildings.Controls.OBC.ASHRAE.G36",
+  "support_policy": {
+    "runtime_sequence_status": "not_yet_supported",
+    "fixture_status": "supported-fixture-only",
+    "notes": [
+      "This catalog is a sequence-level planning and guard artifact. It does not claim that canonical ASHRAE G36 composite classes can load through oce-cxf.",
+      "Current in-tree G36 examples are hand-authored, pre-flattened CXF graphs made from supported CDL elementary blocks.",
+      "A canonical G36 class path may be marked supported-runtime-sequence only after a source-proven composite importer, explicit parameter variants, fixture, provenance, golden trace, and oracle evidence all exist."
+    ]
+  },
+  "package_orders": [
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/package.order",
+      "entries": [
+        "AHUs",
+        "FanCoilUnits",
+        "Generic",
+        "TerminalUnits",
+        "ThermalZones",
+        "VentilationZones",
+        "ZoneGroups",
+        "Types"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
+      "entries": [
+        "MultiZone",
+        "SingleZone"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/package.order",
+      "entries": [
+        "VAV"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/package.order",
+      "entries": [
+        "Controller",
+        "Economizers",
+        "SetPoints",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+      "entries": [
+        "Controller",
+        "Subsequences",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "entries": [
+        "FreezeProtection",
+        "PlantRequests",
+        "ReliefDamper",
+        "ReliefFan",
+        "ReliefFanGroup",
+        "ReturnFanAirflowTracking",
+        "ReturnFanDirectPressure",
+        "SupplyFan",
+        "SupplySignals",
+        "SupplyTemperature",
+        "OutdoorAirFlow",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
+      "entries": [
+        "VAV"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+      "entries": [
+        "Controller",
+        "Economizers",
+        "SetPoints",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.Types",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
+      "entries": [
+        "ASHRAEClimateZone",
+        "ControlEconomizer",
+        "CoolingCoil",
+        "EnergyStandard",
+        "FreezeStat",
+        "HeatingCoil",
+        "OutdoorAirSection",
+        "PressureControl",
+        "Title24ClimateZone",
+        "VentilationStandard",
+        "DemandLimitLevels",
+        "FreezeProtectionStages",
+        "OperationModes",
+        "ZoneStates"
+      ]
+    }
+  ],
+  "top_level_packages": [
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs",
+      "status": "in-progress",
+      "rationale": "Representative flattened AHU fixtures exist; canonical package/composite import is not implemented."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.FanCoilUnits",
+      "status": "deferred",
+      "rationale": "Out of the initial AHU/VAV sequence path."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
+      "status": "deferred",
+      "rationale": "Reusable G36 logic; implement after catalog/types/composite foundation."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
+      "status": "deferred",
+      "rationale": "Needed for full zone-to-AHU loop, not part of the first catalog/profile slice."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
+      "status": "deferred",
+      "rationale": "Depends on terminal-unit and zone-state sequence semantics."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones",
+      "status": "deferred",
+      "rationale": "Depends on ventilation sequence semantics and composite import."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ZoneGroups",
+      "status": "deferred",
+      "rationale": "Depends on multi-zone request and aggregation semantics."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types",
+      "status": "structural-type",
+      "rationale": "Computation-affecting enum and integer-constant packages; not executable sequence support."
+    }
+  ],
+  "initial_vav_paths": [
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Controller",
+      "status": "in-progress",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
+      "runtime_support": false,
+      "rationale": "Cataloged source anchor only; composite import and parameter variants are not implemented."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+      "runtime_support": false,
+      "rationale": "Needed for AHU economizer tranche after profile/types/composite support."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+      "runtime_support": false,
+      "rationale": "Sequence source package; not supported as a runtime composite yet."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Validation",
+      "status": "validation-only",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+      "runtime_support": false,
+      "rationale": "Reference/test material only."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.FreezeProtection",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanAirflowTracking",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.Validation",
+      "status": "validation-only",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "runtime_support": false,
+      "rationale": "Reference/test material only."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.Controller",
+      "status": "unknown-pending-source-review",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+      "runtime_support": false,
+      "rationale": "Existing vav_single_zone fixture is not yet mapped to a canonical upstream class."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.Validation",
+      "status": "validation-only",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+      "runtime_support": false,
+      "rationale": "Reference/test material only."
+    }
+  ],
+  "runtime_sequences": [],
+  "fixture_only_sequences": [
+    {
+      "name": "ahu_supply_air_temp_reset",
+      "status": "supported-fixture-only",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld",
+      "top_id": "http://example.org#g36.ahu_supply_air_temp_reset",
+      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "child_block_count": 7,
+      "input_count": 2,
+      "output_count": 2,
+      "supported_variant": "minimal pre-flattened fixture only",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/ahu_supply_air_temp_reset/reference.csv",
+      "oracle_status": "complete",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+    },
+    {
+      "name": "ahu_economizer",
+      "status": "supported-fixture-only",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
+      "top_id": "http://example.org#g36.ahu_economizer",
+      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "child_block_count": 12,
+      "input_count": 3,
+      "output_count": 4,
+      "supported_variant": "minimal pre-flattened fixture only",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_economizer.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_economizer.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/ahu_economizer/reference.csv",
+      "oracle_status": "complete",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+    },
+    {
+      "name": "vav_single_zone",
+      "status": "supported-fixture-only",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld",
+      "top_id": "http://example.org#g36.vav_single_zone",
+      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "child_block_count": 8,
+      "input_count": 3,
+      "output_count": 4,
+      "supported_variant": "minimal pre-flattened fixture only",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/vav_single_zone/reference.csv",
+      "oracle_status": "partial",
+      "oracle_exception": "tools/golden-gen/goldens/G36/vav_single_zone/pid_cone_deferred.prov.json",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+    }
+  ],
+  "profile_fixtures": [
+    {
+      "name": "small_composite",
+      "path": "_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld",
+      "purpose": "Profile example for a flat CXF composite with supported CDL child blocks.",
+      "runtime_expected": false
+    },
+    {
+      "name": "parameter_gated_connector",
+      "path": "_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld",
+      "purpose": "Profile-only example for a G36 enum parameter and load-time conditional connector.",
+      "runtime_expected": false
+    }
+  ],
+  "conditional_guard_profile": {
+    "status": "profile-only",
+    "allowed_forms": [
+      "parameter",
+      "!parameter",
+      "parameter == fully.qualified.Enum.literal",
+      "parameter != fully.qualified.Enum.literal",
+      "and",
+      "or",
+      "parentheses"
+    ],
+    "rejected_forms": [
+      "runtime connector references",
+      "time references",
+      "function calls",
+      "arithmetic",
+      "unknown parameters",
+      "integer stand-ins for enum literals"
+    ]
+  },
+  "g36_types": {
+    "enumerations": [
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
+        "literals": [
+          "Not_Specified",
+          "Zone_1A",
+          "Zone_1B",
+          "Zone_2A",
+          "Zone_2B",
+          "Zone_3A",
+          "Zone_3B",
+          "Zone_3C",
+          "Zone_4A",
+          "Zone_4B",
+          "Zone_4C",
+          "Zone_5A",
+          "Zone_5B",
+          "Zone_5C",
+          "Zone_6A",
+          "Zone_6B",
+          "Zone_7",
+          "Zone_8"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/ControlEconomizer.mo",
+        "literals": [
+          "FixedDryBulb",
+          "DifferentialDryBulb",
+          "FixedDryBulbWithDifferentialDryBulb",
+          "FixedEnthalpyWithFixedDryBulb",
+          "DifferentialEnthalpyWithFixedDryBulb"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/CoolingCoil.mo",
+        "literals": [
+          "None",
+          "WaterBased",
+          "DXCoil"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/EnergyStandard.mo",
+        "literals": [
+          "ASHRAE90_1",
+          "California_Title_24"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeStat.mo",
+        "literals": [
+          "No_freeze_stat",
+          "Hardwired_to_equipment",
+          "Hardwired_to_BAS"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/HeatingCoil.mo",
+        "literals": [
+          "None",
+          "WaterBased",
+          "Electric"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/OutdoorAirSection.mo",
+        "literals": [
+          "DedicatedDampersAirflow",
+          "DedicatedDampersPressure",
+          "SingleDamper"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/PressureControl.mo",
+        "literals": [
+          "BarometricRelief",
+          "ReliefDamper",
+          "ReliefFan",
+          "ReturnFanMeasuredAir",
+          "ReturnFanDp"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.Title24ClimateZone",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/Title24ClimateZone.mo",
+        "literals": [
+          "Not_Specified",
+          "Zone_1",
+          "Zone_2",
+          "Zone_3",
+          "Zone_4",
+          "Zone_5",
+          "Zone_6",
+          "Zone_7",
+          "Zone_8",
+          "Zone_9",
+          "Zone_10",
+          "Zone_11",
+          "Zone_12",
+          "Zone_13",
+          "Zone_14",
+          "Zone_15",
+          "Zone_16"
+        ]
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/VentilationStandard.mo",
+        "literals": [
+          "ASHRAE62_1",
+          "California_Title_24"
+        ]
+      }
+    ],
+    "integer_constant_packages": [
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.DemandLimitLevels",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.mo",
+        "package_order": "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
+        "constants": {
+          "cooling0": 0,
+          "cooling1": 1,
+          "cooling2": 2,
+          "cooling3": 3,
+          "heating0": 0,
+          "heating1": 1,
+          "heating2": 2,
+          "heating3": 3
+        }
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeProtectionStages",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeProtectionStages/package.mo",
+        "package_order": "Buildings/Controls/OBC/ASHRAE/G36/Types/FreezeProtectionStages/package.order",
+        "constants": {
+          "stage0": 0,
+          "stage1": 1,
+          "stage2": 2,
+          "stage3": 3
+        }
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/OperationModes/package.mo",
+        "package_order": "Buildings/Controls/OBC/ASHRAE/G36/Types/OperationModes/package.order",
+        "constants": {
+          "coolDown": 2,
+          "freezeProtection": 6,
+          "occupied": 1,
+          "setBack": 5,
+          "setUp": 3,
+          "unoccupied": 7,
+          "warmUp": 4
+        }
+      },
+      {
+        "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates",
+        "source": "Buildings/Controls/OBC/ASHRAE/G36/Types/ZoneStates/package.mo",
+        "package_order": "Buildings/Controls/OBC/ASHRAE/G36/Types/ZoneStates/package.order",
+        "constants": {
+          "cooling": 3,
+          "deadband": 2,
+          "heating": 1
+        }
+      }
+    ]
+  }
+}
