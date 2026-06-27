@@ -1,0 +1,7 @@
+#1
+# columns: time u active y
+double CDL_Reals_Ramp_implicit_residue_reference(4,4)
+0.0 0.3 1.0 0.3
+0.1 0.5 1.0 0.3181818181818181
+0.2 0.5 1.0 0.3347107438016528
+0.4 0.1 1.0 0.29559228650137737

@@ -189,6 +189,14 @@ CDL.Reals.PID/pi_recurrence reference -> goldens/CDL/Reals/PID/pi_recurrence/ref
 CDL.Reals.PID/pi_recurrence y -> goldens/CDL/Reals/PID/pi_recurrence/y.csv
 CDL.Reals.PIDWithReset/pi_reset_recurrence reference -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/reference.csv
 CDL.Reals.PIDWithReset/pi_reset_recurrence y -> goldens/CDL/Reals/PIDWithReset/pi_reset_recurrence/y.csv
+CDL.Reals.Ramp/active_reinitialize reference -> goldens/CDL/Reals/Ramp/active_reinitialize/reference.csv
+CDL.Reals.Ramp/active_reinitialize y -> goldens/CDL/Reals/Ramp/active_reinitialize/y.csv
+CDL.Reals.Ramp/clamped_edges reference -> goldens/CDL/Reals/Ramp/clamped_edges/reference.csv
+CDL.Reals.Ramp/clamped_edges y -> goldens/CDL/Reals/Ramp/clamped_edges/y.csv
+CDL.Reals.Ramp/implicit_residue reference -> goldens/CDL/Reals/Ramp/implicit_residue/reference.csv
+CDL.Reals.Ramp/implicit_residue y -> goldens/CDL/Reals/Ramp/implicit_residue/y.csv
+CDL.Reals.Ramp/inactive_passthrough reference -> goldens/CDL/Reals/Ramp/inactive_passthrough/reference.csv
+CDL.Reals.Ramp/inactive_passthrough y -> goldens/CDL/Reals/Ramp/inactive_passthrough/y.csv
 CDL.Reals.Round reference -> goldens/CDL/Reals/Round/reference.csv
 CDL.Reals.Round y -> goldens/CDL/Reals/Round/y.csv
 CDL.Reals.Sources.Constant reference -> goldens/CDL/Reals/Sources/Constant/reference.csv

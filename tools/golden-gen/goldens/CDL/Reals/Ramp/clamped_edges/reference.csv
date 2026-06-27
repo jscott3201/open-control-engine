@@ -1,0 +1,6 @@
+#1
+# columns: time u active y
+double CDL_Reals_Ramp_clamped_edges_reference(3,4)
+0.0 0.0 1.0 0.0
+1.0 10.0 1.0 2.0
+2.0 -10.0 1.0 -1.0

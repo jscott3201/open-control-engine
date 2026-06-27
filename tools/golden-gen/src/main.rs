@@ -18,6 +18,7 @@ mod logical_proof;
 mod oracle;
 mod reals;
 mod reals_pid;
+mod reals_ramp;
 mod reals_scalar_arithmetic;
 mod sequences;
 
@@ -46,6 +47,7 @@ fn main() {
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
     goldens.extend(reals_scalar_arithmetic::goldens());
+    goldens.extend(reals_ramp::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());
@@ -371,6 +373,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
     } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
+    } else if g.class_path == "CDL.Reals.Ramp" {
+        "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation"
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }

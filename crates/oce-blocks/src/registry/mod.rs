@@ -16,6 +16,7 @@ mod pid;
 mod reals;
 mod reals_filters;
 mod reals_integrator;
+mod reals_ramp;
 mod utilities;
 
 #[cfg(test)]
@@ -42,6 +43,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
         "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,
+        "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
         "CDL.Reals.PID" => pid::PID_PARAM_RULES,
         "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
         _ => &[],
@@ -52,6 +54,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     reals::ENTRIES,
     reals_integrator::ENTRIES,
     reals_filters::ENTRIES,
+    reals_ramp::ENTRIES,
     pid::ENTRIES,
     logical::ENTRIES,
     logical_proof::ENTRIES,

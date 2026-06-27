@@ -116,6 +116,32 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 );
             }
         }
+        ParamRule::RealLessOrEqualConstant { name, max } => {
+            let Some(value) = find_param(&blk.params, name) else {
+                return;
+            };
+            let Some(v) = real_value(value) else {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be numeric and <= {max}",
+                        blk.class_iri
+                    ),
+                );
+                return;
+            };
+            if !real_less_or_equal(v, max) {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameter `{name}` on block `{}` must be <= {max}; got {v}",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
         ParamRule::RealTimesIntegerInclusiveRange {
             real,
             integer,

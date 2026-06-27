@@ -59,6 +59,23 @@ fn sample_trigger_model(period: f64) -> ModelGraph {
     mb.finish()
 }
 
+fn ramp_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Reals.Ramp",
+        &[ValueType::Real, ValueType::Boolean],
+        &[ValueType::Real],
+        vec![
+            rp("raisingSlewRate", 2.0),
+            rp("fallingSlewRate", -3.0),
+            rp("Td", 0.1),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
 fn stage_model(n: i64, hold_duration: f64, h: f64) -> ModelGraph {
     let mut mb = Mb::new();
     let (_, inputs, _) = mb.block(
@@ -276,6 +293,58 @@ fn limiter_cross_param_rules_reject_inverted_at_rest() {
         eng.set_param("b5.uMin", Value::Real(1.0)),
         Err(OcError::ParamRange { .. })
     ));
+}
+
+#[test]
+fn ramp_param_rules_surface_attrs_and_reject_invalid_edits_at_rest() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(ramp_model(), None)
+        .expect("valid Ramp loads");
+    let rows = eng.params().to_vec();
+
+    let (_, raising_value, raising_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.raisingSlewRate")
+        .expect("raisingSlewRate param must be present");
+    assert!(raising_value.bit_eq(&Value::Real(2.0)));
+    assert_eq!(raising_attrs.min, Some(1e-37));
+    assert_eq!(raising_attrs.max, None);
+
+    let (_, falling_value, falling_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.fallingSlewRate")
+        .expect("fallingSlewRate param must be present");
+    assert!(falling_value.bit_eq(&Value::Real(-3.0)));
+    assert_eq!(falling_attrs.min, None);
+    assert_eq!(falling_attrs.max, Some(-1e-37));
+
+    let (_, td_value, td_attrs) = rows
+        .iter()
+        .find(|(p, _, _)| p == "b0.Td")
+        .expect("Td param must be present");
+    assert!(td_value.bit_eq(&Value::Real(0.1)));
+    assert_eq!(td_attrs.min, Some(1e-15));
+    assert_eq!(td_attrs.max, None);
+
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.raisingSlewRate", Value::Real(0.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.fallingSlewRate", Value::Real(-1e-38)),
+        Err(OcError::ParamRange { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.Td", Value::Real(0.0)),
+        Err(OcError::ParamRange { .. })
+    ));
+    eng.set_param("b0.raisingSlewRate", Value::Real(1e-37))
+        .expect("raising Ramp boundary is valid");
+    eng.set_param("b0.fallingSlewRate", Value::Real(-1e-37))
+        .expect("falling Ramp boundary is valid");
+    eng.set_param("b0.Td", Value::Real(1e-15))
+        .expect("Td Ramp boundary is valid");
 }
 
 #[test]

@@ -51,6 +51,13 @@ const SWITCH_INPUTS: &[Port] = &[
         kind: R,
     },
 ];
+const RAMP_INPUTS: &[Port] = &[
+    Port { name: "u", kind: R },
+    Port {
+        name: "active",
+        kind: B,
+    },
+];
 const PID_INPUTS: &[Port] = &[
     Port {
         name: "u_s",
@@ -207,6 +214,62 @@ const PID_PI_RECURRENCE_PARAMS: &[Param] = &[
     Param {
         name: "yMax",
         value: ParamValue::Real("0.42"),
+    },
+];
+const RAMP_CLAMPED_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-3.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("0.1"),
+    },
+];
+const RAMP_INACTIVE_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-2.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("1.0"),
+    },
+];
+const RAMP_ACTIVE_REINIT_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-0.5"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("1.0"),
+    },
+];
+const RAMP_IMPLICIT_RESIDUE_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("100.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-100.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("1.0"),
     },
 ];
 const PID_RESET_PI_RECURRENCE_PARAMS: &[Param] = &[
@@ -460,6 +523,38 @@ const CASES: &[BlockCase] = &[
         REAL_Y,
     ),
     case(
+        "reals_ramp_inactive_passthrough",
+        "CDL.Reals.Ramp",
+        "Ramp/inactive_passthrough",
+        RAMP_INPUTS,
+        RAMP_INACTIVE_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_ramp_active_reinitialize",
+        "CDL.Reals.Ramp",
+        "Ramp/active_reinitialize",
+        RAMP_INPUTS,
+        RAMP_ACTIVE_REINIT_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_ramp_clamped_edges",
+        "CDL.Reals.Ramp",
+        "Ramp/clamped_edges",
+        RAMP_INPUTS,
+        RAMP_CLAMPED_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_ramp_implicit_residue",
+        "CDL.Reals.Ramp",
+        "Ramp/implicit_residue",
+        RAMP_INPUTS,
+        RAMP_IMPLICIT_RESIDUE_PARAMS,
+        REAL_Y,
+    ),
+    case(
         "reals_pid_pi_recurrence",
         "CDL.Reals.PID",
         "PID/pi_recurrence",
@@ -487,6 +582,10 @@ const STATEFUL_REALS_SLUGS: &[&str] = &[
     "reals_less_hysteretic_preset",
     "reals_less_threshold_hysteretic",
     "reals_less_threshold_hysteretic_preset",
+    "reals_ramp_inactive_passthrough",
+    "reals_ramp_active_reinitialize",
+    "reals_ramp_clamped_edges",
+    "reals_ramp_implicit_residue",
     "reals_pid_pi_recurrence",
     "reals_pid_with_reset_pi_recurrence",
 ];
