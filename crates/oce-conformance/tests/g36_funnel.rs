@@ -14,6 +14,8 @@ const AHU_SAT_RESET: &str =
 const AHU_ECONOMIZER: &str = include_str!("../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld");
 const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
+const SUPPLY_TEMPERATURE: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 
@@ -37,6 +39,15 @@ const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heati
 const VAV_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
 const VAV_AIRFLOW_SETPOINT_RUNTIME: &str = "conn#16";
 const VAV_HEATING_ENABLED_RUNTIME: &str = "conn#11";
+const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
+const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan";
+const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
+const SUPPLY_TEMPERATURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
+const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
@@ -72,6 +83,19 @@ const VAV_MASKED_OUTPUTS: &[PointSpec] = &[
     PointSpec::real("airflow_setpoint", VAV_AIRFLOW_SETPOINT_RUNTIME),
     PointSpec::real("damper_command", VAV_DAMPER_COMMAND_RUNTIME),
 ];
+const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
+    PointSpec::real("outdoor_air_temperature", SUPPLY_TEMPERATURE_OUTDOOR_AIR),
+    PointSpec::boolean("supply_fan_status", SUPPLY_TEMPERATURE_FAN_STATUS),
+    PointSpec::integer("operating_mode", SUPPLY_TEMPERATURE_OPERATING_MODE),
+    PointSpec::integer(
+        "zone_temperature_reset_requests",
+        SUPPLY_TEMPERATURE_REQUESTS,
+    ),
+];
+const SUPPLY_TEMPERATURE_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::real(
+    "supply_air_temperature_setpoint",
+    SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
+)];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -97,6 +121,14 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: VAV_INPUTS,
         exact_outputs: VAV_EXACT_OUTPUTS,
         masked_outputs: VAV_MASKED_OUTPUTS,
+    },
+    SequenceSpec {
+        name: "multizone_vav_supply_temperature",
+        cxf: SUPPLY_TEMPERATURE,
+        t_stop: 900,
+        inputs: SUPPLY_TEMPERATURE_INPUTS,
+        exact_outputs: SUPPLY_TEMPERATURE_EXACT_OUTPUTS,
+        masked_outputs: &[],
     },
 ];
 

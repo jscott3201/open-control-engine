@@ -196,8 +196,8 @@ fn deferred_load_paths_return_typed_errors_not_panics() {
 #[test]
 fn param_lifecycle_halt_set_resume_refolds() {
     let mut eng = loaded_accumulator();
-    // 4 params: b0.k=1.0, b3.k=2.5, b5.uMin=0.0, b5.uMax=3.0.
-    assert_eq!(eng.params().len(), 4);
+    // 5 params: b0.k=1.0, b2.samplePeriod=1.0, b3.k=2.5, b5.uMin=0.0, b5.uMax=3.0.
+    assert_eq!(eng.params().len(), 5);
     assert!(eng.get_param("b0.k").unwrap().bit_eq(&Value::Real(1.0)));
     // The R-PUB-6 owned enumeration yields (path, value, declared attrs). Unconstrained params
     // remain bounds-free.

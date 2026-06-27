@@ -16,6 +16,8 @@ pub(super) const VAV_SINGLE_ZONE: &str =
     include_str!("../tests/fixtures/g36/vav_single_zone.jsonld");
 pub(super) const G36_TRIM_AND_RESPOND: &str =
     include_str!("../tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
+pub(super) const G36_SUPPLY_TEMPERATURE: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld"
@@ -26,7 +28,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "328aff5c9e8b3243";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "9b80ecc78b1167b0";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -99,11 +101,18 @@ pub(super) const RUNTIME_FIXTURES: &[FixtureSource] = &[
     },
 ];
 
-pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[FixtureSource {
-    name: "trim_and_respond_have_hol_false",
-    path: "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
-    text: G36_TRIM_AND_RESPOND,
-}];
+pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
+    FixtureSource {
+        name: "trim_and_respond_have_hol_false",
+        path: "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+        text: G36_TRIM_AND_RESPOND,
+    },
+    FixtureSource {
+        name: "multizone_vav_supply_temperature",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
+        text: G36_SUPPLY_TEMPERATURE,
+    },
+];
 
 pub(super) const PROFILE_FIXTURES: &[FixtureSource] = &[
     FixtureSource {

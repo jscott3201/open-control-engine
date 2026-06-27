@@ -1,0 +1,376 @@
+blocks: 62
+  B0 decl=0 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.tim")
+    inputs=[0] outputs=[1]
+    param delayTime=Real(0x4086800000000000)
+    param delayOnInit=Boolean(true)
+  B1 decl=1 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr")
+    inputs=[2] outputs=[3]
+  B2 decl=2 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.netRes")
+    inputs=[4, 5, 6] outputs=[7]
+  B3 decl=3 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.resAmoCon")
+    inputs=[] outputs=[8]
+    param k=Real(0xbfc999999999999a)
+  B4 decl=4 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro")
+    inputs=[9, 10] outputs=[11]
+  B5 decl=5 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro1")
+    inputs=[12, 13] outputs=[14]
+  B6 decl=6 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.pro2")
+    inputs=[15, 16] outputs=[17]
+  B7 decl=7 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.uniDel")
+    inputs=[18] outputs=[19]
+    param samplePeriod=Real(0x405e000000000000)
+    param y_start=Real(0x4072326666666666)
+  B8 decl=8 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi")
+    inputs=[20, 21, 22] outputs=[23]
+  B9 decl=9 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi1")
+    inputs=[24, 25, 26] outputs=[27]
+  B10 decl=10 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi2")
+    inputs=[28, 29, 30] outputs=[31]
+  B11 decl=11 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swi3")
+    inputs=[32, 33, 34] outputs=[35]
+  B12 decl=12 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.sampler")
+    inputs=[36] outputs=[37]
+    param samplePeriod=Real(0x405e000000000000)
+  B13 decl=13 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.lesThr1")
+    inputs=[38] outputs=[39]
+  B14 decl=14 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr2")
+    inputs=[40] outputs=[41]
+  B15 decl=15 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.greThr1")
+    inputs=[42] outputs=[43]
+  B16 decl=16 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.gai")
+    inputs=[44] outputs=[45]
+    param k=Real(0xbff0000000000000)
+  B17 decl=17 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.iniSetCon")
+    inputs=[] outputs=[46]
+    param k=Real(0x4072326666666666)
+  B18 decl=18 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.numIgnReqCon")
+    inputs=[] outputs=[47]
+    param k=Integer(2)
+  B19 decl=19 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.triAmoCon")
+    inputs=[] outputs=[48]
+    param k=Real(0x3fb999999999999a)
+  B20 decl=20 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxResCon")
+    inputs=[] outputs=[49]
+    param k=Real(0xbfe3333333333333)
+  B21 decl=21 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxSetCon")
+    inputs=[] outputs=[50]
+    param k=Real(0x4072326666666666)
+  B22 decl=22 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.zerTri")
+    inputs=[] outputs=[51]
+    param k=Real(0x0000000000000000)
+  B23 decl=23 class=CDL.Conversions.IntegerToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.intToRea")
+    inputs=[52] outputs=[53]
+  B24 decl=24 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.difReqIgnReq")
+    inputs=[54, 55] outputs=[56]
+  B25 decl=25 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.add1")
+    inputs=[57, 58] outputs=[59]
+  B26 decl=26 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.add2")
+    inputs=[60, 61] outputs=[62]
+  B27 decl=27 class=CDL.Reals.Min instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.minInp")
+    inputs=[63, 64] outputs=[65]
+  B28 decl=28 class=CDL.Reals.Min instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.min1")
+    inputs=[66, 67] outputs=[68]
+  B29 decl=29 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.and2")
+    inputs=[69, 70] outputs=[71]
+  B30 decl=30 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.not1")
+    inputs=[72] outputs=[73]
+  B31 decl=31 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.minSetCon")
+    inputs=[] outputs=[74]
+    param k=Real(0x4071d26666666666)
+  B32 decl=32 class=CDL.Reals.Max instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.maxInp")
+    inputs=[75, 76] outputs=[77]
+  B33 decl=33 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.assMes")
+    inputs=[78] outputs=[]
+    param message=String("Trim amount \"triAmo\" and respond amount \"resAmo\" must have opposite signs.")
+  B34 decl=34 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.assMes2")
+    inputs=[79] outputs=[]
+    param message=String("Respond amount \"resAmo\" and maximum respond amount \"maxRes\" must have same sign.")
+  B35 decl=35 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.abs")
+    inputs=[80] outputs=[81]
+  B36 decl=36 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.abs1")
+    inputs=[82] outputs=[83]
+  B37 decl=37 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.zer")
+    inputs=[] outputs=[84]
+    param k=Real(0x0000000000000000)
+  B38 decl=38 class=CDL.Logical.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.fal")
+    inputs=[] outputs=[85]
+    param k=Boolean(false)
+  B39 decl=39 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.swiHol")
+    inputs=[86, 87, 88] outputs=[89]
+  B40 decl=40 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.notHol")
+    inputs=[90] outputs=[91]
+  B41 decl=41 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.lat")
+    inputs=[92, 93] outputs=[94]
+  B42 decl=42 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.notHolAndTic")
+    inputs=[95, 96] outputs=[97]
+  B43 decl=43 class=CDL.Logical.Sources.SampleTrigger instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxSupTemRes.samTri")
+    inputs=[] outputs=[98]
+    param period=Real(0x405e000000000000)
+    param shift=Real(0x0000000000000000)
+  B44 decl=44 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.lin")
+    inputs=[99, 100, 101, 102, 103] outputs=[104]
+  B45 decl=45 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.minOutTem")
+    inputs=[] outputs=[105]
+    param k=Real(0x4072126666666666)
+  B46 decl=46 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.maxOutTem")
+    inputs=[] outputs=[106]
+    param k=Real(0x4072626666666666)
+  B47 decl=47 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.minSupTem")
+    inputs=[] outputs=[107]
+    param k=Real(0x4071d26666666666)
+  B48 decl=48 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.and1")
+    inputs=[108, 109] outputs=[110]
+  B49 decl=49 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.supTemWarUpSetBac")
+    inputs=[] outputs=[111]
+    param k=Real(0x4073426666666666)
+  B50 decl=50 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.swi1")
+    inputs=[112, 113, 114] outputs=[115]
+  B51 decl=51 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.swi2")
+    inputs=[116, 117, 118] outputs=[119]
+  B52 decl=52 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.swi3")
+    inputs=[120, 121, 122] outputs=[123]
+  B53 decl=53 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.cooDowMod")
+    inputs=[] outputs=[124]
+    param k=Integer(3)
+  B54 decl=54 class=CDL.Integers.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.intLesThr1")
+    inputs=[125] outputs=[126]
+    param t=Integer(6)
+  B55 decl=55 class=CDL.Integers.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.intGreThr1")
+    inputs=[127] outputs=[128]
+    param t=Integer(3)
+  B56 decl=56 class=CDL.Integers.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.intLesThr2")
+    inputs=[129] outputs=[130]
+    param t=Integer(3)
+  B57 decl=57 class=CDL.Integers.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.intGreThr2")
+    inputs=[131] outputs=[132]
+    param t=Integer(0)
+  B58 decl=58 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.and2")
+    inputs=[133, 134] outputs=[135]
+  B59 decl=59 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.swi4")
+    inputs=[136, 137, 138] outputs=[139]
+  B60 decl=60 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.intEqu")
+    inputs=[140, 141] outputs=[142]
+  B61 decl=61 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.TDea")
+    inputs=[] outputs=[143]
+    param k=Real(0x4072b26666666666)
+connectors: 144
+  C0 block=B0 dir=In type=Boolean decl=0 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan")
+  C1 block=B0 dir=Out type=Boolean decl=1 iri=None
+  C2 block=B1 dir=In type=Real decl=2 iri=None
+  C3 block=B1 dir=Out type=Boolean decl=3 iri=None
+  C4 block=B2 dir=In type=Real decl=4 iri=None
+  C5 block=B2 dir=In type=Boolean decl=5 iri=None
+  C6 block=B2 dir=In type=Real decl=6 iri=None
+  C7 block=B2 dir=Out type=Real decl=7 iri=None
+  C8 block=B3 dir=Out type=Real decl=8 iri=None
+  C9 block=B4 dir=In type=Real decl=9 iri=None
+  C10 block=B4 dir=In type=Real decl=10 iri=None
+  C11 block=B4 dir=Out type=Real decl=11 iri=None
+  C12 block=B5 dir=In type=Real decl=12 iri=None
+  C13 block=B5 dir=In type=Real decl=13 iri=None
+  C14 block=B5 dir=Out type=Real decl=14 iri=None
+  C15 block=B6 dir=In type=Real decl=15 iri=None
+  C16 block=B6 dir=In type=Real decl=16 iri=None
+  C17 block=B6 dir=Out type=Real decl=17 iri=None
+  C18 block=B7 dir=In type=Real decl=18 iri=None
+  C19 block=B7 dir=Out type=Real decl=19 iri=None
+  C20 block=B8 dir=In type=Real decl=20 iri=None
+  C21 block=B8 dir=In type=Boolean decl=21 iri=None
+  C22 block=B8 dir=In type=Real decl=22 iri=None
+  C23 block=B8 dir=Out type=Real decl=23 iri=None
+  C24 block=B9 dir=In type=Real decl=24 iri=None
+  C25 block=B9 dir=In type=Boolean decl=25 iri=None
+  C26 block=B9 dir=In type=Real decl=26 iri=None
+  C27 block=B9 dir=Out type=Real decl=27 iri=None
+  C28 block=B10 dir=In type=Real decl=28 iri=None
+  C29 block=B10 dir=In type=Boolean decl=29 iri=None
+  C30 block=B10 dir=In type=Real decl=30 iri=None
+  C31 block=B10 dir=Out type=Real decl=31 iri=None
+  C32 block=B11 dir=In type=Real decl=32 iri=None
+  C33 block=B11 dir=In type=Boolean decl=33 iri=None
+  C34 block=B11 dir=In type=Real decl=34 iri=None
+  C35 block=B11 dir=Out type=Real decl=35 iri=None
+  C36 block=B12 dir=In type=Real decl=36 iri=None
+  C37 block=B12 dir=Out type=Real decl=37 iri=None
+  C38 block=B13 dir=In type=Real decl=38 iri=None
+  C39 block=B13 dir=Out type=Boolean decl=39 iri=None
+  C40 block=B14 dir=In type=Real decl=40 iri=None
+  C41 block=B14 dir=Out type=Boolean decl=41 iri=None
+  C42 block=B15 dir=In type=Real decl=42 iri=None
+  C43 block=B15 dir=Out type=Boolean decl=43 iri=None
+  C44 block=B16 dir=In type=Real decl=44 iri=None
+  C45 block=B16 dir=Out type=Real decl=45 iri=None
+  C46 block=B17 dir=Out type=Real decl=46 iri=None
+  C47 block=B18 dir=Out type=Real decl=47 iri=None
+  C48 block=B19 dir=Out type=Real decl=48 iri=None
+  C49 block=B20 dir=Out type=Real decl=49 iri=None
+  C50 block=B21 dir=Out type=Real decl=50 iri=None
+  C51 block=B22 dir=Out type=Real decl=51 iri=None
+  C52 block=B23 dir=In type=Integer decl=52 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq")
+  C53 block=B23 dir=Out type=Real decl=53 iri=None
+  C54 block=B24 dir=In type=Real decl=54 iri=None
+  C55 block=B24 dir=In type=Real decl=55 iri=None
+  C56 block=B24 dir=Out type=Real decl=56 iri=None
+  C57 block=B25 dir=In type=Real decl=57 iri=None
+  C58 block=B25 dir=In type=Real decl=58 iri=None
+  C59 block=B25 dir=Out type=Real decl=59 iri=None
+  C60 block=B26 dir=In type=Real decl=60 iri=None
+  C61 block=B26 dir=In type=Real decl=61 iri=None
+  C62 block=B26 dir=Out type=Real decl=62 iri=None
+  C63 block=B27 dir=In type=Real decl=63 iri=None
+  C64 block=B27 dir=In type=Real decl=64 iri=None
+  C65 block=B27 dir=Out type=Real decl=65 iri=None
+  C66 block=B28 dir=In type=Real decl=66 iri=None
+  C67 block=B28 dir=In type=Real decl=67 iri=None
+  C68 block=B28 dir=Out type=Real decl=68 iri=None
+  C69 block=B29 dir=In type=Boolean decl=69 iri=None
+  C70 block=B29 dir=In type=Boolean decl=70 iri=None
+  C71 block=B29 dir=Out type=Boolean decl=71 iri=None
+  C72 block=B30 dir=In type=Boolean decl=72 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan")
+  C73 block=B30 dir=Out type=Boolean decl=73 iri=None
+  C74 block=B31 dir=Out type=Real decl=74 iri=None
+  C75 block=B32 dir=In type=Real decl=75 iri=None
+  C76 block=B32 dir=In type=Real decl=76 iri=None
+  C77 block=B32 dir=Out type=Real decl=77 iri=None
+  C78 block=B33 dir=In type=Boolean decl=78 iri=None
+  C79 block=B34 dir=In type=Boolean decl=79 iri=None
+  C80 block=B35 dir=In type=Real decl=80 iri=None
+  C81 block=B35 dir=Out type=Real decl=81 iri=None
+  C82 block=B36 dir=In type=Real decl=82 iri=None
+  C83 block=B36 dir=Out type=Real decl=83 iri=None
+  C84 block=B37 dir=Out type=Real decl=84 iri=None
+  C85 block=B38 dir=Out type=Boolean decl=85 iri=None
+  C86 block=B39 dir=In type=Real decl=86 iri=None
+  C87 block=B39 dir=In type=Boolean decl=87 iri=None
+  C88 block=B39 dir=In type=Real decl=88 iri=None
+  C89 block=B39 dir=Out type=Real decl=89 iri=None
+  C90 block=B40 dir=In type=Boolean decl=90 iri=None
+  C91 block=B40 dir=Out type=Boolean decl=91 iri=None
+  C92 block=B41 dir=In type=Boolean decl=92 iri=None
+  C93 block=B41 dir=In type=Boolean decl=93 iri=None
+  C94 block=B41 dir=Out type=Boolean decl=94 iri=None
+  C95 block=B42 dir=In type=Boolean decl=95 iri=None
+  C96 block=B42 dir=In type=Boolean decl=96 iri=None
+  C97 block=B42 dir=Out type=Boolean decl=97 iri=None
+  C98 block=B43 dir=Out type=Boolean decl=98 iri=None
+  C99 block=B44 dir=In type=Real decl=99 iri=None
+  C100 block=B44 dir=In type=Real decl=100 iri=None
+  C101 block=B44 dir=In type=Real decl=101 iri=None
+  C102 block=B44 dir=In type=Real decl=102 iri=None
+  C103 block=B44 dir=In type=Real decl=103 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.TOut")
+  C104 block=B44 dir=Out type=Real decl=104 iri=None
+  C105 block=B45 dir=Out type=Real decl=105 iri=None
+  C106 block=B46 dir=Out type=Real decl=106 iri=None
+  C107 block=B47 dir=Out type=Real decl=107 iri=None
+  C108 block=B48 dir=In type=Boolean decl=108 iri=None
+  C109 block=B48 dir=In type=Boolean decl=109 iri=None
+  C110 block=B48 dir=Out type=Boolean decl=110 iri=None
+  C111 block=B49 dir=Out type=Real decl=111 iri=None
+  C112 block=B50 dir=In type=Real decl=112 iri=None
+  C113 block=B50 dir=In type=Boolean decl=113 iri=None
+  C114 block=B50 dir=In type=Real decl=114 iri=None
+  C115 block=B50 dir=Out type=Real decl=115 iri=None
+  C116 block=B51 dir=In type=Real decl=116 iri=None
+  C117 block=B51 dir=In type=Boolean decl=117 iri=None
+  C118 block=B51 dir=In type=Real decl=118 iri=None
+  C119 block=B51 dir=Out type=Real decl=119 iri=None
+  C120 block=B52 dir=In type=Real decl=120 iri=None
+  C121 block=B52 dir=In type=Boolean decl=121 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan")
+  C122 block=B52 dir=In type=Real decl=122 iri=None
+  C123 block=B52 dir=Out type=Real decl=123 iri=None
+  C124 block=B53 dir=Out type=Integer decl=124 iri=None
+  C125 block=B54 dir=In type=Integer decl=125 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod")
+  C126 block=B54 dir=Out type=Boolean decl=126 iri=None
+  C127 block=B55 dir=In type=Integer decl=127 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod")
+  C128 block=B55 dir=Out type=Boolean decl=128 iri=None
+  C129 block=B56 dir=In type=Integer decl=129 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod")
+  C130 block=B56 dir=Out type=Boolean decl=130 iri=None
+  C131 block=B57 dir=In type=Integer decl=131 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod")
+  C132 block=B57 dir=Out type=Boolean decl=132 iri=None
+  C133 block=B58 dir=In type=Boolean decl=133 iri=None
+  C134 block=B58 dir=In type=Boolean decl=134 iri=None
+  C135 block=B58 dir=Out type=Boolean decl=135 iri=None
+  C136 block=B59 dir=In type=Real decl=136 iri=None
+  C137 block=B59 dir=In type=Boolean decl=137 iri=None
+  C138 block=B59 dir=In type=Real decl=138 iri=None
+  C139 block=B59 dir=Out type=Real decl=139 iri=None
+  C140 block=B60 dir=In type=Integer decl=140 iri=Some("http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod")
+  C141 block=B60 dir=In type=Integer decl=141 iri=None
+  C142 block=B60 dir=Out type=Boolean decl=142 iri=None
+  C143 block=B61 dir=Out type=Real decl=143 iri=None
+connections: 74
+  C1 -> C21
+  C1 -> C25
+  C1 -> C69
+  C3 -> C70
+  C7 -> C88
+  C8 -> C13
+  C8 -> C15
+  C8 -> C80
+  C8 -> C42
+  C11 -> C63
+  C14 -> C38
+  C17 -> C40
+  C19 -> C57
+  C23 -> C100
+  C27 -> C6
+  C31 -> C20
+  C31 -> C18
+  C35 -> C61
+  C37 -> C54
+  C39 -> C78
+  C41 -> C79
+  C43 -> C33
+  C45 -> C34
+  C46 -> C22
+  C46 -> C28
+  C47 -> C55
+  C48 -> C60
+  C48 -> C24
+  C48 -> C12
+  C49 -> C16
+  C49 -> C82
+  C50 -> C67
+  C51 -> C26
+  C53 -> C36
+  C56 -> C2
+  C56 -> C9
+  C59 -> C66
+  C62 -> C4
+  C65 -> C32
+  C65 -> C44
+  C68 -> C75
+  C71 -> C5
+  C73 -> C29
+  C74 -> C76
+  C77 -> C30
+  C81 -> C10
+  C83 -> C64
+  C84 -> C86
+  C85 -> C90
+  C89 -> C58
+  C91 -> C95
+  C94 -> C87
+  C97 -> C93
+  C98 -> C92
+  C98 -> C96
+  C104 -> C136
+  C105 -> C99
+  C106 -> C101
+  C107 -> C102
+  C107 -> C116
+  C110 -> C113
+  C111 -> C112
+  C115 -> C120
+  C119 -> C114
+  C124 -> C141
+  C126 -> C108
+  C128 -> C109
+  C130 -> C133
+  C132 -> C134
+  C135 -> C137
+  C139 -> C118
+  C142 -> C117
+  C143 -> C122
+  C143 -> C138
+external_inputs: [103, 72, 0, 121, 125, 127, 129, 131, 140, 52]

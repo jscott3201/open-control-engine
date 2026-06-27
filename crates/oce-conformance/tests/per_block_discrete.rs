@@ -16,14 +16,26 @@ const U_TRIGGER: &[Port] = &[
     },
 ];
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
-const UNIT_DELAY_PARAMS: &[Param] = &[Param {
-    name: "y_start",
-    value: ParamValue::Real("0.0"),
-}];
-const UNIT_DELAY_NONZERO_START_PARAMS: &[Param] = &[Param {
-    name: "y_start",
-    value: ParamValue::Real("2.5"),
-}];
+const UNIT_DELAY_PARAMS: &[Param] = &[
+    Param {
+        name: "y_start",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "samplePeriod",
+        value: ParamValue::Real("1.0"),
+    },
+];
+const UNIT_DELAY_NONZERO_START_PARAMS: &[Param] = &[
+    Param {
+        name: "y_start",
+        value: ParamValue::Real("2.5"),
+    },
+    Param {
+        name: "samplePeriod",
+        value: ParamValue::Real("1.0"),
+    },
+];
 const TRIGGERED_SAMPLER_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("2.5"),

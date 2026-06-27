@@ -8,6 +8,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 const SAT: &str = "ahu_supply_air_temp_reset";
 const ECON: &str = "ahu_economizer";
 const VAV: &str = "vav_single_zone";
+const SUPPLY_TEMP: &str = "multizone_vav_supply_temperature";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -26,6 +27,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(sat_reset());
     out.extend(economizer());
     out.extend(vav_single_zone());
+    out.extend(multizone_vav_supply_temperature());
     out
 }
 
@@ -221,6 +223,49 @@ fn vav_single_zone() -> Vec<Golden> {
     ]
 }
 
+fn multizone_vav_supply_temperature() -> Vec<Golden> {
+    let time = unit_ticks(901);
+    let outdoor_air_temperature = vec![289.15; time.len()];
+    let supply_fan_status = vec![true; time.len()];
+    let operating_mode = vec![1; time.len()];
+    let zone_temperature_reset_requests: Vec<i64> = time
+        .iter()
+        .map(|&t| {
+            if t >= 840.0 {
+                6
+            } else if t >= 720.0 {
+                3
+            } else {
+                0
+            }
+        })
+        .collect();
+    let supply_air_temperature_setpoint = supply_temperature_setpoint_trace(
+        &time,
+        &outdoor_air_temperature,
+        &supply_fan_status,
+        &operating_mode,
+        &zone_temperature_reset_requests,
+    );
+    let inputs = supply_temperature_inputs(
+        &outdoor_air_temperature,
+        &supply_fan_status,
+        &operating_mode,
+        &zone_temperature_reset_requests,
+    );
+
+    vec![sequence_golden(
+        SUPPLY_TEMP,
+        "supply_air_temperature_setpoint",
+        ValueKind::Real,
+        time,
+        supply_air_temperature_setpoint.into_iter().map(r).collect(),
+        "SupplyTemperature: TOut=TOut_min, fan proven on, literal operating mode 1; requests step 0 -> 3 at 720s -> 6 at 840s",
+        "Pinned SupplyTemperature.mo mode/fan switches plus nested TrimAndRespond.mo have_hol=false default variant; UnitDelay uses samplePeriod=120s and TrueDelay uses delTim+samplePeriod=720s",
+        inputs,
+    )]
+}
+
 #[allow(clippy::too_many_arguments)]
 fn sequence_golden(
     sequence: &'static str,
@@ -237,7 +282,7 @@ fn sequence_golden(
         .with_inputs(inputs)
         .with_provenance("source_commit", SOURCE_COMMIT)
         .with_provenance("source_files", source_files(sequence))
-        .with_provenance("fixture_status", "supported-fixture-only source-reviewed fragment")
+        .with_provenance("fixture_status", fixture_status(sequence))
 }
 
 fn source_files(sequence: &str) -> &'static str {
@@ -245,6 +290,15 @@ fn source_files(sequence: &str) -> &'static str {
         SAT => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
         ECON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
         VAV => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+        SUPPLY_TEMP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+        _ => unreachable!("unknown G36 sequence {sequence}"),
+    }
+}
+
+fn fixture_status(sequence: &str) -> &'static str {
+    match sequence {
+        SUPPLY_TEMP => "supported-runtime-sequence source-verified composite",
+        SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
@@ -329,6 +383,214 @@ fn less_hysteretic(u1: &[f64], u2: &[f64], h: f64, pre_y_start: bool) -> Vec<boo
     out
 }
 
+fn supply_temperature_setpoint_trace(
+    time: &[f64],
+    outdoor_air_temperature: &[f64],
+    supply_fan_status: &[bool],
+    operating_mode: &[i64],
+    zone_temperature_reset_requests: &[i64],
+) -> Vec<f64> {
+    const T_SUP_COO_MIN: f64 = 285.15;
+    const T_SUP_COO_MAX: f64 = 291.15;
+    const T_OUT_MIN: f64 = 289.15;
+    const T_OUT_MAX: f64 = 294.15;
+    const T_SUP_WAR_UP_SET_BAC: f64 = 308.15;
+    const T_DEA_BAN: f64 = 299.15;
+    const DEL_TIM: f64 = 600.0;
+    const SAMPLE_PERIOD: f64 = 120.0;
+    const NUM_IGN_REQ: f64 = 2.0;
+    const TRI_AMO: f64 = 0.1;
+    const RES_AMO: f64 = -0.2;
+    const MAX_RES: f64 = -0.6;
+
+    let mut true_delay_timer = 0.0;
+    let mut true_delay_prev_time: Option<f64> = None;
+    let mut true_delay_prev_u = false;
+    let mut true_delay_held = false;
+
+    let mut sampler_held = 0.0;
+    let mut sampler_t0 = 0.0;
+    let mut sampler_last_index = -1;
+    let mut sampler_initialized = false;
+
+    let mut unit_delay_held = T_SUP_COO_MAX;
+    let mut unit_delay_t0 = 0.0;
+    let mut unit_delay_last_index = -1;
+    let mut unit_delay_initialized = false;
+
+    let mut out = Vec::with_capacity(time.len());
+    for ((((&t, &t_out), &fan_on), &mode), &requests) in time
+        .iter()
+        .zip(outdoor_air_temperature)
+        .zip(supply_fan_status)
+        .zip(operating_mode)
+        .zip(zone_temperature_reset_requests)
+    {
+        let tim = true_delay_output(
+            t,
+            fan_on,
+            DEL_TIM + SAMPLE_PERIOD,
+            true,
+            true_delay_prev_time,
+            true_delay_prev_u,
+            true_delay_held,
+            true_delay_timer,
+        )
+        .0;
+        let sampled_requests = sampler_output(
+            t,
+            requests as f64,
+            SAMPLE_PERIOD,
+            sampler_initialized,
+            sampler_t0,
+            sampler_last_index,
+            sampler_held,
+        );
+        let request_delta = sampled_requests - NUM_IGN_REQ;
+        let response = -((RES_AMO.abs() * request_delta).min(MAX_RES.abs()));
+        let net_reset = if !tim {
+            0.0
+        } else if request_delta > 0.0 {
+            TRI_AMO + response
+        } else {
+            TRI_AMO
+        };
+        let candidate = clamp(unit_delay_held + net_reset, T_SUP_COO_MIN, T_SUP_COO_MAX);
+        let trim_respond = if fan_on { candidate } else { T_SUP_COO_MAX };
+        let reset_branch = buildings_line(
+            T_OUT_MIN,
+            trim_respond,
+            T_OUT_MAX,
+            T_SUP_COO_MIN,
+            t_out,
+        );
+        let selected = if !fan_on {
+            T_DEA_BAN
+        } else if mode > 0 && mode < 3 {
+            reset_branch
+        } else if mode == 3 {
+            T_SUP_COO_MIN
+        } else if mode > 3 && mode < 6 {
+            T_SUP_WAR_UP_SET_BAC
+        } else {
+            T_DEA_BAN
+        };
+        out.push(selected);
+
+        let (next_true_delay, next_timer) = true_delay_output(
+            t,
+            fan_on,
+            DEL_TIM + SAMPLE_PERIOD,
+            true,
+            true_delay_prev_time,
+            true_delay_prev_u,
+            true_delay_held,
+            true_delay_timer,
+        );
+        true_delay_timer = next_timer;
+        true_delay_prev_time = Some(t);
+        true_delay_prev_u = fan_on;
+        true_delay_held = next_true_delay;
+
+        if !sampler_initialized {
+            sampler_t0 = initial_sample_time(t, SAMPLE_PERIOD);
+            sampler_last_index = sample_index(t, sampler_t0, SAMPLE_PERIOD);
+            sampler_held = requests as f64;
+            sampler_initialized = true;
+        } else {
+            let (due, index) = sample_due(t, sampler_t0, SAMPLE_PERIOD, sampler_last_index);
+            if due {
+                sampler_last_index = index;
+                sampler_held = requests as f64;
+            }
+        }
+
+        if !unit_delay_initialized {
+            unit_delay_t0 = initial_sample_time(t, SAMPLE_PERIOD);
+            unit_delay_last_index = sample_index(t, unit_delay_t0, SAMPLE_PERIOD);
+            unit_delay_held = trim_respond;
+            unit_delay_initialized = true;
+        } else {
+            let (due, index) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
+            if due {
+                unit_delay_last_index = index;
+                unit_delay_held = trim_respond;
+            }
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn true_delay_output(
+    t: f64,
+    u: bool,
+    delay_time: f64,
+    delay_on_init: bool,
+    prev_time: Option<f64>,
+    prev_u: bool,
+    held: bool,
+    timer: f64,
+) -> (bool, f64) {
+    if !u {
+        return (false, 0.0);
+    }
+    let delay = delay_time.max(0.0);
+    let Some(previous_time) = prev_time else {
+        return if delay_on_init && delay > 0.0 {
+            (false, 0.0)
+        } else {
+            (true, delay)
+        };
+    };
+    if held {
+        (true, delay)
+    } else if !prev_u {
+        (delay <= 0.0, 0.0)
+    } else {
+        let next_timer = timer + (t - previous_time).max(0.0);
+        (next_timer >= delay, next_timer)
+    }
+}
+
+fn sampler_output(
+    t: f64,
+    input: f64,
+    period: f64,
+    initialized: bool,
+    t0: f64,
+    last_index: i64,
+    held: f64,
+) -> f64 {
+    if !initialized || sample_due(t, t0, period, last_index).0 {
+        input
+    } else {
+        held
+    }
+}
+
+fn initial_sample_time(t_start: f64, period: f64) -> f64 {
+    buildings_round_six((t_start / period).floor() * period)
+}
+
+fn buildings_round_six(x: f64) -> f64 {
+    const FACTOR: f64 = 1_000_000.0;
+    if x > 0.0 {
+        (x * FACTOR + 0.5).floor() / FACTOR
+    } else {
+        (x * FACTOR - 0.5).ceil() / FACTOR
+    }
+}
+
+fn sample_index(t_now: f64, t0: f64, period: f64) -> i64 {
+    ((t_now - t0) / period + 1e-9).floor() as i64
+}
+
+fn sample_due(t_now: f64, t0: f64, period: f64, last_index: i64) -> (bool, i64) {
+    let index = sample_index(t_now, t0, period);
+    (index > last_index, index)
+}
+
 fn sat_inputs(zone_temp: &[f64], cooling_setpoint: &[f64]) -> Vec<InputSeries> {
     vec![
         input_r("zone_temp", zone_temp.iter().copied()),
@@ -360,8 +622,33 @@ fn vav_inputs(
     ]
 }
 
+fn supply_temperature_inputs(
+    outdoor_air_temperature: &[f64],
+    supply_fan_status: &[bool],
+    operating_mode: &[i64],
+    zone_temperature_reset_requests: &[i64],
+) -> Vec<InputSeries> {
+    vec![
+        input_r("outdoor_air_temperature", outdoor_air_temperature.iter().copied()),
+        input_b("supply_fan_status", supply_fan_status.iter().copied()),
+        input_i("operating_mode", operating_mode.iter().copied()),
+        input_i(
+            "zone_temperature_reset_requests",
+            zone_temperature_reset_requests.iter().copied(),
+        ),
+    ]
+}
+
 fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSeries {
     InputSeries::new(name, ValueKind::Real, values.into_iter().map(r).collect())
+}
+
+fn input_b(name: &'static str, values: impl IntoIterator<Item = bool>) -> InputSeries {
+    InputSeries::new(
+        name,
+        ValueKind::Boolean,
+        values.into_iter().map(b).collect(),
+    )
 }
 
 fn input_i(name: &'static str, values: impl IntoIterator<Item = i64>) -> InputSeries {

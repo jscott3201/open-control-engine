@@ -62,6 +62,12 @@
           {
             "Int": 0
           }
+        ],
+        [
+          "samplePeriod",
+          {
+            "Real": 1.0
+          }
         ]
       ],
       "config_json": "{}"

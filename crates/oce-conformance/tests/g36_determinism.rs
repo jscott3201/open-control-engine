@@ -19,6 +19,8 @@ const AHU_SAT_RESET: &str =
 const AHU_ECONOMIZER: &str = include_str!("../../oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld");
 const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
+const SUPPLY_TEMPERATURE: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 
 const GOLDEN_DIR: &str = "tests/fixtures/golden/g36_traces";
 const PROVENANCE_SOURCE: &str =
@@ -57,6 +59,17 @@ const VAV_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
 const VAV_AIRFLOW_SETPOINT_RUNTIME: &str = "conn#16";
 const VAV_COOLING_SIGNAL_RUNTIME: &str = "conn#4";
 const VAV_HEATING_ENABLED_RUNTIME: &str = "conn#11";
+const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
+const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan";
+const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
+const SUPPLY_TEMPERATURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
+const SUPPLY_TEMPERATURE_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.TAirSupSet";
+const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -90,6 +103,16 @@ const VAV_OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(VAV_COOLING_SIGNAL, VAV_COOLING_SIGNAL_RUNTIME),
     PointSpec::boolean_alias(VAV_HEATING_ENABLED, VAV_HEATING_ENABLED_RUNTIME),
 ];
+const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
+    PointSpec::real(SUPPLY_TEMPERATURE_OUTDOOR_AIR),
+    PointSpec::boolean(SUPPLY_TEMPERATURE_FAN_STATUS),
+    PointSpec::integer(SUPPLY_TEMPERATURE_OPERATING_MODE),
+    PointSpec::integer(SUPPLY_TEMPERATURE_REQUESTS),
+];
+const SUPPLY_TEMPERATURE_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
+    SUPPLY_TEMPERATURE_SETPOINT,
+    SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
+)];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -115,6 +138,14 @@ const SEQUENCES: &[SequenceSpec] = &[
         inputs: VAV_INPUTS,
         outputs: VAV_OUTPUTS,
         input_fn: vav_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_supply_temperature",
+        cxf: SUPPLY_TEMPERATURE,
+        t_stop: 900,
+        inputs: SUPPLY_TEMPERATURE_INPUTS,
+        outputs: SUPPLY_TEMPERATURE_OUTPUTS,
+        input_fn: supply_temperature_inputs,
     },
 ];
 
@@ -168,6 +199,14 @@ impl PointSpec {
             reference_name: name,
             cdl_name: name,
             kind: ValueKind::Integer,
+        }
+    }
+
+    const fn boolean(name: &'static str) -> Self {
+        Self {
+            reference_name: name,
+            cdl_name: name,
+            kind: ValueKind::Boolean,
         }
     }
 
@@ -246,6 +285,22 @@ fn vav_inputs(t: f64) -> Vec<(String, Value)> {
         pair(VAV_ZONE_TEMP, Value::Real(zone_temp)),
         pair(VAV_COOLING_SETPOINT, Value::Real(24.0)),
         pair(VAV_HEATING_SETPOINT, Value::Real(20.0)),
+    ]
+}
+
+fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
+    let requests = if t >= 840.0 {
+        6
+    } else if t >= 720.0 {
+        3
+    } else {
+        0
+    };
+    vec![
+        pair(SUPPLY_TEMPERATURE_OUTDOOR_AIR, Value::Real(289.15)),
+        pair(SUPPLY_TEMPERATURE_FAN_STATUS, Value::Boolean(true)),
+        pair(SUPPLY_TEMPERATURE_OPERATING_MODE, Value::Integer(1)),
+        pair(SUPPLY_TEMPERATURE_REQUESTS, Value::Integer(requests)),
     ]
 }
 

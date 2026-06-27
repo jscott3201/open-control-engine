@@ -118,8 +118,11 @@ fn pre_emits_prior_then_latches_current() {
 
 #[test]
 fn unit_delay_holds_prior_sample() {
-    let ud = UnitDelay { y_start: 2.5 };
-    assert_eq!(ud.state_len(), 1);
+    let ud = UnitDelay {
+        y_start: 2.5,
+        sample_period: 1.0,
+    };
+    assert_eq!(ud.state_len(), 4);
     let mut region = vec![0u64; ud.state_len()];
     ud.init_state(&mut region, &ParamTable::default());
 
@@ -131,9 +134,37 @@ fn unit_delay_holds_prior_sample() {
 }
 
 #[test]
+fn unit_delay_holds_between_nondefault_sample_instants() {
+    let ud = UnitDelay {
+        y_start: 0.0,
+        sample_period: 2.0,
+    };
+    let mut region = vec![0u64; ud.state_len()];
+    ud.init_state(&mut region, &ParamTable::default());
+    let diag = NoopDiagnostics;
+
+    let cx = Ctx::new(0.0, &diag);
+    assert!(emit(&ud, &[Value::Real(10.0)], &region)[0].bit_eq(&Value::Real(0.0)));
+    ud.update_state(&cx, &[Value::Real(10.0)], &mut region);
+
+    let cx = Ctx::new(1.0, &diag);
+    assert!(emit(&ud, &[Value::Real(20.0)], &region)[0].bit_eq(&Value::Real(10.0)));
+    ud.update_state(&cx, &[Value::Real(20.0)], &mut region);
+
+    let cx = Ctx::new(2.0, &diag);
+    assert!(emit(&ud, &[Value::Real(30.0)], &region)[0].bit_eq(&Value::Real(10.0)));
+    ud.update_state(&cx, &[Value::Real(30.0)], &mut region);
+
+    let cx = Ctx::new(3.0, &diag);
+    assert!(emit(&ud, &[Value::Real(40.0)], &region)[0].bit_eq(&Value::Real(30.0)));
+    ud.update_state(&cx, &[Value::Real(40.0)], &mut region);
+}
+
+#[test]
 fn unit_delay_real_output_canonicalizes_held_nan_bits() {
     let ud = UnitDelay {
         y_start: f64::from_bits(0xfff8_0000_0000_0000),
+        sample_period: 1.0,
     };
     let mut region = vec![0u64; ud.state_len()];
     ud.init_state(&mut region, &ParamTable::default());

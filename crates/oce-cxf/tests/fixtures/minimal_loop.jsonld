@@ -55,11 +55,16 @@
       "@id": "http://example.org#MinLoop.del",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
       "S231:label": "del",
-      "S231:hasParameter": { "@id": "http://example.org#MinLoop.del.y_start" },
+      "S231:hasParameter": [
+        { "@id": "http://example.org#MinLoop.del.y_start" },
+        { "@id": "http://example.org#MinLoop.del.samplePeriod" }
+      ],
       "S231:hasInput": { "@id": "http://example.org#MinLoop.del.u" },
       "S231:hasOutput": { "@id": "http://example.org#MinLoop.del.y" }
     },
     { "@id": "http://example.org#MinLoop.del.y_start", "S231:value": 0 },
+    { "@id": "http://example.org#MinLoop.del.samplePeriod",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
     { "@id": "http://example.org#MinLoop.del.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
     { "@id": "http://example.org#MinLoop.del.y",
       "@type": "S231:RealOutput",

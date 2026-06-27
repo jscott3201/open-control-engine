@@ -88,6 +88,7 @@ fn make_triggered_sampler(p: &ParamTable) -> Box<dyn Block> {
 fn make_unit_delay(p: &ParamTable) -> Box<dyn Block> {
     Box::new(UnitDelay {
         y_start: real_param(p, "y_start", 0.0),
+        sample_period: sample_period_param(p),
     })
 }
 

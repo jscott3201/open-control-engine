@@ -11,14 +11,21 @@ use serde_json::{Value as JsonValue, json};
 const NESTED: &str = include_str!("fixtures/nested_composite.jsonld");
 const G36_TRIM_AND_RESPOND: &str =
     include_str!("fixtures/g36/trim_and_respond_have_hol_false.jsonld");
+const G36_SUPPLY_TEMPERATURE: &str =
+    include_str!("fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const NESTED_GOLDEN_REL: &str = "tests/fixtures/golden/nested_composite.modelgraph.txt";
 const G36_TRIM_AND_RESPOND_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt";
+const G36_SUPPLY_TEMPERATURE_GOLDEN_REL: &str =
+    "tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt";
 const MODEL: &str = "http://example.org#g36.profile.nested_composite";
 const G36_TRIM_AND_RESPOND_MODEL: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false";
 const G36_TRIM_AND_RESPOND_CLASS: &str =
     "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond";
+const G36_SUPPLY_TEMPERATURE_MODEL: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature";
+const G36_SUPPLY_TEMPERATURE_CLASS: &str = "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature";
 
 fn import_ok(src: &str) -> ModelGraph {
     let (graph, report) = import_cxf(src.as_bytes(), &ResolveOptions::default())
@@ -281,6 +288,84 @@ fn golden_g36_trim_and_respond_have_hol_false_modelgraph() {
     assert_eq!(
         actual, expected,
         "source-verified G36 TrimAndRespond ModelGraph diverged from golden"
+    );
+}
+
+#[test]
+fn source_verified_g36_multizone_vav_supply_temperature_imports_nested_trim_and_respond() {
+    let parsed: JsonValue = serde_json::from_str(G36_SUPPLY_TEMPERATURE).expect("G36 fixture JSON");
+    let top = parsed["@graph"]
+        .as_array()
+        .expect("@graph array")
+        .iter()
+        .find(|node| node["@id"] == json!(G36_SUPPLY_TEMPERATURE_MODEL))
+        .expect("top G36 SupplyTemperature composite node");
+    assert_eq!(top["@type"], json!(G36_SUPPLY_TEMPERATURE_CLASS));
+
+    let graph = import_ok(G36_SUPPLY_TEMPERATURE);
+    assert_eq!(
+        graph.blocks.len(),
+        62,
+        "SupplyTemperature should flatten 44 active TrimAndRespond leaves plus 18 top-level leaves"
+    );
+    let instances: Vec<&str> = graph
+        .blocks
+        .iter()
+        .map(|block| block.instance_iri.as_deref().expect("source path"))
+        .collect();
+    assert!(
+        instances
+            .iter()
+            .any(|iri| iri.ends_with(".maxSupTemRes.tim"))
+    );
+    assert!(instances.iter().any(|iri| iri.ends_with(".lin")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".swi3")));
+    assert!(
+        !instances
+            .iter()
+            .any(|iri| iri.ends_with(".maxSupTemRes.truHol"))
+    );
+
+    assert!(
+        block_param(&graph, ".maxSupTemRes.tim", "delayTime").bit_eq(&Value::Real(720.0)),
+        "nested TrimAndRespond delay must ground the source default delTim + samplePeriod"
+    );
+    assert!(
+        block_param(&graph, ".maxSupTemRes.uniDel", "y_start").bit_eq(&Value::Real(291.15)),
+        "nested TrimAndRespond initial setpoint must ground the source default TSupCoo_max"
+    );
+    assert!(
+        block_param(&graph, ".minSupTem", "k").bit_eq(&Value::Real(285.15)),
+        "minimum cooling SAT constant must ground the source default TSupCoo_min"
+    );
+
+    let counts = connector_iri_counts(&graph);
+    assert!(counts.contains(&(format!("{G36_SUPPLY_TEMPERATURE_MODEL}.TOut"), 1)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uZonTemResReq"), 1)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uOpeMod"), 5)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_TEMPERATURE_MODEL}.u1SupFan"), 3)));
+    assert!(
+        !counts
+            .iter()
+            .any(|(iri, _)| iri.ends_with(".maxSupTemRes.uHol")),
+        "inactive nested have_hol=false optional input must not survive flattening"
+    );
+}
+
+#[test]
+fn golden_g36_multizone_vav_supply_temperature_modelgraph() {
+    let actual = render(&import_ok(G36_SUPPLY_TEMPERATURE));
+    let path = golden_path(G36_SUPPLY_TEMPERATURE_GOLDEN_REL);
+    if std::env::var_os("OCE_BLESS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, &actual).unwrap();
+        return;
+    }
+    let expected = std::fs::read_to_string(path)
+        .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
+    assert_eq!(
+        actual, expected,
+        "source-verified G36 SupplyTemperature ModelGraph diverged from golden"
     );
 }
 

@@ -296,6 +296,10 @@ fn validate_runtime_sequences(catalog: &Value, errors: &mut Vec<String>) {
 
 fn validate_initial_paths(catalog: &Value, errors: &mut Vec<String>) {
     let mut validation_count = 0;
+    let runtime_sequences = array_field(catalog, "runtime_sequences")
+        .iter()
+        .map(|entry| str_field(entry, "class_path"))
+        .collect::<BTreeSet<_>>();
     for entry in array_field(catalog, "initial_vav_paths") {
         let class_path = str_field(entry, "class_path");
         let status = str_field(entry, "status");
@@ -312,9 +316,9 @@ fn validate_initial_paths(catalog: &Value, errors: &mut Vec<String>) {
                 "runtime-support-without-supported-status: {class_path}"
             ));
         }
-        if status == "supported-runtime-sequence" {
+        if status == "supported-runtime-sequence" && !runtime_sequences.contains(class_path) {
             errors.push(format!(
-                "unexpected-supported-runtime-sequence: {class_path}"
+                "runtime-initial-path-missing-runtime-record: {class_path}"
             ));
         }
     }
@@ -416,15 +420,27 @@ fn validate_composite_import_fixture_records(
             ));
             continue;
         };
-        if str_field(entry, "status") != "supported-import-fixture" {
+        let status = str_field(entry, "status");
+        if !matches!(
+            status,
+            "supported-import-fixture" | "supported-runtime-sequence"
+        ) {
             errors.push(format!(
                 "composite-import-fixture-invalid-status: {}",
                 fixture.name
             ));
         }
-        if bool_field(entry, "supported_runtime_sequence") {
+        if status == "supported-import-fixture" && bool_field(entry, "supported_runtime_sequence") {
             errors.push(format!(
                 "composite-import-fixture-marked-runtime-supported: {}",
+                fixture.name
+            ));
+        }
+        if status == "supported-runtime-sequence"
+            && !bool_field(entry, "supported_runtime_sequence")
+        {
+            errors.push(format!(
+                "composite-import-fixture-runtime-flag-missing: {}",
                 fixture.name
             ));
         }
@@ -442,9 +458,18 @@ fn validate_composite_import_fixture_records(
                 ));
             }
         }
-        if str_field(entry, "oracle_status") != "import-structure-only" {
+        if status == "supported-import-fixture"
+            && str_field(entry, "oracle_status") != "import-structure-only"
+        {
             errors.push(format!(
                 "composite-import-fixture-overclaims-oracle: {}",
+                fixture.name
+            ));
+        }
+        if status == "supported-runtime-sequence" && str_field(entry, "oracle_status") != "complete"
+        {
+            errors.push(format!(
+                "composite-import-fixture-runtime-oracle-incomplete: {}",
                 fixture.name
             ));
         }
@@ -550,7 +575,12 @@ fn validate_composite_import_fixture_types(
     errors: &mut Vec<String>,
 ) {
     let document = parse_cxf(fixture, errors);
-    let Some(entry) = array_field(catalog, "composite_import_fixtures")
+    let entries = array_field(catalog, "composite_import_fixtures");
+    let allowed_g36_composites = entries
+        .iter()
+        .map(|entry| str_field(entry, "class_path"))
+        .collect::<BTreeSet<_>>();
+    let Some(entry) = entries
         .iter()
         .find(|entry| str_field(entry, "fixture") == fixture.path)
     else {
@@ -575,10 +605,12 @@ fn validate_composite_import_fixture_types(
                     ));
                 }
             } else if class_path.starts_with("Buildings.Controls.OBC.ASHRAE.G36.") {
-                errors.push(format!(
-                    "composite-import-fixture-contains-uncataloged-g36-runtime-type: {}:{class_path}",
-                    fixture.name
-                ));
+                if !allowed_g36_composites.contains(class_path.as_str()) {
+                    errors.push(format!(
+                        "composite-import-fixture-contains-uncataloged-g36-runtime-type: {}:{class_path}",
+                        fixture.name
+                    ));
+                }
             } else {
                 errors.push(format!(
                     "composite-import-fixture-unknown-runtime-type: {}:{class_path}",

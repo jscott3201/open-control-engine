@@ -108,7 +108,7 @@ pub(super) fn build_accumulator_model() -> (ModelGraph, ConnectorId, ConnectorId
         "CDL.Discrete.UnitDelay",
         &[ValueType::Real],
         &[ValueType::Real],
-        vec![],
+        vec![rp("samplePeriod", 1.0)],
     );
     let (_, _, c2) = mb.block(
         "CDL.Reals.Sources.Constant",

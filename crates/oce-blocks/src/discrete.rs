@@ -9,6 +9,7 @@ use oce_model::{
     determinism::{canonicalize_real, det_max},
 };
 
+use crate::discrete_sampled::{initial_sample_time, sample_due, valid_sample_period};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
@@ -30,13 +31,30 @@ fn word_bool(word: u64) -> bool {
     word != 0
 }
 
+fn i64_word(value: i64) -> u64 {
+    value.cast_unsigned()
+}
+
+fn word_i64(word: u64) -> i64 {
+    word as i64
+}
+
+const UNIT_DELAY_HELD_WORD: usize = 0;
+const UNIT_DELAY_T0_WORD: usize = 1;
+const UNIT_DELAY_LAST_INDEX_WORD: usize = 2;
+const UNIT_DELAY_INITIALIZED_WORD: usize = 3;
+const UNIT_DELAY_STATE_WORDS: usize = 4;
+
 /// `CDL.Discrete.UnitDelay` — `y(k) = u(k−1)`, a one-sample `Real` delay and a discrete
-/// loop-breaker (`03` §4.6): stateful with `feeds_through == false`, so it cuts the
-/// direct-feedthrough DAG. The held value lives in one `[S]` state word (`f64::to_bits`), seeded
-/// from the `y_start` parameter (default `0.0`).
+/// loop-breaker (`03` §4.6) on the configured `samplePeriod`: stateful with `feeds_through ==
+/// false`, so it cuts the direct-feedthrough DAG. The held output is seeded from `y_start` and
+/// updates only when the sample clock reaches the next periodic instant. Invalid direct
+/// construction periods degrade to `1.0`; validated models must supply a finite period at least
+/// `1E-3`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct UnitDelay {
     pub(crate) y_start: f64,
+    pub(crate) sample_period: f64,
 }
 
 impl Block for UnitDelay {
@@ -56,10 +74,13 @@ impl Block for UnitDelay {
         false // the discrete loop cut: output is the prior sample, not the current input
     }
     fn state_len(&self) -> usize {
-        1 // one word holds the one-sample-delayed Real (as f64 bits)
+        UNIT_DELAY_STATE_WORDS
     }
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
-        region[0] = self.y_start.to_bits();
+        region[UNIT_DELAY_HELD_WORD] = canonicalize_real(self.y_start).to_bits();
+        region[UNIT_DELAY_T0_WORD] = 0.0f64.to_bits();
+        region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(-1);
+        region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(false);
     }
     fn emit_from_state(
         &self,
@@ -68,10 +89,26 @@ impl Block for UnitDelay {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, f64::from_bits(region[0]), emit); // the prior sample, held since last tick
+        emit_real(0, f64::from_bits(region[UNIT_DELAY_HELD_WORD]), emit);
     }
-    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        region[0] = read_real(inputs, 0).to_bits(); // latch the current input for next tick
+    fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        let period = valid_sample_period(self.sample_period);
+        if !word_bool(region[UNIT_DELAY_INITIALIZED_WORD]) {
+            let t0 = initial_sample_time(ctx.t(), period);
+            let (_, index) = sample_due(ctx.t(), t0, period, -1);
+            region[UNIT_DELAY_HELD_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            region[UNIT_DELAY_T0_WORD] = t0.to_bits();
+            region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(index);
+            region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(true);
+            return;
+        }
+        let t0 = f64::from_bits(region[UNIT_DELAY_T0_WORD]);
+        let last = word_i64(region[UNIT_DELAY_LAST_INDEX_WORD]);
+        let (due, index) = sample_due(ctx.t(), t0, period, last);
+        if due {
+            region[UNIT_DELAY_HELD_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(index);
+        }
     }
 }
 
