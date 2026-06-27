@@ -1,0 +1,9 @@
+#1
+# columns: time discharge_pressure_setpoint
+double G36_multizone_vav_return_fan_direct_pressure_discharge_pressure_setpoint(6,2)
+0.0 0.0
+1.0 2.3999999999999986
+2.0 2.3999999999999986
+3.0 21.199999999999946
+4.0 2.3999999999999986
+5.0 40.0

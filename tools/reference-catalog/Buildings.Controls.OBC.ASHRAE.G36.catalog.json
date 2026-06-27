@@ -269,14 +269,14 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar no-fan relief damper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switch; ReliefFanGroup, ReturnFanDirectPressure, FreezeProtection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar no-fan relief damper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switch; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar single-relief-fan control with relFanSpe_min=0.1, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), P-only controllerType=P, reverseActing=false, damper latch/timer cone, and relief-fan start/stop timers; ReliefFanGroup, ReturnFanDirectPressure, freeze-protection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar single-relief-fan control with relFanSpe_min=0.1, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), P-only controllerType=P, reverseActing=false, damper latch/timer cone, and relief-fan start/stop timers; ReliefFanGroup, freeze-protection, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
@@ -289,13 +289,14 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar return-fan airflow-tracking control with difFloSet=1 m3/s, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, minSpe=0, maxSpe=1, and supply-fan proof switching return-fan speed to zero; ReturnFanDirectPressure, ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar return-fan airflow-tracking control with difFloSet=1 m3/s, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, minSpe=0, maxSpe=1, and supply-fan proof switching return-fan speed to zero; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar direct-pressure return-fan control with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, MovingAverage(delta=300), default PID reverseActing=true, and supply-fan/minimum-outdoor-air-damper switching; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
@@ -456,6 +457,24 @@
       ]
     },
     {
+      "name": "multizone_vav_return_fan_direct_pressure",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure",
+      "supported_variant": "source-verified explicit CXF for scalar ReturnFanDirectPressure with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, and supply-fan/minimum-outdoor-air-damper switching",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_return_fan_direct_pressure.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_return_fan_direct_pressure.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_return_fan_direct_pressure/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_return_fan_direct_pressure_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar ReturnFanDirectPressure composite, not arbitrary Modelica parsing.",
+        "The supported variant covers MovingAverage(delta=300), default PI PID semantics with reverseActing=true, relief-damper modulation gated by u1MinOutAirDam AND u1SupFan, discharge pressure setpoint switching, return-fan speed mapping from the pressure setpoint, and source boundary alias y1RetFan = u1SupFan through an explicit Boolean identity bridge in the fixture.",
+        "The oracle covers fan-off switching, minimum-outdoor-air damper disabling only yRelDam, damper modulation, lower/interior/upper pressure and speed line clamps, and direct return-fan proof status."
+      ]
+    },
+    {
       "name": "multizone_vav_plant_requests",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
@@ -535,7 +554,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu",
-      "source_child_count": 15,
+      "fixture_top_child_count": 15,
       "active_block_count": 15,
       "input_count": 5,
       "output_count": 4,
@@ -557,7 +576,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_relief_damper",
-      "source_child_count": 6,
+      "fixture_top_child_count": 6,
       "active_block_count": 6,
       "input_count": 2,
       "output_count": 1,
@@ -569,7 +588,7 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup logic, ReturnFanDirectPressure, alternate PID controller types, or non-default ReliefDamper parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup logic, alternate PID controller types, or non-default ReliefDamper parameterizations."
       ]
     },
     {
@@ -579,7 +598,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_relief_fan",
-      "source_child_count": 19,
+      "fixture_top_child_count": 19,
       "active_block_count": 19,
       "input_count": 2,
       "output_count": 4,
@@ -591,7 +610,7 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including logical boundary-input fanout, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, ReturnFanDirectPressure, FreezeProtection, alternate PID controller types, or non-default ReliefFan parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate PID controller types, or non-default ReliefFan parameterizations."
       ]
     },
     {
@@ -601,7 +620,9 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking",
-      "source_child_count": 7,
+      "fixture_top_child_count": 7,
+      "source_declared_child_count": 5,
+      "bridge_block_count": 2,
       "active_block_count": 7,
       "input_count": 3,
       "output_count": 2,
@@ -614,7 +635,32 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including a Boolean identity bridge for y1RetFan = u1SupFan, independent oracle matching, and determinism golden coverage.",
         "The fixture has five source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias as an executable output point.",
-        "Evidence does not claim arbitrary .mo parsing, ReturnFanDirectPressure, ReliefFanGroup staging, FreezeProtection, alternate controller types, or non-default ReturnFanAirflowTracking parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate controller types, or non-default ReturnFanAirflowTracking parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_return_fan_direct_pressure",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure",
+      "fixture_top_child_count": 23,
+      "source_declared_child_count": 21,
+      "bridge_block_count": 2,
+      "active_block_count": 23,
+      "input_count": 3,
+      "output_count": 5,
+      "supported_variant": "explicit CXF source transcription for scalar ReturnFanDirectPressure with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, and supply-fan/minimum-outdoor-air-damper switching",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_return_fan_direct_pressure.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_return_fan_direct_pressure.rs",
+      "api_test": "crates/oce-api/tests/g36_return_fan_direct_pressure.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including logical boundary-input fanout, independent oracle matching, and determinism golden coverage.",
+        "The fixture has 21 source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias y1RetFan = u1SupFan as an executable output point.",
+        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate controller types, or non-default ReturnFanDirectPressure parameterizations."
       ]
     },
     {
@@ -624,7 +670,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_plant_requests",
-      "source_child_count": 32,
+      "fixture_top_child_count": 32,
       "active_block_count": 32,
       "input_count": 4,
       "output_count": 4,
@@ -646,7 +692,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
       "top_id": "http://example.org#g36.source.trim_and_respond_have_hol_false",
-      "source_child_count": 45,
+      "fixture_top_child_count": 45,
       "active_block_count": 44,
       "input_count": 3,
       "output_count": 1,
@@ -668,7 +714,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_supply_temperature",
-      "source_child_count": 19,
+      "fixture_top_child_count": 19,
       "active_block_count": 62,
       "input_count": 4,
       "output_count": 1,
@@ -697,7 +743,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_supply_fan",
-      "source_child_count": 23,
+      "fixture_top_child_count": 23,
       "active_block_count": 65,
       "input_count": 3,
       "output_count": 2,
@@ -726,7 +772,7 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_supply_signals",
-      "source_child_count": 9,
+      "fixture_top_child_count": 9,
       "active_block_count": 9,
       "input_count": 3,
       "output_count": 3,

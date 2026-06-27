@@ -1,0 +1,9 @@
+#1
+# columns: time averaged_building_pressure
+double G36_multizone_vav_return_fan_direct_pressure_averaged_building_pressure(6,2)
+0.0 0.0
+1.0 9.000000000000002
+2.0 15.000000000000002
+3.0 3.0
+4.0 36.0
+5.0 -24.0

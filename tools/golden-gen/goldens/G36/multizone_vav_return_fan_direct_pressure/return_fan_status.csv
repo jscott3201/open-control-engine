@@ -1,0 +1,9 @@
+#1
+# columns: time return_fan_status
+double G36_multizone_vav_return_fan_direct_pressure_return_fan_status(6,2)
+0.0 0.0
+1.0 1.0
+2.0 1.0
+3.0 1.0
+4.0 1.0
+5.0 1.0

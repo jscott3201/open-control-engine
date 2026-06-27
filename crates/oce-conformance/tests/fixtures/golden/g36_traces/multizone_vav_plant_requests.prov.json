@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "c2ea22fbf643c396db46647307e94afc58b2042d",
+  "engine_rev": "3c231792e2ff8d1a8cf51b185dd486596113d2b9",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq",
     "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq",

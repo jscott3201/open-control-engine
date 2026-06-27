@@ -552,7 +552,7 @@ fn validate_composite_import_fixture_shape(
     assert_usize_field(
         top.contains_block.len(),
         entry,
-        "source_child_count",
+        "fixture_top_child_count",
         fixture,
         errors,
     );
