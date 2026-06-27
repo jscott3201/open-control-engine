@@ -134,6 +134,28 @@ const SOURCE_RAMP_NEGATIVE_HEIGHT_PARAMS: &[Param] = &[
         value: ParamValue::Real("-1.0"),
     },
 ];
+const SOURCE_PULSE_PARAMS: &[Param] = &[
+    Param {
+        name: "amplitude",
+        value: ParamValue::Real("2.0"),
+    },
+    Param {
+        name: "width",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "period",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("0.0"),
+    },
+    Param {
+        name: "offset",
+        value: ParamValue::Real("0.2"),
+    },
+];
 const ROUND_N_TWO: &[Param] = &[Param {
     name: "n",
     value: ParamValue::Integer("2"),
@@ -350,6 +372,14 @@ const CASES: &[BlockCase] = &[
         "Sources/CivilTime",
         &[],
         &[],
+        REAL_Y,
+    ),
+    case(
+        "reals_source_pulse",
+        "CDL.Reals.Sources.Pulse",
+        "Sources/Pulse",
+        &[],
+        SOURCE_PULSE_PARAMS,
         REAL_Y,
     ),
     case(

@@ -251,16 +251,15 @@ fn registry_constructs_logical_conversion_and_integer_classes() {
 }
 
 #[test]
-fn deferred_vector_and_pulse_blocks_remain_unregistered() {
+fn deferred_vector_blocks_remain_unregistered() {
     for path in [
         "CDL.Logical.MultiAnd",
         "CDL.Logical.MultiOr",
         "CDL.Integers.MultiSum",
-        "CDL.Logical.Sources.Pulse",
     ] {
         assert!(
             lookup(path).is_none(),
-            "{path} remains explicitly deferred until vector gathering or time-source support lands"
+            "{path} remains explicitly deferred until vector gathering support lands"
         );
     }
 }

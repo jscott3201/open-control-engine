@@ -39,6 +39,7 @@ mod reals_integrator;
 mod reals_ramp;
 mod reals_sources;
 mod registry;
+mod source_pulse;
 mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
@@ -69,6 +70,7 @@ pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CivilTime, SourceRamp};
 pub use registry::lookup;
+pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use utilities::Assert;
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -400,6 +402,9 @@ mod reals_ramp_tests;
 
 #[cfg(test)]
 mod reals_sources_tests;
+
+#[cfg(test)]
+mod source_pulse_tests;
 
 #[cfg(test)]
 mod discrete_tests;

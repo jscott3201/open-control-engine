@@ -1,0 +1,18 @@
+{
+  "class_path": "CDL.Reals.Sources.Pulse",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "amplitude=2, width=0.5, period=1, shift=0, offset=0.2",
+  "reference_rule": "Buildings Reals/Sources/Pulse.mo composite: Logical.Sources.Pulse -> BooleanToReal(realTrue=offset+amplitude, realFalse=offset)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

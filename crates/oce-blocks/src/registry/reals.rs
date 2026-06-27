@@ -5,7 +5,8 @@ use crate::reals_sources::MIN_SOURCE_RAMP_DURATION;
 use crate::{
     Abs, Add, AddParameter, Average, Block, CivilTime, Constant, Divide, Greater, GreaterThreshold,
     Hysteresis, Less, LessThreshold, Limiter, Line, Max, Min, Modulo, Multiply,
-    MultiplyByParameter, ParamRule, RegistryEntry, Round, SourceRamp, Sqrt, Subtract, Switch,
+    MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, SourceRamp, Sqrt, Subtract,
+    Switch,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -16,6 +17,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.CivilTime",
         make: make_civil_time,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.Pulse",
+        make: make_real_pulse,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Sources.Ramp",
@@ -134,6 +139,16 @@ fn make_constant(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_civil_time(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(CivilTime)
+}
+
+fn make_real_pulse(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(RealPulse {
+        amplitude: real_param(p, "amplitude", 1.0),
+        width: real_param(p, "width", 0.5),
+        period: real_param(p, "period", 1.0),
+        shift: real_param(p, "shift", 0.0),
+        offset: real_param(p, "offset", 0.0),
+    })
 }
 
 fn make_source_ramp(p: &ParamTable) -> Box<dyn Block> {

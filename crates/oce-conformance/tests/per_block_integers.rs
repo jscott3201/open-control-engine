@@ -66,6 +66,28 @@ const K_NEG_12345: &[Param] = &[Param {
     name: "k",
     value: ParamValue::Integer("-12345"),
 }];
+const SOURCE_PULSE_NEGATIVE_SHIFT_PARAMS: &[Param] = &[
+    Param {
+        name: "amplitude",
+        value: ParamValue::Integer("3"),
+    },
+    Param {
+        name: "width",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "period",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "shift",
+        value: ParamValue::Real("-1.25"),
+    },
+    Param {
+        name: "offset",
+        value: ParamValue::Integer("-2"),
+    },
+];
 const T_10: &[Param] = &[Param {
     name: "t",
     value: ParamValue::Integer("10"),
@@ -363,6 +385,14 @@ const CASES: &[BlockCase] = &[
         "Sources/Constant",
         &[],
         K_NEG_12345,
+        INTEGER_Y,
+    ),
+    case(
+        "integers_source_pulse_negative_shift",
+        "CDL.Integers.Sources.Pulse",
+        "Sources/Pulse",
+        &[],
+        SOURCE_PULSE_NEGATIVE_SHIFT_PARAMS,
         INTEGER_Y,
     ),
 ];

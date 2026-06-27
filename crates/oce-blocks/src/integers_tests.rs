@@ -1,6 +1,7 @@
 //! Exact algebraic tests for `CDL.Integers` blocks.
 //! Expected values are derived directly from `_spec/03` §4.2–§4.4 and compared bit-exactly.
 
+#[cfg(debug_assertions)]
 use std::sync::Arc;
 
 use oce_model::Value;

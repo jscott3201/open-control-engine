@@ -2,14 +2,18 @@ use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
 use crate::{
-    And, Block, Edge, LogicalConstant, LogicalSwitch, Nand, Nor, Not, Or, ParamRule, Pre,
-    RegistryEntry, SampleTrigger, Xor,
+    And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, Nand, Nor, Not, Or, ParamRule,
+    Pre, RegistryEntry, SampleTrigger, Xor,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Sources.Constant",
         make: make_logical_constant,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Sources.Pulse",
+        make: make_logical_pulse,
     },
     RegistryEntry {
         class_path: "CDL.Logical.And",
@@ -64,6 +68,14 @@ pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {
         k: bool_param(p, "k", false),
+    })
+}
+
+fn make_logical_pulse(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(LogicalPulse {
+        width: real_param(p, "width", 0.5),
+        period: real_param(p, "period", 1.0),
+        shift: real_param(p, "shift", 0.0),
     })
 }
 

@@ -1,0 +1,11 @@
+#1
+# columns: time y
+double CDL_Logical_Sources_Pulse_width_one_reference(8,2)
+-10.0 1.0
+-1.4 1.0
+-1.0 1.0
+0.0 1.0
+0.6 1.0
+1.0 1.0
+2.6 1.0
+9.0 1.0

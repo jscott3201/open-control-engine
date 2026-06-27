@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use oce_model::{ParamTable, SimpleController, Value};
 
+use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
 
 mod conversions;
@@ -37,6 +38,9 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
+        "CDL.Logical.Sources.Pulse" | "CDL.Reals.Sources.Pulse" | "CDL.Integers.Sources.Pulse" => {
+            SOURCE_PULSE_PARAM_RULES
+        }
         "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
