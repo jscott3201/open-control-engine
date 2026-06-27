@@ -16,6 +16,8 @@ const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
 const SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
+const SUPPLY_FAN: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 
@@ -48,6 +50,14 @@ const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
 const SUPPLY_TEMPERATURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
 const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
+const SUPPLY_FAN_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
+const SUPPLY_FAN_DUCT_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
+const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
+const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#110";
+const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#107";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
@@ -96,6 +106,15 @@ const SUPPLY_TEMPERATURE_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::real(
     "supply_air_temperature_setpoint",
     SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
 )];
+const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
+    PointSpec::integer("operating_mode", SUPPLY_FAN_OPERATING_MODE),
+    PointSpec::real("duct_static_pressure", SUPPLY_FAN_DUCT_PRESSURE),
+    PointSpec::integer("zone_pressure_reset_requests", SUPPLY_FAN_PRESSURE_REQUESTS),
+];
+const SUPPLY_FAN_EXACT_OUTPUTS: &[PointSpec] = &[
+    PointSpec::boolean("supply_fan_status", SUPPLY_FAN_STATUS_RUNTIME),
+    PointSpec::real("supply_fan_speed", SUPPLY_FAN_SPEED_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -128,6 +147,14 @@ const SEQUENCES: &[SequenceSpec] = &[
         t_stop: 900,
         inputs: SUPPLY_TEMPERATURE_INPUTS,
         exact_outputs: SUPPLY_TEMPERATURE_EXACT_OUTPUTS,
+        masked_outputs: &[],
+    },
+    SequenceSpec {
+        name: "multizone_vav_supply_fan",
+        cxf: SUPPLY_FAN,
+        t_stop: 900,
+        inputs: SUPPLY_FAN_INPUTS,
+        exact_outputs: SUPPLY_FAN_EXACT_OUTPUTS,
         masked_outputs: &[],
     },
 ];

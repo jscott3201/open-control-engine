@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "89be178c1cf2503d551d9a2ce9e69553d87d2c9f",
+  "engine_rev": "63b56a510b0927568f8381f3f1ec8d6b38607f8e",
   "reference_columns": [
     "http://example.org#g36.vav_single_zone.damper_command",
     "http://example.org#g36.vav_single_zone.airflow_setpoint",

@@ -4,6 +4,7 @@
   "depends_on_oce_blocks": true,
   "engine_rev": "63b56a510b0927568f8381f3f1ec8d6b38607f8e",
   "reference_columns": [
-    "http://example.org#g36.source.multizone_vav_supply_temperature.TAirSupSet"
+    "http://example.org#g36.source.multizone_vav_supply_fan.y1SupFan",
+    "http://example.org#g36.source.multizone_vav_supply_fan.ySupFan"
   ]
 }

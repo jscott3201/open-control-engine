@@ -13,6 +13,8 @@ const VAV_SINGLE_ZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld");
 const SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
+const SUPPLY_FAN: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
@@ -32,6 +34,12 @@ const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
 const SUPPLY_TEMPERATURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
+const SUPPLY_FAN_OPERATING_MODE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
+const SUPPLY_FAN_DUCT_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
+const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
@@ -257,6 +265,26 @@ fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
     ]
 }
 
+fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
+    let operating_mode = match t as u32 {
+        300..=359 => 4,
+        _ => 1,
+    };
+    let requests = if t >= 840.0 {
+        5
+    } else if t >= 720.0 {
+        3
+    } else {
+        0
+    };
+    let duct_pressure = if t >= 720.0 { 80.0 } else { 120.0 };
+    vec![
+        pair(SUPPLY_FAN_OPERATING_MODE, Value::Integer(operating_mode)),
+        pair(SUPPLY_FAN_DUCT_PRESSURE, Value::Real(duct_pressure)),
+        pair(SUPPLY_FAN_PRESSURE_REQUESTS, Value::Integer(requests)),
+    ]
+}
+
 #[test]
 fn ahu_supply_air_temp_reset_loads_simulates_and_is_deterministic() {
     let (engine, _) = load(AHU_SAT_RESET, 7, 0);
@@ -352,6 +380,60 @@ fn multizone_vav_supply_temperature_loads_simulates_and_is_deterministic() {
     assert!(
         real_at(&metrics_a, sat_setpoint, 840) < real_at(&metrics_a, sat_setpoint, 839),
         "larger request count should apply a larger negative response"
+    );
+}
+
+#[test]
+fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
+    let (engine, _) = load(SUPPLY_FAN, 65, 7);
+    let outputs = [
+        OutputRef {
+            label: "supply_fan_speed",
+            ordinal: 44,
+        },
+        OutputRef {
+            label: "supply_fan_status",
+            ordinal: 45,
+        },
+    ];
+    let (schedule_a, paths, metrics_a) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_fan_inputs)),
+        &outputs,
+        900.0,
+    );
+
+    let (engine, _) = load(SUPPLY_FAN, 65, 7);
+    let (schedule_b, paths_b, metrics_b) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_fan_inputs)),
+        &outputs,
+        900.0,
+    );
+
+    assert_eq!(paths, paths_b);
+    assert_eq!(
+        schedule_a, schedule_b,
+        "SupplyFan schedule is deterministic"
+    );
+    assert_trace_bit_eq(&metrics_a, &metrics_b);
+    let fan_speed = paths[0].as_str();
+    let fan_status = paths[1].as_str();
+    assert_real_bounds(&metrics_a, fan_speed, 0.0, 1.0);
+    assert!(bool_at(&metrics_a, fan_status, 0));
+    assert!(!bool_at(&metrics_a, fan_status, 300));
+    assert!(bool_at(&metrics_a, fan_status, 360));
+    assert_eq!(
+        real_at(&metrics_a, fan_speed, 300).to_bits(),
+        0.0f64.to_bits()
+    );
+    assert!(
+        real_at(&metrics_a, fan_speed, 360) >= 0.1,
+        "occupied mode after warm-up should restore at least minSpe"
+    );
+    assert!(
+        real_at(&metrics_a, fan_speed, 840) > real_at(&metrics_a, fan_speed, 719),
+        "larger pressure reset requests and lower duct pressure should increase fan speed"
     );
 }
 

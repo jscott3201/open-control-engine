@@ -9,11 +9,14 @@ const G36_TRIM_AND_RESPOND: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
 const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
+const G36_SUPPLY_FAN: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 const FANOUT_INPUT: &str = "http://example.org#g36.profile.boundary_fanout.u";
 const INPUT: &str = "http://example.org#g36.profile.nested_composite.u";
 const G36_TRIM_MODEL: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false";
 const G36_SUPPLY_TEMPERATURE_MODEL: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature";
+const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
@@ -217,5 +220,89 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
             .expect("SupplyTemperature output exists")
             .bit_eq(&Value::Real(299.15)),
         "fan-off branch should emit the source deadband temperature"
+    );
+}
+
+#[test]
+fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
+    let mut engine = Engine::in_memory();
+    let report = engine
+        .load_cxf(G36_SUPPLY_FAN.as_bytes())
+        .expect("source-verified G36 SupplyFan CXF fixture loads");
+    assert_eq!(report.block_count, 65);
+    assert_eq!(report.stateful_blocks, 7);
+    assert!(
+        report.warnings.is_empty(),
+        "fixture should not warn: {:?}",
+        report.warnings
+    );
+
+    let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
+    let operating_mode = format!("{G36_SUPPLY_FAN_MODEL}.uOpeMod");
+    let duct_pressure = format!("{G36_SUPPLY_FAN_MODEL}.dpDuc");
+    let pressure_requests = format!("{G36_SUPPLY_FAN_MODEL}.uZonPreResReq");
+    let hold = format!("{G36_SUPPLY_FAN_MODEL}.staPreSetRes.uHol");
+    for required in [&operating_mode, &duct_pressure, &pressure_requests] {
+        assert!(paths.contains(required), "missing facade input {required}");
+    }
+    assert!(
+        !paths.contains(&hold),
+        "inactive nested have_hol=false optional input should not survive facade IO export"
+    );
+
+    let fan_speed = "conn#107";
+    let fan_status = "conn#110";
+    for output in [fan_speed, fan_status] {
+        assert!(
+            paths.contains(&output.to_owned()),
+            "SupplyFan output alias {output} should be visible"
+        );
+    }
+
+    engine
+        .set_input(&operating_mode, Value::Integer(1))
+        .expect("operating mode stages");
+    engine
+        .set_input(&duct_pressure, Value::Real(120.0))
+        .expect("duct pressure stages");
+    engine
+        .set_input(&pressure_requests, Value::Integer(0))
+        .expect("pressure reset requests stage");
+    engine.tick(0.0).expect("SupplyFan model ticks");
+    assert!(
+        engine
+            .get_output(fan_status)
+            .expect("SupplyFan status output exists")
+            .bit_eq(&Value::Boolean(true)),
+        "occupied/setup/cooldown modes should enable the fan in the default no-perimeter variant"
+    );
+    match engine
+        .get_output(fan_speed)
+        .expect("SupplyFan speed output exists")
+    {
+        Value::Real(value) => assert!(
+            (0.1..=1.0).contains(&value),
+            "enabled fan speed should stay within [minSpe,maxSpe], got {value}"
+        ),
+        other => panic!("SupplyFan speed output must be Real, got {other:?}"),
+    }
+
+    engine
+        .set_input(&operating_mode, Value::Integer(4))
+        .expect("operating mode stages");
+    engine.tick(1.0).expect("SupplyFan model ticks");
+    assert!(
+        engine
+            .get_output(fan_status)
+            .expect("SupplyFan status output exists")
+            .bit_eq(&Value::Boolean(false)),
+        "warm-up mode should leave the default no-perimeter fan disabled"
+    );
+    assert!(
+        engine
+            .get_output(fan_speed)
+            .expect("SupplyFan speed output exists")
+            .bit_eq(&Value::Real(0.0)),
+        "fan-off branch should force zero fan speed"
     );
 }
