@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Reals.Sources.TimeTable",
+  "scenario": "periodic_scaled",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "scenario=periodic_scaled; table=[0,0;1,10;2,20], timeScale=2, extrapolation=Periodic",
+  "reference_rule": "Periodic Reals TimeTable repeats the scaled table time range; timeScale multiplies first-column times before lookup",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

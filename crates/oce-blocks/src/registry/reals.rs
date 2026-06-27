@@ -2,13 +2,14 @@ use oce_model::ParamTable;
 
 use super::{bool_param, int_param, real_param, zero_time_param};
 use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
+use crate::source_timetable::{EXTRAPOLATION_MEMBERS, SMOOTHNESS_MEMBERS};
 use crate::{
     Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CalendarTime, CivilTime,
     Constant, Cos, Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold,
     Limiter, Line, Log, Log10, MAX_RESOLVED_PORT_WIDTH, MatrixGain, MatrixMax, MatrixMin,
     MatrixReductionAxis, Max, Min, Modulo, MultiMax, MultiMin, MultiSum, Multiply,
-    MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, Sin, Sort, SourceRamp,
-    SourceSin, Sqrt, Subtract, Switch, Tan,
+    MultiplyByParameter, ParamRule, RealPulse, RealTimeTable, RegistryEntry, Round, Sin, Sort,
+    SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan, TimeTableValues,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -35,6 +36,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.CalendarTime",
         make: make_calendar_time,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.TimeTable",
+        make: make_real_time_table,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Add",
@@ -235,6 +240,32 @@ pub(super) const CALENDAR_TIME_PARAM_RULES: &[ParamRule] = &[
     ParamRule::RealFinite { name: "offset" },
 ];
 
+pub(super) const REAL_TIMETABLE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::TimeTableMatrix {
+        base: "table",
+        values: TimeTableValues::Real,
+        time_scale: "timeScale",
+        period: None,
+        extrapolation: Some("extrapolation"),
+    },
+    ParamRule::TimeTableOffset {
+        base: "offset",
+        table: "table",
+    },
+    ParamRule::EnumMembers {
+        name: "smoothness",
+        members: SMOOTHNESS_MEMBERS,
+    },
+    ParamRule::EnumMembers {
+        name: "extrapolation",
+        members: EXTRAPOLATION_MEMBERS,
+    },
+    ParamRule::RealFiniteGreaterThan {
+        name: "timeScale",
+        min: 0.0,
+    },
+];
+
 pub(super) const MULTI_REAL_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Structural { name: "nin" },
     ParamRule::IntegerGreaterOrEqual {
@@ -414,6 +445,10 @@ fn make_calendar_time(p: &ParamTable) -> Box<dyn Block> {
         year_ref: int_param(p, "yearRef", 2016),
         offset: real_param(p, "offset", 0.0),
     })
+}
+
+fn make_real_time_table(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(RealTimeTable::from_params(p))
 }
 
 fn make_add(_p: &ParamTable) -> Box<dyn Block> {

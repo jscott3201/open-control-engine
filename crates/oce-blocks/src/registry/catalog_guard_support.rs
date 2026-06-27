@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "9599c3c9aa4aaa07";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "7135fc53e40d3075";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -54,6 +54,7 @@ pub(super) const EXPECTED_DRIFT_SOURCE_FILES: &[&str] =
     &["Buildings/Resources/Scripts/Conversion/ConvertBuildings_from_10_to_11.0.0.mos"];
 pub(super) const EXPECTED_EXTERNAL_SOURCE_FILES: &[&str] = &[
     "Buildings/package.mo",
+    "Modelica/Blocks/Sources.mo",
     "Modelica/Constants.mo",
     "Modelica/Math/package.mo",
     "ModelicaServices/package.mo",
@@ -94,13 +95,13 @@ pub(super) fn validate_catalog(
         .iter()
         .filter(|entry| entry.status == "missing")
         .count();
-    if implemented.len() != 129 {
+    if implemented.len() != 132 {
         errors.push(format!(
             "implemented-reference-count: {}",
             implemented.len()
         ));
     }
-    if missing_count != 3 {
+    if missing_count != 0 {
         errors.push(format!("missing-reference-count: {missing_count}"));
     }
 

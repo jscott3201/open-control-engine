@@ -1,0 +1,18 @@
+{
+  "class_path": "CDL.Integers.Sources.TimeTable",
+  "signal": "y2",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 6,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y1", "y2"],
+  "inputs": [],
+  "input": "table=[0,-2,7;2,3,8;5,4,9], period=6; periodic step lookup with 1e-6 timestamp guard",
+  "reference_rule": "Buildings Integers/Sources/TimeTable.mo: tS=mod(time,period); choose last timestamp with tS >= timeStamp - 1e-6; y=integer(table+small)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

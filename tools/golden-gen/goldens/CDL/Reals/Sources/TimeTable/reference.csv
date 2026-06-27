@@ -1,0 +1,8 @@
+#1
+# columns: time y1 y2
+double CDL_Reals_Sources_TimeTable_reference(5,3)
+-1.0 0.5 -1.0
+0.0 0.5 9.0
+1.0 1.5 29.0
+1.5 3.0 34.0
+4.0 14.5 59.0

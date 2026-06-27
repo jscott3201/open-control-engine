@@ -14,5 +14,6 @@ mod params_sources;
 mod reals_matrix;
 mod routing_real;
 mod routing_typed;
+mod source_timetable;
 mod structural;
 mod unification;

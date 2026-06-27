@@ -50,6 +50,7 @@ mod routing;
 mod routing_boolean;
 mod routing_integer;
 mod source_pulse;
+mod source_timetable;
 mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
@@ -98,6 +99,9 @@ pub use routing_integer::{
     IntegerVectorReplicator,
 };
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
+pub use source_timetable::{
+    IntegerTimeTable, LogicalTimeTable, RealTimeTable, TimeTableExtrapolation, TimeTableSmoothness,
+};
 pub use utilities::{Assert, SunRiseSet};
 
 /// Wall-clock-free model time in seconds, chosen by the host scheduler (CDL §7.16; `01` §8).
@@ -326,6 +330,17 @@ pub trait Block: Send + Sync {
     fn update_state(&self, _ctx: &Ctx<'_>, _inputs: &[Value], _region: &mut [u64]) {}
 }
 
+/// Output-column kind expected for a flattened `CDL.*.Sources.TimeTable` matrix.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TimeTableValues {
+    /// Output columns are numeric Real values.
+    Real,
+    /// Output columns must be integer-valued Reals.
+    Integer,
+    /// Output columns must be `0`/`1` Boolean encodings.
+    Boolean,
+}
+
 /// A class-level parameter validation rule published by the block registry.
 ///
 /// Rules are static metadata for resolved block parameters: `oce-validate` uses them at load time,
@@ -458,6 +473,34 @@ pub enum ParamRule {
         cols: &'static str,
         /// Source default column count when `cols` is omitted.
         default_cols: i64,
+    },
+    /// Flattened source `TimeTable` matrix elements must form a complete rectangular table.
+    ///
+    /// Flattened names use one-based row-major keys such as `table_1_1`, `table_1_2`, ...
+    /// The first column is model time; remaining columns carry typed outputs. `period` is present
+    /// only for periodic Integer/Logical sources; `extrapolation` is present only for the Real
+    /// source so validation can reject a degenerate periodic range.
+    TimeTableMatrix {
+        /// Flattened matrix base name, normally `"table"`.
+        base: &'static str,
+        /// Required value kind for output columns.
+        values: TimeTableValues,
+        /// Time-scale parameter name.
+        time_scale: &'static str,
+        /// Optional period parameter name for periodic step tables.
+        period: Option<&'static str>,
+        /// Optional extrapolation parameter name for Real tables.
+        extrapolation: Option<&'static str>,
+    },
+    /// Present members of a flattened TimeTable offset vector must be numeric and in shape.
+    ///
+    /// The valid vector length is inferred from the resolved table matrix column count as
+    /// `size(table, 2)-1`. Missing members use the CDL source default `0`.
+    TimeTableOffset {
+        /// Flattened offset vector base name, normally `"offset"`.
+        base: &'static str,
+        /// Flattened table matrix base name that defines the output count.
+        table: &'static str,
     },
     /// Present members of a flattened Boolean array parameter must be Boolean values.
     BooleanArrayElements {
@@ -694,6 +737,9 @@ mod reals_sources_tests;
 
 #[cfg(test)]
 mod source_pulse_tests;
+
+#[cfg(test)]
+mod source_timetable_tests;
 
 #[cfg(test)]
 mod discrete_tests;

@@ -68,12 +68,11 @@
       "implemented": {
         "golden_manifest": [
           "Constant",
-          "Pulse"
+          "Pulse",
+          "TimeTable"
         ]
       },
-      "missing": [
-        "TimeTable"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Logical",
@@ -113,15 +112,14 @@
       "implemented": {
         "golden_manifest": [
           "Pulse",
-          "SampleTrigger"
+          "SampleTrigger",
+          "TimeTable"
         ],
         "legacy_evidence_exemption": [
           "Constant"
         ]
       },
-      "missing": [
-        "TimeTable"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Psychrometrics",
@@ -201,12 +199,11 @@
           "Constant",
           "Pulse",
           "Ramp",
-          "Sin"
+          "Sin",
+          "TimeTable"
         ]
       },
-      "missing": [
-        "TimeTable"
-      ]
+      "missing": []
     },
     {
       "package": "CDL.Routing",

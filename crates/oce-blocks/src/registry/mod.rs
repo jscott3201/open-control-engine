@@ -41,6 +41,7 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
+        "CDL.Logical.Sources.TimeTable" => logical::TIME_TABLE_PARAM_RULES,
         "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => logical::MULTI_LOGICAL_PARAM_RULES,
         "CDL.Logical.Sources.Pulse" | "CDL.Reals.Sources.Pulse" | "CDL.Integers.Sources.Pulse" => {
             SOURCE_PULSE_PARAM_RULES
@@ -48,6 +49,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_RULES,
         "CDL.Logical.VariablePulse" => logical_variable_pulse::VARIABLE_PULSE_PARAM_RULES,
         "CDL.Integers.MultiSum" => integers::MULTI_SUM_PARAM_RULES,
+        "CDL.Integers.Sources.TimeTable" => integers::TIME_TABLE_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
         "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => reals::MULTI_REAL_PARAM_RULES,
@@ -59,6 +61,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Sources.Ramp" => reals::SOURCE_RAMP_PARAM_RULES,
         "CDL.Reals.Sources.Sin" => reals::SOURCE_SIN_PARAM_RULES,
         "CDL.Reals.Sources.CalendarTime" => reals::CALENDAR_TIME_PARAM_RULES,
+        "CDL.Reals.Sources.TimeTable" => reals::REAL_TIMETABLE_PARAM_RULES,
         "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
         "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,

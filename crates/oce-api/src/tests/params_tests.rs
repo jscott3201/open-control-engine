@@ -78,6 +78,40 @@ fn matrix_gain_model() -> ModelGraph {
     model
 }
 
+fn real_time_table_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    mb.block(
+        "CDL.Reals.Sources.TimeTable",
+        &[],
+        &[ValueType::Real],
+        vec![
+            rp("table_1_1", 0.0),
+            rp("table_1_2", 1.0),
+            rp("table_2_1", 2.0),
+            rp("table_2_2", 5.0),
+            rp("offset_1", 0.0),
+        ],
+    );
+    mb.finish()
+}
+
+fn logical_time_table_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    mb.block(
+        "CDL.Logical.Sources.TimeTable",
+        &[],
+        &[ValueType::Boolean],
+        vec![
+            rp("table_1_1", 0.0),
+            rp("table_1_2", 0.0),
+            rp("table_2_1", 2.0),
+            rp("table_2_2", 1.0),
+            rp("period", 4.0),
+        ],
+    );
+    mb.finish()
+}
+
 fn real_extract_signal_model() -> ModelGraph {
     let mut mb = Mb::new();
     let (_, inputs, _) = mb.block(
@@ -311,6 +345,31 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
     ));
     eng.set_param("b0.K_1_1", Value::Real(2.0))
         .expect("MatrixGain K entries are value-only coefficient edits");
+}
+
+#[test]
+fn time_table_cells_are_editable_at_rest_but_typed_encodings_are_checked() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(real_time_table_model(), None)
+        .expect("valid Real TimeTable loads");
+    eng.halt().unwrap();
+    eng.set_param("b0.table_1_2", Value::Real(2.0))
+        .expect("Real TimeTable value cell is editable at rest");
+    eng.set_param("b0.table_1_1", Value::Real(-1.0))
+        .expect("Real TimeTable time cell is editable at rest");
+    eng.set_param("b0.offset_1", Value::Real(0.5))
+        .expect("Real TimeTable offset cell is editable at rest");
+
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(logical_time_table_model(), None)
+        .expect("valid Logical TimeTable loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.table_1_2", Value::Real(0.5)),
+        Err(OcError::ParamRange { .. })
+    ));
+    eng.set_param("b0.table_1_2", Value::Real(1.0))
+        .expect("Boolean-encoded table value remains editable when valid");
 }
 
 #[test]

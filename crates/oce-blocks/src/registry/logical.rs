@@ -1,9 +1,11 @@
 use oce_model::ParamTable;
 
 use super::{bool_param, int_param, real_param};
+use crate::source_timetable::MIN_TIMETABLE_PERIOD;
 use crate::{
-    And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, MAX_RESOLVED_PORT_WIDTH,
-    MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamRule, Pre, RegistryEntry, SampleTrigger, Xor,
+    And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, LogicalTimeTable,
+    MAX_RESOLVED_PORT_WIDTH, MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamRule, Pre, RegistryEntry,
+    SampleTrigger, TimeTableValues, Xor,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -14,6 +16,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Logical.Sources.Pulse",
         make: make_logical_pulse,
+    },
+    RegistryEntry {
+        class_path: "CDL.Logical.Sources.TimeTable",
+        make: make_logical_time_table,
     },
     RegistryEntry {
         class_path: "CDL.Logical.And",
@@ -85,6 +91,29 @@ pub(super) const MULTI_LOGICAL_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "period" },
+    ParamRule::TimeTableMatrix {
+        base: "table",
+        values: TimeTableValues::Boolean,
+        time_scale: "timeScale",
+        period: Some("period"),
+        extrapolation: None,
+    },
+    ParamRule::RealFiniteGreaterThan {
+        name: "timeScale",
+        min: 0.0,
+    },
+    ParamRule::RealFiniteGreaterThan {
+        name: "period",
+        min: 0.0,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "period",
+        min: MIN_TIMETABLE_PERIOD,
+    },
+];
+
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {
         k: bool_param(p, "k", false),
@@ -97,6 +126,10 @@ fn make_logical_pulse(p: &ParamTable) -> Box<dyn Block> {
         period: real_param(p, "period", 1.0),
         shift: real_param(p, "shift", 0.0),
     })
+}
+
+fn make_logical_time_table(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(LogicalTimeTable::from_params(p))
 }
 
 fn make_and(_p: &ParamTable) -> Box<dyn Block> {
