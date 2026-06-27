@@ -93,6 +93,36 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 ),
             }
         }
+        ParamRule::RealLessOrEqualWarning { lower, upper } => {
+            let (Some(lo), Some(hi)) = (
+                find_param(&blk.params, lower).map(real_value),
+                find_param(&blk.params, upper).map(real_value),
+            ) else {
+                return;
+            };
+            match (lo, hi) {
+                (Some(lo), Some(hi)) if real_less_or_equal(lo, hi) => {}
+                (Some(lo), Some(hi)) => diags.push(
+                    Diagnostic::warning(
+                        DiagCode::ParameterOutOfRange,
+                        format!(
+                            "parameters `{lower}` and `{upper}` on block `{}` should satisfy \
+                             {lower} <= {upper}; got {lo} > {hi}",
+                            blk.class_iri
+                        ),
+                    )
+                    .with_subject(block_subject_of(blk)),
+                ),
+                _ => push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameters `{lower}` and `{upper}` on block `{}` must both be numeric",
+                        blk.class_iri
+                    ),
+                ),
+            }
+        }
         ParamRule::RealEqualWarning { left, right } => {
             let (Some(left_value), Some(right_value)) = (
                 find_param(&blk.params, left).and_then(real_value),

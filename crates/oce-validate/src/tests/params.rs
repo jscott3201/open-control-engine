@@ -52,6 +52,31 @@ fn missing_required_sample_trigger_period_is_an_error() {
 }
 
 #[test]
+fn missing_required_proof_parameters_are_errors() {
+    let model = one_block_model(
+        "CDL.Logical.Proof",
+        &[ValueType::Boolean, ValueType::Boolean],
+        &[ValueType::Boolean, ValueType::Boolean],
+        vec![],
+    );
+    let err = validate(&model).expect_err("Proof debounce and feedbackDelay are required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![
+            DiagCode::MissingRequiredParameter,
+            DiagCode::MissingRequiredParameter,
+        ]
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.severity == Severity::Error)
+    );
+    assert!(err.diagnostics[0].message.contains("`debounce`"));
+    assert!(err.diagnostics[1].message.contains("`feedbackDelay`"));
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",
@@ -185,6 +210,20 @@ fn limiter_equal_bounds_are_a_warning_only() {
     assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
     assert_eq!(warnings[0].severity, Severity::Warning);
     assert!(warnings[0].message.contains("clamp to a constant"));
+}
+
+#[test]
+fn proof_feedback_delay_less_than_debounce_is_warning_only() {
+    let model = one_block_model(
+        "CDL.Logical.Proof",
+        &[ValueType::Boolean, ValueType::Boolean],
+        &[ValueType::Boolean, ValueType::Boolean],
+        vec![rp("debounce", 5.0), rp("feedbackDelay", 2.0)],
+    );
+    let warnings = validate(&model).expect("Proof source assert is warning-only");
+    assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(warnings[0].severity, Severity::Warning);
+    assert!(warnings[0].message.contains("debounce <= feedbackDelay"));
 }
 
 #[test]

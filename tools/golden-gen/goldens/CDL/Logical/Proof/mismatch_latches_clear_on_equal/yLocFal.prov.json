@@ -1,0 +1,23 @@
+{
+  "class_path": "CDL.Logical.Proof",
+  "scenario": "mismatch_latches_clear_on_equal",
+  "signal": "yLocFal",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0 (atoly=0)",
+  "n_samples": 7,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u_s", "u_m", "yLocFal", "yLocTru"],
+  "inputs": [
+    { "name": "u_s", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0] },
+    { "name": "u_m", "value_kind": "Boolean", "values": [0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0] }
+  ],
+  "input": "debounce=2, feedbackDelay=5; stable mismatches latch each alarm and stable equality clears on the same tick",
+  "reference_rule": "Buildings Proof.mo: measured stability via debounce TrueDelay pair; invalid timer threshold feedbackDelay+debounce; clear-dominant latch outputs clear on rising valid-equality edge",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -282,7 +282,9 @@ impl<S: Store> Engine<S> {
         };
         for rule in entry.param_rules() {
             match *rule {
-                ParamRule::Required { .. } | ParamRule::RealEqualWarning { .. } => {}
+                ParamRule::Required { .. }
+                | ParamRule::RealEqualWarning { .. }
+                | ParamRule::RealLessOrEqualWarning { .. } => {}
                 ParamRule::RealGreaterThan { name, min } if edited.name.as_ref() == name => {
                     let Some(v) = real_param_value(value) else {
                         return true;

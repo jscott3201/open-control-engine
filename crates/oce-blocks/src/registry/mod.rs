@@ -10,6 +10,7 @@ mod conversions;
 mod discrete;
 mod integers;
 mod logical;
+mod logical_proof;
 mod logical_timing;
 mod pid;
 mod reals;
@@ -35,6 +36,7 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
+        "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
         "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
@@ -51,6 +53,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     reals_filters::ENTRIES,
     pid::ENTRIES,
     logical::ENTRIES,
+    logical_proof::ENTRIES,
     logical_timing::ENTRIES,
     conversions::ENTRIES,
     integers::ENTRIES,

@@ -89,6 +89,7 @@
           "Latch",
           "Not",
           "Or",
+          "Proof",
           "Switch",
           "Timer",
           "TimerAccumulating",
@@ -106,7 +107,6 @@
       "missing": [
         "MultiAnd",
         "MultiOr",
-        "Proof",
         "VariablePulse"
       ]
     },
