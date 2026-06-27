@@ -24,6 +24,7 @@ mod reals_ramp;
 mod reals_scalar_arithmetic;
 mod reals_sources;
 mod reals_transcendental;
+mod reals_vector_reductions;
 mod sequences;
 mod source_pulse;
 mod utilities;
@@ -56,6 +57,7 @@ fn main() {
     goldens.extend(reals_sources::goldens());
     goldens.extend(reals_ramp::goldens());
     goldens.extend(reals_transcendental::goldens());
+    goldens.extend(reals_vector_reductions::goldens());
     goldens.extend(source_pulse::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(psychrometrics::goldens());

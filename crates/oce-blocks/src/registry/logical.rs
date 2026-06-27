@@ -74,6 +74,7 @@ pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const MULTI_LOGICAL_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nin" },
     ParamRule::IntegerGreaterOrEqual {
         name: "nin",
         min: 0,

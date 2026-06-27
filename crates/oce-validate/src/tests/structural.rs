@@ -435,6 +435,51 @@ fn t46_resolved_signature_checks_dynamic_vector_port_kind() {
 }
 
 #[test]
+fn reals_multi_reducer_resolved_signature_accepts_vector_width() {
+    let m = one_block_model(
+        "CDL.Reals.MultiSum",
+        &[ValueType::Real, ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    assert!(
+        validate(&m)
+            .expect("MultiSum nin=3 with three Real inputs is valid")
+            .is_empty()
+    );
+}
+
+#[test]
+fn reals_multi_reducer_resolved_signature_rejects_arity_mismatch() {
+    let m = one_block_model(
+        "CDL.Reals.MultiMin",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    let err = validate(&m).expect_err("MultiMin nin=3 requires three inputs");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0].message.contains("class requires 3/1"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn reals_multi_reducer_resolved_signature_checks_port_kind() {
+    let m = one_block_model(
+        "CDL.Reals.MultiMax",
+        &[ValueType::Real, ValueType::Boolean, ValueType::Real],
+        &[ValueType::Real],
+        vec![(Arc::from("nin"), Value::Integer(3))],
+    );
+    let err = validate(&m).expect_err("MultiMax input elements must all be Real");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::PortKindMismatch]);
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#1"));
+}
+
+#[test]
 fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
     // CXF resolve already rejects these shapes for documents. The pure validate seam must also reject
     // hand-built ModelGraph callers before oce-graph reaches emit/gather by port index.

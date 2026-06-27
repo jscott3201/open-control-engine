@@ -43,6 +43,7 @@ mod reals_integrator;
 mod reals_ramp;
 mod reals_sources;
 mod reals_transcendental;
+mod reals_vector_reductions;
 mod registry;
 mod source_pulse;
 mod utilities;
@@ -78,6 +79,7 @@ pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
 pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
+pub use reals_vector_reductions::{MultiMax, MultiMin, MultiSum};
 pub use registry::lookup;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use utilities::{Assert, SunRiseSet};
@@ -321,6 +323,15 @@ pub enum ParamRule {
         /// Parameter name as it appears in CDL / the resolved model.
         name: &'static str,
     },
+    /// The named parameter changes the block's resolved structure and cannot be edited at rest.
+    ///
+    /// Examples include vector widths such as `nin`, where changing the value changes the flattened
+    /// port arity and therefore requires rebuilding the model rather than resuming an existing
+    /// schedule.
+    Structural {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+    },
     /// The named parameter, when present, must be numeric and usable as a `Real`.
     Real {
         /// Parameter name as it appears in CDL / the resolved model.
@@ -365,6 +376,16 @@ pub enum ParamRule {
     /// source defaults for every omitted element. When a member is supplied, this rule rejects a
     /// non-integer value instead of letting the constructor silently fall back to that default.
     IntegerArrayElements {
+        /// Flattened array base name, for example `"k"` matching `k_1`, `k_2`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved array length.
+        len: &'static str,
+    },
+    /// Present members of a flattened real array parameter must be numeric values usable as `Real`.
+    ///
+    /// Like [`ParamRule::IntegerArrayElements`], sparse arrays are allowed when the source default
+    /// supplies omitted elements. Supplied members accept CDL integer-to-real promotion.
+    RealArrayElements {
         /// Flattened array base name, for example `"k"` matching `k_1`, `k_2`, ...
         base: &'static str,
         /// Integer parameter carrying the resolved array length.
@@ -512,6 +533,9 @@ mod reals_comparators_tests;
 
 #[cfg(test)]
 mod reals_transcendental_tests;
+
+#[cfg(test)]
+mod reals_vector_reductions_tests;
 
 #[cfg(test)]
 mod logical_tests;

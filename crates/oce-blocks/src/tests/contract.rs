@@ -39,6 +39,15 @@ fn resolved_signature_uses_instance_width_for_vector_ports() {
         &[PortKind::Boolean, PortKind::Boolean, PortKind::Boolean]
     );
     assert_eq!(multi.outputs.as_ref(), &[PortKind::Boolean]);
+
+    let multi_sum = MultiSum::new(vec![0.5, 1.0]);
+    let real_multi = multi_sum.resolved_signature();
+    assert_eq!(real_multi.class_path, "CDL.Reals.MultiSum");
+    assert_eq!(
+        real_multi.inputs.as_ref(),
+        &[PortKind::Real, PortKind::Real]
+    );
+    assert_eq!(real_multi.outputs.as_ref(), &[PortKind::Real]);
 }
 
 #[test]
@@ -104,6 +113,10 @@ fn feedthrough_classification_matches_spec() {
     assert!(MultiAnd::new(3).feeds_through(2, 0));
     assert!(!MultiAnd::new(3).feeds_through(3, 0));
     assert!(MultiOr::new(2).feeds_through(1, 0));
+    assert!(MultiSum::new(vec![1.0, 2.0, 3.0]).feeds_through(2, 0));
+    assert!(!MultiSum::new(vec![1.0, 2.0, 3.0]).feeds_through(3, 0));
+    assert!(MultiMin::new(2).feeds_through(1, 0));
+    assert!(MultiMax::new(2).feeds_through(1, 0));
     assert!(Not.feeds_through(0, 0));
     assert!(Switch.feeds_through(0, 0) && Switch.feeds_through(1, 0) && Switch.feeds_through(2, 0));
 
@@ -212,6 +225,9 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Abs",
         "CDL.Reals.Min",
         "CDL.Reals.Max",
+        "CDL.Reals.MultiMax",
+        "CDL.Reals.MultiMin",
+        "CDL.Reals.MultiSum",
         "CDL.Reals.Limiter",
         "CDL.Reals.Line",
         "CDL.Reals.Greater",
@@ -292,7 +308,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Utilities.Assert",
         "CDL.Utilities.SunRiseSet",
     ];
-    assert_eq!(PATHS.len(), 98, "registry count");
+    assert_eq!(PATHS.len(), 101, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

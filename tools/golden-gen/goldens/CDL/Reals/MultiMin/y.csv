@@ -1,0 +1,7 @@
+#1
+# columns: time y
+double CDL_Reals_MultiMin_y(4,2)
+0.0 2.0
+60.0 -0.0
+120.0 -4.25
+180.0 -8.0

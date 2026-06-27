@@ -1,0 +1,19 @@
+{
+  "class_path": "CDL.Reals.MultiMin",
+  "scenario": "empty",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "bit-exact for finite; Inf/NaN by IEEE class (Value::bit_eq)",
+  "n_samples": 2,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "y"],
+  "inputs": [],
+  "input": "param nin=0; no input connectors",
+  "reference_rule": "Modelica min(empty Real vector) reduction identity is +Inf",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

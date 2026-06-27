@@ -266,10 +266,21 @@ impl<S: Store> Engine<S> {
         Ok(())
     }
 
-    /// Whether parameter `idx` gates a conditional-instance (`if`-on-Boolean-parameter, CDL §7.7.4).
-    /// Currently always `false`; conditional-gate tracking is a structural-load concern.
-    fn is_structural_param(&self, _idx: usize) -> bool {
-        false
+    /// Whether parameter `idx` changes the resolved block structure and therefore requires reload.
+    fn is_structural_param(&self, idx: usize) -> bool {
+        let edited = &self.params.entries[idx];
+        let Some(block) = self.model.blocks.get(edited.block.0 as usize) else {
+            return false;
+        };
+        let Some(entry) = lookup(&block.class_iri) else {
+            return false;
+        };
+        entry.param_rules().iter().any(|rule| {
+            matches!(
+                rule,
+                ParamRule::Structural { name } if edited.name.as_ref() == *name
+            )
+        })
     }
 
     fn class_param_rules_reject(&self, idx: usize, value: &Value) -> bool {
@@ -283,6 +294,7 @@ impl<S: Store> Engine<S> {
         for rule in entry.param_rules() {
             match *rule {
                 ParamRule::Required { .. }
+                | ParamRule::Structural { .. }
                 | ParamRule::RealEqualWarning { .. }
                 | ParamRule::RealLessOrEqualWarning { .. }
                 | ParamRule::RealGreaterOrEqualScaledWarning { .. } => {}
@@ -346,6 +358,13 @@ impl<S: Store> Engine<S> {
                     return true;
                 }
                 ParamRule::IntegerArrayElements { .. } => {}
+                ParamRule::RealArrayElements { base, .. }
+                    if flattened_array_element_name(edited.name.as_ref(), base)
+                        && real_param_value(value).is_none() =>
+                {
+                    return true;
+                }
+                ParamRule::RealArrayElements { .. } => {}
                 ParamRule::EnumMembers { name, members }
                     if edited.name.as_ref() == name && !enum_param_value(value, members) =>
                 {

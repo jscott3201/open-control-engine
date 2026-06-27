@@ -163,6 +163,9 @@
           "Max",
           "Min",
           "Modulo",
+          "MultiMax",
+          "MultiMin",
+          "MultiSum",
           "Multiply",
           "MultiplyByParameter",
           "PID",
@@ -186,9 +189,6 @@
         "MatrixGain",
         "MatrixMax",
         "MatrixMin",
-        "MultiMax",
-        "MultiMin",
-        "MultiSum",
         "Sort"
       ]
     },

@@ -1,0 +1,7 @@
+#1
+# columns: time y
+double CDL_Reals_MultiSum_y(4,2)
+0.0 0.0
+60.0 4.325
+120.0 8.1
+180.0 5.0
