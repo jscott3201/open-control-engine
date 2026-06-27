@@ -1,0 +1,9 @@
+#1
+# columns: time building_pressure min_outdoor_air_damper supply_fan_status averaged_building_pressure relief_damper_command discharge_pressure_setpoint return_fan_speed return_fan_status
+double G36_multizone_vav_return_fan_direct_pressure_reference(6,9)
+0.0 12.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0
+1.0 9.009 0.0 1.0 9.000000000000002 0.0 2.3999999999999986 0.10000000000000006 1.0
+2.0 21.006 1.0 1.0 15.000000000000002 0.4999999999999991 2.3999999999999986 0.10000000000000006 1.0
+3.0 -21.012 1.0 1.0 3.0 1.0 21.199999999999946 0.5499999999999987 1.0
+4.0 135.033 1.0 1.0 36.0 0.0 2.3999999999999986 0.10000000000000006 1.0
+5.0 -264.06 1.0 1.0 -24.0 1.0 40.0 1.0 1.0

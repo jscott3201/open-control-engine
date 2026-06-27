@@ -1,0 +1,750 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+      "S231:label": "multizone_vav_return_fan_direct_pressure",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSet" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.p_rel_RetFan_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.p_rel_RetFan_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.disSpe_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.disSpe_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conTyp" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.Ti" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.Td" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1MinOutAirDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1SupFan" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yDpBui" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRelDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpDisSet" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRetFan" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSet",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:value": { "@value": "12", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.p_rel_RetFan_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:value": { "@value": "2.4", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.p_rel_RetFan_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:value": { "@value": "40", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.disSpe_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.disSpe_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conTyp",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1MinOutAirDam",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yDpBui",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRelDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpDisSet",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRetFan",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MovingAverage",
+      "S231:label": "movMea",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.delta" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.delta",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "300", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yDpBui" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "conP",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.controllerType" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.Ti" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.Td" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.reverseActing" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.yMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.yMin" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_s" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_m" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "conTyp"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "k"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "Ti"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "Td"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "linExhAirDam",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "linRetFanStaPre",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRelDam" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpDisSet" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:label": "div",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_m" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "linRetFanSpe",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRetFan" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "dpBuiSetPoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dpBuiSet" },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBuiSetPoi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.div.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retFanDisPreMin",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "p_rel_RetFan_min" },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMin.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retFanDisPreMax",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "p_rel_RetFan_max" },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanDisPreMax.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.x2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u3" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "one",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.one.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linExhAirDam.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanStaPre.x2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "conOne",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conOne.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.conP.u_s" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "enaDam",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.enaDam.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retFanSpeMin",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "disSpe_min" },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMin.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retFanSpeMax",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "disSpe_max" },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.retFanSpeMax.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.linRetFanSpe.f2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.zer2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "y1RetFanPas",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "tru",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.tru.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFanPas.u2" }
+    }
+  ]
+}

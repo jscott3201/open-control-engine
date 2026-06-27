@@ -33,6 +33,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo`
@@ -64,8 +65,14 @@ reviewed only for the scalar single-relief-fan variant with `relFanSpe_min=0.1`,
 `ReturnFanAirflowTracking.mo` is reviewed only for the scalar airflow-tracking variant with
 `difFloSet=1 m3/s`, `conTyp=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`, `minSpe=0`, `maxSpe=1`,
 supply-fan proof switching, and the source boundary alias `y1RetFan = u1SupFan` represented by
-an explicit fixture-local Boolean identity bridge. `ReliefFanGroup`, `ReturnFanDirectPressure`,
-freeze-protection sequences, and non-default variants remain deferred. Each runtime claim must
+an explicit fixture-local Boolean identity bridge. `ReturnFanDirectPressure.mo` is reviewed only for
+the scalar direct-pressure variant with `dpBuiSet=12 Pa`, `p_rel_RetFan_min=2.4 Pa`,
+`p_rel_RetFan_max=40 Pa`, `conTyp=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`, parent-default
+`disSpe_min=0.1`, parent-default `disSpe_max=1`, `MovingAverage(delta=300)`, default PID
+`reverseActing=true`, default clamped `Line` blocks, relief-damper gating by
+`u1MinOutAirDam AND u1SupFan`, supply-fan proof switching for `dpDisSet` and `yRetFan`, and the
+source boundary alias `y1RetFan = u1SupFan` represented by an explicit fixture-local Boolean
+identity bridge. `ReliefFanGroup`, freeze-protection sequences, and non-default variants remain deferred. Each runtime claim must
 stay tied to its explicit checked-in CXF fixture and supported parameter variant.
 
 For representative-sequence hardening, the AHU supply-air-temperature reset, AHU economizer, and

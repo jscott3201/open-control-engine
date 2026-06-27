@@ -1,0 +1,9 @@
+#1
+# columns: time return_fan_speed
+double G36_multizone_vav_return_fan_direct_pressure_return_fan_speed(6,2)
+0.0 0.0
+1.0 0.10000000000000006
+2.0 0.10000000000000006
+3.0 0.5499999999999987
+4.0 0.10000000000000006
+5.0 1.0
