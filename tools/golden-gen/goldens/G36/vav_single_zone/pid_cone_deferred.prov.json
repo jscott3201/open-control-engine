@@ -1,7 +1,7 @@
 {
   "sequence": "vav_single_zone",
   "tier": "B-deferred",
-  "source": "no in-repo correctness oracle yet; deferred to the OpenModelica-Docker Tier-B spike 019eeada-4929/019eeab6-7edc",
+  "source": "no in-repo correctness oracle yet; deferred to the OpenModelica-Docker Tier-B spike and tracked PID derivative-term oracle follow-up",
   "depends_on_oce_blocks": false,
   "deferred_signals": [
     "cooling_signal",

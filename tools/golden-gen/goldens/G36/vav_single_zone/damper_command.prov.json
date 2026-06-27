@@ -17,6 +17,9 @@
   ],
   "input": "VAV damperLimiter heating branch only: airflowSwitch.y=0.6, uMin=0.2, uMax=1.0",
   "reference_rule": "When heating_enabled is true, Limiter clamps 0.6 to 0.6 exactly; cooling-branch rows are masked and deferred",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+  "fixture_status": "supported-fixture-only source-reviewed fragment",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

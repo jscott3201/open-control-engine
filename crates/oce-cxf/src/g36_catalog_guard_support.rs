@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use serde_json::Value;
 
+use crate::g36_catalog_fixture_manifest::{validate_fixture_manifest, validate_fixture_records};
 use crate::{OneOrMany, bridge};
 
 pub(super) use crate::g36_catalog_guard_data::*;
@@ -43,7 +44,7 @@ pub(super) fn validate_g36_catalog(
     validate_runtime_sequences(catalog, &mut errors);
     validate_initial_paths(catalog, &mut errors);
     validate_type_registry(catalog, &mut errors);
-    validate_fixture_records(catalog, runtime_fixtures, &mut errors);
+    validate_fixture_records(catalog, prov, runtime_fixtures, &mut errors);
     validate_composite_import_fixture_records(catalog, composite_import_fixtures, &mut errors);
     validate_profile_fixture_records(catalog, profile_fixtures, &mut errors);
 
@@ -148,6 +149,14 @@ fn validate_package_orders(catalog: &Value, errors: &mut Vec<String>) {
             &["Controller", "Economizers", "SetPoints", "Validation"],
         ),
         (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers",
+            &["Controller", "Subsequences", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
+            &["Enable", "Limits", "Modulations", "Validation"],
+        ),
+        (
             "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints",
             &[
                 "FreezeProtection",
@@ -161,6 +170,23 @@ fn validate_package_orders(catalog: &Value, errors: &mut Vec<String>) {
                 "SupplySignals",
                 "SupplyTemperature",
                 "OutdoorAirFlow",
+                "Validation",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints",
+            &[
+                "CoolingCoil",
+                "FreezeProtection",
+                "ModeAndSetPoints",
+                "PlantRequests",
+                "ReliefDamper",
+                "ReliefFan",
+                "ReliefFanGroup",
+                "ReturnFan",
+                "Supply",
+                "SupplyFan",
+                "SupplyTemperature",
                 "Validation",
             ],
         ),
@@ -358,53 +384,6 @@ fn validate_type_registry(catalog: &Value, errors: &mut Vec<String>) {
         != Some(&1)
     {
         errors.push("stale-g36-constant: OperationModes.occupied".to_owned());
-    }
-}
-
-fn validate_fixture_records(
-    catalog: &Value,
-    runtime_fixtures: &[FixtureSource],
-    errors: &mut Vec<String>,
-) {
-    let entries = array_field(catalog, "fixture_only_sequences");
-    let catalog_paths = entries
-        .iter()
-        .map(|entry| str_field(entry, "fixture").to_owned())
-        .collect::<BTreeSet<_>>();
-    let expected_paths = runtime_fixtures
-        .iter()
-        .map(|fixture| fixture.path.to_owned())
-        .collect::<BTreeSet<_>>();
-    if catalog_paths != expected_paths {
-        errors.push("fixture-path-set-drift".to_owned());
-    }
-
-    for fixture in runtime_fixtures {
-        let Some(entry) = entries
-            .iter()
-            .find(|entry| str_field(entry, "fixture") == fixture.path)
-        else {
-            errors.push(format!("fixture-missing-catalog-record: {}", fixture.path));
-            continue;
-        };
-        if str_field(entry, "status") != "supported-fixture-only" {
-            errors.push(format!("fixture-invalid-status: {}", fixture.name));
-        }
-        if str_field(entry, "canonical_g36_class_path_status") != "unknown-pending-source-review" {
-            errors.push(format!(
-                "fixture-overclaims-canonical-source: {}",
-                fixture.name
-            ));
-        }
-        if str_field(entry, "golden_trace").is_empty()
-            || str_field(entry, "oracle_reference").is_empty()
-            || str_field(entry, "oracle_test").is_empty()
-        {
-            errors.push(format!("fixture-missing-evidence: {}", fixture.name));
-        }
-        if fixture.name == "vav_single_zone" && str_field(entry, "oracle_status") != "partial" {
-            errors.push("vav-fixture-oracle-status-not-partial".to_owned());
-        }
     }
 }
 
@@ -639,6 +618,7 @@ fn validate_runtime_fixture_shape(
     );
     assert_usize_field(top.has_input.len(), entry, "input_count", fixture, errors);
     assert_usize_field(top.has_output.len(), entry, "output_count", fixture, errors);
+    validate_fixture_manifest(&document, top, entry, fixture, errors);
 }
 
 fn validate_fixture_cdl_types(fixture: &FixtureSource, errors: &mut Vec<String>) {

@@ -17,6 +17,9 @@
   ],
   "input": "VAV: zone_temp=[22,27,27.5,19,19.3,21], heating_setpoint=20, h=0.5",
   "reference_rule": "Buildings Reals/Less hysteresis: set when zone_temp<heating_setpoint; hold while previous true and zone_temp<heating_setpoint+h",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+  "fixture_status": "supported-fixture-only source-reviewed fragment",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

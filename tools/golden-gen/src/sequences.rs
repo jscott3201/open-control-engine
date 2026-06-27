@@ -8,6 +8,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 const SAT: &str = "ahu_supply_air_temp_reset";
 const ECON: &str = "ahu_economizer";
 const VAV: &str = "vav_single_zone";
+const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
 pub struct DeferredProvenance {
@@ -38,7 +39,8 @@ pub fn deferred_provenance(generator_version: &str) -> Vec<DeferredProvenance> {
                 "  \"sequence\": \"vav_single_zone\",\n",
                 "  \"tier\": \"B-deferred\",\n",
                 "  \"source\": \"no in-repo correctness oracle yet; deferred to the ",
-                "OpenModelica-Docker Tier-B spike 019eeada-4929/019eeab6-7edc\",\n",
+                "OpenModelica-Docker Tier-B spike and tracked PID derivative-term ",
+                "oracle follow-up\",\n",
                 "  \"depends_on_oce_blocks\": false,\n",
                 "  \"deferred_signals\": [\n",
                 "    \"cooling_signal\",\n",
@@ -233,6 +235,18 @@ fn sequence_golden(
     Golden::new("G36", signal, kind, time, samples, input_desc, rule_desc)
         .with_scenario(sequence)
         .with_inputs(inputs)
+        .with_provenance("source_commit", SOURCE_COMMIT)
+        .with_provenance("source_files", source_files(sequence))
+        .with_provenance("fixture_status", "supported-fixture-only source-reviewed fragment")
+}
+
+fn source_files(sequence: &str) -> &'static str {
+    match sequence {
+        SAT => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
+        ECON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+        VAV => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+        _ => unreachable!("unknown G36 sequence {sequence}"),
+    }
 }
 
 fn unit_ticks(n: usize) -> Vec<f64> {

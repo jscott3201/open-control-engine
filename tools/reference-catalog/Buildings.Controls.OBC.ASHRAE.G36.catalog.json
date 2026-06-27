@@ -61,6 +61,16 @@
       ]
     },
     {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order",
+      "entries": [
+        "Enable",
+        "Limits",
+        "Modulations",
+        "Validation"
+      ]
+    },
+    {
       "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
       "entries": [
@@ -92,6 +102,24 @@
         "Controller",
         "Economizers",
         "SetPoints",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/package.order",
+      "entries": [
+        "CoolingCoil",
+        "FreezeProtection",
+        "ModeAndSetPoints",
+        "PlantRequests",
+        "ReliefDamper",
+        "ReliefFan",
+        "ReliefFanGroup",
+        "ReturnFan",
+        "Supply",
+        "SupplyFan",
+        "SupplyTemperature",
         "Validation"
       ]
     },
@@ -179,7 +207,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
       "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.order",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
       "runtime_support": false,
       "rationale": "Needed for AHU economizer tranche after profile/types/composite support."
     },
@@ -254,7 +282,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
       "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
       "runtime_support": false
     },
     {
@@ -272,10 +300,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.Controller",
-      "status": "unknown-pending-source-review",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
+      "status": "deferred",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
       "runtime_support": false,
-      "rationale": "Existing vav_single_zone fixture is not yet mapped to a canonical upstream class."
+      "rationale": "Source-reviewed for the representative vav_single_zone fragment; the checked-in fixture is not the full canonical controller."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.Validation",
@@ -316,49 +344,453 @@
       "status": "supported-fixture-only",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld",
       "top_id": "http://example.org#g36.ahu_supply_air_temp_reset",
-      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "source_mapping_status": "source-reviewed-fragment",
+      "canonical_g36_class_path_status": "fragment-of-canonical-source-not-runtime-sequence",
+      "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "upstream_source_files": [
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo"
+      ],
+      "source_mapping": "Fixture isolates the linear occupied/setup supply-air-temperature reset pattern from SupplyTemperature.mo, but replaces upstream TOut, uZonTemResReq, TrimAndRespond, fan-status, and operation-mode switching with a fixture-local zone_temp minus cooling_setpoint demand proxy.",
       "child_block_count": 7,
       "input_count": 2,
       "output_count": 2,
-      "supported_variant": "minimal pre-flattened fixture only",
+      "supported_variant": "source-reviewed flattened fragment: dyadic cooling demand proxy drives a 16 to 12 supply-air-temperature reset line",
+      "required_inputs": [
+        {
+          "name": "zone_temp",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp",
+          "kind": "Real"
+        },
+        {
+          "name": "cooling_setpoint",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "sat_setpoint",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint",
+          "kind": "Real"
+        },
+        {
+          "name": "cooling_demand",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand",
+          "kind": "Real"
+        }
+      ],
+      "active_child_components": [
+        {
+          "name": "zoneMinusSet",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.zoneMinusSet",
+          "class_path": "CDL.Reals.Subtract"
+        },
+        {
+          "name": "demandLimiter",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter",
+          "class_path": "CDL.Reals.Limiter"
+        },
+        {
+          "name": "x1",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.x1",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "f1",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.f1",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "x2",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.x2",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "f2",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.f2",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "satLine",
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.satLine",
+          "class_path": "CDL.Reals.Line"
+        }
+      ],
+      "parameters": [
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMin",
+          "value": 0.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.uMax",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.x1.k",
+          "value": 0.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.f1.k",
+          "value": 16.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.x2.k",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_supply_air_temp_reset.f2.k",
+          "value": 12.0
+        }
+      ],
+      "known_deferred_branches": [
+        "TrimAndRespond maximum cooling supply temperature reset from uZonTemResReq",
+        "operation-mode switching for cool-down, warmup, setback, and deadband outputs",
+        "supply-fan proven-on gating"
+      ],
+      "unsupported_variants": [
+        "canonical SetPoints.SupplyTemperature composite import",
+        "non-default TrimAndRespond parameter variants",
+        "operation-mode-dependent SAT outputs"
+      ],
       "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.csv",
       "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_supply_air_temp_reset.prov.json",
       "oracle_reference": "tools/golden-gen/goldens/G36/ahu_supply_air_temp_reset/reference.csv",
       "oracle_status": "complete",
-      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "oracle_explanation": "Closed-form table in tools/golden-gen/src/sequences.rs derives cooling_demand = clamp(zone_temp - cooling_setpoint, 0, 1) and sat_setpoint = Line(0,16,1,12,cooling_demand)."
     },
     {
       "name": "ahu_economizer",
       "status": "supported-fixture-only",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
       "top_id": "http://example.org#g36.ahu_economizer",
-      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "source_mapping_status": "source-reviewed-fragment",
+      "canonical_g36_class_path_status": "fragment-of-canonical-source-not-runtime-sequence",
+      "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "upstream_source_files": [
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
+        "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo"
+      ],
+      "source_mapping": "Fixture extracts a differential-dry-bulb-style favorable outdoor-air check, one-second enable delay, clear-dominant latch, and minimum/open damper command. It substitutes operating_mode > 0 for the full upstream fan, freeze-protection, high-limit, damper-limit, and pressure-control conditions.",
       "child_block_count": 12,
       "input_count": 3,
       "output_count": 4,
-      "supported_variant": "minimal pre-flattened fixture only",
+      "supported_variant": "source-reviewed flattened fragment: return_air_temp minus outdoor_air_temp hysteresis, operating_mode occupancy proxy, delayed latch, and 0.2/1.0 damper switch",
+      "required_inputs": [
+        {
+          "name": "return_air_temp",
+          "path": "http://example.org#g36.ahu_economizer.return_air_temp",
+          "kind": "Real"
+        },
+        {
+          "name": "outdoor_air_temp",
+          "path": "http://example.org#g36.ahu_economizer.outdoor_air_temp",
+          "kind": "Real"
+        },
+        {
+          "name": "operating_mode",
+          "path": "http://example.org#g36.ahu_economizer.operating_mode",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "economizer_enabled",
+          "path": "http://example.org#g36.ahu_economizer.economizer_enabled",
+          "kind": "Boolean"
+        },
+        {
+          "name": "damper_command",
+          "path": "http://example.org#g36.ahu_economizer.damper_command",
+          "kind": "Real"
+        },
+        {
+          "name": "operating_mode_real",
+          "path": "http://example.org#g36.ahu_economizer.operating_mode_real",
+          "kind": "Real"
+        },
+        {
+          "name": "oa_temperature_delta",
+          "path": "http://example.org#g36.ahu_economizer.oa_temperature_delta",
+          "kind": "Real"
+        }
+      ],
+      "active_child_components": [
+        {
+          "name": "returnMinusOutdoor",
+          "path": "http://example.org#g36.ahu_economizer.returnMinusOutdoor",
+          "class_path": "CDL.Reals.Subtract"
+        },
+        {
+          "name": "favorable",
+          "path": "http://example.org#g36.ahu_economizer.favorable",
+          "class_path": "CDL.Reals.Hysteresis"
+        },
+        {
+          "name": "modeIdentity",
+          "path": "http://example.org#g36.ahu_economizer.modeIdentity",
+          "class_path": "CDL.Integers.AddParameter"
+        },
+        {
+          "name": "modeAllowed",
+          "path": "http://example.org#g36.ahu_economizer.modeAllowed",
+          "class_path": "CDL.Integers.GreaterThreshold"
+        },
+        {
+          "name": "modeToReal",
+          "path": "http://example.org#g36.ahu_economizer.modeToReal",
+          "class_path": "CDL.Conversions.IntegerToReal"
+        },
+        {
+          "name": "candidate",
+          "path": "http://example.org#g36.ahu_economizer.candidate",
+          "class_path": "CDL.Logical.And"
+        },
+        {
+          "name": "delay",
+          "path": "http://example.org#g36.ahu_economizer.delay",
+          "class_path": "CDL.Logical.TrueDelay"
+        },
+        {
+          "name": "notCandidate",
+          "path": "http://example.org#g36.ahu_economizer.notCandidate",
+          "class_path": "CDL.Logical.Not"
+        },
+        {
+          "name": "enableLatch",
+          "path": "http://example.org#g36.ahu_economizer.enableLatch",
+          "class_path": "CDL.Logical.Latch"
+        },
+        {
+          "name": "damperOpen",
+          "path": "http://example.org#g36.ahu_economizer.damperOpen",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "damperMinimum",
+          "path": "http://example.org#g36.ahu_economizer.damperMinimum",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "damperSwitch",
+          "path": "http://example.org#g36.ahu_economizer.damperSwitch",
+          "class_path": "CDL.Reals.Switch"
+        }
+      ],
+      "parameters": [
+        {
+          "path": "http://example.org#g36.ahu_economizer.favorable.uLow",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.favorable.uHigh",
+          "value": 3.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.modeIdentity.p",
+          "value": 0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.modeAllowed.t",
+          "value": 0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.delay.delayTime",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.damperOpen.k",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.ahu_economizer.damperMinimum.k",
+          "value": 0.2
+        }
+      ],
+      "known_deferred_branches": [
+        "full AirEconomizerHighLimits climate/standard/economizer-mode table",
+        "Enable.mo fan proven-on, freeze protection, TrueFalseHold, and damper disable delays",
+        "minimum outdoor-air damper limit subsequences",
+        "return/relief fan pressure-control modulation branches"
+      ],
+      "unsupported_variants": [
+        "canonical Economizers.Controller composite import",
+        "enthalpy-based high-limit modes",
+        "dedicated minimum outdoor-air damper variants",
+        "pressure-control and fan-tracking economizer modulation"
+      ],
       "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_economizer.csv",
       "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ahu_economizer.prov.json",
       "oracle_reference": "tools/golden-gen/goldens/G36/ahu_economizer/reference.csv",
       "oracle_status": "complete",
-      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "oracle_explanation": "Hand-derived table in tools/golden-gen/src/sequences.rs recomputes temperature delta, hysteresis, operating-mode gate, true-delay, latch, and damper switch independently of oce-blocks."
     },
     {
       "name": "vav_single_zone",
       "status": "supported-fixture-only",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld",
       "top_id": "http://example.org#g36.vav_single_zone",
-      "canonical_g36_class_path_status": "unknown-pending-source-review",
+      "source_mapping_status": "source-reviewed-fragment",
+      "canonical_g36_class_path_status": "fragment-of-canonical-source-not-runtime-sequence",
+      "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "upstream_source_files": [
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
+        "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo"
+      ],
+      "source_mapping": "Fixture extracts the controller cooling-loop signal and simplified airflow/damper selection pattern, but replaces the full SingleZone.VAV.Controller, ModeAndSetPoints, Supply, economizer, ventilation, coil, plant-request, and pressure-control graph with fixture-local setpoints and a heating hysteresis.",
       "child_block_count": 8,
       "input_count": 3,
       "output_count": 4,
-      "supported_variant": "minimal pre-flattened fixture only",
+      "supported_variant": "source-reviewed flattened fragment: PI cooling signal, minimum/cooling/heating airflow selection, heating hysteresis, and damper limiter",
+      "required_inputs": [
+        {
+          "name": "zone_temp",
+          "path": "http://example.org#g36.vav_single_zone.zone_temp",
+          "kind": "Real"
+        },
+        {
+          "name": "cooling_setpoint",
+          "path": "http://example.org#g36.vav_single_zone.cooling_setpoint",
+          "kind": "Real"
+        },
+        {
+          "name": "heating_setpoint",
+          "path": "http://example.org#g36.vav_single_zone.heating_setpoint",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "damper_command",
+          "path": "http://example.org#g36.vav_single_zone.damper_command",
+          "kind": "Real"
+        },
+        {
+          "name": "airflow_setpoint",
+          "path": "http://example.org#g36.vav_single_zone.airflow_setpoint",
+          "kind": "Real"
+        },
+        {
+          "name": "cooling_signal",
+          "path": "http://example.org#g36.vav_single_zone.cooling_signal",
+          "kind": "Real"
+        },
+        {
+          "name": "heating_enabled",
+          "path": "http://example.org#g36.vav_single_zone.heating_enabled",
+          "kind": "Boolean"
+        }
+      ],
+      "active_child_components": [
+        {
+          "name": "zoneSignal",
+          "path": "http://example.org#g36.vav_single_zone.zoneSignal",
+          "class_path": "CDL.Reals.AddParameter"
+        },
+        {
+          "name": "coolingPid",
+          "path": "http://example.org#g36.vav_single_zone.coolingPid",
+          "class_path": "CDL.Reals.PID"
+        },
+        {
+          "name": "minimumFlow",
+          "path": "http://example.org#g36.vav_single_zone.minimumFlow",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "coolingFlow",
+          "path": "http://example.org#g36.vav_single_zone.coolingFlow",
+          "class_path": "CDL.Reals.Max"
+        },
+        {
+          "name": "heatingNeed",
+          "path": "http://example.org#g36.vav_single_zone.heatingNeed",
+          "class_path": "CDL.Reals.Less"
+        },
+        {
+          "name": "heatingFlow",
+          "path": "http://example.org#g36.vav_single_zone.heatingFlow",
+          "class_path": "CDL.Reals.Sources.Constant"
+        },
+        {
+          "name": "airflowSwitch",
+          "path": "http://example.org#g36.vav_single_zone.airflowSwitch",
+          "class_path": "CDL.Reals.Switch"
+        },
+        {
+          "name": "damperLimiter",
+          "path": "http://example.org#g36.vav_single_zone.damperLimiter",
+          "class_path": "CDL.Reals.Limiter"
+        }
+      ],
+      "parameters": [
+        {
+          "path": "http://example.org#g36.vav_single_zone.zoneSignal.p",
+          "value": 0.0
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.coolingPid.k",
+          "value": 0.25
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.coolingPid.Ti",
+          "value": 20.0
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.coolingPid.yMin",
+          "value": 0.0
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.coolingPid.yMax",
+          "value": 1.0
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.coolingPid.reverseActing",
+          "value": false
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.minimumFlow.k",
+          "value": 0.25
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.heatingNeed.h",
+          "value": 0.5
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.heatingFlow.k",
+          "value": 0.6
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.damperLimiter.uMin",
+          "value": 0.2
+        },
+        {
+          "path": "http://example.org#g36.vav_single_zone.damperLimiter.uMax",
+          "value": 1.0
+        }
+      ],
+      "known_deferred_branches": [
+        "heating-loop PIDWithReset and full zone-state calculation",
+        "SingleZone.VAV.SetPoints.Supply fan-speed reset and slew limiting",
+        "economizer, ventilation, coil, freeze protection, relief/return fan, and plant-request subsequences",
+        "cooling PID/cooling-branch Tier-B oracle equivalence"
+      ],
+      "unsupported_variants": [
+        "canonical SingleZone.VAV.Controller composite import",
+        "full SetPoints.Supply fan speed and supply-temperature outputs",
+        "heating/cooling coil and pressure-control variants",
+        "OpenModelica-equivalent cooling PID cone"
+      ],
       "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.csv",
       "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/vav_single_zone.prov.json",
       "oracle_reference": "tools/golden-gen/goldens/G36/vav_single_zone/reference.csv",
       "oracle_status": "partial",
       "oracle_exception": "tools/golden-gen/goldens/G36/vav_single_zone/pid_cone_deferred.prov.json",
-      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs"
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "oracle_explanation": "Tier-A oracle covers heating_enabled exactly and masks heating-branch airflow/damper rows by heating_enabled. Cooling_signal and cooling-branch airflow/damper rows remain deferred in pid_cone_deferred.prov.json."
     }
   ],
   "profile_fixtures": [

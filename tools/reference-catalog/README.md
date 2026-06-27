@@ -24,6 +24,9 @@ G36 sequence entries have a separate support vocabulary. `supported-runtime-sequ
 canonical `Buildings.Controls.OBC.ASHRAE.G36.*` class path, source provenance, supported parameter
 variants, fixture, deterministic golden trace, and independent oracle evidence. `supported-fixture-only`
 means the current fixture is a hand-authored, pre-flattened CXF graph whose executable child blocks
-are native CDL entries. `supported-import-fixture` means a canonical G36 top class is proven through
-restricted explicit CXF import, modelgraph/API tests, and source provenance, but still lacks the
-whole-sequence oracle evidence required for `supported-runtime-sequence`.
+are native CDL entries. Some fixture-only rows are `source-reviewed-fragment` evidence: they record
+the upstream files reviewed, fixture-local parameter/input/output manifests, known deferred branches,
+and unsupported variants while still avoiding any canonical runtime-sequence claim.
+`supported-import-fixture` means a canonical G36 top class is proven through restricted explicit CXF
+import, modelgraph/API tests, and source provenance, but still lacks the whole-sequence oracle
+evidence required for `supported-runtime-sequence`.
