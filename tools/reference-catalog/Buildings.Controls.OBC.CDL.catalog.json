@@ -22,6 +22,7 @@
       "implemented": {
         "golden_manifest": [
           "TriggeredMax",
+          "TriggeredMovingMean",
           "TriggeredSampler",
           "UnitDelay"
         ]
@@ -29,7 +30,6 @@
       "missing": [
         "FirstOrderHold",
         "Sampler",
-        "TriggeredMovingMean",
         "ZeroOrderHold"
       ]
     },

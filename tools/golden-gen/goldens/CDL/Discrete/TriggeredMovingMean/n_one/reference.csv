@@ -1,0 +1,9 @@
+#1
+# columns: time u trigger y
+double CDL_Discrete_TriggeredMovingMean_n_one_reference(6,4)
+0.0 4.0 0.0 4.0
+1.0 5.0 0.0 4.0
+2.0 -2.0 1.0 -2.0
+3.0 7.0 1.0 -2.0
+4.0 8.0 0.0 -2.0
+5.0 1.25 1.0 1.25

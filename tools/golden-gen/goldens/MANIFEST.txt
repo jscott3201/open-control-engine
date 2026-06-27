@@ -12,6 +12,12 @@ CDL.Discrete.TriggeredMax reference -> goldens/CDL/Discrete/TriggeredMax/referen
 CDL.Discrete.TriggeredMax y -> goldens/CDL/Discrete/TriggeredMax/y.csv
 CDL.Discrete.TriggeredMax/trigger_initially_true reference -> goldens/CDL/Discrete/TriggeredMax/trigger_initially_true/reference.csv
 CDL.Discrete.TriggeredMax/trigger_initially_true y -> goldens/CDL/Discrete/TriggeredMax/trigger_initially_true/y.csv
+CDL.Discrete.TriggeredMovingMean reference -> goldens/CDL/Discrete/TriggeredMovingMean/reference.csv
+CDL.Discrete.TriggeredMovingMean y -> goldens/CDL/Discrete/TriggeredMovingMean/y.csv
+CDL.Discrete.TriggeredMovingMean/n_one reference -> goldens/CDL/Discrete/TriggeredMovingMean/n_one/reference.csv
+CDL.Discrete.TriggeredMovingMean/n_one y -> goldens/CDL/Discrete/TriggeredMovingMean/n_one/y.csv
+CDL.Discrete.TriggeredMovingMean/trigger_initially_true reference -> goldens/CDL/Discrete/TriggeredMovingMean/trigger_initially_true/reference.csv
+CDL.Discrete.TriggeredMovingMean/trigger_initially_true y -> goldens/CDL/Discrete/TriggeredMovingMean/trigger_initially_true/y.csv
 CDL.Discrete.TriggeredSampler reference -> goldens/CDL/Discrete/TriggeredSampler/reference.csv
 CDL.Discrete.TriggeredSampler y -> goldens/CDL/Discrete/TriggeredSampler/y.csv
 CDL.Discrete.TriggeredSampler/trigger_initially_true reference -> goldens/CDL/Discrete/TriggeredSampler/trigger_initially_true/reference.csv

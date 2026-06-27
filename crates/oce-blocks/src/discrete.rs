@@ -16,6 +16,11 @@ const TRIGGERED_SAMPLER_PREV_TRIGGER_WORD: usize = 1;
 const TRIGGERED_MAX_HELD_WORD: usize = 0;
 const TRIGGERED_MAX_PREV_TRIGGER_WORD: usize = 1;
 const TRIGGERED_MAX_HAS_HISTORY_WORD: usize = 2;
+const TRIGGERED_MOVING_MEAN_HELD_WORD: usize = 0;
+const TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD: usize = 1;
+const TRIGGERED_MOVING_MEAN_COUNTER_WORD: usize = 2;
+const TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD: usize = 3;
+const TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START: usize = 4;
 
 fn bool_word(value: bool) -> u64 {
     u64::from(value)
@@ -218,5 +223,131 @@ impl Block for TriggeredMax {
         region[TRIGGERED_MAX_HELD_WORD] = canonicalize_real(Self::output(inputs, region)).to_bits();
         region[TRIGGERED_MAX_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
         region[TRIGGERED_MAX_HAS_HISTORY_WORD] = bool_word(true);
+    }
+}
+
+/// `CDL.Discrete.TriggeredMovingMean` — average the last `n` triggered samples of `u`.
+///
+/// The source parameter is `Integer n(min=1)` with no default; validation requires it, while the
+/// registry's direct-construction fallback uses `n = 1`. The source samples on
+/// `when {initial(), trigger}`: the first tick always samples exactly once, then later ticks sample
+/// only on false-to-true trigger edges. The block owns `4 + n` `[S]` words: held output, previous
+/// trigger bit, populated-sample counter, next zero-based ring slot, and the `n` sampled `Real`
+/// words. It feeds through from both inputs to `y` because an initial event or same-tick rising
+/// trigger emits a mean that includes the current `u`. Real samples and outputs are NaN
+/// canonicalized for deterministic traces. The block never panics for finite or non-finite `Real`
+/// values; validated callers must provide a `Real` then a `Boolean` input.
+#[derive(Clone, Copy, Debug)]
+pub struct TriggeredMovingMean {
+    pub(crate) n: usize,
+}
+
+impl Default for TriggeredMovingMean {
+    fn default() -> Self {
+        Self { n: 1 }
+    }
+}
+
+impl TriggeredMovingMean {
+    fn window(self) -> usize {
+        self.n.max(1)
+    }
+
+    fn sample_count(self, region: &[u64]) -> usize {
+        (region[TRIGGERED_MOVING_MEAN_COUNTER_WORD] as usize).min(self.window())
+    }
+
+    fn next_sample_index(self, region: &[u64]) -> usize {
+        (region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] as usize) % self.window()
+    }
+
+    fn should_sample(self, inputs: &[Value], region: &[u64]) -> bool {
+        let trigger = read_bool(inputs, 1);
+        let prev_trigger = word_bool(region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD]);
+        self.sample_count(region) == 0 || (trigger && !prev_trigger)
+    }
+
+    fn sampled_mean(self, u: f64, region: &[u64]) -> f64 {
+        let n = self.window();
+        let sample_index = self.next_sample_index(region);
+        let next_counter = (self.sample_count(region) + 1).min(n);
+        let sample = canonicalize_real(u);
+        let mut sum = 0.0;
+        for i in 0..n {
+            let value = if i == sample_index {
+                sample
+            } else {
+                f64::from_bits(region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + i])
+            };
+            sum += value;
+        }
+        sum / next_counter as f64
+    }
+
+    fn output(self, inputs: &[Value], region: &[u64]) -> f64 {
+        if self.should_sample(inputs, region) {
+            self.sampled_mean(read_real(inputs, 0), region)
+        } else {
+            f64::from_bits(region[TRIGGERED_MOVING_MEAN_HELD_WORD])
+        }
+    }
+}
+
+impl Block for TriggeredMovingMean {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Discrete.TriggeredMovingMean",
+            inputs: &[PortKind::Real, PortKind::Boolean],
+            outputs: &[PortKind::Real],
+            stateful: true,
+        };
+        &SIG
+    }
+
+    fn kind(&self) -> BlockKind {
+        BlockKind::Stateful
+    }
+
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        in_idx < 2 && out_idx == 0
+    }
+
+    fn state_len(&self) -> usize {
+        TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + self.window()
+    }
+
+    fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
+        region[TRIGGERED_MOVING_MEAN_HELD_WORD] = 0.0f64.to_bits();
+        region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD] = bool_word(false);
+        region[TRIGGERED_MOVING_MEAN_COUNTER_WORD] = 0;
+        region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] = 0;
+        for word in &mut region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START..] {
+            *word = 0.0f64.to_bits();
+        }
+    }
+
+    fn emit_from_state(
+        &self,
+        _ctx: &Ctx<'_>,
+        inputs: &[Value],
+        region: &[u64],
+        emit: &mut dyn FnMut(usize, Value),
+    ) {
+        emit_real(0, self.output(inputs, region), emit);
+    }
+
+    fn update_state(&self, _ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
+        if self.should_sample(inputs, region) {
+            let n = self.window();
+            let sample_index = self.next_sample_index(region);
+            let next_counter = (self.sample_count(region) + 1).min(n);
+            let output = self.sampled_mean(read_real(inputs, 0), region);
+            region[TRIGGERED_MOVING_MEAN_HELD_WORD] = canonicalize_real(output).to_bits();
+            region[TRIGGERED_MOVING_MEAN_SAMPLE_WORDS_START + sample_index] =
+                canonicalize_real(read_real(inputs, 0)).to_bits();
+            region[TRIGGERED_MOVING_MEAN_COUNTER_WORD] = next_counter as u64;
+            region[TRIGGERED_MOVING_MEAN_NEXT_INDEX_WORD] = ((sample_index + 1) % n) as u64;
+        }
+        region[TRIGGERED_MOVING_MEAN_PREV_TRIGGER_WORD] = bool_word(read_bool(inputs, 1));
     }
 }

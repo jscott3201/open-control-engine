@@ -10,8 +10,8 @@ pub(super) use crate::{
     Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegerStage, IntegratorWithReset, Less,
     LessThreshold, LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply,
     MultiplyByParameter, NoopDiagnostics, Not, ParamRule, Pid, PidWithReset, Pre, Proof, Ramp,
-    SampleTrigger, Subtract, Switch, Time, TriggeredMax, TriggeredSampler, UnitDelay, lookup,
-    read_int,
+    SampleTrigger, Subtract, Switch, Time, TriggeredMax, TriggeredMovingMean, TriggeredSampler,
+    UnitDelay, lookup, read_int,
 };
 
 #[derive(Default)]
