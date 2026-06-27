@@ -1,0 +1,7 @@
+#1
+# columns: time y2
+double CDL_Routing_BooleanVectorFilter_y2(4,2)
+0.0 1.0
+60.0 1.0
+120.0 0.0
+180.0 0.0

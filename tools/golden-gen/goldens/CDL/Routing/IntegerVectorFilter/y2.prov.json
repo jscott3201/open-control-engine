@@ -1,0 +1,23 @@
+{
+  "class_path": "CDL.Routing.IntegerVectorFilter",
+  "signal": "y2",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 4,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u1", "u2", "u3", "u4", "y1", "y2"],
+  "inputs": [
+    { "name": "u1", "value_kind": "Integer", "values": [1.0, 10.0, -1.0, -10.0] },
+    { "name": "u2", "value_kind": "Integer", "values": [2.0, 20.0, -2.0, -20.0] },
+    { "name": "u3", "value_kind": "Integer", "values": [9007199254740992.0, -9007199254740992.0, 3.0, 30.0] },
+    { "name": "u4", "value_kind": "Integer", "values": [4.0, 40.0, -4.0, -40.0] }
+  ],
+  "input": "params nin=4,nout=2,msk=[false,true,true,false]",
+  "reference_rule": "y = u[BooleanVectors.index(msk)] preserving true-mask input order",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

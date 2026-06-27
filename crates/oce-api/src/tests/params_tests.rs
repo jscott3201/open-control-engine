@@ -94,6 +94,42 @@ fn real_vector_filter_model() -> ModelGraph {
     model
 }
 
+fn boolean_extract_signal_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Routing.BooleanExtractSignal",
+        &[ValueType::Boolean, ValueType::Boolean],
+        &[ValueType::Boolean],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("nout"), Value::Integer(1)),
+            (Arc::from("extract_1"), Value::Integer(2)),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
+fn integer_vector_filter_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Routing.IntegerVectorFilter",
+        &[ValueType::Integer, ValueType::Integer, ValueType::Integer],
+        &[ValueType::Integer, ValueType::Integer],
+        vec![
+            (Arc::from("nin"), Value::Integer(3)),
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("msk_1"), Value::Boolean(true)),
+            (Arc::from("msk_2"), Value::Boolean(false)),
+            (Arc::from("msk_3"), Value::Boolean(true)),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
 #[test]
 fn calendar_time_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
     let mut eng = Engine::in_memory();
@@ -267,6 +303,24 @@ fn structural_routing_array_params_are_not_editable_at_rest() {
     ));
     assert!(matches!(
         eng.set_param("b0.nout", Value::Integer(1)),
+        Err(OcError::ParamStructural { .. })
+    ));
+
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(boolean_extract_signal_model(), None)
+        .expect("valid BooleanExtractSignal loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.extract_1", Value::Integer(1)),
+        Err(OcError::ParamStructural { .. })
+    ));
+
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(integer_vector_filter_model(), None)
+        .expect("valid IntegerVectorFilter loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.msk_1", Value::Boolean(false)),
         Err(OcError::ParamStructural { .. })
     ));
 }

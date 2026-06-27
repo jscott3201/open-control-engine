@@ -1,0 +1,7 @@
+#1
+# columns: time y2
+double CDL_Routing_IntegerVectorFilter_y2(4,2)
+0.0 9007199254740992.0
+60.0 -9007199254740992.0
+120.0 3.0
+180.0 30.0

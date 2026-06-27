@@ -61,11 +61,21 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
         "CDL.Reals.PID" => pid::PID_PARAM_RULES,
         "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
-        "CDL.Routing.RealExtractSignal" => routing::REAL_EXTRACT_SIGNAL_PARAM_RULES,
-        "CDL.Routing.RealExtractor" => routing::REAL_EXTRACTOR_PARAM_RULES,
-        "CDL.Routing.RealScalarReplicator" => routing::REAL_SCALAR_REPLICATOR_PARAM_RULES,
-        "CDL.Routing.RealVectorFilter" => routing::REAL_VECTOR_FILTER_PARAM_RULES,
-        "CDL.Routing.RealVectorReplicator" => routing::REAL_VECTOR_REPLICATOR_PARAM_RULES,
+        "CDL.Routing.BooleanExtractSignal"
+        | "CDL.Routing.IntegerExtractSignal"
+        | "CDL.Routing.RealExtractSignal" => routing::EXTRACT_SIGNAL_PARAM_RULES,
+        "CDL.Routing.BooleanExtractor"
+        | "CDL.Routing.IntegerExtractor"
+        | "CDL.Routing.RealExtractor" => routing::EXTRACTOR_PARAM_RULES,
+        "CDL.Routing.BooleanScalarReplicator"
+        | "CDL.Routing.IntegerScalarReplicator"
+        | "CDL.Routing.RealScalarReplicator" => routing::SCALAR_REPLICATOR_PARAM_RULES,
+        "CDL.Routing.BooleanVectorFilter"
+        | "CDL.Routing.IntegerVectorFilter"
+        | "CDL.Routing.RealVectorFilter" => routing::VECTOR_FILTER_PARAM_RULES,
+        "CDL.Routing.BooleanVectorReplicator"
+        | "CDL.Routing.IntegerVectorReplicator"
+        | "CDL.Routing.RealVectorReplicator" => routing::VECTOR_REPLICATOR_PARAM_RULES,
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
             psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
         }

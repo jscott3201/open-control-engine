@@ -103,139 +103,175 @@ fn registry_exposes_block_param_rules() {
             },
         ]
     );
-    assert_eq!(
-        lookup("CDL.Routing.RealExtractSignal")
-            .unwrap()
-            .param_rules(),
-        &[
-            ParamRule::Structural { name: "nin" },
-            ParamRule::Structural { name: "nout" },
-            ParamRule::StructuralArrayElements { base: "extract" },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nin",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nout",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerArrayElementsInRange {
-                base: "extract",
-                len: "nout",
-                len_default: 1,
-                min: 1,
-                max: "nin",
-                max_default: 1,
-                default_to_index: true,
-            },
-        ]
-    );
-    assert_eq!(
-        lookup("CDL.Routing.RealExtractor").unwrap().param_rules(),
-        &[
-            ParamRule::Structural { name: "nin" },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nin",
-                min: 1,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-        ]
-    );
-    assert_eq!(
-        lookup("CDL.Routing.RealScalarReplicator")
-            .unwrap()
-            .param_rules(),
-        &[
-            ParamRule::Structural { name: "nout" },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nout",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-        ]
-    );
-    assert_eq!(
-        lookup("CDL.Routing.RealVectorFilter")
-            .unwrap()
-            .param_rules(),
-        &[
-            ParamRule::Required { name: "nin" },
-            ParamRule::Required { name: "nout" },
-            ParamRule::Structural { name: "nin" },
-            ParamRule::Structural { name: "nout" },
-            ParamRule::StructuralArrayElements { base: "msk" },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nin",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nout",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::BooleanArrayElements {
-                base: "msk",
-                len: "nin",
-            },
-            ParamRule::BooleanArrayTrueCountEquals {
-                base: "msk",
-                len: "nin",
-                count: "nout",
-                default: true,
-            },
-        ]
-    );
-    assert_eq!(
-        lookup("CDL.Routing.RealVectorReplicator")
-            .unwrap()
-            .param_rules(),
-        &[
-            ParamRule::Structural { name: "nin" },
-            ParamRule::Structural { name: "nout" },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nin",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nin",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerGreaterOrEqual {
-                name: "nout",
-                min: 0,
-            },
-            ParamRule::IntegerLessOrEqualConstant {
-                name: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-            ParamRule::IntegerProductLessOrEqualConstant {
-                left: "nin",
-                right: "nout",
-                max: MAX_RESOLVED_PORT_WIDTH as i64,
-            },
-        ]
-    );
+    let extract_signal_rules = &[
+        ParamRule::Structural { name: "nin" },
+        ParamRule::Structural { name: "nout" },
+        ParamRule::StructuralArrayElements { base: "extract" },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nin",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nin",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nout",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nout",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::IntegerArrayElementsInRange {
+            base: "extract",
+            len: "nout",
+            len_default: 1,
+            min: 1,
+            max: "nin",
+            max_default: 1,
+            default_to_index: true,
+        },
+    ];
+    for path in [
+        "CDL.Routing.BooleanExtractSignal",
+        "CDL.Routing.IntegerExtractSignal",
+        "CDL.Routing.RealExtractSignal",
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            extract_signal_rules,
+            "{path}"
+        );
+    }
+
+    let extractor_rules = &[
+        ParamRule::Structural { name: "nin" },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nin",
+            min: 1,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nin",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+    ];
+    for path in [
+        "CDL.Routing.BooleanExtractor",
+        "CDL.Routing.IntegerExtractor",
+        "CDL.Routing.RealExtractor",
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            extractor_rules,
+            "{path}"
+        );
+    }
+
+    let scalar_replicator_rules = &[
+        ParamRule::Structural { name: "nout" },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nout",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nout",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+    ];
+    for path in [
+        "CDL.Routing.BooleanScalarReplicator",
+        "CDL.Routing.IntegerScalarReplicator",
+        "CDL.Routing.RealScalarReplicator",
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            scalar_replicator_rules,
+            "{path}"
+        );
+    }
+
+    let vector_filter_rules = &[
+        ParamRule::Required { name: "nin" },
+        ParamRule::Required { name: "nout" },
+        ParamRule::Structural { name: "nin" },
+        ParamRule::Structural { name: "nout" },
+        ParamRule::StructuralArrayElements { base: "msk" },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nin",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nin",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nout",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nout",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::BooleanArrayElements {
+            base: "msk",
+            len: "nin",
+        },
+        ParamRule::BooleanArrayTrueCountEquals {
+            base: "msk",
+            len: "nin",
+            count: "nout",
+            default: true,
+        },
+    ];
+    for path in [
+        "CDL.Routing.BooleanVectorFilter",
+        "CDL.Routing.IntegerVectorFilter",
+        "CDL.Routing.RealVectorFilter",
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            vector_filter_rules,
+            "{path}"
+        );
+    }
+
+    let vector_replicator_rules = &[
+        ParamRule::Structural { name: "nin" },
+        ParamRule::Structural { name: "nout" },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nin",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nin",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::IntegerGreaterOrEqual {
+            name: "nout",
+            min: 0,
+        },
+        ParamRule::IntegerLessOrEqualConstant {
+            name: "nout",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+        ParamRule::IntegerProductLessOrEqualConstant {
+            left: "nin",
+            right: "nout",
+            max: MAX_RESOLVED_PORT_WIDTH as i64,
+        },
+    ];
+    for path in [
+        "CDL.Routing.BooleanVectorReplicator",
+        "CDL.Routing.IntegerVectorReplicator",
+        "CDL.Routing.RealVectorReplicator",
+    ] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            vector_replicator_rules,
+            "{path}"
+        );
+    }
     assert_eq!(
         lookup("CDL.Integers.Stage").unwrap().param_rules(),
         &[

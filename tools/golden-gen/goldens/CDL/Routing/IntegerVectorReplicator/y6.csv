@@ -1,0 +1,7 @@
+#1
+# columns: time y6
+double CDL_Routing_IntegerVectorReplicator_y6(4,2)
+0.0 8.0
+60.0 -8.0
+120.0 -9007199254740992.0
+180.0 1.0
