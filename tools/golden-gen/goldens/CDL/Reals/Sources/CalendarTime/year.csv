@@ -1,0 +1,7 @@
+#1
+# columns: time year
+double CDL_Reals_Sources_CalendarTime_year(4,2)
+172799.0 2017.0
+172800.0 2017.0
+172801.0 2017.0
+345600.0 2017.0

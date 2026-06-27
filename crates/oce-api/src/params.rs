@@ -328,6 +328,23 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::IntegerGreaterOrEqual { .. } => {}
+                ParamRule::IntegerLessOrEqualConstant { name, max }
+                    if edited.name.as_ref() == name =>
+                {
+                    let Some(v) = int_param_value(value) else {
+                        return true;
+                    };
+                    if v > max {
+                        return true;
+                    }
+                }
+                ParamRule::IntegerLessOrEqualConstant { .. } => {}
+                ParamRule::EnumMembers { name, members }
+                    if edited.name.as_ref() == name && !enum_param_value(value, members) =>
+                {
+                    return true;
+                }
+                ParamRule::EnumMembers { .. } => {}
                 ParamRule::RealGreaterOrEqual { name, min } if edited.name.as_ref() == name => {
                     let Some(v) = real_param_value(value) else {
                         return true;
@@ -459,6 +476,18 @@ fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64
                 None => lower,
             });
         }
+        if let ParamRule::IntegerLessOrEqualConstant {
+            name: rule_name,
+            max: upper,
+        } = *rule
+            && rule_name == name
+        {
+            let upper = upper as f64;
+            max = Some(match max {
+                Some(current) => current.min(upper),
+                None => upper,
+            });
+        }
         if let ParamRule::RealLessOrEqualConstant {
             name: rule_name,
             max: upper,
@@ -526,6 +555,22 @@ fn int_param_value(value: &Value) -> Option<i64> {
     match value {
         Value::Integer(v) => Some(*v),
         _ => None,
+    }
+}
+
+fn enum_param_value(value: &Value, members: &[&str]) -> bool {
+    match value {
+        Value::Enum { ordinal, .. } => {
+            usize::try_from(*ordinal).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
+        }
+        Value::Integer(v) => {
+            usize::try_from(*v).is_ok_and(|ordinal| (1..=members.len()).contains(&ordinal))
+        }
+        Value::String(s) => s
+            .rsplit('.')
+            .next()
+            .is_some_and(|member| members.contains(&member)),
+        _ => false,
     }
 }
 

@@ -1,6 +1,6 @@
 //! Registry parameter-rule contract tests.
 
-use super::{ParamRule, lookup};
+use super::{ParamRule, lookup, reals_sources::ZERO_TIME_MEMBERS};
 
 #[test]
 fn registry_exposes_block_param_rules() {
@@ -94,6 +94,27 @@ fn registry_exposes_block_param_rules() {
                 name: "Td",
                 min: 1e-15,
             },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Sources.CalendarTime")
+            .unwrap()
+            .param_rules(),
+        &[
+            ParamRule::Required { name: "zerTim" },
+            ParamRule::EnumMembers {
+                name: "zerTim",
+                members: ZERO_TIME_MEMBERS,
+            },
+            ParamRule::IntegerGreaterOrEqual {
+                name: "yearRef",
+                min: 2010,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "yearRef",
+                max: 2031,
+            },
+            ParamRule::RealFinite { name: "offset" },
         ]
     );
     assert_eq!(

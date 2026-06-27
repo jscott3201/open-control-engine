@@ -416,9 +416,7 @@ impl Parser {
             return Ok(ExprAst::Const(c));
         }
         if n.contains('.') {
-            return Err(parse_err(format!(
-                "qualified name '{n}' is not a known constant; enum references are deferred to M1-PR-9"
-            )));
+            return Ok(ExprAst::EnumRef(Arc::from(n.as_str())));
         }
         Ok(ExprAst::Ident(Arc::from(n.as_str())))
     }

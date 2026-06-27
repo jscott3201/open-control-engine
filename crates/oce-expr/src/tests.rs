@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use oce_model::Value;
+use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
 use super::{EvalResult, ExprAst, ExprError, Scope, eval, eval_str, parse};
 
@@ -27,6 +27,14 @@ impl TestScope {
 impl Scope for TestScope {
     fn lookup(&self, name: &str) -> Option<&EvalResult> {
         self.vars.iter().find(|(k, _)| k == name).map(|(_, v)| v)
+    }
+
+    fn enum_class(&self, qualified: &str) -> Option<EnumClassId> {
+        enum_class_id(qualified)
+    }
+
+    fn enum_ordinal(&self, class: EnumClassId, literal: &str) -> Option<u32> {
+        enum_member_ordinal(class, literal)
     }
 }
 
@@ -100,6 +108,22 @@ fn literal_folds() {
 fn string_literal_is_metadata() {
     let v = run("\"K\"").expect("should evaluate");
     assert!(v.bit_eq(&Value::String(Arc::from("K"))), "got {v:?}");
+}
+
+#[test]
+fn enum_reference_folds_to_class_and_ordinal() {
+    assert!(
+        run("Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017")
+            .unwrap()
+            .bit_eq(&Value::Enum {
+                class: EnumClassId::ZERO_TIME,
+                ordinal: 11,
+            })
+    );
+    assert_eq!(
+        run("Buildings.Controls.OBC.CDL.Types.ZeroTime.Nope").unwrap_err(),
+        ExprError::UnknownIdent("Buildings.Controls.OBC.CDL.Types.ZeroTime.Nope".to_owned())
+    );
 }
 
 #[test]
@@ -328,8 +352,11 @@ fn named_constants() {
     assert_real("inf", f64::MAX);
     assert_real("CDL.Constants.inf", f64::MAX);
     assert_real("-inf", -f64::MAX);
-    // A qualified name whose final package is not `Constants` is not a constant.
-    assert!(matches!(run("Foo.pi"), Err(ExprError::Parse(_))));
+    // A qualified name whose final package is not `Constants` is an enum reference candidate.
+    assert_eq!(
+        run("Foo.pi").unwrap_err(),
+        ExprError::UnknownIdent("Foo".to_string())
+    );
 }
 
 // --- Closed-world rejection (R9) ----------------------------------------------------------

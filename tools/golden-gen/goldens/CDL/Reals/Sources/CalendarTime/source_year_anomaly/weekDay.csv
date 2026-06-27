@@ -1,0 +1,5 @@
+#1
+# columns: time weekDay
+double CDL_Reals_Sources_CalendarTime_source_year_anomaly_weekDay(2,2)
+0.0 7.0
+86400.0 1.0

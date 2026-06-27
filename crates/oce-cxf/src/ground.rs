@@ -17,7 +17,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use oce_expr::{EvalResult, Scope};
-use oce_model::Value;
+use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
 use crate::dto::CxfValue;
 
@@ -144,6 +144,14 @@ impl Scope for ParamScope<'_> {
             .rev()
             .find(|(n, _)| n.as_ref() == name)
             .map(|(_, v)| v)
+    }
+
+    fn enum_class(&self, qualified: &str) -> Option<EnumClassId> {
+        enum_class_id(qualified)
+    }
+
+    fn enum_ordinal(&self, class: EnumClassId, literal: &str) -> Option<u32> {
+        enum_member_ordinal(class, literal)
     }
 }
 
@@ -284,6 +292,25 @@ mod tests {
             &no_scope(),
         );
         assert!(matches!(r, Err(GroundErr::Expr(_))));
+    }
+
+    #[test]
+    fn expr_binding_resolves_cdl_enum_reference() {
+        let v = ground_value(
+            &CxfValue::Expr("Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017".to_owned()),
+            &no_scope(),
+        )
+        .unwrap();
+        assert!(v.bit_eq(&Value::Enum {
+            class: EnumClassId::ZERO_TIME,
+            ordinal: 11,
+        }));
+
+        let invalid = ground_value(
+            &CxfValue::Expr("Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2051".to_owned()),
+            &no_scope(),
+        );
+        assert!(matches!(invalid, Err(GroundErr::Expr(_))));
     }
 
     #[test]

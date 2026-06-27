@@ -1,0 +1,7 @@
+#1
+# columns: time hour
+double CDL_Reals_Sources_CalendarTime_hour(4,2)
+172799.0 23.0
+172800.0 0.0
+172801.0 0.0
+345600.0 0.0

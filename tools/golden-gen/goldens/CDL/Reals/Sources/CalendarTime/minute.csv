@@ -1,0 +1,7 @@
+#1
+# columns: time minute
+double CDL_Reals_Sources_CalendarTime_minute(4,2)
+172799.0 59.983333334326744
+172800.0 0.0
+172801.0 0.01666666567325592
+345600.0 0.0

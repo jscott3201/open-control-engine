@@ -1,0 +1,20 @@
+{
+  "class_path": "CDL.Reals.Sources.CalendarTime",
+  "scenario": "source_year_anomaly",
+  "signal": "month",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact (atoly=0)",
+  "n_samples": 2,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "year", "month", "day", "hour", "minute", "weekDay"],
+  "inputs": [],
+  "input": "zerTim=NY2024, yearRef=2016 ignored, offset=0; source table indexes NY2024 to the NY2023 timestamp slot",
+  "reference_rule": "source-compatible helper index: NY2010..NY2023 map directly; NY2024..NY2050 map one slot early in the pinned Buildings helper",
+  "source_snapshot": "Buildings.Controls.OBC.CDL.Reals.Sources.CalendarTime.mo plus Buildings.Utilities.Time.CalendarTime.mo at a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

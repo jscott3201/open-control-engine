@@ -1,0 +1,5 @@
+#1
+# columns: time month
+double CDL_Reals_Sources_CalendarTime_source_year_anomaly_month(2,2)
+0.0 1.0
+86400.0 1.0
