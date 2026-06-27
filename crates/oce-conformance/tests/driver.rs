@@ -19,9 +19,18 @@ const DIVIDE_U2: &str = "http://example.org#DriverDivide.u2";
 const Y: &str = "conn#2";
 
 fn table(rows: &[(f64, f64, f64)]) -> CombiTimeTable {
+    table_with_outputs(
+        &rows
+            .iter()
+            .map(|&(t, u1, u2)| (t, u1, u2, u1 + u2))
+            .collect::<Vec<_>>(),
+    )
+}
+
+fn table_with_outputs(rows: &[(f64, f64, f64, f64)]) -> CombiTimeTable {
     let mut data = Vec::with_capacity(rows.len() * 4);
-    for &(t, u1, u2) in rows {
-        data.extend([t, u1, u2, u1 + u2]);
+    for &(t, u1, u2, y) in rows {
+        data.extend([t, u1, u2, y]);
     }
     CombiTimeTable {
         name: "driver_reference".to_string(),
@@ -35,6 +44,15 @@ fn table(rows: &[(f64, f64, f64)]) -> CombiTimeTable {
             "y".to_string(),
         ]),
     }
+}
+
+fn offset_reference(offset: f64) -> CombiTimeTable {
+    table_with_outputs(&[
+        (0.0, 1.0, 2.0, 3.0 + offset),
+        (1.0, 2.0, 4.0, 6.0 + offset),
+        (2.0, 3.0, 6.0, 9.0 + offset),
+        (3.0, 4.0, 8.0, 12.0 + offset),
+    ])
 }
 
 fn config() -> VerifyConfig {
@@ -519,4 +537,85 @@ fn exact_mode_compares_non_finite_divide_reference_without_no_compared_points() 
     assert_eq!(y.values[1].to_bits(), f64::INFINITY.to_bits());
     assert_eq!(y.values[2].to_bits(), f64::NEG_INFINITY.to_bits());
     assert!(y.values[3].is_nan());
+}
+
+#[test]
+fn aligned_tolerance_mode_compares_free_add_with_configured_slack() {
+    let reference = offset_reference(5.0e-13);
+    let mut config = config();
+    config.tolerances = Tolerances {
+        atoly: 1.0e-12,
+        ..config.tolerances
+    };
+
+    let run = drive_trace_with_options(
+        FREE_ADD.as_bytes(),
+        &config,
+        &reference,
+        &DriverOptions {
+            comparison: ComparisonMode::AlignedTolerance,
+            ..DriverOptions::default()
+        },
+    )
+    .expect("aligned tolerance mode compares finite add output");
+
+    assert_eq!(run.comparisons.len(), 1);
+    assert!(!run.comparisons[0].masked);
+    let ComparisonResult::AlignedTolerance(result) = &run.comparisons[0].result else {
+        panic!("aligned tolerance mode must return an aligned verdict");
+    };
+    assert!(result.passed);
+    assert_eq!(result.compared_points, reference.n_rows);
+    assert_eq!(result.first_mismatch, None);
+}
+
+#[test]
+fn aligned_tolerance_mode_reports_out_of_band_output_without_driver_error() {
+    let reference = offset_reference(2.0e-9);
+    let mut config = config();
+    config.tolerances = Tolerances {
+        atoly: 1.0e-12,
+        ..config.tolerances
+    };
+
+    let run = drive_trace_with_options(
+        FREE_ADD.as_bytes(),
+        &config,
+        &reference,
+        &DriverOptions {
+            comparison: ComparisonMode::AlignedTolerance,
+            ..DriverOptions::default()
+        },
+    )
+    .expect("failed comparisons are reported in the run result");
+
+    let ComparisonResult::AlignedTolerance(result) = &run.comparisons[0].result else {
+        panic!("aligned tolerance mode must return an aligned verdict");
+    };
+    assert!(!result.passed);
+    let mismatch = result.first_mismatch.expect("first out-of-band mismatch");
+    assert_eq!(mismatch.index, 0);
+    assert!(mismatch.error > mismatch.bound);
+}
+
+#[test]
+fn aligned_tolerance_mode_preserves_non_finite_divide_classes() {
+    let reference = divide_reference();
+    let config = divide_config();
+    let run = drive_trace_with_options(
+        FREE_DIVIDE.as_bytes(),
+        &config,
+        &reference,
+        &DriverOptions {
+            comparison: ComparisonMode::AlignedTolerance,
+            ..DriverOptions::default()
+        },
+    )
+    .expect("aligned tolerance mode compares non-finite divide output");
+
+    let ComparisonResult::AlignedTolerance(result) = &run.comparisons[0].result else {
+        panic!("aligned tolerance mode must return an aligned verdict");
+    };
+    assert!(result.passed);
+    assert_eq!(result.compared_points, reference.n_rows);
 }
