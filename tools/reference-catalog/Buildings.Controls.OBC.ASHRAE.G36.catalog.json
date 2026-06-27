@@ -2,11 +2,11 @@
   "schema": "oce-g36-catalog-v1",
   "namespace": "Buildings.Controls.OBC.ASHRAE.G36",
   "support_policy": {
-    "runtime_sequence_status": "not_yet_supported",
+    "runtime_sequence_status": "selected-explicit-cxf-variants-supported",
     "fixture_status": "supported-fixture-only",
     "notes": [
-      "This catalog is a sequence-level planning and guard artifact. It does not claim supported-runtime-sequence status for any canonical ASHRAE G36 composite class.",
-      "Current in-tree G36 examples are hand-authored, pre-flattened CXF graphs made from supported CDL elementary blocks.",
+      "This catalog is a sequence-level planning and guard artifact. Supported-runtime-sequence rows are limited to the listed checked-in explicit-CXF variants and do not imply arbitrary ASHRAE G36 composite support.",
+      "Fixture-only G36 examples are hand-authored, pre-flattened CXF graphs made from supported CDL elementary blocks.",
       "A restricted source-verified composite import fixture tier exists for explicit CXF that has already been specialized; it is not arbitrary Modelica parsing and is not whole-sequence oracle support.",
       "A canonical G36 class path may be marked supported-runtime-sequence only after a source-proven composite importer, explicit parameter variants, fixture, provenance, golden trace, and oracle evidence all exist."
     ]
@@ -233,9 +233,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the default PlantRequests parameterization with heaCoi=WaterBased, cooCoi=WaterBased, THys=0.1, posHys=0.05, and chilled-water/hot-water request branches active; non-water coil variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
@@ -318,6 +319,24 @@
   ],
   "runtime_sequences": [
     {
+      "name": "multizone_vav_plant_requests",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_plant_requests",
+      "supported_variant": "source-verified explicit CXF for default PlantRequests parameters with heaCoi=WaterBased, cooCoi=WaterBased, THys=0.1, posHys=0.05, and active chilled-water/hot-water request branches",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_plant_requests.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_plant_requests.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_plant_requests/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
+        "The supported variant keeps both optional coil branches active by selecting WaterBased heating and cooling coils.",
+        "The oracle covers chilled-water reset requests, chiller plant requests, hot-water reset requests, and hot-water plant requests over threshold, true-delay, latch, and integer switch paths."
+      ]
+    },
+    {
       "name": "multizone_vav_supply_temperature",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
@@ -372,6 +391,28 @@
     }
   ],
   "composite_import_fixtures": [
+    {
+      "name": "multizone_vav_plant_requests",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_plant_requests",
+      "source_child_count": 32,
+      "active_block_count": 32,
+      "input_count": 4,
+      "output_count": 4,
+      "supported_variant": "explicit CXF source transcription for default PlantRequests parameters with heaCoi=WaterBased, cooCoi=WaterBased, THys=0.1, and posHys=0.05",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_plant_requests.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_plant_requests.rs",
+      "api_test": "crates/oce-api/tests/g36_plant_requests.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim arbitrary .mo parsing, non-water heating or cooling coil variants, or alternate PlantRequests parameterizations."
+      ]
+    },
     {
       "name": "trim_and_respond_have_hol_false",
       "status": "supported-import-fixture",

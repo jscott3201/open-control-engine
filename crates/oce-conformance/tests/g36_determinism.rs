@@ -25,6 +25,8 @@ const SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
+const PLANT_REQUESTS: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 
 // The facade exposes flattened runtime connector IDs, while the goldens and provenance preserve
 // the fixture-declared output names.
@@ -95,6 +97,26 @@ const SUPPLY_SIGNALS_HEATING: &str =
 const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
 const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
 const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
+const PLANT_REQUESTS_SUPPLY_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
+const PLANT_REQUESTS_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet";
+const PLANT_REQUESTS_COOLING_VALVE: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet";
+const PLANT_REQUESTS_HEATING_VALVE: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet";
+const PLANT_REQUESTS_CHILLED_RESET: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq";
+const PLANT_REQUESTS_CHILLER: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq";
+const PLANT_REQUESTS_HOT_RESET: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq";
+const PLANT_REQUESTS_HOT_PLANT: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq";
+const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
+const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
+const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
+const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
@@ -157,12 +179,28 @@ const SUPPLY_SIGNALS_OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(SUPPLY_SIGNALS_HEATING, SUPPLY_SIGNALS_HEATING_RUNTIME),
     PointSpec::real_alias(SUPPLY_SIGNALS_COOLING, SUPPLY_SIGNALS_COOLING_RUNTIME),
 ];
+const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
+    PointSpec::real(PLANT_REQUESTS_SUPPLY_AIR),
+    PointSpec::real(PLANT_REQUESTS_SETPOINT),
+    PointSpec::real(PLANT_REQUESTS_COOLING_VALVE),
+    PointSpec::real(PLANT_REQUESTS_HEATING_VALVE),
+];
+const PLANT_REQUESTS_OUTPUTS: &[PointSpec] = &[
+    PointSpec::integer_alias(
+        PLANT_REQUESTS_CHILLED_RESET,
+        PLANT_REQUESTS_CHILLED_RESET_RUNTIME,
+    ),
+    PointSpec::integer_alias(PLANT_REQUESTS_CHILLER, PLANT_REQUESTS_CHILLER_RUNTIME),
+    PointSpec::integer_alias(PLANT_REQUESTS_HOT_RESET, PLANT_REQUESTS_HOT_RESET_RUNTIME),
+    PointSpec::integer_alias(PLANT_REQUESTS_HOT_PLANT, PLANT_REQUESTS_HOT_PLANT_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "ahu_supply_air_temp_reset",
         cxf: AHU_SAT_RESET,
         t_stop: 4,
+        sample_step: 1.0,
         inputs: SAT_INPUTS,
         outputs: SAT_OUTPUTS,
         input_fn: sat_inputs,
@@ -171,6 +209,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "ahu_economizer",
         cxf: AHU_ECONOMIZER,
         t_stop: 5,
+        sample_step: 1.0,
         inputs: ECON_INPUTS,
         outputs: ECON_OUTPUTS,
         input_fn: economizer_inputs,
@@ -179,6 +218,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "vav_single_zone",
         cxf: VAV_SINGLE_ZONE,
         t_stop: 5,
+        sample_step: 1.0,
         inputs: VAV_INPUTS,
         outputs: VAV_OUTPUTS,
         input_fn: vav_inputs,
@@ -187,6 +227,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_temperature",
         cxf: SUPPLY_TEMPERATURE,
         t_stop: 900,
+        sample_step: 1.0,
         inputs: SUPPLY_TEMPERATURE_INPUTS,
         outputs: SUPPLY_TEMPERATURE_OUTPUTS,
         input_fn: supply_temperature_inputs,
@@ -195,6 +236,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_fan",
         cxf: SUPPLY_FAN,
         t_stop: 900,
+        sample_step: 1.0,
         inputs: SUPPLY_FAN_INPUTS,
         outputs: SUPPLY_FAN_OUTPUTS,
         input_fn: supply_fan_inputs,
@@ -203,9 +245,19 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_signals",
         cxf: SUPPLY_SIGNALS,
         t_stop: 9,
+        sample_step: 1.0,
         inputs: SUPPLY_SIGNALS_INPUTS,
         outputs: SUPPLY_SIGNALS_OUTPUTS,
         input_fn: supply_signals_inputs,
+    },
+    SequenceSpec {
+        name: "multizone_vav_plant_requests",
+        cxf: PLANT_REQUESTS,
+        t_stop: 19,
+        sample_step: 60.0,
+        inputs: PLANT_REQUESTS_INPUTS,
+        outputs: PLANT_REQUESTS_OUTPUTS,
+        input_fn: plant_requests_inputs,
     },
 ];
 
@@ -333,5 +385,41 @@ fn supply_signals_inputs(t: f64) -> Vec<(String, Value)> {
         pair(SUPPLY_SIGNALS_MEASURED_TEMP, Value::Real(measured)),
         pair(SUPPLY_SIGNALS_SETPOINT, Value::Real(setpoint)),
         pair(SUPPLY_SIGNALS_FAN_STATUS, Value::Boolean(fan_status)),
+    ]
+}
+
+fn plant_requests_inputs(t: f64) -> Vec<(String, Value)> {
+    let row = ((t / 60.0).round() as usize).min(19);
+    let supply_air_setpoint = [
+        300.0, 295.0, 295.0, 295.0, 295.0, 300.0, 300.0, 300.0, 300.0, 320.0, 320.0, 320.0, 320.0,
+        320.0, 320.0, 310.0, 300.0, 300.0, 300.0, 300.0,
+    ][row];
+    let supply_air_temperature = [
+        300.0, 299.0, 299.0, 299.0, 297.5, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
+        300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
+    ][row];
+    let cooling_coil_valve = [
+        0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+        0.05, 0.05, 0.05, 0.05,
+    ][row];
+    let heating_coil_valve = [
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9,
+        0.8, 0.05,
+    ][row];
+
+    vec![
+        pair(
+            PLANT_REQUESTS_SUPPLY_AIR,
+            Value::Real(supply_air_temperature),
+        ),
+        pair(PLANT_REQUESTS_SETPOINT, Value::Real(supply_air_setpoint)),
+        pair(
+            PLANT_REQUESTS_COOLING_VALVE,
+            Value::Real(cooling_coil_valve),
+        ),
+        pair(
+            PLANT_REQUESTS_HEATING_VALVE,
+            Value::Real(heating_coil_valve),
+        ),
     ]
 }

@@ -20,6 +20,8 @@ const SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
+const PLANT_REQUESTS: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 
@@ -70,6 +72,18 @@ const SUPPLY_SIGNALS_FAN_STATUS: &str =
 const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
 const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
 const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
+const PLANT_REQUESTS_SUPPLY_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
+const PLANT_REQUESTS_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet";
+const PLANT_REQUESTS_COOLING_VALVE: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet";
+const PLANT_REQUESTS_HEATING_VALVE: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet";
+const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
+const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
+const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
+const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
@@ -135,12 +149,28 @@ const SUPPLY_SIGNALS_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::real("yHeaCoi", SUPPLY_SIGNALS_HEATING_RUNTIME),
     PointSpec::real("yCooCoi", SUPPLY_SIGNALS_COOLING_RUNTIME),
 ];
+const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
+    PointSpec::real("supply_air_temperature", PLANT_REQUESTS_SUPPLY_AIR),
+    PointSpec::real("supply_air_temperature_setpoint", PLANT_REQUESTS_SETPOINT),
+    PointSpec::real("cooling_coil_valve", PLANT_REQUESTS_COOLING_VALVE),
+    PointSpec::real("heating_coil_valve", PLANT_REQUESTS_HEATING_VALVE),
+];
+const PLANT_REQUESTS_EXACT_OUTPUTS: &[PointSpec] = &[
+    PointSpec::integer(
+        "chilled_water_reset_request",
+        PLANT_REQUESTS_CHILLED_RESET_RUNTIME,
+    ),
+    PointSpec::integer("chiller_plant_request", PLANT_REQUESTS_CHILLER_RUNTIME),
+    PointSpec::integer("hot_water_reset_request", PLANT_REQUESTS_HOT_RESET_RUNTIME),
+    PointSpec::integer("hot_water_plant_request", PLANT_REQUESTS_HOT_PLANT_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
         name: "ahu_supply_air_temp_reset",
         cxf: AHU_SAT_RESET,
         t_stop: 4,
+        sample_step: 1.0,
         inputs: SAT_INPUTS,
         exact_outputs: SAT_EXACT_OUTPUTS,
         masked_outputs: &[],
@@ -149,6 +179,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "ahu_economizer",
         cxf: AHU_ECONOMIZER,
         t_stop: 5,
+        sample_step: 1.0,
         inputs: ECON_INPUTS,
         exact_outputs: ECON_EXACT_OUTPUTS,
         masked_outputs: &[],
@@ -157,6 +188,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "vav_single_zone",
         cxf: VAV_SINGLE_ZONE,
         t_stop: 5,
+        sample_step: 1.0,
         inputs: VAV_INPUTS,
         exact_outputs: VAV_EXACT_OUTPUTS,
         masked_outputs: &[],
@@ -165,6 +197,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_temperature",
         cxf: SUPPLY_TEMPERATURE,
         t_stop: 900,
+        sample_step: 1.0,
         inputs: SUPPLY_TEMPERATURE_INPUTS,
         exact_outputs: SUPPLY_TEMPERATURE_EXACT_OUTPUTS,
         masked_outputs: &[],
@@ -173,6 +206,7 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_fan",
         cxf: SUPPLY_FAN,
         t_stop: 900,
+        sample_step: 1.0,
         inputs: SUPPLY_FAN_INPUTS,
         exact_outputs: SUPPLY_FAN_EXACT_OUTPUTS,
         masked_outputs: &[],
@@ -181,8 +215,18 @@ const SEQUENCES: &[SequenceSpec] = &[
         name: "multizone_vav_supply_signals",
         cxf: SUPPLY_SIGNALS,
         t_stop: 9,
+        sample_step: 1.0,
         inputs: SUPPLY_SIGNALS_INPUTS,
         exact_outputs: SUPPLY_SIGNALS_EXACT_OUTPUTS,
+        masked_outputs: &[],
+    },
+    SequenceSpec {
+        name: "multizone_vav_plant_requests",
+        cxf: PLANT_REQUESTS,
+        t_stop: 19,
+        sample_step: 60.0,
+        inputs: PLANT_REQUESTS_INPUTS,
+        exact_outputs: PLANT_REQUESTS_EXACT_OUTPUTS,
         masked_outputs: &[],
     },
 ];
@@ -256,6 +300,7 @@ struct SequenceSpec {
     name: &'static str,
     cxf: &'static str,
     t_stop: u32,
+    sample_step: f64,
     inputs: &'static [PointSpec],
     exact_outputs: &'static [PointSpec],
     masked_outputs: &'static [PointSpec],
@@ -280,7 +325,7 @@ fn config_for(
         tolerances: zero_tolerances(),
         outputs: Vec::new(),
         indicators,
-        sampling: Some(1.0),
+        sampling: Some(spec.sample_step),
         run_controller: true,
     }
 }
@@ -307,7 +352,9 @@ fn point_end(name: &str, kind: ValueKind) -> PointEnd {
 fn options_for(spec: &SequenceSpec, comparison: ComparisonMode) -> DriverOptions {
     DriverOptions {
         cadence: DriveCadence::EventAligned {
-            instants: (0..=spec.t_stop).map(f64::from).collect(),
+            instants: (0..=spec.t_stop)
+                .map(|tick| f64::from(tick) * spec.sample_step)
+                .collect(),
         },
         input_replay: DriverInputReplay::ReferenceTable,
         comparison,

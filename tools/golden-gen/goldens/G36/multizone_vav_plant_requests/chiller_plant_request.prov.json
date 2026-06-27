@@ -1,0 +1,27 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_plant_requests",
+  "signal": "chiller_plant_request",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact encoded integer",
+  "n_samples": 20,
+  "n_reference_columns": 9,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "supply_air_temperature", "supply_air_temperature_setpoint", "cooling_coil_valve", "heating_coil_valve", "chilled_water_reset_request", "chiller_plant_request", "hot_water_reset_request", "hot_water_plant_request"],
+  "inputs": [
+    { "name": "supply_air_temperature", "value_kind": "Real", "values": [300.0, 299.0, 299.0, 299.0, 297.5, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0] },
+    { "name": "supply_air_temperature_setpoint", "value_kind": "Real", "values": [300.0, 295.0, 295.0, 295.0, 295.0, 300.0, 300.0, 300.0, 300.0, 320.0, 320.0, 320.0, 320.0, 320.0, 320.0, 310.0, 300.0, 300.0, 300.0, 300.0] },
+    { "name": "cooling_coil_valve", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05] },
+    { "name": "heating_coil_valve", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05] }
+  ],
+  "input": "PlantRequests: cooling valve plant latch sets at >0.95 and remains set until valve drops below 0.1",
+  "reference_rule": "Pinned PlantRequests.mo WaterBased cooling plant branch: valve GreaterThreshold(t=0.95,h=posHys) sets Latch and LessThreshold(t=0.1,h=posHys) clears it; switch emits 1 or 0",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
