@@ -312,6 +312,17 @@ impl<S: Store> Engine<S> {
                     }
                 }
                 ParamRule::RealGreaterOrEqual { .. } => {}
+                ParamRule::RealLessOrEqualConstant { name, max }
+                    if edited.name.as_ref() == name =>
+                {
+                    let Some(v) = real_param_value(value) else {
+                        return true;
+                    };
+                    if !real_less_or_equal(v, max) {
+                        return true;
+                    }
+                }
+                ParamRule::RealLessOrEqualConstant { .. } => {}
                 ParamRule::RealTimesIntegerInclusiveRange {
                     real,
                     integer,
@@ -376,7 +387,7 @@ fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64
         return (None, None);
     };
     let mut min = None::<f64>;
-    let max = None;
+    let mut max = None::<f64>;
     for rule in entry.param_rules() {
         if let ParamRule::RealGreaterThan {
             name: rule_name,
@@ -410,6 +421,17 @@ fn static_param_bounds(class_path: &str, name: &str) -> (Option<f64>, Option<f64
             min = Some(match min {
                 Some(current) => current.max(lower),
                 None => lower,
+            });
+        }
+        if let ParamRule::RealLessOrEqualConstant {
+            name: rule_name,
+            max: upper,
+        } = *rule
+            && rule_name == name
+        {
+            max = Some(match max {
+                Some(current) => current.min(upper),
+                None => upper,
             });
         }
     }

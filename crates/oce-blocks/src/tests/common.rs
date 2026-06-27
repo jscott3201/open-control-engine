@@ -9,7 +9,7 @@ pub(super) use crate::{
     Abs, Add, AddParameter, And, Assert, Block, BlockKind, Constant, Ctx, Derivative, Diagnostics,
     Divide, Edge, Greater, GreaterThreshold, Hysteresis, IntegerStage, IntegratorWithReset, Less,
     LessThreshold, LimitSlewRate, Limiter, Line, Max, Min, MovingAverage, Multiply,
-    MultiplyByParameter, NoopDiagnostics, Not, ParamRule, Pid, PidWithReset, Pre, Proof,
+    MultiplyByParameter, NoopDiagnostics, Not, ParamRule, Pid, PidWithReset, Pre, Proof, Ramp,
     SampleTrigger, Subtract, Switch, Time, UnitDelay, lookup, read_int,
 };
 

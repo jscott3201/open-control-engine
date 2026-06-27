@@ -115,6 +115,9 @@ fn feedthrough_classification_matches_spec() {
     assert!(Derivative::default().feeds_through(0, 0));
     assert_eq!(LimitSlewRate::default().kind(), BlockKind::Stateful);
     assert!(LimitSlewRate::default().feeds_through(0, 0));
+    assert_eq!(Ramp::default().kind(), BlockKind::Stateful);
+    assert!(Ramp::default().feeds_through(0, 0));
+    assert!(Ramp::default().feeds_through(1, 0));
     assert_eq!(MovingAverage::default().kind(), BlockKind::Stateful);
     assert!(MovingAverage::default().feeds_through(0, 0));
     assert!(Pid::default().feeds_through(0, 0) && Pid::default().feeds_through(1, 0));
@@ -157,6 +160,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.IntegratorWithReset",
         "CDL.Reals.Derivative",
         "CDL.Reals.LimitSlewRate",
+        "CDL.Reals.Ramp",
         "CDL.Reals.MovingAverage",
         "CDL.Reals.PID",
         "CDL.Reals.PIDWithReset",
@@ -209,7 +213,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 76, "registry count");
+    assert_eq!(PATHS.len(), 77, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -293,6 +297,26 @@ fn registry_exposes_block_param_rules() {
             name: "Td",
             min: 0.0,
         }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Ramp").unwrap().param_rules(),
+        &[
+            ParamRule::Required {
+                name: "raisingSlewRate",
+            },
+            ParamRule::RealGreaterOrEqual {
+                name: "raisingSlewRate",
+                min: 1e-37,
+            },
+            ParamRule::RealLessOrEqualConstant {
+                name: "fallingSlewRate",
+                max: -1e-37,
+            },
+            ParamRule::RealGreaterOrEqual {
+                name: "Td",
+                min: 1e-15,
+            },
+        ]
     );
     assert_eq!(
         lookup("CDL.Reals.MovingAverage").unwrap().param_rules(),
@@ -464,6 +488,31 @@ fn registry_make_resolves_parameters() {
     assert!(tick_real(slew.as_ref(), &mut region, 0.0, 0.0).bit_eq(&Value::Real(0.0)));
     assert!(tick_real(slew.as_ref(), &mut region, 1.0, 10.0).bit_eq(&Value::Real(2.0)));
     assert!(tick_real(slew.as_ref(), &mut region, 2.0, -10.0).bit_eq(&Value::Real(-1.0)));
+
+    let ramp = (lookup("CDL.Reals.Ramp").unwrap().make)(&ParamTable {
+        values: vec![
+            (Arc::from("raisingSlewRate"), Value::Real(2.0)),
+            (Arc::from("fallingSlewRate"), Value::Real(-3.0)),
+            (Arc::from("Td"), Value::Real(0.1)),
+        ],
+    });
+    assert_eq!(ramp.kind(), BlockKind::Stateful);
+    assert_eq!(ramp.state_len(), 3);
+    let mut region = vec![0u64; ramp.state_len()];
+    ramp.init_state(&mut region, &ParamTable::default());
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(0.0, &diag);
+    let mut out = None;
+    let inputs = [Value::Real(10.0), Value::Boolean(true)];
+    ramp.emit_from_state(&cx, &inputs, &region, &mut |idx, val| {
+        assert_eq!(idx, 0);
+        out = Some(val);
+    });
+    assert!(
+        out.expect("Ramp emits one output")
+            .bit_eq(&Value::Real(10.0)),
+        "Ramp initial equation y_internal=u must be visible on the first tick"
+    );
 
     let proof = (lookup("CDL.Logical.Proof").unwrap().make)(&ParamTable {
         values: vec![

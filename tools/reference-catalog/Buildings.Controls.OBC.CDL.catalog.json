@@ -160,6 +160,7 @@
           "MultiplyByParameter",
           "PID",
           "PIDWithReset",
+          "Ramp",
           "Round",
           "Sqrt",
           "Subtract",
@@ -187,7 +188,6 @@
         "MultiMax",
         "MultiMin",
         "MultiSum",
-        "Ramp",
         "Sin",
         "Sort",
         "Tan"

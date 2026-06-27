@@ -1,0 +1,7 @@
+#1
+# columns: time u active y
+double CDL_Reals_Ramp_active_reinitialize_reference(4,4)
+0.0 0.0 0.0 0.0
+1.0 10.0 1.0 10.0
+2.0 20.0 1.0 10.5
+3.0 20.0 1.0 11.0

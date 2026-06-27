@@ -229,6 +229,100 @@ fn stage_dependent_parameter_bounds_are_pinned() {
 }
 
 #[test]
+fn ramp_parameter_bounds_are_pinned() {
+    let valid_base = || {
+        vec![
+            rp("raisingSlewRate", 1e-37),
+            rp("fallingSlewRate", -1e-37),
+            rp("Td", 1e-15),
+        ]
+    };
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Reals.Ramp",
+            &[ValueType::Real, ValueType::Boolean],
+            &[ValueType::Real],
+            valid_base(),
+        ))
+        .expect("Ramp lower/upper boundaries are inclusive")
+        .is_empty()
+    );
+
+    assert!(
+        validate(&one_block_model(
+            "CDL.Reals.Ramp",
+            &[ValueType::Real, ValueType::Boolean],
+            &[ValueType::Real],
+            vec![rp("raisingSlewRate", 2.0)],
+        ))
+        .expect("fallingSlewRate and Td may be omitted and default from raisingSlewRate")
+        .is_empty()
+    );
+
+    for (params, golden) in [
+        (
+            Vec::new(),
+            vec![
+                "error|missing-required-parameter|block#0|block `CDL.Reals.Ramp` is missing required parameter `raisingSlewRate`",
+            ],
+        ),
+        (
+            vec![
+                rp("raisingSlewRate", 0.0),
+                rp("fallingSlewRate", -1.0),
+                rp("Td", 1e-15),
+            ],
+            vec![
+                "error|parameter-out-of-range|block#0|parameter `raisingSlewRate` on block `CDL.Reals.Ramp` must be >= 0.0000000000000000000000000000000000001; got 0",
+            ],
+        ),
+        (
+            vec![
+                rp("raisingSlewRate", 1.0),
+                rp("fallingSlewRate", -1e-38),
+                rp("Td", 1e-15),
+            ],
+            vec![
+                "error|parameter-out-of-range|block#0|parameter `fallingSlewRate` on block `CDL.Reals.Ramp` must be <= -0.0000000000000000000000000000000000001; got -0.00000000000000000000000000000000000001",
+            ],
+        ),
+        (
+            vec![
+                rp("raisingSlewRate", 1.0),
+                rp("fallingSlewRate", -1.0),
+                rp("Td", 0.0),
+            ],
+            vec![
+                "error|parameter-out-of-range|block#0|parameter `Td` on block `CDL.Reals.Ramp` must be >= 0.000000000000001; got 0",
+            ],
+        ),
+    ] {
+        let err = validate(&one_block_model(
+            "CDL.Reals.Ramp",
+            &[ValueType::Real, ValueType::Boolean],
+            &[ValueType::Real],
+            params,
+        ))
+        .expect_err("invalid Ramp params must fail");
+        let got: Vec<String> = err
+            .diagnostics
+            .iter()
+            .map(|diag| {
+                format!(
+                    "{}|{}|{}|{}",
+                    diag.severity.as_str(),
+                    diag.code.as_str(),
+                    diag.subject.as_deref().unwrap_or("<none>"),
+                    diag.message
+                )
+            })
+            .collect();
+        assert_eq!(got, golden, "{:?}", err.diagnostics);
+    }
+}
+
+#[test]
 fn strict_positive_param_rules_reject_zero() {
     let cases: &[(&str, &[ValueType], &[ValueType], &str)] = &[
         (

@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Reals.Ramp",
+  "scenario": "active_reinitialize",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 4,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "active", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, 10.0, 20.0, 20.0] },
+    { "name": "active", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0] }
+  ],
+  "input": "scenario=active_reinitialize; raisingSlewRate=0.5, fallingSlewRate=-0.5, Td=1; active rises at t=1",
+  "reference_rule": "active rising reinitializes y_internal to current u on that tick; held active ticks then slew-limit from the reset value",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

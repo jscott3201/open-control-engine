@@ -10,6 +10,16 @@ fn assert_bool_trace(got: &[Value], want: &[bool]) {
     }
 }
 
+fn assert_real_trace(got: &[Value], want: &[f64]) {
+    assert_eq!(got.len(), want.len());
+    for (idx, (got, want)) in got.iter().zip(want).enumerate() {
+        assert!(
+            got.bit_eq(&Value::Real(*want)),
+            "trace[{idx}] got {got:?}, want {want}"
+        );
+    }
+}
+
 fn greater_h_to_not_trace(inputs: &[f64]) -> (Vec<Value>, Vec<Value>) {
     let mut b = ModelBuilder::default();
     let (_zero, _, zero_out) = b.block_real(make(
@@ -89,6 +99,51 @@ fn feedthrough_stateful_comparators_emit_current_inputs_and_hold_across_ticks() 
     let (hyst, not) = hysteresis_to_not_trace(&hyst_inputs);
     assert_bool_trace(&hyst, &[false, true, true, true, false, true]);
     assert_bool_trace(&not, &[true, false, false, false, true, false]);
+}
+
+#[test]
+fn ramp_active_and_output_feedthrough_schedule_current_tick_inputs() {
+    let mut b = ModelBuilder::default();
+    let (add, add_in, add_out) = b.block_real(make("CDL.Reals.Add", &[]));
+    let (ramp, ramp_in, ramp_out) = b.block_real(make(
+        "CDL.Reals.Ramp",
+        &[
+            ("raisingSlewRate", Value::Real(2.0)),
+            ("fallingSlewRate", Value::Real(-3.0)),
+            ("Td", Value::Real(0.1)),
+        ],
+    ));
+    let (active, _, active_out) = b.block_real(make(
+        "CDL.Logical.Sources.Constant",
+        &[("k", Value::Boolean(true))],
+    ));
+    b.connect(active_out[0], ramp_in[1]);
+    b.connect(ramp_out[0], add_in[0]);
+
+    let sched = compile(&b.model, &b.blocks).unwrap();
+    let pos = |id: BlockId| sched.order.iter().position(|&x| x == id).unwrap();
+    assert!(
+        pos(active) < pos(ramp),
+        "active source must schedule before Ramp because active feeds through"
+    );
+    assert!(
+        pos(ramp) < pos(add),
+        "Ramp output must schedule before downstream Add because y feeds through current u/active"
+    );
+
+    let mut state = allocate_state(&b.model, &b.blocks);
+    let mut ramp_trace = Vec::new();
+    let mut add_trace = Vec::new();
+    for (t, u) in [(0.0, 0.0), (1.0, 10.0), (2.0, -10.0)] {
+        state.values[ramp_in[0].0 as usize] = Value::Real(u);
+        state.values[add_in[1].0 as usize] = Value::Real(0.0);
+        tick_once(&b.model, &sched, &b.blocks, &mut state, t);
+        ramp_trace.push(state.values[ramp_out[0].0 as usize].clone());
+        add_trace.push(state.values[add_out[0].0 as usize].clone());
+    }
+
+    assert_real_trace(&ramp_trace, &[0.0, 2.0, -1.0]);
+    assert_real_trace(&add_trace, &[0.0, 2.0, -1.0]);
 }
 
 #[test]

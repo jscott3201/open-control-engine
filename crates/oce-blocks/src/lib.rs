@@ -35,6 +35,7 @@ mod reals_arithmetic;
 mod reals_comparators;
 mod reals_filters;
 mod reals_integrator;
+mod reals_ramp;
 mod registry;
 mod utilities;
 
@@ -62,6 +63,7 @@ pub use reals_arithmetic::{
 pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThreshold};
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
+pub use reals_ramp::Ramp;
 pub use registry::lookup;
 pub use utilities::Assert;
 
@@ -242,6 +244,13 @@ pub enum ParamRule {
         /// Inclusive lower bound.
         min: f64,
     },
+    /// The named `Real` parameter must be less than or equal to `max`.
+    RealLessOrEqualConstant {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+        /// Inclusive upper bound.
+        max: f64,
+    },
     /// The named `Real` parameter, multiplied by an `Integer` parameter, must be in range.
     RealTimesIntegerInclusiveRange {
         /// Real-valued parameter name.
@@ -381,6 +390,9 @@ mod reals_integrator_tests;
 
 #[cfg(test)]
 mod reals_filters_tests;
+
+#[cfg(test)]
+mod reals_ramp_tests;
 
 #[cfg(test)]
 mod utilities_tests;

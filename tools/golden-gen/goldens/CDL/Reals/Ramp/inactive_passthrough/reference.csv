@@ -1,0 +1,7 @@
+#1
+# columns: time u active y
+double CDL_Reals_Ramp_inactive_passthrough_reference(4,4)
+0.0 1.0 1.0 1.0
+1.0 3.0 1.0 2.0
+2.0 -9.0 0.0 -9.0
+3.0 -8.0 0.0 -8.0
