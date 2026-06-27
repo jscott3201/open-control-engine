@@ -15,6 +15,7 @@ mod integers_conversions;
 mod integers_stage;
 mod logical;
 mod logical_proof;
+mod logical_variable_pulse;
 mod oracle;
 mod reals;
 mod reals_pid;
@@ -55,6 +56,7 @@ fn main() {
     goldens.extend(reals_pid::goldens());
     goldens.extend(logical::goldens());
     goldens.extend(logical_proof::goldens());
+    goldens.extend(logical_variable_pulse::goldens());
     goldens.extend(integers_conversions::goldens());
     goldens.extend(integers_stage::goldens());
     goldens.extend(discrete_sources::goldens());

@@ -31,6 +31,7 @@ mod logical;
 mod logical_latch;
 mod logical_proof;
 mod logical_timing;
+mod logical_variable_pulse;
 mod pid;
 mod reals_arithmetic;
 mod reals_comparators;
@@ -59,6 +60,7 @@ pub use logical::{
 pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_proof::Proof;
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
+pub use logical_variable_pulse::LogicalVariablePulse;
 pub use pid::{Pid, PidWithReset};
 pub use reals_arithmetic::{
     Abs, Add, AddParameter, Average, Constant, Divide, Limiter, Line, Max, Min, Modulo, Multiply,
@@ -282,6 +284,15 @@ pub enum ParamRule {
         /// Upper-bound parameter name.
         upper: &'static str,
     },
+    /// The left `Real` parameter should be at least `factor * right`; violations warn only.
+    RealGreaterOrEqualScaledWarning {
+        /// Left-hand parameter name.
+        left: &'static str,
+        /// Right-hand parameter name multiplied by `factor`.
+        right: &'static str,
+        /// Positive scale factor applied to `right`.
+        factor: f64,
+    },
     /// Equal `Real` parameter values are permitted but should produce a warning.
     RealEqualWarning {
         /// Left-hand parameter name.
@@ -359,6 +370,9 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 mod tests;
 
 #[cfg(test)]
+mod param_rules_tests;
+
+#[cfg(test)]
 mod reals_arithmetic_tests;
 
 #[cfg(test)]
@@ -381,6 +395,9 @@ mod logical_proof_tests;
 
 #[cfg(test)]
 mod logical_timing_tests;
+
+#[cfg(test)]
+mod logical_variable_pulse_tests;
 
 #[cfg(test)]
 mod integers_edge_tests;

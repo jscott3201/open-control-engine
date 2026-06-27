@@ -1,0 +1,6 @@
+#1
+# columns: time u y
+double CDL_Logical_VariablePulse_adjusted_period_reference(3,3)
+0.0 0.5 1.0
+0.75 0.5 1.0
+1.02 0.5 0.0

@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Logical_VariablePulse_delta_reset_reference(4,3)
+0.0 0.25 1.0
+1.0 0.25 0.0
+2.0 0.375 0.0
+2.001 0.75 1.0

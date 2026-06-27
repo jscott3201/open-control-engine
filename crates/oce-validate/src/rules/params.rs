@@ -239,6 +239,42 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 ),
             }
         }
+        ParamRule::RealGreaterOrEqualScaledWarning {
+            left,
+            right,
+            factor,
+        } => {
+            let (Some(left_value), Some(right_value)) = (
+                find_param(&blk.params, left).map(real_value),
+                find_param(&blk.params, right).map(real_value),
+            ) else {
+                return;
+            };
+            match (left_value, right_value) {
+                (Some(left_value), Some(right_value))
+                    if real_greater_or_equal(left_value, right_value * factor) => {}
+                (Some(left_value), Some(right_value)) => diags.push(
+                    Diagnostic::warning(
+                        DiagCode::ParameterOutOfRange,
+                        format!(
+                            "parameters `{left}` and `{right}` on block `{}` should satisfy \
+                             {left} >= {factor}*{right}; got {left_value} < {}",
+                            blk.class_iri,
+                            right_value * factor
+                        ),
+                    )
+                    .with_subject(block_subject_of(blk)),
+                ),
+                _ => push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "parameters `{left}` and `{right}` on block `{}` must both be numeric",
+                        blk.class_iri
+                    ),
+                ),
+            }
+        }
         ParamRule::RealEqualWarning { left, right } => {
             let (Some(left_value), Some(right_value)) = (
                 find_param(&blk.params, left).and_then(real_value),

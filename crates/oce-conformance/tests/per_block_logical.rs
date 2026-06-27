@@ -8,6 +8,7 @@ use block_harness::{
 };
 
 const U: &[Port] = &[Port { name: "u", kind: B }];
+const U_REAL: &[Port] = &[Port { name: "u", kind: R }];
 const U1_U2: &[Port] = &[
     Port {
         name: "u1",
@@ -197,6 +198,62 @@ const SOURCE_PULSE_WIDTH_ONE_PARAMS: &[Param] = &[
         value: ParamValue::Real("0.6"),
     },
 ];
+const VARIABLE_PULSE_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("4.0"),
+    },
+    Param {
+        name: "deltaU",
+        value: ParamValue::Real("0.01"),
+    },
+    Param {
+        name: "minTruFalHol",
+        value: ParamValue::Real("0.04"),
+    },
+];
+const VARIABLE_PULSE_DELTA_RESET_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("4.0"),
+    },
+    Param {
+        name: "deltaU",
+        value: ParamValue::Real("0.125"),
+    },
+    Param {
+        name: "minTruFalHol",
+        value: ParamValue::Real("0.04"),
+    },
+];
+const VARIABLE_PULSE_MINIMUM_HOLD_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("3.0"),
+    },
+    Param {
+        name: "deltaU",
+        value: ParamValue::Real("0.01"),
+    },
+    Param {
+        name: "minTruFalHol",
+        value: ParamValue::Real("1.0"),
+    },
+];
+const VARIABLE_PULSE_ADJUSTED_PERIOD_PARAMS: &[Param] = &[
+    Param {
+        name: "period",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "deltaU",
+        value: ParamValue::Real("0.01"),
+    },
+    Param {
+        name: "minTruFalHol",
+        value: ParamValue::Real("1.0"),
+    },
+];
 
 const CASES: &[BlockCase] = &[
     case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
@@ -341,6 +398,46 @@ const CASES: &[BlockCase] = &[
         PROOF_OUTPUTS,
     ),
     case(
+        "logical_variable_pulse",
+        "CDL.Logical.VariablePulse",
+        "VariablePulse",
+        U_REAL,
+        VARIABLE_PULSE_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_variable_pulse_delta_reset",
+        "CDL.Logical.VariablePulse",
+        "VariablePulse/delta_reset",
+        U_REAL,
+        VARIABLE_PULSE_DELTA_RESET_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_variable_pulse_endpoints",
+        "CDL.Logical.VariablePulse",
+        "VariablePulse/endpoints",
+        U_REAL,
+        VARIABLE_PULSE_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_variable_pulse_minimum_hold",
+        "CDL.Logical.VariablePulse",
+        "VariablePulse/minimum_hold",
+        U_REAL,
+        VARIABLE_PULSE_MINIMUM_HOLD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
+        "logical_variable_pulse_adjusted_period",
+        "CDL.Logical.VariablePulse",
+        "VariablePulse/adjusted_period",
+        U_REAL,
+        VARIABLE_PULSE_ADJUSTED_PERIOD_PARAMS,
+        BOOL_Y,
+    ),
+    case(
         "logical_sample_trigger",
         "CDL.Logical.Sources.SampleTrigger",
         "Sources/SampleTrigger",
@@ -408,6 +505,11 @@ const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
     "logical_proof_debounce_before_feedback",
     "logical_proof_feedback_before_debounce_then_unstable_both",
     "logical_proof_inverted_delay_warning_only",
+    "logical_variable_pulse",
+    "logical_variable_pulse_delta_reset",
+    "logical_variable_pulse_endpoints",
+    "logical_variable_pulse_minimum_hold",
+    "logical_variable_pulse_adjusted_period",
     "logical_sample_trigger",
     "logical_sample_trigger_shift_after_period",
     "logical_sample_trigger_negative_shift",

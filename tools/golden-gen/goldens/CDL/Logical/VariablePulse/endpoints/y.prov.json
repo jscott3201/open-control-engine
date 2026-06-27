@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Logical.VariablePulse",
+  "scenario": "endpoints",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0 (atoly=0)",
+  "n_samples": 4,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, 0.0, 1.0, 1.0] }
+  ],
+  "input": "scenario=endpoints; period=4, deltaU=0.01, minTruFalHol=0.04; u exercises exact 0 and 1 duty-ratio endpoints",
+  "reference_rule": "Source declares u in [0,1]; Cycle output is always false for u<=0 and always true for u>=1",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
