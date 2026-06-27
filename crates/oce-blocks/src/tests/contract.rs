@@ -77,6 +77,8 @@ fn feedthrough_classification_matches_spec() {
     assert!(!Constant { k: 0.0 }.feeds_through(0, 0)); // no inputs
     assert!(!Pre::default().feeds_through(0, 0)); // THE cut
     assert!(!UnitDelay::default().feeds_through(0, 0)); // discrete cut
+    assert!(TriggeredMax.feeds_through(0, 0)); // current u seeds initial y and trigger samples
+    assert!(TriggeredMax.feeds_through(1, 0)); // current trigger selects same-tick event
     assert!(TriggeredSampler::default().feeds_through(0, 0)); // current u sampled on a trigger
     assert!(TriggeredSampler::default().feeds_through(1, 0)); // current trigger chooses sampling
     assert!(!IntegratorWithReset::default().feeds_through(0, 0)); // integrating loop cut
@@ -112,6 +114,7 @@ fn feedthrough_classification_matches_spec() {
 
     assert_eq!(Pre::default().kind(), BlockKind::Stateful);
     assert_eq!(UnitDelay::default().kind(), BlockKind::Stateful);
+    assert_eq!(TriggeredMax.kind(), BlockKind::Stateful);
     assert_eq!(TriggeredSampler::default().kind(), BlockKind::Stateful);
     assert_eq!(IntegratorWithReset::default().kind(), BlockKind::Stateful);
     assert_eq!(Derivative::default().kind(), BlockKind::Stateful);
@@ -213,11 +216,12 @@ fn registry_resolves_canonical_paths() {
         "CDL.Integers.OnCounter",
         "CDL.Integers.Change",
         "CDL.Integers.Stage",
+        "CDL.Discrete.TriggeredMax",
         "CDL.Discrete.TriggeredSampler",
         "CDL.Discrete.UnitDelay",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 78, "registry count");
+    assert_eq!(PATHS.len(), 79, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);
@@ -390,6 +394,20 @@ fn registry_make_resolves_parameters() {
     let mut region = vec![0u64; delay.state_len()];
     delay.init_state(&mut region, &delay_params);
     assert!(emit(delay.as_ref(), &[Value::Real(0.0)], &region)[0].bit_eq(&Value::Real(1.25)));
+
+    let triggered_max = (lookup("CDL.Discrete.TriggeredMax").unwrap().make)(&ParamTable::default());
+    assert_eq!(triggered_max.kind(), BlockKind::Stateful);
+    assert_eq!(triggered_max.state_len(), 3);
+    let mut region = vec![0u64; triggered_max.state_len()];
+    triggered_max.init_state(&mut region, &ParamTable::default());
+    assert!(
+        emit(
+            triggered_max.as_ref(),
+            &[Value::Real(-2.0), Value::Boolean(false)],
+            &region,
+        )[0]
+        .bit_eq(&Value::Real(-2.0))
+    );
 
     let sampler = (lookup("CDL.Discrete.TriggeredSampler").unwrap().make)(&delay_params);
     assert_eq!(sampler.kind(), BlockKind::Stateful);

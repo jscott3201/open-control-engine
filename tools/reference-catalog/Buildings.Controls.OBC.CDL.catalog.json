@@ -21,6 +21,7 @@
       "package_order": "Buildings/Controls/OBC/CDL/Discrete/package.order",
       "implemented": {
         "golden_manifest": [
+          "TriggeredMax",
           "TriggeredSampler",
           "UnitDelay"
         ]
@@ -28,7 +29,6 @@
       "missing": [
         "FirstOrderHold",
         "Sampler",
-        "TriggeredMax",
         "TriggeredMovingMean",
         "ZeroOrderHold"
       ]

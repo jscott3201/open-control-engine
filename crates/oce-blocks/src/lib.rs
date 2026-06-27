@@ -40,7 +40,7 @@ mod registry;
 mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
-pub use discrete::{TriggeredSampler, UnitDelay};
+pub use discrete::{TriggeredMax, TriggeredSampler, UnitDelay};
 pub use integers::{
     IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerConstant, IntegerEqual, IntegerGreater,
     IntegerGreaterEqual, IntegerGreaterEqualThreshold, IntegerGreaterThreshold, IntegerLess,
