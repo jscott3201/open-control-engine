@@ -315,6 +315,27 @@ CDL.Reals.Switch reference -> goldens/CDL/Reals/Switch/reference.csv
 CDL.Reals.Switch y -> goldens/CDL/Reals/Switch/y.csv
 CDL.Reals.Tan reference -> goldens/CDL/Reals/Tan/reference.csv
 CDL.Reals.Tan y -> goldens/CDL/Reals/Tan/y.csv
+CDL.Routing.RealExtractSignal reference -> goldens/CDL/Routing/RealExtractSignal/reference.csv
+CDL.Routing.RealExtractSignal y1 -> goldens/CDL/Routing/RealExtractSignal/y1.csv
+CDL.Routing.RealExtractSignal y2 -> goldens/CDL/Routing/RealExtractSignal/y2.csv
+CDL.Routing.RealExtractSignal y3 -> goldens/CDL/Routing/RealExtractSignal/y3.csv
+CDL.Routing.RealExtractSignal y4 -> goldens/CDL/Routing/RealExtractSignal/y4.csv
+CDL.Routing.RealExtractor reference -> goldens/CDL/Routing/RealExtractor/reference.csv
+CDL.Routing.RealExtractor y -> goldens/CDL/Routing/RealExtractor/y.csv
+CDL.Routing.RealScalarReplicator reference -> goldens/CDL/Routing/RealScalarReplicator/reference.csv
+CDL.Routing.RealScalarReplicator y1 -> goldens/CDL/Routing/RealScalarReplicator/y1.csv
+CDL.Routing.RealScalarReplicator y2 -> goldens/CDL/Routing/RealScalarReplicator/y2.csv
+CDL.Routing.RealScalarReplicator y3 -> goldens/CDL/Routing/RealScalarReplicator/y3.csv
+CDL.Routing.RealVectorFilter reference -> goldens/CDL/Routing/RealVectorFilter/reference.csv
+CDL.Routing.RealVectorFilter y1 -> goldens/CDL/Routing/RealVectorFilter/y1.csv
+CDL.Routing.RealVectorFilter y2 -> goldens/CDL/Routing/RealVectorFilter/y2.csv
+CDL.Routing.RealVectorReplicator reference -> goldens/CDL/Routing/RealVectorReplicator/reference.csv
+CDL.Routing.RealVectorReplicator y1 -> goldens/CDL/Routing/RealVectorReplicator/y1.csv
+CDL.Routing.RealVectorReplicator y2 -> goldens/CDL/Routing/RealVectorReplicator/y2.csv
+CDL.Routing.RealVectorReplicator y3 -> goldens/CDL/Routing/RealVectorReplicator/y3.csv
+CDL.Routing.RealVectorReplicator y4 -> goldens/CDL/Routing/RealVectorReplicator/y4.csv
+CDL.Routing.RealVectorReplicator y5 -> goldens/CDL/Routing/RealVectorReplicator/y5.csv
+CDL.Routing.RealVectorReplicator y6 -> goldens/CDL/Routing/RealVectorReplicator/y6.csv
 CDL.Types (fold-time, no CSV) -> goldens/CDL/Types/types.prov.json
 CDL.Utilities.SunRiseSet nextSunRise -> goldens/CDL/Utilities/SunRiseSet/nextSunRise.csv
 CDL.Utilities.SunRiseSet nextSunSet -> goldens/CDL/Utilities/SunRiseSet/nextSunSet.csv

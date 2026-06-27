@@ -1,0 +1,7 @@
+#1
+# columns: time y2
+double CDL_Routing_RealVectorReplicator_y2(4,2)
+0.0 8.0
+60.0 -8.0
+120.0 -0.5
+180.0 0.0

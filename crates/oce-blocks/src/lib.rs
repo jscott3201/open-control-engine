@@ -45,6 +45,7 @@ mod reals_sources;
 mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
+mod routing;
 mod source_pulse;
 mod utilities;
 
@@ -81,6 +82,9 @@ pub use reals_sources::{CalendarTime, CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
 pub use reals_vector_reductions::{MultiMax, MultiMin, MultiSum};
 pub use registry::lookup;
+pub use routing::{
+    RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter, RealVectorReplicator,
+};
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
 pub use utilities::{Assert, SunRiseSet};
 
@@ -332,6 +336,15 @@ pub enum ParamRule {
         /// Parameter name as it appears in CDL / the resolved model.
         name: &'static str,
     },
+    /// Flattened members of the named array parameter change the resolved block structure.
+    ///
+    /// Examples include selector arrays such as `extract[nout]` and masks such as `msk[nin]`,
+    /// where editing one element changes the source-to-output feedthrough map. Flattened CXF names
+    /// use `base_1`, `base_2`, ... and require a fresh model load when changed.
+    StructuralArrayElements {
+        /// Flattened array base name, for example `"extract"` matching `extract_1`, ...
+        base: &'static str,
+    },
     /// The named parameter, when present, must be numeric and usable as a `Real`.
     Real {
         /// Parameter name as it appears in CDL / the resolved model.
@@ -381,6 +394,27 @@ pub enum ParamRule {
         /// Integer parameter carrying the resolved array length.
         len: &'static str,
     },
+    /// Present members of a flattened integer array must be in an inclusive parameterized range.
+    ///
+    /// Sparse members may be allowed when a CDL source default supplies omitted values. When
+    /// `default_to_index` is true, omitted member `base_i` validates as value `i`; this models
+    /// defaults such as `extract[nout]=1:nout` and catches invalid defaulted selectors.
+    IntegerArrayElementsInRange {
+        /// Flattened array base name, for example `"extract"` matching `extract_1`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved array length.
+        len: &'static str,
+        /// Default array length when `len` is omitted by source defaulting.
+        len_default: i64,
+        /// Inclusive lower bound.
+        min: i64,
+        /// Integer parameter carrying the inclusive upper bound.
+        max: &'static str,
+        /// Default upper bound when `max` is omitted by source defaulting.
+        max_default: i64,
+        /// Whether omitted `base_i` defaults to integer value `i`.
+        default_to_index: bool,
+    },
     /// Present members of a flattened real array parameter must be numeric values usable as `Real`.
     ///
     /// Like [`ParamRule::IntegerArrayElements`], sparse arrays are allowed when the source default
@@ -390,6 +424,27 @@ pub enum ParamRule {
         base: &'static str,
         /// Integer parameter carrying the resolved array length.
         len: &'static str,
+    },
+    /// Present members of a flattened Boolean array parameter must be Boolean values.
+    BooleanArrayElements {
+        /// Flattened array base name, for example `"msk"` matching `msk_1`, `msk_2`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved array length.
+        len: &'static str,
+    },
+    /// The true count of a flattened Boolean array must equal another integer parameter.
+    ///
+    /// Missing members use the source default supplied in `default`, so sparse masks validate the
+    /// same way source-expanded arrays do.
+    BooleanArrayTrueCountEquals {
+        /// Flattened array base name, for example `"msk"` matching `msk_1`, ...
+        base: &'static str,
+        /// Integer parameter carrying the resolved array length.
+        len: &'static str,
+        /// Integer parameter carrying the expected true count.
+        count: &'static str,
+        /// Source default for omitted Boolean array members.
+        default: bool,
     },
     /// The named enum parameter must be one of the source-verified members.
     EnumMembers {
@@ -422,6 +477,15 @@ pub enum ParamRule {
         min: f64,
         /// Inclusive upper bound on `real * integer`.
         max: f64,
+    },
+    /// The product of two integer parameters must not exceed a constant upper bound.
+    IntegerProductLessOrEqualConstant {
+        /// Left-hand integer parameter name.
+        left: &'static str,
+        /// Right-hand integer parameter name.
+        right: &'static str,
+        /// Inclusive upper bound on `left * right`.
+        max: i64,
     },
     /// The two named `Real` parameters must satisfy `lower <= upper`.
     RealLessOrEqual {
@@ -536,6 +600,9 @@ mod reals_transcendental_tests;
 
 #[cfg(test)]
 mod reals_vector_reductions_tests;
+
+#[cfg(test)]
+mod routing_tests;
 
 #[cfg(test)]
 mod logical_tests;

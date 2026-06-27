@@ -20,6 +20,7 @@ mod reals;
 mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;
+mod routing;
 mod utilities;
 
 #[cfg(test)]
@@ -60,6 +61,11 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
         "CDL.Reals.PID" => pid::PID_PARAM_RULES,
         "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_RULES,
+        "CDL.Routing.RealExtractSignal" => routing::REAL_EXTRACT_SIGNAL_PARAM_RULES,
+        "CDL.Routing.RealExtractor" => routing::REAL_EXTRACTOR_PARAM_RULES,
+        "CDL.Routing.RealScalarReplicator" => routing::REAL_SCALAR_REPLICATOR_PARAM_RULES,
+        "CDL.Routing.RealVectorFilter" => routing::REAL_VECTOR_FILTER_PARAM_RULES,
+        "CDL.Routing.RealVectorReplicator" => routing::REAL_VECTOR_REPLICATOR_PARAM_RULES,
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
             psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
         }
@@ -85,6 +91,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     logical_timing::ENTRIES,
     conversions::ENTRIES,
     integers::ENTRIES,
+    routing::ENTRIES,
     discrete::ENTRIES,
     utilities::ENTRIES,
 ];

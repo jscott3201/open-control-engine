@@ -58,6 +58,42 @@ fn real_multi_sum_model() -> ModelGraph {
     model
 }
 
+fn real_extract_signal_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Routing.RealExtractSignal",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("nout"), Value::Integer(1)),
+            (Arc::from("extract_1"), Value::Integer(2)),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
+fn real_vector_filter_model() -> ModelGraph {
+    let mut mb = Mb::new();
+    let (_, inputs, _) = mb.block(
+        "CDL.Routing.RealVectorFilter",
+        &[ValueType::Real, ValueType::Real, ValueType::Real],
+        &[ValueType::Real, ValueType::Real],
+        vec![
+            (Arc::from("nin"), Value::Integer(3)),
+            (Arc::from("nout"), Value::Integer(2)),
+            (Arc::from("msk_1"), Value::Boolean(true)),
+            (Arc::from("msk_2"), Value::Boolean(false)),
+            (Arc::from("msk_3"), Value::Boolean(true)),
+        ],
+    );
+    let mut model = mb.finish();
+    model.external_inputs = inputs;
+    model
+}
+
 #[test]
 fn calendar_time_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
     let mut eng = Engine::in_memory();
@@ -208,4 +244,29 @@ fn structural_vector_width_params_are_not_editable_at_rest() {
     ));
     eng.set_param("b0.k_1", Value::Real(-0.25))
         .expect("non-structural Real gain edit is accepted at rest");
+}
+
+#[test]
+fn structural_routing_array_params_are_not_editable_at_rest() {
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(real_extract_signal_model(), None)
+        .expect("valid RealExtractSignal loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.extract_1", Value::Integer(1)),
+        Err(OcError::ParamStructural { .. })
+    ));
+
+    let mut eng = Engine::in_memory();
+    eng.build_model_in_memory(real_vector_filter_model(), None)
+        .expect("valid RealVectorFilter loads");
+    eng.halt().unwrap();
+    assert!(matches!(
+        eng.set_param("b0.msk_1", Value::Boolean(false)),
+        Err(OcError::ParamStructural { .. })
+    ));
+    assert!(matches!(
+        eng.set_param("b0.nout", Value::Integer(1)),
+        Err(OcError::ParamStructural { .. })
+    ));
 }
