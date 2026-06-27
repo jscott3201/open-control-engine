@@ -11,12 +11,15 @@ const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const G36_SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
+const G36_SUPPLY_SIGNALS: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 const FANOUT_INPUT: &str = "http://example.org#g36.profile.boundary_fanout.u";
 const INPUT: &str = "http://example.org#g36.profile.nested_composite.u";
 const G36_TRIM_MODEL: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false";
 const G36_SUPPLY_TEMPERATURE_MODEL: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature";
 const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
+const G36_SUPPLY_SIGNALS_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_signals";
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
@@ -305,4 +308,101 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
             .bit_eq(&Value::Real(0.0)),
         "fan-off branch should force zero fan speed"
     );
+}
+
+#[test]
+fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
+    let mut engine = Engine::in_memory();
+    let report = engine
+        .load_cxf(G36_SUPPLY_SIGNALS.as_bytes())
+        .expect("source-verified G36 SupplySignals CXF fixture loads");
+    assert_eq!(report.block_count, 9);
+    assert_eq!(report.stateful_blocks, 1);
+    assert!(
+        report.warnings.is_empty(),
+        "fixture should not warn: {:?}",
+        report.warnings
+    );
+
+    let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
+    let measured_temp = format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSup");
+    let setpoint = format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSupSet");
+    let fan_status = format!("{G36_SUPPLY_SIGNALS_MODEL}.u1SupFan");
+    for required in [&measured_temp, &setpoint, &fan_status] {
+        assert!(paths.contains(required), "missing facade input {required}");
+    }
+
+    let u_t_sup = "conn#7";
+    let cooling = "conn#18";
+    let heating = "conn#24";
+    for output in [u_t_sup, cooling, heating] {
+        assert!(
+            paths.contains(&output.to_owned()),
+            "SupplySignals output alias {output} should be visible"
+        );
+    }
+
+    engine
+        .set_input(&setpoint, Value::Real(295.0))
+        .expect("setpoint stages");
+    engine
+        .set_input(&measured_temp, Value::Real(300.0))
+        .expect("measured temperature stages");
+    engine
+        .set_input(&fan_status, Value::Boolean(false))
+        .expect("fan status stages");
+    engine.tick(0.0).expect("SupplySignals model ticks");
+    assert!(
+        engine
+            .get_output(u_t_sup)
+            .expect("SupplySignals signal output exists")
+            .bit_eq(&Value::Real(0.0)),
+        "fan-off branch should force zero supply-temperature loop signal"
+    );
+
+    engine
+        .set_input(&fan_status, Value::Boolean(true))
+        .expect("fan status stages");
+    engine.tick(1.0).expect("SupplySignals model ticks");
+    assert!(
+        engine
+            .get_output(u_t_sup)
+            .expect("SupplySignals signal output exists")
+            .bit_eq(&Value::Real(0.25)),
+        "rising fan trigger resets after emit, so the first enabled tick sees the current P term"
+    );
+
+    engine.tick(2.0).expect("SupplySignals model ticks");
+    assert!(
+        engine
+            .get_output(u_t_sup)
+            .expect("SupplySignals signal output exists")
+            .bit_eq(&Value::Real(0.0)),
+        "PIDWithReset reset target should be visible on the next tick"
+    );
+
+    engine
+        .set_input(&setpoint, Value::Real(320.0))
+        .expect("setpoint stages");
+    engine
+        .set_input(&measured_temp, Value::Real(295.0))
+        .expect("measured temperature stages");
+    engine.tick(3.0).expect("SupplySignals model ticks");
+    assert!(
+        engine
+            .get_output(heating)
+            .expect("SupplySignals heating output exists")
+            .bit_eq(&Value::Real(1.0)),
+        "large negative loop signal should fully open the heating coil command"
+    );
+    match engine
+        .get_output(cooling)
+        .expect("SupplySignals cooling output exists")
+    {
+        Value::Real(value) => assert!(
+            value.abs() <= 1e-12,
+            "heating-side command should leave cooling coil closed, got {value}"
+        ),
+        other => panic!("SupplySignals cooling output must be Real, got {other:?}"),
+    }
 }

@@ -1,0 +1,505 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
+      "S231:label": "multizone_vav_supply_signals",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.have_heaCoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.have_cooCoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.controllerType" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.kTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TiTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TdTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHea_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCoo_min" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uTSup" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.have_heaCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.have_cooCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.kTSup",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.05", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TiTSup",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "600", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TdTSup",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHea_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "-0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCoo_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_m" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_s" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.trigger" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uTSup",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:label": "conTSup",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.controllerType" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.k" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.Ti" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.Td" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.yMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.yMin" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.reverseActing" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y_reset" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_s" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_m" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.trigger" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "controllerType"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kTSup"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "TiTSup"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "TdTSup"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y_reset",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uTSup" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "uHeaMaxCon",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_heaCoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uHea_max"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "negOne",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_heaCoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.negOne.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "uCooMinCon",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_cooCoi",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uCoo_min"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.zer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.swi.u3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "one",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.one.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "conSigCoo",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_cooCoi",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "conSigHea",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "have_heaCoi",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi" }
+    }
+  ]
+}

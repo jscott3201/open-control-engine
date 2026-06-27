@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "31ef604134497a1c",
+  "catalog_fingerprint": "8d29fa0fc98d67db",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -29,6 +29,7 @@
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
@@ -57,6 +58,8 @@
     "crates/oce-api/tests/g36_sequences.rs",
     "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_fan.csv",
     "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_fan.prov.json",
+    "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_signals.csv",
+    "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_signals.prov.json",
     "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.csv",
     "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_temperature.prov.json",
     "crates/oce-conformance/tests/g36_determinism.rs",
@@ -64,10 +67,12 @@
     "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld",
+    "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
     "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld",
     "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_fan.modelgraph.txt",
+    "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_signals.modelgraph.txt",
     "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt",
     "crates/oce-cxf/tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt",
     "crates/oce-cxf/tests/resolve_composite.rs",
@@ -78,6 +83,13 @@
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/supply_fan_speed.prov.json",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_fan/supply_fan_status.prov.json",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/reference.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/uTSup.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/uTSup.prov.json",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/yCooCoi.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/yCooCoi.prov.json",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/yHeaCoi.csv",
+    "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/yHeaCoi.prov.json",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/reference.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv",
     "tools/golden-gen/goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.prov.json",
@@ -92,6 +104,7 @@
     "tools/golden-gen/goldens/G36/vav_single_zone/reference.csv",
     "tools/golden-gen/src/main.rs",
     "tools/golden-gen/src/sequences.rs",
+    "tools/golden-gen/src/sequences/supply_signals.rs",
     "tools/golden-gen/src/sequences/vav_single_zone.rs"
   ],
   "notes": [
@@ -100,6 +113,7 @@
     "The vav_single_zone fixture-only fragment now has complete in-repo Tier-A oracle coverage for heating_enabled, cooling_signal/internal coolingPid.y, airflow_setpoint, and damper_command; the broader PID derivative-term and canonical SingleZone.VAV.Controller equivalence work remains separate.",
     "Standalone TrimAndRespond have_hol=false is recorded as restricted explicit-CXF composite import evidence only; it remains import-structure-only without an independent whole-sequence oracle.",
     "SupplyTemperature is recorded as a restricted source-verified explicit-CXF runtime sequence using the default parameterization and nested TrimAndRespond have_hol=false; it is not arbitrary Modelica parsing or a named operation-mode enum claim.",
-    "SupplyFan is recorded as a restricted source-verified explicit-CXF runtime sequence for the default have_perZonRehBox=false, controllerType=PI variant with explicit maxSet=410 Pa and nested TrimAndRespond have_hol=false; it is not arbitrary Modelica parsing or perimeter/non-PI variant support."
+    "SupplyFan is recorded as a restricted source-verified explicit-CXF runtime sequence for the default have_perZonRehBox=false, controllerType=PI variant with explicit maxSet=410 Pa and nested TrimAndRespond have_hol=false; it is not arbitrary Modelica parsing or perimeter/non-PI variant support.",
+    "SupplySignals is recorded as a restricted source-verified explicit-CXF runtime sequence for the default have_heaCoi=true, have_cooCoi=true, controllerType=PI variant; it is not arbitrary Modelica parsing, coil-absent variant support, or non-PI/PID derivative-term support."
   ]
 }

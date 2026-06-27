@@ -18,6 +18,8 @@ const SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
+const SUPPLY_SIGNALS: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 
@@ -59,6 +61,15 @@ const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
 const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#110";
 const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#107";
+const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
+const SUPPLY_SIGNALS_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet";
+const SUPPLY_SIGNALS_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan";
+const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
+const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
+const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
@@ -114,6 +125,16 @@ const SUPPLY_FAN_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::boolean("supply_fan_status", SUPPLY_FAN_STATUS_RUNTIME),
     PointSpec::real("supply_fan_speed", SUPPLY_FAN_SPEED_RUNTIME),
 ];
+const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
+    PointSpec::real("supply_air_temperature", SUPPLY_SIGNALS_MEASURED_TEMP),
+    PointSpec::real("supply_air_temperature_setpoint", SUPPLY_SIGNALS_SETPOINT),
+    PointSpec::boolean("supply_fan_status", SUPPLY_SIGNALS_FAN_STATUS),
+];
+const SUPPLY_SIGNALS_EXACT_OUTPUTS: &[PointSpec] = &[
+    PointSpec::real("uTSup", SUPPLY_SIGNALS_U_T_SUP_RUNTIME),
+    PointSpec::real("yHeaCoi", SUPPLY_SIGNALS_HEATING_RUNTIME),
+    PointSpec::real("yCooCoi", SUPPLY_SIGNALS_COOLING_RUNTIME),
+];
 
 const SEQUENCES: &[SequenceSpec] = &[
     SequenceSpec {
@@ -154,6 +175,14 @@ const SEQUENCES: &[SequenceSpec] = &[
         t_stop: 900,
         inputs: SUPPLY_FAN_INPUTS,
         exact_outputs: SUPPLY_FAN_EXACT_OUTPUTS,
+        masked_outputs: &[],
+    },
+    SequenceSpec {
+        name: "multizone_vav_supply_signals",
+        cxf: SUPPLY_SIGNALS,
+        t_stop: 9,
+        inputs: SUPPLY_SIGNALS_INPUTS,
+        exact_outputs: SUPPLY_SIGNALS_EXACT_OUTPUTS,
         masked_outputs: &[],
     },
 ];

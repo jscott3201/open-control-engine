@@ -23,6 +23,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order`
@@ -38,8 +39,10 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 
 For the restricted composite-import slices, `TrimAndRespond.mo` is source evidence for the checked-in
 explicit-CXF `have_hol=false` fixture. `SupplyTemperature.mo` and `SupplyFan.mo` are reviewed
-multizone VAV setpoint anchors because they nest `G36.Generic.TrimAndRespond`; each runtime claim
-must stay tied to its explicit checked-in CXF fixture and supported parameter variant.
+multizone VAV setpoint anchors because they nest `G36.Generic.TrimAndRespond`. `SupplySignals.mo`
+is a reviewed multizone VAV setpoint anchor for the supply-temperature loop and coil-command
+sequencing. Each runtime claim must stay tied to its explicit checked-in CXF fixture and supported
+parameter variant.
 
 For representative-sequence hardening, the AHU supply-air-temperature reset, AHU economizer, and
 single-zone VAV fixtures are source-reviewed fragments of the listed upstream files. They remain

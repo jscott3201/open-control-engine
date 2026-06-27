@@ -175,6 +175,10 @@ they are marked `supported-runtime-sequence`.
   `crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld` remain fixture-only representative
   graphs. Their catalog rows are source-reviewed fragments of upstream G36 files, not canonical
   runtime-sequence imports.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld` is a source-verified
+  restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals` with
+  `have_heaCoi=true`, `have_cooCoi=true`, and `controllerType=PI`.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

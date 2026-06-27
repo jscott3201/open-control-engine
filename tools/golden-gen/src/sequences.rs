@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod supply_fan;
+mod supply_signals;
 mod vav_single_zone;
 
 const SAT: &str = "ahu_supply_air_temp_reset";
@@ -13,6 +14,7 @@ const ECON: &str = "ahu_economizer";
 const VAV: &str = "vav_single_zone";
 const SUPPLY_TEMP: &str = "multizone_vav_supply_temperature";
 const SUPPLY_FAN: &str = "multizone_vav_supply_fan";
+const SUPPLY_SIGNALS: &str = "multizone_vav_supply_signals";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -33,6 +35,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(vav_single_zone::goldens());
     out.extend(multizone_vav_supply_temperature());
     out.extend(supply_fan::goldens());
+    out.extend(supply_signals::goldens());
     out
 }
 
@@ -223,13 +226,16 @@ fn source_files(sequence: &str) -> &'static str {
         VAV => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
         SUPPLY_TEMP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
         SUPPLY_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+        SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
 
 fn fixture_status(sequence: &str) -> &'static str {
     match sequence {
-        SUPPLY_TEMP | SUPPLY_FAN => "supported-runtime-sequence source-verified composite",
+        SUPPLY_TEMP | SUPPLY_FAN | SUPPLY_SIGNALS => {
+            "supported-runtime-sequence source-verified composite"
+        }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }

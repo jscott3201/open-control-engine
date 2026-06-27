@@ -1,0 +1,11 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "12072cb04c9e21beb7b4326197ce85f0b59efbfe",
+  "reference_columns": [
+    "http://example.org#g36.source.multizone_vav_supply_signals.uTSup",
+    "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi",
+    "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi"
+  ]
+}

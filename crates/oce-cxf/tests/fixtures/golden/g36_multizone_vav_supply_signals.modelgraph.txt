@@ -1,0 +1,76 @@
+blocks: 9
+  B0 decl=0 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conTSup")
+    inputs=[0, 1, 2] outputs=[3]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3fa999999999999a)
+    param Ti=Real(0x4082c00000000000)
+    param Td=Real(0x3fb999999999999a)
+    param yMax=Real(0x3ff0000000000000)
+    param yMin=Real(0xbff0000000000000)
+    param reverseActing=Boolean(false)
+    param y_reset=Real(0x0000000000000000)
+  B1 decl=1 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.swi")
+    inputs=[4, 5, 6] outputs=[7]
+  B2 decl=2 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon")
+    inputs=[] outputs=[8]
+    param k=Real(0xbfd0000000000000)
+  B3 decl=3 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.negOne")
+    inputs=[] outputs=[9]
+    param k=Real(0xbff0000000000000)
+  B4 decl=4 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon")
+    inputs=[] outputs=[10]
+    param k=Real(0x3fd0000000000000)
+  B5 decl=5 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.zer")
+    inputs=[] outputs=[11]
+    param k=Real(0x0000000000000000)
+  B6 decl=6 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.one")
+    inputs=[] outputs=[12]
+    param k=Real(0x3ff0000000000000)
+  B7 decl=7 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo")
+    inputs=[13, 14, 15, 16, 17] outputs=[18]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(false)
+  B8 decl=8 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea")
+    inputs=[19, 20, 21, 22, 23] outputs=[24]
+    param limitBelow=Boolean(false)
+    param limitAbove=Boolean(true)
+connectors: 25
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet")
+  C1 block=B0 dir=In type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.TAirSup")
+  C2 block=B0 dir=In type=Boolean decl=2 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan")
+  C3 block=B0 dir=Out type=Real decl=3 iri=None
+  C4 block=B1 dir=In type=Real decl=4 iri=None
+  C5 block=B1 dir=In type=Boolean decl=5 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan")
+  C6 block=B1 dir=In type=Real decl=6 iri=None
+  C7 block=B1 dir=Out type=Real decl=7 iri=None
+  C8 block=B2 dir=Out type=Real decl=8 iri=None
+  C9 block=B3 dir=Out type=Real decl=9 iri=None
+  C10 block=B4 dir=Out type=Real decl=10 iri=None
+  C11 block=B5 dir=Out type=Real decl=11 iri=None
+  C12 block=B6 dir=Out type=Real decl=12 iri=None
+  C13 block=B7 dir=In type=Real decl=13 iri=None
+  C14 block=B7 dir=In type=Real decl=14 iri=None
+  C15 block=B7 dir=In type=Real decl=15 iri=None
+  C16 block=B7 dir=In type=Real decl=16 iri=None
+  C17 block=B7 dir=In type=Real decl=17 iri=None
+  C18 block=B7 dir=Out type=Real decl=18 iri=None
+  C19 block=B8 dir=In type=Real decl=19 iri=None
+  C20 block=B8 dir=In type=Real decl=20 iri=None
+  C21 block=B8 dir=In type=Real decl=21 iri=None
+  C22 block=B8 dir=In type=Real decl=22 iri=None
+  C23 block=B8 dir=In type=Real decl=23 iri=None
+  C24 block=B8 dir=Out type=Real decl=24 iri=None
+connections: 12
+  C3 -> C4
+  C7 -> C23
+  C7 -> C17
+  C8 -> C21
+  C9 -> C19
+  C10 -> C13
+  C11 -> C6
+  C11 -> C22
+  C11 -> C14
+  C12 -> C20
+  C12 -> C15
+  C12 -> C16
+external_inputs: [1, 0, 5, 2]

@@ -1,0 +1,26 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_supply_signals",
+  "signal": "yHeaCoi",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 10,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "supply_air_temperature", "supply_air_temperature_setpoint", "supply_fan_status", "uTSup", "yHeaCoi", "yCooCoi"],
+  "inputs": [
+    { "name": "supply_air_temperature", "value_kind": "Real", "values": [300.0, 300.0, 300.0, 295.0, 310.0, 320.0, 295.0, 295.0, 295.0, 295.0] },
+    { "name": "supply_air_temperature_setpoint", "value_kind": "Real", "values": [295.0, 295.0, 295.0, 300.0, 295.0, 295.0, 320.0, 320.0, 320.0, 320.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] }
+  ],
+  "input": "SupplySignals: have_heaCoi=true default branch; yHeaCoi follows uTSup heating side",
+  "reference_rule": "Pinned SupplySignals.mo conSigHea uses Buildings Reals/Line.mo with x1=-1,f1=1,x2=uHea_max=-0.25,f2=0,limitBelow=false,limitAbove=true",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
