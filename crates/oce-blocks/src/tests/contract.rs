@@ -156,6 +156,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Reals.Sources.CivilTime",
         "CDL.Reals.Sources.Pulse",
         "CDL.Reals.Sources.Ramp",
+        "CDL.Reals.Sources.Sin",
         "CDL.Reals.Add",
         "CDL.Reals.Subtract",
         "CDL.Reals.Multiply",
@@ -242,7 +243,7 @@ fn registry_resolves_canonical_paths() {
         "CDL.Discrete.ZeroOrderHold",
         "CDL.Utilities.Assert",
     ];
-    assert_eq!(PATHS.len(), 89, "registry count");
+    assert_eq!(PATHS.len(), 90, "registry count");
     for path in PATHS {
         let entry = lookup(path).unwrap_or_else(|| panic!("missing catalog entry: {path}"));
         assert_eq!(entry.class_path, *path);

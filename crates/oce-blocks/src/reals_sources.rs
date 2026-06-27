@@ -116,3 +116,75 @@ impl Block for SourceRamp {
         emit_real(0, self.output(ctx.t()), emit);
     }
 }
+
+/// `CDL.Reals.Sources.Sin` - parameterized sine-wave source.
+///
+/// The source has no inputs or state. It emits `offset` before `startTime`; at and after
+/// `startTime`, it emits `offset + amplitude*sin(2*pi*freqHz*(time-startTime)+phase)`.
+/// Parameters are not asserted by the Buildings source, so non-finite values are evaluated through
+/// deterministic `libm` math and emitted with canonical NaN bits where applicable. The block never
+/// panics and reads only scheduler-provided model time.
+#[derive(Clone, Copy, Debug)]
+pub struct SourceSin {
+    /// Sine-wave amplitude.
+    pub(crate) amplitude: f64,
+    /// Sine-wave frequency in hertz.
+    pub(crate) freq_hz: f64,
+    /// Phase offset in radians.
+    pub(crate) phase: f64,
+    /// Output offset before and during the waveform.
+    pub(crate) offset: f64,
+    /// Model time at which the sine waveform begins.
+    pub(crate) start_time: f64,
+}
+
+impl Default for SourceSin {
+    fn default() -> Self {
+        Self {
+            amplitude: 1.0,
+            freq_hz: 1.0,
+            phase: 0.0,
+            offset: 0.0,
+            start_time: 0.0,
+        }
+    }
+}
+
+impl SourceSin {
+    fn output(self, t: f64) -> f64 {
+        self.offset
+            + if t < self.start_time {
+                0.0
+            } else {
+                self.amplitude
+                    * libm::sin(
+                        2.0 * std::f64::consts::PI * self.freq_hz * (t - self.start_time)
+                            + self.phase,
+                    )
+            }
+    }
+}
+
+impl Block for SourceSin {
+    fn signature(&self) -> &'static BlockSignature {
+        static SIG: BlockSignature = BlockSignature {
+            class_path: "CDL.Reals.Sources.Sin",
+            inputs: &[],
+            outputs: &[PortKind::Real],
+            stateful: false,
+        };
+        &SIG
+    }
+
+    fn kind(&self) -> BlockKind {
+        BlockKind::Algebraic
+    }
+
+    fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
+        false
+    }
+
+    fn step_algebraic(&self, ctx: &Ctx<'_>, _inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
+        emit_real(0, self.output(ctx.t()), emit);
+    }
+}

@@ -71,6 +71,35 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
+    {
+        let time = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let amplitude = 2.0;
+        let freq_hz = 0.25;
+        let phase = std::f64::consts::FRAC_PI_2;
+        let offset = 0.5;
+        let start_time = 1.0;
+        let samples = time
+            .iter()
+            .copied()
+            .map(|t| r(source_sin_y(t, amplitude, freq_hz, phase, offset, start_time)))
+            .collect();
+        out.push(
+            Golden::new(
+                "CDL.Reals.Sources.Sin",
+                "y",
+                ValueKind::Real,
+                time,
+                samples,
+                "amplitude=2, freqHz=0.25, phase=pi/2, offset=0.5, startTime=1; before start, observable start boundary, phase plumbing, and period samples",
+                "y = offset + (if time < startTime then 0 else amplitude*sin(2*pi*freqHz*(time-startTime)+phase)); Buildings Reals/Sources/Sin.mo, deterministic libm 0.2.16",
+            )
+            .with_provenance(
+                "math_library",
+                "libm 0.2.16, default-features=false, pure Rust deterministic math",
+            ),
+        );
+    }
+
     out
 }
 
@@ -82,5 +111,21 @@ fn source_ramp_y(t: f64, height: f64, duration: f64, offset: f64, start_time: f6
             (t - start_time) * height / duration
         } else {
             height
+        }
+}
+
+fn source_sin_y(
+    t: f64,
+    amplitude: f64,
+    freq_hz: f64,
+    phase: f64,
+    offset: f64,
+    start_time: f64,
+) -> f64 {
+    offset
+        + if t < start_time {
+            0.0
+        } else {
+            amplitude * libm::sin(2.0 * std::f64::consts::PI * freq_hz * (t - start_time) + phase)
         }
 }

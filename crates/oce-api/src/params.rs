@@ -286,6 +286,12 @@ impl<S: Store> Engine<S> {
                 | ParamRule::RealEqualWarning { .. }
                 | ParamRule::RealLessOrEqualWarning { .. }
                 | ParamRule::RealGreaterOrEqualScaledWarning { .. } => {}
+                ParamRule::Real { name }
+                    if edited.name.as_ref() == name && real_param_value(value).is_none() =>
+                {
+                    return true;
+                }
+                ParamRule::Real { .. } => {}
                 ParamRule::RealGreaterThan { name, min } if edited.name.as_ref() == name => {
                     let Some(v) = real_param_value(value) else {
                         return true;

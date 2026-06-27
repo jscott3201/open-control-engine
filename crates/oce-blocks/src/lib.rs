@@ -71,7 +71,7 @@ pub use reals_comparators::{Greater, GreaterThreshold, Hysteresis, Less, LessThr
 pub use reals_filters::{Derivative, LimitSlewRate, MovingAverage};
 pub use reals_integrator::IntegratorWithReset;
 pub use reals_ramp::Ramp;
-pub use reals_sources::{CivilTime, SourceRamp};
+pub use reals_sources::{CivilTime, SourceRamp, SourceSin};
 pub use reals_transcendental::{Acos, Asin, Atan, Atan2, Cos, Exp, Log, Log10, Sin, Tan};
 pub use registry::lookup;
 pub use source_pulse::{IntegerPulse, LogicalPulse, RealPulse};
@@ -230,6 +230,11 @@ pub trait Block: Send + Sync {
 pub enum ParamRule {
     /// The named parameter must appear in the resolved [`ParamTable`].
     Required {
+        /// Parameter name as it appears in CDL / the resolved model.
+        name: &'static str,
+    },
+    /// The named parameter, when present, must be numeric and usable as a `Real`.
+    Real {
         /// Parameter name as it appears in CDL / the resolved model.
         name: &'static str,
     },

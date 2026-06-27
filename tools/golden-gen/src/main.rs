@@ -383,6 +383,8 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
     } else if g.class_path == "CDL.Reals.Ramp" {
         "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation"
+    } else if g.class_path == "CDL.Reals.Sources.Sin" {
+        "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation"
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }
@@ -416,6 +418,7 @@ fn is_reals_transcendental(g: &Golden) -> bool {
             | "CDL.Reals.Log"
             | "CDL.Reals.Log10"
             | "CDL.Reals.Sin"
+            | "CDL.Reals.Sources.Sin"
             | "CDL.Reals.Tan"
     )
 }

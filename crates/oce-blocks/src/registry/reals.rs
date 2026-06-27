@@ -6,7 +6,7 @@ use crate::{
     Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CivilTime, Constant, Cos,
     Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold, Limiter, Line, Log,
     Log10, Max, Min, Modulo, Multiply, MultiplyByParameter, ParamRule, RealPulse, RegistryEntry,
-    Round, Sin, SourceRamp, Sqrt, Subtract, Switch, Tan,
+    Round, Sin, SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -25,6 +25,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
         class_path: "CDL.Reals.Sources.Ramp",
         make: make_source_ramp,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.Sources.Sin",
+        make: make_source_sin,
     },
     RegistryEntry {
         class_path: "CDL.Reals.Add",
@@ -171,6 +175,15 @@ pub(super) const SOURCE_RAMP_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+pub(super) const SOURCE_SIN_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "freqHz" },
+    ParamRule::Real { name: "amplitude" },
+    ParamRule::Real { name: "freqHz" },
+    ParamRule::Real { name: "phase" },
+    ParamRule::Real { name: "offset" },
+    ParamRule::Real { name: "startTime" },
+];
+
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Constant {
         k: real_param(p, "k", 0.0),
@@ -195,6 +208,16 @@ fn make_source_ramp(p: &ParamTable) -> Box<dyn Block> {
     Box::new(SourceRamp {
         height: real_param(p, "height", 1.0),
         duration: real_param(p, "duration", 1.0),
+        offset: real_param(p, "offset", 0.0),
+        start_time: real_param(p, "startTime", 0.0),
+    })
+}
+
+fn make_source_sin(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(SourceSin {
+        amplitude: real_param(p, "amplitude", 1.0),
+        freq_hz: real_param(p, "freqHz", 1.0),
+        phase: real_param(p, "phase", 0.0),
         offset: real_param(p, "offset", 0.0),
         start_time: real_param(p, "startTime", 0.0),
     })
