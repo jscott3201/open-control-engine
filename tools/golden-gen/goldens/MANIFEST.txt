@@ -450,6 +450,11 @@ G36/ahu_economizer reference -> goldens/G36/ahu_economizer/reference.csv
 G36/ahu_supply_air_temp_reset cooling_demand -> goldens/G36/ahu_supply_air_temp_reset/cooling_demand.csv
 G36/ahu_supply_air_temp_reset reference -> goldens/G36/ahu_supply_air_temp_reset/reference.csv
 G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_reset/sat_setpoint.csv
+G36/multizone_vav_plant_requests chilled_water_reset_request -> goldens/G36/multizone_vav_plant_requests/chilled_water_reset_request.csv
+G36/multizone_vav_plant_requests chiller_plant_request -> goldens/G36/multizone_vav_plant_requests/chiller_plant_request.csv
+G36/multizone_vav_plant_requests hot_water_plant_request -> goldens/G36/multizone_vav_plant_requests/hot_water_plant_request.csv
+G36/multizone_vav_plant_requests hot_water_reset_request -> goldens/G36/multizone_vav_plant_requests/hot_water_reset_request.csv
+G36/multizone_vav_plant_requests reference -> goldens/G36/multizone_vav_plant_requests/reference.csv
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv

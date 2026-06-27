@@ -5,6 +5,7 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+mod plant_requests;
 mod supply_fan;
 mod supply_signals;
 mod vav_single_zone;
@@ -15,6 +16,7 @@ const VAV: &str = "vav_single_zone";
 const SUPPLY_TEMP: &str = "multizone_vav_supply_temperature";
 const SUPPLY_FAN: &str = "multizone_vav_supply_fan";
 const SUPPLY_SIGNALS: &str = "multizone_vav_supply_signals";
+const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -36,6 +38,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(multizone_vav_supply_temperature());
     out.extend(supply_fan::goldens());
     out.extend(supply_signals::goldens());
+    out.extend(plant_requests::goldens());
     out
 }
 
@@ -227,13 +230,14 @@ fn source_files(sequence: &str) -> &'static str {
         SUPPLY_TEMP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
         SUPPLY_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
         SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+        PLANT_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
 
 fn fixture_status(sequence: &str) -> &'static str {
     match sequence {
-        SUPPLY_TEMP | SUPPLY_FAN | SUPPLY_SIGNALS => {
+        SUPPLY_TEMP | SUPPLY_FAN | SUPPLY_SIGNALS | PLANT_REQUESTS => {
             "supported-runtime-sequence source-verified composite"
         }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",

@@ -64,12 +64,24 @@ impl PointSpec {
             kind: ValueKind::Boolean,
         }
     }
+
+    pub(crate) const fn integer_alias(
+        reference_name: &'static str,
+        cdl_name: &'static str,
+    ) -> Self {
+        Self {
+            reference_name,
+            cdl_name,
+            kind: ValueKind::Integer,
+        }
+    }
 }
 
 pub(crate) struct SequenceSpec {
     pub(crate) name: &'static str,
     pub(crate) cxf: &'static str,
     pub(crate) t_stop: u32,
+    pub(crate) sample_step: f64,
     pub(crate) inputs: &'static [PointSpec],
     pub(crate) outputs: &'static [PointSpec],
     pub(crate) input_fn: fn(f64) -> Vec<(String, Value)>,
@@ -159,7 +171,7 @@ fn seed_reference(spec: &SequenceSpec) -> CombiTimeTable {
     let n_cols = names.len();
     let mut data = Vec::with_capacity(n_rows * n_cols);
     for tick in 0..=spec.t_stop {
-        let t = f64::from(tick);
+        let t = f64::from(tick) * spec.sample_step;
         data.push(t);
         push_input_cells(spec, t, &mut data);
         data.extend(spec.outputs.iter().map(|_| 0.0));
@@ -222,7 +234,7 @@ pub(crate) fn config_for(spec: &SequenceSpec) -> VerifyConfig {
         },
         outputs: Vec::new(),
         indicators: Vec::new(),
-        sampling: Some(1.0),
+        sampling: Some(spec.sample_step),
         run_controller: true,
     }
 }
@@ -249,7 +261,9 @@ fn point_end(name: &str, kind: ValueKind) -> PointEnd {
 pub(crate) fn options_for(spec: &SequenceSpec) -> DriverOptions {
     DriverOptions {
         cadence: DriveCadence::EventAligned {
-            instants: (0..=spec.t_stop).map(f64::from).collect(),
+            instants: (0..=spec.t_stop)
+                .map(|tick| f64::from(tick) * spec.sample_step)
+                .collect(),
         },
         input_replay: DriverInputReplay::ReferenceTable,
         comparison: ComparisonMode::Exact,

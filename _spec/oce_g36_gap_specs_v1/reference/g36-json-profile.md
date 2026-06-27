@@ -1,8 +1,8 @@
 # OCE G36 JSON/CXF Profile
 
 **Profile id:** `oce-g36-cxf-profile-v1`
-**Status:** restricted explicit-CXF composite import evidence exists; no `supported-runtime-sequence`
-claims yet.
+**Status:** restricted explicit-CXF composite import evidence exists, with selected
+`supported-runtime-sequence` claims only for checked-in explicit-CXF variants.
 
 This profile defines the checked-in JSON/CXF subset Open Control Engine will use for
 `Buildings.Controls.OBC.ASHRAE.G36` sequence work. It is deliberately narrower than arbitrary
@@ -23,12 +23,12 @@ The profile covers:
 - restricted explicit-CXF composite import after load-time specialization;
 - fail-closed decisions for validation packages, unsupported variants, and conditional guards.
 
-The profile does not add arbitrary `.mo` parsing or promote any canonical
-`Buildings.Controls.OBC.ASHRAE.G36.*` class to `supported-runtime-sequence`. `oce-cxf` supports a
-restricted explicit CXF subset: active nested composite nodes are specialized at load time, then
-lowered into native `CDL.*` registry blocks with deterministic source-path identity, parent
-parameter propagation, boundary connection expansion, and fail-closed diagnostics for unsupported
-Modelica constructs.
+The profile does not add arbitrary `.mo` parsing. `supported-runtime-sequence` claims apply only to
+the cataloged checked-in explicit-CXF variants with source, oracle, and determinism evidence.
+`oce-cxf` supports a restricted explicit CXF subset: active nested composite nodes are specialized at
+load time, then lowered into native `CDL.*` registry blocks with deterministic source-path identity,
+parent parameter propagation, boundary connection expansion, and fail-closed diagnostics for
+unsupported Modelica constructs.
 
 ## Class Identity
 
@@ -179,6 +179,10 @@ they are marked `supported-runtime-sequence`.
   restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals` with
   `have_heaCoi=true`, `have_cooCoi=true`, and `controllerType=PI`.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld` is a source-verified
+  restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests` with
+  `heaCoi=WaterBased`, `cooCoi=WaterBased`, `THys=0.1`, and `posHys=0.05`.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

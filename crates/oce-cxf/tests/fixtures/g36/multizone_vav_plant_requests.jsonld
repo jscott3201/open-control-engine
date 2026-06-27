@@ -1,0 +1,1889 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+      "S231:label": "multizone_vav_plant_requests",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.THys"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.posHys"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.THys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.posHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.05",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "cooSupTemDif",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.cooSupTemDif.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "3",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "THys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "2",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "THys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "120",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "120",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.95",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "thr",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 3
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.thr.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "chiWatRes3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiWatResReq"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "chiWatRes2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "two",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.two.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.85",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "chiWatRes1",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "one",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 1
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.one.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "zer",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.zer.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes1.u3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u3"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat1",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr1",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat1.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yChiPlaReq"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "heaSupTemDif",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.heaSupTemDif.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "17",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "THys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr4",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "8",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "THys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.truDel3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "hotWatRes3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "hotWatRes2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.85",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr5",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.95",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.greThr5.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat2",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "hotWatRes1",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lesThr3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat3",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.lat3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi1",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq"
+      }
+    }
+  ]
+}
