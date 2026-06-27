@@ -79,6 +79,83 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
+    // Sampler: initial() samples at simulation start; periodic t0 supports negative start time.
+    {
+        let t = vec![-0.25, 0.0, 0.5, 1.0, 1.5];
+        let u = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let y = sampled_sampler_y(&t, 1.0, &u);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.Sampler",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=1.0, start=-0.25; u=[10,20,30,40,50]",
+                "t0=round(integer(time/samplePeriod)*samplePeriod,n=6); when {sampleTrigger,initial()} then y=u; held between periodic sample instants; Buildings Sampler.mo",
+            )
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // ZeroOrderHold: initial input feeds through, then y=pre(ySample) at sample instants.
+    {
+        let t = vec![-0.25, 0.0, 0.5, 1.0, 1.5];
+        let u = [10.0, 20.0, 30.0, 40.0, 50.0];
+        let y = zero_order_hold_y(&t, 1.0, &u);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.ZeroOrderHold",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=1.0, start=-0.25; u=[10,20,30,40,50]",
+                "initial time feeds u directly to y; later y=pre(ySample), so a sample instant emits the previously sampled value and then stores current u; Buildings ZeroOrderHold.mo",
+            )
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // FirstOrderHold: first sample has zero slope; later intervals extrapolate from two samples.
+    {
+        let t = vec![0.0, 0.5, 1.0, 1.5, 2.0, 2.5];
+        let u = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+        let y = first_order_hold_y(&t, 1.0, &u);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.FirstOrderHold",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=1.0, start=0.0; u=[0,1,2,3,4,5]",
+                "pre(tSample)=t0, pre(uSample)=u, pre(pre_uSample)=u, pre(c)=0; on sample instants y emits the previous sample, then c=(uSample-pre_uSample)/samplePeriod for the following interval; Buildings FirstOrderHold.mo",
+            )
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // FirstOrderHold scenario: negative simulation start derives t0 by Modelica integer floor.
+    {
+        let t = vec![-0.25, 0.0, 0.5];
+        let u = [10.0, 12.0, 14.0];
+        let y = first_order_hold_y(&t, 1.0, &u);
+        out.push(
+            Golden::new(
+                "CDL.Discrete.FirstOrderHold",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "scenario=negative_start; samplePeriod=1.0, start=-0.25; u=[10,12,14]",
+                "t0=round(integer(-0.25/1.0)*1.0,n=6)=-1.0 using Modelica integer floor; the t=0 sample emits previous u=10, then the following interval uses slope (12-10)/1",
+            )
+            .with_scenario("negative_start")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
     // TriggeredMax: initial y = u, then y=max(pre(y),abs(u)) on false->true trigger edges.
     {
         let t = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
@@ -341,6 +418,96 @@ fn triggered_moving_mean_y(n: usize, u: &[f64], trigger: &[bool]) -> Vec<Sample>
         prev_trigger = trig;
     }
     y
+}
+
+fn sampled_sampler_y(t: &[f64], period: f64, u: &[f64]) -> Vec<Sample> {
+    assert_eq!(t.len(), u.len());
+    assert!(period >= 1e-3);
+    let t0 = initial_sample_time(t[0], period);
+    let mut last = sample_index(t[0], t0, period);
+    let mut held = u[0];
+    let mut y = vec![r(held)];
+    for (&now, &cur) in t.iter().zip(u).skip(1) {
+        let (due, index) = sample_due(now, t0, period, last);
+        if due {
+            held = cur;
+            last = index;
+        }
+        y.push(r(held));
+    }
+    y
+}
+
+fn zero_order_hold_y(t: &[f64], period: f64, u: &[f64]) -> Vec<Sample> {
+    assert_eq!(t.len(), u.len());
+    assert!(period >= 1e-3);
+    let t0 = initial_sample_time(t[0], period);
+    let mut last = sample_index(t[0], t0, period);
+    let mut held = u[0];
+    let mut y = vec![r(u[0])];
+    for (&now, &cur) in t.iter().zip(u).skip(1) {
+        let (due, index) = sample_due(now, t0, period, last);
+        y.push(r(held));
+        if due {
+            held = cur;
+            last = index;
+        }
+    }
+    y
+}
+
+fn first_order_hold_y(t: &[f64], period: f64, u: &[f64]) -> Vec<Sample> {
+    assert_eq!(t.len(), u.len());
+    assert!(period >= 1e-3);
+    let t0 = initial_sample_time(t[0], period);
+    let mut last = sample_index(t[0], t0, period);
+    let mut t_sample = t0;
+    let mut u_sample = u[0];
+    let mut pre_u_sample = u[0];
+    let mut slope = 0.0;
+    let mut y = vec![r(u[0])];
+    for (&now, &cur) in t.iter().zip(u).skip(1) {
+        let (due, index) = sample_due(now, t0, period, last);
+        if due {
+            y.push(r(u_sample));
+            let previous_u = u_sample;
+            let first_trigger = now <= t0 + period / 2.0;
+            last = index;
+            t_sample = now;
+            u_sample = cur;
+            pre_u_sample = previous_u;
+            slope = if first_trigger {
+                0.0
+            } else {
+                (u_sample - pre_u_sample) / period
+            };
+        } else {
+            y.push(r(pre_u_sample + slope * (now - t_sample)));
+        }
+    }
+    y
+}
+
+fn initial_sample_time(t_start: f64, period: f64) -> f64 {
+    buildings_round_six((t_start / period).floor() * period)
+}
+
+fn buildings_round_six(x: f64) -> f64 {
+    const FACTOR: f64 = 1_000_000.0;
+    if x > 0.0 {
+        (x * FACTOR + 0.5).floor() / FACTOR
+    } else {
+        (x * FACTOR - 0.5).ceil() / FACTOR
+    }
+}
+
+fn sample_index(t_now: f64, t0: f64, period: f64) -> i64 {
+    ((t_now - t0) / period + 1e-9).floor() as i64
+}
+
+fn sample_due(t_now: f64, t0: f64, period: f64, last_index: i64) -> (bool, i64) {
+    let index = sample_index(t_now, t0, period);
+    (index > last_index, index)
 }
 
 fn oracle_max(a: f64, b: f64) -> f64 {

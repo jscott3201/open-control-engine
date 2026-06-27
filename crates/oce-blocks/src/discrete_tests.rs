@@ -2,7 +2,10 @@ use oce_model::{ParamTable, Value};
 
 use oce_model::determinism::CANONICAL_NAN_BITS;
 
-use super::{Block, Ctx, NoopDiagnostics, TriggeredMax, TriggeredMovingMean, TriggeredSampler};
+use super::{
+    Block, Ctx, FirstOrderHold, NoopDiagnostics, Sampler, TriggeredMax, TriggeredMovingMean,
+    TriggeredSampler, ZeroOrderHold,
+};
 
 fn sample_tick(block: &dyn Block, region: &mut [u64], u: f64, trigger: bool) -> Value {
     let diag = NoopDiagnostics;
@@ -17,8 +20,31 @@ fn sample_tick(block: &dyn Block, region: &mut [u64], u: f64, trigger: bool) -> 
     out.expect("single-output stateful block emits one value")
 }
 
+fn timed_real_tick(block: &dyn Block, region: &mut [u64], t: f64, u: f64) -> Value {
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(t, &diag);
+    let inputs = [Value::Real(u)];
+    let mut out = None;
+    block.emit_from_state(&cx, &inputs, region, &mut |idx, val| {
+        assert_eq!(idx, 0);
+        out = Some(val);
+    });
+    block.update_state(&cx, &inputs, region);
+    out.expect("single-output stateful block emits one value")
+}
+
 fn assert_real_bits(got: &Value, want: f64) {
     assert!(got.bit_eq(&Value::Real(want)), "got {got:?}, want {want:?}");
+}
+
+fn assert_trace_bits(got: &[Value], want: &[f64]) {
+    assert_eq!(got.len(), want.len());
+    for (idx, (got, want)) in got.iter().zip(want).enumerate() {
+        assert!(
+            got.bit_eq(&Value::Real(*want)),
+            "trace[{idx}] got {got:?}, want {want:?}"
+        );
+    }
 }
 
 fn emit_once(block: &dyn Block, inputs: &[Value], region: &[u64]) -> Vec<Value> {
@@ -30,6 +56,168 @@ fn emit_once(block: &dyn Block, inputs: &[Value], region: &[u64]) -> Vec<Value> 
         out.push(val);
     });
     out
+}
+
+#[test]
+fn sampler_uses_start_time_t0_and_holds_between_sample_instants() {
+    let sampler = Sampler { sample_period: 1.0 };
+    assert_eq!(sampler.state_len(), 4);
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &ParamTable::default());
+
+    let trace = [
+        timed_real_tick(&sampler, &mut region, -0.25, 10.0),
+        timed_real_tick(&sampler, &mut region, 0.0, 20.0),
+        timed_real_tick(&sampler, &mut region, 0.5, 30.0),
+        timed_real_tick(&sampler, &mut region, 1.0, 40.0),
+        timed_real_tick(&sampler, &mut region, 1.5, 50.0),
+    ];
+
+    assert_trace_bits(&trace, &[10.0, 20.0, 20.0, 40.0, 40.0]);
+}
+
+#[test]
+fn zero_order_hold_initial_feedthrough_then_pre_sample_hold() {
+    let hold = ZeroOrderHold { sample_period: 1.0 };
+    assert_eq!(hold.state_len(), 4);
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+
+    let trace = [
+        timed_real_tick(&hold, &mut region, -0.25, 10.0),
+        timed_real_tick(&hold, &mut region, 0.0, 20.0),
+        timed_real_tick(&hold, &mut region, 0.5, 30.0),
+        timed_real_tick(&hold, &mut region, 1.0, 40.0),
+        timed_real_tick(&hold, &mut region, 1.5, 50.0),
+    ];
+
+    assert_trace_bits(&trace, &[10.0, 10.0, 20.0, 20.0, 40.0]);
+}
+
+#[test]
+fn first_order_hold_seeds_from_initial_input_and_extrapolates_after_samples() {
+    let hold = FirstOrderHold { sample_period: 1.0 };
+    assert_eq!(hold.state_len(), 7);
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+
+    let trace = [
+        timed_real_tick(&hold, &mut region, 0.0, 0.0),
+        timed_real_tick(&hold, &mut region, 0.5, 1.0),
+        timed_real_tick(&hold, &mut region, 1.0, 2.0),
+        timed_real_tick(&hold, &mut region, 1.5, 3.0),
+        timed_real_tick(&hold, &mut region, 2.0, 4.0),
+        timed_real_tick(&hold, &mut region, 2.5, 5.0),
+    ];
+
+    assert_trace_bits(&trace, &[0.0, 0.0, 0.0, 1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn first_order_hold_negative_start_computes_t0_from_floor_integer() {
+    let hold = FirstOrderHold { sample_period: 1.0 };
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+
+    let trace = [
+        timed_real_tick(&hold, &mut region, -0.25, 10.0),
+        timed_real_tick(&hold, &mut region, 0.0, 12.0),
+        timed_real_tick(&hold, &mut region, 0.5, 14.0),
+    ];
+
+    assert_trace_bits(&trace, &[10.0, 10.0, 11.0]);
+}
+
+#[test]
+fn sampled_blocks_emit_pass_is_pure_for_initial_tick() {
+    for block in [
+        Box::new(Sampler { sample_period: 1.0 }) as Box<dyn Block>,
+        Box::new(ZeroOrderHold { sample_period: 1.0 }),
+        Box::new(FirstOrderHold { sample_period: 1.0 }),
+    ] {
+        let mut region = vec![0u64; block.state_len()];
+        block.init_state(&mut region, &ParamTable::default());
+        let inputs = [Value::Real(4.0)];
+        let before = region.clone();
+
+        let a = emit_once(block.as_ref(), &inputs, &region);
+        let b = emit_once(block.as_ref(), &inputs, &region);
+
+        assert_real_bits(&a[0], 4.0);
+        assert!(a[0].bit_eq(&b[0]));
+        assert_eq!(region, before, "emit_from_state must not mutate state");
+    }
+}
+
+#[test]
+fn sampled_blocks_non_finite_samples_are_canonicalized() {
+    let noncanonical_nan = f64::from_bits(0xfff8_0000_0000_0001);
+    let canonical_nan = f64::from_bits(CANONICAL_NAN_BITS);
+
+    let sampler = Sampler { sample_period: 1.0 };
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &ParamTable::default());
+    assert_real_bits(
+        &timed_real_tick(&sampler, &mut region, 0.0, noncanonical_nan),
+        canonical_nan,
+    );
+    assert_eq!(region[0], CANONICAL_NAN_BITS);
+
+    let hold = ZeroOrderHold { sample_period: 1.0 };
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+    assert_real_bits(
+        &timed_real_tick(&hold, &mut region, 0.0, noncanonical_nan),
+        canonical_nan,
+    );
+    assert_eq!(region[0], CANONICAL_NAN_BITS);
+    assert_real_bits(
+        &timed_real_tick(&hold, &mut region, 0.5, 5.0),
+        canonical_nan,
+    );
+
+    let hold = FirstOrderHold { sample_period: 1.0 };
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+    assert_real_bits(
+        &timed_real_tick(&hold, &mut region, 0.0, noncanonical_nan),
+        canonical_nan,
+    );
+    assert_eq!(region[4], CANONICAL_NAN_BITS);
+    assert_eq!(region[5], CANONICAL_NAN_BITS);
+}
+
+#[test]
+fn sampled_blocks_direct_invalid_period_degrades_to_one_second() {
+    let sampler = Sampler { sample_period: 0.0 };
+    let mut region = vec![0u64; sampler.state_len()];
+    sampler.init_state(&mut region, &ParamTable::default());
+    let sampler_trace = [
+        timed_real_tick(&sampler, &mut region, 0.0, 1.0),
+        timed_real_tick(&sampler, &mut region, 0.5, 2.0),
+        timed_real_tick(&sampler, &mut region, 1.0, 3.0),
+    ];
+    assert_trace_bits(&sampler_trace, &[1.0, 1.0, 3.0]);
+
+    let hold = ZeroOrderHold { sample_period: 0.0 };
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+    let zoh_trace = [
+        timed_real_tick(&hold, &mut region, 0.0, 1.0),
+        timed_real_tick(&hold, &mut region, 0.5, 2.0),
+        timed_real_tick(&hold, &mut region, 1.0, 3.0),
+    ];
+    assert_trace_bits(&zoh_trace, &[1.0, 1.0, 1.0]);
+
+    let hold = FirstOrderHold { sample_period: 0.0 };
+    let mut region = vec![0u64; hold.state_len()];
+    hold.init_state(&mut region, &ParamTable::default());
+    let foh_trace = [
+        timed_real_tick(&hold, &mut region, 0.0, 1.0),
+        timed_real_tick(&hold, &mut region, 0.5, 2.0),
+        timed_real_tick(&hold, &mut region, 1.0, 3.0),
+    ];
+    assert_trace_bits(&foh_trace, &[1.0, 1.0, 1.0]);
 }
 
 #[test]

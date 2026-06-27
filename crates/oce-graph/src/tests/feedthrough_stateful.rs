@@ -220,6 +220,30 @@ fn triggered_moving_mean_feedback_requires_an_explicit_cut() {
 }
 
 #[test]
+fn periodic_sampled_feedback_requires_an_explicit_cut_for_initial_feedthrough() {
+    for class in [
+        "CDL.Discrete.Sampler",
+        "CDL.Discrete.ZeroOrderHold",
+        "CDL.Discrete.FirstOrderHold",
+    ] {
+        let mut direct = ModelBuilder::default();
+        let (_block, input, output) =
+            direct.block_real(make(class, &[("samplePeriod", Value::Real(1.0))]));
+        direct.connect(output[0], input[0]);
+
+        let err = compile(&direct.model, &direct.blocks)
+            .expect_err("periodic sampled blocks are transparent on the initial tick");
+        assert!(
+            matches!(
+                err,
+                BuildError::AlgebraicLoop { .. } | BuildError::BlockAlgebraicLoop { .. }
+            ),
+            "{class}: expected algebraic loop rejection, got {err:?}"
+        );
+    }
+}
+
+#[test]
 fn h0_comparator_allocates_no_state_through_real_graph_build() {
     let mut b = ModelBuilder::default();
     let (greater, _, _) = b.block_real(make("CDL.Reals.Greater", &[]));

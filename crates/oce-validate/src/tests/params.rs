@@ -154,6 +154,42 @@ fn triggered_moving_mean_n_parameter_is_required_and_positive() {
 }
 
 #[test]
+fn sampled_discrete_sample_period_is_required_and_at_least_one_millisecond() {
+    for class in [
+        "CDL.Discrete.FirstOrderHold",
+        "CDL.Discrete.Sampler",
+        "CDL.Discrete.ZeroOrderHold",
+    ] {
+        let missing = real_to_real_model(class, vec![]);
+        let err = validate(&missing).expect_err("samplePeriod is required");
+        assert_eq!(
+            codes(&err.diagnostics),
+            vec![DiagCode::MissingRequiredParameter],
+            "{class}"
+        );
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains("`samplePeriod`"));
+
+        let invalid = real_to_real_model(class, vec![rp("samplePeriod", 0.0005)]);
+        let err = validate(&invalid).expect_err("samplePeriod below 1E-3 must fail");
+        assert_eq!(
+            codes(&err.diagnostics),
+            vec![DiagCode::ParameterOutOfRange],
+            "{class}"
+        );
+        assert_eq!(err.diagnostics[0].severity, Severity::Error);
+        assert!(err.diagnostics[0].message.contains("`samplePeriod`"));
+
+        assert!(
+            validate(&real_to_real_model(class, vec![rp("samplePeriod", 0.001)]))
+                .expect("samplePeriod boundary is inclusive")
+                .is_empty(),
+            "{class}"
+        );
+    }
+}
+
+#[test]
 fn sample_trigger_period_zero_rejection_is_pinned() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",

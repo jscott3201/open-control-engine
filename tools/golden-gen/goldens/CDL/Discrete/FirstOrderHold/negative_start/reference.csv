@@ -1,0 +1,6 @@
+#1
+# columns: time u y
+double CDL_Discrete_FirstOrderHold_negative_start_reference(3,3)
+-0.25 10.0 10.0
+0.0 12.0 10.0
+0.5 14.0 11.0
