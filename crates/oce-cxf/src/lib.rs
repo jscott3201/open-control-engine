@@ -18,6 +18,14 @@ use oce_model::ModelGraph;
 mod arrays;
 mod bridge;
 pub mod dto;
+#[cfg(test)]
+mod g36_catalog_guard_data;
+#[cfg(test)]
+mod g36_catalog_guard_helpers;
+#[cfg(test)]
+mod g36_catalog_guard_support;
+#[cfg(test)]
+mod g36_catalog_tests;
 mod ground;
 mod resolve;
 #[cfg(test)]

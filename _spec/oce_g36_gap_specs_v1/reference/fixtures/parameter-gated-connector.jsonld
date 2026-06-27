@@ -1,0 +1,48 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.profile.parameter_gated_connector",
+      "@type": "S231:Block",
+      "S231:label": "parameter_gated_connector",
+      "S231:hasParameter": { "@id": "http://example.org#g36.profile.parameter_gated_connector.venStd" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.profile.parameter_gated_connector.outdoor_airflow" },
+        { "@id": "http://example.org#g36.profile.parameter_gated_connector.co2_concentration" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.profile.parameter_gated_connector.enabled" }
+    },
+    {
+      "@id": "http://example.org#g36.profile.parameter_gated_connector.venStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.California_Title_24"
+    },
+    {
+      "@id": "http://example.org#g36.profile.parameter_gated_connector.outdoor_airflow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate"
+    },
+    {
+      "@id": "http://example.org#g36.profile.parameter_gated_connector.co2_concentration",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "venStd == Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard.California_Title_24",
+      "S231:unit": "ppm",
+      "S231:quantity": "Concentration"
+    },
+    {
+      "@id": "http://example.org#g36.profile.parameter_gated_connector.enabled",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    }
+  ]
+}
