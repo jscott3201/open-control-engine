@@ -1,7 +1,7 @@
 {
   "class_path": "G36",
   "scenario": "vav_single_zone",
-  "signal": "damper_command",
+  "signal": "cooling_signal",
   "tier": "A",
   "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
   "value_kind": "Real",
@@ -15,8 +15,8 @@
     { "name": "cooling_setpoint", "value_kind": "Real", "values": [24.0, 24.0, 24.0, 24.0, 24.0, 24.0] },
     { "name": "heating_setpoint", "value_kind": "Real", "values": [20.0, 20.0, 20.0, 20.0, 20.0, 20.0] }
   ],
-  "input": "VAV: zone_temp=[22,27,27.5,19,19.3,21], cooling_setpoint=24, heating_setpoint=20; fixture-local PI cooling loop plus heating branch",
-  "reference_rule": "damperLimiter.y = max(0.2,min(airflowSwitch.y,1)); airflowSwitch selects heatingFlow=0.6 while heating_enabled, else max(coolingPid.y, minimumFlow=0.25)",
+  "input": "VAV: coolingPid has k=0.25, Ti=20, Ni=0.9 default, yMin=0, yMax=1, xi_start=0, reverseActing=false",
+  "reference_rule": "cooling_signal aliases internal coolingPid.y. At each tick: e=zone_temp-cooling_setpoint; y=clamp(k*e+xI,0,1); then xI += (k/Ti)*(e-(yU-y)/(k*Ni))*dt with first dt=0.",
   "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
   "fixture_status": "supported-fixture-only source-reviewed fragment",

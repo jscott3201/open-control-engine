@@ -1,0 +1,9 @@
+#1
+# columns: time cooling_signal
+double G36_vav_single_zone_cooling_signal(6,2)
+0.0 0.0
+1.0 0.75
+2.0 0.9125
+3.0 0.0
+4.0 0.0
+5.0 0.0

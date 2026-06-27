@@ -486,9 +486,7 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         .any(|s| matches!(s, Sample::Real(x) if !x.is_finite()));
     let compare = if g.class_path == "G36" {
         match g.kind {
-            ValueKind::Real => {
-                "Exact for dyadic Tier-A Reals; zero-tolerance masked funnel for VAV heating-branch constants"
-            }
+            ValueKind::Real => "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
             ValueKind::Integer => "exact encoded integer",
             ValueKind::Boolean => "exact 0.0/1.0",
         }

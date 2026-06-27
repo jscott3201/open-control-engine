@@ -455,8 +455,8 @@ G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_suppl
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv
 G36/multizone_vav_supply_temperature reference -> goldens/G36/multizone_vav_supply_temperature/reference.csv
 G36/multizone_vav_supply_temperature supply_air_temperature_setpoint -> goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv
-G36/vav_single_zone PID cone deferred -> goldens/G36/vav_single_zone/pid_cone_deferred.prov.json
 G36/vav_single_zone airflow_setpoint -> goldens/G36/vav_single_zone/airflow_setpoint.csv
+G36/vav_single_zone cooling_signal -> goldens/G36/vav_single_zone/cooling_signal.csv
 G36/vav_single_zone damper_command -> goldens/G36/vav_single_zone/damper_command.csv
 G36/vav_single_zone heating_enabled -> goldens/G36/vav_single_zone/heating_enabled.csv
 G36/vav_single_zone reference -> goldens/G36/vav_single_zone/reference.csv

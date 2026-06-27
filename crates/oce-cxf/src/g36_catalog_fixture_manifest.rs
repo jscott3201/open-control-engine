@@ -78,10 +78,7 @@ pub(super) fn validate_fixture_records(
         validate_fixture_source_list(entry, fixture, &source_files, errors);
         validate_nonempty_manifest_array(entry, "known_deferred_branches", fixture, errors);
         validate_nonempty_manifest_array(entry, "unsupported_variants", fixture, errors);
-        if fixture.name == "vav_single_zone" && str_field(entry, "oracle_status") != "partial" {
-            errors.push("vav-fixture-oracle-status-not-partial".to_owned());
-        }
-        if fixture.name != "vav_single_zone" && str_field(entry, "oracle_status") != "complete" {
+        if str_field(entry, "oracle_status") != "complete" {
             errors.push(format!(
                 "fixture-oracle-status-not-complete: {}",
                 fixture.name

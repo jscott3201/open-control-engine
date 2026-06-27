@@ -7,15 +7,15 @@
   "value_kind": "Boolean",
   "compare_regime": "exact 0.0/1.0",
   "n_samples": 6,
-  "n_reference_columns": 7,
+  "n_reference_columns": 8,
   "reference_csv": "reference.csv",
-  "reference_columns": ["time", "zone_temp", "cooling_setpoint", "heating_setpoint", "heating_enabled", "airflow_setpoint", "damper_command"],
+  "reference_columns": ["time", "zone_temp", "cooling_setpoint", "heating_setpoint", "damper_command", "airflow_setpoint", "cooling_signal", "heating_enabled"],
   "inputs": [
     { "name": "zone_temp", "value_kind": "Real", "values": [22.0, 27.0, 27.5, 19.0, 19.3, 21.0] },
     { "name": "cooling_setpoint", "value_kind": "Real", "values": [24.0, 24.0, 24.0, 24.0, 24.0, 24.0] },
     { "name": "heating_setpoint", "value_kind": "Real", "values": [20.0, 20.0, 20.0, 20.0, 20.0, 20.0] }
   ],
-  "input": "VAV: zone_temp=[22,27,27.5,19,19.3,21], heating_setpoint=20, h=0.5",
+  "input": "VAV: same fixture inputs; heatingNeed is Less(h=0.5, pre_y_start=false)",
   "reference_rule": "Buildings Reals/Less hysteresis: set when zone_temp<heating_setpoint; hold while previous true and zone_temp<heating_setpoint+h",
   "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
