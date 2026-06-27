@@ -453,6 +453,10 @@ G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_re
 G36/multizone_vav_supply_fan reference -> goldens/G36/multizone_vav_supply_fan/reference.csv
 G36/multizone_vav_supply_fan supply_fan_speed -> goldens/G36/multizone_vav_supply_fan/supply_fan_speed.csv
 G36/multizone_vav_supply_fan supply_fan_status -> goldens/G36/multizone_vav_supply_fan/supply_fan_status.csv
+G36/multizone_vav_supply_signals reference -> goldens/G36/multizone_vav_supply_signals/reference.csv
+G36/multizone_vav_supply_signals uTSup -> goldens/G36/multizone_vav_supply_signals/uTSup.csv
+G36/multizone_vav_supply_signals yCooCoi -> goldens/G36/multizone_vav_supply_signals/yCooCoi.csv
+G36/multizone_vav_supply_signals yHeaCoi -> goldens/G36/multizone_vav_supply_signals/yHeaCoi.csv
 G36/multizone_vav_supply_temperature reference -> goldens/G36/multizone_vav_supply_temperature/reference.csv
 G36/multizone_vav_supply_temperature supply_air_temperature_setpoint -> goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv
 G36/vav_single_zone airflow_setpoint -> goldens/G36/vav_single_zone/airflow_setpoint.csv

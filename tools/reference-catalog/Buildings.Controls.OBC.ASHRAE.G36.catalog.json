@@ -276,9 +276,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the default SupplySignals parameterization with have_heaCoi=true, have_cooCoi=true, controllerType=PI, and PI supply-temperature loop reset from u1SupFan; coil-absent and non-PI variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
@@ -349,6 +350,24 @@
         "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
         "The supported variant uses the default no-perimeter branch: y1SupFan is true for operation modes 1/2/3, false otherwise, and ySupFan is zero when the fan is disabled.",
         "The oracle covers the pressure TrimAndRespond -> FirstOrderHold -> PI PIDWithReset cone for controllerType=PI only."
+      ]
+    },
+    {
+      "name": "multizone_vav_supply_signals",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_signals",
+      "supported_variant": "source-verified explicit CXF for default SupplySignals parameters with have_heaCoi=true, have_cooCoi=true, controllerType=PI, kTSup=0.05, TiTSup=600, uHea_max=-0.25, and uCoo_min=0.25",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_signals.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_supply_signals.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_supply_signals/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
+        "The supported variant keeps both coil command outputs active and uses the source PI supply-temperature loop reset by u1SupFan.",
+        "The oracle covers uTSup, yHeaCoi, and yCooCoi for controllerType=PI only; coil-absent and non-PI variants remain deferred."
       ]
     }
   ],
@@ -431,6 +450,28 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, nested TrimAndRespond flattening, facade load support, independent oracle matching, and determinism golden coverage.",
         "Evidence does not claim arbitrary .mo parsing, have_perZonRehBox=true perimeter reheating, non-PI controller variants, or source defaults for maxSet; maxSet is explicit at 410 Pa in the fixture."
+      ]
+    },
+    {
+      "name": "multizone_vav_supply_signals",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_supply_signals",
+      "source_child_count": 9,
+      "active_block_count": 9,
+      "input_count": 3,
+      "output_count": 3,
+      "supported_variant": "explicit CXF source transcription for default SupplySignals parameters with have_heaCoi=true, have_cooCoi=true, and controllerType=PI",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_supply_signals.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_composite.rs",
+      "api_test": "crates/oce-api/tests/composite_import.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load support, independent oracle matching, and determinism golden coverage.",
+        "Evidence does not claim arbitrary .mo parsing, have_heaCoi=false, have_cooCoi=false, or non-PI controller variants."
       ]
     }
   ],

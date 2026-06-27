@@ -14,6 +14,7 @@ const G36_TRIM_AND_RESPOND: &str =
 const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const G36_SUPPLY_FAN: &str = include_str!("fixtures/g36/multizone_vav_supply_fan.jsonld");
+const G36_SUPPLY_SIGNALS: &str = include_str!("fixtures/g36/multizone_vav_supply_signals.jsonld");
 const NESTED_GOLDEN_REL: &str = "tests/fixtures/golden/nested_composite.modelgraph.txt";
 const G36_TRIM_AND_RESPOND_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt";
@@ -21,6 +22,8 @@ const G36_SUPPLY_TEMPERATURE_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_multizone_vav_supply_temperature.modelgraph.txt";
 const G36_SUPPLY_FAN_GOLDEN_REL: &str =
     "tests/fixtures/golden/g36_multizone_vav_supply_fan.modelgraph.txt";
+const G36_SUPPLY_SIGNALS_GOLDEN_REL: &str =
+    "tests/fixtures/golden/g36_multizone_vav_supply_signals.modelgraph.txt";
 const MODEL: &str = "http://example.org#g36.profile.nested_composite";
 const G36_TRIM_AND_RESPOND_MODEL: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false";
@@ -32,6 +35,8 @@ const G36_SUPPLY_TEMPERATURE_CLASS: &str = "http://example.org#Buildings.Control
 const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
 const G36_SUPPLY_FAN_CLASS: &str =
     "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan";
+const G36_SUPPLY_SIGNALS_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_signals";
+const G36_SUPPLY_SIGNALS_CLASS: &str = "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals";
 
 fn import_ok(src: &str) -> ModelGraph {
     let (graph, report) = import_cxf(src.as_bytes(), &ResolveOptions::default())
@@ -483,6 +488,104 @@ fn golden_g36_multizone_vav_supply_fan_modelgraph() {
     assert_eq!(
         actual, expected,
         "source-verified G36 SupplyFan ModelGraph diverged from golden"
+    );
+}
+
+#[test]
+fn source_verified_g36_multizone_vav_supply_signals_imports_source_loop() {
+    let parsed: JsonValue = serde_json::from_str(G36_SUPPLY_SIGNALS).expect("G36 fixture JSON");
+    let top = parsed["@graph"]
+        .as_array()
+        .expect("@graph array")
+        .iter()
+        .find(|node| node["@id"] == json!(G36_SUPPLY_SIGNALS_MODEL))
+        .expect("top G36 SupplySignals composite node");
+    assert_eq!(top["@type"], json!(G36_SUPPLY_SIGNALS_CLASS));
+    assert_eq!(
+        top["S231:containsBlock"]
+            .as_array()
+            .expect("children")
+            .len(),
+        9,
+        "SupplySignals source transcription should preserve the 9 default child components"
+    );
+
+    let graph = import_ok(G36_SUPPLY_SIGNALS);
+    assert_eq!(
+        graph.blocks.len(),
+        9,
+        "default have_heaCoi=true/have_cooCoi=true variant should keep both coil branches"
+    );
+    let instances: Vec<&str> = graph
+        .blocks
+        .iter()
+        .map(|block| block.instance_iri.as_deref().expect("source path"))
+        .collect();
+    assert!(instances.iter().any(|iri| iri.ends_with(".conTSup")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".swi")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".conSigHea")));
+    assert!(instances.iter().any(|iri| iri.ends_with(".conSigCoo")));
+
+    assert!(
+        block_param(&graph, ".conTSup", "controllerType").bit_eq(&Value::Enum {
+            class: EnumClassId::SIMPLE_CONTROLLER,
+            ordinal: 2,
+        }),
+        "SupplySignals source default controllerType=PI must ground through parent scope"
+    );
+    assert!(
+        block_param(&graph, ".conTSup", "k").bit_eq(&Value::Real(0.05)),
+        "PID gain must inherit kTSup"
+    );
+    assert!(
+        block_param(&graph, ".conTSup", "Ti").bit_eq(&Value::Real(600.0)),
+        "PID integral time must inherit TiTSup"
+    );
+    assert!(
+        block_param(&graph, ".conTSup", "yMin").bit_eq(&Value::Real(-1.0)),
+        "SupplySignals PID range must allow heating-side negative output"
+    );
+    assert!(
+        block_param(&graph, ".conTSup", "reverseActing").bit_eq(&Value::Boolean(false)),
+        "source reverseActing=false must override the registry default"
+    );
+    assert!(
+        block_param(&graph, ".conSigHea", "limitBelow").bit_eq(&Value::Boolean(false)),
+        "heating coil map must only clamp above uHea_max"
+    );
+    assert!(
+        block_param(&graph, ".conSigHea", "limitAbove").bit_eq(&Value::Boolean(true)),
+        "heating coil map must only clamp above uHea_max"
+    );
+    assert!(
+        block_param(&graph, ".conSigCoo", "limitBelow").bit_eq(&Value::Boolean(true)),
+        "cooling coil map must clamp below uCoo_min"
+    );
+    assert!(
+        block_param(&graph, ".conSigCoo", "limitAbove").bit_eq(&Value::Boolean(false)),
+        "cooling coil map must not clamp above because PID yMax already limits uTSup"
+    );
+
+    let counts = connector_iri_counts(&graph);
+    assert!(counts.contains(&(format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSup"), 1)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSupSet"), 1)));
+    assert!(counts.contains(&(format!("{G36_SUPPLY_SIGNALS_MODEL}.u1SupFan"), 2)));
+}
+
+#[test]
+fn golden_g36_multizone_vav_supply_signals_modelgraph() {
+    let actual = render(&import_ok(G36_SUPPLY_SIGNALS));
+    let path = golden_path(G36_SUPPLY_SIGNALS_GOLDEN_REL);
+    if std::env::var_os("OCE_BLESS").is_some() {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, &actual).unwrap();
+        return;
+    }
+    let expected = std::fs::read_to_string(path)
+        .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
+    assert_eq!(
+        actual, expected,
+        "source-verified G36 SupplySignals ModelGraph diverged from golden"
     );
 }
 

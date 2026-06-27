@@ -1,0 +1,13 @@
+#1
+# columns: time uTSup
+double G36_multizone_vav_supply_signals_uTSup(10,2)
+0.0 0.0
+1.0 0.25
+2.0 0.0
+3.0 -0.4995833333333333
+4.0 0.5
+5.0 1.0
+6.0 -1.0
+7.0 0.0
+8.0 -1.0
+9.0 0.0

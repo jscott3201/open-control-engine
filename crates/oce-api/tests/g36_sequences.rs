@@ -15,6 +15,8 @@ const SUPPLY_TEMPERATURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 const SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
+const SUPPLY_SIGNALS: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
@@ -40,6 +42,12 @@ const SUPPLY_FAN_DUCT_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
 const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
+const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
+const SUPPLY_SIGNALS_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet";
+const SUPPLY_SIGNALS_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan";
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
@@ -285,6 +293,22 @@ fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
     ]
 }
 
+fn supply_signals_inputs(t: f64) -> Vec<(String, Value)> {
+    let row = t as usize;
+    let setpoint = [
+        295.0, 295.0, 295.0, 300.0, 295.0, 295.0, 320.0, 320.0, 320.0, 320.0,
+    ][row.min(9)];
+    let measured = [
+        300.0, 300.0, 300.0, 295.0, 310.0, 320.0, 295.0, 295.0, 295.0, 295.0,
+    ][row.min(9)];
+    let fan_status = [false, true, true, true, true, true, true, false, true, true][row.min(9)];
+    vec![
+        pair(SUPPLY_SIGNALS_MEASURED_TEMP, Value::Real(measured)),
+        pair(SUPPLY_SIGNALS_SETPOINT, Value::Real(setpoint)),
+        pair(SUPPLY_SIGNALS_FAN_STATUS, Value::Boolean(fan_status)),
+    ]
+}
+
 #[test]
 fn ahu_supply_air_temp_reset_loads_simulates_and_is_deterministic() {
     let (engine, _) = load(AHU_SAT_RESET, 7, 0);
@@ -435,6 +459,71 @@ fn multizone_vav_supply_fan_loads_simulates_and_is_deterministic() {
         real_at(&metrics_a, fan_speed, 840) > real_at(&metrics_a, fan_speed, 719),
         "larger pressure reset requests and lower duct pressure should increase fan speed"
     );
+}
+
+#[test]
+fn multizone_vav_supply_signals_loads_simulates_and_is_deterministic() {
+    let (engine, _) = load(SUPPLY_SIGNALS, 9, 1);
+    let outputs = [
+        OutputRef {
+            label: "uTSup",
+            ordinal: 1,
+        },
+        OutputRef {
+            label: "yCooCoi",
+            ordinal: 7,
+        },
+        OutputRef {
+            label: "yHeaCoi",
+            ordinal: 8,
+        },
+    ];
+    let (schedule_a, paths, metrics_a) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_signals_inputs)),
+        &outputs,
+        9.0,
+    );
+
+    let (engine, _) = load(SUPPLY_SIGNALS, 9, 1);
+    let (schedule_b, paths_b, metrics_b) = simulate(
+        engine,
+        InputSource::Closure(Box::new(supply_signals_inputs)),
+        &outputs,
+        9.0,
+    );
+
+    assert_eq!(paths, paths_b);
+    assert_eq!(
+        schedule_a, schedule_b,
+        "SupplySignals schedule is deterministic"
+    );
+    assert_trace_bit_eq(&metrics_a, &metrics_b);
+    let signal = paths[0].as_str();
+    let cooling = paths[1].as_str();
+    let heating = paths[2].as_str();
+    assert_real_bounds(&metrics_a, signal, -1.0, 1.0);
+    assert_real_bounds(&metrics_a, cooling, 0.0, 1.0);
+    assert_real_bounds(&metrics_a, heating, 0.0, 1.0);
+    assert_eq!(real_at(&metrics_a, signal, 0).to_bits(), 0.0f64.to_bits());
+    assert_eq!(real_at(&metrics_a, signal, 1).to_bits(), 0.25f64.to_bits());
+    assert_eq!(real_at(&metrics_a, signal, 2).to_bits(), 0.0f64.to_bits());
+    assert!(
+        real_at(&metrics_a, heating, 3) > 0.0,
+        "negative loop signal should open the heating coil command"
+    );
+    assert!(
+        real_at(&metrics_a, cooling, 4) > 0.0,
+        "positive loop signal above uCoo_min should open the cooling coil command"
+    );
+    assert_eq!(real_at(&metrics_a, cooling, 5).to_bits(), 1.0f64.to_bits());
+    assert_eq!(real_at(&metrics_a, heating, 6).to_bits(), 1.0f64.to_bits());
+    assert_eq!(real_at(&metrics_a, signal, 7).to_bits(), 0.0f64.to_bits());
+    assert_eq!(
+        real_at(&metrics_a, signal, 8).to_bits(),
+        (-1.0f64).to_bits()
+    );
+    assert_eq!(real_at(&metrics_a, signal, 9).to_bits(), 0.0f64.to_bits());
 }
 
 #[test]

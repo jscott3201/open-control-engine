@@ -1,0 +1,13 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_supply_signals.uTSup http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi
+double multizone_vav_supply_signals(10,4)
+0.0 0.0 0.0 5.551115123125783e-17
+1.0 0.25 0.0 5.551115123125783e-17
+2.0 0.0 0.0 5.551115123125783e-17
+3.0 -0.4995833333333333 0.3327777777777778 5.551115123125783e-17
+4.0 0.5 0.0 0.33333333333333337
+5.0 1.0 0.0 1.0
+6.0 -1.0 1.0 5.551115123125783e-17
+7.0 0.0 0.0 5.551115123125783e-17
+8.0 -1.0 1.0 5.551115123125783e-17
+9.0 0.0 0.0 5.551115123125783e-17
