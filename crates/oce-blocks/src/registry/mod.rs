@@ -49,6 +49,8 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Integers.MultiSum" => integers::MULTI_SUM_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
+        "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => reals::MULTI_REAL_PARAM_RULES,
+        "CDL.Reals.MultiSum" => reals::MULTI_SUM_PARAM_RULES,
         "CDL.Reals.Sources.Ramp" => reals::SOURCE_RAMP_PARAM_RULES,
         "CDL.Reals.Sources.Sin" => reals::SOURCE_SIN_PARAM_RULES,
         "CDL.Reals.Sources.CalendarTime" => reals::CALENDAR_TIME_PARAM_RULES,

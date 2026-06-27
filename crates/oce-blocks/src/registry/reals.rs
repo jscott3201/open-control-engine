@@ -5,8 +5,9 @@ use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::{
     Abs, Acos, Add, AddParameter, Asin, Atan, Atan2, Average, Block, CalendarTime, CivilTime,
     Constant, Cos, Divide, Exp, Greater, GreaterThreshold, Hysteresis, Less, LessThreshold,
-    Limiter, Line, Log, Log10, Max, Min, Modulo, Multiply, MultiplyByParameter, ParamRule,
-    RealPulse, RegistryEntry, Round, Sin, SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
+    Limiter, Line, Log, Log10, MAX_RESOLVED_PORT_WIDTH, Max, Min, Modulo, MultiMax, MultiMin,
+    MultiSum, Multiply, MultiplyByParameter, ParamRule, RealPulse, RegistryEntry, Round, Sin,
+    SourceRamp, SourceSin, Sqrt, Subtract, Switch, Tan,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -127,6 +128,18 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
         make: make_max,
     },
     RegistryEntry {
+        class_path: "CDL.Reals.MultiMax",
+        make: make_multi_max,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.MultiMin",
+        make: make_multi_min,
+    },
+    RegistryEntry {
+        class_path: "CDL.Reals.MultiSum",
+        make: make_multi_sum,
+    },
+    RegistryEntry {
         class_path: "CDL.Reals.Limiter",
         make: make_limiter,
     },
@@ -203,6 +216,34 @@ pub(super) const CALENDAR_TIME_PARAM_RULES: &[ParamRule] = &[
         max: 2031,
     },
     ParamRule::RealFinite { name: "offset" },
+];
+
+pub(super) const MULTI_REAL_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nin" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+];
+
+pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nin" },
+    ParamRule::IntegerGreaterOrEqual {
+        name: "nin",
+        min: 0,
+    },
+    ParamRule::IntegerLessOrEqualConstant {
+        name: "nin",
+        max: MAX_RESOLVED_PORT_WIDTH as i64,
+    },
+    ParamRule::RealArrayElements {
+        base: "k",
+        len: "nin",
+    },
 ];
 
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
@@ -350,6 +391,22 @@ fn make_max(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Max)
 }
 
+fn make_multi_max(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MultiMax::new(bounded_nin(p)))
+}
+
+fn make_multi_min(p: &ParamTable) -> Box<dyn Block> {
+    Box::new(MultiMin::new(bounded_nin(p)))
+}
+
+fn make_multi_sum(p: &ParamTable) -> Box<dyn Block> {
+    let nin = bounded_nin(p);
+    let gains = (1..=nin)
+        .map(|idx| real_param(p, &format!("k_{idx}"), 1.0))
+        .collect();
+    Box::new(MultiSum::new(gains))
+}
+
 fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Limiter {
         u_min: real_param(p, "uMin", f64::NEG_INFINITY),
@@ -404,4 +461,11 @@ fn make_less_threshold(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
     Box::new(Switch)
+}
+
+fn bounded_nin(p: &ParamTable) -> usize {
+    let raw = int_param(p, "nin", 0);
+    usize::try_from(raw)
+        .unwrap_or(0)
+        .min(MAX_RESOLVED_PORT_WIDTH)
 }

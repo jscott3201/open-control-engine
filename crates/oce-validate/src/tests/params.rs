@@ -159,6 +159,35 @@ fn vector_width_and_flattened_gain_parameters_are_checked() {
             .expect("omitted k_i elements default to fill(1,nin)")
             .is_empty()
     );
+
+    let bad_real_gain = one_block_model(
+        "CDL.Reals.MultiSum",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("k_1"), Value::Real(0.5)),
+            (Arc::from("k_2"), Value::Boolean(true)),
+        ],
+    );
+    let err = validate(&bad_real_gain).expect_err("supplied k_2 must be numeric for Real gains");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert!(err.diagnostics[0].message.contains("`k_2`"));
+
+    let integer_promoted_gain = one_block_model(
+        "CDL.Reals.MultiSum",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![
+            (Arc::from("nin"), Value::Integer(2)),
+            (Arc::from("k_1"), Value::Integer(2)),
+        ],
+    );
+    assert!(
+        validate(&integer_promoted_gain)
+            .expect("integer literal k_i promotes to Real parameter")
+            .is_empty()
+    );
 }
 
 #[test]

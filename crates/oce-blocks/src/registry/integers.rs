@@ -30,6 +30,7 @@ pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Structural { name: "nin" },
     ParamRule::IntegerGreaterOrEqual {
         name: "nin",
         min: 0,

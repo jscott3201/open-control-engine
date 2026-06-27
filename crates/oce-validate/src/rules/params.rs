@@ -38,6 +38,7 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
             );
         }
         ParamRule::Required { .. } => {}
+        ParamRule::Structural { .. } => {}
         ParamRule::Real { name } => {
             let Some(value) = find_param(&blk.params, name) else {
                 return;
@@ -204,6 +205,33 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                         diags,
                         format!(
                             "parameter `{name}` on block `{}` must be an integer array element",
+                            blk.class_iri
+                        ),
+                    );
+                }
+            }
+        }
+        ParamRule::RealArrayElements { base, len } => {
+            let Some(value) = find_param(&blk.params, len) else {
+                return;
+            };
+            let Some(n) = integer_value(value) else {
+                return;
+            };
+            let Ok(n) = usize::try_from(n) else {
+                return;
+            };
+            for idx in 1..=n.min(MAX_RESOLVED_PORT_WIDTH) {
+                let name = format!("{base}_{idx}");
+                let Some(value) = find_param(&blk.params, &name) else {
+                    continue;
+                };
+                if real_value(value).is_none() {
+                    push_range_error(
+                        blk,
+                        diags,
+                        format!(
+                            "parameter `{name}` on block `{}` must be a numeric real array element",
                             blk.class_iri
                         ),
                     );

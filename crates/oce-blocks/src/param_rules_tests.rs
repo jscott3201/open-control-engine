@@ -43,6 +43,7 @@ fn registry_exposes_block_param_rules() {
         ]
     );
     let multi_width_rules = &[
+        ParamRule::Structural { name: "nin" },
         ParamRule::IntegerGreaterOrEqual {
             name: "nin",
             min: 0,
@@ -59,9 +60,17 @@ fn registry_exposes_block_param_rules() {
             "{path}"
         );
     }
+    for path in ["CDL.Reals.MultiMax", "CDL.Reals.MultiMin"] {
+        assert_eq!(
+            lookup(path).unwrap().param_rules(),
+            multi_width_rules,
+            "{path}"
+        );
+    }
     assert_eq!(
         lookup("CDL.Integers.MultiSum").unwrap().param_rules(),
         &[
+            ParamRule::Structural { name: "nin" },
             ParamRule::IntegerGreaterOrEqual {
                 name: "nin",
                 min: 0,
@@ -71,6 +80,24 @@ fn registry_exposes_block_param_rules() {
                 max: MAX_RESOLVED_PORT_WIDTH as i64,
             },
             ParamRule::IntegerArrayElements {
+                base: "k",
+                len: "nin",
+            },
+        ]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.MultiSum").unwrap().param_rules(),
+        &[
+            ParamRule::Structural { name: "nin" },
+            ParamRule::IntegerGreaterOrEqual {
+                name: "nin",
+                min: 0,
+            },
+            ParamRule::IntegerLessOrEqualConstant {
+                name: "nin",
+                max: MAX_RESOLVED_PORT_WIDTH as i64,
+            },
+            ParamRule::RealArrayElements {
                 base: "k",
                 len: "nin",
             },
