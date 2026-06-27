@@ -1,0 +1,25 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_relief_damper",
+  "signal": "relief_damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 6,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "building_pressure", "supply_fan_status", "relief_damper_command"],
+  "inputs": [
+    { "name": "building_pressure", "value_kind": "Real", "values": [10.0, 12.0, 13.0, 14.0, 15.0, 20.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 0.0] }
+  ],
+  "input": "ReliefDamper: disabled high/low rows plus enabled setpoint, proportional, and upper clamp rows",
+  "reference_rule": "Pinned ReliefDamper.mo: conErr=dpBui-dpBuiSet, PID controllerType=P with reverseActing=false gives clamp(k*(dpBui-12),0,1), and Reals.Switch emits zero when u1SupFan=false",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

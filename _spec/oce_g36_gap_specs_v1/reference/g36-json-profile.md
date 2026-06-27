@@ -188,6 +188,11 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU`
   with `minOADes=SingleDamper`, `VUncDesOutAir_flow=6`, and `VDesTotOutAir_flow=8`.
   Package-level `OutdoorAirFlow`, `ASHRAE62_1.SumZone`, and Title24 variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper` with
+  `dpBuiSet=12 Pa`, `k=0.5`, `controllerType=P`, `reverseActing=false`, and supply-fan proof
+  switching. Relief fan/group, return-fan, and non-default PID variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.
