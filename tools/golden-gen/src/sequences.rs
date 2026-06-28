@@ -52,6 +52,8 @@ const ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21: &str =
 const ECONOMIZER_MODULATIONS_RELIEFS: &str = "multizone_vav_economizer_modulations_reliefs";
 const ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
     "multizone_vav_economizer_modulations_return_fan";
+const ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER: &str =
+    "multizone_vav_economizer_modulations_return_fan_relief_damper";
 const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24: &str =
     "generic_air_economizer_high_limits_ashrae_fixed_24";
 const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21: &str =
@@ -306,7 +308,10 @@ fn source_files(sequence: &str) -> &'static str {
         ECONOMIZER_LIMITS_COMMON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
         ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21 => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
         ECONOMIZER_MODULATIONS_RELIEFS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
-        ECONOMIZER_MODULATIONS_RETURN_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+        ECONOMIZER_MODULATIONS_RETURN_FAN
+        | ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER => {
+            "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo"
+        }
         AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18 => {
@@ -338,6 +343,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         | ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21
         | ECONOMIZER_MODULATIONS_RELIEFS
         | ECONOMIZER_MODULATIONS_RETURN_FAN
+        | ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18

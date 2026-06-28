@@ -1,0 +1,10 @@
+#1
+# columns: time relief_damper_command
+double G36_multizone_vav_economizer_modulations_return_fan_relief_damper_relief_damper_command(7,2)
+0.0 0.0
+1.0 0.0
+2.0 0.25
+3.0 0.5
+4.0 0.75
+5.0 1.0
+6.0 1.0
