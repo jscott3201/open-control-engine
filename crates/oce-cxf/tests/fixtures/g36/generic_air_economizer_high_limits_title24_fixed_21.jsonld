@@ -1,0 +1,99 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "S231:label": "generic_air_economizer_high_limits_title24_fixed_21",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.eneStd"
+        },
+        {
+          "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.ecoHigLimCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.tit24CliZon"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.TCut"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.eneStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard.California_Title_24"
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.ecoHigLimCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer.FixedDryBulb"
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.tit24CliZon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.Title24ClimateZone"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.Title24ClimateZone.Zone_7"
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.TCut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC"
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con8",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:value": {
+        "@value": "294.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.TCut"
+      }
+    }
+  ]
+}

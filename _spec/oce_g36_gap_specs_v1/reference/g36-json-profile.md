@@ -258,16 +258,22 @@ they are marked `supported-runtime-sequence`.
   deferred.
 - `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld`,
   `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld`,
   and
-  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld`
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld`
   are source-verified restricted runtime-sequence fixtures for
   `Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits` with
-  `eneStd=ASHRAE90_1` and `ecoHigLimCon=FixedDryBulb`. They cover the ASHRAE 90.1 dry-bulb
-  cutoff buckets `TCut=297.15 K` for zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K`
-  for 5A/6A, and `TCut=291.15 K` for 1A/2A/3A/4A. `EnergyStandard.Not_Specified`,
-  California Title24, `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy
-  branches, `hCut`, return-air inputs, and `Economizers.Controller` variants outside the
-  restricted SingleDamper/ReliefDamper FixedDryBulb Zone_5A assembly remain deferred.
+  `ecoHigLimCon=FixedDryBulb`. They cover the ASHRAE 90.1 dry-bulb cutoff buckets
+  `TCut=297.15 K` for zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K` for 5A/6A,
+  and `TCut=291.15 K` for 1A/2A/3A/4A, plus the California Title 24 fixed-dry-bulb buckets
+  `TCut=297.15 K` for zones 1/3/5/11/12/13/14/15/16, `TCut=296.15 K` for 2/4/10,
+  `TCut=295.15 K` for 6/8/9, and `TCut=294.15 K` for 7. `EnergyStandard.Not_Specified`,
+  `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy branches, `hCut`,
+  return-air inputs, and `Economizers.Controller` variants outside the restricted
+  SingleDamper/ReliefDamper FixedDryBulb Zone_5A assembly remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable` with

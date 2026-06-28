@@ -13,6 +13,14 @@ const G36_HIGH_LIMIT_FIXED_21: &str =
     include_str!("fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld");
 const G36_HIGH_LIMIT_FIXED_18: &str =
     include_str!("fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld");
+const G36_HIGH_LIMIT_TITLE24_FIXED_24: &str =
+    include_str!("fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld");
+const G36_HIGH_LIMIT_TITLE24_FIXED_23: &str =
+    include_str!("fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld");
+const G36_HIGH_LIMIT_TITLE24_FIXED_22: &str =
+    include_str!("fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld");
+const G36_HIGH_LIMIT_TITLE24_FIXED_21: &str =
+    include_str!("fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld");
 const G36_HIGH_LIMIT_CLASS: &str =
     "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits";
 
@@ -50,6 +58,38 @@ const CASES: &[Case] = &[
         child: ".con2",
         cutoff: 291.15,
         climate_zone: "Zone_1A",
+    },
+    Case {
+        source: G36_HIGH_LIMIT_TITLE24_FIXED_24,
+        model: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24",
+        golden_rel: "tests/fixtures/golden/g36_generic_air_economizer_high_limits_title24_fixed_24.modelgraph.txt",
+        child: ".con5",
+        cutoff: 297.15,
+        climate_zone: "Title24 Zone_1",
+    },
+    Case {
+        source: G36_HIGH_LIMIT_TITLE24_FIXED_23,
+        model: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23",
+        golden_rel: "tests/fixtures/golden/g36_generic_air_economizer_high_limits_title24_fixed_23.modelgraph.txt",
+        child: ".con6",
+        cutoff: 296.15,
+        climate_zone: "Title24 Zone_2",
+    },
+    Case {
+        source: G36_HIGH_LIMIT_TITLE24_FIXED_22,
+        model: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22",
+        golden_rel: "tests/fixtures/golden/g36_generic_air_economizer_high_limits_title24_fixed_22.modelgraph.txt",
+        child: ".con7",
+        cutoff: 295.15,
+        climate_zone: "Title24 Zone_6",
+    },
+    Case {
+        source: G36_HIGH_LIMIT_TITLE24_FIXED_21,
+        model: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21",
+        golden_rel: "tests/fixtures/golden/g36_generic_air_economizer_high_limits_title24_fixed_21.modelgraph.txt",
+        child: ".con8",
+        cutoff: 294.15,
+        climate_zone: "Title24 Zone_7",
     },
 ];
 

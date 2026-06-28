@@ -1,0 +1,8 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7")
+    inputs=[] outputs=[0]
+    param k=Real(0x4072726666666666)
+connectors: 1
+  C0 block=B0 dir=Out type=Real decl=0 iri=None
+connections: 0
+external_inputs: []

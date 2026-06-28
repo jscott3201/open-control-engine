@@ -24,6 +24,18 @@ const HIGH_LIMIT_FIXED_21: &str = include_str!(
 const HIGH_LIMIT_FIXED_18: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld"
 );
+const HIGH_LIMIT_TITLE24_FIXED_24: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_23: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
+);
 
 const TEMPERATURE_CUTOFF_FIXED_24_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.TCut";
@@ -31,6 +43,14 @@ const TEMPERATURE_CUTOFF_FIXED_21_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.TCut";
 const TEMPERATURE_CUTOFF_FIXED_18_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.TCut";
+const TEMPERATURE_CUTOFF_TITLE24_FIXED_24_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.TCut";
+const TEMPERATURE_CUTOFF_TITLE24_FIXED_23_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.TCut";
+const TEMPERATURE_CUTOFF_TITLE24_FIXED_22_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.TCut";
+const TEMPERATURE_CUTOFF_TITLE24_FIXED_21_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.TCut";
 const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
 
 const NO_INPUTS: &[PointSpec] = &[];
@@ -44,6 +64,22 @@ const OUTPUTS_FIXED_21: &[PointSpec] = &[PointSpec::real_alias(
 )];
 const OUTPUTS_FIXED_18: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_FIXED_18_SOURCE,
+    TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_FIXED_24: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_FIXED_24_SOURCE,
+    TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_FIXED_23: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_FIXED_23_SOURCE,
+    TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_FIXED_22: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_FIXED_22_SOURCE,
+    TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_FIXED_21: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_FIXED_21_SOURCE,
     TEMPERATURE_CUTOFF_RUNTIME,
 )];
 
@@ -73,6 +109,42 @@ const SPECS: &[SequenceSpec] = &[
         sample_step: 1.0,
         inputs: NO_INPUTS,
         outputs: OUTPUTS_FIXED_18,
+        input_fn: no_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_fixed_24",
+        cxf: HIGH_LIMIT_TITLE24_FIXED_24,
+        t_stop: 0,
+        sample_step: 1.0,
+        inputs: NO_INPUTS,
+        outputs: OUTPUTS_TITLE24_FIXED_24,
+        input_fn: no_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_fixed_23",
+        cxf: HIGH_LIMIT_TITLE24_FIXED_23,
+        t_stop: 0,
+        sample_step: 1.0,
+        inputs: NO_INPUTS,
+        outputs: OUTPUTS_TITLE24_FIXED_23,
+        input_fn: no_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_fixed_22",
+        cxf: HIGH_LIMIT_TITLE24_FIXED_22,
+        t_stop: 0,
+        sample_step: 1.0,
+        inputs: NO_INPUTS,
+        outputs: OUTPUTS_TITLE24_FIXED_22,
+        input_fn: no_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_fixed_21",
+        cxf: HIGH_LIMIT_TITLE24_FIXED_21,
+        t_stop: 0,
+        sample_step: 1.0,
+        inputs: NO_INPUTS,
+        outputs: OUTPUTS_TITLE24_FIXED_21,
         input_fn: no_inputs,
     },
 ];
