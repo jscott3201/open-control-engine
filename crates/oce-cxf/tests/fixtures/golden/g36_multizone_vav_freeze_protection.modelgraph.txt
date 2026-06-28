@@ -1,0 +1,406 @@
+blocks: 61
+  B0 decl=0 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lesThr")
+    inputs=[0] outputs=[1]
+    param t=Real(0x407158cccccccccd)
+    param h=Real(0x3fd0000000000000)
+  B1 decl=1 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim")
+    inputs=[2] outputs=[3, 4]
+    param t=Real(0x4072c00000000000)
+  B2 decl=2 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq")
+    inputs=[5, 6, 7] outputs=[8]
+  B3 decl=3 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt")
+    inputs=[] outputs=[9]
+    param k=Integer(2)
+  B4 decl=4 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.minVen")
+    inputs=[10, 11, 12] outputs=[13]
+  B5 decl=5 class=CDL.Reals.PID instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1")
+    inputs=[14, 15] outputs=[16]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3ff0000000000000)
+    param Ti=Real(0x3fe0000000000000)
+    param Td=Real(0x3fb999999999999a)
+    param yMax=Real(0x3ff0000000000000)
+    param yMin=Real(0x0000000000000000)
+    param reverseActing=Boolean(true)
+  B6 decl=6 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1")
+    inputs=[17, 18, 19] outputs=[20]
+  B7 decl=7 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.greThr")
+    inputs=[21] outputs=[22]
+    param t=Real(0x4071826666666666)
+    param h=Real(0x3fd0000000000000)
+  B8 decl=8 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lat")
+    inputs=[23, 24] outputs=[25]
+  B9 decl=9 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim1")
+    inputs=[26] outputs=[27, 28]
+    param t=Real(0x4072c00000000000)
+  B10 decl=10 class=CDL.Logical.Edge instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne")
+    inputs=[29] outputs=[30]
+  B11 decl=11 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1")
+    inputs=[31] outputs=[32]
+    param t=Real(0x4071473333333333)
+    param h=Real(0x3fd0000000000000)
+  B12 decl=12 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim2")
+    inputs=[33] outputs=[34, 35]
+    param t=Real(0x4072c00000000000)
+  B13 decl=13 class=CDL.Logical.TrueFalseHold instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.holSta2")
+    inputs=[36] outputs=[37]
+    param trueHoldDuration=Real(0x40ac200000000000)
+    param falseHoldDuration=Real(0x0000000000000000)
+  B14 decl=14 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.outDam2")
+    inputs=[38, 39, 40] outputs=[41]
+  B15 decl=15 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.con")
+    inputs=[] outputs=[42]
+    param k=Real(0x0000000000000000)
+  B16 decl=16 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2")
+    inputs=[43, 44, 45] outputs=[46]
+  B17 decl=17 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.retDam2")
+    inputs=[47, 48, 49] outputs=[50]
+  B18 decl=18 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.con1")
+    inputs=[] outputs=[51]
+    param k=Real(0x3ff0000000000000)
+  B19 decl=19 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1")
+    inputs=[52, 53, 54] outputs=[55]
+  B20 decl=20 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt1")
+    inputs=[] outputs=[56]
+    param k=Integer(3)
+  B21 decl=21 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt2")
+    inputs=[] outputs=[57]
+    param k=Integer(0)
+  B22 decl=22 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim3")
+    inputs=[58] outputs=[59, 60]
+    param t=Real(0x408c200000000000)
+  B23 decl=23 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2")
+    inputs=[61] outputs=[62]
+    param t=Real(0x4071226666666666)
+    param h=Real(0x3fd0000000000000)
+  B24 decl=24 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim4")
+    inputs=[63] outputs=[64, 65]
+    param t=Real(0x4072c00000000000)
+  B25 decl=25 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.or8")
+    inputs=[66, 67] outputs=[68]
+  B26 decl=26 class=CDL.Logical.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.con2")
+    inputs=[] outputs=[69]
+    param k=Boolean(false)
+  B27 decl=27 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lat1")
+    inputs=[70, 71] outputs=[72]
+  B28 decl=28 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.supFan")
+    inputs=[73, 74, 75] outputs=[76]
+  B29 decl=29 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.con3")
+    inputs=[] outputs=[77]
+    param k=Real(0x0000000000000000)
+  B30 decl=30 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.outDam")
+    inputs=[78, 79, 80] outputs=[81]
+  B31 decl=31 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal")
+    inputs=[82, 83, 84] outputs=[85]
+  B32 decl=32 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3")
+    inputs=[86, 87, 88] outputs=[89]
+  B33 decl=33 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt3")
+    inputs=[] outputs=[90]
+    param k=Integer(2)
+  B34 decl=34 class=CDL.Reals.Max instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.max1")
+    inputs=[91, 92] outputs=[93]
+  B35 decl=35 class=CDL.Reals.PID instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod")
+    inputs=[94, 95] outputs=[96]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3ff0000000000000)
+    param Ti=Real(0x3fe0000000000000)
+    param Td=Real(0x3fb999999999999a)
+    param yMax=Real(0x3ff0000000000000)
+    param yMin=Real(0x0000000000000000)
+    param reverseActing=Boolean(true)
+  B36 decl=36 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.con4")
+    inputs=[] outputs=[97]
+    param k=Real(0x4072c26666666666)
+  B37 decl=37 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos")
+    inputs=[98, 99, 100] outputs=[101]
+  B38 decl=38 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3")
+    inputs=[102, 103, 104] outputs=[105]
+  B39 decl=39 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt4")
+    inputs=[] outputs=[106]
+    param k=Integer(2)
+  B40 decl=40 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar")
+    inputs=[107] outputs=[]
+    param message=String("Warning: the unit is shut down by freeze protection!")
+  B41 decl=41 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.not1")
+    inputs=[108] outputs=[109]
+  B42 decl=42 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar")
+    inputs=[110] outputs=[]
+    param message=String("Warning: minimum ventilation was interrupted by freeze protection!")
+  B43 decl=43 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.not2")
+    inputs=[111] outputs=[112]
+  B44 decl=44 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.tim5")
+    inputs=[113] outputs=[114, 115]
+    param t=Real(0x40ac200000000000)
+  B45 decl=45 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam")
+    inputs=[116, 117, 118] outputs=[119]
+  B46 decl=46 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt5")
+    inputs=[] outputs=[120]
+    param k=Integer(0)
+  B47 decl=47 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.lat2")
+    inputs=[121, 122] outputs=[123]
+  B48 decl=48 class=CDL.Logical.Edge instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo")
+    inputs=[124] outputs=[125]
+  B49 decl=49 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.or2")
+    inputs=[126, 127] outputs=[128]
+  B50 decl=50 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.retDam")
+    inputs=[129, 130, 131] outputs=[132]
+  B51 decl=51 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet")
+    inputs=[] outputs=[133]
+    param k=Real(0x4071726666666666)
+  B52 decl=52 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2")
+    inputs=[134, 135, 136] outputs=[137]
+  B53 decl=53 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4")
+    inputs=[138, 139, 140] outputs=[141]
+  B54 decl=54 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt6")
+    inputs=[] outputs=[142]
+    param k=Integer(2)
+  B55 decl=55 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5")
+    inputs=[143, 144, 145] outputs=[146]
+  B56 decl=56 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt7")
+    inputs=[] outputs=[147]
+    param k=Integer(1)
+  B57 decl=57 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.conInt8")
+    inputs=[] outputs=[148]
+    param k=Integer(0)
+  B58 decl=58 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.norSta1")
+    inputs=[149] outputs=[150]
+  B59 decl=59 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.and2")
+    inputs=[151, 152] outputs=[153]
+  B60 decl=60 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.or7")
+    inputs=[154, 155] outputs=[156]
+connectors: 157
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C1 block=B0 dir=Out type=Boolean decl=1 iri=None
+  C2 block=B1 dir=In type=Boolean decl=2 iri=None
+  C3 block=B1 dir=Out type=Real decl=3 iri=None
+  C4 block=B1 dir=Out type=Boolean decl=4 iri=None
+  C5 block=B2 dir=In type=Integer decl=5 iri=None
+  C6 block=B2 dir=In type=Boolean decl=6 iri=None
+  C7 block=B2 dir=In type=Integer decl=7 iri=None
+  C8 block=B2 dir=Out type=Integer decl=8 iri=None
+  C9 block=B3 dir=Out type=Integer decl=9 iri=None
+  C10 block=B4 dir=In type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uOutDamPosMin")
+  C11 block=B4 dir=In type=Boolean decl=11 iri=None
+  C12 block=B4 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uOutDam")
+  C13 block=B4 dir=Out type=Real decl=13 iri=None
+  C14 block=B5 dir=In type=Real decl=14 iri=None
+  C15 block=B5 dir=In type=Real decl=15 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C16 block=B5 dir=Out type=Real decl=16 iri=None
+  C17 block=B6 dir=In type=Real decl=17 iri=None
+  C18 block=B6 dir=In type=Boolean decl=18 iri=None
+  C19 block=B6 dir=In type=Real decl=19 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uHeaCoi")
+  C20 block=B6 dir=Out type=Real decl=20 iri=None
+  C21 block=B7 dir=In type=Real decl=21 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C22 block=B7 dir=Out type=Boolean decl=22 iri=None
+  C23 block=B8 dir=In type=Boolean decl=23 iri=None
+  C24 block=B8 dir=In type=Boolean decl=24 iri=None
+  C25 block=B8 dir=Out type=Boolean decl=25 iri=None
+  C26 block=B9 dir=In type=Boolean decl=26 iri=None
+  C27 block=B9 dir=Out type=Real decl=27 iri=None
+  C28 block=B9 dir=Out type=Boolean decl=28 iri=None
+  C29 block=B10 dir=In type=Boolean decl=29 iri=None
+  C30 block=B10 dir=Out type=Boolean decl=30 iri=None
+  C31 block=B11 dir=In type=Real decl=31 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C32 block=B11 dir=Out type=Boolean decl=32 iri=None
+  C33 block=B12 dir=In type=Boolean decl=33 iri=None
+  C34 block=B12 dir=Out type=Real decl=34 iri=None
+  C35 block=B12 dir=Out type=Boolean decl=35 iri=None
+  C36 block=B13 dir=In type=Boolean decl=36 iri=None
+  C37 block=B13 dir=Out type=Boolean decl=37 iri=None
+  C38 block=B14 dir=In type=Real decl=38 iri=None
+  C39 block=B14 dir=In type=Boolean decl=39 iri=None
+  C40 block=B14 dir=In type=Real decl=40 iri=None
+  C41 block=B14 dir=Out type=Real decl=41 iri=None
+  C42 block=B15 dir=Out type=Real decl=42 iri=None
+  C43 block=B16 dir=In type=Real decl=43 iri=None
+  C44 block=B16 dir=In type=Boolean decl=44 iri=None
+  C45 block=B16 dir=In type=Real decl=45 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uMinOutDam")
+  C46 block=B16 dir=Out type=Real decl=46 iri=None
+  C47 block=B17 dir=In type=Real decl=47 iri=None
+  C48 block=B17 dir=In type=Boolean decl=48 iri=None
+  C49 block=B17 dir=In type=Real decl=49 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uRetDam")
+  C50 block=B17 dir=Out type=Real decl=50 iri=None
+  C51 block=B18 dir=Out type=Real decl=51 iri=None
+  C52 block=B19 dir=In type=Integer decl=52 iri=None
+  C53 block=B19 dir=In type=Boolean decl=53 iri=None
+  C54 block=B19 dir=In type=Integer decl=54 iri=None
+  C55 block=B19 dir=Out type=Integer decl=55 iri=None
+  C56 block=B20 dir=Out type=Integer decl=56 iri=None
+  C57 block=B21 dir=Out type=Integer decl=57 iri=None
+  C58 block=B22 dir=In type=Boolean decl=58 iri=None
+  C59 block=B22 dir=Out type=Real decl=59 iri=None
+  C60 block=B22 dir=Out type=Boolean decl=60 iri=None
+  C61 block=B23 dir=In type=Real decl=61 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C62 block=B23 dir=Out type=Boolean decl=62 iri=None
+  C63 block=B24 dir=In type=Boolean decl=63 iri=None
+  C64 block=B24 dir=Out type=Real decl=64 iri=None
+  C65 block=B24 dir=Out type=Boolean decl=65 iri=None
+  C66 block=B25 dir=In type=Boolean decl=66 iri=None
+  C67 block=B25 dir=In type=Boolean decl=67 iri=None
+  C68 block=B25 dir=Out type=Boolean decl=68 iri=None
+  C69 block=B26 dir=Out type=Boolean decl=69 iri=None
+  C70 block=B27 dir=In type=Boolean decl=70 iri=None
+  C71 block=B27 dir=In type=Boolean decl=71 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.u1SofSwiRes")
+  C72 block=B27 dir=Out type=Boolean decl=72 iri=None
+  C73 block=B28 dir=In type=Real decl=73 iri=None
+  C74 block=B28 dir=In type=Boolean decl=74 iri=None
+  C75 block=B28 dir=In type=Real decl=75 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uSupFan")
+  C76 block=B28 dir=Out type=Real decl=76 iri=None
+  C77 block=B29 dir=Out type=Real decl=77 iri=None
+  C78 block=B30 dir=In type=Real decl=78 iri=None
+  C79 block=B30 dir=In type=Boolean decl=79 iri=None
+  C80 block=B30 dir=In type=Real decl=80 iri=None
+  C81 block=B30 dir=Out type=Real decl=81 iri=None
+  C82 block=B31 dir=In type=Real decl=82 iri=None
+  C83 block=B31 dir=In type=Boolean decl=83 iri=None
+  C84 block=B31 dir=In type=Real decl=84 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.uCooCoi")
+  C85 block=B31 dir=Out type=Real decl=85 iri=None
+  C86 block=B32 dir=In type=Integer decl=86 iri=None
+  C87 block=B32 dir=In type=Boolean decl=87 iri=None
+  C88 block=B32 dir=In type=Integer decl=88 iri=None
+  C89 block=B32 dir=Out type=Integer decl=89 iri=None
+  C90 block=B33 dir=Out type=Integer decl=90 iri=None
+  C91 block=B34 dir=In type=Real decl=91 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup")
+  C92 block=B34 dir=In type=Real decl=92 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.TAirMix")
+  C93 block=B34 dir=Out type=Real decl=93 iri=None
+  C94 block=B35 dir=In type=Real decl=94 iri=None
+  C95 block=B35 dir=In type=Real decl=95 iri=None
+  C96 block=B35 dir=Out type=Real decl=96 iri=None
+  C97 block=B36 dir=Out type=Real decl=97 iri=None
+  C98 block=B37 dir=In type=Real decl=98 iri=None
+  C99 block=B37 dir=In type=Boolean decl=99 iri=None
+  C100 block=B37 dir=In type=Real decl=100 iri=None
+  C101 block=B37 dir=Out type=Real decl=101 iri=None
+  C102 block=B38 dir=In type=Integer decl=102 iri=None
+  C103 block=B38 dir=In type=Boolean decl=103 iri=None
+  C104 block=B38 dir=In type=Integer decl=104 iri=None
+  C105 block=B38 dir=Out type=Integer decl=105 iri=None
+  C106 block=B39 dir=Out type=Integer decl=106 iri=None
+  C107 block=B40 dir=In type=Boolean decl=107 iri=None
+  C108 block=B41 dir=In type=Boolean decl=108 iri=None
+  C109 block=B41 dir=Out type=Boolean decl=109 iri=None
+  C110 block=B42 dir=In type=Boolean decl=110 iri=None
+  C111 block=B43 dir=In type=Boolean decl=111 iri=None
+  C112 block=B43 dir=Out type=Boolean decl=112 iri=None
+  C113 block=B44 dir=In type=Boolean decl=113 iri=None
+  C114 block=B44 dir=Out type=Real decl=114 iri=None
+  C115 block=B44 dir=Out type=Boolean decl=115 iri=None
+  C116 block=B45 dir=In type=Real decl=116 iri=None
+  C117 block=B45 dir=In type=Boolean decl=117 iri=None
+  C118 block=B45 dir=In type=Real decl=118 iri=None
+  C119 block=B45 dir=Out type=Real decl=119 iri=None
+  C120 block=B46 dir=Out type=Integer decl=120 iri=None
+  C121 block=B47 dir=In type=Boolean decl=121 iri=None
+  C122 block=B47 dir=In type=Boolean decl=122 iri=None
+  C123 block=B47 dir=Out type=Boolean decl=123 iri=None
+  C124 block=B48 dir=In type=Boolean decl=124 iri=None
+  C125 block=B48 dir=Out type=Boolean decl=125 iri=None
+  C126 block=B49 dir=In type=Boolean decl=126 iri=None
+  C127 block=B49 dir=In type=Boolean decl=127 iri=None
+  C128 block=B49 dir=Out type=Boolean decl=128 iri=None
+  C129 block=B50 dir=In type=Real decl=129 iri=None
+  C130 block=B50 dir=In type=Boolean decl=130 iri=None
+  C131 block=B50 dir=In type=Real decl=131 iri=None
+  C132 block=B50 dir=Out type=Real decl=132 iri=None
+  C133 block=B51 dir=Out type=Real decl=133 iri=None
+  C134 block=B52 dir=In type=Integer decl=134 iri=None
+  C135 block=B52 dir=In type=Boolean decl=135 iri=None
+  C136 block=B52 dir=In type=Integer decl=136 iri=None
+  C137 block=B52 dir=Out type=Integer decl=137 iri=None
+  C138 block=B53 dir=In type=Integer decl=138 iri=None
+  C139 block=B53 dir=In type=Boolean decl=139 iri=None
+  C140 block=B53 dir=In type=Integer decl=140 iri=None
+  C141 block=B53 dir=Out type=Integer decl=141 iri=None
+  C142 block=B54 dir=Out type=Integer decl=142 iri=None
+  C143 block=B55 dir=In type=Integer decl=143 iri=None
+  C144 block=B55 dir=In type=Boolean decl=144 iri=None
+  C145 block=B55 dir=In type=Integer decl=145 iri=None
+  C146 block=B55 dir=Out type=Integer decl=146 iri=None
+  C147 block=B56 dir=Out type=Integer decl=147 iri=None
+  C148 block=B57 dir=Out type=Integer decl=148 iri=None
+  C149 block=B58 dir=In type=Boolean decl=149 iri=None
+  C150 block=B58 dir=Out type=Boolean decl=150 iri=None
+  C151 block=B59 dir=In type=Boolean decl=151 iri=Some("http://example.org#g36.source.multizone_vav_freeze_protection.u1SupFan")
+  C152 block=B59 dir=In type=Boolean decl=152 iri=None
+  C153 block=B59 dir=Out type=Boolean decl=153 iri=None
+  C154 block=B60 dir=In type=Boolean decl=154 iri=None
+  C155 block=B60 dir=In type=Boolean decl=155 iri=None
+  C156 block=B60 dir=Out type=Boolean decl=156 iri=None
+connections: 76
+  C1 -> C2
+  C4 -> C126
+  C8 -> C88
+  C9 -> C5
+  C13 -> C40
+  C16 -> C17
+  C20 -> C100
+  C22 -> C26
+  C25 -> C6
+  C25 -> C11
+  C25 -> C18
+  C25 -> C144
+  C28 -> C29
+  C30 -> C24
+  C32 -> C33
+  C32 -> C58
+  C35 -> C36
+  C37 -> C113
+  C37 -> C121
+  C41 -> C80
+  C42 -> C38
+  C42 -> C43
+  C46 -> C118
+  C50 -> C131
+  C51 -> C47
+  C51 -> C82
+  C55 -> C104
+  C56 -> C52
+  C56 -> C134
+  C57 -> C7
+  C60 -> C154
+  C62 -> C63
+  C65 -> C155
+  C68 -> C70
+  C69 -> C67
+  C72 -> C74
+  C72 -> C79
+  C72 -> C83
+  C72 -> C87
+  C72 -> C99
+  C72 -> C103
+  C72 -> C108
+  C72 -> C117
+  C72 -> C130
+  C72 -> C135
+  C72 -> C149
+  C77 -> C73
+  C77 -> C78
+  C77 -> C116
+  C77 -> C129
+  C90 -> C86
+  C93 -> C95
+  C96 -> C98
+  C97 -> C94
+  C106 -> C102
+  C109 -> C107
+  C112 -> C110
+  C115 -> C124
+  C120 -> C54
+  C123 -> C39
+  C123 -> C44
+  C123 -> C111
+  C123 -> C48
+  C123 -> C53
+  C123 -> C139
+  C125 -> C122
+  C125 -> C127
+  C128 -> C23
+  C133 -> C14
+  C141 -> C136
+  C142 -> C138
+  C146 -> C140
+  C147 -> C143
+  C148 -> C145
+  C150 -> C152
+  C156 -> C66
+external_inputs: [10, 12, 19, 45, 49, 0, 15, 21, 31, 61, 91, 71, 151, 75, 84, 92]

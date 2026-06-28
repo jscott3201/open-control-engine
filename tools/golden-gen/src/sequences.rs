@@ -5,6 +5,7 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+mod freeze_protection;
 mod plant_requests;
 mod economizer_enable;
 mod outdoor_airflow_ahu;
@@ -38,6 +39,7 @@ const RELIEF_FAN_GROUP: &str = "multizone_vav_relief_fan_group";
 const RETURN_FAN_AIRFLOW: &str = "multizone_vav_return_fan_airflow_tracking";
 const RETURN_FAN_DIRECT_PRESSURE: &str = "multizone_vav_return_fan_direct_pressure";
 const ECONOMIZER_ENABLE: &str = "multizone_vav_economizer_enable";
+const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
@@ -70,6 +72,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(return_fan_airflow_tracking::goldens());
     out.extend(return_fan_direct_pressure::goldens());
     out.extend(economizer_enable::goldens());
+    out.extend(freeze_protection::goldens());
     out
 }
 
@@ -272,6 +275,7 @@ fn source_files(sequence: &str) -> &'static str {
         RETURN_FAN_AIRFLOW => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
         RETURN_FAN_DIRECT_PRESSURE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
         ECONOMIZER_ENABLE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
+        FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
 }
@@ -291,7 +295,8 @@ fn fixture_status(sequence: &str) -> &'static str {
         | RELIEF_FAN_GROUP
         | RETURN_FAN_AIRFLOW
         | RETURN_FAN_DIRECT_PRESSURE
-        | ECONOMIZER_ENABLE => {
+        | ECONOMIZER_ENABLE
+        | FREEZE_PROTECTION => {
             "supported-runtime-sequence source-verified composite"
         }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",
