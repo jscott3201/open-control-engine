@@ -1,0 +1,27 @@
+#1
+# columns: time return_damper_command
+double G36_multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21_return_damper_command(24,2)
+0.0 1.0
+60.0 1.0
+120.0 0.0
+180.0 1.0
+240.0 0.0
+300.0 1.0
+360.0 0.0
+420.0 1.0
+480.0 0.0
+540.0 1.0
+600.0 0.0
+660.0 1.0
+720.0 1.0
+780.0 1.0
+840.0 1.0
+900.0 1.0
+960.0 1.0
+1020.0 0.0
+1080.0 0.5
+1140.0 0.0
+1200.0 1.0
+1260.0 1.0
+1320.0 1.0
+1380.0 0.0

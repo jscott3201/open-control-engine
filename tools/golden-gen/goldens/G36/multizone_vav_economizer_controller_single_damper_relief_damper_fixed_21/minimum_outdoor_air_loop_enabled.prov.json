@@ -1,0 +1,30 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+  "signal": "minimum_outdoor_air_loop_enabled",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Boolean",
+  "compare_regime": "exact 0.0/1.0",
+  "n_samples": 24,
+  "n_reference_columns": 12,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "outdoor_airflow_normalized", "minimum_outdoor_airflow_setpoint_normalized", "supply_temperature_signal", "outdoor_air_temperature", "supply_fan_status", "operation_mode", "freeze_protection_stage", "outdoor_damper_min_limit", "minimum_outdoor_air_loop_enabled", "outdoor_damper_command", "return_damper_command"],
+  "inputs": [
+    { "name": "outdoor_airflow_normalized", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
+    { "name": "minimum_outdoor_airflow_setpoint_normalized", "value_kind": "Real", "values": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2] },
+    { "name": "supply_temperature_signal", "value_kind": "Real", "values": [-0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5, -0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5, -0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5, -0.5, -0.25, -0.125] },
+    { "name": "outdoor_air_temperature", "value_kind": "Real", "values": [293.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 293.0, 293.0, 293.0, 293.0, 293.0, 293.0, 293.0, 293.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "operation_mode", "value_kind": "Integer", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0] },
+    { "name": "freeze_protection_stage", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] }
+  ],
+  "input": "Economizers.Controller restricted variant: yEnaMinOut follows Limits.Common fan proof and occupied-mode gate",
+  "reference_rule": "Pinned Controller.mo connects damLim.yEnaMinOut directly to yEnaMinOut; Enable high-limit state does not gate this status output",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

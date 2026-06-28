@@ -1,0 +1,3654 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
+      "S231:label": "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.minOADes"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.buiPreCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.eneStd"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLimCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ashCliZon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.minOAConTyp"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.kMinOA"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TiMinOA"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TdMinOA"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.delTOutHis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.delEntHis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamFulOpeTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.disDel"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamPhy_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.outDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.outDamPhy_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uHeaMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uCooMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOutDamMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uRetDamMin"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOutMinSet_flow_normalized"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOut_flow_normalized"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uTSup"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TOut"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.u1SupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOpeMod"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uFreProSta"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yEnaMinOut"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yRetDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.minOADes",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection.SingleDamper"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.buiPreCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl.ReliefDamper"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.eneStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard.ASHRAE90_1"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLimCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer.FixedDryBulb"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ashCliZon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone.Zone_5A"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.minOAConTyp",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.kMinOA",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TiMinOA",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TdMinOA",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uRetDam_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.delTOutHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.delEntHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1000",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamFulOpeTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "180",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.disDel",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamPhy_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.retDamPhy_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.outDamPhy_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.outDamPhy_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uHeaMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uCooMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOutDamMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uRetDamMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOutMinSet_flow_normalized",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOutMinSet_flow_normalized"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOut_flow_normalized",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOut_flow_normalized"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uTSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uTSup"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TOut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOut"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.u1SupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.u1SupFan"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.uOpeMod"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uFreProSta",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uFreProSta"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam_min",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yEnaMinOut",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yRetDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common",
+      "S231:label": "damLim",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.controllerType"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.k"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.Ti"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.Td"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.uRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhy_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhy_min"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOut_flow_normalized"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOutMinSet_flow_normalized"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.uOpeMod"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.u1SupFan"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yEnaMinOut"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.uRetDam_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhy_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhy_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhy_max",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhy_min",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOut_flow_normalized",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_m"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.VOutMinSet_flow_normalized",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_s"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.trigger"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_min",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam_min"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_min",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_min"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDamPhy_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDamPhy_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yEnaMinOut",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yEnaMinOut"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:label": "damLimCon",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.controllerType"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.k"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.Ti"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.Td"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.yMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.yMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.y_reset"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_s"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_m"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.trigger"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "controllerType"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.y_reset",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.trigger",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.damLimCon.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamPhyPosMinSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "outDamPhy_min"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMinSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamPhyPosMaxSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "outDamPhy_max"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPhyPosMaxSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamPhyPosMinSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "retDamPhy_min"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMinSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamPhyPosMaxSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "retDamPhy_max"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPhyPosMaxSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDamPhy_max"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "minSigLim",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minSigLim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "maxSigLim",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.maxSigLim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "sigFraForOutDam",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uRetDam_min"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.sigFraForOutDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "minOutDam",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.limitBelow"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.limitAbove"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.u"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_min"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "minRetDam",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.limitBelow"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.limitAbove"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.u"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "retDamPosMinSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minRetDam.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yRetDam_min"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "outDamPosMaxSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yOutDam_max"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.retDamPosMinSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.outDamPosMaxSwitch.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.conInt1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.u2",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.intEqu.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.not1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.yEnaMinOut"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable",
+      "S231:label": "enaDis",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.use_enthalpy"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delTOutHis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delEntHis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamFulOpeTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.disDel"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOut"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOutCut"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDamPhy_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.u1SupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uFreProSta"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yOutDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_max"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.use_enthalpy",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delTOutHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "TemperatureDifference",
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delEntHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "J/kg",
+      "S231:quantity": "SpecificEnergy",
+      "S231:value": {
+        "@value": "1000",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamFulOpeTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "180",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.disDel",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:displayUnit": "degC",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOutCut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:displayUnit": "degC",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uOutDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u3"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uRetDamPhy_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.uFreProSta",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yOutDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_min",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_min"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "S231:label": "truFalHol",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.trueHoldDuration"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.falseHoldDuration"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.trueHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "600",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.falseHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "600",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "andEnaDis",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "sub1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.sub1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "hysOutTem",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.uLow"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.uHigh"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "-1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.hysOutTem.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "outDamSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yOutDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "retDamSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "maxRetDamSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_max"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "minRetDamSwitch",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.yRetDam_min"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not2",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.retDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.maxRetDamSwitch.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.minRetDamSwitch.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.outDamSwitch.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u2",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.andEnaDis.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "delOutDamOsc",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "disDel"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delOutDamOsc.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and3.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "delRetDam",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "retDamFulOpeTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.delRetDam.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.and2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeProtectionStages"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeProtectionStages.stage0"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.conInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.intEqu.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "entSubst1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.entSubst1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.or2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.truFalHol.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+      "S231:label": "modRel",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDamMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDamMin"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uTSup"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_max"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_min"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_max"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yRetDam"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:max": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:value": {
+        "@value": "-0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDamMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "-1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDamMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "-1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uTSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uOutDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.uRetDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yOutDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yRetDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.yRetDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamMinLimSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uMin"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMinLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamMaxLimSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uOutDamMax"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamMaxLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamConMinLimSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uRetDamMin"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamConMinLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamMaxLimSig",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "uMax"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamMaxLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "outDamPos",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.limitBelow"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.limitAbove"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.u"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.outDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "retDamPos",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.limitBelow"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.limitAbove"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.u"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.retDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:label": "min",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yOutDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:label": "max",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.yRetDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "S231:label": "ecoHigLim",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.eneStd"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.ecoHigLimCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.ashCliZon"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.TCut"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.eneStd",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard.ASHRAE90_1"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.ecoHigLimCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer.FixedDryBulb"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.ashCliZon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone.Zone_5A"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.TCut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.enaDis.TOutCut"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:value": {
+        "@value": "294.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.con1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.ecoHigLim.TCut"
+      }
+    }
+  ]
+}
