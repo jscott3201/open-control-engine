@@ -8,6 +8,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 mod freeze_protection;
 mod air_economizer_high_limits;
 mod economizer_limits_common;
+mod economizer_controller;
 mod economizer_modulations_reliefs;
 mod economizer_modulations_return_fan;
 mod plant_requests;
@@ -44,6 +45,8 @@ const RETURN_FAN_AIRFLOW: &str = "multizone_vav_return_fan_airflow_tracking";
 const RETURN_FAN_DIRECT_PRESSURE: &str = "multizone_vav_return_fan_direct_pressure";
 const ECONOMIZER_ENABLE: &str = "multizone_vav_economizer_enable";
 const ECONOMIZER_LIMITS_COMMON: &str = "multizone_vav_economizer_limits_common";
+const ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21: &str =
+    "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21";
 const ECONOMIZER_MODULATIONS_RELIEFS: &str = "multizone_vav_economizer_modulations_reliefs";
 const ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
     "multizone_vav_economizer_modulations_return_fan";
@@ -87,6 +90,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(return_fan_direct_pressure::goldens());
     out.extend(economizer_enable::goldens());
     out.extend(economizer_limits_common::goldens());
+    out.extend(economizer_controller::goldens());
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(air_economizer_high_limits::goldens());
@@ -294,6 +298,7 @@ fn source_files(sequence: &str) -> &'static str {
         RETURN_FAN_DIRECT_PRESSURE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
         ECONOMIZER_ENABLE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
         ECONOMIZER_LIMITS_COMMON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
+        ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21 => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
         ECONOMIZER_MODULATIONS_RELIEFS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
         ECONOMIZER_MODULATIONS_RETURN_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
         AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
@@ -323,6 +328,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         | RETURN_FAN_DIRECT_PRESSURE
         | ECONOMIZER_ENABLE
         | ECONOMIZER_LIMITS_COMMON
+        | ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21
         | ECONOMIZER_MODULATIONS_RELIEFS
         | ECONOMIZER_MODULATIONS_RETURN_FAN
         | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24

@@ -263,14 +263,14 @@ they are marked `supported-runtime-sequence`.
   cutoff buckets `TCut=297.15 K` for zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K`
   for 5A/6A, and `TCut=291.15 K` for 1A/2A/3A/4A. `EnergyStandard.Not_Specified`,
   California Title24, `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy
-  branches, `hCut`, return-air inputs, and full `Economizers.Controller` integration remain
-  deferred.
+  branches, `hCut`, return-air inputs, and `Economizers.Controller` variants outside the
+  restricted SingleDamper/ReliefDamper FixedDryBulb Zone_5A assembly remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable` with
   `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`, supply-fan
   proof gating, freeze-protection stage zero gating, and the source dry-bulb polarity
-  `TOut - TOutCut`. The enthalpy high-limit branch, full `Economizers.Controller`,
+  `TOut - TOutCut`. The enthalpy high-limit branch, unrestricted `Economizers.Controller`,
   package-level `Economizers.Subsequences`, package-level `Limits`, `Limits.SeparateWithAFMS`,
   `Limits.SeparateWithDP`, remaining `Modulations` classes, and non-default Enable parameter
   variants remain deferred.
@@ -280,13 +280,13 @@ they are marked `supported-runtime-sequence`.
   with source-default `controllerType=PI`, `k=0.05`, `Ti=120 s`, `Td=0.1 s`,
   `uRetDam_min=0.5`, physical damper limits `0..1`, `PIDWithReset` triggered by `u1SupFan`, and
   minimum-outdoor-air loop enablement gated by occupied mode plus supply-fan proof.
-  Package-level `Limits`, `SeparateWithAFMS`, `SeparateWithDP`, full `Economizers.Controller`,
+  Package-level `Limits`, `SeparateWithAFMS`, `SeparateWithDP`, unrestricted `Economizers.Controller`,
   derivative-term behavior, and non-default Common parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs`
   with source-default `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor
-  and return damper `Line` blocks, and final `Min`/`Max` output clamps. Full
+  and return damper `Line` blocks, and final `Min`/`Max` output clamps. Unrestricted
   `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and non-default
   Reliefs parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld` is a
@@ -294,9 +294,22 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan`
   with source-default `have_dirCon=true`, `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the
   clamped return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
-  `yOutDam=1`. The `have_dirCon=false` relief-damper output branch, full
+  `yOutDam=1`. The `have_dirCon=false` relief-damper output branch, unrestricted
   `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and non-default
   ReturnFan parameter variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld`
+  is a source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller` with
+  `minOADes=SingleDamper`, `buiPreCon=ReliefDamper`, `eneStd=ASHRAE90_1`,
+  `ecoHigLimCon=FixedDryBulb`, and `ashCliZon=Zone_5A` selecting `TCut=294.15 K`. The active
+  child composites are `damLim=Limits.Common`, `enaDis=Enable`, `modRel=Modulations.Reliefs`, and
+  `ecoHigLim=Generic.AirEconomizerHighLimits`; top inputs are `VOutMinSet_flow_normalized`,
+  `VOut_flow_normalized`, `uTSup`, `TOut`, `u1SupFan`, `uOpeMod`, and `uFreProSta`; top outputs
+  are `yOutDam_min`, `yEnaMinOut`, `yRetDam`, and `yOutDam`. The controller final bindings
+  override standalone `Limits.Common` defaults with `kMinOA=1`, `TiMinOA=0.5 s`, and
+  `TdMinOA=0.1 s`. `SeparateWithAFMS`, `SeparateWithDP`, return-fan pressure-control branches,
+  Title24, differential and enthalpy high-limit modes, package-level Economizers support,
+  arbitrary `.mo` parsing, and full `AHUs.MultiZone.VAV.Controller` assembly remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

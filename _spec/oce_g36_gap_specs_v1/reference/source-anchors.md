@@ -93,30 +93,43 @@ identity bridge. `Generic.AirEconomizerHighLimits.mo` is reviewed only for the r
 climate zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K` for 5A/6A, and
 `TCut=291.15 K` for 1A/2A/3A/4A. The `EnergyStandard.Not_Specified` assertion, California
 Title24 table, `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy branches,
-`hCut`, return-air inputs, and full `Economizers.Controller` integration remain deferred.
+`hCut`, return-air inputs, and `Economizers.Controller` variants outside the restricted
+SingleDamper/ReliefDamper FixedDryBulb Zone_5A assembly remain deferred.
 `Economizers.Subsequences.Enable.mo` is reviewed only for the restricted dry-bulb
 variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`,
 supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
-hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level
+hysteresis polarity. The enthalpy high-limit branch, unrestricted `Economizers.Controller`, package-level
 `Economizers.Subsequences`, package-level `Limits`, `Limits.SeparateWithAFMS`,
 `Limits.SeparateWithDP`, remaining `Modulations` classes, and other Enable parameterizations
 remain deferred. `Economizers.Subsequences.Limits.Common.mo` is reviewed only for the
 source-default common-damper limits leaf with `controllerType=PI`, `k=0.05`, `Ti=120 s`,
 `Td=0.1 s`, `uRetDam_min=0.5`, physical damper limits `0..1`, `PIDWithReset` triggered by
 `u1SupFan`, and `yEnaMinOut = u1SupFan AND (uOpeMod == OperationModes.occupied)`. Package-level
-`Limits`, `SeparateWithAFMS`, `SeparateWithDP`, full `Economizers.Controller`, derivative-term
+`Limits`, `SeparateWithAFMS`, `SeparateWithDP`, unrestricted `Economizers.Controller`, derivative-term
 behavior, and non-default Common parameterizations remain deferred.
 `Economizers.Subsequences.Modulations.Reliefs.mo` is reviewed only for the source-default
 relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`,
 `uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final `Min`/`Max` output
-clamps. Full `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and
+clamps. Unrestricted `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and
 non-default Reliefs parameterizations remain deferred.
 `Economizers.Subsequences.Modulations.ReturnFan.mo` is reviewed only for the source-default
 `have_dirCon=true` variant with `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the clamped
 return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
-`yOutDam=1`. The `have_dirCon=false` relief-damper output branch, full `Economizers.Controller`,
+`yOutDam=1`. The `have_dirCon=false` relief-damper output branch, unrestricted `Economizers.Controller`,
 package-level `Modulations`, package-level `Limits`, and non-default ReturnFan parameterizations remain
 deferred.
+`Economizers.Controller.mo` is reviewed only for the restricted first controller assembly with
+`minOADes=SingleDamper`, `buiPreCon=ReliefDamper`, `eneStd=ASHRAE90_1`,
+`ecoHigLimCon=FixedDryBulb`, and `ashCliZon=Zone_5A` (`TCut=294.15 K`). The active child
+composites are `damLim=Limits.Common`, `enaDis=Enable`, `modRel=Modulations.Reliefs`, and
+`ecoHigLim=Generic.AirEconomizerHighLimits`; top inputs are
+`VOutMinSet_flow_normalized`, `VOut_flow_normalized`, `uTSup`, `TOut`, `u1SupFan`, `uOpeMod`,
+and `uFreProSta`; top outputs are `yOutDam_min`, `yEnaMinOut`, `yRetDam`, and `yOutDam`. The
+controller final bindings override the standalone `Limits.Common` defaults with `kMinOA=1`,
+`TiMinOA=0.5 s`, and `TdMinOA=0.1 s`. `SeparateWithAFMS`, `SeparateWithDP`, return-fan
+pressure-control branches, Title24, differential and enthalpy high-limit modes, package-level
+Economizers support, arbitrary `.mo` parsing, and full `AHUs.MultiZone.VAV.Controller` assembly
+remain deferred.
 `ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
 variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
 `relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,

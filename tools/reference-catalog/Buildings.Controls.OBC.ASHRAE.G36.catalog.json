@@ -232,10 +232,10 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
-      "status": "deferred",
+      "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
-      "runtime_support": false,
-      "rationale": "Needed for AHU economizer tranche after profile/types/composite support."
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the restricted controller assembly variant with minOADes=SingleDamper, buiPreCon=ReliefDamper, eneStd=ASHRAE90_1, ecoHigLimCon=FixedDryBulb, ashCliZon=Zone_5A, ASHRAE 90.1 TCut=294.15 K, and active Limits.Common, Enable, Modulations.Reliefs, and AirEconomizerHighLimits children; SeparateWithAFMS, SeparateWithDP, return-fan pressure-control branches, Title24, enthalpy/differential high-limit modes, package-level support, arbitrary .mo parsing, and full AHU Controller support remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
@@ -428,6 +428,26 @@
     }
   ],
   "runtime_sequences": [
+    {
+      "name": "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "supported_variant": "source-verified explicit CXF for Economizers.Controller with minOADes=SingleDamper, buiPreCon=ReliefDamper, eneStd=ASHRAE90_1, ecoHigLimCon=FixedDryBulb, ashCliZon=Zone_5A selecting TCut=294.15 K, minOAConTyp=PI, kMinOA=1, TiMinOA=0.5 s, TdMinOA=0.1 s, uRetDam_min=0.5, default Enable delays, and source-default Reliefs modulation",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_economizer_controller_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF controller assembly, not arbitrary Modelica parsing.",
+        "The supported variant composes the active source children damLim=Limits.Common, enaDis=Enable, modRel=Modulations.Reliefs, and ecoHigLim=AirEconomizerHighLimits.",
+        "The controller final bindings intentionally override the standalone Limits.Common source defaults: kMinOA=1, TiMinOA=0.5 s, and TdMinOA=0.1 s feed damLim.damLimCon.",
+        "The oracle covers minimum outdoor-air damper limit, minimum outdoor-air loop enablement, outdoor damper command, and return damper command across fan-off disable, high-limit disable, freeze-protection interruption, unoccupied interruption, and relief modulation rows.",
+        "Evidence does not claim SeparateWithAFMS, SeparateWithDP, return-fan pressure-control branches, Title24, enthalpy or differential high-limit modes, package-level Economizers support, arbitrary .mo parsing, or full AHUs.MultiZone.VAV.Controller support."
+      ]
+    },
     {
       "name": "multizone_vav_economizer_enable",
       "status": "supported-runtime-sequence",
@@ -807,6 +827,42 @@
     }
   ],
   "composite_import_fixtures": [
+    {
+      "name": "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+      "fixture_top_child_count": 4,
+      "active_block_count": 44,
+      "input_count": 7,
+      "output_count": 4,
+      "supported_variant": "explicit CXF source transcription for Economizers.Controller with SingleDamper minimum outdoor air, ReliefDamper building pressure control, ASHRAE90_1 FixedDryBulb Zone_5A high limit, PI minimum-outdoor-air controller bindings kMinOA=1/TiMinOA=0.5 s/TdMinOA=0.1 s, default Enable delays, and source-default Reliefs modulation",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_economizer_controller.rs",
+      "api_test": "crates/oce-api/tests/g36_economizer_controller.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_economizer_controller_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.csv",
+      "known_deferred_branches": [
+        "Limits.SeparateWithAFMS",
+        "Limits.SeparateWithDP",
+        "return-fan pressure-control modulation branches",
+        "California Title24 high-limit table",
+        "DifferentialDryBulb and FixedDryBulbWithDifferentialDryBulb return-air comparisons",
+        "enthalpy high-limit modes and hCut output",
+        "package-level Economizers support",
+        "full AHUs.MultiZone.VAV.Controller assembly"
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes the four active source child composites damLim, enaDis, modRel, and ecoHigLim; each flattens to already-source-verified leaf behavior under this controller binding.",
+        "Evidence does not claim arbitrary .mo parsing, inactive controller parameter branches, package-level Economizers support, or full AHUs.MultiZone.VAV.Controller support."
+      ]
+    },
     {
       "name": "multizone_vav_economizer_enable",
       "status": "supported-runtime-sequence",
