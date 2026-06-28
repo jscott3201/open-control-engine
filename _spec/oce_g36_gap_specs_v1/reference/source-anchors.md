@@ -34,6 +34,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo`
@@ -88,7 +89,12 @@ variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `d
 supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
 hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level
 `Economizers.Subsequences`, `Limits`, `Modulations`, and other Enable parameterizations remain
-deferred. `ReliefFanGroup`, freeze-protection sequences, and non-default variants remain deferred.
+deferred. `ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
+variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
+`relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,
+`MovingAverage(delta=300)`, `controllerType=P`, `reverseActing=false`, stage-up/down timers,
+2 s `TrueDelay` proof acknowledgement, and level-2 alarm damper guards. Arbitrary fan
+counts/matrices, freeze-protection sequences, and non-default variants remain deferred.
 Each runtime claim must stay tied to its explicit checked-in CXF fixture and supported parameter
 variant.
 

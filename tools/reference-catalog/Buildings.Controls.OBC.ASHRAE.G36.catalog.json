@@ -276,34 +276,35 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar no-fan relief damper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switch; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar no-fan relief damper with dpBuiSet=12 Pa, k=0.5, controllerType=P, reverseActing=false, and supply-fan proof switch; FreezeProtection and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar single-relief-fan control with relFanSpe_min=0.1, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), P-only controllerType=P, reverseActing=false, damper latch/timer cone, and relief-fan start/stop timers; ReliefFanGroup, freeze-protection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar single-relief-fan control with relFanSpe_min=0.1, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), P-only controllerType=P, reverseActing=false, damper latch/timer cone, and relief-fan start/stop timers; FreezeProtection and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
-      "status": "deferred",
-      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
-      "runtime_support": false
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default ReliefFanGroup with nSupFan=2, nRelFan=4, relFanSpe_min=0.1, staVec={2,3,1,4}, relFanMat={{1,0},{1,0},{0,1},{0,1}}, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), P-only controllerType=P, reverseActing=false, stage-up/down timers, 2 s TrueDelay proof acknowledgement, and level-2 alarm damper guards; arbitrary fan counts/matrices, FreezeProtection, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanAirflowTracking",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar return-fan airflow-tracking control with difFloSet=1 m3/s, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, minSpe=0, maxSpe=1, and supply-fan proof switching return-fan speed to zero; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar return-fan airflow-tracking control with difFloSet=1 m3/s, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, minSpe=0, maxSpe=1, and supply-fan proof switching return-fan speed to zero; FreezeProtection and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar direct-pressure return-fan control with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, MovingAverage(delta=300), default PID reverseActing=true, and supply-fan/minimum-outdoor-air-damper switching; ReliefFanGroup, FreezeProtection, and non-default variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the scalar direct-pressure return-fan control with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, MovingAverage(delta=300), default PID reverseActing=true, and supply-fan/minimum-outdoor-air-damper switching; FreezeProtection and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
@@ -529,6 +530,24 @@
         "Runtime support is the checked-in explicit-CXF scalar ReliefFan composite, not arbitrary Modelica parsing.",
         "The supported variant covers the moving-average building-pressure signal, normalized P-only pressure controller, relief-damper latch/clear path, and relief-fan start/stop timers.",
         "The oracle covers averaged building pressure, relief damper status, relief fan status, and relief fan speed over fan-off, high-pressure start, fan-start delay, pressure recovery, fan-stop delay, and damper-clear delay rows."
+      ]
+    },
+    {
+      "name": "multizone_vav_relief_fan_group",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_relief_fan_group",
+      "supported_variant": "source-verified explicit CXF for source-default ReliefFanGroup with nSupFan=2, nRelFan=4, relFanSpe_min=0.1, staVec={2,3,1,4}, relFanMat={{1,0},{1,0},{0,1},{0,1}}, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), controllerType=P, reverseActing=false, stage-up/down timers, 2 s TrueDelay proof acknowledgement, and level-2 alarm damper guards",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_relief_fan_group.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_relief_fan_group.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_relief_fan_group/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_relief_fan_group_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF source-default ReliefFanGroup composite, not arbitrary Modelica parsing.",
+        "The supported variant keeps the source defaults nSupFan=2, nRelFan=4, staVec={2,3,1,4}, and relFanMat={{1,0},{1,0},{0,1},{0,1}} through scalarized child parameters because top-level array-valued composite parameters remain deferred.",
+        "The oracle covers averaged building pressure, four relief fan speed outputs, and four relief damper command outputs over supply-fan enable/disable, proof feedback, staged start/stop, TrueDelay acknowledgement, and a level-2 alarm damper guard."
       ]
     },
     {
@@ -772,7 +791,7 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup logic, alternate PID controller types, or non-default ReliefDamper parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, grouped relief-fan staging through the scalar ReliefDamper fixture, alternate PID controller types, or non-default ReliefDamper parameterizations."
       ]
     },
     {
@@ -794,7 +813,30 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including logical boundary-input fanout, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate PID controller types, or non-default ReliefFan parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, multi-relief-fan group staging through the scalar ReliefFan fixture, FreezeProtection, alternate PID controller types, or non-default ReliefFan parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_relief_fan_group",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_relief_fan_group",
+      "fixture_top_child_count": 226,
+      "active_block_count": 226,
+      "input_count": 11,
+      "output_count": 9,
+      "supported_variant": "explicit CXF source transcription for source-default ReliefFanGroup with nSupFan=2, nRelFan=4, relFanSpe_min=0.1, staVec={2,3,1,4}, relFanMat={{1,0},{1,0},{0,1},{0,1}}, dpBuiSet=12 Pa, k=1, hys=0.005, MovingAverage(delta=300), controllerType=P, reverseActing=false, timers, proof acknowledgement, and alarm damper guards",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_relief_fan_group.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_relief_fan_group.rs",
+      "api_test": "crates/oce-api/tests/g36_relief_fan_group.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF fixed-size ReliefFanGroup composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture intentionally specializes the source-default nSupFan=2, nRelFan=4, staVec={2,3,1,4}, and relFanMat={{1,0},{1,0},{0,1},{0,1}}; top-level array-valued composite parameters remain deferred, so child MatrixGain.K and Gain.k parameters carry the executable values.",
+        "Evidence does not claim arbitrary .mo parsing, arbitrary fan counts or matrices, FreezeProtection support, alternate controller types, or non-default ReliefFanGroup parameterizations."
       ]
     },
     {
@@ -819,7 +861,7 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including a Boolean identity bridge for y1RetFan = u1SupFan, independent oracle matching, and determinism golden coverage.",
         "The fixture has five source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias as an executable output point.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate controller types, or non-default ReturnFanAirflowTracking parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, relief-fan-group staging through ReturnFanAirflowTracking, FreezeProtection, alternate controller types, or non-default ReturnFanAirflowTracking parameterizations."
       ]
     },
     {
@@ -844,7 +886,7 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including logical boundary-input fanout, independent oracle matching, and determinism golden coverage.",
         "The fixture has 21 source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias y1RetFan = u1SupFan as an executable output point.",
-        "Evidence does not claim arbitrary .mo parsing, ReliefFanGroup staging, FreezeProtection, alternate controller types, or non-default ReturnFanDirectPressure parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, relief-fan-group staging through ReturnFanDirectPressure, FreezeProtection, alternate controller types, or non-default ReturnFanDirectPressure parameterizations."
       ]
     },
     {
