@@ -331,7 +331,7 @@
       "status": "deferred",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
       "runtime_support": false,
-      "rationale": "OutdoorAirFlow is a package; only the nested ASHRAE62_1.AHU and Title24.AHU leaves have restricted runtime evidence in this catalog."
+      "rationale": "OutdoorAirFlow is a package; only the nested ASHRAE62_1.AHU, Title24.AHU, and restricted Title24.SumZone leaves have runtime evidence in this catalog."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
@@ -366,14 +366,21 @@
       "status": "deferred",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order",
       "runtime_support": false,
-      "rationale": "Package-level support remains deferred until AHU plus SumZone aggregation are both supported; the Title24.AHU supported leaf is a restricted parameterized slice."
+      "rationale": "Package-level support remains deferred until package composition, validation variants, no-CO2, alternate matrices/sizes, and non-default variants are covered; Title24.AHU and a restricted Title24.SumZone leaf are supported slices."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.AHU",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the Title 24 scalar AHU-level calculation with minOADes=SingleDamper, have_CO2Sen=true, VAbsOutAir_flow=3 m3/s, and VDesOutAir_flow=8 m3/s; SumZone aggregation, no-CO2, and non-SingleDamper variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the Title 24 scalar AHU-level calculation with minOADes=SingleDamper, have_CO2Sen=true, VAbsOutAir_flow=3 m3/s, and VDesOutAir_flow=8 m3/s; no-CO2 and non-SingleDamper variants remain deferred."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone",
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the Title 24 SumZone aggregation with nGro=2, nZon=3, have_CO2Sen=true, and zonGroMat=[1,1,0;0,1,1]; package-level Title24, no-CO2, alternate group/zone sizes, alternate matrices, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.Validation",
@@ -450,6 +457,24 @@
         "Runtime support is the checked-in explicit-CXF scalar AHU-level composite, not arbitrary Modelica parsing.",
         "The supported variant uses have_CO2Sen=true and SingleDamper so uCO2Loo_max, VAirOut_flow, and outAir_normalized remain active.",
         "The oracle covers effective absolute outdoor airflow, effective absolute normalized outdoor airflow, effective design outdoor airflow, effective design normalized outdoor airflow, CO2-loop effective outdoor-air normalization, and measured outdoor-air normalization across pass-through, cap, interpolation, clamp, zero, and below-x1 extrapolation rows."
+      ]
+    },
+    {
+      "name": "multizone_vav_outdoor_airflow_title24_sumzone",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone",
+      "supported_variant": "source-verified explicit CXF for Title24.SumZone with nGro=2, nZon=3, have_CO2Sen=true, zonGroMat=[1,1,0;0,1,1], occupied group gating, and max CO2 branch active",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_title24_sumzone.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_title24_sumzone.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_outdoor_airflow_title24_sumzone/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_outdoor_airflow_title24_sumzone_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF fixed-size SumZone composite, not arbitrary Modelica parsing.",
+        "The supported variant keeps have_CO2Sen=true, maps three zones into two overlapping groups with zonGroMat=[1,1,0;0,1,1], and uses G36 OperationModes.occupied=1 for group gating.",
+        "The oracle covers summed absolute minimum outdoor airflow, summed design minimum outdoor airflow, and maximum CO2 across both occupied, one occupied, none occupied, zero-flow, negative CO2, and equal-maximum rows."
       ]
     },
     {
@@ -661,7 +686,30 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF scalar composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim arbitrary .mo parsing, package-level Title24 support, Title24.SumZone zone/group aggregation, the no-CO2 branch, DedicatedDampersPressure behavior, or non-default parameter variants."
+        "Evidence does not claim arbitrary .mo parsing, package-level Title24 support, the no-CO2 branch, DedicatedDampersPressure behavior, or non-default parameter variants."
+      ]
+    },
+    {
+      "name": "multizone_vav_outdoor_airflow_title24_sumzone",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone",
+      "fixture_top_child_count": 15,
+      "active_block_count": 15,
+      "input_count": 11,
+      "output_count": 3,
+      "supported_variant": "explicit CXF source transcription for Title24.SumZone with nGro=2, nZon=3, have_CO2Sen=true, and zonGroMat=[1,1,0;0,1,1]",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_outdoor_airflow_title24_sumzone.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_outdoor_airflow_title24_sumzone.rs",
+      "api_test": "crates/oce-api/tests/g36_outdoor_airflow_title24_sumzone.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF fixed-size SumZone composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture intentionally specializes nGro=2, nZon=3, have_CO2Sen=true, and an overlapping two-group matrix; top-level composite array-valued parameters remain deferred, so child MatrixGain.K arrays carry the executable matrix values.",
+        "Evidence does not claim arbitrary .mo parsing, package-level Title24 support, no-CO2 behavior, alternate group/zone sizes, alternate matrices, or non-default parameter variants."
       ]
     },
     {

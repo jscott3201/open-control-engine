@@ -1,0 +1,9 @@
+#1
+# columns: time maximum_co2_loop
+double G36_multizone_vav_outdoor_airflow_title24_sumzone_maximum_co2_loop(6,2)
+0.0 0.6
+1.0 0.2
+2.0 0.9
+3.0 0.0
+4.0 -1.0
+5.0 1.2
