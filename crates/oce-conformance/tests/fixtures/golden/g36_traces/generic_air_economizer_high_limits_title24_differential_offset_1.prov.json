@@ -4,6 +4,6 @@
   "depends_on_oce_blocks": true,
   "engine_rev": "520526343f724a5da68c5e02297a9cecc6c0da55",
   "reference_columns": [
-    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.TCut"
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TCut"
   ]
 }

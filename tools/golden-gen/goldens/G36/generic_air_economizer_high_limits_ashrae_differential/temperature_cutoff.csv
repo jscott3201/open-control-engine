@@ -1,0 +1,7 @@
+#1
+# columns: time temperature_cutoff
+double G36_generic_air_economizer_high_limits_ashrae_differential_temperature_cutoff(4,2)
+0.0 289.25
+1.0 293.15
+2.0 297.5
+3.0 301.75

@@ -30,48 +30,153 @@ const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
 const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
 );
+const HIGH_LIMIT_ASHRAE_DIFFERENTIAL: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld"
+);
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
-const ROWS: usize = 1;
 const SAMPLE_STEP: f64 = 1.0;
 
-const TEMPERATURE_CUTOFF: PointSpec = PointSpec::real("temperature_cutoff", "conn#0");
-const REFERENCE_COLUMNS: &[&str] = &["time", "temperature_cutoff"];
+const RETURN_AIR_TEMPERATURE: PointSpec = PointSpec::real("return_air_temperature", "");
+const FIXED_TEMPERATURE_CUTOFF: PointSpec = PointSpec::real("temperature_cutoff", "conn#0");
+const DIFFERENTIAL_TEMPERATURE_CUTOFF: PointSpec = PointSpec::real("temperature_cutoff", "conn#1");
+const FIXED_REFERENCE_COLUMNS: &[&str] = &["time", "temperature_cutoff"];
+const DIFFERENTIAL_REFERENCE_COLUMNS: &[&str] =
+    &["time", "return_air_temperature", "temperature_cutoff"];
 
 #[derive(Clone, Copy)]
 struct Case {
     sequence: &'static str,
     fixture: &'static str,
+    input: Option<PointSpec>,
+    output: PointSpec,
+    rows: usize,
+    reference_columns: &'static [&'static str],
 }
 
 const CASES: &[Case] = &[
     Case {
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_24",
         fixture: HIGH_LIMIT_FIXED_24,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_21",
         fixture: HIGH_LIMIT_FIXED_21,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_18",
         fixture: HIGH_LIMIT_FIXED_18,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_title24_fixed_24",
         fixture: HIGH_LIMIT_TITLE24_FIXED_24,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_title24_fixed_23",
         fixture: HIGH_LIMIT_TITLE24_FIXED_23,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_title24_fixed_22",
         fixture: HIGH_LIMIT_TITLE24_FIXED_22,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
     },
     Case {
         sequence: "generic_air_economizer_high_limits_title24_fixed_21",
         fixture: HIGH_LIMIT_TITLE24_FIXED_21,
+        input: None,
+        output: FIXED_TEMPERATURE_CUTOFF,
+        rows: 1,
+        reference_columns: FIXED_REFERENCE_COLUMNS,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_ashrae_differential",
+        fixture: HIGH_LIMIT_ASHRAE_DIFFERENTIAL,
+        input: Some(PointSpec::real(
+            RETURN_AIR_TEMPERATURE.reference_name,
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet",
+        )),
+        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        rows: 4,
+        reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_differential_offset_0",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0,
+        input: Some(PointSpec::real(
+            RETURN_AIR_TEMPERATURE.reference_name,
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet",
+        )),
+        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        rows: 4,
+        reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_differential_offset_1",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1,
+        input: Some(PointSpec::real(
+            RETURN_AIR_TEMPERATURE.reference_name,
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet",
+        )),
+        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        rows: 4,
+        reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_differential_offset_2",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2,
+        input: Some(PointSpec::real(
+            RETURN_AIR_TEMPERATURE.reference_name,
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet",
+        )),
+        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        rows: 4,
+        reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_differential_offset_3",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3,
+        input: Some(PointSpec::real(
+            RETURN_AIR_TEMPERATURE.reference_name,
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet",
+        )),
+        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        rows: 4,
+        reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },
 ];
 
@@ -91,11 +196,15 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
             "{} reference name",
             case.sequence
         );
-        assert_eq!(reference.n_rows, ROWS, "{} reference rows", case.sequence);
+        assert_eq!(
+            reference.n_rows, case.rows,
+            "{} reference rows",
+            case.sequence
+        );
         assert_eq!(
             reference.col_names.as_deref(),
             Some(
-                REFERENCE_COLUMNS
+                case.reference_columns
                     .iter()
                     .map(|column| (*column).to_string())
                     .collect::<Vec<_>>()
@@ -104,15 +213,17 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
             "{} reference columns",
             case.sequence
         );
-        assert_signal_provenance(case.sequence, &reference);
+        assert_signal_provenance(case, &reference);
 
         let run = drive_trace_with_options(
             case.fixture.as_bytes(),
-            &config(case.sequence),
+            &config(case),
             &reference,
             &DriverOptions {
                 cadence: DriveCadence::EventAligned {
-                    instants: (0..ROWS).map(|tick| tick as f64 * SAMPLE_STEP).collect(),
+                    instants: (0..case.rows)
+                        .map(|tick| tick as f64 * SAMPLE_STEP)
+                        .collect(),
                 },
                 input_replay: DriverInputReplay::ReferenceTable,
                 comparison: ComparisonMode::Exact,
@@ -132,11 +243,8 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
             case.sequence
         );
         let comparison = &run.comparisons[0];
-        assert_eq!(comparison.output, TEMPERATURE_CUTOFF.cdl_name);
-        assert_eq!(
-            comparison.reference_column,
-            TEMPERATURE_CUTOFF.reference_name
-        );
+        assert_eq!(comparison.output, case.output.cdl_name);
+        assert_eq!(comparison.reference_column, case.output.reference_name);
         assert!(!comparison.masked);
         match &comparison.result {
             ComparisonResult::Exact(result) => {
@@ -145,7 +253,7 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
                     "AirEconomizerHighLimits {} exact comparison failed: {:?}",
                     case.sequence, result.first_mismatch
                 );
-                assert_eq!(result.compared_points, ROWS);
+                assert_eq!(result.compared_points, case.rows);
                 assert_eq!(result.first_mismatch, None);
             }
             other => panic!(
@@ -173,12 +281,12 @@ impl PointSpec {
     }
 }
 
-fn config(sequence: &str) -> VerifyConfig {
+fn config(case: Case) -> VerifyConfig {
     VerifyConfig {
         references: vec![ReferenceSpec {
             model: "g36".to_string(),
-            sequence: sequence.to_string(),
-            point_name_mapping: point_mapping(),
+            sequence: case.sequence.to_string(),
+            point_name_mapping: point_mapping(case),
         }],
         tolerances: Tolerances {
             atolx: 0.0,
@@ -195,11 +303,19 @@ fn config(sequence: &str) -> VerifyConfig {
     }
 }
 
-fn point_mapping() -> Vec<PointMapEntry> {
-    vec![PointMapEntry {
-        cdl: point_end(TEMPERATURE_CUTOFF.cdl_name, TEMPERATURE_CUTOFF.kind),
-        device: point_end(TEMPERATURE_CUTOFF.reference_name, TEMPERATURE_CUTOFF.kind),
-    }]
+fn point_mapping(case: Case) -> Vec<PointMapEntry> {
+    let mut points = Vec::new();
+    if let Some(input) = case.input {
+        points.push(input);
+    }
+    points.push(case.output);
+    points
+        .into_iter()
+        .map(|point| PointMapEntry {
+            cdl: point_end(point.cdl_name, point.kind),
+            device: point_end(point.reference_name, point.kind),
+        })
+        .collect()
 }
 
 fn point_end(name: &str, kind: ValueKind) -> PointEnd {
@@ -210,14 +326,14 @@ fn point_end(name: &str, kind: ValueKind) -> PointEnd {
     }
 }
 
-fn assert_signal_provenance(sequence: &str, reference: &CombiTimeTable) {
+fn assert_signal_provenance(case: Case, reference: &CombiTimeTable) {
     let prov = read_json(&signal_provenance_path(
-        sequence,
-        TEMPERATURE_CUTOFF.reference_name,
+        case.sequence,
+        case.output.reference_name,
     ));
     assert_eq!(prov["class_path"], "G36");
-    assert_eq!(prov["scenario"], sequence);
-    assert_eq!(prov["signal"], TEMPERATURE_CUTOFF.reference_name);
+    assert_eq!(prov["scenario"], case.sequence);
+    assert_eq!(prov["signal"], case.output.reference_name);
     assert_eq!(prov["tier"], "A");
     assert_eq!(prov["depends_on_oce_blocks"], false);
     assert!(

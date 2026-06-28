@@ -1,0 +1,7 @@
+#1
+# columns: time return_air_temperature temperature_cutoff
+double G36_generic_air_economizer_high_limits_title24_differential_offset_3_reference(4,3)
+0.0 289.25 286.25
+1.0 293.15 290.15
+2.0 297.5 294.5
+3.0 301.75 298.75

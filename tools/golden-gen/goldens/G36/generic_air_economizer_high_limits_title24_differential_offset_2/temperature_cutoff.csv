@@ -1,0 +1,7 @@
+#1
+# columns: time temperature_cutoff
+double G36_generic_air_economizer_high_limits_title24_differential_offset_2_temperature_cutoff(4,2)
+0.0 287.25
+1.0 291.15
+2.0 295.5
+3.0 299.75

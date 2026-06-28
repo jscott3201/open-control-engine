@@ -1,0 +1,9 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar")
+    inputs=[0] outputs=[1]
+    param p=Real(0xbff0000000000000)
+connectors: 2
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet")
+  C1 block=B0 dir=Out type=Real decl=1 iri=None
+connections: 0
+external_inputs: [0]

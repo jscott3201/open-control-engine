@@ -68,6 +68,21 @@ pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22: &str = include
 pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21: &str = include_str!(
     "../tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
 );
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL: &str = include_str!(
+    "../tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld"
+);
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0: &str = include_str!(
+    "../tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld"
+);
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1: &str = include_str!(
+    "../tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld"
+);
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str = include_str!(
+    "../tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld"
+);
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str = include_str!(
+    "../tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld"
+);
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_SUMZONE: &str =
@@ -86,7 +101,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "88466f126d4ffaaf";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "ea910623dec63502";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -300,6 +315,31 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "generic_air_economizer_high_limits_title24_fixed_21",
         path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld",
         text: G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_ashrae_differential",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_0",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_1",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_2",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_3",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3,
     },
     FixtureSource {
         name: "multizone_vav_outdoor_airflow_ahu",

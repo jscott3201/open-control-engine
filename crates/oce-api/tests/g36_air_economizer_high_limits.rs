@@ -23,9 +23,27 @@ const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
 const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
 );
+const HIGH_LIMIT_ASHRAE_DIFFERENTIAL: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld"
+);
 
 const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
-const EXPECTED_TIMES: [f64; 1] = [0.0];
+const DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#1";
+const FIXED_TIMES: [f64; 1] = [0.0];
+const DIFFERENTIAL_TIMES: [f64; 4] = [0.0, 1.0, 2.0, 3.0];
+const RETURN_AIR_TEMPERATURES: [f64; 4] = [289.25, 293.15, 297.5, 301.75];
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
@@ -33,44 +51,111 @@ type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 struct Case {
     name: &'static str,
     fixture: &'static str,
-    expected_cutoff: f64,
+    input_path: Option<&'static str>,
+    output_path: &'static str,
+    expected_cutoff: ExpectedCutoff,
+}
+
+#[derive(Clone, Copy)]
+enum ExpectedCutoff {
+    Fixed(f64),
+    ReturnAirOffset(f64),
 }
 
 const CASES: &[Case] = &[
     Case {
         name: "ASHRAE90_1 FixedDryBulb 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8",
         fixture: HIGH_LIMIT_FIXED_24,
-        expected_cutoff: 297.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(297.15),
     },
     Case {
         name: "ASHRAE90_1 FixedDryBulb 5A/6A",
         fixture: HIGH_LIMIT_FIXED_21,
-        expected_cutoff: 294.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(294.15),
     },
     Case {
         name: "ASHRAE90_1 FixedDryBulb 1A/2A/3A/4A",
         fixture: HIGH_LIMIT_FIXED_18,
-        expected_cutoff: 291.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(291.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 1/3/5/11-16",
         fixture: HIGH_LIMIT_TITLE24_FIXED_24,
-        expected_cutoff: 297.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(297.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 2/4/10",
         fixture: HIGH_LIMIT_TITLE24_FIXED_23,
-        expected_cutoff: 296.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(296.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 6/8/9",
         fixture: HIGH_LIMIT_TITLE24_FIXED_22,
-        expected_cutoff: 295.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(295.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 7",
         fixture: HIGH_LIMIT_TITLE24_FIXED_21,
-        expected_cutoff: 294.15,
+        input_path: None,
+        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::Fixed(294.15),
+    },
+    Case {
+        name: "ASHRAE90_1 DifferentialDryBulb 5A",
+        fixture: HIGH_LIMIT_ASHRAE_DIFFERENTIAL,
+        input_path: Some(
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet",
+        ),
+        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::ReturnAirOffset(0.0),
+    },
+    Case {
+        name: "California_Title_24 DifferentialDryBulb 1/3/5/11-16",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0,
+        input_path: Some(
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet",
+        ),
+        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::ReturnAirOffset(0.0),
+    },
+    Case {
+        name: "California_Title_24 DifferentialDryBulb 2/4/10",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1,
+        input_path: Some(
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet",
+        ),
+        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::ReturnAirOffset(-1.0),
+    },
+    Case {
+        name: "California_Title_24 DifferentialDryBulb 6/8/9",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2,
+        input_path: Some(
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet",
+        ),
+        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::ReturnAirOffset(-2.0),
+    },
+    Case {
+        name: "California_Title_24 DifferentialDryBulb 7",
+        fixture: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3,
+        input_path: Some(
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet",
+        ),
+        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        expected_cutoff: ExpectedCutoff::ReturnAirOffset(-3.0),
     },
 ];
 
@@ -108,18 +193,25 @@ fn simulate(case: Case, mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
     let metrics = engine
         .simulate(&SimSpec {
             t_start: 0.0,
-            t_stop: 0.0,
+            t_stop: match case.expected_cutoff {
+                ExpectedCutoff::Fixed(_) => 0.0,
+                ExpectedCutoff::ReturnAirOffset(_) => 3.0,
+            },
             step: 1.0,
-            inputs: InputSource::None,
+            inputs: match case.input_path {
+                Some(path) => InputSource::Closure(Box::new(move |t| return_air_inputs(path, t))),
+                None => InputSource::None,
+            },
             collect: CollectSpec::Named {
-                points: vec![TEMPERATURE_CUTOFF_RUNTIME.to_string()],
+                points: vec![case.output_path.to_string()],
                 stride: 1,
             },
         })
         .unwrap_or_else(|err| panic!("{} simulates: {err}", case.name));
+    let expected_times = expected_times(case);
     assert_eq!(
         metrics.ticks,
-        EXPECTED_TIMES.len() as u64,
+        expected_times.len() as u64,
         "{} ticks",
         case.name
     );
@@ -130,7 +222,7 @@ fn simulate(case: Case, mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
             .iter()
             .map(|t| t.to_bits())
             .collect::<Vec<_>>(),
-        EXPECTED_TIMES
+        expected_times
             .iter()
             .map(|t| t.to_bits())
             .collect::<Vec<_>>(),
@@ -138,6 +230,30 @@ fn simulate(case: Case, mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
         case.name
     );
     (schedule, metrics)
+}
+
+fn expected_times(case: Case) -> &'static [f64] {
+    match case.expected_cutoff {
+        ExpectedCutoff::Fixed(_) => &FIXED_TIMES,
+        ExpectedCutoff::ReturnAirOffset(_) => &DIFFERENTIAL_TIMES,
+    }
+}
+
+fn return_air_inputs(input_path: &str, t: f64) -> Vec<(String, Value)> {
+    vec![(
+        input_path.to_string(),
+        Value::Real(RETURN_AIR_TEMPERATURES[t as usize]),
+    )]
+}
+
+fn expected_cutoffs(case: Case) -> Vec<f64> {
+    match case.expected_cutoff {
+        ExpectedCutoff::Fixed(cutoff) => vec![cutoff],
+        ExpectedCutoff::ReturnAirOffset(offset) => RETURN_AIR_TEMPERATURES
+            .iter()
+            .map(|&temperature| temperature + offset)
+            .collect(),
+    }
 }
 
 fn real_column(metrics: &SimMetrics, path: &str) -> Vec<f64> {
@@ -186,26 +302,36 @@ fn assert_trace_bit_eq(left: &SimMetrics, right: &SimMetrics) {
 }
 
 #[test]
-fn g36_air_economizer_high_limits_fixed_dry_bulb_loads_simulates_and_is_deterministic() {
+fn g36_air_economizer_high_limits_loads_simulates_and_is_deterministic() {
     for &case in CASES {
         let engine = load_high_limit(case);
         let points = engine.io().iter().collect::<Vec<_>>();
+        let expected_point_count = if case.input_path.is_some() { 2 } else { 1 };
         assert_eq!(
             points.len(),
+            expected_point_count,
+            "{} facade point count",
+            case.name
+        );
+        if let Some(path) = case.input_path {
+            assert!(
+                points
+                    .iter()
+                    .any(|point| point.path == path && point.direction == PointDirection::In),
+                "{} should expose return-air input {path}",
+                case.name
+            );
+        }
+        assert_eq!(
+            points
+                .iter()
+                .filter(|point| point.path == case.output_path
+                    && point.direction == PointDirection::Out)
+                .count(),
             1,
-            "{} should expose one facade point",
-            case.name
-        );
-        assert_eq!(
-            points[0].path, TEMPERATURE_CUTOFF_RUNTIME,
-            "{} facade path",
-            case.name
-        );
-        assert_eq!(
-            points[0].direction,
-            PointDirection::Out,
-            "{} facade direction",
-            case.name
+            "{} should expose one temperature cutoff output {}",
+            case.name,
+            case.output_path
         );
 
         let (schedule_a, metrics_a) = simulate(case, engine);
@@ -217,11 +343,14 @@ fn g36_air_economizer_high_limits_fixed_dry_bulb_loads_simulates_and_is_determin
         );
         assert_trace_bit_eq(&metrics_a, &metrics_b);
         assert_eq!(
-            real_column(&metrics_a, TEMPERATURE_CUTOFF_RUNTIME)
+            real_column(&metrics_a, case.output_path)
                 .iter()
                 .map(|value| value.to_bits())
                 .collect::<Vec<_>>(),
-            vec![case.expected_cutoff.to_bits()],
+            expected_cutoffs(case)
+                .iter()
+                .map(|value| value.to_bits())
+                .collect::<Vec<_>>(),
             "{} cutoff diverged",
             case.name
         );

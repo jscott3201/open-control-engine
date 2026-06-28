@@ -68,6 +68,16 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22: &str =
     "generic_air_economizer_high_limits_title24_fixed_22";
 const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21: &str =
     "generic_air_economizer_high_limits_title24_fixed_21";
+const AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL: &str =
+    "generic_air_economizer_high_limits_ashrae_differential";
+const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0: &str =
+    "generic_air_economizer_high_limits_title24_differential_offset_0";
+const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1: &str =
+    "generic_air_economizer_high_limits_title24_differential_offset_1";
+const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str =
+    "generic_air_economizer_high_limits_title24_differential_offset_2";
+const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
+    "generic_air_economizer_high_limits_title24_differential_offset_3";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
@@ -326,7 +336,12 @@ fn source_files(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_24
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_23
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21 => {
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21
+        | AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3 => {
             "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo"
         }
         FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
@@ -363,6 +378,11 @@ fn fixture_status(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_23
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21
+        | AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
+        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
         | FREEZE_PROTECTION => {
             "supported-runtime-sequence source-verified composite"
         }
