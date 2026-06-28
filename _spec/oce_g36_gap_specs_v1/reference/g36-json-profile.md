@@ -253,6 +253,18 @@ they are marked `supported-runtime-sequence`.
   `dpDisSet` and `yRetFan`, and a fixture-local Boolean identity bridge for the source boundary
   alias `y1RetFan = u1SupFan`. Alternate controller types and non-default parameter variants remain
   deferred.
+- `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld`,
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld`,
+  and
+  `crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld`
+  are source-verified restricted runtime-sequence fixtures for
+  `Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits` with
+  `eneStd=ASHRAE90_1` and `ecoHigLimCon=FixedDryBulb`. They cover the ASHRAE 90.1 dry-bulb
+  cutoff buckets `TCut=297.15 K` for zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K`
+  for 5A/6A, and `TCut=291.15 K` for 1A/2A/3A/4A. `EnergyStandard.Not_Specified`,
+  California Title24, `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy
+  branches, `hCut`, return-air inputs, and full `Economizers.Controller` integration remain
+  deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable` with

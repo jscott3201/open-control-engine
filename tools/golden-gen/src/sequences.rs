@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod freeze_protection;
+mod air_economizer_high_limits;
 mod economizer_limits_common;
 mod economizer_modulations_reliefs;
 mod economizer_modulations_return_fan;
@@ -46,6 +47,12 @@ const ECONOMIZER_LIMITS_COMMON: &str = "multizone_vav_economizer_limits_common";
 const ECONOMIZER_MODULATIONS_RELIEFS: &str = "multizone_vav_economizer_modulations_reliefs";
 const ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
     "multizone_vav_economizer_modulations_return_fan";
+const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24: &str =
+    "generic_air_economizer_high_limits_ashrae_fixed_24";
+const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21: &str =
+    "generic_air_economizer_high_limits_ashrae_fixed_21";
+const AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18: &str =
+    "generic_air_economizer_high_limits_ashrae_fixed_18";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
@@ -82,6 +89,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(economizer_limits_common::goldens());
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
+    out.extend(air_economizer_high_limits::goldens());
     out.extend(freeze_protection::goldens());
     out
 }
@@ -288,6 +296,11 @@ fn source_files(sequence: &str) -> &'static str {
         ECONOMIZER_LIMITS_COMMON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
         ECONOMIZER_MODULATIONS_RELIEFS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
         ECONOMIZER_MODULATIONS_RETURN_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+        AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
+        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
+        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18 => {
+            "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo"
+        }
         FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
     }
@@ -312,6 +325,9 @@ fn fixture_status(sequence: &str) -> &'static str {
         | ECONOMIZER_LIMITS_COMMON
         | ECONOMIZER_MODULATIONS_RELIEFS
         | ECONOMIZER_MODULATIONS_RETURN_FAN
+        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
+        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
+        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18
         | FREEZE_PROTECTION => {
             "supported-runtime-sequence source-verified composite"
         }
