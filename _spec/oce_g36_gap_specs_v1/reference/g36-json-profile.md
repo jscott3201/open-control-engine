@@ -266,8 +266,16 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs`
   with source-default `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor
   and return damper `Line` blocks, and final `Min`/`Max` output clamps. Full
-  `Economizers.Controller`, package-level `Modulations`, `Modulations.ReturnFan`, `Limits`, and
-  non-default Reliefs parameter variants remain deferred.
+  `Economizers.Controller`, package-level `Modulations`, `Limits`, and non-default Reliefs
+  parameter variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan`
+  with source-default `have_dirCon=true`, `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the
+  clamped return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
+  `yOutDam=1`. The `have_dirCon=false` relief-damper output branch, full
+  `Economizers.Controller`, package-level `Modulations`, `Limits`, and non-default ReturnFan
+  parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

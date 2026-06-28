@@ -1,0 +1,10 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "84142179bc066482759f6fe25cbaa8e142e0ae4e",
+  "reference_columns": [
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yRetDam",
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yOutDam"
+  ]
+}

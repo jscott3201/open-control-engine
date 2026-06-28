@@ -256,7 +256,14 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer relief/barometric modulation leaf with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, active outdoor and return damper Line blocks, and final Min/Max output clamps; full Economizers.Controller, ReturnFan modulation, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer relief/barometric modulation leaf with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, active outdoor and return damper Line blocks, and final Min/Max output clamps; full Economizers.Controller, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer return-fan modulation leaf with have_dirCon=true, uMin=-0.25, uMax=0.25, active clamped return damper Line block, and constant outdoor damper command yOutDam=1; the have_dirCon=false relief-damper branch, full Economizers.Controller, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Validation",
@@ -447,7 +454,25 @@
       "notes": [
         "Runtime support is the checked-in explicit-CXF source-default Modulations.Reliefs leaf, not arbitrary Modelica parsing.",
         "The supported variant covers the outdoor damper interpolation from uMin to uOutDamMax, the return damper interpolation from uRetDamMin to uMax, and the final outdoor-damper upper clamp and return-damper lower clamp.",
-        "Evidence does not claim full Economizers.Controller support, package-level Modulations support, Modulations.ReturnFan, Limits, or non-default Reliefs parameterizations."
+        "Evidence does not claim full Economizers.Controller support, package-level Modulations support, Limits, or non-default Reliefs parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_economizer_modulations_return_fan",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan",
+      "supported_variant": "source-verified explicit CXF for source-default Economizers.Subsequences.Modulations.ReturnFan with have_dirCon=true, uMin=-0.25, uMax=0.25, clamped return damper Line block, and constant outdoor damper command",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_modulations_return_fan.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_modulations_return_fan.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_economizer_modulations_return_fan/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_economizer_modulations_return_fan_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF source-default Modulations.ReturnFan leaf, not arbitrary Modelica parsing.",
+        "The supported variant covers yRetDam interpolation from uRetDam_max at uMin to uRetDam_min at uMax, with Line block clamping below and above the interval, and yOutDam fixed at 1.0.",
+        "Evidence does not claim the have_dirCon=false relief-damper output branch, full Economizers.Controller support, package-level Modulations support, Limits, or non-default ReturnFan parameterizations."
       ]
     },
     {
@@ -746,7 +771,30 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes all eight active source child components: four constants, two clamped Line blocks, one Min block, and one Max block.",
-        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Modulations support, Modulations.ReturnFan, Limits, or non-default Reliefs parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Modulations support, Limits, or non-default Reliefs parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_economizer_modulations_return_fan",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan",
+      "fixture_top_child_count": 4,
+      "active_block_count": 4,
+      "input_count": 3,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for source-default Modulations.ReturnFan with have_dirCon=true, uMin=-0.25, uMax=0.25, clamped return damper Line block, and constant outdoor damper command",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_economizer_modulations_return_fan.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_economizer_modulations_return_fan.rs",
+      "api_test": "crates/oce-api/tests/g36_economizer_modulations_return_fan.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes the four active source child components for have_dirCon=true: two constants, one clamped Line block, and one outdoor-damper Constant block.",
+        "Evidence does not claim arbitrary .mo parsing, the have_dirCon=false relief-damper branch, full Economizers.Controller support, package-level Modulations support, Limits, or non-default ReturnFan parameterizations."
       ]
     },
     {
