@@ -44,6 +44,12 @@ pub(super) const G36_ECONOMIZER_MODULATIONS_RELIEFS: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld");
 pub(super) const G36_ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld");
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24: &str =
+    include_str!("../tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld");
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21: &str =
+    include_str!("../tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld");
+pub(super) const G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18: &str =
+    include_str!("../tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_SUMZONE: &str =
@@ -62,7 +68,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "591e259d1bf8c4c2";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "4e40cf8dfec46ce0";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -231,6 +237,21 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_economizer_modulations_return_fan",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld",
         text: G36_ECONOMIZER_MODULATIONS_RETURN_FAN,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_ashrae_fixed_24",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_ashrae_fixed_21",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21,
+    },
+    FixtureSource {
+        name: "generic_air_economizer_high_limits_ashrae_fixed_18",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld",
+        text: G36_AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18,
     },
     FixtureSource {
         name: "multizone_vav_outdoor_airflow_ahu",

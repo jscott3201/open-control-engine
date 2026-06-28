@@ -1,0 +1,4 @@
+#1
+# columns: time http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.TCut
+double generic_air_economizer_high_limits_ashrae_fixed_21(1,2)
+0.0 294.15

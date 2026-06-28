@@ -88,7 +88,13 @@ the scalar direct-pressure variant with `dpBuiSet=12 Pa`, `p_rel_RetFan_min=2.4 
 `reverseActing=true`, default clamped `Line` blocks, relief-damper gating by
 `u1MinOutAirDam AND u1SupFan`, supply-fan proof switching for `dpDisSet` and `yRetFan`, and the
 source boundary alias `y1RetFan = u1SupFan` represented by an explicit fixture-local Boolean
-identity bridge. `Economizers.Subsequences.Enable.mo` is reviewed only for the restricted dry-bulb
+identity bridge. `Generic.AirEconomizerHighLimits.mo` is reviewed only for the restricted
+`eneStd=ASHRAE90_1`, `ecoHigLimCon=FixedDryBulb` table buckets: `TCut=297.15 K` for ASHRAE
+climate zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8, `TCut=294.15 K` for 5A/6A, and
+`TCut=291.15 K` for 1A/2A/3A/4A. The `EnergyStandard.Not_Specified` assertion, California
+Title24 table, `DifferentialDryBulb`, `FixedDryBulbWithDifferentialDryBulb`, enthalpy branches,
+`hCut`, return-air inputs, and full `Economizers.Controller` integration remain deferred.
+`Economizers.Subsequences.Enable.mo` is reviewed only for the restricted dry-bulb
 variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`,
 supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
 hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level

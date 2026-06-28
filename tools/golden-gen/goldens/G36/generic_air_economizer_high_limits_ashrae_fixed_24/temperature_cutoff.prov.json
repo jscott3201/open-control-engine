@@ -1,0 +1,22 @@
+{
+  "class_path": "G36",
+  "scenario": "generic_air_economizer_high_limits_ashrae_fixed_24",
+  "signal": "temperature_cutoff",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 1,
+  "n_reference_columns": 2,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "temperature_cutoff"],
+  "inputs": [],
+  "input": "ASHRAE 90.1 fixed dry-bulb high-limit bucket for climate zones 1B, 2B, 3B, 3C, 4B, 4C, 5B, 5C, 6B, 7, and 8",
+  "reference_rule": "AirEconomizerHighLimits.mo ASHRAE90_1 + FixedDryBulb table selects con.k = 273.15 + 24 K",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

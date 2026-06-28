@@ -194,7 +194,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
       "status": "in-progress",
-      "rationale": "Reusable G36 logic; TrimAndRespond has a restricted source-verified explicit-CXF import fixture, but no supported runtime sequence claim."
+      "rationale": "Reusable G36 logic; AirEconomizerHighLimits has restricted source-verified ASHRAE90_1 FixedDryBulb runtime-sequence variants, while TrimAndRespond remains a restricted source-verified explicit-CXF import fixture."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
@@ -498,6 +498,60 @@
         "Runtime support is the checked-in explicit-CXF source-default Modulations.ReturnFan leaf, not arbitrary Modelica parsing.",
         "The supported variant covers yRetDam interpolation from uRetDam_max at uMin to uRetDam_min at uMax, with Line block clamping below and above the interval, and yOutDam fixed at 1.0.",
         "Evidence does not claim the have_dirCon=false relief-damper output branch, full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default ReturnFan parameterizations."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_24",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24",
+      "supported_variant": "source-verified explicit CXF for eneStd=ASHRAE90_1, ecoHigLimCon=FixedDryBulb, and ASHRAE climate zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8 selecting TCut=297.15 K",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_24.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_24.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_24/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF FixedDryBulb ASHRAE 90.1 high-limit bucket, not arbitrary Modelica parsing.",
+        "The supported variant prunes all inactive high-limit branches and exposes only the selected TCut constant.",
+        "Evidence does not claim EnergyStandard.Not_Specified assertion behavior, California Title24, DifferentialDryBulb, FixedDryBulbWithDifferentialDryBulb, enthalpy branches, hCut, return-air inputs, or full Economizers.Controller support."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_21",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21",
+      "supported_variant": "source-verified explicit CXF for eneStd=ASHRAE90_1, ecoHigLimCon=FixedDryBulb, and ASHRAE climate zones 5A/6A selecting TCut=294.15 K",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_21.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_21.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_21/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF FixedDryBulb ASHRAE 90.1 high-limit bucket, not arbitrary Modelica parsing.",
+        "The supported variant prunes all inactive high-limit branches and exposes only the selected TCut constant.",
+        "Evidence does not claim EnergyStandard.Not_Specified assertion behavior, California Title24, DifferentialDryBulb, FixedDryBulbWithDifferentialDryBulb, enthalpy branches, hCut, return-air inputs, or full Economizers.Controller support."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_18",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18",
+      "supported_variant": "source-verified explicit CXF for eneStd=ASHRAE90_1, ecoHigLimCon=FixedDryBulb, and ASHRAE climate zones 1A/2A/3A/4A selecting TCut=291.15 K",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_18.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_18.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_18/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF FixedDryBulb ASHRAE 90.1 high-limit bucket, not arbitrary Modelica parsing.",
+        "The supported variant prunes all inactive high-limit branches and exposes only the selected TCut constant.",
+        "Evidence does not claim EnergyStandard.Not_Specified assertion behavior, California Title24, DifferentialDryBulb, FixedDryBulbWithDifferentialDryBulb, enthalpy branches, hCut, return-air inputs, or full Economizers.Controller support."
       ]
     },
     {
@@ -843,6 +897,105 @@
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes the four active source child components for have_dirCon=true: two constants, one clamped Line block, and one outdoor-damper Constant block.",
         "Evidence does not claim arbitrary .mo parsing, the have_dirCon=false relief-damper branch, full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default ReturnFan parameterizations."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_24",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24",
+      "fixture_top_child_count": 1,
+      "active_block_count": 1,
+      "input_count": 0,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for ASHRAE90_1 FixedDryBulb zones 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8 with con.k=297.15 K",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_generic_air_economizer_high_limits_ashrae_fixed_24.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_air_economizer_high_limits.rs",
+      "api_test": "crates/oce-api/tests/g36_air_economizer_high_limits.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_24/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_24.csv",
+      "known_deferred_branches": [
+        "EnergyStandard.Not_Specified assertion",
+        "California Title24 climate-zone table",
+        "DifferentialDryBulb and FixedDryBulbWithDifferentialDryBulb return-air comparisons",
+        "enthalpy high-limit modes and hCut output",
+        "full Economizers.Controller integration"
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes one active source child component, the selected CDL.Reals.Sources.Constant feeding TCut.",
+        "Evidence does not claim arbitrary .mo parsing or any inactive AirEconomizerHighLimits branch outside this FixedDryBulb bucket."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_21",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21",
+      "fixture_top_child_count": 1,
+      "active_block_count": 1,
+      "input_count": 0,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for ASHRAE90_1 FixedDryBulb zones 5A/6A with con1.k=294.15 K",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_generic_air_economizer_high_limits_ashrae_fixed_21.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_air_economizer_high_limits.rs",
+      "api_test": "crates/oce-api/tests/g36_air_economizer_high_limits.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_21/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_21.csv",
+      "known_deferred_branches": [
+        "EnergyStandard.Not_Specified assertion",
+        "California Title24 climate-zone table",
+        "DifferentialDryBulb and FixedDryBulbWithDifferentialDryBulb return-air comparisons",
+        "enthalpy high-limit modes and hCut output",
+        "full Economizers.Controller integration"
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes one active source child component, the selected CDL.Reals.Sources.Constant feeding TCut.",
+        "Evidence does not claim arbitrary .mo parsing or any inactive AirEconomizerHighLimits branch outside this FixedDryBulb bucket."
+      ]
+    },
+    {
+      "name": "generic_air_economizer_high_limits_ashrae_fixed_18",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld",
+      "top_id": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18",
+      "fixture_top_child_count": 1,
+      "active_block_count": 1,
+      "input_count": 0,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for ASHRAE90_1 FixedDryBulb zones 1A/2A/3A/4A with con2.k=291.15 K",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_generic_air_economizer_high_limits_ashrae_fixed_18.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_air_economizer_high_limits.rs",
+      "api_test": "crates/oce-api/tests/g36_air_economizer_high_limits.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_18/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_air_economizer_high_limits_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_air_economizer_high_limits_ashrae_fixed_18.csv",
+      "known_deferred_branches": [
+        "EnergyStandard.Not_Specified assertion",
+        "California Title24 climate-zone table",
+        "DifferentialDryBulb and FixedDryBulbWithDifferentialDryBulb return-air comparisons",
+        "enthalpy high-limit modes and hCut output",
+        "full Economizers.Controller integration"
+      ],
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes one active source child component, the selected CDL.Reals.Sources.Constant feeding TCut.",
+        "Evidence does not claim arbitrary .mo parsing or any inactive AirEconomizerHighLimits branch outside this FixedDryBulb bucket."
       ]
     },
     {
