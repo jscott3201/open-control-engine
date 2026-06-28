@@ -1,0 +1,25 @@
+{
+  "class_path": "G36",
+  "scenario": "trim_and_respond_have_hol_false",
+  "signal": "setpoint",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 23,
+  "n_reference_columns": 4,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "request_count", "device_status", "setpoint"],
+  "inputs": [
+    { "name": "request_count", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 3.0, 6.0, 6.0, 6.0, 6.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
+    { "name": "device_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0] }
+  ],
+  "input": "TrimAndRespond have_hol=false: device proven on until 1080s, off 1080..1200s, on again at 1260s; requests step 0 -> 3 at 720s -> 6 at 840s -> 0 at 1080s",
+  "reference_rule": "Pinned TrimAndRespond.mo have_hol=false variant: TrueDelay(delTim+samplePeriod=720s), Sampler(samplePeriod=120s), UnitDelay(y_start=iniSet=10), triAmo=0.1, resAmo=-0.2, maxRes=-0.6, clamp 0..20; inactive hold path is specialized away",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

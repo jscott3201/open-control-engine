@@ -57,7 +57,10 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - every `Buildings/Controls/OBC/ASHRAE/G36/Types/*.mo` file used by the scoped sequence.
 
 For the restricted composite-import slices, `TrimAndRespond.mo` is source evidence for the checked-in
-explicit-CXF `have_hol=false` fixture. `SupplyTemperature.mo` and `SupplyFan.mo` are reviewed
+explicit-CXF `have_hol=false` runtime fixture, including delayed activation, sampled request
+trim/respond updates, capped response, and device-off reset behavior; `have_hol=true`, the runtime
+hold input branch, alternate parameterizations, and arbitrary `.mo` parsing remain deferred.
+`SupplyTemperature.mo` and `SupplyFan.mo` are reviewed
 multizone VAV setpoint anchors because they nest `G36.Generic.TrimAndRespond`. `SupplySignals.mo`
 is a reviewed multizone VAV setpoint anchor for the supply-temperature loop and coil-command
 sequencing. `PlantRequests.mo` is a reviewed multizone VAV setpoint anchor for chilled-water and

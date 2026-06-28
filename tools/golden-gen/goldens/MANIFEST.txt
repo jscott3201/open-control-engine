@@ -551,6 +551,8 @@ G36/multizone_vav_supply_signals yCooCoi -> goldens/G36/multizone_vav_supply_sig
 G36/multizone_vav_supply_signals yHeaCoi -> goldens/G36/multizone_vav_supply_signals/yHeaCoi.csv
 G36/multizone_vav_supply_temperature reference -> goldens/G36/multizone_vav_supply_temperature/reference.csv
 G36/multizone_vav_supply_temperature supply_air_temperature_setpoint -> goldens/G36/multizone_vav_supply_temperature/supply_air_temperature_setpoint.csv
+G36/trim_and_respond_have_hol_false reference -> goldens/G36/trim_and_respond_have_hol_false/reference.csv
+G36/trim_and_respond_have_hol_false setpoint -> goldens/G36/trim_and_respond_have_hol_false/setpoint.csv
 G36/vav_single_zone airflow_setpoint -> goldens/G36/vav_single_zone/airflow_setpoint.csv
 G36/vav_single_zone cooling_signal -> goldens/G36/vav_single_zone/cooling_signal.csv
 G36/vav_single_zone damper_command -> goldens/G36/vav_single_zone/damper_command.csv

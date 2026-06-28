@@ -24,6 +24,7 @@ mod return_fan_airflow_tracking;
 mod return_fan_direct_pressure;
 mod supply_fan;
 mod supply_signals;
+mod trim_and_respond;
 mod vav_single_zone;
 
 const SAT: &str = "ahu_supply_air_temp_reset";
@@ -32,6 +33,7 @@ const VAV: &str = "vav_single_zone";
 const SUPPLY_TEMP: &str = "multizone_vav_supply_temperature";
 const SUPPLY_FAN: &str = "multizone_vav_supply_fan";
 const SUPPLY_SIGNALS: &str = "multizone_vav_supply_signals";
+const TRIM_AND_RESPOND_HAVE_HOL_FALSE: &str = "trim_and_respond_have_hol_false";
 const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const OUTDOOR_AIRFLOW_AHU: &str = "multizone_vav_outdoor_airflow_ahu";
 const OUTDOOR_AIRFLOW_SUMZONE: &str = "multizone_vav_outdoor_airflow_sumzone";
@@ -78,6 +80,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(multizone_vav_supply_temperature());
     out.extend(supply_fan::goldens());
     out.extend(supply_signals::goldens());
+    out.extend(trim_and_respond::goldens());
     out.extend(plant_requests::goldens());
     out.extend(outdoor_airflow_ahu::goldens());
     out.extend(outdoor_airflow_sumzone::goldens());
@@ -286,6 +289,9 @@ fn source_files(sequence: &str) -> &'static str {
         SUPPLY_TEMP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
         SUPPLY_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
         SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
+        TRIM_AND_RESPOND_HAVE_HOL_FALSE => {
+            "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"
+        }
         PLANT_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
         OUTDOOR_AIRFLOW_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
         OUTDOOR_AIRFLOW_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
@@ -316,6 +322,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         SUPPLY_TEMP
         | SUPPLY_FAN
         | SUPPLY_SIGNALS
+        | TRIM_AND_RESPOND_HAVE_HOL_FALSE
         | PLANT_REQUESTS
         | OUTDOOR_AIRFLOW_AHU
         | OUTDOOR_AIRFLOW_SUMZONE
