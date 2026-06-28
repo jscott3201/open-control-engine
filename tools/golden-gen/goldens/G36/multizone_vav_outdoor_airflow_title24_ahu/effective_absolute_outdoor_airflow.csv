@@ -1,0 +1,9 @@
+#1
+# columns: time effective_absolute_outdoor_airflow
+double G36_multizone_vav_outdoor_airflow_title24_ahu_effective_absolute_outdoor_airflow(6,2)
+0.0 1.0
+1.0 3.0
+2.0 3.0
+3.0 2.5
+4.0 0.0
+5.0 1.0

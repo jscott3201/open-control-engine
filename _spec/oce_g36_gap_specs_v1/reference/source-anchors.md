@@ -30,6 +30,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo`
@@ -56,7 +57,10 @@ is a reviewed multizone VAV setpoint anchor for the supply-temperature loop and 
 sequencing. `PlantRequests.mo` is a reviewed multizone VAV setpoint anchor for chilled-water and
 hot-water reset/plant request logic under the WaterBased coil branches. `OutdoorAirFlow.ASHRAE62_1`
 is reviewed only for the scalar AHU leaf currently supported by an explicit-CXF fixture; its
-`SumZone` vector/matrix aggregation and Title24 package remain deferred. `ReliefDamper.mo` is
+`SumZone` vector/matrix aggregation remains deferred. `OutdoorAirFlow.Title24.AHU` is reviewed only
+for the scalar AHU leaf with `minOADes=SingleDamper`, `have_CO2Sen=true`,
+`VAbsOutAir_flow=3`, and `VDesOutAir_flow=8`; Title24 package-level support, `SumZone`, no-CO2,
+`DedicatedDampersPressure`, and non-default variants remain deferred. `ReliefDamper.mo` is
 reviewed only for the scalar no-fan relief-damper variant with `dpBuiSet=12 Pa`, `k=0.5`,
 `controllerType=P`, `reverseActing=false`, and supply-fan proof switching. `ReliefFan.mo` is
 reviewed only for the scalar single-relief-fan variant with `relFanSpe_min=0.1`,
