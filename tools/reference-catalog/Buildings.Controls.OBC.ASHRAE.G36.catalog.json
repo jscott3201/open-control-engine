@@ -331,28 +331,28 @@
       "status": "deferred",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order",
       "runtime_support": false,
-      "rationale": "OutdoorAirFlow is a package; only the nested ASHRAE62_1.AHU, Title24.AHU, and restricted Title24.SumZone leaves have runtime evidence in this catalog."
+      "rationale": "OutdoorAirFlow is a package; only the nested ASHRAE62_1.AHU, restricted ASHRAE62_1.SumZone, Title24.AHU, and restricted Title24.SumZone leaves have runtime evidence in this catalog."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
       "status": "deferred",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order",
       "runtime_support": false,
-      "rationale": "Package-level support remains deferred until AHU plus SumZone aggregation are both supported."
+      "rationale": "Package-level support remains deferred until package composition, validation variants, alternate group/zone sizes, alternate matrices, and non-default variants are covered; ASHRAE62_1.AHU and a restricted ASHRAE62_1.SumZone leaf are supported slices."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the ASHRAE 62.1 scalar AHU-level calculation with minOADes=SingleDamper, VUncDesOutAir_flow=6 m3/s, and VDesTotOutAir_flow=8 m3/s; SumZone aggregation remains deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the ASHRAE 62.1 scalar AHU-level calculation with minOADes=SingleDamper, VUncDesOutAir_flow=6 m3/s, and VDesTotOutAir_flow=8 m3/s; package-level ASHRAE62_1 and non-SingleDamper variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
-      "status": "deferred",
+      "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
-      "runtime_support": false,
-      "rationale": "Zone/group aggregation uses vector and matrix blocks and remains VEC-gated."
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the ASHRAE 62.1 SumZone aggregation with nGro=2, nZon=3, zonGroMat=[1,1,0;0,1,1], and zonGroMatTra=[1,0;1,1;0,1]; package-level ASHRAE62_1, alternate group/zone sizes, alternate matrices, validation variants, and non-default variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.Validation",
@@ -439,6 +439,24 @@
         "Runtime support is the checked-in explicit-CXF scalar AHU-level composite, not arbitrary Modelica parsing.",
         "The supported variant uses SingleDamper so VAirOut_flow and outAir_normalized remain active and guarded by the OutdoorAirSection enum condition.",
         "The oracle covers uncorrected outdoor airflow, effective minimum outdoor airflow, effective normalized outdoor airflow, and measured normalized outdoor airflow across nominal, design-cap, primary-flow guard, near-zero system-efficiency guard, and design-total cap rows."
+      ]
+    },
+    {
+      "name": "multizone_vav_outdoor_airflow_sumzone",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone",
+      "supported_variant": "source-verified explicit CXF for ASHRAE62_1.SumZone with nGro=2, nZon=3, zonGroMat=[1,1,0;0,1,1], zonGroMatTra=[1,0;1,1;0,1], occupied group gating, and maximum zone outdoor-air fraction active",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_sumzone.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_outdoor_airflow_sumzone.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_outdoor_airflow_sumzone/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_outdoor_airflow_sumzone_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF fixed-size SumZone composite, not arbitrary Modelica parsing.",
+        "The supported variant maps three zones into two overlapping groups with zonGroMat=[1,1,0;0,1,1] and uses zonGroMatTra=[1,0;1,1;0,1] for occupied-zone membership in the maximum outdoor-air fraction path.",
+        "The oracle covers summed adjusted population breathing-zone flow, summed adjusted area breathing-zone flow, summed zone primary airflow, and maximum zone outdoor-air fraction across both occupied, one occupied, none occupied, zero/near-zero primary flow, and overlapping-zone amplification rows."
       ]
     },
     {
@@ -664,7 +682,30 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF scalar composite import, conditional measured-outdoor-air branch retention, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
-        "Evidence does not claim package-level OutdoorAirFlow support, ASHRAE62_1.SumZone zone/group aggregation, or arbitrary .mo parsing."
+        "Evidence does not claim package-level OutdoorAirFlow support, non-SingleDamper ASHRAE62_1.AHU variants, or arbitrary .mo parsing."
+      ]
+    },
+    {
+      "name": "multizone_vav_outdoor_airflow_sumzone",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone",
+      "fixture_top_child_count": 35,
+      "active_block_count": 35,
+      "input_count": 14,
+      "output_count": 4,
+      "supported_variant": "explicit CXF source transcription for ASHRAE62_1.SumZone with nGro=2, nZon=3, zonGroMat=[1,1,0;0,1,1], and zonGroMatTra=[1,0;1,1;0,1]",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_outdoor_airflow_sumzone.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_outdoor_airflow_sumzone.rs",
+      "api_test": "crates/oce-api/tests/g36_outdoor_airflow_sumzone.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF fixed-size SumZone composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture intentionally specializes nGro=2, nZon=3, zonGroMat=[1,1,0;0,1,1], and zonGroMatTra=[1,0;1,1;0,1]; top-level composite array-valued parameters remain deferred, so child MatrixGain.K arrays carry the executable matrix values.",
+        "Evidence does not claim arbitrary .mo parsing, package-level ASHRAE62_1 support, alternate group/zone sizes, alternate matrices, validation variants, or non-default parameter variants."
       ]
     },
     {

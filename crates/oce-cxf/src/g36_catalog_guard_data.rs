@@ -36,6 +36,8 @@ pub(super) const G36_ECONOMIZER_ENABLE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
+pub(super) const G36_OUTDOOR_AIRFLOW_SUMZONE: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
@@ -50,7 +52,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "0946f9f82a490cd4";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "db8ffe9988433938";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -194,6 +196,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_outdoor_airflow_ahu",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld",
         text: G36_OUTDOOR_AIRFLOW_AHU,
+    },
+    FixtureSource {
+        name: "multizone_vav_outdoor_airflow_sumzone",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld",
+        text: G36_OUTDOOR_AIRFLOW_SUMZONE,
     },
     FixtureSource {
         name: "multizone_vav_outdoor_airflow_title24_ahu",

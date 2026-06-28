@@ -187,7 +187,13 @@ they are marked `supported-runtime-sequence`.
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU`
   with `minOADes=SingleDamper`, `VUncDesOutAir_flow=6`, and `VDesTotOutAir_flow=8`.
-  Package-level `OutdoorAirFlow` and `ASHRAE62_1.SumZone` remain deferred.
+  Package-level `OutdoorAirFlow`/`ASHRAE62_1` and non-`SingleDamper` variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone`
+  with `nGro=2`, `nZon=3`, `zonGroMat=[1,1,0;0,1,1]`, and
+  `zonGroMatTra=[1,0;1,1;0,1]`. Package-level `ASHRAE62_1`, alternate group/zone sizes,
+  alternate matrices, validation variants, and non-default parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.AHU`

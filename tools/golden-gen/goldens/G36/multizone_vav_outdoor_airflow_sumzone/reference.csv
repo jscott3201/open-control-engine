@@ -1,0 +1,9 @@
+#1
+# columns: time operation_mode_1 operation_mode_2 population_flow_1 population_flow_2 population_flow_3 area_flow_1 area_flow_2 area_flow_3 primary_flow_1 primary_flow_2 primary_flow_3 minimum_outdoor_air_1 minimum_outdoor_air_2 minimum_outdoor_air_3 summed_adjusted_population_breathing_zone_flow summed_adjusted_area_breathing_zone_flow summed_zone_primary_airflow maximum_zone_outdoor_air_fraction
+double G36_multizone_vav_outdoor_airflow_sumzone_reference(6,19)
+0.0 1.0 1.0 1.0 2.0 3.0 4.0 5.0 6.0 10.0 20.0 30.0 1.0 2.0 3.0 8.0 20.0 80.0 0.2
+1.0 1.0 7.0 2.0 4.0 8.0 1.0 3.0 5.0 2.0 4.0 8.0 1.0 2.0 4.0 6.0 4.0 6.0 0.5
+2.0 4.0 1.0 2.5 0.5 1.5 6.0 2.0 1.0 5.0 0.5 1.5 10.0 0.1 2.0 2.0 3.0 2.0 1.0
+3.0 7.0 6.0 10.0 20.0 30.0 3.0 2.0 1.0 0.0 0.0 0.0 1.0 1.0 1.0 0.0 0.0 0.0 0.0
+4.0 1.0 1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.00005 0.5 1.0 1.0 0.1 0.0 2.0 0.5001 1.0
+5.0 1.0 1.0 1.25 2.5 5.0 8.0 13.0 21.0 1.0 1.0 1.0 0.2 0.8 0.3 11.25 55.0 4.0 1.6
