@@ -297,9 +297,14 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan`
   with source-default `have_dirCon=true`, `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the
   clamped return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
-  `yOutDam=1`. The `have_dirCon=false` relief-damper output branch, unrestricted
-  `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and non-default
-  ReturnFan parameter variants remain deferred.
+  `yOutDam=1`.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan_relief_damper.jsonld`
+  is a source-verified restricted runtime-sequence fixture for the same upstream ReturnFan class
+  with `have_dirCon=false`, `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the clamped return
+  damper `Line` block, active `yRelDam` produced by a clamped relief damper `Line` block from `0`
+  at `uMin` to `1` at `uMax`, and `yOutDam=1`. Unrestricted `Economizers.Controller`,
+  package-level `Modulations`, package-level `Limits`, and non-default ReturnFan parameter variants
+  remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld`
   is a source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller` with

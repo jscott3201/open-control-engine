@@ -115,12 +115,13 @@ relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`
 `uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final `Min`/`Max` output
 clamps. Unrestricted `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and
 non-default Reliefs parameterizations remain deferred.
-`Economizers.Subsequences.Modulations.ReturnFan.mo` is reviewed only for the source-default
-`have_dirCon=true` variant with `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the clamped
-return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
-`yOutDam=1`. The `have_dirCon=false` relief-damper output branch, unrestricted `Economizers.Controller`,
-package-level `Modulations`, package-level `Limits`, and non-default ReturnFan parameterizations remain
-deferred.
+`Economizers.Subsequences.Modulations.ReturnFan.mo` is reviewed for two explicit variants:
+source-default `have_dirCon=true` with `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the
+clamped return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
+`yOutDam=1`; and `have_dirCon=false`, which additionally activates `yRelDam` through a clamped
+relief damper `Line` block from `0` at `uMin` to `1` at `uMax`. Unrestricted
+`Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and non-default
+ReturnFan parameterizations remain deferred.
 `Economizers.Controller.mo` is reviewed only for the restricted first controller assembly with
 `minOADes=SingleDamper`, `buiPreCon=ReliefDamper`, `eneStd=ASHRAE90_1`,
 `ecoHigLimCon=FixedDryBulb`, and `ashCliZon=Zone_5A` (`TCut=294.15 K`). The active child

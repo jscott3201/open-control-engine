@@ -1,0 +1,328 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+      "S231:label": "multizone_vav_economizer_modulations_return_fan_relief_damper",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.have_dirCon" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uMin" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uMax" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_min" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRetDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRelDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yOutDam" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.have_dirCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:max": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "-0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uTSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.u" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRetDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRelDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "!have_dirCon"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "damMinLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uMin"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "damMaxLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uMax"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "retDamPos",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRetDam" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "relDamPos",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "!have_dirCon",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yRelDam" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "zer",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "!have_dirCon",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "one",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.yOutDam" }
+      ]
+    }
+  ]
+}
