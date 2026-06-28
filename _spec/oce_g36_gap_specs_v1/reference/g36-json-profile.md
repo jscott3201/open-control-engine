@@ -192,8 +192,14 @@ they are marked `supported-runtime-sequence`.
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.AHU`
   with `minOADes=SingleDamper`, `have_CO2Sen=true`, `VAbsOutAir_flow=3`, and
-  `VDesOutAir_flow=8`. Package-level `Title24`, `Title24.SumZone`, no-CO2,
-  `DedicatedDampersPressure`, and non-default parameter variants remain deferred.
+  `VDesOutAir_flow=8`. No-CO2, `DedicatedDampersPressure`, and non-default AHU parameter
+  variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone`
+  with `nGro=2`, `nZon=3`, `have_CO2Sen=true`, and
+  `zonGroMat=[1,1,0;0,1,1]`. Package-level `Title24`, no-CO2, alternate group/zone sizes,
+  alternate matrices, validation variants, and non-default parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper` with
