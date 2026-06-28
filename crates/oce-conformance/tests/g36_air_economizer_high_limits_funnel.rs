@@ -18,6 +18,18 @@ const HIGH_LIMIT_FIXED_21: &str = include_str!(
 const HIGH_LIMIT_FIXED_18: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld"
 );
+const HIGH_LIMIT_TITLE24_FIXED_24: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_23: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
+);
 
 const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 const ROWS: usize = 1;
@@ -44,6 +56,22 @@ const CASES: &[Case] = &[
     Case {
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_18",
         fixture: HIGH_LIMIT_FIXED_18,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_fixed_24",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_24,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_fixed_23",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_23,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_fixed_22",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_22,
+    },
+    Case {
+        sequence: "generic_air_economizer_high_limits_title24_fixed_21",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_21,
     },
 ];
 

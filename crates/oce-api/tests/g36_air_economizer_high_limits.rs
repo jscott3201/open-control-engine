@@ -11,6 +11,18 @@ const HIGH_LIMIT_FIXED_21: &str = include_str!(
 const HIGH_LIMIT_FIXED_18: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld"
 );
+const HIGH_LIMIT_TITLE24_FIXED_24: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_23: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld"
+);
+const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
+);
 
 const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
 const EXPECTED_TIMES: [f64; 1] = [0.0];
@@ -39,6 +51,26 @@ const CASES: &[Case] = &[
         name: "ASHRAE90_1 FixedDryBulb 1A/2A/3A/4A",
         fixture: HIGH_LIMIT_FIXED_18,
         expected_cutoff: 291.15,
+    },
+    Case {
+        name: "California_Title_24 FixedDryBulb 1/3/5/11-16",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_24,
+        expected_cutoff: 297.15,
+    },
+    Case {
+        name: "California_Title_24 FixedDryBulb 2/4/10",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_23,
+        expected_cutoff: 296.15,
+    },
+    Case {
+        name: "California_Title_24 FixedDryBulb 6/8/9",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_22,
+        expected_cutoff: 295.15,
+    },
+    Case {
+        name: "California_Title_24 FixedDryBulb 7",
+        fixture: HIGH_LIMIT_TITLE24_FIXED_21,
+        expected_cutoff: 294.15,
     },
 ];
 
