@@ -1,0 +1,26 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_economizer_modulations_return_fan",
+  "signal": "outdoor_damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 7,
+  "n_reference_columns": 6,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "supply_temperature_signal", "return_damper_min", "return_damper_max", "return_damper_command", "outdoor_damper_command"],
+  "inputs": [
+    { "name": "supply_temperature_signal", "value_kind": "Real", "values": [-0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5] },
+    { "name": "return_damper_min", "value_kind": "Real", "values": [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125] },
+    { "name": "return_damper_max", "value_kind": "Real", "values": [0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75] }
+  ],
+  "input": "Economizer Modulations.ReturnFan: source-default have_dirCon=true keeps outdoor damper command fully open",
+  "reference_rule": "Pinned ReturnFan.mo source-default have_dirCon=true connects one.y (k=1) directly to yOutDam; relief damper branch is inactive",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

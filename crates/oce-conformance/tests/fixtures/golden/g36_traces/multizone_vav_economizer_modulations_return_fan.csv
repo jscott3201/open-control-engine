@@ -1,0 +1,10 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yRetDam http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.yOutDam
+double multizone_vav_economizer_modulations_return_fan(7,3)
+0.0 0.75 1.0
+1.0 0.75 1.0
+2.0 0.59375 1.0
+3.0 0.4375 1.0
+4.0 0.28125 1.0
+5.0 0.125 1.0
+6.0 0.125 1.0

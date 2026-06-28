@@ -22,6 +22,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo`
@@ -95,7 +96,13 @@ parameterizations remain deferred. `Economizers.Subsequences.Modulations.Reliefs
 only for the source-default relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`,
 `uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final
 `Min`/`Max` output clamps. Full `Economizers.Controller`, package-level `Modulations`,
-`Modulations.ReturnFan`, `Limits`, and non-default Reliefs parameterizations remain deferred.
+`Limits`, and non-default Reliefs parameterizations remain deferred.
+`Economizers.Subsequences.Modulations.ReturnFan.mo` is reviewed only for the source-default
+`have_dirCon=true` variant with `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the clamped
+return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
+`yOutDam=1`. The `have_dirCon=false` relief-damper output branch, full `Economizers.Controller`,
+package-level `Modulations`, `Limits`, and non-default ReturnFan parameterizations remain
+deferred.
 `ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
 variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
 `relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,
