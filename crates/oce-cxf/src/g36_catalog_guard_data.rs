@@ -30,6 +30,8 @@ pub(super) const G36_RELIEF_FAN: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_relief_fan.jsonld");
 pub(super) const G36_RELIEF_FAN_GROUP: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld");
+pub(super) const G36_FREEZE_PROTECTION: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_freeze_protection.jsonld");
 pub(super) const G36_RETURN_FAN_AIRFLOW: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld");
 pub(super) const G36_RETURN_FAN_DIRECT_PRESSURE: &str =
@@ -54,7 +56,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "bff8cd4532d891c4";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "751011997f775515";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -87,6 +89,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
@@ -184,6 +187,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_relief_fan_group",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld",
         text: G36_RELIEF_FAN_GROUP,
+    },
+    FixtureSource {
+        name: "multizone_vav_freeze_protection",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_freeze_protection.jsonld",
+        text: G36_FREEZE_PROTECTION,
     },
     FixtureSource {
         name: "multizone_vav_return_fan_airflow_tracking",

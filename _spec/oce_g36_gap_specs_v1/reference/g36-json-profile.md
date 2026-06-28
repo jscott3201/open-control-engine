@@ -216,7 +216,7 @@ they are marked `supported-runtime-sequence`.
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan` with
   `relFanSpe_min=0.1`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`, `MovingAverage(delta=300)`,
   `controllerType=P`, `reverseActing=false`, relief-damper latch/clear timing, and relief-fan
-  start/stop timing. FreezeProtection and non-default PID variants remain deferred.
+  start/stop timing. Non-default PID variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup` with
@@ -224,15 +224,25 @@ they are marked `supported-runtime-sequence`.
   `relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,
   `MovingAverage(delta=300)`, `controllerType=P`, `reverseActing=false`, stage-up/down timers,
   2 s `TrueDelay` proof acknowledgement, and level-2 alarm damper guards. Arbitrary fan
-  counts/matrices, FreezeProtection, and non-default parameter variants remain deferred.
+  counts/matrices and non-default parameter variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_freeze_protection.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.FreezeProtection` with
+  source-default `have_frePro=true`, `buiPreCon=ReliefDamper`,
+  `minOADes=DedicatedDampersAirflow`, `freSta=No_freeze_stat`, `heaCoi=WaterBased`,
+  `cooCoi=WaterBased`, `minHotWatReq=2`, `heaCoiCon=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`,
+  `yMax=1`, `yMin=0`, `THys=0.25 K`, staged timers/latches, and default heating-coil PID
+  `reverseActing=true`. No-freeze-protection, BAS or hardwired freeze-stat, return/relief-fan
+  pressure, `DedicatedDampersPressure` minimum-OA, alternate controller, and non-default parameter
+  variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanAirflowTracking` with
   `difFloSet=1 m3/s`, `conTyp=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`, `minSpe=0`, `maxSpe=1`, and
   supply-fan proof switching return-fan speed to zero. The source boundary alias
   `y1RetFan = u1SupFan` is represented by a fixture-local Boolean identity bridge so the executable
-  graph can expose it as an output point. FreezeProtection, alternate controller types, and
-  non-default parameter variants remain deferred.
+  graph can expose it as an output point. Alternate controller types and non-default parameter
+  variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure` with
@@ -241,8 +251,8 @@ they are marked `supported-runtime-sequence`.
   `MovingAverage(delta=300)`, default PID `reverseActing=true`, default clamped `Line` blocks,
   relief-damper gating by `u1MinOutAirDam AND u1SupFan`, supply-fan proof switching for
   `dpDisSet` and `yRetFan`, and a fixture-local Boolean identity bridge for the source boundary
-  alias `y1RetFan = u1SupFan`. FreezeProtection, alternate controller types, and non-default
-  parameter variants remain deferred.
+  alias `y1RetFan = u1SupFan`. Alternate controller types and non-default parameter variants remain
+  deferred.
 - `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld` is a
   source-verified restricted runtime-sequence fixture for
   `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable` with

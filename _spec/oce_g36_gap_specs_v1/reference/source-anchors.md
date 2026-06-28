@@ -22,6 +22,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo`
@@ -94,7 +95,14 @@ variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
 `relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,
 `MovingAverage(delta=300)`, `controllerType=P`, `reverseActing=false`, stage-up/down timers,
 2 s `TrueDelay` proof acknowledgement, and level-2 alarm damper guards. Arbitrary fan
-counts/matrices, freeze-protection sequences, and non-default variants remain deferred.
+counts/matrices and non-default variants remain deferred. `FreezeProtection.mo` is reviewed only
+for the source-default variant with `have_frePro=true`, `buiPreCon=ReliefDamper`,
+`minOADes=DedicatedDampersAirflow`, `freSta=No_freeze_stat`, `heaCoi=WaterBased`,
+`cooCoi=WaterBased`, `minHotWatReq=2`, `heaCoiCon=PI`, `k=1`, `Ti=0.5 s`, `Td=0.1 s`,
+`yMax=1`, `yMin=0`, `THys=0.25 K`, and default heating-coil PID `reverseActing=true`.
+No-freeze-protection, BAS/hardwired freeze-stat, return/relief-fan pressure,
+`DedicatedDampersPressure` minimum-OA, alternate controller, and non-default variants remain
+deferred.
 Each runtime claim must stay tied to its explicit checked-in CXF fixture and supported parameter
 variant.
 

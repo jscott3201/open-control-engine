@@ -1,0 +1,3623 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.FreezeProtection",
+      "S231:label": "multizone_vav_freeze_protection",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.have_frePro"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.buiPreCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOADes"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.freSta"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minHotWatReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.k"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.Ti"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.Td"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.THys"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDamPosMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uHeaCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uMinOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uRetDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.u1SofSwiRes"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.u1SupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uSupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uCooCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.TAirMix"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yFreProSta"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1EneCHWPum"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yRetDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMinOutDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1SupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.ySupFan"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yCooCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHeaCoi"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHotWatPlaReq"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yAla"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.have_frePro",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.buiPreCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl.ReliefDamper"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOADes",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection.DedicatedDampersAirflow"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.freSta",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat.No_freeze_stat"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoi",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minHotWatReq",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "1"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "1"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "1"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.THys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:unit": "K"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDamPosMin",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uHeaCoi",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uMinOutDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uRetDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_m"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.u1SofSwiRes",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uSupFan",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.uCooCoi",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.TAirMix",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yFreProSta",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1EneCHWPum",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yRetDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMinOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1SupFan",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.ySupFan",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yCooCoi",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHeaCoi",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:min": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      },
+      "S231:max": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHotWatPlaReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yAla",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "277.55",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "hotWatPlaReq",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "minVen",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "heaCoiCon1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.controllerType"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.k"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.Ti"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.Td"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.yMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.yMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.reverseActing"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_s"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_m"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "heaCoi1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "280.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minVen.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim1.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Edge",
+      "S231:label": "endStaOne",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaOne.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.clr"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "276.45",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim2.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.trueHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "3600",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.falseHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "S231:label": "holSta2",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.trueHoldDuration"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.falseHoldDuration"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.holSta2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "outDam2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "minOutDam2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "retDam2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 3
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt2.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "900",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim3",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim3.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "274.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "lesThr2",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lesThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim4",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim4.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or8",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "con2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1EneCHWPum"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "supFan",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.ySupFan"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con3",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "outDam",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yOutDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "cooCoiVal",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yCooCoi"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "hotWatPlaReq3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHotWatPlaReq"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt3",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:label": "max1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.max1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_m"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.controllerType",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController"
+      },
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.Ti",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.Td",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.yMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.yMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.reverseActing",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:label": "heaCoiMod",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.controllerType"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.k"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.Ti"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.Td"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.yMax"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.yMin"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.reverseActing"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_s"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_m"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_s",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_m",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "300.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con4",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.con4.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiMod.u_s"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "heaCoiPos",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yHeaCoi"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yAla"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt4",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt4.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: the unit is shut down by freeze protection!\""
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "shuDowWar",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.shuDowWar.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: minimum ventilation was interrupted by freeze protection!\""
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "disMinVenWar",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not2",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.disMinVenWar.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "3600",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:label": "tim5",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.t"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.u"
+      },
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.y"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.passed"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.tim5.passed",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "minOutDam",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yMinOutDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt5",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt5.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:label": "lat2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.clr"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.clr",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.outDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.not2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi1.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Edge",
+      "S231:label": "endStaTwo",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.endStaTwo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat2.clr"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.lat.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "retDam",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.u3",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yRetDam"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "279.15",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "supTemSet",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.supTemSet.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiCon1.u_s"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.yFreProSta"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi4",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt6",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt6.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi5",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi4.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 1
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt7",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt7.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt8",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.conInt8.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi5.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "norSta1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.norSta1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.y1SupFan"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or7",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or7.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.multizone_vav_freeze_protection.or8.u1"
+      }
+    }
+  ]
+}
