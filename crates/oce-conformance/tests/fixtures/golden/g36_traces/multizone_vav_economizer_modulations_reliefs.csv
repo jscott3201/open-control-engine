@@ -1,0 +1,10 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam
+double multizone_vav_economizer_modulations_reliefs(7,3)
+0.0 0.25 0.75
+1.0 0.25 0.75
+2.0 0.5625 0.75
+3.0 0.875 0.75
+4.0 0.875 0.4375
+5.0 0.875 0.125
+6.0 0.875 0.125

@@ -1,0 +1,28 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_economizer_modulations_reliefs",
+  "signal": "outdoor_damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 7,
+  "n_reference_columns": 8,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "supply_temperature_signal", "outdoor_damper_min", "outdoor_damper_max", "return_damper_min", "return_damper_max", "outdoor_damper_command", "return_damper_command"],
+  "inputs": [
+    { "name": "supply_temperature_signal", "value_kind": "Real", "values": [-0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5] },
+    { "name": "outdoor_damper_min", "value_kind": "Real", "values": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25] },
+    { "name": "outdoor_damper_max", "value_kind": "Real", "values": [0.875, 0.875, 0.875, 0.875, 0.875, 0.875, 0.875] },
+    { "name": "return_damper_min", "value_kind": "Real", "values": [0.125, 0.125, 0.125, 0.125, 0.125, 0.125, 0.125] },
+    { "name": "return_damper_max", "value_kind": "Real", "values": [0.75, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75] }
+  ],
+  "input": "Economizer Modulations.Reliefs: uTSup sweeps below, through, and above the relief control window with fixed dyadic damper limits",
+  "reference_rule": "Pinned Reliefs.mo default parameters: outDamPos=Line(x1=uMin=-0.25,f1=uOutDam_min,x2=uOutDamMax=0,f2=uOutDam_max,limitBelow=true,limitAbove=true); yOutDam=min(outDamPos.y,uOutDam_max)",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -249,7 +249,14 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the restricted dry-bulb economizer-enable branch with use_enthalpy=false, delTOutHis=1 K, retDamFulOpeTim=180 s, disDel=15 s, supply-fan proof, and freeze-protection stage zero gating; enthalpy high-limit, full Economizers.Controller, Limits, Modulations, package-level support, and other variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the restricted dry-bulb economizer-enable branch with use_enthalpy=false, delTOutHis=1 K, retDamFulOpeTim=180 s, disDel=15 s, supply-fan proof, and freeze-protection stage zero gating; enthalpy high-limit, full Economizers.Controller, Limits, remaining Modulations classes, package-level support, and other variants remain deferred."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer relief/barometric modulation leaf with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, active outdoor and return damper Line blocks, and final Min/Max output clamps; full Economizers.Controller, ReturnFan modulation, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Validation",
@@ -423,6 +430,24 @@
         "Runtime support is the checked-in explicit-CXF dry-bulb Enable composite, not arbitrary Modelica parsing.",
         "The supported variant explicitly sets use_enthalpy=false; enthalpy high-limit blocks are inactive and pruned.",
         "The oracle covers outdoor damper maximum, return damper maximum, and return damper minimum limits over initial disabled behavior, 600 s true/false hold timing, supply-fan interruption, freeze-protection interruption, and return-damper full-open timing."
+      ]
+    },
+    {
+      "name": "multizone_vav_economizer_modulations_reliefs",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs",
+      "supported_variant": "source-verified explicit CXF for source-default Economizers.Subsequences.Modulations.Reliefs with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, clamped outdoor/return damper Line blocks, and final Min/Max output clamps",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_modulations_reliefs.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_modulations_reliefs.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_economizer_modulations_reliefs/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_economizer_modulations_reliefs_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF source-default Modulations.Reliefs leaf, not arbitrary Modelica parsing.",
+        "The supported variant covers the outdoor damper interpolation from uMin to uOutDamMax, the return damper interpolation from uRetDamMin to uMax, and the final outdoor-damper upper clamp and return-damper lower clamp.",
+        "Evidence does not claim full Economizers.Controller support, package-level Modulations support, Modulations.ReturnFan, Limits, or non-default Reliefs parameterizations."
       ]
     },
     {
@@ -698,7 +723,30 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture intentionally specializes use_enthalpy=false; hOut, hOutCut, hysOutEnt, and enthalpy subtract logic are outside this variant.",
-        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Economizers.Subsequences support, Limits, Modulations, or other Enable parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Economizers.Subsequences support, Limits, remaining Modulations classes, or other Enable parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_economizer_modulations_reliefs",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs",
+      "fixture_top_child_count": 8,
+      "active_block_count": 8,
+      "input_count": 5,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for source-default Modulations.Reliefs with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, clamped outdoor/return damper Line blocks, and final Min/Max output clamps",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_economizer_modulations_reliefs.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_economizer_modulations_reliefs.rs",
+      "api_test": "crates/oce-api/tests/g36_economizer_modulations_reliefs.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes all eight active source child components: four constants, two clamped Line blocks, one Min block, and one Max block.",
+        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Modulations support, Modulations.ReturnFan, Limits, or non-default Reliefs parameterizations."
       ]
     },
     {
