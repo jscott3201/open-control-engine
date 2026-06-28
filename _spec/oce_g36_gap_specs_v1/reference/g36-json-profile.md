@@ -259,8 +259,15 @@ they are marked `supported-runtime-sequence`.
   `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`, supply-fan
   proof gating, freeze-protection stage zero gating, and the source dry-bulb polarity
   `TOut - TOutCut`. The enthalpy high-limit branch, full `Economizers.Controller`,
-  package-level `Economizers.Subsequences`, `Limits`, `Modulations`, and non-default Enable
-  parameter variants remain deferred.
+  package-level `Economizers.Subsequences`, `Limits`, remaining `Modulations` classes, and
+  non-default Enable parameter variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs`
+  with source-default `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor
+  and return damper `Line` blocks, and final `Min`/`Max` output clamps. Full
+  `Economizers.Controller`, package-level `Modulations`, `Modulations.ReturnFan`, `Limits`, and
+  non-default Reliefs parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.

@@ -1,0 +1,399 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+      "S231:label": "multizone_vav_economizer_modulations_reliefs",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uMin" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDamMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDamMin" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_max" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:max": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "-0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDamMax",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDamMin",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.u" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamMinLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uMin"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "outDamMaxLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uOutDamMax"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamConMinLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uRetDamMin"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "retDamMaxLimSig",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "uMax"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "outDamPos",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "retDamPos",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.limitBelow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.limitAbove" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.limitBelow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.limitAbove",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": true
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.f2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:label": "min",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:label": "max",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam" }
+    }
+  ]
+}

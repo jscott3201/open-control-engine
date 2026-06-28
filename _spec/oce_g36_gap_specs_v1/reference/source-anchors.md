@@ -21,6 +21,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo`
@@ -89,8 +90,13 @@ identity bridge. `Economizers.Subsequences.Enable.mo` is reviewed only for the r
 variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`,
 supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
 hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level
-`Economizers.Subsequences`, `Limits`, `Modulations`, and other Enable parameterizations remain
-deferred. `ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
+`Economizers.Subsequences`, `Limits`, remaining `Modulations` classes, and other Enable
+parameterizations remain deferred. `Economizers.Subsequences.Modulations.Reliefs.mo` is reviewed
+only for the source-default relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`,
+`uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final
+`Min`/`Max` output clamps. Full `Economizers.Controller`, package-level `Modulations`,
+`Modulations.ReturnFan`, `Limits`, and non-default Reliefs parameterizations remain deferred.
+`ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
 variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
 `relFanMat={{1,0},{1,0},{0,1},{0,1}}`, `dpBuiSet=12 Pa`, `k=1`, `hys=0.005`,
 `MovingAverage(delta=300)`, `controllerType=P`, `reverseActing=false`, stage-up/down timers,
@@ -108,7 +114,7 @@ variant.
 
 For representative-sequence hardening, the AHU supply-air-temperature reset, AHU economizer, and
 single-zone VAV fixtures are source-reviewed fragments of the listed upstream files. They remain
-fixture-only CXF graphs: `Economizers.Subsequences.Modulations` and other package-order entries are
+fixture-only CXF graphs: other `Economizers.Subsequences.Modulations` package-order entries are
 catalog navigation/deferred branches, not implemented runtime support in this tranche.
 
 ## Generated docs
