@@ -20,6 +20,8 @@ const SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
+const TRIM_AND_RESPOND: &str =
+    include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
 const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 const OUTDOOR_AIRFLOW_AHU: &str =
@@ -74,6 +76,11 @@ const SUPPLY_SIGNALS_FAN_STATUS: &str =
 const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
 const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
 const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
+const TRIM_AND_RESPOND_REQUESTS: &str =
+    "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq";
+const TRIM_AND_RESPOND_DEVICE_STATUS: &str =
+    "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta";
+const TRIM_AND_RESPOND_SETPOINT_RUNTIME: &str = "conn#23";
 const PLANT_REQUESTS_SUPPLY_AIR: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
 const PLANT_REQUESTS_SETPOINT: &str =
@@ -165,6 +172,14 @@ const SUPPLY_SIGNALS_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::real("yHeaCoi", SUPPLY_SIGNALS_HEATING_RUNTIME),
     PointSpec::real("yCooCoi", SUPPLY_SIGNALS_COOLING_RUNTIME),
 ];
+const TRIM_AND_RESPOND_INPUTS: &[PointSpec] = &[
+    PointSpec::integer("request_count", TRIM_AND_RESPOND_REQUESTS),
+    PointSpec::boolean("device_status", TRIM_AND_RESPOND_DEVICE_STATUS),
+];
+const TRIM_AND_RESPOND_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::real(
+    "setpoint",
+    TRIM_AND_RESPOND_SETPOINT_RUNTIME,
+)];
 const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_air_temperature", PLANT_REQUESTS_SUPPLY_AIR),
     PointSpec::real("supply_air_temperature_setpoint", PLANT_REQUESTS_SETPOINT),
@@ -259,6 +274,15 @@ const SEQUENCES: &[SequenceSpec] = &[
         sample_step: 1.0,
         inputs: SUPPLY_SIGNALS_INPUTS,
         exact_outputs: SUPPLY_SIGNALS_EXACT_OUTPUTS,
+        masked_outputs: &[],
+    },
+    SequenceSpec {
+        name: "trim_and_respond_have_hol_false",
+        cxf: TRIM_AND_RESPOND,
+        t_stop: 22,
+        sample_step: 60.0,
+        inputs: TRIM_AND_RESPOND_INPUTS,
+        exact_outputs: TRIM_AND_RESPOND_EXACT_OUTPUTS,
         masked_outputs: &[],
     },
     SequenceSpec {

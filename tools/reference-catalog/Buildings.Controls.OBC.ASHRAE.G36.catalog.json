@@ -194,7 +194,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
       "status": "in-progress",
-      "rationale": "Reusable G36 logic; AirEconomizerHighLimits has restricted source-verified ASHRAE90_1 FixedDryBulb runtime-sequence variants, while TrimAndRespond remains a restricted source-verified explicit-CXF import fixture."
+      "rationale": "Reusable G36 logic; AirEconomizerHighLimits has restricted source-verified ASHRAE90_1 FixedDryBulb runtime-sequence variants, and TrimAndRespond has restricted source-verified explicit-CXF runtime-sequence support for have_hol=false."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
@@ -773,6 +773,24 @@
       ]
     },
     {
+      "name": "trim_and_respond_have_hol_false",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
+      "top_id": "http://example.org#g36.source.trim_and_respond_have_hol_false",
+      "supported_variant": "source-verified explicit CXF for have_hol=false with iniSet=10, minSet=0, maxSet=20, delTim=600 s, samplePeriod=120 s, numIgnReq=2, triAmo=0.1, resAmo=-0.2, maxRes=-0.6, and inactive uHol/truHol optional hold path pruned",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/trim_and_respond_have_hol_false.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/trim_and_respond_have_hol_false.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/trim_and_respond_have_hol_false/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF composite, not arbitrary Modelica parsing.",
+        "The oracle covers delayed activation, sampled request trim/respond updates, capped negative response, min/max clamping envelope, device-off reset to iniSet, and restart-before-delay behavior.",
+        "Evidence does not claim have_hol=true, uHol/TrueFalseHold runtime behavior, alternate TrimAndRespond parameterizations, or arbitrary .mo parsing."
+      ]
+    },
+    {
       "name": "multizone_vav_supply_temperature",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
@@ -1308,7 +1326,7 @@
     },
     {
       "name": "trim_and_respond_have_hol_false",
-      "status": "supported-import-fixture",
+      "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld",
@@ -1320,12 +1338,21 @@
       "supported_variant": "explicit CXF after load-time specialization with have_hol=false; inactive uHol/truHol optional hold path is pruned",
       "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_trim_and_respond_have_hol_false.modelgraph.txt",
       "resolver_test": "crates/oce-cxf/tests/resolve_composite.rs",
-      "api_test": "crates/oce-api/tests/composite_import.rs",
-      "oracle_status": "import-structure-only",
-      "supported_runtime_sequence": false,
+      "api_test": "crates/oce-api/tests/g36_trim_and_respond.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/trim_and_respond_have_hol_false/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/trim_and_respond_have_hol_false.csv",
+      "known_deferred_branches": [
+        "have_hol=true optional hold input and TrueFalseHold branch",
+        "alternate TrimAndRespond parameterizations",
+        "arbitrary .mo parsing"
+      ],
       "notes": [
-        "Evidence proves restricted explicit-CXF composite import, deterministic flattening, parameter propagation, conditional pruning, and facade load support.",
-        "Standalone TrimAndRespond evidence does not claim arbitrary .mo parsing or an independent whole-sequence oracle."
+        "Evidence proves restricted explicit-CXF composite import, deterministic flattening, parameter propagation, conditional pruning, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The runtime oracle covers the have_hol=false variant only; inactive uHol and truHol nodes remain specialization/pruning evidence, not supported hold-runtime behavior.",
+        "Standalone TrimAndRespond evidence does not claim arbitrary .mo parsing, have_hol=true, or alternate parameterizations."
       ]
     },
     {

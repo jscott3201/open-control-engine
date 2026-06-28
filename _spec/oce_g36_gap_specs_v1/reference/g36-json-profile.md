@@ -166,10 +166,13 @@ they are marked `supported-runtime-sequence`.
 - `fixtures/parameter-gated-connector.jsonld` is a profile-only G36 enum parameter plus a conditional
   connector guard over that parameter.
 - `crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld` is the first
-  source-verified restricted composite import fixture. It encodes
+  source-verified restricted composite runtime fixture. It encodes
   `Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond` for the explicit `have_hol=false`
-  variant. Optional hold input/subgraph nodes are present as inactive post-specialization evidence
-  and pruned before the executable graph is frozen.
+  variant with independent oracle coverage for delayed activation, sampled trim/respond updates,
+  capped negative response, device-off reset, and restart-before-delay behavior. Optional hold
+  input/subgraph nodes are present as inactive post-specialization evidence and pruned before the
+  executable graph is frozen; `have_hol=true`, hold-runtime behavior, alternate parameterizations,
+  and arbitrary `.mo` parsing remain deferred.
 - `crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld`,
   `crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld`, and
   `crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld` remain fixture-only representative
