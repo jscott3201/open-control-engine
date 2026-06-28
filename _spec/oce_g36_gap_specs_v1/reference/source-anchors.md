@@ -72,8 +72,14 @@ the scalar direct-pressure variant with `dpBuiSet=12 Pa`, `p_rel_RetFan_min=2.4 
 `reverseActing=true`, default clamped `Line` blocks, relief-damper gating by
 `u1MinOutAirDam AND u1SupFan`, supply-fan proof switching for `dpDisSet` and `yRetFan`, and the
 source boundary alias `y1RetFan = u1SupFan` represented by an explicit fixture-local Boolean
-identity bridge. `ReliefFanGroup`, freeze-protection sequences, and non-default variants remain deferred. Each runtime claim must
-stay tied to its explicit checked-in CXF fixture and supported parameter variant.
+identity bridge. `Economizers.Subsequences.Enable.mo` is reviewed only for the restricted dry-bulb
+variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`,
+supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
+hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level
+`Economizers.Subsequences`, `Limits`, `Modulations`, and other Enable parameterizations remain
+deferred. `ReliefFanGroup`, freeze-protection sequences, and non-default variants remain deferred.
+Each runtime claim must stay tied to its explicit checked-in CXF fixture and supported parameter
+variant.
 
 For representative-sequence hardening, the AHU supply-air-temperature reset, AHU economizer, and
 single-zone VAV fixtures are source-reviewed fragments of the listed upstream files. They remain

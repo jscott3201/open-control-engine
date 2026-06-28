@@ -450,6 +450,10 @@ G36/ahu_economizer reference -> goldens/G36/ahu_economizer/reference.csv
 G36/ahu_supply_air_temp_reset cooling_demand -> goldens/G36/ahu_supply_air_temp_reset/cooling_demand.csv
 G36/ahu_supply_air_temp_reset reference -> goldens/G36/ahu_supply_air_temp_reset/reference.csv
 G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_reset/sat_setpoint.csv
+G36/multizone_vav_economizer_enable outdoor_damper_max_limit -> goldens/G36/multizone_vav_economizer_enable/outdoor_damper_max_limit.csv
+G36/multizone_vav_economizer_enable reference -> goldens/G36/multizone_vav_economizer_enable/reference.csv
+G36/multizone_vav_economizer_enable return_damper_max_limit -> goldens/G36/multizone_vav_economizer_enable/return_damper_max_limit.csv
+G36/multizone_vav_economizer_enable return_damper_min_limit -> goldens/G36/multizone_vav_economizer_enable/return_damper_min_limit.csv
 G36/multizone_vav_outdoor_airflow_ahu effective_minimum_outdoor_airflow -> goldens/G36/multizone_vav_outdoor_airflow_ahu/effective_minimum_outdoor_airflow.csv
 G36/multizone_vav_outdoor_airflow_ahu effective_outdoor_airflow_normalized -> goldens/G36/multizone_vav_outdoor_airflow_ahu/effective_outdoor_airflow_normalized.csv
 G36/multizone_vav_outdoor_airflow_ahu measured_outdoor_airflow_normalized -> goldens/G36/multizone_vav_outdoor_airflow_ahu/measured_outdoor_airflow_normalized.csv

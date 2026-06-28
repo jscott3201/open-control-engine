@@ -1,0 +1,617 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable",
+      "S231:label": "multizone_vav_economizer_enable",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.use_enthalpy" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delTOutHis" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delEntHis" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamFulOpeTim" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.disDel" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.TOut" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.TOutCut" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDamPhy_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.u1SupFan" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yOutDam_max" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_min" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_max" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.use_enthalpy",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delTOutHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "TemperatureDifference",
+      "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delEntHis",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "J/kg",
+      "S231:quantity": "SpecificEnergy",
+      "S231:value": { "@value": "1000", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamFulOpeTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "180", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.disDel",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "15", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.TOut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:displayUnit": "degC",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.TOutCut",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:displayUnit": "degC",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u3" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_min",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDamPhy_max",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yOutDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_min",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_max",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "S231:label": "truFalHol",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.trueHoldDuration" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.falseHoldDuration" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.trueHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "600", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.falseHoldDuration",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "600", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "andEnaDis",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "sub1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.sub1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "hysOutTem",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.uLow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.uHigh" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "-1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "outDamSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yOutDam_max" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "retDamSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "maxRetDamSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_max" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "minRetDamSwitch",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_min" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not2",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.u" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "delOutDamOsc",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "disDel"
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and3.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "delRetDam",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "retDamFulOpeTim"
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.and2.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeProtectionStages"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeProtectionStages.stage0"
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.conInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:label": "entSubst1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.y" }
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.or2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.u" }
+    }
+  ]
+}

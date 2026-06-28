@@ -32,6 +32,8 @@ pub(super) const G36_RETURN_FAN_AIRFLOW: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld");
 pub(super) const G36_RETURN_FAN_DIRECT_PRESSURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld");
+pub(super) const G36_ECONOMIZER_ENABLE: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
@@ -44,7 +46,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "c07ae895914c6c34";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "81b21a31e8d9252f";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -176,6 +178,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_return_fan_direct_pressure",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld",
         text: G36_RETURN_FAN_DIRECT_PRESSURE,
+    },
+    FixtureSource {
+        name: "multizone_vav_economizer_enable",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld",
+        text: G36_ECONOMIZER_ENABLE,
     },
     FixtureSource {
         name: "multizone_vav_outdoor_airflow_ahu",

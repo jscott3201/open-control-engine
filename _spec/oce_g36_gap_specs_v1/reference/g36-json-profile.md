@@ -6,9 +6,9 @@
 
 This profile defines the checked-in JSON/CXF subset Open Control Engine will use for
 `Buildings.Controls.OBC.ASHRAE.G36` sequence work. It is deliberately narrower than arbitrary
-Modelica translation and deliberately broader than the hand-authored representative fixtures. It now
-covers the first source-verified explicit-CXF composite import fixture while preserving the higher
-bar for full G36 runtime-sequence support.
+Modelica translation and deliberately broader than the hand-authored representative fixtures. It
+covers source-verified explicit-CXF composite import fixtures while preserving the higher bar for
+full G36 runtime-sequence support.
 
 ## Scope
 
@@ -218,6 +218,14 @@ they are marked `supported-runtime-sequence`.
   `dpDisSet` and `yRetFan`, and a fixture-local Boolean identity bridge for the source boundary
   alias `y1RetFan = u1SupFan`. ReliefFanGroup, FreezeProtection, alternate controller types, and
   non-default parameter variants remain deferred.
+- `crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld` is a
+  source-verified restricted runtime-sequence fixture for
+  `Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable` with
+  `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`, supply-fan
+  proof gating, freeze-protection stage zero gating, and the source dry-bulb polarity
+  `TOut - TOutCut`. The enthalpy high-limit branch, full `Economizers.Controller`,
+  package-level `Economizers.Subsequences`, `Limits`, `Modulations`, and non-default Enable
+  parameter variants remain deferred.
 - `crates/oce-cxf/tests/fixtures/boundary_fanout.jsonld` is a synthetic regression fixture proving a
   top composite boundary input can fan out to multiple internal input connectors while the facade and
   durable point projection expose one logical host point.
