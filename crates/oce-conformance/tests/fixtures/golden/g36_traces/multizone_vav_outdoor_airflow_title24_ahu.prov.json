@@ -1,0 +1,14 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "b9d063d9ee02e33e810d8e84e5a1547cb65c0aee",
+  "reference_columns": [
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VEffAbsOutAir_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effAbsOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VEffDesOutAir_flow",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effDesOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effOutAir_normalized",
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.outAir_normalized"
+  ]
+}

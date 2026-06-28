@@ -36,6 +36,8 @@ pub(super) const G36_ECONOMIZER_ENABLE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
+pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_AHU: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld");
 pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld"
@@ -46,7 +48,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "81b21a31e8d9252f";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "2ef3d67740961bdd";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -77,6 +79,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
@@ -188,6 +191,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_outdoor_airflow_ahu",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld",
         text: G36_OUTDOOR_AIRFLOW_AHU,
+    },
+    FixtureSource {
+        name: "multizone_vav_outdoor_airflow_title24_ahu",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld",
+        text: G36_OUTDOOR_AIRFLOW_TITLE24_AHU,
     },
 ];
 

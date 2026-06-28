@@ -1,0 +1,27 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_outdoor_airflow_title24_ahu",
+  "signal": "measured_outdoor_airflow_normalized",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 6,
+  "n_reference_columns": 11,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "absolute_min_flow", "design_min_flow", "co2_loop_max", "measured_outdoor_air", "effective_absolute_outdoor_airflow", "effective_absolute_outdoor_airflow_normalized", "effective_design_outdoor_airflow", "effective_design_outdoor_airflow_normalized", "effective_outdoor_airflow_normalized", "measured_outdoor_airflow_normalized"],
+  "inputs": [
+    { "name": "absolute_min_flow", "value_kind": "Real", "values": [1.0, 4.0, 4.0, 2.5, 0.0, 1.0] },
+    { "name": "design_min_flow", "value_kind": "Real", "values": [2.0, 10.0, 10.0, 4.0, 0.0, 5.0] },
+    { "name": "co2_loop_max", "value_kind": "Real", "values": [0.0, 0.5, 0.75, 1.4, 1.0, -0.25] },
+    { "name": "measured_outdoor_air", "value_kind": "Real", "values": [4.0, 6.0, 0.0, 9.0, 8.0, 1.6] }
+  ],
+  "input": "OutdoorAirFlow.Title24.AHU SingleDamper: measured outdoor-air normalization branch is active",
+  "reference_rule": "Pinned Title24/AHU.mo conditional branch: outAir_normalized = VAirOut_flow / max(VDesOutAir_flow, 1E-4) when minOADes is DedicatedDampersAirflow or SingleDamper",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}
