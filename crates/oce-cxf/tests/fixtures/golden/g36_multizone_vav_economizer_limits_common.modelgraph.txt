@@ -1,0 +1,114 @@
+blocks: 16
+  B0 decl=0 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.damLimCon")
+    inputs=[0, 1, 2] outputs=[3]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3fa999999999999a)
+    param Ti=Real(0x405e000000000000)
+    param Td=Real(0x3fb999999999999a)
+    param yMax=Real(0x3ff0000000000000)
+    param yMin=Real(0x0000000000000000)
+    param y_reset=Real(0x0000000000000000)
+  B1 decl=1 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhyPosMinSig")
+    inputs=[] outputs=[4]
+    param k=Real(0x0000000000000000)
+  B2 decl=2 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPhyPosMaxSig")
+    inputs=[] outputs=[5]
+    param k=Real(0x3ff0000000000000)
+  B3 decl=3 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMinSig")
+    inputs=[] outputs=[6]
+    param k=Real(0x0000000000000000)
+  B4 decl=4 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMaxSig")
+    inputs=[] outputs=[7]
+    param k=Real(0x3ff0000000000000)
+  B5 decl=5 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.minSigLim")
+    inputs=[] outputs=[8]
+    param k=Real(0x0000000000000000)
+  B6 decl=6 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.maxSigLim")
+    inputs=[] outputs=[9]
+    param k=Real(0x3ff0000000000000)
+  B7 decl=7 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.sigFraForOutDam")
+    inputs=[] outputs=[10]
+    param k=Real(0x3fe0000000000000)
+  B8 decl=8 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.minOutDam")
+    inputs=[11, 12, 13, 14, 15] outputs=[16]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(true)
+  B9 decl=9 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.minRetDam")
+    inputs=[17, 18, 19, 20, 21] outputs=[22]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(true)
+  B10 decl=10 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPosMinSwitch")
+    inputs=[23, 24, 25] outputs=[26]
+  B11 decl=11 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPosMaxSwitch")
+    inputs=[27, 28, 29] outputs=[30]
+  B12 decl=12 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.not1")
+    inputs=[31] outputs=[32]
+  B13 decl=13 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.conInt1")
+    inputs=[] outputs=[33]
+    param k=Integer(1)
+  B14 decl=14 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.intEqu")
+    inputs=[34, 35] outputs=[36]
+  B15 decl=15 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.and3")
+    inputs=[37, 38] outputs=[39]
+connectors: 40
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.VOutMinSet_flow_normalized")
+  C1 block=B0 dir=In type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.VOut_flow_normalized")
+  C2 block=B0 dir=In type=Boolean decl=2 iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.u1SupFan")
+  C3 block=B0 dir=Out type=Real decl=3 iri=None
+  C4 block=B1 dir=Out type=Real decl=4 iri=None
+  C5 block=B2 dir=Out type=Real decl=5 iri=None
+  C6 block=B3 dir=Out type=Real decl=6 iri=None
+  C7 block=B4 dir=Out type=Real decl=7 iri=None
+  C8 block=B5 dir=Out type=Real decl=8 iri=None
+  C9 block=B6 dir=Out type=Real decl=9 iri=None
+  C10 block=B7 dir=Out type=Real decl=10 iri=None
+  C11 block=B8 dir=In type=Real decl=11 iri=None
+  C12 block=B8 dir=In type=Real decl=12 iri=None
+  C13 block=B8 dir=In type=Real decl=13 iri=None
+  C14 block=B8 dir=In type=Real decl=14 iri=None
+  C15 block=B8 dir=In type=Real decl=15 iri=None
+  C16 block=B8 dir=Out type=Real decl=16 iri=None
+  C17 block=B9 dir=In type=Real decl=17 iri=None
+  C18 block=B9 dir=In type=Real decl=18 iri=None
+  C19 block=B9 dir=In type=Real decl=19 iri=None
+  C20 block=B9 dir=In type=Real decl=20 iri=None
+  C21 block=B9 dir=In type=Real decl=21 iri=None
+  C22 block=B9 dir=Out type=Real decl=22 iri=None
+  C23 block=B10 dir=In type=Real decl=23 iri=None
+  C24 block=B10 dir=In type=Boolean decl=24 iri=None
+  C25 block=B10 dir=In type=Real decl=25 iri=None
+  C26 block=B10 dir=Out type=Real decl=26 iri=None
+  C27 block=B11 dir=In type=Real decl=27 iri=None
+  C28 block=B11 dir=In type=Boolean decl=28 iri=None
+  C29 block=B11 dir=In type=Real decl=29 iri=None
+  C30 block=B11 dir=Out type=Real decl=30 iri=None
+  C31 block=B12 dir=In type=Boolean decl=31 iri=None
+  C32 block=B12 dir=Out type=Boolean decl=32 iri=None
+  C33 block=B13 dir=Out type=Integer decl=33 iri=None
+  C34 block=B14 dir=In type=Integer decl=34 iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.uOpeMod")
+  C35 block=B14 dir=In type=Integer decl=35 iri=None
+  C36 block=B14 dir=Out type=Boolean decl=36 iri=None
+  C37 block=B15 dir=In type=Boolean decl=37 iri=Some("http://example.org#g36.source.multizone_vav_economizer_limits_common.u1SupFan")
+  C38 block=B15 dir=In type=Boolean decl=38 iri=None
+  C39 block=B15 dir=Out type=Boolean decl=39 iri=None
+connections: 19
+  C3 -> C21
+  C3 -> C15
+  C4 -> C27
+  C4 -> C12
+  C5 -> C29
+  C6 -> C25
+  C7 -> C23
+  C7 -> C18
+  C8 -> C11
+  C9 -> C19
+  C10 -> C17
+  C10 -> C13
+  C26 -> C20
+  C30 -> C14
+  C32 -> C24
+  C32 -> C28
+  C33 -> C35
+  C36 -> C38
+  C39 -> C31
+external_inputs: [1, 0, 34, 2, 37]

@@ -249,21 +249,28 @@
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the restricted dry-bulb economizer-enable branch with use_enthalpy=false, delTOutHis=1 K, retDamFulOpeTim=180 s, disDel=15 s, supply-fan proof, and freeze-protection stage zero gating; enthalpy high-limit, full Economizers.Controller, Limits, remaining Modulations classes, package-level support, and other variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the restricted dry-bulb economizer-enable branch with use_enthalpy=false, delTOutHis=1 K, retDamFulOpeTim=180 s, disDel=15 s, supply-fan proof, and freeze-protection stage zero gating; enthalpy high-limit, full Economizers.Controller, package-level Limits, Limits.SeparateWithAFMS/SeparateWithDP, remaining Modulations classes, package-level support, and other variants remain deferred."
+    },
+    {
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common",
+      "status": "supported-runtime-sequence",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
+      "runtime_support": true,
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default common-damper limits leaf with controllerType=PI, k=0.05, Ti=120 s, Td=0.1 s, uRetDam_min=0.5, physical damper limits 0..1, PIDWithReset trigger from u1SupFan, and minimum-outdoor-air enable gating by occupied mode and supply-fan proof; Limits package-level support, SeparateWithAFMS, SeparateWithDP, full Economizers.Controller, and non-default controller/parameter variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer relief/barometric modulation leaf with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, active outdoor and return damper Line blocks, and final Min/Max output clamps; full Economizers.Controller, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer relief/barometric modulation leaf with uMin=-0.25, uMax=0.25, uOutDamMax=0, uRetDamMin=0, active outdoor and return damper Line blocks, and final Min/Max output clamps; full Economizers.Controller, package-level Limits, package-level Modulations support, and non-default parameter variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
       "status": "supported-runtime-sequence",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
       "runtime_support": true,
-      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer return-fan modulation leaf with have_dirCon=true, uMin=-0.25, uMax=0.25, active clamped return damper Line block, and constant outdoor damper command yOutDam=1; the have_dirCon=false relief-damper branch, full Economizers.Controller, Limits, package-level Modulations support, and non-default parameter variants remain deferred."
+      "rationale": "Source-verified explicit-CXF runtime sequence for the source-default economizer return-fan modulation leaf with have_dirCon=true, uMin=-0.25, uMax=0.25, active clamped return damper Line block, and constant outdoor damper command yOutDam=1; the have_dirCon=false relief-damper branch, full Economizers.Controller, package-level Limits, package-level Modulations support, and non-default parameter variants remain deferred."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Validation",
@@ -440,6 +447,24 @@
       ]
     },
     {
+      "name": "multizone_vav_economizer_limits_common",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_limits_common",
+      "supported_variant": "source-verified explicit CXF for source-default Economizers.Subsequences.Limits.Common with controllerType=PI, k=0.05, Ti=120 s, Td=0.1 s, uRetDam_min=0.5, physical damper limits 0..1, and supply-fan-triggered PIDWithReset",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_limits_common.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/multizone_vav_economizer_limits_common.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/multizone_vav_economizer_limits_common/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_economizer_limits_common_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF source-default Limits.Common leaf, not arbitrary Modelica parsing.",
+        "The supported variant covers yOutDam_min, yOutDam_max, yRetDam_min, yRetDam_max, yRetDamPhy_max, and yEnaMinOut across fan-off disable, rising PID reset, enabled modulation, upper saturation, unoccupied disable, and second fan reset rows.",
+        "Evidence does not claim package-level Limits support, SeparateWithAFMS, SeparateWithDP, full Economizers.Controller support, non-PI controller variants, derivative-term behavior, or non-default Common parameterizations."
+      ]
+    },
+    {
       "name": "multizone_vav_economizer_modulations_reliefs",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
@@ -454,7 +479,7 @@
       "notes": [
         "Runtime support is the checked-in explicit-CXF source-default Modulations.Reliefs leaf, not arbitrary Modelica parsing.",
         "The supported variant covers the outdoor damper interpolation from uMin to uOutDamMax, the return damper interpolation from uRetDamMin to uMax, and the final outdoor-damper upper clamp and return-damper lower clamp.",
-        "Evidence does not claim full Economizers.Controller support, package-level Modulations support, Limits, or non-default Reliefs parameterizations."
+        "Evidence does not claim full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default Reliefs parameterizations."
       ]
     },
     {
@@ -472,7 +497,7 @@
       "notes": [
         "Runtime support is the checked-in explicit-CXF source-default Modulations.ReturnFan leaf, not arbitrary Modelica parsing.",
         "The supported variant covers yRetDam interpolation from uRetDam_max at uMin to uRetDam_min at uMax, with Line block clamping below and above the interval, and yOutDam fixed at 1.0.",
-        "Evidence does not claim the have_dirCon=false relief-damper output branch, full Economizers.Controller support, package-level Modulations support, Limits, or non-default ReturnFan parameterizations."
+        "Evidence does not claim the have_dirCon=false relief-damper output branch, full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default ReturnFan parameterizations."
       ]
     },
     {
@@ -748,7 +773,30 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture intentionally specializes use_enthalpy=false; hOut, hOutCut, hysOutEnt, and enthalpy subtract logic are outside this variant.",
-        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Economizers.Subsequences support, Limits, remaining Modulations classes, or other Enable parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Economizers.Subsequences support, package-level Limits, Limits.SeparateWithAFMS/SeparateWithDP, remaining Modulations classes, or other Enable parameterizations."
+      ]
+    },
+    {
+      "name": "multizone_vav_economizer_limits_common",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld",
+      "top_id": "http://example.org#g36.source.multizone_vav_economizer_limits_common",
+      "fixture_top_child_count": 16,
+      "active_block_count": 16,
+      "input_count": 4,
+      "output_count": 6,
+      "supported_variant": "explicit CXF source transcription for source-default Limits.Common with controllerType=PI, k=0.05, Ti=120 s, Td=0.1 s, uRetDam_min=0.5, physical damper limits 0..1, PIDWithReset trigger from u1SupFan, and occupied/supply-fan minimum-outdoor-air enable gating",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_multizone_vav_economizer_limits_common.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_economizer_limits_common.rs",
+      "api_test": "crates/oce-api/tests/g36_economizer_limits_common.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
+        "The fixture includes all sixteen active source child components: one PIDWithReset, seven constants, two clamped Line blocks, two Reals.Switch blocks, one Logical.Not, one Integers.Equal, one Integers.Sources.Constant, and one Logical.And.",
+        "Evidence does not claim arbitrary .mo parsing, package-level Limits support, SeparateWithAFMS, SeparateWithDP, full Economizers.Controller support, derivative-term behavior, or non-default Common parameterizations."
       ]
     },
     {
@@ -771,7 +819,7 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes all eight active source child components: four constants, two clamped Line blocks, one Min block, and one Max block.",
-        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Modulations support, Limits, or non-default Reliefs parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default Reliefs parameterizations."
       ]
     },
     {
@@ -794,7 +842,7 @@
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes the four active source child components for have_dirCon=true: two constants, one clamped Line block, and one outdoor-damper Constant block.",
-        "Evidence does not claim arbitrary .mo parsing, the have_dirCon=false relief-damper branch, full Economizers.Controller support, package-level Modulations support, Limits, or non-default ReturnFan parameterizations."
+        "Evidence does not claim arbitrary .mo parsing, the have_dirCon=false relief-damper branch, full Economizers.Controller support, package-level Modulations support, package-level Limits, or non-default ReturnFan parameterizations."
       ]
     },
     {

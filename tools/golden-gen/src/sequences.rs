@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod freeze_protection;
+mod economizer_limits_common;
 mod economizer_modulations_reliefs;
 mod economizer_modulations_return_fan;
 mod plant_requests;
@@ -41,6 +42,7 @@ const RELIEF_FAN_GROUP: &str = "multizone_vav_relief_fan_group";
 const RETURN_FAN_AIRFLOW: &str = "multizone_vav_return_fan_airflow_tracking";
 const RETURN_FAN_DIRECT_PRESSURE: &str = "multizone_vav_return_fan_direct_pressure";
 const ECONOMIZER_ENABLE: &str = "multizone_vav_economizer_enable";
+const ECONOMIZER_LIMITS_COMMON: &str = "multizone_vav_economizer_limits_common";
 const ECONOMIZER_MODULATIONS_RELIEFS: &str = "multizone_vav_economizer_modulations_reliefs";
 const ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
     "multizone_vav_economizer_modulations_return_fan";
@@ -77,6 +79,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(return_fan_airflow_tracking::goldens());
     out.extend(return_fan_direct_pressure::goldens());
     out.extend(economizer_enable::goldens());
+    out.extend(economizer_limits_common::goldens());
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(freeze_protection::goldens());
@@ -282,6 +285,7 @@ fn source_files(sequence: &str) -> &'static str {
         RETURN_FAN_AIRFLOW => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
         RETURN_FAN_DIRECT_PRESSURE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
         ECONOMIZER_ENABLE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
+        ECONOMIZER_LIMITS_COMMON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
         ECONOMIZER_MODULATIONS_RELIEFS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
         ECONOMIZER_MODULATIONS_RETURN_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
         FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
@@ -305,6 +309,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         | RETURN_FAN_AIRFLOW
         | RETURN_FAN_DIRECT_PRESSURE
         | ECONOMIZER_ENABLE
+        | ECONOMIZER_LIMITS_COMMON
         | ECONOMIZER_MODULATIONS_RELIEFS
         | ECONOMIZER_MODULATIONS_RETURN_FAN
         | FREEZE_PROTECTION => {

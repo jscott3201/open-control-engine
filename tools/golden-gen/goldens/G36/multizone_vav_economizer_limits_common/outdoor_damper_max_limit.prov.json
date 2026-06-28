@@ -1,0 +1,27 @@
+{
+  "class_path": "G36",
+  "scenario": "multizone_vav_economizer_limits_common",
+  "signal": "outdoor_damper_max_limit",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 8,
+  "n_reference_columns": 11,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "outdoor_airflow_normalized", "minimum_outdoor_airflow_setpoint_normalized", "operation_mode", "supply_fan_status", "outdoor_damper_min_limit", "outdoor_damper_max_limit", "return_damper_min_limit", "return_damper_max_limit", "return_damper_physical_max_limit", "minimum_outdoor_air_loop_enabled"],
+  "inputs": [
+    { "name": "outdoor_airflow_normalized", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
+    { "name": "minimum_outdoor_airflow_setpoint_normalized", "value_kind": "Real", "values": [1.0, 1.0, 1.0, 12.0, 24.0, 8.0, 8.0, 8.0] },
+    { "name": "operation_mode", "value_kind": "Integer", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0] }
+  ],
+  "input": "Economizer Limits.Common: outdoor maximum limit is disabled when fan/mode gating disables minimum outdoor air control",
+  "reference_rule": "Pinned Limits/Common.mo: outDamPosMaxSwitch selects outDamPhy_min when !yEnaMinOut else outDamPhy_max",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

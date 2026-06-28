@@ -1,0 +1,11 @@
+#1
+# columns: time return_damper_min_limit
+double G36_multizone_vav_economizer_limits_common_return_damper_min_limit(8,2)
+0.0 1.0
+1.0 0.0
+2.0 0.0
+3.0 0.0
+4.0 0.0
+5.0 1.0
+6.0 1.0
+7.0 0.0
