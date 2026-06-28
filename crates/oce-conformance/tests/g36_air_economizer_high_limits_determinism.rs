@@ -36,6 +36,21 @@ const HIGH_LIMIT_TITLE24_FIXED_22: &str = include_str!(
 const HIGH_LIMIT_TITLE24_FIXED_21: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld"
 );
+const HIGH_LIMIT_ASHRAE_DIFFERENTIAL: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld"
+);
+const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3: &str = include_str!(
+    "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld"
+);
 
 const TEMPERATURE_CUTOFF_FIXED_24_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.TCut";
@@ -51,9 +66,38 @@ const TEMPERATURE_CUTOFF_TITLE24_FIXED_22_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.TCut";
 const TEMPERATURE_CUTOFF_TITLE24_FIXED_21_SOURCE: &str =
     "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.TCut";
+const RETURN_AIR_TEMPERATURE_ASHRAE_DIFFERENTIAL_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet";
+const TEMPERATURE_CUTOFF_ASHRAE_DIFFERENTIAL_SOURCE: &str =
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TCut";
+const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet";
+const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TCut";
+const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet";
+const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TCut";
+const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet";
+const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TCut";
+const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet";
+const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TCut";
 const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
+const DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#1";
+const RETURN_AIR_TEMPERATURES: [f64; 4] = [289.25, 293.15, 297.5, 301.75];
 
 const NO_INPUTS: &[PointSpec] = &[];
+const INPUTS_ASHRAE_DIFFERENTIAL: &[PointSpec] = &[PointSpec::real(
+    RETURN_AIR_TEMPERATURE_ASHRAE_DIFFERENTIAL_SOURCE,
+)];
+const INPUTS_TITLE24_DIFFERENTIAL_OFFSET_0: &[PointSpec] = &[PointSpec::real(
+    RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE,
+)];
+const INPUTS_TITLE24_DIFFERENTIAL_OFFSET_1: &[PointSpec] = &[PointSpec::real(
+    RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE,
+)];
+const INPUTS_TITLE24_DIFFERENTIAL_OFFSET_2: &[PointSpec] = &[PointSpec::real(
+    RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE,
+)];
+const INPUTS_TITLE24_DIFFERENTIAL_OFFSET_3: &[PointSpec] = &[PointSpec::real(
+    RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE,
+)];
 const OUTPUTS_FIXED_24: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_FIXED_24_SOURCE,
     TEMPERATURE_CUTOFF_RUNTIME,
@@ -81,6 +125,26 @@ const OUTPUTS_TITLE24_FIXED_22: &[PointSpec] = &[PointSpec::real_alias(
 const OUTPUTS_TITLE24_FIXED_21: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_FIXED_21_SOURCE,
     TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_ASHRAE_DIFFERENTIAL: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_ASHRAE_DIFFERENTIAL_SOURCE,
+    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_0: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE,
+    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_1: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE,
+    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_2: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE,
+    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+)];
+const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_3: &[PointSpec] = &[PointSpec::real_alias(
+    TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE,
+    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
 )];
 
 const SPECS: &[SequenceSpec] = &[
@@ -147,6 +211,51 @@ const SPECS: &[SequenceSpec] = &[
         outputs: OUTPUTS_TITLE24_FIXED_21,
         input_fn: no_inputs,
     },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_ashrae_differential",
+        cxf: HIGH_LIMIT_ASHRAE_DIFFERENTIAL,
+        t_stop: 3,
+        sample_step: 1.0,
+        inputs: INPUTS_ASHRAE_DIFFERENTIAL,
+        outputs: OUTPUTS_ASHRAE_DIFFERENTIAL,
+        input_fn: ashrae_differential_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_0",
+        cxf: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_0,
+        t_stop: 3,
+        sample_step: 1.0,
+        inputs: INPUTS_TITLE24_DIFFERENTIAL_OFFSET_0,
+        outputs: OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_0,
+        input_fn: title24_differential_offset_0_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_1",
+        cxf: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_1,
+        t_stop: 3,
+        sample_step: 1.0,
+        inputs: INPUTS_TITLE24_DIFFERENTIAL_OFFSET_1,
+        outputs: OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_1,
+        input_fn: title24_differential_offset_1_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_2",
+        cxf: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_2,
+        t_stop: 3,
+        sample_step: 1.0,
+        inputs: INPUTS_TITLE24_DIFFERENTIAL_OFFSET_2,
+        outputs: OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_2,
+        input_fn: title24_differential_offset_2_inputs,
+    },
+    SequenceSpec {
+        name: "generic_air_economizer_high_limits_title24_differential_offset_3",
+        cxf: HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3,
+        t_stop: 3,
+        sample_step: 1.0,
+        inputs: INPUTS_TITLE24_DIFFERENTIAL_OFFSET_3,
+        outputs: OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_3,
+        input_fn: title24_differential_offset_3_inputs,
+    },
 ];
 
 #[test]
@@ -180,4 +289,43 @@ fn g36_air_economizer_high_limits_outputs_match_determinism_goldens() {
 
 fn no_inputs(_: f64) -> Vec<(String, Value)> {
     Vec::new()
+}
+
+fn ashrae_differential_inputs(t: f64) -> Vec<(String, Value)> {
+    return_air_inputs(RETURN_AIR_TEMPERATURE_ASHRAE_DIFFERENTIAL_SOURCE, t)
+}
+
+fn title24_differential_offset_0_inputs(t: f64) -> Vec<(String, Value)> {
+    return_air_inputs(
+        RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE,
+        t,
+    )
+}
+
+fn title24_differential_offset_1_inputs(t: f64) -> Vec<(String, Value)> {
+    return_air_inputs(
+        RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE,
+        t,
+    )
+}
+
+fn title24_differential_offset_2_inputs(t: f64) -> Vec<(String, Value)> {
+    return_air_inputs(
+        RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE,
+        t,
+    )
+}
+
+fn title24_differential_offset_3_inputs(t: f64) -> Vec<(String, Value)> {
+    return_air_inputs(
+        RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE,
+        t,
+    )
+}
+
+fn return_air_inputs(path: &str, t: f64) -> Vec<(String, Value)> {
+    vec![support::pair(
+        path,
+        Value::Real(RETURN_AIR_TEMPERATURES[t as usize]),
+    )]
 }
