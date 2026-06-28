@@ -1,0 +1,11 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_economizer_limits_common.yOutDam_min http://example.org#g36.source.multizone_vav_economizer_limits_common.yOutDam_max http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDam_min http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDam_max http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDamPhy_max http://example.org#g36.source.multizone_vav_economizer_limits_common.yEnaMinOut
+double multizone_vav_economizer_limits_common(8,7)
+0.0 0.0 0.0 1.0 1.0 1.0 0.0
+1.0 0.1 1.0 0.0 1.0 1.0 1.0
+2.0 0.0 1.0 0.0 1.0 1.0 1.0
+3.0 1.0 1.0 0.0 0.8991666666666664 1.0 1.0
+4.0 1.0 1.0 0.0 0.0 1.0 1.0
+5.0 0.0 0.0 1.0 1.0 1.0 0.0
+6.0 0.0 0.0 1.0 1.0 1.0 0.0
+7.0 0.7412885802469136 1.0 0.0 1.0 1.0 1.0

@@ -1,0 +1,14 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "72c4d8a16bd293c18c4ef94803bfe426380221d4",
+  "reference_columns": [
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yOutDam_min",
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yOutDam_max",
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDam_min",
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDam_max",
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yRetDamPhy_max",
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.yEnaMinOut"
+  ]
+}

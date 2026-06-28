@@ -1,0 +1,11 @@
+#1
+# columns: time outdoor_airflow_normalized minimum_outdoor_airflow_setpoint_normalized operation_mode supply_fan_status outdoor_damper_min_limit outdoor_damper_max_limit return_damper_min_limit return_damper_max_limit return_damper_physical_max_limit minimum_outdoor_air_loop_enabled
+double G36_multizone_vav_economizer_limits_common_reference(8,11)
+0.0 0.0 1.0 1.0 0.0 0.0 0.0 1.0 1.0 1.0 0.0
+1.0 0.0 1.0 1.0 1.0 0.1 1.0 0.0 1.0 1.0 1.0
+2.0 0.0 1.0 1.0 1.0 0.0 1.0 0.0 1.0 1.0 1.0
+3.0 0.0 12.0 1.0 1.0 1.0 1.0 0.0 0.8991666666666664 1.0 1.0
+4.0 0.0 24.0 1.0 1.0 1.0 1.0 0.0 0.0 1.0 1.0
+5.0 0.0 8.0 0.0 1.0 0.0 0.0 1.0 1.0 1.0 0.0
+6.0 0.0 8.0 1.0 0.0 0.0 0.0 1.0 1.0 1.0 0.0
+7.0 0.0 8.0 1.0 1.0 0.7412885802469136 1.0 0.0 1.0 1.0 1.0

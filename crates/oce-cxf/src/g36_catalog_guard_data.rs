@@ -38,6 +38,8 @@ pub(super) const G36_RETURN_FAN_DIRECT_PRESSURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld");
 pub(super) const G36_ECONOMIZER_ENABLE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
+pub(super) const G36_ECONOMIZER_LIMITS_COMMON: &str =
+    include_str!("../tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld");
 pub(super) const G36_ECONOMIZER_MODULATIONS_RELIEFS: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld");
 pub(super) const G36_ECONOMIZER_MODULATIONS_RETURN_FAN: &str =
@@ -60,7 +62,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "e3e04bceed26f4e8";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "591e259d1bf8c4c2";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -87,6 +89,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo",
@@ -213,6 +216,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_economizer_enable",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld",
         text: G36_ECONOMIZER_ENABLE,
+    },
+    FixtureSource {
+        name: "multizone_vav_economizer_limits_common",
+        path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld",
+        text: G36_ECONOMIZER_LIMITS_COMMON,
     },
     FixtureSource {
         name: "multizone_vav_economizer_modulations_reliefs",

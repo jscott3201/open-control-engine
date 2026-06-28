@@ -21,6 +21,7 @@ Codex must re-fetch these sources locally and record exact commit SHAs in PRs.
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.order`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo`
+- `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo`
 - `Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/package.order`
@@ -91,17 +92,24 @@ identity bridge. `Economizers.Subsequences.Enable.mo` is reviewed only for the r
 variant with `use_enthalpy=false`, `delTOutHis=1 K`, `retDamFulOpeTim=180 s`, `disDel=15 s`,
 supply-fan proof gating, freeze-protection stage zero gating, and the source `TOut - TOutCut`
 hysteresis polarity. The enthalpy high-limit branch, full `Economizers.Controller`, package-level
-`Economizers.Subsequences`, `Limits`, remaining `Modulations` classes, and other Enable
-parameterizations remain deferred. `Economizers.Subsequences.Modulations.Reliefs.mo` is reviewed
-only for the source-default relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`,
-`uOutDamMax=0`, `uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final
-`Min`/`Max` output clamps. Full `Economizers.Controller`, package-level `Modulations`,
-`Limits`, and non-default Reliefs parameterizations remain deferred.
+`Economizers.Subsequences`, package-level `Limits`, `Limits.SeparateWithAFMS`,
+`Limits.SeparateWithDP`, remaining `Modulations` classes, and other Enable parameterizations
+remain deferred. `Economizers.Subsequences.Limits.Common.mo` is reviewed only for the
+source-default common-damper limits leaf with `controllerType=PI`, `k=0.05`, `Ti=120 s`,
+`Td=0.1 s`, `uRetDam_min=0.5`, physical damper limits `0..1`, `PIDWithReset` triggered by
+`u1SupFan`, and `yEnaMinOut = u1SupFan AND (uOpeMod == OperationModes.occupied)`. Package-level
+`Limits`, `SeparateWithAFMS`, `SeparateWithDP`, full `Economizers.Controller`, derivative-term
+behavior, and non-default Common parameterizations remain deferred.
+`Economizers.Subsequences.Modulations.Reliefs.mo` is reviewed only for the source-default
+relief/barometric modulation leaf with `uMin=-0.25`, `uMax=0.25`, `uOutDamMax=0`,
+`uRetDamMin=0`, clamped outdoor and return damper `Line` blocks, and final `Min`/`Max` output
+clamps. Full `Economizers.Controller`, package-level `Modulations`, package-level `Limits`, and
+non-default Reliefs parameterizations remain deferred.
 `Economizers.Subsequences.Modulations.ReturnFan.mo` is reviewed only for the source-default
 `have_dirCon=true` variant with `uMin=-0.25`, `uMax=0.25`, `yRetDam` produced by the clamped
 return damper `Line` block from `uRetDam_max` at `uMin` to `uRetDam_min` at `uMax`, and
 `yOutDam=1`. The `have_dirCon=false` relief-damper output branch, full `Economizers.Controller`,
-package-level `Modulations`, `Limits`, and non-default ReturnFan parameterizations remain
+package-level `Modulations`, package-level `Limits`, and non-default ReturnFan parameterizations remain
 deferred.
 `ReliefFanGroup.mo` is reviewed only for the source-default `nSupFan=2`, `nRelFan=4`
 variant with `relFanSpe_min=0.1`, `staVec={2,3,1,4}`,
