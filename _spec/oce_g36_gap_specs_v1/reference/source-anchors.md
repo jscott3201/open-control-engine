@@ -57,9 +57,12 @@ multizone VAV setpoint anchors because they nest `G36.Generic.TrimAndRespond`. `
 is a reviewed multizone VAV setpoint anchor for the supply-temperature loop and coil-command
 sequencing. `PlantRequests.mo` is a reviewed multizone VAV setpoint anchor for chilled-water and
 hot-water reset/plant request logic under the WaterBased coil branches. `OutdoorAirFlow.ASHRAE62_1`
-is reviewed only for the scalar AHU leaf currently supported by an explicit-CXF fixture; its
-`SumZone` vector/matrix aggregation remains deferred. `OutdoorAirFlow.Title24.AHU` is reviewed only
-for the scalar AHU leaf with `minOADes=SingleDamper`, `have_CO2Sen=true`,
+is reviewed only for the scalar AHU leaf with `minOADes=SingleDamper`, `VUncDesOutAir_flow=6`,
+and `VDesTotOutAir_flow=8`, plus a fixed `SumZone` variant with `nGro=2`, `nZon=3`,
+`zonGroMat=[1,1,0;0,1,1]`, and `zonGroMatTra=[1,0;1,1;0,1]`; ASHRAE62_1 package-level support,
+alternate group/zone sizes, alternate matrices, validation variants, and non-default variants
+remain deferred. `OutdoorAirFlow.Title24.AHU` is reviewed only for the scalar AHU leaf with
+`minOADes=SingleDamper`, `have_CO2Sen=true`,
 `VAbsOutAir_flow=3`, and `VDesOutAir_flow=8`. `OutdoorAirFlow.Title24.SumZone` is reviewed only
 for a fixed `nGro=2`, `nZon=3`, `have_CO2Sen=true`, `zonGroMat=[1,1,0;0,1,1]` variant; Title24
 package-level support, no-CO2, alternate group/zone sizes, alternate matrices,

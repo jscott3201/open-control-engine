@@ -1,0 +1,9 @@
+#1
+# columns: time http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjPopBreZon_flow http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjAreBreZon_flow http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumZonPri_flow http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOutAirFra_max
+double multizone_vav_outdoor_airflow_sumzone(6,5)
+0.0 8.0 20.0 80.0 0.2
+1.0 6.0 4.0 6.0 0.5
+2.0 2.0 3.0 2.0 1.0
+3.0 0.0 0.0 0.0 0.0
+4.0 0.0 2.0 0.5001 1.0
+5.0 11.25 55.0 4.0 1.6

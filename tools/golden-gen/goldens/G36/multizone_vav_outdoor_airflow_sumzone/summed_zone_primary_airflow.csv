@@ -1,0 +1,9 @@
+#1
+# columns: time summed_zone_primary_airflow
+double G36_multizone_vav_outdoor_airflow_sumzone_summed_zone_primary_airflow(6,2)
+0.0 80.0
+1.0 6.0
+2.0 2.0
+3.0 0.0
+4.0 0.5001
+5.0 4.0

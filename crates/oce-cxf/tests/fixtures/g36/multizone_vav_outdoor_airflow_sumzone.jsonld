@@ -1,0 +1,440 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
+      "S231:label": "multizone_vav_outdoor_airflow_sumzone",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.nZon" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.nGro" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_1" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_2" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjPopBreZon_flow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjAreBreZon_flow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumZonPri_flow" },
+        { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOutAirFra_max" }
+      ]
+    },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.nZon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.nGro", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u3" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u3" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u1" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u1" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u3" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u1" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjPopBreZon_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjAreBreZon_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumZonPri_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOutAirFra_max", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1" },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain", "S231:label": "groFlo", "S231:hasParameter": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.nout" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.nin" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.K" }
+    ], "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u3" }
+    ], "S231:hasOutput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y2" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.K", "@type": "S231:Parameter", "S231:label": "K[2,3]", "S231:isArray": true, "S231:numberDimensions": 2, "S231:sizeOfDimensions": "(2, 3)", "S231:value": [
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y1", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y2", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain", "S231:label": "groFlo1", "S231:hasParameter": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.nout" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.nin" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.K" }
+    ], "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u3" }
+    ], "S231:hasOutput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y2" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.K", "@type": "S231:Parameter", "S231:label": "K[2,3]", "S231:isArray": true, "S231:numberDimensions": 2, "S231:sizeOfDimensions": "(2, 3)", "S231:value": [
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y1", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y2", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain", "S231:label": "groFlo2", "S231:hasParameter": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.nout" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.nin" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.K" }
+    ], "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u3" }
+    ], "S231:hasOutput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y2" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.K", "@type": "S231:Parameter", "S231:label": "K[2,3]", "S231:isArray": true, "S231:numberDimensions": 2, "S231:sizeOfDimensions": "(2, 3)", "S231:value": [
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y1", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y2", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MatrixGain", "S231:label": "groFlo3", "S231:hasParameter": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.nout" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.nin" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.K" }
+    ], "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u2" }
+    ], "S231:hasOutput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y3" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.nout", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.K", "@type": "S231:Parameter", "S231:label": "K[3,2]", "S231:isArray": true, "S231:numberDimensions": 2, "S231:sizeOfDimensions": "(3, 2)", "S231:value": [
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y1", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y2", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y3", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u1" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal", "S231:label": "booToRea[1]", "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.u" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u1" }
+    ] },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal", "S231:label": "booToRea[2]", "S231:hasInput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.u" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u2" }
+    ] },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant", "S231:label": "occMod[1]", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.k" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied" },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant", "S231:label": "occMod[2]", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.k" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied" },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal", "S231:label": "intEqu1[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.u" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal", "S231:label": "intEqu1[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.u" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul1[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul1[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul2[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul2[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum", "S231:label": "mulSum", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.nin" }, "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjPopBreZon_flow" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum", "S231:label": "mulSum1", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.nin" }, "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumAdjAreBreZon_flow" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiSum", "S231:label": "mulSum2", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.nin" }, "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumZonPri_flow" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiMax", "S231:label": "mulMax", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.nin" }, "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u2" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u3" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.nin", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOutAirFra_max" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide", "S231:label": "div1[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide", "S231:label": "div1[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide", "S231:label": "div1[3]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul3[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul3[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply", "S231:label": "mul3[3]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u3" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant", "S231:label": "neaZer[1]", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.k" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.0001 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant", "S231:label": "neaZer[2]", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.k" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.0001 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant", "S231:label": "neaZer[3]", "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.k" }, "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.0001 },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max", "S231:label": "max2[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max", "S231:label": "max2[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u2" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Max", "S231:label": "max2[3]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u2" } },
+
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min", "S231:label": "min1[1]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min", "S231:label": "min1[2]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u1" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3", "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Min", "S231:label": "min1[3]", "S231:hasInput": [
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u1" },
+      { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u2" }
+    ], "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.y" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u1" } }
+  ]
+}

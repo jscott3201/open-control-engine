@@ -8,6 +8,7 @@ use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 mod plant_requests;
 mod economizer_enable;
 mod outdoor_airflow_ahu;
+mod outdoor_airflow_sumzone;
 mod outdoor_airflow_title24_ahu;
 mod outdoor_airflow_title24_sumzone;
 mod relief_damper;
@@ -26,6 +27,7 @@ const SUPPLY_FAN: &str = "multizone_vav_supply_fan";
 const SUPPLY_SIGNALS: &str = "multizone_vav_supply_signals";
 const PLANT_REQUESTS: &str = "multizone_vav_plant_requests";
 const OUTDOOR_AIRFLOW_AHU: &str = "multizone_vav_outdoor_airflow_ahu";
+const OUTDOOR_AIRFLOW_SUMZONE: &str = "multizone_vav_outdoor_airflow_sumzone";
 const OUTDOOR_AIRFLOW_TITLE24_AHU: &str = "multizone_vav_outdoor_airflow_title24_ahu";
 const OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
     "multizone_vav_outdoor_airflow_title24_sumzone";
@@ -57,6 +59,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(supply_signals::goldens());
     out.extend(plant_requests::goldens());
     out.extend(outdoor_airflow_ahu::goldens());
+    out.extend(outdoor_airflow_sumzone::goldens());
     out.extend(outdoor_airflow_title24_ahu::goldens());
     out.extend(outdoor_airflow_title24_sumzone::goldens());
     out.extend(relief_damper::goldens());
@@ -257,6 +260,7 @@ fn source_files(sequence: &str) -> &'static str {
         SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
         PLANT_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
         OUTDOOR_AIRFLOW_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
+        OUTDOOR_AIRFLOW_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
         OUTDOOR_AIRFLOW_TITLE24_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
         OUTDOOR_AIRFLOW_TITLE24_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
         RELIEF_DAMPER => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
@@ -275,6 +279,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         | SUPPLY_SIGNALS
         | PLANT_REQUESTS
         | OUTDOOR_AIRFLOW_AHU
+        | OUTDOOR_AIRFLOW_SUMZONE
         | OUTDOOR_AIRFLOW_TITLE24_AHU
         | OUTDOOR_AIRFLOW_TITLE24_SUMZONE
         | RELIEF_DAMPER
