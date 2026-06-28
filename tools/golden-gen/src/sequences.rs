@@ -13,6 +13,7 @@ mod outdoor_airflow_title24_ahu;
 mod outdoor_airflow_title24_sumzone;
 mod relief_damper;
 mod relief_fan;
+mod relief_fan_group;
 mod return_fan_airflow_tracking;
 mod return_fan_direct_pressure;
 mod supply_fan;
@@ -33,6 +34,7 @@ const OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
     "multizone_vav_outdoor_airflow_title24_sumzone";
 const RELIEF_DAMPER: &str = "multizone_vav_relief_damper";
 const RELIEF_FAN: &str = "multizone_vav_relief_fan";
+const RELIEF_FAN_GROUP: &str = "multizone_vav_relief_fan_group";
 const RETURN_FAN_AIRFLOW: &str = "multizone_vav_return_fan_airflow_tracking";
 const RETURN_FAN_DIRECT_PRESSURE: &str = "multizone_vav_return_fan_direct_pressure";
 const ECONOMIZER_ENABLE: &str = "multizone_vav_economizer_enable";
@@ -64,6 +66,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(outdoor_airflow_title24_sumzone::goldens());
     out.extend(relief_damper::goldens());
     out.extend(relief_fan::goldens());
+    out.extend(relief_fan_group::goldens());
     out.extend(return_fan_airflow_tracking::goldens());
     out.extend(return_fan_direct_pressure::goldens());
     out.extend(economizer_enable::goldens());
@@ -265,6 +268,7 @@ fn source_files(sequence: &str) -> &'static str {
         OUTDOOR_AIRFLOW_TITLE24_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
         RELIEF_DAMPER => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
         RELIEF_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
+        RELIEF_FAN_GROUP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo",
         RETURN_FAN_AIRFLOW => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
         RETURN_FAN_DIRECT_PRESSURE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
         ECONOMIZER_ENABLE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
@@ -284,6 +288,7 @@ fn fixture_status(sequence: &str) -> &'static str {
         | OUTDOOR_AIRFLOW_TITLE24_SUMZONE
         | RELIEF_DAMPER
         | RELIEF_FAN
+        | RELIEF_FAN_GROUP
         | RETURN_FAN_AIRFLOW
         | RETURN_FAN_DIRECT_PRESSURE
         | ECONOMIZER_ENABLE => {

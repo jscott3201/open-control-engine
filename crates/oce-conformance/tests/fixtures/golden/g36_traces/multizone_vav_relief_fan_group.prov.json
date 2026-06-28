@@ -1,0 +1,17 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "3cf713aca7022bdf993af68af225fa0f6a7c866e",
+  "reference_columns": [
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yDpBui",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yRelFan_1",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yRelFan_2",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yRelFan_3",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yRelFan_4",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_1",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_2",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_3",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_4"
+  ]
+}

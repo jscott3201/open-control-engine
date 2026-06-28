@@ -1,0 +1,1509 @@
+blocks: 226
+  B0 decl=0 class=CDL.Reals.MatrixGain instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaRel")
+    inputs=[0, 1] outputs=[2, 3, 4, 5]
+    param nout=Integer(4)
+    param nin=Integer(2)
+    param K_1_1=Real(0x3ff0000000000000)
+    param K_1_2=Real(0x0000000000000000)
+    param K_2_1=Real(0x3ff0000000000000)
+    param K_2_2=Real(0x0000000000000000)
+    param K_3_1=Real(0x0000000000000000)
+    param K_3_2=Real(0x3ff0000000000000)
+    param K_4_1=Real(0x0000000000000000)
+    param K_4_2=Real(0x3ff0000000000000)
+  B1 decl=1 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea_1")
+    inputs=[6] outputs=[7]
+  B2 decl=2 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea_2")
+    inputs=[8] outputs=[9]
+  B3 decl=3 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.gai_1")
+    inputs=[10] outputs=[11]
+    param k=Real(0x4000000000000000)
+  B4 decl=4 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.gai_2")
+    inputs=[12] outputs=[13]
+    param k=Real(0x4008000000000000)
+  B5 decl=5 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.gai_3")
+    inputs=[14] outputs=[15]
+    param k=Real(0x3ff0000000000000)
+  B6 decl=6 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.gai_4")
+    inputs=[16] outputs=[17]
+    param k=Real(0x4010000000000000)
+  B7 decl=7 class=CDL.Reals.MovingAverage instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.movMea")
+    inputs=[18] outputs=[19]
+    param delta=Real(0x4072c00000000000)
+  B8 decl=8 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.div1")
+    inputs=[20, 21] outputs=[22]
+  B9 decl=9 class=CDL.Reals.PID instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conP")
+    inputs=[23, 24] outputs=[25]
+    param controllerType=Enum(class=1,ordinal=1)
+    param k=Real(0x3ff0000000000000)
+    param reverseActing=Boolean(false)
+  B10 decl=10 class=CDL.Logical.MultiOr instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaRelGro")
+    inputs=[26, 27] outputs=[28]
+    param nin=Integer(2)
+  B11 decl=11 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea1")
+    inputs=[29] outputs=[30]
+  B12 decl=12 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro")
+    inputs=[31, 32] outputs=[33]
+  B13 decl=13 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr")
+    inputs=[34] outputs=[35]
+    param t=Real(0x3fa999999999999a)
+    param h=Real(0x3f747ae147ae147b)
+  B14 decl=14 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and2")
+    inputs=[36, 37] outputs=[38]
+  B15 decl=15 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lat")
+    inputs=[39, 40] outputs=[41]
+  B16 decl=16 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr")
+    inputs=[42] outputs=[43]
+    param t=Real(0x3f747ae147ae147b)
+    param h=Real(0x3f747ae147ae147b)
+  B17 decl=17 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.tim")
+    inputs=[44] outputs=[45, 46]
+    param t=Real(0x4072c00000000000)
+  B18 decl=18 class=CDL.Routing.BooleanScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booRep")
+    inputs=[47] outputs=[48, 49, 50, 51]
+    param nout=Integer(4)
+  B19 decl=19 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_1")
+    inputs=[52] outputs=[53]
+    param t=Real(0x3fe0000000000000)
+  B20 decl=20 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_2")
+    inputs=[54] outputs=[55]
+    param t=Real(0x3fe0000000000000)
+  B21 decl=21 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_3")
+    inputs=[56] outputs=[57]
+    param t=Real(0x3fe0000000000000)
+  B22 decl=22 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr1_4")
+    inputs=[58] outputs=[59]
+    param t=Real(0x3fe0000000000000)
+  B23 decl=23 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_1")
+    inputs=[60, 61] outputs=[62]
+  B24 decl=24 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_2")
+    inputs=[63, 64] outputs=[65]
+  B25 decl=25 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_3")
+    inputs=[66, 67] outputs=[68]
+  B26 decl=26 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.enaDam_4")
+    inputs=[69, 70] outputs=[71]
+  B27 decl=27 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr2")
+    inputs=[72] outputs=[73]
+    param t=Real(0x3fd0000000000000)
+    param h=Real(0x3f747ae147ae147b)
+  B28 decl=28 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.upTim")
+    inputs=[74] outputs=[75, 76]
+    param t=Real(0x407a400000000000)
+  B29 decl=29 class=CDL.Logical.Pre instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pre")
+    inputs=[77] outputs=[78]
+    param pre_u_start=Boolean(true)
+  B30 decl=30 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_1")
+    inputs=[79] outputs=[80]
+  B31 decl=31 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_2")
+    inputs=[81] outputs=[82]
+  B32 decl=32 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_3")
+    inputs=[83] outputs=[84]
+  B33 decl=33 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea2_4")
+    inputs=[85] outputs=[86]
+  B34 decl=34 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_1")
+    inputs=[87, 88] outputs=[89]
+  B35 decl=35 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_2")
+    inputs=[90, 91] outputs=[92]
+  B36 decl=36 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_3")
+    inputs=[93, 94] outputs=[95]
+  B37 decl=37 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub2_4")
+    inputs=[96, 97] outputs=[98]
+  B38 decl=38 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_1")
+    inputs=[99, 100] outputs=[101]
+  B39 decl=39 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_2")
+    inputs=[102, 103] outputs=[104]
+  B40 decl=40 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_3")
+    inputs=[105, 106] outputs=[107]
+  B41 decl=41 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro1_4")
+    inputs=[108, 109] outputs=[110]
+  B42 decl=42 class=CDL.Reals.MultiMin instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulMin")
+    inputs=[111, 112, 113, 114] outputs=[115]
+    param nin=Integer(4)
+  B43 decl=43 class=CDL.Routing.RealScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep")
+    inputs=[116] outputs=[117, 118, 119, 120]
+    param nout=Integer(4)
+  B44 decl=44 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_1")
+    inputs=[121, 122] outputs=[123]
+  B45 decl=45 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_2")
+    inputs=[124, 125] outputs=[126]
+  B46 decl=46 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_3")
+    inputs=[127, 128] outputs=[129]
+  B47 decl=47 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub1_4")
+    inputs=[130, 131] outputs=[132]
+  B48 decl=48 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_1")
+    inputs=[133] outputs=[134]
+    param t=Real(0x3fe0000000000000)
+  B49 decl=49 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_2")
+    inputs=[135] outputs=[136]
+    param t=Real(0x3fe0000000000000)
+  B50 decl=50 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_3")
+    inputs=[137] outputs=[138]
+    param t=Real(0x3fe0000000000000)
+  B51 decl=51 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr1_4")
+    inputs=[139] outputs=[140]
+    param t=Real(0x3fe0000000000000)
+  B52 decl=52 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_1")
+    inputs=[141] outputs=[142]
+    param p=Real(0x4014000000000000)
+  B53 decl=53 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_2")
+    inputs=[143] outputs=[144]
+    param p=Real(0x4014000000000000)
+  B54 decl=54 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_3")
+    inputs=[145] outputs=[146]
+    param p=Real(0x4014000000000000)
+  B55 decl=55 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar_4")
+    inputs=[147] outputs=[148]
+    param p=Real(0x4014000000000000)
+  B56 decl=56 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi_1")
+    inputs=[149, 150, 151] outputs=[152]
+  B57 decl=57 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi_2")
+    inputs=[153, 154, 155] outputs=[156]
+  B58 decl=58 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi_3")
+    inputs=[157, 158, 159] outputs=[160]
+  B59 decl=59 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi_4")
+    inputs=[161, 162, 163] outputs=[164]
+  B60 decl=60 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_1")
+    inputs=[165] outputs=[166]
+  B61 decl=61 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_2")
+    inputs=[167] outputs=[168]
+  B62 decl=62 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_3")
+    inputs=[169] outputs=[170]
+  B63 decl=63 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs1_4")
+    inputs=[171] outputs=[172]
+  B64 decl=64 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_1")
+    inputs=[173] outputs=[174]
+    param t=Real(0x3fe0000000000000)
+  B65 decl=65 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_2")
+    inputs=[175] outputs=[176]
+    param t=Real(0x3fe0000000000000)
+  B66 decl=66 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_3")
+    inputs=[177] outputs=[178]
+    param t=Real(0x3fe0000000000000)
+  B67 decl=67 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr2_4")
+    inputs=[179] outputs=[180]
+    param t=Real(0x3fe0000000000000)
+  B68 decl=68 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.or2_1")
+    inputs=[181, 182] outputs=[183]
+  B69 decl=69 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.or2_2")
+    inputs=[184, 185] outputs=[186]
+  B70 decl=70 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.or2_3")
+    inputs=[187, 188] outputs=[189]
+  B71 decl=71 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.or2_4")
+    inputs=[190, 191] outputs=[192]
+  B72 decl=72 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lat2")
+    inputs=[193, 194] outputs=[195]
+  B73 decl=73 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr3")
+    inputs=[196] outputs=[197]
+    param t=Real(0x3fb999999999999a)
+    param h=Real(0x3f747ae147ae147b)
+  B74 decl=74 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.dowTim")
+    inputs=[198] outputs=[199, 200]
+    param t=Real(0x4072c00000000000)
+  B75 decl=75 class=CDL.Logical.Pre instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pre1")
+    inputs=[201] outputs=[202]
+    param pre_u_start=Boolean(true)
+  B76 decl=76 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_1")
+    inputs=[203, 204] outputs=[205]
+  B77 decl=77 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_2")
+    inputs=[206, 207] outputs=[208]
+  B78 decl=78 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_3")
+    inputs=[209, 210] outputs=[211]
+  B79 decl=79 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro2_4")
+    inputs=[212, 213] outputs=[214]
+  B80 decl=80 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_1")
+    inputs=[215] outputs=[216]
+    param p=Real(0x4014000000000000)
+  B81 decl=81 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_2")
+    inputs=[217] outputs=[218]
+    param p=Real(0x4014000000000000)
+  B82 decl=82 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_3")
+    inputs=[219] outputs=[220]
+    param p=Real(0x4014000000000000)
+  B83 decl=83 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.addPar1_4")
+    inputs=[221] outputs=[222]
+    param p=Real(0x4014000000000000)
+  B84 decl=84 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_1")
+    inputs=[223] outputs=[224]
+    param t=Real(0x3fe0000000000000)
+  B85 decl=85 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_2")
+    inputs=[225] outputs=[226]
+    param t=Real(0x3fe0000000000000)
+  B86 decl=86 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_3")
+    inputs=[227] outputs=[228]
+    param t=Real(0x3fe0000000000000)
+  B87 decl=87 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr4_4")
+    inputs=[229] outputs=[230]
+    param t=Real(0x3fe0000000000000)
+  B88 decl=88 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_1")
+    inputs=[231, 232, 233] outputs=[234]
+  B89 decl=89 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_2")
+    inputs=[235, 236, 237] outputs=[238]
+  B90 decl=90 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_3")
+    inputs=[239, 240, 241] outputs=[242]
+  B91 decl=91 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi1_4")
+    inputs=[243, 244, 245] outputs=[246]
+  B92 decl=92 class=CDL.Reals.MultiMin instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulMin1")
+    inputs=[247, 248, 249, 250] outputs=[251]
+    param nin=Integer(4)
+  B93 decl=93 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_1")
+    inputs=[252, 253] outputs=[254]
+  B94 decl=94 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_2")
+    inputs=[255, 256] outputs=[257]
+  B95 decl=95 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_3")
+    inputs=[258, 259] outputs=[260]
+  B96 decl=96 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.sub3_4")
+    inputs=[261, 262] outputs=[263]
+  B97 decl=97 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_1")
+    inputs=[264] outputs=[265]
+  B98 decl=98 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_2")
+    inputs=[266] outputs=[267]
+  B99 decl=99 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_3")
+    inputs=[268] outputs=[269]
+  B100 decl=100 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.abs2_4")
+    inputs=[270] outputs=[271]
+  B101 decl=101 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_1")
+    inputs=[272] outputs=[273]
+    param t=Real(0x3fe0000000000000)
+  B102 decl=102 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_2")
+    inputs=[274] outputs=[275]
+    param t=Real(0x3fe0000000000000)
+  B103 decl=103 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_3")
+    inputs=[276] outputs=[277]
+    param t=Real(0x3fe0000000000000)
+  B104 decl=104 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lesThr5_4")
+    inputs=[278] outputs=[279]
+    param t=Real(0x3fe0000000000000)
+  B105 decl=105 class=CDL.Routing.RealScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep1")
+    inputs=[280] outputs=[281, 282, 283, 284]
+    param nout=Integer(4)
+  B106 decl=106 class=CDL.Logical.Xor instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.xor_1")
+    inputs=[285, 286] outputs=[287]
+  B107 decl=107 class=CDL.Logical.Xor instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.xor_2")
+    inputs=[288, 289] outputs=[290]
+  B108 decl=108 class=CDL.Logical.Xor instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.xor_3")
+    inputs=[291, 292] outputs=[293]
+  B109 decl=109 class=CDL.Logical.Xor instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.xor_4")
+    inputs=[294, 295] outputs=[296]
+  B110 decl=110 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_1")
+    inputs=[297] outputs=[298]
+  B111 decl=111 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_2")
+    inputs=[299] outputs=[300]
+  B112 decl=112 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_3")
+    inputs=[301] outputs=[302]
+  B113 decl=113 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt_4")
+    inputs=[303] outputs=[304]
+  B114 decl=114 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_1")
+    inputs=[305] outputs=[306]
+  B115 decl=115 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_2")
+    inputs=[307] outputs=[308]
+  B116 decl=116 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_3")
+    inputs=[309] outputs=[310]
+  B117 decl=117 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt1_4")
+    inputs=[311] outputs=[312]
+  B118 decl=118 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_1")
+    inputs=[313] outputs=[314]
+  B119 decl=119 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_2")
+    inputs=[315] outputs=[316]
+  B120 decl=120 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_3")
+    inputs=[317] outputs=[318]
+  B121 decl=121 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToInt2_4")
+    inputs=[319] outputs=[320]
+  B122 decl=122 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_1")
+    inputs=[321, 322] outputs=[323]
+  B123 decl=123 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_2")
+    inputs=[324, 325] outputs=[326]
+  B124 decl=124 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_3")
+    inputs=[327, 328] outputs=[329]
+  B125 decl=125 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu_4")
+    inputs=[330, 331] outputs=[332]
+  B126 decl=126 class=CDL.Logical.MultiAnd instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd")
+    inputs=[333, 334, 335, 336] outputs=[337]
+    param nin=Integer(4)
+  B127 decl=127 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_1")
+    inputs=[338, 339] outputs=[340]
+  B128 decl=128 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_2")
+    inputs=[341, 342] outputs=[343]
+  B129 decl=129 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_3")
+    inputs=[344, 345] outputs=[346]
+  B130 decl=130 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu1_4")
+    inputs=[347, 348] outputs=[349]
+  B131 decl=131 class=CDL.Logical.MultiAnd instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd2")
+    inputs=[350, 351, 352, 353] outputs=[354]
+    param nin=Integer(4)
+  B132 decl=132 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lat1")
+    inputs=[355, 356] outputs=[357]
+  B133 decl=133 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_1")
+    inputs=[358, 359, 360] outputs=[361]
+  B134 decl=134 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_2")
+    inputs=[362, 363, 364] outputs=[365]
+  B135 decl=135 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_3")
+    inputs=[366, 367, 368] outputs=[369]
+  B136 decl=136 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi_4")
+    inputs=[370, 371, 372] outputs=[373]
+  B137 decl=137 class=CDL.Routing.BooleanScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booRep1")
+    inputs=[374] outputs=[375, 376, 377, 378]
+    param nout=Integer(4)
+  B138 decl=138 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_1")
+    inputs=[379, 380, 381] outputs=[382]
+  B139 decl=139 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_2")
+    inputs=[383, 384, 385] outputs=[386]
+  B140 decl=140 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_3")
+    inputs=[387, 388, 389] outputs=[390]
+  B141 decl=141 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi1_4")
+    inputs=[391, 392, 393] outputs=[394]
+  B142 decl=142 class=CDL.Routing.BooleanScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booRep2")
+    inputs=[395] outputs=[396, 397, 398, 399]
+    param nout=Integer(4)
+  B143 decl=143 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_1")
+    inputs=[400] outputs=[401]
+  B144 decl=144 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_2")
+    inputs=[402] outputs=[403]
+  B145 decl=145 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_3")
+    inputs=[404] outputs=[405]
+  B146 decl=146 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea3_4")
+    inputs=[406] outputs=[407]
+  B147 decl=147 class=CDL.Reals.Limiter instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.lim")
+    inputs=[408] outputs=[409]
+    param uMax=Real(0x3ff0000000000000)
+    param uMin=Real(0x3fb999999999999a)
+  B148 decl=148 class=CDL.Routing.RealScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.reaRep2")
+    inputs=[410] outputs=[411, 412, 413, 414]
+    param nout=Integer(4)
+  B149 decl=149 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_1")
+    inputs=[415, 416] outputs=[417]
+  B150 decl=150 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_2")
+    inputs=[418, 419] outputs=[420]
+  B151 decl=151 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_3")
+    inputs=[421, 422] outputs=[423]
+  B152 decl=152 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_4")
+    inputs=[424, 425] outputs=[426]
+  B153 decl=153 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_1")
+    inputs=[427, 428, 429] outputs=[430]
+  B154 decl=154 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_2")
+    inputs=[431, 432, 433] outputs=[434]
+  B155 decl=155 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_3")
+    inputs=[435, 436, 437] outputs=[438]
+  B156 decl=156 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi2_4")
+    inputs=[439, 440, 441] outputs=[442]
+  B157 decl=157 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.dpBuiSetPoi")
+    inputs=[] outputs=[443]
+    param k=Real(0x4028000000000000)
+  B158 decl=158 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conOne")
+    inputs=[] outputs=[444]
+    param k=Real(0x3ff0000000000000)
+  B159 decl=159 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.con")
+    inputs=[] outputs=[445]
+    param k=Real(0x0000000000000000)
+  B160 decl=160 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi2")
+    inputs=[446, 447, 448] outputs=[449]
+  B161 decl=161 class=CDL.Logical.MultiOr instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulOr")
+    inputs=[450, 451, 452, 453] outputs=[454]
+    param nin=Integer(4)
+  B162 decl=162 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_1")
+    inputs=[455] outputs=[456]
+  B163 decl=163 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_2")
+    inputs=[457] outputs=[458]
+  B164 decl=164 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_3")
+    inputs=[459] outputs=[460]
+  B165 decl=165 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea4_4")
+    inputs=[461] outputs=[462]
+  B166 decl=166 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not1")
+    inputs=[463] outputs=[464]
+  B167 decl=167 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and1")
+    inputs=[465, 466] outputs=[467]
+  B168 decl=168 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and3")
+    inputs=[468, 469] outputs=[470]
+  B169 decl=169 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not2")
+    inputs=[471] outputs=[472]
+  B170 decl=170 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_1")
+    inputs=[473, 474] outputs=[475]
+  B171 decl=171 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_2")
+    inputs=[476, 477] outputs=[478]
+  B172 decl=172 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_3")
+    inputs=[479, 480] outputs=[481]
+  B173 decl=173 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.intEqu2_4")
+    inputs=[482, 483] outputs=[484]
+  B174 decl=174 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_1")
+    inputs=[] outputs=[485]
+    param k=Integer(2)
+  B175 decl=175 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_2")
+    inputs=[] outputs=[486]
+    param k=Integer(2)
+  B176 decl=176 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_3")
+    inputs=[] outputs=[487]
+    param k=Integer(2)
+  B177 decl=177 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.conInt_4")
+    inputs=[] outputs=[488]
+    param k=Integer(2)
+  B178 decl=178 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not3_1")
+    inputs=[489] outputs=[490]
+  B179 decl=179 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not3_2")
+    inputs=[491] outputs=[492]
+  B180 decl=180 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not3_3")
+    inputs=[493] outputs=[494]
+  B181 decl=181 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not3_4")
+    inputs=[495] outputs=[496]
+  B182 decl=182 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and4_1")
+    inputs=[497, 498] outputs=[499]
+  B183 decl=183 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and4_2")
+    inputs=[500, 501] outputs=[502]
+  B184 decl=184 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and4_3")
+    inputs=[503, 504] outputs=[505]
+  B185 decl=185 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.and4_4")
+    inputs=[506, 507] outputs=[508]
+  B186 decl=186 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_1")
+    inputs=[509] outputs=[510]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B187 decl=187 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_2")
+    inputs=[511] outputs=[512]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B188 decl=188 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_3")
+    inputs=[513] outputs=[514]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B189 decl=189 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booToRea5_4")
+    inputs=[515] outputs=[516]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B190 decl=190 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mul_1")
+    inputs=[517, 518] outputs=[519]
+  B191 decl=191 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mul_2")
+    inputs=[520, 521] outputs=[522]
+  B192 decl=192 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mul_3")
+    inputs=[523, 524] outputs=[525]
+  B193 decl=193 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mul_4")
+    inputs=[526, 527] outputs=[528]
+  B194 decl=194 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_1")
+    inputs=[529] outputs=[530]
+    param t=Real(0x3fe0000000000000)
+  B195 decl=195 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_2")
+    inputs=[531] outputs=[532]
+    param t=Real(0x3fe0000000000000)
+  B196 decl=196 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_3")
+    inputs=[533] outputs=[534]
+    param t=Real(0x3fe0000000000000)
+  B197 decl=197 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.greThr3_4")
+    inputs=[535] outputs=[536]
+    param t=Real(0x3fe0000000000000)
+  B198 decl=198 class=CDL.Logical.MultiAnd instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulAnd1")
+    inputs=[537, 538, 539, 540] outputs=[541]
+    param nin=Integer(4)
+  B199 decl=199 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_1")
+    inputs=[542, 543, 544] outputs=[545]
+  B200 decl=200 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_2")
+    inputs=[546, 547, 548] outputs=[549]
+  B201 decl=201 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_3")
+    inputs=[550, 551, 552] outputs=[553]
+  B202 decl=202 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.swi3_4")
+    inputs=[554, 555, 556] outputs=[557]
+  B203 decl=203 class=CDL.Routing.BooleanScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booRep4")
+    inputs=[558] outputs=[559, 560, 561, 562]
+    param nout=Integer(4)
+  B204 decl=204 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_1")
+    inputs=[563, 564, 565] outputs=[566]
+  B205 decl=205 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_2")
+    inputs=[567, 568, 569] outputs=[570]
+  B206 decl=206 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_3")
+    inputs=[571, 572, 573] outputs=[574]
+  B207 decl=207 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.logSwi3_4")
+    inputs=[575, 576, 577] outputs=[578]
+  B208 decl=208 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_1")
+    inputs=[579] outputs=[580]
+    param delayTime=Real(0x4000000000000000)
+  B209 decl=209 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_2")
+    inputs=[581] outputs=[582]
+    param delayTime=Real(0x4000000000000000)
+  B210 decl=210 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_3")
+    inputs=[583] outputs=[584]
+    param delayTime=Real(0x4000000000000000)
+  B211 decl=211 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel_4")
+    inputs=[585] outputs=[586]
+    param delayTime=Real(0x4000000000000000)
+  B212 decl=212 class=CDL.Logical.MultiOr instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.mulOr1")
+    inputs=[587, 588, 589, 590] outputs=[591]
+    param nin=Integer(4)
+  B213 decl=213 class=CDL.Routing.BooleanScalarReplicator instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.booRep5")
+    inputs=[592] outputs=[593, 594, 595, 596]
+    param nout=Integer(4)
+  B214 decl=214 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not5_1")
+    inputs=[597] outputs=[598]
+  B215 decl=215 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not5_2")
+    inputs=[599] outputs=[600]
+  B216 decl=216 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not5_3")
+    inputs=[601] outputs=[602]
+  B217 decl=217 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not5_4")
+    inputs=[603] outputs=[604]
+  B218 decl=218 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not6_1")
+    inputs=[605] outputs=[606]
+  B219 decl=219 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not6_2")
+    inputs=[607] outputs=[608]
+  B220 decl=220 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not6_3")
+    inputs=[609] outputs=[610]
+  B221 decl=221 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.not6_4")
+    inputs=[611] outputs=[612]
+  B222 decl=222 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_1")
+    inputs=[613] outputs=[614]
+    param delayTime=Real(0x4000000000000000)
+  B223 decl=223 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_2")
+    inputs=[615] outputs=[616]
+    param delayTime=Real(0x4000000000000000)
+  B224 decl=224 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_3")
+    inputs=[617] outputs=[618]
+    param delayTime=Real(0x4000000000000000)
+  B225 decl=225 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.truDel1_4")
+    inputs=[619] outputs=[620]
+    param delayTime=Real(0x4000000000000000)
+connectors: 621
+  C0 block=B0 dir=In type=Real decl=0 iri=None
+  C1 block=B0 dir=In type=Real decl=1 iri=None
+  C2 block=B0 dir=Out type=Real decl=2 iri=None
+  C3 block=B0 dir=Out type=Real decl=3 iri=None
+  C4 block=B0 dir=Out type=Real decl=4 iri=None
+  C5 block=B0 dir=Out type=Real decl=5 iri=None
+  C6 block=B1 dir=In type=Boolean decl=6 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_1")
+  C7 block=B1 dir=Out type=Real decl=7 iri=None
+  C8 block=B2 dir=In type=Boolean decl=8 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_2")
+  C9 block=B2 dir=Out type=Real decl=9 iri=None
+  C10 block=B3 dir=In type=Real decl=10 iri=None
+  C11 block=B3 dir=Out type=Real decl=11 iri=None
+  C12 block=B4 dir=In type=Real decl=12 iri=None
+  C13 block=B4 dir=Out type=Real decl=13 iri=None
+  C14 block=B5 dir=In type=Real decl=14 iri=None
+  C15 block=B5 dir=Out type=Real decl=15 iri=None
+  C16 block=B6 dir=In type=Real decl=16 iri=None
+  C17 block=B6 dir=Out type=Real decl=17 iri=None
+  C18 block=B7 dir=In type=Real decl=18 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.dpBui")
+  C19 block=B7 dir=Out type=Real decl=19 iri=None
+  C20 block=B8 dir=In type=Real decl=20 iri=None
+  C21 block=B8 dir=In type=Real decl=21 iri=None
+  C22 block=B8 dir=Out type=Real decl=22 iri=None
+  C23 block=B9 dir=In type=Real decl=23 iri=None
+  C24 block=B9 dir=In type=Real decl=24 iri=None
+  C25 block=B9 dir=Out type=Real decl=25 iri=None
+  C26 block=B10 dir=In type=Boolean decl=26 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_1")
+  C27 block=B10 dir=In type=Boolean decl=27 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_2")
+  C28 block=B10 dir=Out type=Boolean decl=28 iri=None
+  C29 block=B11 dir=In type=Boolean decl=29 iri=None
+  C30 block=B11 dir=Out type=Real decl=30 iri=None
+  C31 block=B12 dir=In type=Real decl=31 iri=None
+  C32 block=B12 dir=In type=Real decl=32 iri=None
+  C33 block=B12 dir=Out type=Real decl=33 iri=None
+  C34 block=B13 dir=In type=Real decl=34 iri=None
+  C35 block=B13 dir=Out type=Boolean decl=35 iri=None
+  C36 block=B14 dir=In type=Boolean decl=36 iri=None
+  C37 block=B14 dir=In type=Boolean decl=37 iri=None
+  C38 block=B14 dir=Out type=Boolean decl=38 iri=None
+  C39 block=B15 dir=In type=Boolean decl=39 iri=None
+  C40 block=B15 dir=In type=Boolean decl=40 iri=None
+  C41 block=B15 dir=Out type=Boolean decl=41 iri=None
+  C42 block=B16 dir=In type=Real decl=42 iri=None
+  C43 block=B16 dir=Out type=Boolean decl=43 iri=None
+  C44 block=B17 dir=In type=Boolean decl=44 iri=None
+  C45 block=B17 dir=Out type=Real decl=45 iri=None
+  C46 block=B17 dir=Out type=Boolean decl=46 iri=None
+  C47 block=B18 dir=In type=Boolean decl=47 iri=None
+  C48 block=B18 dir=Out type=Boolean decl=48 iri=None
+  C49 block=B18 dir=Out type=Boolean decl=49 iri=None
+  C50 block=B18 dir=Out type=Boolean decl=50 iri=None
+  C51 block=B18 dir=Out type=Boolean decl=51 iri=None
+  C52 block=B19 dir=In type=Real decl=52 iri=None
+  C53 block=B19 dir=Out type=Boolean decl=53 iri=None
+  C54 block=B20 dir=In type=Real decl=54 iri=None
+  C55 block=B20 dir=Out type=Boolean decl=55 iri=None
+  C56 block=B21 dir=In type=Real decl=56 iri=None
+  C57 block=B21 dir=Out type=Boolean decl=57 iri=None
+  C58 block=B22 dir=In type=Real decl=58 iri=None
+  C59 block=B22 dir=Out type=Boolean decl=59 iri=None
+  C60 block=B23 dir=In type=Boolean decl=60 iri=None
+  C61 block=B23 dir=In type=Boolean decl=61 iri=None
+  C62 block=B23 dir=Out type=Boolean decl=62 iri=None
+  C63 block=B24 dir=In type=Boolean decl=63 iri=None
+  C64 block=B24 dir=In type=Boolean decl=64 iri=None
+  C65 block=B24 dir=Out type=Boolean decl=65 iri=None
+  C66 block=B25 dir=In type=Boolean decl=66 iri=None
+  C67 block=B25 dir=In type=Boolean decl=67 iri=None
+  C68 block=B25 dir=Out type=Boolean decl=68 iri=None
+  C69 block=B26 dir=In type=Boolean decl=69 iri=None
+  C70 block=B26 dir=In type=Boolean decl=70 iri=None
+  C71 block=B26 dir=Out type=Boolean decl=71 iri=None
+  C72 block=B27 dir=In type=Real decl=72 iri=None
+  C73 block=B27 dir=Out type=Boolean decl=73 iri=None
+  C74 block=B28 dir=In type=Boolean decl=74 iri=None
+  C75 block=B28 dir=Out type=Real decl=75 iri=None
+  C76 block=B28 dir=Out type=Boolean decl=76 iri=None
+  C77 block=B29 dir=In type=Boolean decl=77 iri=None
+  C78 block=B29 dir=Out type=Boolean decl=78 iri=None
+  C79 block=B30 dir=In type=Boolean decl=79 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C80 block=B30 dir=Out type=Real decl=80 iri=None
+  C81 block=B31 dir=In type=Boolean decl=81 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C82 block=B31 dir=Out type=Real decl=82 iri=None
+  C83 block=B32 dir=In type=Boolean decl=83 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C84 block=B32 dir=Out type=Real decl=84 iri=None
+  C85 block=B33 dir=In type=Boolean decl=85 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C86 block=B33 dir=Out type=Real decl=86 iri=None
+  C87 block=B34 dir=In type=Real decl=87 iri=None
+  C88 block=B34 dir=In type=Real decl=88 iri=None
+  C89 block=B34 dir=Out type=Real decl=89 iri=None
+  C90 block=B35 dir=In type=Real decl=90 iri=None
+  C91 block=B35 dir=In type=Real decl=91 iri=None
+  C92 block=B35 dir=Out type=Real decl=92 iri=None
+  C93 block=B36 dir=In type=Real decl=93 iri=None
+  C94 block=B36 dir=In type=Real decl=94 iri=None
+  C95 block=B36 dir=Out type=Real decl=95 iri=None
+  C96 block=B37 dir=In type=Real decl=96 iri=None
+  C97 block=B37 dir=In type=Real decl=97 iri=None
+  C98 block=B37 dir=Out type=Real decl=98 iri=None
+  C99 block=B38 dir=In type=Real decl=99 iri=None
+  C100 block=B38 dir=In type=Real decl=100 iri=None
+  C101 block=B38 dir=Out type=Real decl=101 iri=None
+  C102 block=B39 dir=In type=Real decl=102 iri=None
+  C103 block=B39 dir=In type=Real decl=103 iri=None
+  C104 block=B39 dir=Out type=Real decl=104 iri=None
+  C105 block=B40 dir=In type=Real decl=105 iri=None
+  C106 block=B40 dir=In type=Real decl=106 iri=None
+  C107 block=B40 dir=Out type=Real decl=107 iri=None
+  C108 block=B41 dir=In type=Real decl=108 iri=None
+  C109 block=B41 dir=In type=Real decl=109 iri=None
+  C110 block=B41 dir=Out type=Real decl=110 iri=None
+  C111 block=B42 dir=In type=Real decl=111 iri=None
+  C112 block=B42 dir=In type=Real decl=112 iri=None
+  C113 block=B42 dir=In type=Real decl=113 iri=None
+  C114 block=B42 dir=In type=Real decl=114 iri=None
+  C115 block=B42 dir=Out type=Real decl=115 iri=None
+  C116 block=B43 dir=In type=Real decl=116 iri=None
+  C117 block=B43 dir=Out type=Real decl=117 iri=None
+  C118 block=B43 dir=Out type=Real decl=118 iri=None
+  C119 block=B43 dir=Out type=Real decl=119 iri=None
+  C120 block=B43 dir=Out type=Real decl=120 iri=None
+  C121 block=B44 dir=In type=Real decl=121 iri=None
+  C122 block=B44 dir=In type=Real decl=122 iri=None
+  C123 block=B44 dir=Out type=Real decl=123 iri=None
+  C124 block=B45 dir=In type=Real decl=124 iri=None
+  C125 block=B45 dir=In type=Real decl=125 iri=None
+  C126 block=B45 dir=Out type=Real decl=126 iri=None
+  C127 block=B46 dir=In type=Real decl=127 iri=None
+  C128 block=B46 dir=In type=Real decl=128 iri=None
+  C129 block=B46 dir=Out type=Real decl=129 iri=None
+  C130 block=B47 dir=In type=Real decl=130 iri=None
+  C131 block=B47 dir=In type=Real decl=131 iri=None
+  C132 block=B47 dir=Out type=Real decl=132 iri=None
+  C133 block=B48 dir=In type=Real decl=133 iri=None
+  C134 block=B48 dir=Out type=Boolean decl=134 iri=None
+  C135 block=B49 dir=In type=Real decl=135 iri=None
+  C136 block=B49 dir=Out type=Boolean decl=136 iri=None
+  C137 block=B50 dir=In type=Real decl=137 iri=None
+  C138 block=B50 dir=Out type=Boolean decl=138 iri=None
+  C139 block=B51 dir=In type=Real decl=139 iri=None
+  C140 block=B51 dir=Out type=Boolean decl=140 iri=None
+  C141 block=B52 dir=In type=Real decl=141 iri=None
+  C142 block=B52 dir=Out type=Real decl=142 iri=None
+  C143 block=B53 dir=In type=Real decl=143 iri=None
+  C144 block=B53 dir=Out type=Real decl=144 iri=None
+  C145 block=B54 dir=In type=Real decl=145 iri=None
+  C146 block=B54 dir=Out type=Real decl=146 iri=None
+  C147 block=B55 dir=In type=Real decl=147 iri=None
+  C148 block=B55 dir=Out type=Real decl=148 iri=None
+  C149 block=B56 dir=In type=Real decl=149 iri=None
+  C150 block=B56 dir=In type=Boolean decl=150 iri=None
+  C151 block=B56 dir=In type=Real decl=151 iri=None
+  C152 block=B56 dir=Out type=Real decl=152 iri=None
+  C153 block=B57 dir=In type=Real decl=153 iri=None
+  C154 block=B57 dir=In type=Boolean decl=154 iri=None
+  C155 block=B57 dir=In type=Real decl=155 iri=None
+  C156 block=B57 dir=Out type=Real decl=156 iri=None
+  C157 block=B58 dir=In type=Real decl=157 iri=None
+  C158 block=B58 dir=In type=Boolean decl=158 iri=None
+  C159 block=B58 dir=In type=Real decl=159 iri=None
+  C160 block=B58 dir=Out type=Real decl=160 iri=None
+  C161 block=B59 dir=In type=Real decl=161 iri=None
+  C162 block=B59 dir=In type=Boolean decl=162 iri=None
+  C163 block=B59 dir=In type=Real decl=163 iri=None
+  C164 block=B59 dir=Out type=Real decl=164 iri=None
+  C165 block=B60 dir=In type=Real decl=165 iri=None
+  C166 block=B60 dir=Out type=Real decl=166 iri=None
+  C167 block=B61 dir=In type=Real decl=167 iri=None
+  C168 block=B61 dir=Out type=Real decl=168 iri=None
+  C169 block=B62 dir=In type=Real decl=169 iri=None
+  C170 block=B62 dir=Out type=Real decl=170 iri=None
+  C171 block=B63 dir=In type=Real decl=171 iri=None
+  C172 block=B63 dir=Out type=Real decl=172 iri=None
+  C173 block=B64 dir=In type=Real decl=173 iri=None
+  C174 block=B64 dir=Out type=Boolean decl=174 iri=None
+  C175 block=B65 dir=In type=Real decl=175 iri=None
+  C176 block=B65 dir=Out type=Boolean decl=176 iri=None
+  C177 block=B66 dir=In type=Real decl=177 iri=None
+  C178 block=B66 dir=Out type=Boolean decl=178 iri=None
+  C179 block=B67 dir=In type=Real decl=179 iri=None
+  C180 block=B67 dir=Out type=Boolean decl=180 iri=None
+  C181 block=B68 dir=In type=Boolean decl=181 iri=None
+  C182 block=B68 dir=In type=Boolean decl=182 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C183 block=B68 dir=Out type=Boolean decl=183 iri=None
+  C184 block=B69 dir=In type=Boolean decl=184 iri=None
+  C185 block=B69 dir=In type=Boolean decl=185 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C186 block=B69 dir=Out type=Boolean decl=186 iri=None
+  C187 block=B70 dir=In type=Boolean decl=187 iri=None
+  C188 block=B70 dir=In type=Boolean decl=188 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C189 block=B70 dir=Out type=Boolean decl=189 iri=None
+  C190 block=B71 dir=In type=Boolean decl=190 iri=None
+  C191 block=B71 dir=In type=Boolean decl=191 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C192 block=B71 dir=Out type=Boolean decl=192 iri=None
+  C193 block=B72 dir=In type=Boolean decl=193 iri=None
+  C194 block=B72 dir=In type=Boolean decl=194 iri=None
+  C195 block=B72 dir=Out type=Boolean decl=195 iri=None
+  C196 block=B73 dir=In type=Real decl=196 iri=None
+  C197 block=B73 dir=Out type=Boolean decl=197 iri=None
+  C198 block=B74 dir=In type=Boolean decl=198 iri=None
+  C199 block=B74 dir=Out type=Real decl=199 iri=None
+  C200 block=B74 dir=Out type=Boolean decl=200 iri=None
+  C201 block=B75 dir=In type=Boolean decl=201 iri=None
+  C202 block=B75 dir=Out type=Boolean decl=202 iri=None
+  C203 block=B76 dir=In type=Real decl=203 iri=None
+  C204 block=B76 dir=In type=Real decl=204 iri=None
+  C205 block=B76 dir=Out type=Real decl=205 iri=None
+  C206 block=B77 dir=In type=Real decl=206 iri=None
+  C207 block=B77 dir=In type=Real decl=207 iri=None
+  C208 block=B77 dir=Out type=Real decl=208 iri=None
+  C209 block=B78 dir=In type=Real decl=209 iri=None
+  C210 block=B78 dir=In type=Real decl=210 iri=None
+  C211 block=B78 dir=Out type=Real decl=211 iri=None
+  C212 block=B79 dir=In type=Real decl=212 iri=None
+  C213 block=B79 dir=In type=Real decl=213 iri=None
+  C214 block=B79 dir=Out type=Real decl=214 iri=None
+  C215 block=B80 dir=In type=Real decl=215 iri=None
+  C216 block=B80 dir=Out type=Real decl=216 iri=None
+  C217 block=B81 dir=In type=Real decl=217 iri=None
+  C218 block=B81 dir=Out type=Real decl=218 iri=None
+  C219 block=B82 dir=In type=Real decl=219 iri=None
+  C220 block=B82 dir=Out type=Real decl=220 iri=None
+  C221 block=B83 dir=In type=Real decl=221 iri=None
+  C222 block=B83 dir=Out type=Real decl=222 iri=None
+  C223 block=B84 dir=In type=Real decl=223 iri=None
+  C224 block=B84 dir=Out type=Boolean decl=224 iri=None
+  C225 block=B85 dir=In type=Real decl=225 iri=None
+  C226 block=B85 dir=Out type=Boolean decl=226 iri=None
+  C227 block=B86 dir=In type=Real decl=227 iri=None
+  C228 block=B86 dir=Out type=Boolean decl=228 iri=None
+  C229 block=B87 dir=In type=Real decl=229 iri=None
+  C230 block=B87 dir=Out type=Boolean decl=230 iri=None
+  C231 block=B88 dir=In type=Real decl=231 iri=None
+  C232 block=B88 dir=In type=Boolean decl=232 iri=None
+  C233 block=B88 dir=In type=Real decl=233 iri=None
+  C234 block=B88 dir=Out type=Real decl=234 iri=None
+  C235 block=B89 dir=In type=Real decl=235 iri=None
+  C236 block=B89 dir=In type=Boolean decl=236 iri=None
+  C237 block=B89 dir=In type=Real decl=237 iri=None
+  C238 block=B89 dir=Out type=Real decl=238 iri=None
+  C239 block=B90 dir=In type=Real decl=239 iri=None
+  C240 block=B90 dir=In type=Boolean decl=240 iri=None
+  C241 block=B90 dir=In type=Real decl=241 iri=None
+  C242 block=B90 dir=Out type=Real decl=242 iri=None
+  C243 block=B91 dir=In type=Real decl=243 iri=None
+  C244 block=B91 dir=In type=Boolean decl=244 iri=None
+  C245 block=B91 dir=In type=Real decl=245 iri=None
+  C246 block=B91 dir=Out type=Real decl=246 iri=None
+  C247 block=B92 dir=In type=Real decl=247 iri=None
+  C248 block=B92 dir=In type=Real decl=248 iri=None
+  C249 block=B92 dir=In type=Real decl=249 iri=None
+  C250 block=B92 dir=In type=Real decl=250 iri=None
+  C251 block=B92 dir=Out type=Real decl=251 iri=None
+  C252 block=B93 dir=In type=Real decl=252 iri=None
+  C253 block=B93 dir=In type=Real decl=253 iri=None
+  C254 block=B93 dir=Out type=Real decl=254 iri=None
+  C255 block=B94 dir=In type=Real decl=255 iri=None
+  C256 block=B94 dir=In type=Real decl=256 iri=None
+  C257 block=B94 dir=Out type=Real decl=257 iri=None
+  C258 block=B95 dir=In type=Real decl=258 iri=None
+  C259 block=B95 dir=In type=Real decl=259 iri=None
+  C260 block=B95 dir=Out type=Real decl=260 iri=None
+  C261 block=B96 dir=In type=Real decl=261 iri=None
+  C262 block=B96 dir=In type=Real decl=262 iri=None
+  C263 block=B96 dir=Out type=Real decl=263 iri=None
+  C264 block=B97 dir=In type=Real decl=264 iri=None
+  C265 block=B97 dir=Out type=Real decl=265 iri=None
+  C266 block=B98 dir=In type=Real decl=266 iri=None
+  C267 block=B98 dir=Out type=Real decl=267 iri=None
+  C268 block=B99 dir=In type=Real decl=268 iri=None
+  C269 block=B99 dir=Out type=Real decl=269 iri=None
+  C270 block=B100 dir=In type=Real decl=270 iri=None
+  C271 block=B100 dir=Out type=Real decl=271 iri=None
+  C272 block=B101 dir=In type=Real decl=272 iri=None
+  C273 block=B101 dir=Out type=Boolean decl=273 iri=None
+  C274 block=B102 dir=In type=Real decl=274 iri=None
+  C275 block=B102 dir=Out type=Boolean decl=275 iri=None
+  C276 block=B103 dir=In type=Real decl=276 iri=None
+  C277 block=B103 dir=Out type=Boolean decl=277 iri=None
+  C278 block=B104 dir=In type=Real decl=278 iri=None
+  C279 block=B104 dir=Out type=Boolean decl=279 iri=None
+  C280 block=B105 dir=In type=Real decl=280 iri=None
+  C281 block=B105 dir=Out type=Real decl=281 iri=None
+  C282 block=B105 dir=Out type=Real decl=282 iri=None
+  C283 block=B105 dir=Out type=Real decl=283 iri=None
+  C284 block=B105 dir=Out type=Real decl=284 iri=None
+  C285 block=B106 dir=In type=Boolean decl=285 iri=None
+  C286 block=B106 dir=In type=Boolean decl=286 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C287 block=B106 dir=Out type=Boolean decl=287 iri=None
+  C288 block=B107 dir=In type=Boolean decl=288 iri=None
+  C289 block=B107 dir=In type=Boolean decl=289 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C290 block=B107 dir=Out type=Boolean decl=290 iri=None
+  C291 block=B108 dir=In type=Boolean decl=291 iri=None
+  C292 block=B108 dir=In type=Boolean decl=292 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C293 block=B108 dir=Out type=Boolean decl=293 iri=None
+  C294 block=B109 dir=In type=Boolean decl=294 iri=None
+  C295 block=B109 dir=In type=Boolean decl=295 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C296 block=B109 dir=Out type=Boolean decl=296 iri=None
+  C297 block=B110 dir=In type=Boolean decl=297 iri=None
+  C298 block=B110 dir=Out type=Integer decl=298 iri=None
+  C299 block=B111 dir=In type=Boolean decl=299 iri=None
+  C300 block=B111 dir=Out type=Integer decl=300 iri=None
+  C301 block=B112 dir=In type=Boolean decl=301 iri=None
+  C302 block=B112 dir=Out type=Integer decl=302 iri=None
+  C303 block=B113 dir=In type=Boolean decl=303 iri=None
+  C304 block=B113 dir=Out type=Integer decl=304 iri=None
+  C305 block=B114 dir=In type=Boolean decl=305 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C306 block=B114 dir=Out type=Integer decl=306 iri=None
+  C307 block=B115 dir=In type=Boolean decl=307 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C308 block=B115 dir=Out type=Integer decl=308 iri=None
+  C309 block=B116 dir=In type=Boolean decl=309 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C310 block=B116 dir=Out type=Integer decl=310 iri=None
+  C311 block=B117 dir=In type=Boolean decl=311 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C312 block=B117 dir=Out type=Integer decl=312 iri=None
+  C313 block=B118 dir=In type=Boolean decl=313 iri=None
+  C314 block=B118 dir=Out type=Integer decl=314 iri=None
+  C315 block=B119 dir=In type=Boolean decl=315 iri=None
+  C316 block=B119 dir=Out type=Integer decl=316 iri=None
+  C317 block=B120 dir=In type=Boolean decl=317 iri=None
+  C318 block=B120 dir=Out type=Integer decl=318 iri=None
+  C319 block=B121 dir=In type=Boolean decl=319 iri=None
+  C320 block=B121 dir=Out type=Integer decl=320 iri=None
+  C321 block=B122 dir=In type=Integer decl=321 iri=None
+  C322 block=B122 dir=In type=Integer decl=322 iri=None
+  C323 block=B122 dir=Out type=Boolean decl=323 iri=None
+  C324 block=B123 dir=In type=Integer decl=324 iri=None
+  C325 block=B123 dir=In type=Integer decl=325 iri=None
+  C326 block=B123 dir=Out type=Boolean decl=326 iri=None
+  C327 block=B124 dir=In type=Integer decl=327 iri=None
+  C328 block=B124 dir=In type=Integer decl=328 iri=None
+  C329 block=B124 dir=Out type=Boolean decl=329 iri=None
+  C330 block=B125 dir=In type=Integer decl=330 iri=None
+  C331 block=B125 dir=In type=Integer decl=331 iri=None
+  C332 block=B125 dir=Out type=Boolean decl=332 iri=None
+  C333 block=B126 dir=In type=Boolean decl=333 iri=None
+  C334 block=B126 dir=In type=Boolean decl=334 iri=None
+  C335 block=B126 dir=In type=Boolean decl=335 iri=None
+  C336 block=B126 dir=In type=Boolean decl=336 iri=None
+  C337 block=B126 dir=Out type=Boolean decl=337 iri=None
+  C338 block=B127 dir=In type=Integer decl=338 iri=None
+  C339 block=B127 dir=In type=Integer decl=339 iri=None
+  C340 block=B127 dir=Out type=Boolean decl=340 iri=None
+  C341 block=B128 dir=In type=Integer decl=341 iri=None
+  C342 block=B128 dir=In type=Integer decl=342 iri=None
+  C343 block=B128 dir=Out type=Boolean decl=343 iri=None
+  C344 block=B129 dir=In type=Integer decl=344 iri=None
+  C345 block=B129 dir=In type=Integer decl=345 iri=None
+  C346 block=B129 dir=Out type=Boolean decl=346 iri=None
+  C347 block=B130 dir=In type=Integer decl=347 iri=None
+  C348 block=B130 dir=In type=Integer decl=348 iri=None
+  C349 block=B130 dir=Out type=Boolean decl=349 iri=None
+  C350 block=B131 dir=In type=Boolean decl=350 iri=None
+  C351 block=B131 dir=In type=Boolean decl=351 iri=None
+  C352 block=B131 dir=In type=Boolean decl=352 iri=None
+  C353 block=B131 dir=In type=Boolean decl=353 iri=None
+  C354 block=B131 dir=Out type=Boolean decl=354 iri=None
+  C355 block=B132 dir=In type=Boolean decl=355 iri=None
+  C356 block=B132 dir=In type=Boolean decl=356 iri=None
+  C357 block=B132 dir=Out type=Boolean decl=357 iri=None
+  C358 block=B133 dir=In type=Boolean decl=358 iri=None
+  C359 block=B133 dir=In type=Boolean decl=359 iri=None
+  C360 block=B133 dir=In type=Boolean decl=360 iri=None
+  C361 block=B133 dir=Out type=Boolean decl=361 iri=None
+  C362 block=B134 dir=In type=Boolean decl=362 iri=None
+  C363 block=B134 dir=In type=Boolean decl=363 iri=None
+  C364 block=B134 dir=In type=Boolean decl=364 iri=None
+  C365 block=B134 dir=Out type=Boolean decl=365 iri=None
+  C366 block=B135 dir=In type=Boolean decl=366 iri=None
+  C367 block=B135 dir=In type=Boolean decl=367 iri=None
+  C368 block=B135 dir=In type=Boolean decl=368 iri=None
+  C369 block=B135 dir=Out type=Boolean decl=369 iri=None
+  C370 block=B136 dir=In type=Boolean decl=370 iri=None
+  C371 block=B136 dir=In type=Boolean decl=371 iri=None
+  C372 block=B136 dir=In type=Boolean decl=372 iri=None
+  C373 block=B136 dir=Out type=Boolean decl=373 iri=None
+  C374 block=B137 dir=In type=Boolean decl=374 iri=None
+  C375 block=B137 dir=Out type=Boolean decl=375 iri=None
+  C376 block=B137 dir=Out type=Boolean decl=376 iri=None
+  C377 block=B137 dir=Out type=Boolean decl=377 iri=None
+  C378 block=B137 dir=Out type=Boolean decl=378 iri=None
+  C379 block=B138 dir=In type=Boolean decl=379 iri=None
+  C380 block=B138 dir=In type=Boolean decl=380 iri=None
+  C381 block=B138 dir=In type=Boolean decl=381 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C382 block=B138 dir=Out type=Boolean decl=382 iri=None
+  C383 block=B139 dir=In type=Boolean decl=383 iri=None
+  C384 block=B139 dir=In type=Boolean decl=384 iri=None
+  C385 block=B139 dir=In type=Boolean decl=385 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C386 block=B139 dir=Out type=Boolean decl=386 iri=None
+  C387 block=B140 dir=In type=Boolean decl=387 iri=None
+  C388 block=B140 dir=In type=Boolean decl=388 iri=None
+  C389 block=B140 dir=In type=Boolean decl=389 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C390 block=B140 dir=Out type=Boolean decl=390 iri=None
+  C391 block=B141 dir=In type=Boolean decl=391 iri=None
+  C392 block=B141 dir=In type=Boolean decl=392 iri=None
+  C393 block=B141 dir=In type=Boolean decl=393 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C394 block=B141 dir=Out type=Boolean decl=394 iri=None
+  C395 block=B142 dir=In type=Boolean decl=395 iri=None
+  C396 block=B142 dir=Out type=Boolean decl=396 iri=None
+  C397 block=B142 dir=Out type=Boolean decl=397 iri=None
+  C398 block=B142 dir=Out type=Boolean decl=398 iri=None
+  C399 block=B142 dir=Out type=Boolean decl=399 iri=None
+  C400 block=B143 dir=In type=Boolean decl=400 iri=None
+  C401 block=B143 dir=Out type=Real decl=401 iri=None
+  C402 block=B144 dir=In type=Boolean decl=402 iri=None
+  C403 block=B144 dir=Out type=Real decl=403 iri=None
+  C404 block=B145 dir=In type=Boolean decl=404 iri=None
+  C405 block=B145 dir=Out type=Real decl=405 iri=None
+  C406 block=B146 dir=In type=Boolean decl=406 iri=None
+  C407 block=B146 dir=Out type=Real decl=407 iri=None
+  C408 block=B147 dir=In type=Real decl=408 iri=None
+  C409 block=B147 dir=Out type=Real decl=409 iri=None
+  C410 block=B148 dir=In type=Real decl=410 iri=None
+  C411 block=B148 dir=Out type=Real decl=411 iri=None
+  C412 block=B148 dir=Out type=Real decl=412 iri=None
+  C413 block=B148 dir=Out type=Real decl=413 iri=None
+  C414 block=B148 dir=Out type=Real decl=414 iri=None
+  C415 block=B149 dir=In type=Real decl=415 iri=None
+  C416 block=B149 dir=In type=Real decl=416 iri=None
+  C417 block=B149 dir=Out type=Real decl=417 iri=None
+  C418 block=B150 dir=In type=Real decl=418 iri=None
+  C419 block=B150 dir=In type=Real decl=419 iri=None
+  C420 block=B150 dir=Out type=Real decl=420 iri=None
+  C421 block=B151 dir=In type=Real decl=421 iri=None
+  C422 block=B151 dir=In type=Real decl=422 iri=None
+  C423 block=B151 dir=Out type=Real decl=423 iri=None
+  C424 block=B152 dir=In type=Real decl=424 iri=None
+  C425 block=B152 dir=In type=Real decl=425 iri=None
+  C426 block=B152 dir=Out type=Real decl=426 iri=None
+  C427 block=B153 dir=In type=Boolean decl=427 iri=None
+  C428 block=B153 dir=In type=Boolean decl=428 iri=None
+  C429 block=B153 dir=In type=Boolean decl=429 iri=None
+  C430 block=B153 dir=Out type=Boolean decl=430 iri=None
+  C431 block=B154 dir=In type=Boolean decl=431 iri=None
+  C432 block=B154 dir=In type=Boolean decl=432 iri=None
+  C433 block=B154 dir=In type=Boolean decl=433 iri=None
+  C434 block=B154 dir=Out type=Boolean decl=434 iri=None
+  C435 block=B155 dir=In type=Boolean decl=435 iri=None
+  C436 block=B155 dir=In type=Boolean decl=436 iri=None
+  C437 block=B155 dir=In type=Boolean decl=437 iri=None
+  C438 block=B155 dir=Out type=Boolean decl=438 iri=None
+  C439 block=B156 dir=In type=Boolean decl=439 iri=None
+  C440 block=B156 dir=In type=Boolean decl=440 iri=None
+  C441 block=B156 dir=In type=Boolean decl=441 iri=None
+  C442 block=B156 dir=Out type=Boolean decl=442 iri=None
+  C443 block=B157 dir=Out type=Real decl=443 iri=None
+  C444 block=B158 dir=Out type=Real decl=444 iri=None
+  C445 block=B159 dir=Out type=Real decl=445 iri=None
+  C446 block=B160 dir=In type=Real decl=446 iri=None
+  C447 block=B160 dir=In type=Boolean decl=447 iri=None
+  C448 block=B160 dir=In type=Real decl=448 iri=None
+  C449 block=B160 dir=Out type=Real decl=449 iri=None
+  C450 block=B161 dir=In type=Boolean decl=450 iri=None
+  C451 block=B161 dir=In type=Boolean decl=451 iri=None
+  C452 block=B161 dir=In type=Boolean decl=452 iri=None
+  C453 block=B161 dir=In type=Boolean decl=453 iri=None
+  C454 block=B161 dir=Out type=Boolean decl=454 iri=None
+  C455 block=B162 dir=In type=Boolean decl=455 iri=None
+  C456 block=B162 dir=Out type=Real decl=456 iri=None
+  C457 block=B163 dir=In type=Boolean decl=457 iri=None
+  C458 block=B163 dir=Out type=Real decl=458 iri=None
+  C459 block=B164 dir=In type=Boolean decl=459 iri=None
+  C460 block=B164 dir=Out type=Real decl=460 iri=None
+  C461 block=B165 dir=In type=Boolean decl=461 iri=None
+  C462 block=B165 dir=Out type=Real decl=462 iri=None
+  C463 block=B166 dir=In type=Boolean decl=463 iri=None
+  C464 block=B166 dir=Out type=Boolean decl=464 iri=None
+  C465 block=B167 dir=In type=Boolean decl=465 iri=None
+  C466 block=B167 dir=In type=Boolean decl=466 iri=None
+  C467 block=B167 dir=Out type=Boolean decl=467 iri=None
+  C468 block=B168 dir=In type=Boolean decl=468 iri=None
+  C469 block=B168 dir=In type=Boolean decl=469 iri=None
+  C470 block=B168 dir=Out type=Boolean decl=470 iri=None
+  C471 block=B169 dir=In type=Boolean decl=471 iri=None
+  C472 block=B169 dir=Out type=Boolean decl=472 iri=None
+  C473 block=B170 dir=In type=Integer decl=473 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_1")
+  C474 block=B170 dir=In type=Integer decl=474 iri=None
+  C475 block=B170 dir=Out type=Boolean decl=475 iri=None
+  C476 block=B171 dir=In type=Integer decl=476 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_2")
+  C477 block=B171 dir=In type=Integer decl=477 iri=None
+  C478 block=B171 dir=Out type=Boolean decl=478 iri=None
+  C479 block=B172 dir=In type=Integer decl=479 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_3")
+  C480 block=B172 dir=In type=Integer decl=480 iri=None
+  C481 block=B172 dir=Out type=Boolean decl=481 iri=None
+  C482 block=B173 dir=In type=Integer decl=482 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_4")
+  C483 block=B173 dir=In type=Integer decl=483 iri=None
+  C484 block=B173 dir=Out type=Boolean decl=484 iri=None
+  C485 block=B174 dir=Out type=Integer decl=485 iri=None
+  C486 block=B175 dir=Out type=Integer decl=486 iri=None
+  C487 block=B176 dir=Out type=Integer decl=487 iri=None
+  C488 block=B177 dir=Out type=Integer decl=488 iri=None
+  C489 block=B178 dir=In type=Boolean decl=489 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C490 block=B178 dir=Out type=Boolean decl=490 iri=None
+  C491 block=B179 dir=In type=Boolean decl=491 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C492 block=B179 dir=Out type=Boolean decl=492 iri=None
+  C493 block=B180 dir=In type=Boolean decl=493 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C494 block=B180 dir=Out type=Boolean decl=494 iri=None
+  C495 block=B181 dir=In type=Boolean decl=495 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C496 block=B181 dir=Out type=Boolean decl=496 iri=None
+  C497 block=B182 dir=In type=Boolean decl=497 iri=None
+  C498 block=B182 dir=In type=Boolean decl=498 iri=None
+  C499 block=B182 dir=Out type=Boolean decl=499 iri=None
+  C500 block=B183 dir=In type=Boolean decl=500 iri=None
+  C501 block=B183 dir=In type=Boolean decl=501 iri=None
+  C502 block=B183 dir=Out type=Boolean decl=502 iri=None
+  C503 block=B184 dir=In type=Boolean decl=503 iri=None
+  C504 block=B184 dir=In type=Boolean decl=504 iri=None
+  C505 block=B184 dir=Out type=Boolean decl=505 iri=None
+  C506 block=B185 dir=In type=Boolean decl=506 iri=None
+  C507 block=B185 dir=In type=Boolean decl=507 iri=None
+  C508 block=B185 dir=Out type=Boolean decl=508 iri=None
+  C509 block=B186 dir=In type=Boolean decl=509 iri=None
+  C510 block=B186 dir=Out type=Real decl=510 iri=None
+  C511 block=B187 dir=In type=Boolean decl=511 iri=None
+  C512 block=B187 dir=Out type=Real decl=512 iri=None
+  C513 block=B188 dir=In type=Boolean decl=513 iri=None
+  C514 block=B188 dir=Out type=Real decl=514 iri=None
+  C515 block=B189 dir=In type=Boolean decl=515 iri=None
+  C516 block=B189 dir=Out type=Real decl=516 iri=None
+  C517 block=B190 dir=In type=Real decl=517 iri=None
+  C518 block=B190 dir=In type=Real decl=518 iri=None
+  C519 block=B190 dir=Out type=Real decl=519 iri=None
+  C520 block=B191 dir=In type=Real decl=520 iri=None
+  C521 block=B191 dir=In type=Real decl=521 iri=None
+  C522 block=B191 dir=Out type=Real decl=522 iri=None
+  C523 block=B192 dir=In type=Real decl=523 iri=None
+  C524 block=B192 dir=In type=Real decl=524 iri=None
+  C525 block=B192 dir=Out type=Real decl=525 iri=None
+  C526 block=B193 dir=In type=Real decl=526 iri=None
+  C527 block=B193 dir=In type=Real decl=527 iri=None
+  C528 block=B193 dir=Out type=Real decl=528 iri=None
+  C529 block=B194 dir=In type=Real decl=529 iri=None
+  C530 block=B194 dir=Out type=Boolean decl=530 iri=None
+  C531 block=B195 dir=In type=Real decl=531 iri=None
+  C532 block=B195 dir=Out type=Boolean decl=532 iri=None
+  C533 block=B196 dir=In type=Real decl=533 iri=None
+  C534 block=B196 dir=Out type=Boolean decl=534 iri=None
+  C535 block=B197 dir=In type=Real decl=535 iri=None
+  C536 block=B197 dir=Out type=Boolean decl=536 iri=None
+  C537 block=B198 dir=In type=Boolean decl=537 iri=None
+  C538 block=B198 dir=In type=Boolean decl=538 iri=None
+  C539 block=B198 dir=In type=Boolean decl=539 iri=None
+  C540 block=B198 dir=In type=Boolean decl=540 iri=None
+  C541 block=B198 dir=Out type=Boolean decl=541 iri=None
+  C542 block=B199 dir=In type=Real decl=542 iri=None
+  C543 block=B199 dir=In type=Boolean decl=543 iri=None
+  C544 block=B199 dir=In type=Real decl=544 iri=None
+  C545 block=B199 dir=Out type=Real decl=545 iri=None
+  C546 block=B200 dir=In type=Real decl=546 iri=None
+  C547 block=B200 dir=In type=Boolean decl=547 iri=None
+  C548 block=B200 dir=In type=Real decl=548 iri=None
+  C549 block=B200 dir=Out type=Real decl=549 iri=None
+  C550 block=B201 dir=In type=Real decl=550 iri=None
+  C551 block=B201 dir=In type=Boolean decl=551 iri=None
+  C552 block=B201 dir=In type=Real decl=552 iri=None
+  C553 block=B201 dir=Out type=Real decl=553 iri=None
+  C554 block=B202 dir=In type=Real decl=554 iri=None
+  C555 block=B202 dir=In type=Boolean decl=555 iri=None
+  C556 block=B202 dir=In type=Real decl=556 iri=None
+  C557 block=B202 dir=Out type=Real decl=557 iri=None
+  C558 block=B203 dir=In type=Boolean decl=558 iri=None
+  C559 block=B203 dir=Out type=Boolean decl=559 iri=None
+  C560 block=B203 dir=Out type=Boolean decl=560 iri=None
+  C561 block=B203 dir=Out type=Boolean decl=561 iri=None
+  C562 block=B203 dir=Out type=Boolean decl=562 iri=None
+  C563 block=B204 dir=In type=Boolean decl=563 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1")
+  C564 block=B204 dir=In type=Boolean decl=564 iri=None
+  C565 block=B204 dir=In type=Boolean decl=565 iri=None
+  C566 block=B204 dir=Out type=Boolean decl=566 iri=None
+  C567 block=B205 dir=In type=Boolean decl=567 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2")
+  C568 block=B205 dir=In type=Boolean decl=568 iri=None
+  C569 block=B205 dir=In type=Boolean decl=569 iri=None
+  C570 block=B205 dir=Out type=Boolean decl=570 iri=None
+  C571 block=B206 dir=In type=Boolean decl=571 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3")
+  C572 block=B206 dir=In type=Boolean decl=572 iri=None
+  C573 block=B206 dir=In type=Boolean decl=573 iri=None
+  C574 block=B206 dir=Out type=Boolean decl=574 iri=None
+  C575 block=B207 dir=In type=Boolean decl=575 iri=Some("http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4")
+  C576 block=B207 dir=In type=Boolean decl=576 iri=None
+  C577 block=B207 dir=In type=Boolean decl=577 iri=None
+  C578 block=B207 dir=Out type=Boolean decl=578 iri=None
+  C579 block=B208 dir=In type=Boolean decl=579 iri=None
+  C580 block=B208 dir=Out type=Boolean decl=580 iri=None
+  C581 block=B209 dir=In type=Boolean decl=581 iri=None
+  C582 block=B209 dir=Out type=Boolean decl=582 iri=None
+  C583 block=B210 dir=In type=Boolean decl=583 iri=None
+  C584 block=B210 dir=Out type=Boolean decl=584 iri=None
+  C585 block=B211 dir=In type=Boolean decl=585 iri=None
+  C586 block=B211 dir=Out type=Boolean decl=586 iri=None
+  C587 block=B212 dir=In type=Boolean decl=587 iri=None
+  C588 block=B212 dir=In type=Boolean decl=588 iri=None
+  C589 block=B212 dir=In type=Boolean decl=589 iri=None
+  C590 block=B212 dir=In type=Boolean decl=590 iri=None
+  C591 block=B212 dir=Out type=Boolean decl=591 iri=None
+  C592 block=B213 dir=In type=Boolean decl=592 iri=None
+  C593 block=B213 dir=Out type=Boolean decl=593 iri=None
+  C594 block=B213 dir=Out type=Boolean decl=594 iri=None
+  C595 block=B213 dir=Out type=Boolean decl=595 iri=None
+  C596 block=B213 dir=Out type=Boolean decl=596 iri=None
+  C597 block=B214 dir=In type=Boolean decl=597 iri=None
+  C598 block=B214 dir=Out type=Boolean decl=598 iri=None
+  C599 block=B215 dir=In type=Boolean decl=599 iri=None
+  C600 block=B215 dir=Out type=Boolean decl=600 iri=None
+  C601 block=B216 dir=In type=Boolean decl=601 iri=None
+  C602 block=B216 dir=Out type=Boolean decl=602 iri=None
+  C603 block=B217 dir=In type=Boolean decl=603 iri=None
+  C604 block=B217 dir=Out type=Boolean decl=604 iri=None
+  C605 block=B218 dir=In type=Boolean decl=605 iri=None
+  C606 block=B218 dir=Out type=Boolean decl=606 iri=None
+  C607 block=B219 dir=In type=Boolean decl=607 iri=None
+  C608 block=B219 dir=Out type=Boolean decl=608 iri=None
+  C609 block=B220 dir=In type=Boolean decl=609 iri=None
+  C610 block=B220 dir=Out type=Boolean decl=610 iri=None
+  C611 block=B221 dir=In type=Boolean decl=611 iri=None
+  C612 block=B221 dir=Out type=Boolean decl=612 iri=None
+  C613 block=B222 dir=In type=Boolean decl=613 iri=None
+  C614 block=B222 dir=Out type=Boolean decl=614 iri=None
+  C615 block=B223 dir=In type=Boolean decl=615 iri=None
+  C616 block=B223 dir=Out type=Boolean decl=616 iri=None
+  C617 block=B224 dir=In type=Boolean decl=617 iri=None
+  C618 block=B224 dir=Out type=Boolean decl=618 iri=None
+  C619 block=B225 dir=In type=Boolean decl=619 iri=None
+  C620 block=B225 dir=Out type=Boolean decl=620 iri=None
+connections: 328
+  C2 -> C10
+  C2 -> C87
+  C2 -> C529
+  C3 -> C12
+  C3 -> C90
+  C3 -> C531
+  C4 -> C14
+  C4 -> C93
+  C4 -> C533
+  C5 -> C16
+  C5 -> C96
+  C5 -> C535
+  C7 -> C0
+  C9 -> C1
+  C11 -> C52
+  C11 -> C99
+  C11 -> C121
+  C11 -> C203
+  C11 -> C252
+  C13 -> C54
+  C13 -> C102
+  C13 -> C124
+  C13 -> C206
+  C13 -> C255
+  C15 -> C56
+  C15 -> C105
+  C15 -> C127
+  C15 -> C209
+  C15 -> C258
+  C17 -> C58
+  C17 -> C108
+  C17 -> C130
+  C17 -> C212
+  C17 -> C261
+  C19 -> C20
+  C22 -> C24
+  C25 -> C34
+  C25 -> C42
+  C25 -> C72
+  C25 -> C196
+  C25 -> C408
+  C28 -> C29
+  C28 -> C37
+  C30 -> C31
+  C33 -> C446
+  C35 -> C36
+  C38 -> C39
+  C41 -> C47
+  C43 -> C44
+  C46 -> C40
+  C48 -> C61
+  C49 -> C64
+  C50 -> C67
+  C51 -> C70
+  C53 -> C60
+  C55 -> C63
+  C57 -> C66
+  C59 -> C69
+  C62 -> C429
+  C65 -> C433
+  C68 -> C437
+  C71 -> C441
+  C73 -> C465
+  C76 -> C463
+  C76 -> C193
+  C78 -> C466
+  C80 -> C88
+  C80 -> C204
+  C82 -> C91
+  C82 -> C207
+  C84 -> C94
+  C84 -> C210
+  C86 -> C97
+  C86 -> C213
+  C89 -> C100
+  C92 -> C103
+  C95 -> C106
+  C98 -> C109
+  C101 -> C151
+  C101 -> C141
+  C101 -> C133
+  C101 -> C542
+  C104 -> C155
+  C104 -> C143
+  C104 -> C135
+  C104 -> C546
+  C107 -> C159
+  C107 -> C145
+  C107 -> C137
+  C107 -> C550
+  C110 -> C163
+  C110 -> C147
+  C110 -> C139
+  C110 -> C554
+  C115 -> C116
+  C117 -> C122
+  C118 -> C125
+  C119 -> C128
+  C120 -> C131
+  C123 -> C165
+  C126 -> C167
+  C129 -> C169
+  C132 -> C171
+  C134 -> C150
+  C136 -> C154
+  C138 -> C158
+  C140 -> C162
+  C142 -> C149
+  C144 -> C153
+  C146 -> C157
+  C148 -> C161
+  C152 -> C544
+  C156 -> C548
+  C160 -> C552
+  C164 -> C556
+  C166 -> C173
+  C168 -> C175
+  C170 -> C177
+  C172 -> C179
+  C174 -> C181
+  C176 -> C184
+  C178 -> C187
+  C180 -> C190
+  C183 -> C579
+  C183 -> C358
+  C186 -> C581
+  C186 -> C362
+  C189 -> C583
+  C189 -> C366
+  C192 -> C585
+  C192 -> C370
+  C195 -> C374
+  C197 -> C468
+  C200 -> C471
+  C200 -> C355
+  C202 -> C469
+  C205 -> C215
+  C205 -> C223
+  C205 -> C233
+  C208 -> C217
+  C208 -> C225
+  C208 -> C237
+  C211 -> C219
+  C211 -> C227
+  C211 -> C241
+  C214 -> C221
+  C214 -> C229
+  C214 -> C245
+  C216 -> C231
+  C218 -> C235
+  C220 -> C239
+  C222 -> C243
+  C224 -> C232
+  C226 -> C236
+  C228 -> C240
+  C230 -> C244
+  C234 -> C247
+  C238 -> C248
+  C242 -> C249
+  C246 -> C250
+  C251 -> C280
+  C254 -> C264
+  C257 -> C266
+  C260 -> C268
+  C263 -> C270
+  C265 -> C272
+  C267 -> C274
+  C269 -> C276
+  C271 -> C278
+  C273 -> C285
+  C275 -> C288
+  C277 -> C291
+  C279 -> C294
+  C281 -> C253
+  C282 -> C256
+  C283 -> C259
+  C284 -> C262
+  C287 -> C379
+  C287 -> C597
+  C290 -> C383
+  C290 -> C599
+  C293 -> C387
+  C293 -> C601
+  C296 -> C391
+  C296 -> C603
+  C298 -> C321
+  C300 -> C324
+  C302 -> C327
+  C304 -> C330
+  C306 -> C322
+  C306 -> C338
+  C308 -> C325
+  C308 -> C341
+  C310 -> C328
+  C310 -> C344
+  C312 -> C331
+  C312 -> C347
+  C314 -> C339
+  C316 -> C342
+  C318 -> C345
+  C320 -> C348
+  C323 -> C333
+  C326 -> C334
+  C329 -> C335
+  C332 -> C336
+  C337 -> C194
+  C340 -> C350
+  C343 -> C351
+  C346 -> C352
+  C349 -> C353
+  C354 -> C356
+  C357 -> C395
+  C361 -> C400
+  C361 -> C427
+  C361 -> C587
+  C365 -> C402
+  C365 -> C431
+  C365 -> C588
+  C369 -> C404
+  C369 -> C435
+  C369 -> C589
+  C373 -> C406
+  C373 -> C439
+  C373 -> C590
+  C375 -> C359
+  C376 -> C363
+  C377 -> C367
+  C378 -> C371
+  C382 -> C565
+  C386 -> C569
+  C390 -> C573
+  C394 -> C577
+  C396 -> C380
+  C397 -> C384
+  C398 -> C388
+  C399 -> C392
+  C401 -> C416
+  C403 -> C419
+  C405 -> C422
+  C407 -> C425
+  C409 -> C32
+  C411 -> C415
+  C412 -> C418
+  C413 -> C421
+  C414 -> C424
+  C430 -> C455
+  C434 -> C457
+  C438 -> C459
+  C442 -> C461
+  C443 -> C21
+  C444 -> C23
+  C445 -> C448
+  C449 -> C410
+  C454 -> C447
+  C456 -> C517
+  C458 -> C520
+  C460 -> C523
+  C462 -> C526
+  C464 -> C77
+  C467 -> C74
+  C470 -> C198
+  C472 -> C201
+  C475 -> C497
+  C478 -> C500
+  C481 -> C503
+  C484 -> C506
+  C485 -> C474
+  C486 -> C477
+  C487 -> C480
+  C488 -> C483
+  C490 -> C498
+  C490 -> C537
+  C492 -> C501
+  C492 -> C538
+  C494 -> C504
+  C494 -> C539
+  C496 -> C507
+  C496 -> C540
+  C499 -> C509
+  C502 -> C511
+  C505 -> C513
+  C508 -> C515
+  C510 -> C518
+  C512 -> C521
+  C514 -> C524
+  C516 -> C527
+  C530 -> C450
+  C532 -> C451
+  C534 -> C452
+  C536 -> C453
+  C541 -> C558
+  C545 -> C111
+  C549 -> C112
+  C553 -> C113
+  C557 -> C114
+  C559 -> C543
+  C559 -> C564
+  C560 -> C547
+  C560 -> C568
+  C561 -> C551
+  C561 -> C572
+  C562 -> C555
+  C562 -> C576
+  C566 -> C360
+  C570 -> C364
+  C574 -> C368
+  C578 -> C372
+  C580 -> C297
+  C582 -> C299
+  C584 -> C301
+  C586 -> C303
+  C591 -> C592
+  C593 -> C428
+  C594 -> C432
+  C595 -> C436
+  C596 -> C440
+  C598 -> C613
+  C600 -> C615
+  C602 -> C617
+  C604 -> C619
+  C606 -> C313
+  C608 -> C315
+  C610 -> C317
+  C612 -> C319
+  C614 -> C605
+  C616 -> C607
+  C618 -> C609
+  C620 -> C611
+external_inputs: [6, 26, 8, 27, 18, 473, 476, 479, 482, 79, 182, 305, 286, 381, 489, 563, 81, 185, 307, 289, 385, 491, 567, 83, 188, 309, 292, 389, 493, 571, 85, 191, 311, 295, 393, 495, 575]
