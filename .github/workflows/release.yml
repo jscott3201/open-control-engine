@@ -1,0 +1,87 @@
+# release — the crates.io publish gate.
+#
+# Two deliberately-decoupled triggers, because the `v*` tag doubles as an
+# external git-pin ref (verdant-runtime pins `tag = "v0.1.0"`): cutting or
+# moving that tag must NEVER auto-publish.
+#
+#   * tag push (`v*`)        → VERIFY only: tag↔version match, fmt/clippy/
+#                              tests, and a full `cargo publish --dry-run`.
+#                              No token, no publish. Safe to re-cut the tag.
+#   * workflow_dispatch      → VERIFY then PUBLISH. Publishing is an explicit
+#                              manual act: run the workflow (pick the tag ref
+#                              in the "Run workflow" dialog) to release.
+#
+# The publish job runs in the `release` GitHub Environment, which scopes
+# CARGO_REGISTRY_TOKEN to this workflow (repo Settings → Environments →
+# release). Enabling "Required reviewers" there adds a second human gate.
+#
+# All 15 publishable members ship in one dependency-ordered
+# `cargo publish --workspace` (Rust 1.90+); `oce-reference-wal-adapter` is
+# excluded via its own `publish = false`. crates.io rejects re-publishing an
+# existing version, so a repeat dispatch is a no-op-or-fail, never a clobber.
+#
+# Security: no `${{ github.event.* }}` in any `run:` (confined to if:/with:/env:).
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  verify:
+    name: verify (tag ↔ version, gate, publish dry-run)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt, clippy
+
+      - name: tag matches workspace version
+        if: github.event_name == 'push'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          if [ "v${VERSION}" != "${TAG}" ]; then
+            echo "::error::tag ${TAG} != v${VERSION} (workspace version) — bump Cargo.toml before tagging"
+            exit 1
+          fi
+          echo "tag ${TAG} matches workspace version ${VERSION}"
+
+      - name: fmt
+        run: cargo fmt --all --check
+
+      - name: clippy (-D warnings)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: tests
+        run: cargo test --workspace --locked
+
+      - name: publish dry-run (workspace, dependency-ordered)
+        run: cargo publish --workspace --locked --dry-run
+
+  publish:
+    name: publish to crates.io
+    needs: verify
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.95.0
+
+      - name: cargo publish --workspace
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --workspace --locked

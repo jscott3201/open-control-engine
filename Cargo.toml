@@ -24,7 +24,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.95.0"
 authors = ["Justin Scott"]
@@ -54,21 +54,21 @@ libm = { version = "0.2.16", default-features = false }
 # --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
 # version (matching workspace.package.version) keeps these from reading as wildcard deps and makes
 # them publish-ready; the path wins for in-workspace builds. ---
-oce-model = { path = "crates/oce-model", version = "0.0.0" }
-oce-expr = { path = "crates/oce-expr", version = "0.0.0" }
-oce-diag = { path = "crates/oce-diag", version = "0.0.0" }
-oce-blocks = { path = "crates/oce-blocks", version = "0.0.0" }
-oce-flatten = { path = "crates/oce-flatten", version = "0.0.0" }
-oce-validate = { path = "crates/oce-validate", version = "0.0.0" }
-oce-graph = { path = "crates/oce-graph", version = "0.0.0" }
-oce-cxf = { path = "crates/oce-cxf", version = "0.0.0" }
-oce-semantics = { path = "crates/oce-semantics", version = "0.0.0" }
-oce-store = { path = "crates/oce-store", version = "0.0.0" }
-oce-store-mem = { path = "crates/oce-store-mem", version = "0.0.0" }
-oce-conformance = { path = "crates/oce-conformance", version = "0.0.0" }
-oce-extension = { path = "crates/oce-extension", version = "0.0.0" }
-oce-docs = { path = "crates/oce-docs", version = "0.0.0" }
-oce-api = { path = "crates/oce-api", version = "0.0.0" }
+oce-model = { path = "crates/oce-model", version = "0.1.0" }
+oce-expr = { path = "crates/oce-expr", version = "0.1.0" }
+oce-diag = { path = "crates/oce-diag", version = "0.1.0" }
+oce-blocks = { path = "crates/oce-blocks", version = "0.1.0" }
+oce-flatten = { path = "crates/oce-flatten", version = "0.1.0" }
+oce-validate = { path = "crates/oce-validate", version = "0.1.0" }
+oce-graph = { path = "crates/oce-graph", version = "0.1.0" }
+oce-cxf = { path = "crates/oce-cxf", version = "0.1.0" }
+oce-semantics = { path = "crates/oce-semantics", version = "0.1.0" }
+oce-store = { path = "crates/oce-store", version = "0.1.0" }
+oce-store-mem = { path = "crates/oce-store-mem", version = "0.1.0" }
+oce-conformance = { path = "crates/oce-conformance", version = "0.1.0" }
+oce-extension = { path = "crates/oce-extension", version = "0.1.0" }
+oce-docs = { path = "crates/oce-docs", version = "0.1.0" }
+oce-api = { path = "crates/oce-api", version = "0.1.0" }
 
 [profile.release]
 opt-level = 3
