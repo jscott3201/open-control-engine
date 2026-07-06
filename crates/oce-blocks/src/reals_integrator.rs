@@ -25,6 +25,10 @@ const STATE_WORDS: usize = 3;
 /// - A rising `trigger` stores `y_reset_in` during `update_state`, so the reset is visible at the
 ///   **next** emit; a held-high trigger does not reset again. The reset value is **not** scaled by
 ///   `k` (upstream `reinit(y, y_reset_in)` assigns the state directly).
+/// - A `trigger` already true on the FIRST tick counts as a rising edge: the engine-wide `pre()`
+///   convention initializes every previous-input word to `false` (same deliberate modeling choice
+///   as `TriggeredSampler`/`TriggeredMax`; Modelica leaves when-clauses inactive at
+///   initialization, so this is a documented discretization decision, not upstream behavior).
 #[derive(Clone, Copy, Debug)]
 pub struct IntegratorWithReset {
     pub(crate) k: f64,

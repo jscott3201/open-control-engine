@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Discrete_UnitDelay_unaligned_first_tick_y(5,2)
+0.5 2.5
+1.0 2.5
+1.5 2.5
+2.0 0.2
+3.0 0.4

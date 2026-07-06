@@ -32,6 +32,8 @@ CDL.Discrete.UnitDelay reference -> goldens/CDL/Discrete/UnitDelay/reference.csv
 CDL.Discrete.UnitDelay y -> goldens/CDL/Discrete/UnitDelay/y.csv
 CDL.Discrete.UnitDelay/inter_sample_ticks reference -> goldens/CDL/Discrete/UnitDelay/inter_sample_ticks/reference.csv
 CDL.Discrete.UnitDelay/inter_sample_ticks y -> goldens/CDL/Discrete/UnitDelay/inter_sample_ticks/y.csv
+CDL.Discrete.UnitDelay/unaligned_first_tick reference -> goldens/CDL/Discrete/UnitDelay/unaligned_first_tick/reference.csv
+CDL.Discrete.UnitDelay/unaligned_first_tick y -> goldens/CDL/Discrete/UnitDelay/unaligned_first_tick/y.csv
 CDL.Discrete.UnitDelay/y_start_nonzero reference -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/reference.csv
 CDL.Discrete.UnitDelay/y_start_nonzero y -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/y.csv
 CDL.Discrete.ZeroOrderHold reference -> goldens/CDL/Discrete/ZeroOrderHold/reference.csv

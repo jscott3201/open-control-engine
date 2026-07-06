@@ -9,7 +9,9 @@ use oce_model::{
     determinism::{canonicalize_real, det_max},
 };
 
-use crate::discrete_sampled::{initial_sample_time, sample_due, valid_sample_period};
+use crate::discrete_sampled::{
+    at_sample_instant, initial_sample_time, sample_due, valid_sample_period,
+};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
@@ -120,10 +122,15 @@ impl Block for UnitDelay {
         if !word_bool(region[UNIT_DELAY_INITIALIZED_WORD]) {
             let t0 = initial_sample_time(ctx.t(), period);
             let (_, index) = sample_due(ctx.t(), t0, period, -1);
-            // The first tick is the first sample instant: upstream fires `when sampleTrigger`
-            // with `y = pre(u_internal) = y_start` (held word unchanged) and `u_internal = u`
-            // (staged for the second instant).
-            region[UNIT_DELAY_STAGED_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            // Upstream fires on `when sampleTrigger` with NO `initial()` (unlike the
+            // Sampler/ZeroOrderHold/FirstOrderHold family): the first tick samples only when it
+            // lands exactly on a sample instant, firing `y = pre(u_internal) = y_start` (held
+            // word unchanged) and staging `u_internal = u`. A mid-interval start holds BOTH
+            // words at `y_start` until the next true instant (`last_index` still advances so
+            // the next boundary fires).
+            if at_sample_instant(ctx.t(), t0, period, index) {
+                region[UNIT_DELAY_STAGED_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            }
             region[UNIT_DELAY_T0_WORD] = t0.to_bits();
             region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(index);
             region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(true);

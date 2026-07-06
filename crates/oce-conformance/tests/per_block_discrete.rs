@@ -97,6 +97,16 @@ const CASES: &[BlockCase] = &[
         UNIT_DELAY_INTER_SAMPLE_PARAMS,
         REAL_Y,
     ),
+    // A first tick BETWEEN instants must not stage the initial input: upstream UnitDelay fires
+    // on `when sampleTrigger` with NO initial() clause (PR #145 review-confirmed fix).
+    case(
+        "discrete_unit_delay_unaligned_first_tick",
+        "CDL.Discrete.UnitDelay",
+        "UnitDelay/unaligned_first_tick",
+        U,
+        UNIT_DELAY_NONZERO_START_PARAMS,
+        REAL_Y,
+    ),
     case(
         "discrete_sampler",
         "CDL.Discrete.Sampler",

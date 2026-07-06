@@ -198,6 +198,40 @@ fn unit_delay_holds_the_previous_sample_across_inter_sample_ticks() {
 }
 
 #[test]
+fn unit_delay_mid_interval_start_holds_y_start_until_the_first_true_instant() {
+    // Upstream `Discrete/UnitDelay.mo` fires on `when sampleTrigger` with NO `initial()` clause
+    // (unlike Sampler/ZeroOrderHold/FirstOrderHold): a simulation whose first tick falls between
+    // instants (t=0.5, samplePeriod=1, t0=0) must NOT stage u(0.5). Both state values stay
+    // y_start until the first true instant, so the poison first input 9.9 never surfaces.
+    let ud = UnitDelay {
+        y_start: 2.5,
+        sample_period: 1.0,
+    };
+    let mut region = vec![0u64; ud.state_len()];
+    ud.init_state(&mut region, &ParamTable::default());
+    let diag = NoopDiagnostics;
+
+    // Mid-interval first tick: y = y_start; u(0.5) = 9.9 is NOT staged.
+    assert!(emit_at(&ud, 0.5, &[Value::Real(9.9)], &region)[0].bit_eq(&Value::Real(2.5)));
+    let cx = Ctx::new(0.5, &diag);
+    ud.update_state(&cx, &[Value::Real(9.9)], &mut region);
+    // Still inside the first interval.
+    assert!(emit_at(&ud, 0.75, &[Value::Real(8.8)], &region)[0].bit_eq(&Value::Real(2.5)));
+    let cx = Ctx::new(0.75, &diag);
+    ud.update_state(&cx, &[Value::Real(8.8)], &mut region);
+    // First true instant (t=1): y = pre(u_internal) = y_start; u(1) = 0.2 is staged.
+    assert!(emit_at(&ud, 1.0, &[Value::Real(0.2)], &region)[0].bit_eq(&Value::Real(2.5)));
+    let cx = Ctx::new(1.0, &diag);
+    ud.update_state(&cx, &[Value::Real(0.2)], &mut region);
+    // Between the first and second true instants: y still y_start.
+    assert!(emit_at(&ud, 1.5, &[Value::Real(0.3)], &region)[0].bit_eq(&Value::Real(2.5)));
+    let cx = Ctx::new(1.5, &diag);
+    ud.update_state(&cx, &[Value::Real(0.3)], &mut region);
+    // Second true instant (t=2): y = u(1) = 0.2 — never 9.9.
+    assert!(emit_at(&ud, 2.0, &[Value::Real(0.4)], &region)[0].bit_eq(&Value::Real(0.2)));
+}
+
+#[test]
 fn unit_delay_real_output_canonicalizes_held_nan_bits() {
     let ud = UnitDelay {
         y_start: f64::from_bits(0xfff8_0000_0000_0000),
