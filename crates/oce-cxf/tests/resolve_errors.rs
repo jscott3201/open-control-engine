@@ -541,3 +541,76 @@ fn double_driven_fixture_is_rejected() {
         .expect("fixture is valid JSON");
     assert_error_code(&doc, DiagCode::SingleAssignment);
 }
+
+// ---- NonSubsetConstruct reject paths (the shall-level CDL-subset gate) ----------------------
+
+/// Every banned Modelica key that survives CXF lowering must be rejected as a `shall`-level
+/// `NonSubsetConstruct` error (`_spec/04`; CDL is a subset — `redeclare`/`extends`-family
+/// machinery must not leak past the importer).
+#[test]
+fn surviving_modelica_keys_are_rejected_as_non_subset_constructs() {
+    for key in [
+        "S231:redeclare",
+        "S231:constrainedby",
+        "S231:extends",
+        "S231:extendsFrom",
+        "S231:moSource",
+        "S231:modelicaSource",
+    ] {
+        let mut doc = base();
+        node_mut(&mut doc, ".c2")[key] = json!("http://example.org#SomeBase");
+        let diags = assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+        let term = key.rsplit(':').next().expect("test key has a term");
+        assert!(
+            diags
+                .iter()
+                .any(|d| d.code == DiagCode::NonSubsetConstruct && d.message.contains(term)),
+            "the {key} rejection must name the surviving construct, got {diags:#?}"
+        );
+    }
+}
+
+/// The ban matches the term after the last `:`/`#`/`/`, so bare and absolute-IRI spellings of a
+/// banned key are rejected exactly like the prefixed form.
+#[test]
+fn modelica_key_ban_matches_bare_and_iri_prefixed_forms() {
+    let mut doc = base();
+    node_mut(&mut doc, ".c1")["extends"] = json!(true);
+    assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+
+    let mut doc = base();
+    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231P#redeclare"] = json!({});
+    assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+}
+
+/// Unknown keys OUTSIDE the banned set are lossless passthrough (R-8), not non-subset rejects:
+/// the ban must not over-match vendor extensions.
+#[test]
+fn unknown_vendor_keys_pass_through_without_a_non_subset_reject() {
+    let mut doc = base();
+    node_mut(&mut doc, ".c2")["S231:vendorAnnotation"] = json!("lossless passthrough");
+    import(&doc).expect("a vendor-extension key must not be rejected as a non-subset construct");
+}
+
+/// An array-valued parameter on a composite is outside this CXF lowering subset and must be
+/// rejected with `NonSubsetConstruct` (second emission site, distinct from the surviving-key
+/// scan).
+#[test]
+fn array_valued_composite_parameter_is_rejected_as_non_subset() {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasParameter"] = json!({ "@id": "http://example.org#M.p" });
+    doc["@graph"]
+        .as_array_mut()
+        .expect("@graph array")
+        .push(json!({
+            "@id": "http://example.org#M.p",
+            "S231:isArray": true,
+            "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+        }));
+    let diags = assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+    assert!(
+        diags.iter().any(|d| d.code == DiagCode::NonSubsetConstruct
+            && d.message.contains("array-valued composite parameters")),
+        "the array-param rejection must use the site-2 message, got {diags:#?}"
+    );
+}
