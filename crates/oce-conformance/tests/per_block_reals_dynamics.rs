@@ -45,6 +45,12 @@ const INTEGRATOR_WITH_RESET_INPUTS: &[Port] = &[
         kind: B,
     },
 ];
+// Upstream connector declaration order: k, T, u (all RealInputs).
+const DERIVATIVE_INPUTS: &[Port] = &[
+    Port { name: "k", kind: R },
+    Port { name: "T", kind: R },
+    Port { name: "u", kind: R },
+];
 
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
 
@@ -146,13 +152,42 @@ const CASES: &[BlockCase] = &[
         INTEGRATOR_WITH_RESET_GAIN_PARAMS,
         REAL_Y,
     ),
+    case(
+        "reals_derivative_constant_gain",
+        "CDL.Reals.Derivative",
+        "Derivative",
+        DERIVATIVE_INPUTS,
+        DERIVATIVE_PARAMS,
+        REAL_Y,
+    ),
+    // Oracle-diff golden for the 2026-07-06 closeout divergence fix: k and T are LIVE RealInputs
+    // upstream (PIDWithAutotuning wiring); the engine previously froze them as parameters.
+    case(
+        "reals_derivative_time_varying_gain",
+        "CDL.Reals.Derivative",
+        "Derivative/time_varying_gain_and_time_constant",
+        DERIVATIVE_INPUTS,
+        DERIVATIVE_TIME_VARYING_PARAMS,
+        REAL_Y,
+    ),
 ];
+
+const DERIVATIVE_PARAMS: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Real("0.25"),
+}];
+const DERIVATIVE_TIME_VARYING_PARAMS: &[Param] = &[Param {
+    name: "y_start",
+    value: ParamValue::Real("0.0"),
+}];
 
 const DYNAMICS_SLUGS: &[&str] = &[
     "reals_pid_pi_recurrence",
     "reals_pid_with_reset_pi_recurrence",
     "reals_integrator_with_reset",
     "reals_integrator_with_reset_gain",
+    "reals_derivative_constant_gain",
+    "reals_derivative_time_varying_gain",
 ];
 
 #[test]

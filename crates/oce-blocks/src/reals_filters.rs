@@ -36,47 +36,46 @@ fn derivative_x_for_start(u: f64, k: f64, t: f64, y_start: f64) -> f64 {
     }
 }
 
+/// Input indices for [`Derivative`], in the upstream connector declaration order.
+const DERIVATIVE_K_INPUT: usize = 0;
+const DERIVATIVE_T_INPUT: usize = 1;
+const DERIVATIVE_U_INPUT: usize = 2;
+
 /// `CDL.Reals.Derivative` — first-order filtered derivative:
-/// `y = k*(u-x)/T`, `x'=(u-x)/T`, discretized with the shared implicit Euler filter.
-/// `[S]`, feedthrough `y <- {u}`, not a loop cut.
-#[derive(Clone, Copy, Debug)]
+/// `y = (k/T_nonZero)*(u-x)`, `x' = (u-x)/T_nonZero`, `T_nonZero = max(T, 100*eps)`, discretized
+/// with the shared implicit Euler filter.
+///
+/// Upstream (Buildings `Reals/Derivative.mo`, pin `a131864`) declares the gain `k` and the time
+/// constant `T` as **`RealInput` connectors** in declaration order `k, T, u` (input indices
+/// `0/1/2`), so both may vary at runtime (the `PIDWithAutotuning` wiring); `y_start` is the only
+/// parameter. The state seeds from the upstream initial equation
+/// `x = if |k| < eps then u else u - T*y_start/k` (raw `T`, not `T_nonZero`), evaluated on the
+/// first tick from the live inputs. `[S]`, feedthrough `y <- {k, T, u}`, not a loop cut.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Derivative {
-    pub(crate) k: f64,
-    pub(crate) t: f64,
     pub(crate) y_start: f64,
 }
 
-impl Default for Derivative {
-    fn default() -> Self {
-        Self {
-            k: 1.0,
-            t: 0.1,
-            y_start: 0.0,
-        }
-    }
-}
-
 impl Derivative {
-    fn t_eff(self) -> f64 {
-        positive(self.t)
-    }
-
-    fn output(self, u: f64, region: &[u64]) -> f64 {
+    fn x_now(self, inputs: &[Value], region: &[u64]) -> f64 {
         if is_first_tick(region[PREV_T_WORD]) {
-            self.y_start
-        } else {
-            let x = f64::from_bits(region[X_WORD]);
-            self.k * (u - x) / self.t_eff()
-        }
-    }
-
-    fn next_x(self, u: f64, region: &[u64], dt: f64) -> f64 {
-        let x = if is_first_tick(region[PREV_T_WORD]) {
-            derivative_x_for_start(u, self.k, self.t_eff(), self.y_start)
+            derivative_x_for_start(
+                read_real(inputs, DERIVATIVE_U_INPUT),
+                read_real(inputs, DERIVATIVE_K_INPUT),
+                read_real(inputs, DERIVATIVE_T_INPUT),
+                self.y_start,
+            )
         } else {
             f64::from_bits(region[X_WORD])
-        };
-        first_order_filter_implicit(x, u, self.t_eff(), dt)
+        }
+    }
+
+    fn output(self, inputs: &[Value], region: &[u64]) -> f64 {
+        let k = read_real(inputs, DERIVATIVE_K_INPUT);
+        let t_non_zero = positive(read_real(inputs, DERIVATIVE_T_INPUT));
+        let u = read_real(inputs, DERIVATIVE_U_INPUT);
+        // Mirrors the upstream association exactly: `y = (k/T_nonZero)*(u-x)`.
+        (k / t_non_zero) * (u - self.x_now(inputs, region))
     }
 }
 
@@ -84,7 +83,7 @@ impl Block for Derivative {
     fn signature(&self) -> &'static BlockSignature {
         static SIG: BlockSignature = BlockSignature {
             class_path: "CDL.Reals.Derivative",
-            inputs: &[PortKind::Real],
+            inputs: &[PortKind::Real, PortKind::Real, PortKind::Real],
             outputs: &[PortKind::Real],
             stateful: true,
         };
@@ -95,8 +94,8 @@ impl Block for Derivative {
         BlockKind::Stateful
     }
 
-    fn feeds_through(&self, in_idx: usize, _out_idx: usize) -> bool {
-        in_idx == 0
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        in_idx < 3 && out_idx == 0
     }
 
     fn state_len(&self) -> usize {
@@ -115,13 +114,15 @@ impl Block for Derivative {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, self.output(read_real(inputs, 0), region), emit);
+        emit_real(0, self.output(inputs, region), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        let u = read_real(inputs, 0);
+        let u = read_real(inputs, DERIVATIVE_U_INPUT);
+        let t_non_zero = positive(read_real(inputs, DERIVATIVE_T_INPUT));
         let dt = tick_dt(ctx.t(), region[PREV_T_WORD]);
-        region[X_WORD] = self.next_x(u, region, dt).to_bits();
+        let x = self.x_now(inputs, region);
+        region[X_WORD] = first_order_filter_implicit(x, u, t_non_zero, dt).to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
     }
 }

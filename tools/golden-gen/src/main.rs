@@ -19,6 +19,7 @@ mod logical_variable_pulse;
 mod oracle;
 mod psychrometrics;
 mod reals;
+mod reals_filters;
 mod reals_integrator;
 mod reals_matrix;
 mod reals_pid;
@@ -68,6 +69,7 @@ fn main() {
     goldens.extend(source_timetable::goldens());
     goldens.extend(reals_pid::goldens());
     goldens.extend(reals_integrator::goldens());
+    goldens.extend(reals_filters::goldens());
     goldens.extend(psychrometrics::goldens());
     goldens.extend(utilities::goldens());
     goldens.extend(logical::goldens());

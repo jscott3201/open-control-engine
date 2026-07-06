@@ -436,12 +436,11 @@ fn registry_exposes_block_param_rules() {
             },
         ]
     );
+    // Derivative exposes NO param rules: upstream declares k and T as RealInput connectors
+    // (validated as ports, not parameters); y_start is unconstrained like other start values.
     assert_eq!(
         lookup("CDL.Reals.Derivative").unwrap().param_rules(),
-        &[ParamRule::RealGreaterThan {
-            name: "T",
-            min: 0.0,
-        }]
+        &[] as &[ParamRule]
     );
     assert_eq!(
         lookup("CDL.Reals.LimitSlewRate").unwrap().param_rules(),

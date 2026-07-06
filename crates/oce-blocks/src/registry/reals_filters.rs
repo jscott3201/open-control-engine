@@ -18,11 +18,6 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
-pub(super) const DERIVATIVE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "T",
-    min: 0.0,
-}];
-
 pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
     name: "Td",
     min: 0.0,
@@ -34,9 +29,9 @@ pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGre
 }];
 
 fn make_derivative(p: &ParamTable) -> Box<dyn Block> {
+    // `k` and `T` are RealInput connectors upstream (declaration order k, T, u), not parameters;
+    // `y_start` is the block's only parameter.
     Box::new(Derivative {
-        k: real_param(p, "k", 1.0),
-        t: real_param(p, "T", 0.1),
         y_start: real_param(p, "y_start", 0.0),
     })
 }

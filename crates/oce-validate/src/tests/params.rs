@@ -478,12 +478,6 @@ fn ramp_parameter_bounds_are_pinned() {
 fn strict_positive_param_rules_reject_zero() {
     let cases: &[(&str, &[ValueType], &[ValueType], &str)] = &[
         (
-            "CDL.Reals.Derivative",
-            &[ValueType::Real],
-            &[ValueType::Real],
-            "T",
-        ),
-        (
             "CDL.Reals.LimitSlewRate",
             &[ValueType::Real],
             &[ValueType::Real],

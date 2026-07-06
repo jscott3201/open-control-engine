@@ -212,6 +212,10 @@ CDL.Reals.Average reference -> goldens/CDL/Reals/Average/reference.csv
 CDL.Reals.Average y -> goldens/CDL/Reals/Average/y.csv
 CDL.Reals.Cos reference -> goldens/CDL/Reals/Cos/reference.csv
 CDL.Reals.Cos y -> goldens/CDL/Reals/Cos/y.csv
+CDL.Reals.Derivative reference -> goldens/CDL/Reals/Derivative/reference.csv
+CDL.Reals.Derivative y -> goldens/CDL/Reals/Derivative/y.csv
+CDL.Reals.Derivative/time_varying_gain_and_time_constant reference -> goldens/CDL/Reals/Derivative/time_varying_gain_and_time_constant/reference.csv
+CDL.Reals.Derivative/time_varying_gain_and_time_constant y -> goldens/CDL/Reals/Derivative/time_varying_gain_and_time_constant/y.csv
 CDL.Reals.Divide reference -> goldens/CDL/Reals/Divide/reference.csv
 CDL.Reals.Divide y -> goldens/CDL/Reals/Divide/y.csv
 CDL.Reals.Exp reference -> goldens/CDL/Reals/Exp/reference.csv
