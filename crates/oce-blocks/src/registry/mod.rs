@@ -62,7 +62,6 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Sources.Sin" => reals::SOURCE_SIN_PARAM_RULES,
         "CDL.Reals.Sources.CalendarTime" => reals::CALENDAR_TIME_PARAM_RULES,
         "CDL.Reals.Sources.TimeTable" => reals::REAL_TIMETABLE_PARAM_RULES,
-        "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
         "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,

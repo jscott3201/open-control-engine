@@ -1,8 +1,9 @@
 //! Remaining scalar dynamic `CDL.Reals` blocks.
 //!
-//! These blocks are stateful and feed through on their current `u` input. The tick output is
-//! computed from prior state plus the current input; `update_state` stores the same next state so
-//! no block in this module is a feedback loop cut.
+//! These blocks are stateful and feed through on their current tick inputs (`Derivative` on all
+//! of `k`, `T`, `u`; the others on `u`). The tick output is computed from prior state plus the
+//! current inputs; `update_state` stores the same next state so no block in this module is a
+//! feedback loop cut.
 
 use oce_model::{
     ParamTable, Value,
@@ -23,9 +24,13 @@ const PREV_T_WORD: usize = 1;
 const TWO_WORD_STATE: usize = 2;
 
 fn positive(x: f64) -> f64 {
-    // Internal positive-floor clamp: the effective parameter is always > 0 and is not a
-    // signed-zero/NaN-bearing Real output, so raw max is deterministic enough here.
-    x.max(MIN_PARAM)
+    // Deterministic positive-floor clamp. `Derivative` feeds this live INPUT data (its time
+    // constant `T` is a RealInput), so a NaN operand must resolve identically on every target:
+    // raw `f64::max` lowers to arch intrinsics whose signaling-NaN results differ (aarch64
+    // `fmaxnm` returns the quieted NaN; x86_64 returns the non-NaN operand). `det_max` branches
+    // on `is_nan` before any intrinsic and is bit-identical to raw max for every non-NaN input
+    // here, because the floor is strictly positive so the signed-zero fixup can never engage.
+    det_max(x, MIN_PARAM)
 }
 
 fn derivative_x_for_start(u: f64, k: f64, t: f64, y_start: f64) -> f64 {
@@ -36,47 +41,72 @@ fn derivative_x_for_start(u: f64, k: f64, t: f64, y_start: f64) -> f64 {
     }
 }
 
+/// Input indices for [`Derivative`], in the upstream connector declaration order.
+const DERIVATIVE_K_INPUT: usize = 0;
+const DERIVATIVE_T_INPUT: usize = 1;
+const DERIVATIVE_U_INPUT: usize = 2;
+
+/// One-shot warn latch for a clamped [`Derivative`] time-constant input (`0` = not yet warned).
+const DERIVATIVE_T_WARNED_WORD: usize = 2;
+const DERIVATIVE_STATE_WORDS: usize = 3;
+
 /// `CDL.Reals.Derivative` — first-order filtered derivative:
-/// `y = k*(u-x)/T`, `x'=(u-x)/T`, discretized with the shared implicit Euler filter.
-/// `[S]`, feedthrough `y <- {u}`, not a loop cut.
-#[derive(Clone, Copy, Debug)]
+/// `y = (k/T_nonZero)*(u-x)`, `x' = (u-x)/T_nonZero`, `T_nonZero = max(T, 100*eps)`, discretized
+/// with the shared implicit Euler filter.
+///
+/// Upstream (Buildings `Reals/Derivative.mo`, pin `a131864`) declares the gain `k` and the time
+/// constant `T` as **`RealInput` connectors** in declaration order `k, T, u` (input indices
+/// `0/1/2`), so both may vary at runtime (the `PIDWithAutotuning` wiring); `y_start` is the only
+/// parameter. The state seeds from the upstream initial equation
+/// `x = if |k| < eps then u else u - T*y_start/k` (raw `T`, not `T_nonZero`), evaluated on the
+/// first tick from the live inputs. `[S]`, feedthrough `y <- {k, T, u}`, not a loop cut.
+///
+/// Non-finite/out-of-range input policy (the engine has no input-connector range validation;
+/// upstream annotates `T(min=100*eps)`, "T > 0 required", which a Modelica tool asserts on).
+/// Both equations above run under plain IEEE-754 semantics; the ONLY sanitized value is the
+/// `T` floor:
+///
+/// - **T floor + warn:** `T_nonZero = det_max(T, 100*eps)` floors every `T` that is NaN or
+///   below `100*eps = 1e-13` (e.g. zero — the upstream-documented "ideal derivative" wiring —
+///   or any negative value; the NaN is dropped before any arch intrinsic, so the floor is
+///   bit-identical on every target). The first floored tick warns **once per instance**
+///   through `Ctx::warn` during `update_state`. `T = +inf` is never floored and never warns:
+///   after a healthy first tick it freezes `x` (`alpha = dt/inf = 0`) and scales `y` by
+///   `k/inf` (a signed zero for finite `k`).
+/// - **Taint vs. poison:** after the first tick the state update reads only `T` and `u`, so a
+///   non-finite `k` taints only that tick's `y` (NaN emits leave canonicalized). The state is
+///   poisoned once the seed or filter arithmetic drives `x` non-finite — e.g. a non-finite
+///   `u`, or a first-tick seed `x = u - T*y_start/k` that goes non-finite when the
+///   `|k| < eps` guard does not short-circuit it (the guard seeds `x = u` without reading
+///   `T`, so even a NaN `T` leaves the state recoverable there). A non-finite `x` never
+///   returns to finite under the implicit filter, so `y` then emits canonical NaN or `±inf`
+///   forever. Poisoning itself carries no diagnostic; a warn accompanies it only when the
+///   same tick's `T` independently crossed the floor.
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Derivative {
-    pub(crate) k: f64,
-    pub(crate) t: f64,
     pub(crate) y_start: f64,
 }
 
-impl Default for Derivative {
-    fn default() -> Self {
-        Self {
-            k: 1.0,
-            t: 0.1,
-            y_start: 0.0,
-        }
-    }
-}
-
 impl Derivative {
-    fn t_eff(self) -> f64 {
-        positive(self.t)
-    }
-
-    fn output(self, u: f64, region: &[u64]) -> f64 {
+    fn x_now(self, inputs: &[Value], region: &[u64]) -> f64 {
         if is_first_tick(region[PREV_T_WORD]) {
-            self.y_start
-        } else {
-            let x = f64::from_bits(region[X_WORD]);
-            self.k * (u - x) / self.t_eff()
-        }
-    }
-
-    fn next_x(self, u: f64, region: &[u64], dt: f64) -> f64 {
-        let x = if is_first_tick(region[PREV_T_WORD]) {
-            derivative_x_for_start(u, self.k, self.t_eff(), self.y_start)
+            derivative_x_for_start(
+                read_real(inputs, DERIVATIVE_U_INPUT),
+                read_real(inputs, DERIVATIVE_K_INPUT),
+                read_real(inputs, DERIVATIVE_T_INPUT),
+                self.y_start,
+            )
         } else {
             f64::from_bits(region[X_WORD])
-        };
-        first_order_filter_implicit(x, u, self.t_eff(), dt)
+        }
+    }
+
+    fn output(self, inputs: &[Value], region: &[u64]) -> f64 {
+        let k = read_real(inputs, DERIVATIVE_K_INPUT);
+        let t_non_zero = positive(read_real(inputs, DERIVATIVE_T_INPUT));
+        let u = read_real(inputs, DERIVATIVE_U_INPUT);
+        // Mirrors the upstream association exactly: `y = (k/T_nonZero)*(u-x)`.
+        (k / t_non_zero) * (u - self.x_now(inputs, region))
     }
 }
 
@@ -84,7 +114,7 @@ impl Block for Derivative {
     fn signature(&self) -> &'static BlockSignature {
         static SIG: BlockSignature = BlockSignature {
             class_path: "CDL.Reals.Derivative",
-            inputs: &[PortKind::Real],
+            inputs: &[PortKind::Real, PortKind::Real, PortKind::Real],
             outputs: &[PortKind::Real],
             stateful: true,
         };
@@ -95,17 +125,18 @@ impl Block for Derivative {
         BlockKind::Stateful
     }
 
-    fn feeds_through(&self, in_idx: usize, _out_idx: usize) -> bool {
-        in_idx == 0
+    fn feeds_through(&self, in_idx: usize, out_idx: usize) -> bool {
+        in_idx < 3 && out_idx == 0
     }
 
     fn state_len(&self) -> usize {
-        TWO_WORD_STATE
+        DERIVATIVE_STATE_WORDS
     }
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[X_WORD] = 0.0f64.to_bits();
         region[PREV_T_WORD] = PREV_T_UNSET;
+        region[DERIVATIVE_T_WARNED_WORD] = 0;
     }
 
     fn emit_from_state(
@@ -115,13 +146,26 @@ impl Block for Derivative {
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, self.output(read_real(inputs, 0), region), emit);
+        emit_real(0, self.output(inputs, region), emit);
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
-        let u = read_real(inputs, 0);
+        let u = read_real(inputs, DERIVATIVE_U_INPUT);
+        let t_raw = read_real(inputs, DERIVATIVE_T_INPUT);
+        // Diagnostic parity with the upstream `T(min=100*eps)` annotation ("T > 0 required"):
+        // the clamp below silently turns a faulted T wire into a huge-but-finite gain, so the
+        // first clamped tick warns (once per instance, like the MovingAverage ring overflow).
+        if (t_raw.is_nan() || t_raw < MIN_PARAM) && region[DERIVATIVE_T_WARNED_WORD] == 0 {
+            ctx.warn(
+                "CDL.Reals.Derivative",
+                "Derivative: time-constant input T is NaN or below the 100*eps floor; clamping T_nonZero to 1e-13",
+            );
+            region[DERIVATIVE_T_WARNED_WORD] = 1;
+        }
+        let t_non_zero = positive(t_raw);
         let dt = tick_dt(ctx.t(), region[PREV_T_WORD]);
-        region[X_WORD] = self.next_x(u, region, dt).to_bits();
+        let x = self.x_now(inputs, region);
+        region[X_WORD] = first_order_filter_implicit(x, u, t_non_zero, dt).to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();
     }
 }

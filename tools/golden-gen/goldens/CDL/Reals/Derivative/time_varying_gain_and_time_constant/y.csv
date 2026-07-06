@@ -1,0 +1,9 @@
+#1
+# columns: time y
+double CDL_Reals_Derivative_time_varying_gain_and_time_constant_y(6,2)
+0.0 0.0
+0.1 2.0
+0.2 4.166666666666666
+0.3 6.944444444444445
+0.4 0.0
+0.5 -6.582766439909298
