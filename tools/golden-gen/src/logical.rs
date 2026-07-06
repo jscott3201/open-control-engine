@@ -364,6 +364,21 @@ fn edges_latches() -> Vec<Golden> {
     out
 }
 
+/// Upstream Buildings `Logical/Timer.mo` `passed` latch: `initial equation pre(passed) = t <= 0`;
+/// `when u` re-arms it to `t <= 0`; `elsewhen (u and time >= t + pre(entryTime))` sets it true;
+/// `elsewhen not u` clears it; no clause fires without an edge, so the latch otherwise holds.
+fn timer_passed_latch(pre_passed: bool, u: bool, pre_u: bool, y: f64, threshold: f64) -> bool {
+    if u && !pre_u {
+        threshold <= 0.0
+    } else if u && y >= threshold {
+        true
+    } else if !u && pre_u {
+        false
+    } else {
+        pre_passed
+    }
+}
+
 fn timing() -> Vec<Golden> {
     let mut out = Vec::new();
 
@@ -371,12 +386,17 @@ fn timing() -> Vec<Golden> {
     // clock), then `y = if u then time - entryTime else 0.0`. Elapsed is a SINGLE (time - entryTime)
     // subtraction since the most recent rising edge, NOT an accumulation of per-tick dt (which would
     // both mis-bill the re-arm tick and FP-drift in the running case). pre(u) initial = false.
+    //
+    // `passed` is the upstream discrete latch (`initial equation pre(passed) = t <= 0`): a rising
+    // `u` re-arms it to `t <= 0`, crossing the threshold while `u` is true sets it, a falling `u`
+    // clears it (`elsewhen not u`), and NO clause fires without an edge — the latch holds.
     {
         let t = [0.0, 0.1, 0.3, 0.6, 0.7];
         let u = [true, true, true, false, true];
         let threshold = 0.25;
         let mut entry_time = 0.0_f64;
         let mut pre_u = false;
+        let mut passed_latch = threshold <= 0.0;
         let mut y = Vec::new();
         let mut passed = Vec::new();
         for k in 0..t.len() {
@@ -384,8 +404,9 @@ fn timing() -> Vec<Golden> {
                 entry_time = t[k]; // rising edge: re-arm the clock to now
             }
             let yk = if u[k] { t[k] - entry_time } else { 0.0 };
+            passed_latch = timer_passed_latch(passed_latch, u[k], pre_u, yk, threshold);
             y.push(r(yk));
-            passed.push(b(u[k] && yk >= threshold));
+            passed.push(b(passed_latch));
             pre_u = u[k];
         }
         out.push(Golden::new(
@@ -406,19 +427,21 @@ fn timing() -> Vec<Golden> {
                 t.to_vec(),
                 passed,
                 "threshold t=0.25; same trace as Timer.y",
-                "passed = (y >= t) AND running; _spec/03 §4.3 Timer (canonical Buildings >=)",
+                "passed: Modelica latch — pre(passed)=t<=0; when u => t<=0; elsewhen u&&y>=t => true; elsewhen not u => false; else hold; Buildings Logical/Timer.mo",
             )
             .with_inputs(vec![input_b("u", u)]),
         );
     }
 
-    // Timer scenario variant: default threshold t=0, proving idle ticks gate passed false.
+    // Timer scenario variant: default threshold t=0, proving falling edges clear the latch and
+    // post-edge idle ticks hold it false.
     {
         let t = [0.0, 0.1, 0.2, 0.3, 0.4];
         let u = [true, false, false, true, false];
         let threshold = 0.0;
         let mut entry_time = 0.0_f64;
         let mut pre_u = false;
+        let mut passed_latch = threshold <= 0.0;
         let mut y = Vec::new();
         let mut passed = Vec::new();
         for k in 0..t.len() {
@@ -426,8 +449,9 @@ fn timing() -> Vec<Golden> {
                 entry_time = t[k];
             }
             let yk = if u[k] { t[k] - entry_time } else { 0.0 };
+            passed_latch = timer_passed_latch(passed_latch, u[k], pre_u, yk, threshold);
             y.push(r(yk));
-            passed.push(b(u[k] && yk >= threshold));
+            passed.push(b(passed_latch));
             pre_u = u[k];
         }
         out.push(
@@ -450,10 +474,57 @@ fn timing() -> Vec<Golden> {
                 ValueKind::Boolean,
                 t.to_vec(),
                 passed,
-                "threshold t=0; same trace as Timer.y; idle ticks must keep passed=false",
-                "passed is gated by running input: u AND (y >= t); Buildings Logical/Timer.mo elsewhen not u",
+                "threshold t=0; same trace as Timer.y; falling edges clear the latch, later idle ticks hold false",
+                "passed: Modelica latch — pre(passed)=t<=0; when u => t<=0; elsewhen u&&y>=t => true; elsewhen not u => false; else hold; Buildings Logical/Timer.mo",
             )
             .with_scenario("threshold_zero")
+            .with_inputs(vec![input_b("u", u)]),
+        );
+    }
+
+    // Timer scenario variant: input never rises. Upstream `initial equation pre(passed) = t <= 0`
+    // plus edge-only when-clauses mean an input held false FOREVER reports passed=true for the
+    // default t=0 — no falling edge ever fires to clear the initialization value. This is the
+    // oracle-diff scenario for the 2026-07-06 closeout divergence fix.
+    {
+        let t = [0.0, 0.1, 0.2, 0.3];
+        let u = [false, false, false, false];
+        let threshold = 0.0;
+        let mut pre_u = false;
+        let mut passed_latch = threshold <= 0.0;
+        let mut y = Vec::new();
+        let mut passed = Vec::new();
+        for k in 0..t.len() {
+            let yk = 0.0;
+            passed_latch = timer_passed_latch(passed_latch, u[k], pre_u, yk, threshold);
+            y.push(r(yk));
+            passed.push(b(passed_latch));
+            pre_u = u[k];
+        }
+        out.push(
+            Golden::new(
+                "CDL.Logical.Timer",
+                "y",
+                ValueKind::Real,
+                t.to_vec(),
+                y,
+                "threshold t=0; u held false from the start; y stays 0",
+                "y = if u then time - entryTime else 0; Buildings Logical/Timer.mo",
+            )
+            .with_scenario("input_never_rises")
+            .with_inputs(vec![input_b("u", u)]),
+        );
+        out.push(
+            Golden::new(
+                "CDL.Logical.Timer",
+                "passed",
+                ValueKind::Boolean,
+                t.to_vec(),
+                passed,
+                "threshold t=0; u held false from the start; passed holds the pre(passed)=t<=0 initialization TRUE — no edge ever fires a clearing clause",
+                "passed: Modelica latch — pre(passed)=t<=0; when u => t<=0; elsewhen u&&y>=t => true; elsewhen not u => false; else hold; Buildings Logical/Timer.mo",
+            )
+            .with_scenario("input_never_rises")
             .with_inputs(vec![input_b("u", u)]),
         );
     }

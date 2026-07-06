@@ -10,6 +10,7 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[RegistryEntry {
 
 fn make_integrator_with_reset(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegratorWithReset {
+        k: real_param(p, "k", 1.0),
         y_start: real_param(p, "y_start", 0.0),
     })
 }

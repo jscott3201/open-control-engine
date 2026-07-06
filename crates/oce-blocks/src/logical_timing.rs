@@ -23,17 +23,19 @@ fn positive_duration(x: f64) -> f64 {
 const ACC_WORD: usize = 0;
 const PREV_T_WORD: usize = 1;
 const PREV_U_WORD: usize = 2;
+const TIMER_PASSED_WORD: usize = 3;
 
 /// `CDL.Logical.Timer` — elapsed time since the last rising edge of `u`.
 ///
 /// Buildings `Controls/OBC/CDL/Logical/Timer.mo` computes elapsed time as
 /// `time - entryTime`, a single subtraction from the stored rising-edge timestamp, instead of a
 /// per-tick accumulation. The output resets to zero while `u` is false.
-/// Outputs `(y, passed)` where `passed` uses the Buildings threshold boundary `y >= t` only while
-/// `u` is true. While `u` is false, operation drives `passed=false`; the Modelica
-/// `pre(passed)=t<=0` initial equation is only the initialization value before the `elsewhen not u`
-/// clause drives the steady-state false output. `[S]`, feedthrough `y,passed <- {u}`, not a loop
-/// cut.
+/// Outputs `(y, passed)`. `passed` is the upstream Modelica discrete latch: it initializes to
+/// `t <= 0` (`pre(passed) = t <= 0`, so an input held false from the start reports `passed =
+/// true` for the default non-positive threshold), a rising `u` re-arms it to `t <= 0`, crossing
+/// the threshold `y >= t` while `u` is true sets it, a falling `u` clears it (`elsewhen not u`),
+/// and it otherwise holds its previous value — no when-clause fires without an edge. `[S]`,
+/// feedthrough `y,passed <- {u}`, not a loop cut.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Timer {
     pub(crate) t: f64,
@@ -49,6 +51,25 @@ impl Timer {
             0.0
         } else {
             ctx.t() - f64::from_bits(region[ACC_WORD])
+        }
+    }
+
+    fn passed_now(self, inputs: &[Value], region: &[u64], live_y: f64) -> bool {
+        let u = read_bool(inputs, 0);
+        let prev_u = word_bool(region[PREV_U_WORD]);
+        let pre_passed = word_bool(region[TIMER_PASSED_WORD]);
+        if u && !prev_u {
+            // Upstream `when u`: the first (highest-priority) clause re-arms the latch.
+            self.t <= 0.0
+        } else if u && live_y >= self.t {
+            // Upstream `elsewhen (u and time >= t + pre(entryTime))`.
+            true
+        } else if !u && prev_u {
+            // Upstream `elsewhen not u`: a falling edge clears the latch.
+            false
+        } else {
+            // No edge fired: the discrete latch holds its previous value.
+            pre_passed
         }
     }
 }
@@ -73,13 +94,14 @@ impl Block for Timer {
     }
 
     fn state_len(&self) -> usize {
-        3
+        4
     }
 
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[ACC_WORD] = 0.0f64.to_bits();
         region[PREV_T_WORD] = PREV_T_UNSET;
         region[PREV_U_WORD] = 0;
+        region[TIMER_PASSED_WORD] = bool_word(self.t <= 0.0);
     }
 
     fn emit_from_state(
@@ -90,18 +112,21 @@ impl Block for Timer {
         emit: &mut dyn FnMut(usize, Value),
     ) {
         let y = self.y_now(ctx, inputs, region);
-        let u = read_bool(inputs, 0);
+        let passed = self.passed_now(inputs, region, y);
         emit_real(0, y, emit);
-        emit(1, Value::Boolean(u && y >= self.t));
+        emit(1, Value::Boolean(passed));
     }
 
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         let u = read_bool(inputs, 0);
+        let y = self.y_now(ctx, inputs, region);
+        let passed = self.passed_now(inputs, region, y);
         if u && (is_first_tick(region[PREV_T_WORD]) || !word_bool(region[PREV_U_WORD])) {
             region[ACC_WORD] = ctx.t().to_bits();
         }
         region[PREV_T_WORD] = ctx.t().to_bits();
         region[PREV_U_WORD] = bool_word(u);
+        region[TIMER_PASSED_WORD] = bool_word(passed);
     }
 }
 

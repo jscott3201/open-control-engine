@@ -1,0 +1,9 @@
+#1
+# columns: time u y_reset_in trigger y
+double CDL_Reals_IntegratorWithReset_gain_reference(6,5)
+0.0 2.0 7.0 0.0 1.0
+0.1 2.0 7.0 0.0 1.0
+0.2 -1.0 7.0 0.0 1.5
+0.30000000000000004 -1.0 7.0 0.0 1.25
+0.4 4.0 7.0 1.0 0.9999999999999999
+0.5 4.0 7.0 0.0 7.0

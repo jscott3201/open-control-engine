@@ -36,6 +36,16 @@ const UNIT_DELAY_NONZERO_START_PARAMS: &[Param] = &[
         value: ParamValue::Real("1.0"),
     },
 ];
+const UNIT_DELAY_INTER_SAMPLE_PARAMS: &[Param] = &[
+    Param {
+        name: "y_start",
+        value: ParamValue::Real("2.5"),
+    },
+    Param {
+        name: "samplePeriod",
+        value: ParamValue::Real("2.0"),
+    },
+];
 const TRIGGERED_SAMPLER_PARAMS: &[Param] = &[Param {
     name: "y_start",
     value: ParamValue::Real("2.5"),
@@ -75,6 +85,16 @@ const CASES: &[BlockCase] = &[
         "UnitDelay/y_start_nonzero",
         U,
         UNIT_DELAY_NONZERO_START_PARAMS,
+        REAL_Y,
+    ),
+    // Ticks between sample instants must hold `y = pre(u_internal)` from the previous instant —
+    // the oracle-diff scenario for the 2026-07-06 closeout UnitDelay divergence fix.
+    case(
+        "discrete_unit_delay_inter_sample_ticks",
+        "CDL.Discrete.UnitDelay",
+        "UnitDelay/inter_sample_ticks",
+        U,
+        UNIT_DELAY_INTER_SAMPLE_PARAMS,
         REAL_Y,
     ),
     case(

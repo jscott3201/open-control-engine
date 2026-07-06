@@ -351,6 +351,17 @@ const CASES: &[BlockCase] = &[
         TIMER_ZERO_PARAMS,
         TIMER_OUTPUTS,
     ),
+    // Input held false from the start: `pre(passed) = t <= 0` initializes the latch true and no
+    // edge ever fires a clearing clause — the oracle-diff scenario for the 2026-07-06 closeout
+    // Timer divergence fix.
+    case(
+        "logical_timer_input_never_rises",
+        "CDL.Logical.Timer",
+        "Timer/input_never_rises",
+        U,
+        TIMER_ZERO_PARAMS,
+        TIMER_OUTPUTS,
+    ),
     case(
         "logical_timer_accumulating_threshold_zero",
         "CDL.Logical.TimerAccumulating",

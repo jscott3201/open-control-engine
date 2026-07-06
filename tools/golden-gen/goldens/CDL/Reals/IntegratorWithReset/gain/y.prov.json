@@ -1,0 +1,23 @@
+{
+  "class_path": "CDL.Reals.IntegratorWithReset",
+  "scenario": "gain",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 6,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y_reset_in", "trigger", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [2.0, 2.0, -1.0, -1.0, 4.0, 4.0] },
+    { "name": "y_reset_in", "value_kind": "Real", "values": [7.0, 7.0, 7.0, 7.0, 7.0, 7.0] },
+    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 0.0, 1.0, 0.0] }
+  ],
+  "input": "k=2.5, y_start=1.0; dt=0.1 decimal grid; the accumulator advances by k*u*dt (x0=1, +2.5*2*0.1 per early row), and the rising trigger at row 4 stores exactly 7.0 — NOT 2.5*7.0 — proving reinit is unscaled",
+  "reference_rule": "Emit prior x; then x := y_reset_in on a rising trigger else x + k*u*dt (first dt=0); oracle-diff for the 2026-07-06 closeout fix (engine previously dropped the upstream gain k entirely); Buildings Reals/IntegratorWithReset.mo der(y)=k*u",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

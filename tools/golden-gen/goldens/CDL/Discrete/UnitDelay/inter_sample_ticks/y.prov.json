@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Discrete.UnitDelay",
+  "scenario": "inter_sample_ticks",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.1, 0.2, 0.3, 0.4, 0.5] }
+  ],
+  "input": "samplePeriod=2.0, tick step 1.0, y_start=2.5; u=[0.1..0.5]; inter-sample ticks hold the previous instant's value",
+  "reference_rule": "when sampleTrigger: u_internal=u, y=pre(u_internal); y holds between instants; Buildings Discrete/UnitDelay.mo",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

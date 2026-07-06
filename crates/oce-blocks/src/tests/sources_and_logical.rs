@@ -116,25 +116,55 @@ fn pre_emits_prior_then_latches_current() {
     assert!(emit(&pre, &[Value::Boolean(true)], &region)[0].bit_eq(&Value::Boolean(false)));
 }
 
+/// Time-aware variant of [`emit`]: `UnitDelay`'s output switches exactly at sample instants, so
+/// its emit path reads the tick time (prior state only — never a current input).
+fn emit_at(b: &dyn Block, t: f64, inputs: &[Value], region: &[u64]) -> Vec<Value> {
+    let mut v = Vec::new();
+    let diag = NoopDiagnostics;
+    let cx = Ctx::new(t, &diag);
+    b.emit_from_state(&cx, inputs, region, &mut |idx, val| {
+        assert_eq!(idx, v.len());
+        v.push(val);
+    });
+    v
+}
+
 #[test]
-fn unit_delay_holds_prior_sample() {
+fn unit_delay_outputs_y_start_until_the_second_sample_instant() {
+    // Buildings `Discrete/UnitDelay.mo`: `when sampleTrigger then u_internal = u; y =
+    // pre(u_internal)` with both initialized to `y_start` — "Before the second sample instant,
+    // the output y is identical to parameter y_start" (upstream doc). The first instant stages
+    // u(0) without emitting it; the second instant releases it.
     let ud = UnitDelay {
         y_start: 2.5,
         sample_period: 1.0,
     };
-    assert_eq!(ud.state_len(), 4);
+    assert_eq!(ud.state_len(), 5);
     let mut region = vec![0u64; ud.state_len()];
     ud.init_state(&mut region, &ParamTable::default());
-
-    assert!(emit(&ud, &[Value::Real(99.0)], &region)[0].bit_eq(&Value::Real(2.5))); // seed
     let diag = NoopDiagnostics;
+
+    // First instant (t=0): y = pre(u_internal) = y_start; u(0)=99 is staged, not emitted.
+    assert!(emit_at(&ud, 0.0, &[Value::Real(99.0)], &region)[0].bit_eq(&Value::Real(2.5)));
     let cx = Ctx::new(0.0, &diag);
     ud.update_state(&cx, &[Value::Real(99.0)], &mut region);
-    assert!(emit(&ud, &[Value::Real(7.0)], &region)[0].bit_eq(&Value::Real(99.0))); // prior sample
+    // Between the first and second instants: y is still y_start, not the staged sample.
+    assert!(emit_at(&ud, 0.5, &[Value::Real(7.0)], &region)[0].bit_eq(&Value::Real(2.5)));
+    // Second instant (t=1): y = u(0).
+    assert!(emit_at(&ud, 1.0, &[Value::Real(7.0)], &region)[0].bit_eq(&Value::Real(99.0)));
+    let cx = Ctx::new(1.0, &diag);
+    ud.update_state(&cx, &[Value::Real(7.0)], &mut region);
+    // Between the second and third instants: y holds u(0).
+    assert!(emit_at(&ud, 1.5, &[Value::Real(-3.0)], &region)[0].bit_eq(&Value::Real(99.0)));
+    // Third instant (t=2): y = u(1).
+    assert!(emit_at(&ud, 2.0, &[Value::Real(-3.0)], &region)[0].bit_eq(&Value::Real(7.0)));
 }
 
 #[test]
-fn unit_delay_holds_between_nondefault_sample_instants() {
+fn unit_delay_holds_the_previous_sample_across_inter_sample_ticks() {
+    // samplePeriod = 2 with ticks every 1: the odd-time ticks fall inside an interval and must
+    // re-emit the value from the previous instant, exactly like upstream `y = pre(u_internal)`
+    // held between `when sampleTrigger` events.
     let ud = UnitDelay {
         y_start: 0.0,
         sample_period: 2.0,
@@ -143,21 +173,28 @@ fn unit_delay_holds_between_nondefault_sample_instants() {
     ud.init_state(&mut region, &ParamTable::default());
     let diag = NoopDiagnostics;
 
+    // First instant (t=0): y_start; u(0)=10 staged.
+    assert!(emit_at(&ud, 0.0, &[Value::Real(10.0)], &region)[0].bit_eq(&Value::Real(0.0)));
     let cx = Ctx::new(0.0, &diag);
-    assert!(emit(&ud, &[Value::Real(10.0)], &region)[0].bit_eq(&Value::Real(0.0)));
     ud.update_state(&cx, &[Value::Real(10.0)], &mut region);
 
+    // t=1 is inside the first interval: still y_start (upstream holds until the second instant).
+    assert!(emit_at(&ud, 1.0, &[Value::Real(20.0)], &region)[0].bit_eq(&Value::Real(0.0)));
     let cx = Ctx::new(1.0, &diag);
-    assert!(emit(&ud, &[Value::Real(20.0)], &region)[0].bit_eq(&Value::Real(10.0)));
     ud.update_state(&cx, &[Value::Real(20.0)], &mut region);
 
+    // Second instant (t=2): y = u(0) = 10; u(2)=30 staged.
+    assert!(emit_at(&ud, 2.0, &[Value::Real(30.0)], &region)[0].bit_eq(&Value::Real(10.0)));
     let cx = Ctx::new(2.0, &diag);
-    assert!(emit(&ud, &[Value::Real(30.0)], &region)[0].bit_eq(&Value::Real(10.0)));
     ud.update_state(&cx, &[Value::Real(30.0)], &mut region);
 
+    // t=3 is inside the second interval: y holds u(0) = 10, NOT the staged u(2).
+    assert!(emit_at(&ud, 3.0, &[Value::Real(40.0)], &region)[0].bit_eq(&Value::Real(10.0)));
     let cx = Ctx::new(3.0, &diag);
-    assert!(emit(&ud, &[Value::Real(40.0)], &region)[0].bit_eq(&Value::Real(30.0)));
     ud.update_state(&cx, &[Value::Real(40.0)], &mut region);
+
+    // Third instant (t=4): y = u(2) = 30.
+    assert!(emit_at(&ud, 4.0, &[Value::Real(50.0)], &region)[0].bit_eq(&Value::Real(30.0)));
 }
 
 #[test]
