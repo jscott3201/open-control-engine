@@ -522,9 +522,11 @@ fn derivative_infinite_gain_and_time_constant_follow_ieee_propagation() {
     // +inf T is ABOVE the floor, and the warn channel is for the T floor only.
     let diag = CapturingDiagnostics::default();
 
-    // Inf k on the FIRST tick is TRANSIENT (asymmetric with NaN k, which poisons): the initial
-    // equation computes T*y_start/inf == 0, so x seeds to u exactly; only that tick's y is
-    // NaN (inf * 0), and the next finite-k tick emits from clean state.
+    // Inf k on the FIRST tick is TRANSIENT here (asymmetric with NaN k, which poisons): with
+    // these pinned magnitudes T*y_start = 0.25 stays finite, so T*y_start/inf == 0 and x seeds
+    // to u exactly; only that tick's y is NaN (inf * 0), and the next finite-k tick emits from
+    // clean state. (Were T*y_start to overflow to inf, inf/inf = NaN would poison instead —
+    // the documented poison invariant, not this transient cell.)
     let inf_gain_seed = Derivative { y_start: 0.5 };
     let (trace, _region) = derivative_drive_with_diag(
         &inf_gain_seed,
@@ -582,11 +584,11 @@ fn derivative_infinite_gain_and_time_constant_follow_ieee_propagation() {
 }
 
 #[test]
-fn derivative_mid_run_nan_input_poisons_state_without_warning() {
-    // The u wire has no guard at all: a mid-run NaN u enters the implicit filter update and
-    // poisons x permanently — the OPPOSITE of the mid-run NaN-k transience — and the T-floor
-    // warn channel stays silent (T is finite and legal). Pinned so the documented policy
-    // stays honest about the undiagnosed cell.
+fn derivative_mid_run_non_finite_input_poisons_state_without_warning() {
+    // The u wire has no guard at all: a mid-run non-finite u enters the implicit filter update
+    // and poisons x permanently — the OPPOSITE of the mid-run non-finite-k transience — and
+    // the T-floor warn channel stays silent (T is finite and legal). Pinned so the documented
+    // policy stays honest about the undiagnosed cell.
     let block = Derivative { y_start: 0.0 };
     let diag = CapturingDiagnostics::default();
     let steps = [
@@ -600,5 +602,27 @@ fn derivative_mid_run_nan_input_poisons_state_without_warning() {
         &[0x0000_0000_0000_0000, CANONICAL_NAN, CANONICAL_NAN],
     );
     assert!(f64::from_bits(region[0]).is_nan());
+
+    // Infinite u poisons through the same route, but as ±inf rather than NaN: the poisoned
+    // state emits (1/0.5)*(1 - inf) = -inf on the recovery tick — the "canonical NaN or ±inf
+    // forever" arm of the documented policy (emit_real canonicalizes only NaN, so the inf
+    // bits pass through unchanged).
+    let block = Derivative { y_start: 0.0 };
+    let steps = [
+        (0.0, 1.0, 0.5, 0.0),
+        (0.5, 1.0, 0.5, f64::INFINITY),
+        (1.0, 1.0, 0.5, 1.0),
+    ];
+    let (trace, region) = derivative_drive_with_diag(&block, &steps, &diag);
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x7ff0_0000_0000_0000,
+            0xfff0_0000_0000_0000,
+        ],
+    );
+    assert_eq!(region[0], f64::INFINITY.to_bits());
+
     assert!(diag.events.borrow().is_empty());
 }

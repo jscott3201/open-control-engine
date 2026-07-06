@@ -62,24 +62,26 @@ const DERIVATIVE_STATE_WORDS: usize = 3;
 /// first tick from the live inputs. `[S]`, feedthrough `y <- {k, T, u}`, not a loop cut.
 ///
 /// Non-finite/out-of-range input policy (the engine has no input-connector range validation;
-/// upstream annotates `T(min=100*eps)`, "T > 0 required", which a Modelica tool asserts on):
+/// upstream annotates `T(min=100*eps)`, "T > 0 required", which a Modelica tool asserts on).
+/// Both equations above run under plain IEEE-754 semantics; the ONLY sanitized value is the
+/// `T` floor:
 ///
-/// - **T floor + warn:** a `T` that is NaN or below the floor — zero (the "ideal derivative"
-///   wiring), negative, or subnormal — floors deterministically to `100*eps = 1e-13` via
-///   `det_max` (NaN dropped before any arch intrinsic) and warns **once per instance** through
-///   `Ctx::warn` during `update_state`. `T = +inf` is above the floor — no clamp, no warn: it
-///   freezes `x` (`alpha = dt/inf = 0`) and zeroes `y` (`k/inf`).
-/// - **Transient (state recovers):** the state update reads only `T` and `u` after the first
-///   tick, so a mid-run NaN `k` taints only that tick's `y` (canonical NaN; an infinite `k`
-///   emits `±inf`, or NaN when `u == x`). A first-tick infinite `k` seeds `x = u` exactly
-///   (`T*y_start/inf == 0`), emitting a single NaN (`inf * 0`); a first-tick `|k| < eps` takes
-///   the guard branch, seeding `x = u` WITHOUT reading `T`, so even a NaN `T` stays
-///   recoverable there.
-/// - **Permanent (poisoned state; only a NaN `T` also warns):** a NaN `u` at any tick enters
-///   the filter update; on the first tick, any `k` failing the `|k| < eps` guard (NaN included,
-///   since `|NaN| < eps` is false) runs the raw initial equation `x = u - T*y_start/k`, so a
-///   NaN `k`, a NaN `T`, or an infinite `T` seeds NaN or `∓inf` (`inf*0 = NaN` when
-///   `y_start == 0`) and later `y` emits canonical NaN or `±inf` forever.
+/// - **T floor + warn:** `T_nonZero = det_max(T, 100*eps)` floors every `T` that is NaN or
+///   below `100*eps = 1e-13` (e.g. zero — the upstream-documented "ideal derivative" wiring —
+///   or any negative value; the NaN is dropped before any arch intrinsic, so the floor is
+///   bit-identical on every target). The first floored tick warns **once per instance**
+///   through `Ctx::warn` during `update_state`. `T = +inf` is never floored and never warns:
+///   after a healthy first tick it freezes `x` (`alpha = dt/inf = 0`) and scales `y` by
+///   `k/inf` (a signed zero for finite `k`).
+/// - **Taint vs. poison:** after the first tick the state update reads only `T` and `u`, so a
+///   non-finite `k` taints only that tick's `y` (NaN emits leave canonicalized). The state is
+///   poisoned once the seed or filter arithmetic drives `x` non-finite — e.g. a non-finite
+///   `u`, or a first-tick seed `x = u - T*y_start/k` that goes non-finite when the
+///   `|k| < eps` guard does not short-circuit it (the guard seeds `x = u` without reading
+///   `T`, so even a NaN `T` leaves the state recoverable there). A non-finite `x` never
+///   returns to finite under the implicit filter, so `y` then emits canonical NaN or `±inf`
+///   forever. Poisoning itself carries no diagnostic; a warn accompanies it only when the
+///   same tick's `T` independently crossed the floor.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Derivative {
     pub(crate) y_start: f64,
