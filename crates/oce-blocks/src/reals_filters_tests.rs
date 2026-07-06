@@ -1,13 +1,12 @@
-//! Tests for `CDL.Reals` filter, slew, and moving-average blocks.
-//! Expected traces are hand-derived from the documented discrete recurrences.
+//! Tests for the `CDL.Reals` slew and moving-average blocks. Expected traces are hand-derived
+//! from the documented discrete recurrences. The `Derivative` suite lives in
+//! `reals_filters_derivative_tests` (split along the behavioral sub-topic).
 
 use std::cell::RefCell;
 
 use oce_model::{ParamTable, Value};
 
-use super::{
-    Block, BlockKind, Ctx, Derivative, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics,
-};
+use super::{Block, BlockKind, Ctx, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics};
 
 #[derive(Default)]
 struct CapturingDiagnostics {
@@ -74,59 +73,6 @@ fn drive(block: &dyn Block, steps: &[(f64, f64)]) -> (Vec<Value>, Vec<u64>) {
     (trace, region)
 }
 
-/// `Derivative` inputs in the upstream connector declaration order `k, T, u`.
-fn derivative_inputs(k: f64, t_const: f64, u: f64) -> [Value; 3] {
-    [Value::Real(k), Value::Real(t_const), Value::Real(u)]
-}
-
-fn derivative_emit(
-    block: &Derivative,
-    region: &[u64],
-    t: f64,
-    k: f64,
-    t_const: f64,
-    u: f64,
-) -> Value {
-    let diag = NoopDiagnostics;
-    let cx = Ctx::new(t, &diag);
-    let mut out = None;
-    block.emit_from_state(
-        &cx,
-        &derivative_inputs(k, t_const, u),
-        region,
-        &mut |idx, val| {
-            assert_eq!(idx, 0);
-            out = Some(val);
-        },
-    );
-    out.expect("Derivative must emit one output")
-}
-
-fn derivative_tick(
-    block: &Derivative,
-    region: &mut [u64],
-    t: f64,
-    k: f64,
-    t_const: f64,
-    u: f64,
-) -> Value {
-    let out = derivative_emit(block, region, t, k, t_const, u);
-    let diag = NoopDiagnostics;
-    let cx = Ctx::new(t, &diag);
-    block.update_state(&cx, &derivative_inputs(k, t_const, u), region);
-    out
-}
-
-/// Drive a `Derivative` across `(t, k, T, u)` ticks — `k`/`T` are live inputs upstream.
-fn derivative_drive(block: &Derivative, steps: &[(f64, f64, f64, f64)]) -> (Vec<Value>, Vec<u64>) {
-    let mut region = init_region(block);
-    let mut trace = Vec::with_capacity(steps.len());
-    for &(t, k, t_const, u) in steps {
-        trace.push(derivative_tick(block, &mut region, t, k, t_const, u));
-    }
-    (trace, region)
-}
-
 fn assert_trace_bits(got: &[Value], want: &[u64]) {
     assert_eq!(got.len(), want.len());
     for (idx, (got, want)) in got.iter().zip(want).enumerate() {
@@ -151,36 +97,11 @@ fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
     }
     assert_eq!(LimitSlewRate::default().state_len(), 2);
     assert_eq!(MovingAverage::default().state_len(), 134);
-
-    // Derivative carries the upstream 3-input signature (k, T, u — declaration order) and feeds
-    // through from ALL THREE: the gain and time constant are live RealInputs, so a same-tick
-    // change to any of them changes y.
-    let derivative = Derivative::default();
-    assert_eq!(derivative.kind(), BlockKind::Stateful);
-    assert_eq!(derivative.signature().inputs.len(), 3);
-    assert_eq!(derivative.signature().outputs.len(), 1);
-    for input in 0..3 {
-        assert!(
-            derivative.feeds_through(input, 0),
-            "Derivative input {input} must feed through"
-        );
-    }
-    assert_eq!(derivative.state_len(), 2);
 }
 
 #[test]
 fn dynamic_reals_outputs_canonicalize_nan_bits() {
     let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
-
-    let derivative = Derivative {
-        y_start: negative_nan,
-    };
-    // First tick: x0 = u - T*y_start/k is NaN, so y = (k/T_nonZero)*(u - x0) is NaN — emitted
-    // canonicalized. k=1, T=0.1 are live inputs.
-    assert_real_bits(
-        &derivative_emit(&derivative, &init_region(&derivative), 0.0, 1.0, 0.1, 1.0),
-        0x7ff8000000000000,
-    );
 
     let slew = LimitSlewRate {
         enable: false,
@@ -201,114 +122,6 @@ fn dynamic_reals_outputs_canonicalize_nan_bits() {
         ),
         0x7ff8000000000000,
     );
-}
-
-#[test]
-fn derivative_yd_start_implicit_filter_and_bounded_regime_are_pinned() {
-    // Steps are (t, k, T, u): k and T are live inputs held constant here. The pinned bits are
-    // re-derived independently (IEEE double walk of the upstream `(k/T_nonZero)*(u-x)`
-    // association) and are unchanged from the parameter-era pins.
-    let yd = Derivative { y_start: 0.25 };
-    let steps = [
-        (0.0, 2.0, 1.0, 1.0),
-        (0.5, 2.0, 1.0, 2.0),
-        (1.0, 2.0, 1.0, 2.0),
-    ];
-    let (trace, region) = derivative_drive(&yd, &steps);
-    // Initial x = u - T*y_start/k = 0.875. With alpha=0.5, x becomes 1.25 then 1.5.
-    assert_trace_bits(
-        &trace,
-        &[
-            0x3fd0_0000_0000_0000,
-            0x4002_0000_0000_0000,
-            0x3ff8_0000_0000_0000,
-        ],
-    );
-    assert_eq!(region[0], 0x3ff8_0000_0000_0000);
-
-    let bounded = Derivative { y_start: 0.0 };
-    let steps = [
-        (0.0, 1.0, 0.01, 0.0),
-        (1.0, 1.0, 0.01, 1.0),
-        (2.0, 1.0, 0.01, 1.0),
-        (3.0, 1.0, 0.01, 1.0),
-        (4.0, 1.0, 0.01, 1.0),
-    ];
-    let (trace, region) = derivative_drive(&bounded, &steps);
-    // T=0.01, alpha=100. Explicit Euler would diverge; implicit Euler leaves residual /101.
-    assert_trace_bits(
-        &trace,
-        &[
-            0x0000_0000_0000_0000,
-            0x4059_0000_0000_0000,
-            0x3fef_aee4_1e6a_74a0,
-            0x3f84_1393_15ce_ed00,
-            0x3f19_7185_2d60_8000,
-        ],
-    );
-    assert_eq!(region[0], 0x3fef_ffff_fad7_3d19);
-}
-
-#[test]
-fn derivative_gain_and_time_constant_inputs_act_live() {
-    // Upstream declares k and T as RealInput connectors: changing either mid-run changes y on
-    // the SAME tick (feedthrough), with no re-initialization. Independently derived IEEE walk:
-    // t=0.2 emits (2.5/0.5)*(1-x); t=0.3 emits (2.5/0.25)*(1-x); t=0.4 emits 0 (k=0);
-    // t=0.5 emits (1/0.25)*(-1-x).
-    let block = Derivative { y_start: 0.0 };
-    let steps = [
-        (0.0, 1.0, 0.5, 0.0),
-        (0.1, 1.0, 0.5, 1.0),
-        (0.2, 2.5, 0.5, 1.0),
-        (0.3, 2.5, 0.25, 1.0),
-        (0.4, 0.0, 0.25, 1.0),
-        (0.5, 1.0, 0.25, -1.0),
-    ];
-    let (trace, _region) = derivative_drive(&block, &steps);
-    let want = [
-        0.0,
-        2.0,
-        4.166_666_666_666_666,
-        6.944_444_444_444_445,
-        0.0,
-        -6.582_766_439_909_298,
-    ];
-    for (idx, (got, want)) in trace.iter().zip(want).enumerate() {
-        assert!(
-            got.bit_eq(&Value::Real(want)),
-            "trace[{idx}] got {got:?}, want {want:?}"
-        );
-    }
-}
-
-#[test]
-fn derivative_feedthrough_perturbation_and_determinism_are_pinned() {
-    // All three inputs (k, T, u) feed through: perturbing any one of them on the emit tick
-    // changes y without touching state. Baseline: k=1, T=0.1, x=1 after the t=0 tick.
-    let block = Derivative { y_start: 0.0 };
-    let mut region = init_region(&block);
-    derivative_tick(&block, &mut region, 0.0, 1.0, 0.1, 1.0);
-    let low = derivative_emit(&block, &region, 1.0, 1.0, 0.1, 1.0);
-    let u_perturbed = derivative_emit(&block, &region, 1.0, 1.0, 0.1, 2.0);
-    let k_perturbed = derivative_emit(&block, &region, 1.0, 3.0, 0.1, 2.0);
-    let t_perturbed = derivative_emit(&block, &region, 1.0, 1.0, 0.2, 2.0);
-    assert_real_bits(&low, 0.0f64.to_bits());
-    assert_real_bits(&u_perturbed, 10.0f64.to_bits());
-    assert_real_bits(&k_perturbed, 30.0f64.to_bits());
-    assert_real_bits(&t_perturbed, 5.0f64.to_bits());
-
-    let steps = [
-        (0.0, 1.0, 0.1, 0.2),
-        (0.1, 1.0, 0.1, 0.3),
-        (0.2, 1.0, 0.1, 0.3),
-        (0.4, 1.0, 0.1, 0.1),
-    ];
-    let (trace_a, region_a) = derivative_drive(&block, &steps);
-    let (trace_b, region_b) = derivative_drive(&block, &steps);
-    for (idx, (a, b)) in trace_a.iter().zip(&trace_b).enumerate() {
-        assert!(a.bit_eq(b), "trace[{idx}] {a:?} vs {b:?}");
-    }
-    assert_eq!(region_a, region_b);
 }
 
 #[test]

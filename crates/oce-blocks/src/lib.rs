@@ -727,6 +727,9 @@ mod psychrometrics_tests;
 mod reals_integrator_tests;
 
 #[cfg(test)]
+mod reals_filters_derivative_tests;
+
+#[cfg(test)]
 mod reals_filters_tests;
 
 #[cfg(test)]
