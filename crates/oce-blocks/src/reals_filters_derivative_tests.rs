@@ -391,9 +391,10 @@ fn derivative_mid_run_nan_gain_is_transient_and_state_recovers() {
 
 #[test]
 fn derivative_first_tick_non_finite_seed_poisons_state() {
-    // The initial equation x = u - T*y_start/k reads BOTH wires on the first tick: a NaN k (or
-    // a NaN T) seeds x = NaN, and the implicit filter keeps NaN forever — later finite inputs
-    // do not recover. This is deliberate IEEE propagation, pinned here as canonical-NaN emits.
+    // Whenever the |k| < eps guard is NOT taken (NaN k included — |NaN| < eps is false), the
+    // initial equation x = u - T*y_start/k reads both wires on the first tick: a NaN k or a
+    // NaN T seeds x = NaN, and the implicit filter keeps NaN forever — later finite inputs do
+    // not recover. This is deliberate IEEE propagation, pinned here as canonical-NaN emits.
     let nan_gain = Derivative { y_start: 0.5 };
     let (trace, _region) = derivative_drive(
         &nan_gain,
@@ -448,4 +449,156 @@ fn derivative_mid_run_nan_time_constant_floors_deterministically_and_warns() {
     assert_eq!(events[0].0, "CDL.Reals.Derivative");
     assert_eq!(events[0].1, T_FLOOR_WARNING);
     assert_eq!(events[0].2.to_bits(), 0.5f64.to_bits());
+}
+
+#[test]
+fn derivative_signaling_nan_time_constant_floors_identically_across_arches() {
+    // Pins the det_max clamp itself: a SIGNALING NaN (0x7ff0_0000_0000_0001) is constructible
+    // in safe Rust and reaches the T wire uncanonicalized through the host input path. Raw
+    // f64::max would return the quieted NaN on aarch64 (fmaxnm) but the floor on x86_64 —
+    // a cross-arch bit divergence; det_max drops the NaN before any intrinsic, so BOTH arches
+    // must emit the same 2e13 the quiet-NaN test pins. A mutant reverting positive() to raw
+    // .max fails this test on the arm64 determinism-matrix leg (y becomes NaN).
+    let signaling_nan = f64::from_bits(0x7ff0_0000_0000_0001);
+    assert!(signaling_nan.is_nan());
+
+    let block = Derivative { y_start: 0.0 };
+    let diag = CapturingDiagnostics::default();
+    let steps = [
+        (0.0, 1.0, 0.5, 0.0),
+        (0.5, 1.0, signaling_nan, 2.0),
+        (1.0, 1.0, 0.5, 2.0),
+    ];
+    let (trace, region) = derivative_drive_with_diag(&block, &steps, &diag);
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x42b2_309c_e540_0000,
+            0x3d6c_2400_0000_0000,
+        ],
+    );
+    assert_eq!(region[0], 0x3fff_ffff_ffff_fc7c);
+    assert_eq!(
+        diag.events.borrow().len(),
+        1,
+        "sNaN T must warn like quiet NaN"
+    );
+}
+
+#[test]
+fn derivative_first_tick_sub_eps_gain_seeds_from_u_without_reading_t() {
+    // The seed guard is |k| < eps (eps = 1e-15), not k == 0: a sub-eps nonzero gain takes the
+    // guard branch, which never touches T — so even a first-tick NaN T seeds x = u and the
+    // block stays fully recoverable (the T-floor warn still fires). A mutant tightening the
+    // guard to k == 0.0 would run u - NaN*y_start/k, poison x, and fail every row below.
+    let block = Derivative { y_start: 0.5 };
+    let diag = CapturingDiagnostics::default();
+    let steps = [
+        (0.0, 5e-16, f64::NAN, 2.0),
+        (0.5, 1.0, 0.5, 2.0),
+        (1.0, 1.0, 0.5, 3.0),
+    ];
+    let (trace, _region) = derivative_drive_with_diag(&block, &steps, &diag);
+    // x0 = u = 2 (guard); y0 = (5e-16/1e-13)*(2-2) = +0.0; then the same recovery walk as the
+    // k=0 seed test: 0.0 at t=0.5 (u == x) and exactly 2.0 at t=1.0.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+            2.0f64.to_bits(),
+        ],
+    );
+    let events = diag.events.borrow();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].1, T_FLOOR_WARNING);
+    assert_eq!(events[0].2.to_bits(), 0.0f64.to_bits());
+}
+
+#[test]
+fn derivative_infinite_gain_and_time_constant_follow_ieee_propagation() {
+    // The four Inf cells, each pinned bit-exactly (independent IEEE walk). None of them warns:
+    // +inf T is ABOVE the floor, and the warn channel is for the T floor only.
+    let diag = CapturingDiagnostics::default();
+
+    // Inf k on the FIRST tick is TRANSIENT (asymmetric with NaN k, which poisons): the initial
+    // equation computes T*y_start/inf == 0, so x seeds to u exactly; only that tick's y is
+    // NaN (inf * 0), and the next finite-k tick emits from clean state.
+    let inf_gain_seed = Derivative { y_start: 0.5 };
+    let (trace, _region) = derivative_drive_with_diag(
+        &inf_gain_seed,
+        &[(0.0, f64::INFINITY, 0.5, 1.0), (0.5, 1.0, 0.5, 1.0)],
+        &diag,
+    );
+    assert_trace_bits(&trace, &[CANONICAL_NAN, 0x0000_0000_0000_0000]);
+
+    // Inf T on the FIRST tick with y_start != 0 poisons with ∓inf (u - inf), NOT NaN: the
+    // first emit is inf*0 = NaN, every later finite-input emit is (1/0.5)*(1-(-inf)) = +inf.
+    let inf_time_constant_seed = Derivative { y_start: 0.5 };
+    let (trace, _region) = derivative_drive_with_diag(
+        &inf_time_constant_seed,
+        &[(0.0, 1.0, f64::INFINITY, 1.0), (0.5, 1.0, 0.5, 1.0)],
+        &diag,
+    );
+    assert_trace_bits(&trace, &[CANONICAL_NAN, 0x7ff0_0000_0000_0000]);
+
+    // Inf T on the FIRST tick with y_start == 0 poisons with NaN instead: inf * 0 = NaN inside
+    // the initial equation.
+    let inf_time_constant_zero_start = Derivative { y_start: 0.0 };
+    let (trace, _region) = derivative_drive_with_diag(
+        &inf_time_constant_zero_start,
+        &[(0.0, 1.0, f64::INFINITY, 1.0), (0.5, 1.0, 0.5, 1.0)],
+        &diag,
+    );
+    assert_trace_bits(&trace, &[CANONICAL_NAN, CANONICAL_NAN]);
+
+    // Inf T MID-run freezes the state and zeroes y: alpha = dt/inf = 0 holds x at 0, and
+    // y = (1/inf)*(2-0) = +0.0. The recovered tick emits (1/0.5)*(2-0) = 4.0 — a floored-T
+    // mutant would have dragged x to ~2 and emitted ~8e-13 instead.
+    let inf_time_constant_mid_run = Derivative { y_start: 0.0 };
+    let (trace, _region) = derivative_drive_with_diag(
+        &inf_time_constant_mid_run,
+        &[
+            (0.0, 1.0, 0.5, 0.0),
+            (0.5, 1.0, f64::INFINITY, 2.0),
+            (1.0, 1.0, 0.5, 2.0),
+        ],
+        &diag,
+    );
+    assert_trace_bits(
+        &trace,
+        &[
+            0x0000_0000_0000_0000,
+            0x0000_0000_0000_0000,
+            4.0f64.to_bits(),
+        ],
+    );
+
+    assert!(
+        diag.events.borrow().is_empty(),
+        "infinite k/T must never trip the T-floor warn"
+    );
+}
+
+#[test]
+fn derivative_mid_run_nan_input_poisons_state_without_warning() {
+    // The u wire has no guard at all: a mid-run NaN u enters the implicit filter update and
+    // poisons x permanently — the OPPOSITE of the mid-run NaN-k transience — and the T-floor
+    // warn channel stays silent (T is finite and legal). Pinned so the documented policy
+    // stays honest about the undiagnosed cell.
+    let block = Derivative { y_start: 0.0 };
+    let diag = CapturingDiagnostics::default();
+    let steps = [
+        (0.0, 1.0, 0.5, 0.0),
+        (0.5, 1.0, 0.5, f64::NAN),
+        (1.0, 1.0, 0.5, 1.0),
+    ];
+    let (trace, region) = derivative_drive_with_diag(&block, &steps, &diag);
+    assert_trace_bits(
+        &trace,
+        &[0x0000_0000_0000_0000, CANONICAL_NAN, CANONICAL_NAN],
+    );
+    assert!(f64::from_bits(region[0]).is_nan());
+    assert!(diag.events.borrow().is_empty());
 }

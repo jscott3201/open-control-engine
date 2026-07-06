@@ -25,6 +25,10 @@ fn input_r(name: &'static str, values: impl IntoIterator<Item = f64>) -> InputSe
 }
 
 fn t_non_zero(t: f64) -> f64 {
+    // Raw max is oracle-safe only while no golden drives a NaN T: the ENGINE floors a NaN T
+    // deterministically via its det_max helper, which raw f64::max does not guarantee for
+    // signaling NaN on aarch64. Re-derive that branch independently (NaN drops to MIN_PARAM)
+    // before adding any non-finite-T golden.
     t.max(MIN_PARAM)
 }
 
