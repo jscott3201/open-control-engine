@@ -30,6 +30,10 @@ CDL.Discrete.TriggeredSampler/trigger_initially_true reference -> goldens/CDL/Di
 CDL.Discrete.TriggeredSampler/trigger_initially_true y -> goldens/CDL/Discrete/TriggeredSampler/trigger_initially_true/y.csv
 CDL.Discrete.UnitDelay reference -> goldens/CDL/Discrete/UnitDelay/reference.csv
 CDL.Discrete.UnitDelay y -> goldens/CDL/Discrete/UnitDelay/y.csv
+CDL.Discrete.UnitDelay/inter_sample_ticks reference -> goldens/CDL/Discrete/UnitDelay/inter_sample_ticks/reference.csv
+CDL.Discrete.UnitDelay/inter_sample_ticks y -> goldens/CDL/Discrete/UnitDelay/inter_sample_ticks/y.csv
+CDL.Discrete.UnitDelay/unaligned_first_tick reference -> goldens/CDL/Discrete/UnitDelay/unaligned_first_tick/reference.csv
+CDL.Discrete.UnitDelay/unaligned_first_tick y -> goldens/CDL/Discrete/UnitDelay/unaligned_first_tick/y.csv
 CDL.Discrete.UnitDelay/y_start_nonzero reference -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/reference.csv
 CDL.Discrete.UnitDelay/y_start_nonzero y -> goldens/CDL/Discrete/UnitDelay/y_start_nonzero/y.csv
 CDL.Discrete.ZeroOrderHold reference -> goldens/CDL/Discrete/ZeroOrderHold/reference.csv
@@ -150,6 +154,9 @@ CDL.Logical.Switch y -> goldens/CDL/Logical/Switch/y.csv
 CDL.Logical.Timer passed -> goldens/CDL/Logical/Timer/passed.csv
 CDL.Logical.Timer reference -> goldens/CDL/Logical/Timer/reference.csv
 CDL.Logical.Timer y -> goldens/CDL/Logical/Timer/y.csv
+CDL.Logical.Timer/input_never_rises passed -> goldens/CDL/Logical/Timer/input_never_rises/passed.csv
+CDL.Logical.Timer/input_never_rises reference -> goldens/CDL/Logical/Timer/input_never_rises/reference.csv
+CDL.Logical.Timer/input_never_rises y -> goldens/CDL/Logical/Timer/input_never_rises/y.csv
 CDL.Logical.Timer/threshold_zero passed -> goldens/CDL/Logical/Timer/threshold_zero/passed.csv
 CDL.Logical.Timer/threshold_zero reference -> goldens/CDL/Logical/Timer/threshold_zero/reference.csv
 CDL.Logical.Timer/threshold_zero y -> goldens/CDL/Logical/Timer/threshold_zero/y.csv
@@ -223,6 +230,10 @@ CDL.Reals.GreaterThreshold/hysteretic_preset reference -> goldens/CDL/Reals/Grea
 CDL.Reals.GreaterThreshold/hysteretic_preset y -> goldens/CDL/Reals/GreaterThreshold/hysteretic_preset/y.csv
 CDL.Reals.Hysteresis reference -> goldens/CDL/Reals/Hysteresis/reference.csv
 CDL.Reals.Hysteresis y -> goldens/CDL/Reals/Hysteresis/y.csv
+CDL.Reals.IntegratorWithReset reference -> goldens/CDL/Reals/IntegratorWithReset/reference.csv
+CDL.Reals.IntegratorWithReset y -> goldens/CDL/Reals/IntegratorWithReset/y.csv
+CDL.Reals.IntegratorWithReset/gain reference -> goldens/CDL/Reals/IntegratorWithReset/gain/reference.csv
+CDL.Reals.IntegratorWithReset/gain y -> goldens/CDL/Reals/IntegratorWithReset/gain/y.csv
 CDL.Reals.Less reference -> goldens/CDL/Reals/Less/reference.csv
 CDL.Reals.Less y -> goldens/CDL/Reals/Less/y.csv
 CDL.Reals.Less/hysteretic reference -> goldens/CDL/Reals/Less/hysteretic/reference.csv

@@ -9,7 +9,9 @@ use oce_model::{
     determinism::{canonicalize_real, det_max},
 };
 
-use crate::discrete_sampled::{initial_sample_time, sample_due, valid_sample_period};
+use crate::discrete_sampled::{
+    at_sample_instant, initial_sample_time, sample_due, valid_sample_period,
+};
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const TRIGGERED_SAMPLER_HELD_WORD: usize = 0;
@@ -40,17 +42,24 @@ fn word_i64(word: u64) -> i64 {
 }
 
 const UNIT_DELAY_HELD_WORD: usize = 0;
-const UNIT_DELAY_T0_WORD: usize = 1;
-const UNIT_DELAY_LAST_INDEX_WORD: usize = 2;
-const UNIT_DELAY_INITIALIZED_WORD: usize = 3;
-const UNIT_DELAY_STATE_WORDS: usize = 4;
+const UNIT_DELAY_STAGED_WORD: usize = 1;
+const UNIT_DELAY_T0_WORD: usize = 2;
+const UNIT_DELAY_LAST_INDEX_WORD: usize = 3;
+const UNIT_DELAY_INITIALIZED_WORD: usize = 4;
+const UNIT_DELAY_STATE_WORDS: usize = 5;
 
-/// `CDL.Discrete.UnitDelay` — `y(k) = u(k−1)`, a one-sample `Real` delay and a discrete
-/// loop-breaker (`03` §4.6) on the configured `samplePeriod`: stateful with `feeds_through ==
-/// false`, so it cuts the direct-feedthrough DAG. The held output is seeded from `y_start` and
-/// updates only when the sample clock reaches the next periodic instant. Invalid direct
-/// construction periods degrade to `1.0`; validated models must supply a finite period at least
-/// `1E-3`.
+/// `CDL.Discrete.UnitDelay` — `y = pre(u_internal)` on the `samplePeriod` clock, a one-sample
+/// `Real` delay and a discrete loop-breaker (`03` §4.6): stateful with `feeds_through == false`,
+/// so it cuts the direct-feedthrough DAG (the sample-instant check in `emit_from_state` reads only
+/// the tick time and prior state, never a current input).
+///
+/// Mirrors Buildings `Discrete/UnitDelay.mo` exactly: two state values track the upstream
+/// discrete pair — the held output `y` (the input sampled at the *previous* instant) and the
+/// staged `u_internal` (the input sampled at the *most recent* instant). At each sample instant
+/// `y` becomes the staged sample and the current input is staged; between instants `y` holds.
+/// Both are seeded from `y_start`, so `y` is identical to `y_start` until the **second** sample
+/// instant, per the upstream documentation. Invalid direct-construction periods degrade to `1.0`;
+/// validated models must supply a finite period at least `1E-3`.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct UnitDelay {
     pub(crate) y_start: f64,
@@ -78,25 +87,50 @@ impl Block for UnitDelay {
     }
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[UNIT_DELAY_HELD_WORD] = canonicalize_real(self.y_start).to_bits();
+        region[UNIT_DELAY_STAGED_WORD] = canonicalize_real(self.y_start).to_bits();
         region[UNIT_DELAY_T0_WORD] = 0.0f64.to_bits();
         region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(-1);
         region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(false);
     }
     fn emit_from_state(
         &self,
-        _ctx: &Ctx<'_>,
+        ctx: &Ctx<'_>,
         _inputs: &[Value],
         region: &[u64],
         emit: &mut dyn FnMut(usize, Value),
     ) {
-        emit_real(0, f64::from_bits(region[UNIT_DELAY_HELD_WORD]), emit);
+        if !word_bool(region[UNIT_DELAY_INITIALIZED_WORD]) {
+            emit_real(0, f64::from_bits(region[UNIT_DELAY_HELD_WORD]), emit);
+            return;
+        }
+        // At a sample instant the upstream `when` fires before the output is read: `y` becomes
+        // the previously staged sample. Between instants the held word is unchanged. This check
+        // reads only the tick time and prior state, so `feeds_through` stays `false`.
+        let period = valid_sample_period(self.sample_period);
+        let t0 = f64::from_bits(region[UNIT_DELAY_T0_WORD]);
+        let last = word_i64(region[UNIT_DELAY_LAST_INDEX_WORD]);
+        let (due, _) = sample_due(ctx.t(), t0, period, last);
+        let word = if due {
+            UNIT_DELAY_STAGED_WORD
+        } else {
+            UNIT_DELAY_HELD_WORD
+        };
+        emit_real(0, f64::from_bits(region[word]), emit);
     }
     fn update_state(&self, ctx: &Ctx<'_>, inputs: &[Value], region: &mut [u64]) {
         let period = valid_sample_period(self.sample_period);
         if !word_bool(region[UNIT_DELAY_INITIALIZED_WORD]) {
             let t0 = initial_sample_time(ctx.t(), period);
             let (_, index) = sample_due(ctx.t(), t0, period, -1);
-            region[UNIT_DELAY_HELD_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            // Upstream fires on `when sampleTrigger` with NO `initial()` (unlike the
+            // Sampler/ZeroOrderHold/FirstOrderHold family): the first tick samples only when it
+            // lands exactly on a sample instant, firing `y = pre(u_internal) = y_start` (held
+            // word unchanged) and staging `u_internal = u`. A mid-interval start holds BOTH
+            // words at `y_start` until the next true instant (`last_index` still advances so
+            // the next boundary fires).
+            if at_sample_instant(ctx.t(), t0, period, index) {
+                region[UNIT_DELAY_STAGED_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            }
             region[UNIT_DELAY_T0_WORD] = t0.to_bits();
             region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(index);
             region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(true);
@@ -106,7 +140,8 @@ impl Block for UnitDelay {
         let last = word_i64(region[UNIT_DELAY_LAST_INDEX_WORD]);
         let (due, index) = sample_due(ctx.t(), t0, period, last);
         if due {
-            region[UNIT_DELAY_HELD_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
+            region[UNIT_DELAY_HELD_WORD] = region[UNIT_DELAY_STAGED_WORD];
+            region[UNIT_DELAY_STAGED_WORD] = canonicalize_real(read_real(inputs, 0)).to_bits();
             region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(index);
         }
     }

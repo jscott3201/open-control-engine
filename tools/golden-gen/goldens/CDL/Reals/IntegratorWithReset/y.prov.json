@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Reals.IntegratorWithReset",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 8,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y_reset_in", "trigger", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [2.0, 2.0, -1.0, 4.0, 0.5, 10.0, 0.0, 3.0] },
+    { "name": "y_reset_in", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 7.0, 11.0, 0.0, 0.0, -5.0] },
+    { "name": "trigger", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0] }
+  ],
+  "input": "default k=1, y_start=1.0; dt=0.1 decimal grid (non-dyadic residue); rising trigger at row 3 stores 7.0 for the next emit, held-high row 4 integrates instead of re-resetting to 11.0, second rising trigger at row 7 stores -5.0",
+  "reference_rule": "Emit prior x; then x := y_reset_in on a rising trigger else x + k*u*dt (first dt=0); reinit is direct assignment, never scaled by k; Buildings Reals/IntegratorWithReset.mo der(y)=k*u + when trigger reinit(y, y_reset_in)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

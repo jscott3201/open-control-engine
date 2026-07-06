@@ -17,14 +17,31 @@ const STATE_WORDS: usize = 3;
 
 /// `CDL.Reals.IntegratorWithReset` — forward-Euler integrator with a rising-edge reset:
 ///
+/// - Integrates `der(y) = k * u` (Buildings `Reals/IntegratorWithReset.mo`): the accumulator
+///   advances by `k * u * dt`, with the gain `k` defaulting to `1` exactly as upstream.
 /// - `[S]` loop cut: `y` is emitted from the prior accumulator and feeds through from no current
 ///   input (`y <- {}`).
 /// - First tick integrates with `dt = 0` because there is no previous model time.
 /// - A rising `trigger` stores `y_reset_in` during `update_state`, so the reset is visible at the
-///   **next** emit; a held-high trigger does not reset again.
-#[derive(Clone, Copy, Debug, Default)]
+///   **next** emit; a held-high trigger does not reset again. The reset value is **not** scaled by
+///   `k` (upstream `reinit(y, y_reset_in)` assigns the state directly).
+/// - A `trigger` already true on the FIRST tick counts as a rising edge: the engine-wide `pre()`
+///   convention initializes every previous-input word to `false` (same deliberate modeling choice
+///   as `TriggeredSampler`/`TriggeredMax`; Modelica leaves when-clauses inactive at
+///   initialization, so this is a documented discretization decision, not upstream behavior).
+#[derive(Clone, Copy, Debug)]
 pub struct IntegratorWithReset {
+    pub(crate) k: f64,
     pub(crate) y_start: f64,
+}
+
+impl Default for IntegratorWithReset {
+    fn default() -> Self {
+        Self {
+            k: 1.0,
+            y_start: 0.0,
+        }
+    }
 }
 
 impl Block for IntegratorWithReset {
@@ -77,7 +94,7 @@ impl Block for IntegratorWithReset {
         let next_x = if trigger && !prev_trigger {
             y_reset_in
         } else {
-            forward_euler_accumulate(x, u, dt)
+            forward_euler_accumulate(x, self.k * u, dt)
         };
         region[X_WORD] = next_x.to_bits();
         region[PREV_T_WORD] = ctx.t().to_bits();

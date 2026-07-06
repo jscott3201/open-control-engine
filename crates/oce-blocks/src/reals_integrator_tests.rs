@@ -68,7 +68,10 @@ fn assert_trace_bits(got: &[Value], want: &[u64]) {
 
 #[test]
 fn integrator_with_reset_state_and_feedthrough_contract() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     assert_eq!(
         block.signature().class_path,
         "CDL.Reals.IntegratorWithReset"
@@ -86,7 +89,10 @@ fn integrator_with_reset_state_and_feedthrough_contract() {
 
 #[test]
 fn forward_euler_variable_dt_trace_is_hand_derived() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     let steps = [
         (0.0, 2.0, 0.0, false),
         (0.5, 2.0, 0.0, false),
@@ -105,7 +111,10 @@ fn forward_euler_variable_dt_trace_is_hand_derived() {
 
 #[test]
 fn forward_euler_non_dyadic_residue_trace_is_hand_derived() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let steps = [
         (0.0, 0.2, 0.0, false),
         (0.1, 0.2, 0.0, false),
@@ -134,7 +143,10 @@ fn forward_euler_non_dyadic_residue_trace_is_hand_derived() {
 
 #[test]
 fn reset_is_rising_edge_and_visible_one_tick_later() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     let steps = [
         (0.0, 2.0, 0.0, false),
         (1.0, 2.0, 0.0, false),
@@ -153,7 +165,10 @@ fn reset_is_rising_edge_and_visible_one_tick_later() {
 
 #[test]
 fn first_tick_trigger_high_resets_for_next_emit_only() {
-    let block = IntegratorWithReset { y_start: 2.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 2.0,
+    };
     let steps = [
         (0.0, 10.0, 7.0, true),
         (1.0, 10.0, 9.0, true),
@@ -168,7 +183,10 @@ fn first_tick_trigger_high_resets_for_next_emit_only() {
 
 #[test]
 fn reset_value_path_propagates_extreme_and_nan_bits() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
     let max_steps = [
         (0.0, 1.0, 0.0, false),
@@ -204,7 +222,10 @@ fn reset_value_path_propagates_extreme_and_nan_bits() {
 
 #[test]
 fn zero_dt_negative_u_and_nonzero_start_edges_are_pinned() {
-    let block = IntegratorWithReset { y_start: 2.5 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 2.5,
+    };
     let steps = [
         (1.0, -4.0, 0.0, false),
         (1.0, -4.0, 0.0, false),
@@ -217,7 +238,10 @@ fn zero_dt_negative_u_and_nonzero_start_edges_are_pinned() {
 
 #[test]
 fn non_finite_integrand_accumulation_is_current_ieee_behavior() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let inf_steps = [
         (0.0, 0.0, 0.0, false),
         (1.0, f64::INFINITY, 0.0, false),
@@ -246,8 +270,57 @@ fn non_finite_integrand_accumulation_is_current_ieee_behavior() {
 }
 
 #[test]
+fn gain_scales_the_integrand_per_upstream_der_y_eq_k_times_u() {
+    // Upstream Buildings `Reals/IntegratorWithReset.mo`: `der(y) = k*u`. Hand-derived with
+    // k = 2.5: x0 = 1; x(t=0.5 update) = 1 + 2.5*2.0*0.5 = 3.5; x(t=1.5 update) =
+    // 3.5 + 2.5*(-1.0)*1.0 = 1.0. Emits show the prior accumulator.
+    let block = IntegratorWithReset {
+        k: 2.5,
+        y_start: 1.0,
+    };
+    let steps = [
+        (0.0, 2.0, 0.0, false),
+        (0.5, 2.0, 0.0, false),
+        (1.5, -1.0, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    assert_trace(&trace, &[1.0, 1.0, 3.5]);
+    assert_eq!(f64::from_bits(region[0]).to_bits(), 1.0f64.to_bits());
+}
+
+#[test]
+fn reset_value_is_not_scaled_by_gain() {
+    // Upstream `reinit(y, y_reset_in)` assigns the state directly; the gain only scales the
+    // integrand. With k = 3.0 the rising trigger at t=1 must store exactly 7.0, not 21.0.
+    let block = IntegratorWithReset {
+        k: 3.0,
+        y_start: 0.0,
+    };
+    let steps = [
+        (0.0, 1.0, 0.0, false),
+        (1.0, 1.0, 7.0, true),
+        (2.0, 0.0, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    assert_trace(&trace, &[0.0, 0.0, 7.0]);
+    assert_eq!(f64::from_bits(region[0]).to_bits(), 7.0f64.to_bits());
+}
+
+#[test]
+fn default_gain_is_upstream_unity() {
+    // Buildings declares `parameter Real k=1`; the bare Rust Default must match so direct
+    // construction and an omitted CXF `k` agree.
+    let block = IntegratorWithReset::default();
+    assert_eq!(block.k.to_bits(), 1.0f64.to_bits());
+    assert_eq!(block.y_start.to_bits(), 0.0f64.to_bits());
+}
+
+#[test]
 fn integrator_trace_is_byte_deterministic_across_runs() {
-    let block = IntegratorWithReset { y_start: -0.25 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: -0.25,
+    };
     let steps = [
         (0.0, 1.0, 0.0, false),
         (0.25, 4.0, 0.0, false),

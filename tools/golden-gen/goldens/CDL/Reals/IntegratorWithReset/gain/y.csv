@@ -1,0 +1,9 @@
+#1
+# columns: time y
+double CDL_Reals_IntegratorWithReset_gain_y(6,2)
+0.0 1.0
+0.1 1.0
+0.2 1.5
+0.30000000000000004 1.25
+0.4 0.9999999999999999
+0.5 7.0

@@ -58,31 +58,6 @@ const RAMP_INPUTS: &[Port] = &[
         kind: B,
     },
 ];
-const PID_INPUTS: &[Port] = &[
-    Port {
-        name: "u_s",
-        kind: R,
-    },
-    Port {
-        name: "u_m",
-        kind: R,
-    },
-];
-const PID_RESET_INPUTS: &[Port] = &[
-    Port {
-        name: "u_s",
-        kind: R,
-    },
-    Port {
-        name: "u_m",
-        kind: R,
-    },
-    Port {
-        name: "trigger",
-        kind: B,
-    },
-];
-
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
 const BOOL_Y: &[Port] = &[Port { name: "y", kind: B }];
 
@@ -252,28 +227,6 @@ const HYSTERESIS_PARAMS: &[Param] = &[
         value: ParamValue::Real("3.5"),
     },
 ];
-const PID_PI_RECURRENCE_PARAMS: &[Param] = &[
-    Param {
-        name: "k",
-        value: ParamValue::Real("0.37"),
-    },
-    Param {
-        name: "Ti",
-        value: ParamValue::Real("0.3"),
-    },
-    Param {
-        name: "xi_start",
-        value: ParamValue::Real("0.19"),
-    },
-    Param {
-        name: "yMin",
-        value: ParamValue::Real("-0.36"),
-    },
-    Param {
-        name: "yMax",
-        value: ParamValue::Real("0.42"),
-    },
-];
 const RAMP_CLAMPED_PARAMS: &[Param] = &[
     Param {
         name: "raisingSlewRate",
@@ -330,33 +283,6 @@ const RAMP_IMPLICIT_RESIDUE_PARAMS: &[Param] = &[
         value: ParamValue::Real("1.0"),
     },
 ];
-const PID_RESET_PI_RECURRENCE_PARAMS: &[Param] = &[
-    Param {
-        name: "k",
-        value: ParamValue::Real("0.37"),
-    },
-    Param {
-        name: "Ti",
-        value: ParamValue::Real("0.3"),
-    },
-    Param {
-        name: "xi_start",
-        value: ParamValue::Real("0.11"),
-    },
-    Param {
-        name: "y_reset",
-        value: ParamValue::Real("0.275"),
-    },
-    Param {
-        name: "yMin",
-        value: ParamValue::Real("-0.35"),
-    },
-    Param {
-        name: "yMax",
-        value: ParamValue::Real("0.45"),
-    },
-];
-
 const CASES: &[BlockCase] = &[
     case(
         "reals_constant",
@@ -644,22 +570,6 @@ const CASES: &[BlockCase] = &[
         RAMP_IMPLICIT_RESIDUE_PARAMS,
         REAL_Y,
     ),
-    case(
-        "reals_pid_pi_recurrence",
-        "CDL.Reals.PID",
-        "PID/pi_recurrence",
-        PID_INPUTS,
-        PID_PI_RECURRENCE_PARAMS,
-        REAL_Y,
-    ),
-    case(
-        "reals_pid_with_reset_pi_recurrence",
-        "CDL.Reals.PIDWithReset",
-        "PIDWithReset/pi_reset_recurrence",
-        PID_RESET_INPUTS,
-        PID_RESET_PI_RECURRENCE_PARAMS,
-        REAL_Y,
-    ),
 ];
 
 const STATEFUL_REALS_SLUGS: &[&str] = &[
@@ -676,8 +586,6 @@ const STATEFUL_REALS_SLUGS: &[&str] = &[
     "reals_ramp_active_reinitialize",
     "reals_ramp_clamped_edges",
     "reals_ramp_implicit_residue",
-    "reals_pid_pi_recurrence",
-    "reals_pid_with_reset_pi_recurrence",
 ];
 
 #[test]

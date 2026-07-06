@@ -410,28 +410,43 @@ struct TimerState {
     entry_time: f64,
     prev_t: Option<f64>,
     prev_u: bool,
+    passed: bool,
 }
 
 impl TimerState {
     fn new(threshold: f64) -> Self {
         Self {
             threshold,
+            // Upstream Buildings `Logical/Timer.mo`: `initial equation pre(passed) = t <= 0`.
+            passed: threshold <= 0.0,
             ..Self::default()
         }
     }
 
+    /// Upstream `passed` discrete latch: a rising `u` re-arms it to `t <= 0`, crossing the
+    /// threshold while `u` is true sets it, a falling `u` clears it, and it otherwise holds.
+    /// (Extensionally equivalent to the previous `u && y >= t` gate for this sequence's strictly
+    /// positive thresholds; consolidated onto the corrected latch per the PR #145 review.)
     fn output(&self, t: f64, u: bool) -> TimerOutput {
         let y = if !u || self.prev_t.is_none() || !self.prev_u {
             0.0
         } else {
             t - self.entry_time
         };
-        TimerOutput {
-            passed: u && y >= self.threshold,
-        }
+        let passed = if u && !self.prev_u {
+            self.threshold <= 0.0
+        } else if u && y >= self.threshold {
+            true
+        } else if !u && self.prev_u {
+            false
+        } else {
+            self.passed
+        };
+        TimerOutput { passed }
     }
 
     fn update(&mut self, t: f64, u: bool) {
+        self.passed = self.output(t, u).passed;
         if u && (self.prev_t.is_none() || !self.prev_u) {
             self.entry_time = t;
         }

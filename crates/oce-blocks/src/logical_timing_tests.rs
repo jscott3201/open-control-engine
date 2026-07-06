@@ -153,6 +153,57 @@ fn timer_goldens_pin_threshold_and_non_dyadic_dt() {
 }
 
 #[test]
+fn timer_passed_initializes_true_for_nonpositive_threshold_while_input_never_rises() {
+    // Upstream Buildings `Logical/Timer.mo`: `initial equation pre(passed) = t <= 0`, and the
+    // only clause that clears `passed` is `elsewhen not u` — a FALLING edge. An input held false
+    // from the start fires no edge, so with the default `t = 0` the latch reports `true`
+    // indefinitely. (This pins the closeout-confirmed divergence fix, 2026-07-06.)
+    let timer = Timer { t: 0.0 };
+    let (trace, _) = run(
+        &timer,
+        &[
+            (0.0, vec![Value::Boolean(false)]),
+            (1.0, vec![Value::Boolean(false)]),
+            (2.0, vec![Value::Boolean(false)]),
+        ],
+    );
+    for got in &trace {
+        assert_real_bits(&got[0], 0x0000_0000_0000_0000);
+        assert_bool(&got[1], true);
+    }
+
+    // A positive threshold initializes the latch false; holding u false keeps it false.
+    let timer = Timer { t: 0.5 };
+    let (trace, _) = run(
+        &timer,
+        &[
+            (0.0, vec![Value::Boolean(false)]),
+            (1.0, vec![Value::Boolean(false)]),
+        ],
+    );
+    for got in &trace {
+        assert_bool(&got[1], false);
+    }
+
+    // Once a falling edge fires, the latch clears and idle-false keeps it cleared — the
+    // initialization value never resurrects.
+    let timer = Timer { t: 0.0 };
+    let (trace, _) = run(
+        &timer,
+        &[
+            (0.0, vec![Value::Boolean(false)]), // initial latch: t <= 0 => true
+            (1.0, vec![Value::Boolean(true)]),  // rising edge: t <= 0 => true
+            (2.0, vec![Value::Boolean(false)]), // falling edge: false
+            (3.0, vec![Value::Boolean(false)]), // no edge: holds false
+        ],
+    );
+    let expected = [true, true, false, false];
+    for (got, passed) in trace.iter().zip(expected) {
+        assert_bool(&got[1], passed);
+    }
+}
+
+#[test]
 fn timer_threshold_zero_passed_is_false_while_idle() {
     let timer = Timer { t: 0.0 };
     let (trace, _) = run(
@@ -353,11 +404,11 @@ fn timing_latch_feedthrough_perturbations_pin_current_input_surface() {
 
     let timer = Timer { t: 1.0 };
     assert_real_bits(
-        &emit_at(&timer, &[half, zero, 1], 1.0, &[Value::Boolean(true)])[0],
+        &emit_at(&timer, &[half, zero, 1, 0], 1.0, &[Value::Boolean(true)])[0],
         0x3fe0_0000_0000_0000,
     );
     assert_real_bits(
-        &emit_at(&timer, &[half, zero, 1], 1.0, &[Value::Boolean(false)])[0],
+        &emit_at(&timer, &[half, zero, 1, 0], 1.0, &[Value::Boolean(false)])[0],
         zero,
     );
 

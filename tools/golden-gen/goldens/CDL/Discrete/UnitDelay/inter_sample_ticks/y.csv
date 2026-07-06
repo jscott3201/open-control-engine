@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Discrete_UnitDelay_inter_sample_ticks_y(5,2)
+0.0 2.5
+1.0 2.5
+2.0 0.1
+3.0 0.1
+4.0 0.3

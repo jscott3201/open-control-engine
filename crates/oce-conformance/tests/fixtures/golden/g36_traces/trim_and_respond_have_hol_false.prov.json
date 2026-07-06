@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "623449d0b2323de173136f198df70ba232ff0116",
+  "engine_rev": "c8c86bfb2ec40465d368819825e3fdd65774f63e",
   "reference_columns": [
     "http://example.org#g36.source.trim_and_respond_have_hol_false.y"
   ]

@@ -79,6 +79,81 @@ pub fn goldens() -> Vec<Golden> {
         );
     }
 
+    // UnitDelay scenario variant: ticks BETWEEN sample instants (samplePeriod=2, tick step 1).
+    // Upstream `when sampleTrigger then u_internal = u; y = pre(u_internal)` holds y constant
+    // across the whole interval: the inter-sample ticks at t=1 and t=3 must re-emit the value
+    // from the previous instant, NOT the sample staged at the most recent one. This is the
+    // oracle-diff scenario for the 2026-07-06 closeout divergence fix ("before the second sample
+    // instant, the output y is identical to parameter y_start" — Buildings UnitDelay.mo doc).
+    {
+        let t = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+        let u = [0.1, 0.2, 0.3, 0.4, 0.5];
+        let y_start = 2.5_f64;
+        let mut y_held = y_start; // upstream y between instants
+        let mut u_internal = y_start; // upstream staged sample
+        let mut y = Vec::new();
+        for (k, &cur) in u.iter().enumerate() {
+            let instant = k % 2 == 0; // ticks at t=0,2,4 land on instants
+            if instant {
+                // `when sampleTrigger`: y = pre(u_internal), then u_internal = u.
+                y.push(r(u_internal));
+                y_held = u_internal;
+                u_internal = cur;
+            } else {
+                y.push(r(y_held));
+            }
+        }
+        out.push(
+            Golden::new(
+                "CDL.Discrete.UnitDelay",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=2.0, tick step 1.0, y_start=2.5; u=[0.1..0.5]; inter-sample ticks hold the previous instant's value",
+                "when sampleTrigger: u_internal=u, y=pre(u_internal); y holds between instants; Buildings Discrete/UnitDelay.mo",
+            )
+            .with_scenario("inter_sample_ticks")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
+    // UnitDelay scenario variant: first tick BETWEEN instants (t=0.5, samplePeriod=1, t0=0).
+    // Upstream fires on `when sampleTrigger` with NO initial() clause, so the mid-interval start
+    // must NOT stage u(0.5): y and u_internal hold y_start until the first true instant. The
+    // poison first input 9.9 must never surface in y. (PR #145 review-confirmed fix.)
+    {
+        let t = vec![0.5, 1.0, 1.5, 2.0, 3.0];
+        let u = [9.9, 0.2, 0.3, 0.4, 0.5];
+        let instants = [false, true, false, true, true]; // t=1,2,3 are true sample instants
+        let y_start = 2.5_f64;
+        let mut y_held = y_start;
+        let mut u_internal = y_start;
+        let mut y = Vec::new();
+        for (k, &cur) in u.iter().enumerate() {
+            if instants[k] {
+                y.push(r(u_internal));
+                y_held = u_internal;
+                u_internal = cur;
+            } else {
+                y.push(r(y_held));
+            }
+        }
+        out.push(
+            Golden::new(
+                "CDL.Discrete.UnitDelay",
+                "y",
+                ValueKind::Real,
+                t,
+                y,
+                "samplePeriod=1.0, first tick at t=0.5 (mid-interval), y_start=2.5; u=[9.9,0.2,0.3,0.4,0.5]; the unaligned first input is never staged",
+                "when sampleTrigger (NO initial()): a mid-interval start holds y=y_start and stages nothing until the first true instant; Buildings Discrete/UnitDelay.mo",
+            )
+            .with_scenario("unaligned_first_tick")
+            .with_inputs(vec![input_r("u", u)]),
+        );
+    }
+
     // Sampler: initial() samples at simulation start; periodic t0 supports negative start time.
     {
         let t = vec![-0.25, 0.0, 0.5, 1.0, 1.5];

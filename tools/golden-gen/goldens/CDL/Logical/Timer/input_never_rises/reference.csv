@@ -1,0 +1,7 @@
+#1
+# columns: time u y passed
+double CDL_Logical_Timer_input_never_rises_reference(4,4)
+0.0 0.0 0.0 1.0
+0.1 0.0 0.0 1.0
+0.2 0.0 0.0 1.0
+0.3 0.0 0.0 1.0

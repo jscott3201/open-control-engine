@@ -65,7 +65,11 @@ fn trim_and_respond_trace(
     let mut sampler_last_index = -1;
     let mut sampler_initialized = false;
 
-    let mut unit_delay_held = INI_SET;
+    // Upstream Buildings `Discrete/UnitDelay.mo` pair: `y = pre(u_internal)` (held across the
+    // interval) and the staged `u_internal` (sampled at the most recent instant). Both initialize
+    // to y_start = iniSet.
+    let mut unit_delay_y = INI_SET;
+    let mut unit_delay_u_internal = INI_SET;
     let mut unit_delay_t0 = 0.0;
     let mut unit_delay_last_index = -1;
     let mut unit_delay_initialized = false;
@@ -101,7 +105,15 @@ fn trim_and_respond_trace(
         } else {
             TRI_AMO
         };
-        let candidate = clamp(unit_delay_held + net_reset, MIN_SET, MAX_SET);
+        // UnitDelay output at this tick: at a sample instant the `when` fires before the output
+        // is read (y becomes the previously staged sample); between instants y holds.
+        let unit_delay_out = if !unit_delay_initialized {
+            unit_delay_y
+        } else {
+            let (due, _) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
+            if due { unit_delay_u_internal } else { unit_delay_y }
+        };
+        let candidate = clamp(unit_delay_out + net_reset, MIN_SET, MAX_SET);
         let trim_respond = if device_on { candidate } else { INI_SET };
         out.push(trim_respond);
 
@@ -136,13 +148,15 @@ fn trim_and_respond_trace(
         if !unit_delay_initialized {
             unit_delay_t0 = initial_sample_time(t, SAMPLE_PERIOD);
             unit_delay_last_index = sample_index(t, unit_delay_t0, SAMPLE_PERIOD);
-            unit_delay_held = trim_respond;
+            // First instant: `y = pre(u_internal)` keeps y_start; the current input is staged.
+            unit_delay_u_internal = trim_respond;
             unit_delay_initialized = true;
         } else {
             let (due, index) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
             if due {
                 unit_delay_last_index = index;
-                unit_delay_held = trim_respond;
+                unit_delay_y = unit_delay_u_internal; // y = pre(u_internal)
+                unit_delay_u_internal = trim_respond; // u_internal = u
             }
         }
     }
