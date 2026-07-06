@@ -195,7 +195,12 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
+/// Upstream `Limiter.mo` (pin `a131864`) declares `uMax`/`uMin` with NO default value and an
+/// initial-equation `assert(uMin < uMax)`; the engine errors on inversion and softens equality
+/// to a warning.
 pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "uMax" },
+    ParamRule::Required { name: "uMin" },
     ParamRule::RealLessOrEqual {
         lower: "uMin",
         upper: "uMax",
@@ -203,6 +208,35 @@ pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
     ParamRule::RealEqualWarning {
         left: "uMin",
         right: "uMax",
+    },
+];
+
+/// Upstream declares these parameters with NO default value (pin `a131864`): `Round.n`
+/// ("Number of digits to be round to"), `AddParameter.p`, `MultiplyByParameter.k`, and
+/// `Sources/Constant.k`. Omitting one in a model is an authoring error that previously fell
+/// through to a silent engine default (n=0 / p=0 / k=1 / k=0.0), silently changing behavior.
+pub(super) const ROUND_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "n" }];
+
+pub(super) const ADD_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "p" }];
+
+pub(super) const MULTIPLY_BY_PARAMETER_PARAM_RULES: &[ParamRule] =
+    &[ParamRule::Required { name: "k" }];
+
+pub(super) const REAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+
+/// Upstream `Hysteresis.mo` (pin `a131864`) declares `uLow`/`uHigh` with NO default and an
+/// initial-equation `assert(uHigh > uLow)`; mirrored like the Limiter pair (error on
+/// inversion, warning on equality).
+pub(super) const HYSTERESIS_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "uLow" },
+    ParamRule::Required { name: "uHigh" },
+    ParamRule::RealLessOrEqual {
+        lower: "uLow",
+        upper: "uHigh",
+    },
+    ParamRule::RealEqualWarning {
+        left: "uLow",
+        right: "uHigh",
     },
 ];
 

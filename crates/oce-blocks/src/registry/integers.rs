@@ -12,6 +12,14 @@ use crate::{
     OnCounter, ParamRule, RegistryEntry, TimeTableValues,
 };
 
+/// Upstream declares these parameters with NO default value (pin `a131864`):
+/// `Integers/Sources/Constant.k` and `Integers/AddParameter.p`. Omitting one previously fell
+/// through to a silent engine default (k=0 / p=0).
+pub(super) const INTEGER_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+
+pub(super) const INTEGER_ADD_PARAMETER_PARAM_RULES: &[ParamRule] =
+    &[ParamRule::Required { name: "p" }];
+
 pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Required { name: "n" },
     ParamRule::Required {

@@ -18,15 +18,27 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
-pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "Td",
-    min: 0.0,
-}];
+/// Upstream `LimitSlewRate.mo` (pin `a131864`) declares `raisingSlewRate` with NO default
+/// (`fallingSlewRate` and `Td` default derived from it). Exact-bound alignment of the range
+/// rules to the upstream `min=` annotations is tracked separately.
+pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required {
+        name: "raisingSlewRate",
+    },
+    ParamRule::RealGreaterThan {
+        name: "Td",
+        min: 0.0,
+    },
+];
 
-pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "delta",
-    min: 0.0,
-}];
+/// Upstream `MovingAverage.mo` (pin `a131864`) declares `delta(min=1E-5)` with NO default.
+pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "delta" },
+    ParamRule::RealGreaterThan {
+        name: "delta",
+        min: 0.0,
+    },
+];
 
 fn make_derivative(p: &ParamTable) -> Box<dyn Block> {
     // `k` and `T` are RealInput connectors upstream (declaration order k, T, u), not parameters;

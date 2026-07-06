@@ -30,10 +30,7 @@
 //! Non-finite inputs are deliberately not trapped here yet: NaN/Inf propagate through the
 //! documented recurrence and join the deferred centralized non-finite validation/diagnostic seam.
 
-use oce_model::{
-    ParamTable, SimpleController, Value,
-    determinism::{canonicalize_real, det_max, det_min},
-};
+use oce_model::{ParamTable, SimpleController, Value, determinism::canonicalize_real};
 
 use crate::dynamics::{
     PREV_T_UNSET, first_order_filter_implicit, forward_euler_accumulate,
@@ -42,7 +39,10 @@ use crate::dynamics::{
 use crate::{Block, BlockKind, BlockSignature, Ctx, PortKind, emit_real, read_bool, read_real};
 
 const CDL_EPS: f64 = 1e-15;
-const MIN_PARAM: f64 = 100.0 * CDL_EPS;
+/// The upstream `min=100*Constants.eps` parameter floor (Buildings `Constants.mo`: `eps=1E-15`),
+/// shared with the registry's load-time PID range rules so validation and the runtime
+/// defense-in-depth floor agree bit-exactly.
+pub(crate) const MIN_PARAM: f64 = 100.0 * CDL_EPS;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ControllerConfig {
@@ -97,8 +97,14 @@ impl ControllerConfig {
     }
 
     fn guarded_positive(x: f64) -> f64 {
-        // Internal positive-floor clamp: the effective parameter is always > 0 and is not a
-        // signed-zero/NaN-bearing Real output, so raw max is deterministic enough here.
+        // Defense-in-depth positive-floor clamp for the effective controller parameters. Unlike
+        // `Derivative`'s `positive()` (reals_filters.rs), the operand here is a resolved
+        // build-time PARAMETER, never live Real input data: load-time rules floor k/Ti/Td/r/Ni/Nd
+        // at this same `MIN_PARAM`, and a value that bypasses validation (direct in-crate
+        // construction, unvalidated embedding) is a parsed constant — at worst a quiet NaN,
+        // never a computed signaling NaN — so raw `f64::max` cannot hit the sNaN arch-intrinsic
+        // divergence and is bit-identical to `det_max` here. The strictly positive floor keeps
+        // the signed-zero fixup irrelevant.
         x.max(MIN_PARAM)
     }
 
@@ -132,7 +138,17 @@ impl ControllerConfig {
     }
 
     fn limit(self, y_u: f64) -> f64 {
-        det_min(det_max(y_u, self.y_min), self.y_max)
+        // Upstream PID instantiates `CDL.Reals.Limiter lim(final uMax=yMax, final uMin=yMin)`
+        // for the output clamp; mirror its comparison chain exactly (see
+        // `Limiter::step_algebraic`): a NaN control signal passes through fail-visible instead
+        // of being silently absorbed into `y_min`.
+        if y_u > self.y_max {
+            self.y_max
+        } else if y_u < self.y_min {
+            self.y_min
+        } else {
+            y_u
+        }
     }
 
     fn derivative_gain(self) -> f64 {

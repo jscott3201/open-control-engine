@@ -1,7 +1,7 @@
 use oce_model::{ParamTable, SimpleController};
 
 use super::{bool_param, controller_type_param, real_param};
-use crate::pid::ControllerConfig;
+use crate::pid::{ControllerConfig, MIN_PARAM};
 use crate::{Block, ParamRule, Pid, PidWithReset, RegistryEntry};
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -15,25 +15,82 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
+/// Upstream `PID.mo`/`PIDWithReset.mo` (pin `a131864`) annotate `min=100*Constants.eps` on
+/// exactly {k, Ti, Td, r, Ni, Nd} — an INCLUSIVE Modelica lower bound, hence
+/// `RealGreaterOrEqual` at the shared [`MIN_PARAM`] floor (the same constant the runtime
+/// defense-in-depth clamp uses). The yMin/yMax pair is constrained upstream only transitively,
+/// through the instantiated `Limiter lim(final uMax=yMax, final uMin=yMin)` and its
+/// `assert(uMin < uMax)`; the engine mirrors its own Limiter precedent (error on inversion,
+/// warning on equality). xi_start/yd_start/y_reset are unconstrained upstream and stay unruled.
 pub(super) const PID_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::RealGreaterThan {
-        name: "Td",
-        min: 0.0,
+    ParamRule::RealGreaterOrEqual {
+        name: "k",
+        min: MIN_PARAM,
     },
-    ParamRule::RealGreaterThan {
+    ParamRule::RealGreaterOrEqual {
+        name: "Ti",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "Td",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "r",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "Ni",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
         name: "Nd",
-        min: 0.0,
+        min: MIN_PARAM,
+    },
+    ParamRule::RealLessOrEqual {
+        lower: "yMin",
+        upper: "yMax",
+    },
+    ParamRule::RealEqualWarning {
+        left: "yMin",
+        right: "yMax",
     },
 ];
 
+/// Identical annotation set upstream (`PIDWithReset.mo` is bit-for-bit the same on these
+/// params); `y_reset` is unconstrained upstream and stays unruled.
 pub(super) const PID_WITH_RESET_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::RealGreaterThan {
-        name: "Td",
-        min: 0.0,
+    ParamRule::RealGreaterOrEqual {
+        name: "k",
+        min: MIN_PARAM,
     },
-    ParamRule::RealGreaterThan {
+    ParamRule::RealGreaterOrEqual {
+        name: "Ti",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "Td",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "r",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
+        name: "Ni",
+        min: MIN_PARAM,
+    },
+    ParamRule::RealGreaterOrEqual {
         name: "Nd",
-        min: 0.0,
+        min: MIN_PARAM,
+    },
+    ParamRule::RealLessOrEqual {
+        lower: "yMin",
+        upper: "yMax",
+    },
+    ParamRule::RealEqualWarning {
+        left: "yMin",
+        right: "yMax",
     },
 ];
 

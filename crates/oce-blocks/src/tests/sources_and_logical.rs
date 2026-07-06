@@ -38,7 +38,8 @@ fn limiter_clips_and_tolerates_inverted_bounds() {
     assert!(outs(&lim, &[Value::Real(-5.0)])[0].bit_eq(&Value::Real(0.0)));
     assert!(outs(&lim, &[Value::Real(15.0)])[0].bit_eq(&Value::Real(10.0)));
     assert!(outs(&lim, &[Value::Real(5.0)])[0].bit_eq(&Value::Real(5.0)));
-    // Inverted bounds must not panic; they degrade to u_max deterministically.
+    // Inverted bounds must not panic; the upstream comparison chain degrades deterministically
+    // with the `u > u_max` arm winning first (bit pins live in reals_arithmetic_tests).
     let inv = Limiter {
         u_min: 10.0,
         u_max: 0.0,

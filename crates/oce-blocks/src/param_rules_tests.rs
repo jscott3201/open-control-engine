@@ -3,6 +3,7 @@
 use super::{
     MAX_RESOLVED_PORT_WIDTH, ParamRule, TimeTableValues, lookup, reals_sources::ZERO_TIME_MEMBERS,
 };
+use crate::pid::MIN_PARAM;
 
 #[test]
 fn registry_exposes_block_param_rules() {
@@ -48,6 +49,8 @@ fn registry_exposes_block_param_rules() {
     assert_eq!(
         lookup("CDL.Reals.Limiter").unwrap().param_rules(),
         &[
+            ParamRule::Required { name: "uMax" },
+            ParamRule::Required { name: "uMin" },
             ParamRule::RealLessOrEqual {
                 lower: "uMin",
                 upper: "uMax",
@@ -444,10 +447,15 @@ fn registry_exposes_block_param_rules() {
     );
     assert_eq!(
         lookup("CDL.Reals.LimitSlewRate").unwrap().param_rules(),
-        &[ParamRule::RealGreaterThan {
-            name: "Td",
-            min: 0.0,
-        }]
+        &[
+            ParamRule::Required {
+                name: "raisingSlewRate",
+            },
+            ParamRule::RealGreaterThan {
+                name: "Td",
+                min: 0.0,
+            },
+        ]
     );
     assert_eq!(
         lookup("CDL.Reals.Ramp").unwrap().param_rules(),
@@ -520,36 +528,54 @@ fn registry_exposes_block_param_rules() {
     );
     assert_eq!(
         lookup("CDL.Reals.MovingAverage").unwrap().param_rules(),
-        &[ParamRule::RealGreaterThan {
-            name: "delta",
-            min: 0.0,
-        }]
-    );
-    assert_eq!(
-        lookup("CDL.Reals.PID").unwrap().param_rules(),
         &[
+            ParamRule::Required { name: "delta" },
             ParamRule::RealGreaterThan {
-                name: "Td",
-                min: 0.0,
-            },
-            ParamRule::RealGreaterThan {
-                name: "Nd",
+                name: "delta",
                 min: 0.0,
             },
         ]
     );
+    // Upstream PID.mo/PIDWithReset.mo annotate min=100*Constants.eps (inclusive) on exactly
+    // {k, Ti, Td, r, Ni, Nd}; the yMin/yMax pair mirrors the engine's Limiter precedent.
+    let pid_rules = &[
+        ParamRule::RealGreaterOrEqual {
+            name: "k",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "Ti",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "Td",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "r",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "Ni",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealGreaterOrEqual {
+            name: "Nd",
+            min: MIN_PARAM,
+        },
+        ParamRule::RealLessOrEqual {
+            lower: "yMin",
+            upper: "yMax",
+        },
+        ParamRule::RealEqualWarning {
+            left: "yMin",
+            right: "yMax",
+        },
+    ];
+    assert_eq!(lookup("CDL.Reals.PID").unwrap().param_rules(), pid_rules);
     assert_eq!(
         lookup("CDL.Reals.PIDWithReset").unwrap().param_rules(),
-        &[
-            ParamRule::RealGreaterThan {
-                name: "Td",
-                min: 0.0,
-            },
-            ParamRule::RealGreaterThan {
-                name: "Nd",
-                min: 0.0,
-            },
-        ]
+        pid_rules
     );
     assert_eq!(
         lookup("CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi")
@@ -611,10 +637,63 @@ fn registry_exposes_block_param_rules() {
     ] {
         assert_eq!(lookup(path).unwrap().param_rules(), sampled_rules, "{path}");
     }
-    assert!(
-        lookup("CDL.Reals.Sources.Constant")
+    // Upstream declares these parameters with NO default value (pin a131864): omitting one is
+    // an authoring error, not an implicit engine default.
+    assert_eq!(
+        lookup("CDL.Reals.Sources.Constant").unwrap().param_rules(),
+        &[ParamRule::Required { name: "k" }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.Round").unwrap().param_rules(),
+        &[ParamRule::Required { name: "n" }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.AddParameter").unwrap().param_rules(),
+        &[ParamRule::Required { name: "p" }]
+    );
+    assert_eq!(
+        lookup("CDL.Reals.MultiplyByParameter")
             .unwrap()
-            .param_rules()
-            .is_empty()
+            .param_rules(),
+        &[ParamRule::Required { name: "k" }]
+    );
+    assert_eq!(
+        lookup("CDL.Integers.Sources.Constant")
+            .unwrap()
+            .param_rules(),
+        &[ParamRule::Required { name: "k" }]
+    );
+    assert_eq!(
+        lookup("CDL.Integers.AddParameter").unwrap().param_rules(),
+        &[ParamRule::Required { name: "p" }]
+    );
+    // Hysteresis mirrors the Limiter pattern: both thresholds required (no upstream default)
+    // and the upstream initial-equation assert(uHigh > uLow) as error-on-inversion plus
+    // warning-on-equality.
+    assert_eq!(
+        lookup("CDL.Reals.Hysteresis").unwrap().param_rules(),
+        &[
+            ParamRule::Required { name: "uLow" },
+            ParamRule::Required { name: "uHigh" },
+            ParamRule::RealLessOrEqual {
+                lower: "uLow",
+                upper: "uHigh",
+            },
+            ParamRule::RealEqualWarning {
+                left: "uLow",
+                right: "uHigh",
+            },
+        ]
+    );
+    // IntegratorWithReset exposes NO param rules by policy: upstream declares k=1 and
+    // y_start=0 with no min/max, gain and start-state values are unconstrained engine-wide
+    // (cf. the Derivative assertion above), and non-finite parameter values follow the
+    // documented IEEE-propagation + canonical-NaN-emit convention pending the deferred
+    // centralized non-finite validation seam.
+    assert_eq!(
+        lookup("CDL.Reals.IntegratorWithReset")
+            .unwrap()
+            .param_rules(),
+        &[] as &[ParamRule]
     );
 }

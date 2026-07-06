@@ -10,6 +10,7 @@
 mod common;
 mod determinism;
 mod params;
+mod params_required;
 mod params_sources;
 mod reals_matrix;
 mod routing_real;

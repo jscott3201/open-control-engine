@@ -60,6 +60,18 @@ pub(super) fn block(id: u32, class: &str, inputs: &[u32], outputs: &[u32]) -> Bl
     }
 }
 
+/// A `CDL.Reals.Sources.Constant` with its required `k` supplied — the minimal valid source
+/// block for tests that need a well-formed source and don't care about the value.
+pub(super) fn constant_block(id: u32, outputs: &[u32]) -> BlockInstance {
+    block_with_params(
+        id,
+        "CDL.Reals.Sources.Constant",
+        &[],
+        outputs,
+        vec![(Arc::from("k"), Value::Real(1.0))],
+    )
+}
+
 /// A block instance with explicit raw parameter values.
 pub(super) fn block_with_params(
     id: u32,

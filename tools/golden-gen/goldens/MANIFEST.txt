@@ -252,6 +252,8 @@ CDL.Reals.LessThreshold/hysteretic_preset reference -> goldens/CDL/Reals/LessThr
 CDL.Reals.LessThreshold/hysteretic_preset y -> goldens/CDL/Reals/LessThreshold/hysteretic_preset/y.csv
 CDL.Reals.Limiter reference -> goldens/CDL/Reals/Limiter/reference.csv
 CDL.Reals.Limiter y -> goldens/CDL/Reals/Limiter/y.csv
+CDL.Reals.Limiter/non_finite_and_boundary reference -> goldens/CDL/Reals/Limiter/non_finite_and_boundary/reference.csv
+CDL.Reals.Limiter/non_finite_and_boundary y -> goldens/CDL/Reals/Limiter/non_finite_and_boundary/y.csv
 CDL.Reals.Line reference -> goldens/CDL/Reals/Line/reference.csv
 CDL.Reals.Line y -> goldens/CDL/Reals/Line/y.csv
 CDL.Reals.Line/limit_above_only reference -> goldens/CDL/Reals/Line/limit_above_only/reference.csv
