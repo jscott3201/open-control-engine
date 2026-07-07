@@ -15,6 +15,7 @@ pub mod driver;
 pub mod exact;
 pub mod funnel;
 pub mod mask;
+pub mod report;
 pub mod tiers;
 
 pub use aligned::{AlignedToleranceMismatch, AlignedToleranceResult, compare_aligned_tolerance};
@@ -31,4 +32,5 @@ pub use driver::{
 pub use exact::{ExactMismatch, ExactResult, compare_exact};
 pub use funnel::{FunnelResult, Series, Tolerances, build_bounds, compare};
 pub use mask::{Indicator, Mask, MaskError, compare_masked};
+pub use report::{ConformanceRun, RunInputs, Tier2Source, assemble_report};
 pub use tiers::{ConformanceReport, ConformanceTier, TierReport, TierStatus};
