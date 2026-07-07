@@ -22,8 +22,8 @@
 //! vacuously ([`ConformanceReport::passed`] is `all(!failed)`).
 
 use crate::{
-    CombiTimeTable, ConformanceReport, ConformanceTier, DriverError, DriverOptions, DriverRun,
-    SignalComparison, TierReport, TierStatus, VerifyConfig, drive_trace_with_options,
+    CombiTimeTable, ComparisonMode, ConformanceReport, ConformanceTier, DriverError, DriverOptions,
+    DriverRun, SignalComparison, TierReport, VerifyConfig, drive_trace_with_options,
 };
 
 /// The inputs needed to drive one real sequence run: the tolerance/mapping config, the reference
@@ -121,12 +121,10 @@ fn tier0_load_failed(err: &oce_api::OcError) -> TierReport {
             "static validate",
             validation.diagnostics.clone(),
         ),
-        other => TierReport {
-            tier: ConformanceTier::Tier0,
-            status: TierStatus::Failed,
-            summary: format!("static parse/validate/build failed: {other}"),
-            diagnostics: Vec::new(),
-        },
+        other => TierReport::failure(
+            ConformanceTier::Tier0,
+            format!("static parse/validate/build failed: {other}"),
+        ),
     }
 }
 
@@ -148,8 +146,12 @@ fn tier3_skipped() -> TierReport {
 fn tier2_report(cxf: &[u8], source: &Tier2Source<'_>) -> Result<TierReport, DriverError> {
     match source {
         Tier2Source::Golden(inputs) => {
-            let run =
-                drive_trace_with_options(cxf, inputs.config, inputs.reference, inputs.options)?;
+            // Tier 2 is bit-exact regression by definition, so the assembler *owns* the comparison
+            // mode: force `Exact` regardless of the caller's options, keeping the emitted "bit-exact
+            // regression" verdict truthful by construction even if a caller passes a banded mode.
+            let mut options = inputs.options.clone();
+            options.comparison = ComparisonMode::Exact;
+            let run = drive_trace_with_options(cxf, inputs.config, inputs.reference, &options)?;
             Ok(classify_comparisons(
                 ConformanceTier::Tier2,
                 &run.comparisons,
@@ -177,30 +179,26 @@ fn classify_comparisons(
     let total = comparisons.len();
     if let Some(first) = comparisons.iter().find(|c| !c.result.passed()) {
         let mismatched = comparisons.iter().filter(|c| !c.result.passed()).count();
-        return TierReport {
+        return TierReport::failure(
             tier,
-            status: TierStatus::Failed,
-            summary: format!(
+            format!(
                 "{context}: {mismatched} of {total} signals mismatched (first: {})",
                 first.reference_column
             ),
-            diagnostics: Vec::new(),
-        };
+        );
     }
     if let Some(first) = comparisons.iter().find(|c| c.result.compared_points() == 0) {
         let empty = comparisons
             .iter()
             .filter(|c| c.result.compared_points() == 0)
             .count();
-        return TierReport {
+        return TierReport::no_data(
             tier,
-            status: TierStatus::NoData,
-            summary: format!(
+            format!(
                 "{context}: {empty} of {total} signals compared zero points (first: {})",
                 first.reference_column
             ),
-            diagnostics: Vec::new(),
-        };
+        );
     }
     TierReport::passed(tier, format!("{context}: {total} signals within tolerance"))
 }
