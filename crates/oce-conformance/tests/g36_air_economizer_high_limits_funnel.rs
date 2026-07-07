@@ -319,10 +319,10 @@ fn funnel_band_accepts_air_economizer_cutoff_within_recorded_last_ulp_slack() {
             "{} cutoff must be an unmasked funnel comparison",
             case.sequence
         );
-        // The recorded Real-algebraic band actually resolved onto this signal (not a zero fall-through).
+        // The recorded near-ULP band actually resolved onto this signal (not a zero fall-through).
         assert_eq!(
             comparison.tolerance.rtoly.to_bits(),
-            funnel_band_policy::REAL_ALGEBRAIC_LAST_ULP.to_bits(),
+            funnel_band_policy::NEAR_ULP_RTOLY.to_bits(),
             "{} recorded rtoly",
             case.sequence
         );
@@ -365,7 +365,7 @@ fn funnel_band_accepts_air_economizer_cutoff_within_recorded_last_ulp_slack() {
 }
 
 /// Anti-tautology control: the recorded band is falsifiable, not decorative. Uses a multi-row
-/// differential reference (`range_y > 0`, so the relative last-ULP band is live) and checks — on the
+/// differential reference (`range_y > 0`, so the relative near-ULP band is live) and checks — on the
 /// engine-independent oracle values only — that a within-band drift passes and an out-of-band drift
 /// fails. Without this, routing the bit-exact-matching engine trace through the band would certify
 /// nothing.
@@ -388,7 +388,7 @@ fn recorded_last_ulp_band_rejects_out_of_band_cutoff_drift() {
     let cutoff: Vec<f64> = (0..reference.n_rows)
         .map(|row| reference.data[row * reference.n_cols + cutoff_col])
         .collect();
-    funnel_band_policy::assert_real_algebraic_band_is_falsifiable(&times, &cutoff);
+    funnel_band_policy::assert_near_ulp_band_is_falsifiable(&times, &cutoff);
 }
 
 #[derive(Clone, Copy)]
@@ -438,9 +438,7 @@ fn funnel_config(case: Case) -> VerifyConfig {
             point_name_mapping: point_mapping(case),
         }],
         tolerances: funnel_band_policy::zero_base(),
-        outputs: vec![funnel_band_policy::real_algebraic_override(
-            case.output.cdl_name,
-        )],
+        outputs: vec![funnel_band_policy::near_ulp_override(case.output.cdl_name)],
         indicators: Vec::new(),
         sampling: Some(SAMPLE_STEP),
         run_controller: true,
