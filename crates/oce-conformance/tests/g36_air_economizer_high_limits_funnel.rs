@@ -271,6 +271,10 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
 /// the L1 funnel band with the recorded per-signal tolerance (`_spec/07 §8`), asserting the band is
 /// the real comparison mechanism and that it actually landed on the routed signal. This is additive
 /// to — and file-separate from — the bit-exact oracle and determinism goldens, which stay untouched.
+///
+/// The 7 single-row fixed cases have `range_y == 0`, so their relative band collapses to exact; the
+/// live, falsifiable band is exercised on the 5 multi-row differential cases (see
+/// `recorded_last_ulp_band_rejects_out_of_band_cutoff_drift`).
 #[test]
 fn funnel_band_accepts_air_economizer_cutoff_within_recorded_last_ulp_slack() {
     for &case in CASES {

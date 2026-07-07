@@ -28,9 +28,10 @@ use oce_conformance::{OutputPattern, PartialTolerances, Series, Tolerances, comp
 /// reviewer can derive this from "these are exact f64 arithmetic ops" with no reference to engine
 /// output. On a multi-sample reference it yields a live band of `1e-9 * range_y`; on a single-sample
 /// reference (`range_y == 0`) it correctly collapses to exact (`_spec/07 §8` requirement 2 — exact
-/// where the math is exact). The value is >10 orders of magnitude below the smallest control-decision
-/// granularity on this corpus (high-limit cutoff buckets are 1 K apart; integer requests/levels
-/// differ by 1), so no authored band can admit a wrong bucket, offset, or level.
+/// where the math is exact). The band is relative, so its width is `1e-9 * range_y`: the widest it
+/// reaches on this corpus is `1e-9 * the 12.5 K max reference range ≈ 1.25e-8 K`, which is ~7.9 orders
+/// of magnitude below the 1 K high-limit bucket granularity (Title24 fixed buckets are
+/// 294.15/295.15/296.15/297.15 K), so no authored band can admit a wrong bucket, offset, or level.
 pub const REAL_ALGEBRAIC_LAST_ULP: f64 = 1e-9;
 
 /// The all-zero (collapsed) band for exact-compared Boolean/Integer signals (`_spec/07 §9.3`). These
