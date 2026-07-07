@@ -491,9 +491,10 @@ fn pid_range_rules_floor_at_the_upstream_min_annotation() {
 
 #[test]
 fn pid_output_bound_pair_mirrors_the_limiter_rule() {
-    // Upstream constrains yMin/yMax only transitively, through the instantiated
-    // `Limiter lim(final uMax=yMax, final uMin=yMin)` and its `assert(uMin < uMax)`; the
-    // engine mirrors its own Limiter precedent — error on inversion, warning on equality.
+    // Upstream constrains yMin/yMax two ways: directly via `cheYMinMax(final k=yMin < yMax)` wired
+    // into `assMesYMinMax` ("LimPID: Limits must be yMin < yMax"), and transitively through the
+    // instantiated `Limiter lim(final uMax=yMax, final uMin=yMin)` and its `assert(uMin < uMax)`;
+    // the engine mirrors its own Limiter precedent — error on inversion, warning on equality.
     let inverted = one_block_model(
         "CDL.Reals.PID",
         &[ValueType::Real, ValueType::Real],
@@ -514,6 +515,13 @@ fn pid_output_bound_pair_mirrors_the_limiter_rule() {
     let warnings = validate(&equal).expect("yMin == yMax is a safe deterministic degrade");
     assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
     assert_eq!(warnings[0].severity, Severity::Warning);
+    // The equal-bounds warning must be block-agnostic: PID has an internal Limiter, but the shared
+    // RealEqualWarning message must not name it (it is reused by Hysteresis, which has none).
+    assert!(
+        warnings[0].message.contains("collapses to a single value"),
+        "unexpected warning: {:?}",
+        warnings
+    );
 }
 
 #[test]
@@ -549,7 +557,7 @@ fn limiter_equal_bounds_are_a_warning_only() {
     let warnings = validate(&model).expect("uMin == uMax is a safe deterministic degrade");
     assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
     assert_eq!(warnings[0].severity, Severity::Warning);
-    assert!(warnings[0].message.contains("clamp to a constant"));
+    assert!(warnings[0].message.contains("collapses to a single value"));
 }
 
 #[test]
@@ -576,6 +584,13 @@ fn hysteresis_threshold_pair_mirrors_the_limiter_rule() {
     let warnings = validate(&equal).expect("uLow == uHigh degrades deterministically");
     assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
     assert_eq!(warnings[0].severity, Severity::Warning);
+    // Hysteresis has NO internal Limiter, so the equal-bounds warning must not mention one; the
+    // shared message states the block-agnostic invariant (the bounded interval degenerates).
+    assert!(
+        warnings[0].message.contains("collapses to a single value"),
+        "unexpected warning: {:?}",
+        warnings
+    );
 
     let healthy = one_block_model(
         "CDL.Reals.Hysteresis",

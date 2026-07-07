@@ -18,10 +18,13 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 /// Upstream `PID.mo`/`PIDWithReset.mo` (pin `a131864`) annotate `min=100*Constants.eps` on
 /// exactly {k, Ti, Td, r, Ni, Nd} — an INCLUSIVE Modelica lower bound, hence
 /// `RealGreaterOrEqual` at the shared [`MIN_PARAM`] floor (the same constant the runtime
-/// defense-in-depth clamp uses). The yMin/yMax pair is constrained upstream only transitively,
-/// through the instantiated `Limiter lim(final uMax=yMax, final uMin=yMin)` and its
-/// `assert(uMin < uMax)`; the engine mirrors its own Limiter precedent (error on inversion,
-/// warning on equality). xi_start/yd_start/y_reset are unconstrained upstream and stay unruled.
+/// defense-in-depth clamp uses). Upstream constrains the yMin/yMax pair to `yMin < yMax` two ways:
+/// directly, via `cheYMinMax(final k=yMin < yMax)` wired into `assMesYMinMax` ("LimPID: Limits
+/// must be yMin < yMax"), and transitively, through the instantiated
+/// `Limiter lim(final uMax=yMax, final uMin=yMin)` and its `assert(uMin < uMax)`. The engine mirrors
+/// its own Limiter precedent (error on inversion, warning on equality). yMin/yMax themselves have
+/// upstream defaults (`yMax=1`, `yMin=0`) so they stay optional; xi_start/yd_start/y_reset are
+/// unconstrained upstream and stay unruled.
 pub(super) const PID_PARAM_RULES: &[ParamRule] = &[
     ParamRule::RealGreaterOrEqual {
         name: "k",

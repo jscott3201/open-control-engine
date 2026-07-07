@@ -83,13 +83,32 @@ fn missing_required_stage_parameters_are_errors() {
 fn missing_upstream_no_default_parameters_are_errors() {
     // Upstream (pin a131864) declares each of these with NO default value: omitting one is an
     // authoring error that previously fell through to a silent engine default
-    // (n=0 / p=0 / k=1 or 0 / raisingSlewRate=1 / delta=1), silently changing behavior.
+    // (n=0 / p=0 / k=1 or 0 / k=false / delayTime=0 / trueHoldDuration=0 / raisingSlewRate=1 /
+    // delta=1), silently changing behavior.
     let cases: &[(&str, &[ValueType], &[ValueType], &str)] = &[
         (
             "CDL.Reals.Round",
             &[ValueType::Real],
             &[ValueType::Real],
             "n",
+        ),
+        (
+            "CDL.Logical.Sources.Constant",
+            &[],
+            &[ValueType::Boolean],
+            "k",
+        ),
+        (
+            "CDL.Logical.TrueDelay",
+            &[ValueType::Boolean],
+            &[ValueType::Boolean],
+            "delayTime",
+        ),
+        (
+            "CDL.Logical.TrueFalseHold",
+            &[ValueType::Boolean],
+            &[ValueType::Boolean],
+            "trueHoldDuration",
         ),
         (
             "CDL.Reals.AddParameter",
@@ -147,6 +166,21 @@ fn missing_upstream_no_default_parameters_are_errors() {
             err.diagnostics
         );
     }
+}
+
+#[test]
+fn missing_required_assert_message_is_an_error() {
+    // Upstream `Utilities/Assert.mo` declares `parameter String message` with NO default; omitting
+    // it previously fell through to a silent empty-string engine default, emitting a blank
+    // diagnostic when the assertion trips. Assert has a Boolean input and NO output connectors.
+    let model = one_block_model("CDL.Utilities.Assert", &[ValueType::Boolean], &[], vec![]);
+    let err = validate(&model).expect_err("Assert.message is required");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::MissingRequiredParameter]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("`message`"));
 }
 
 #[test]

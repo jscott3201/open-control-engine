@@ -15,6 +15,13 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
+/// Upstream `Utilities/Assert.mo` (pin `a131864`) declares `parameter String message` with NO
+/// default value ("Message written when u becomes false"). Omitting it previously fell through to a
+/// silent empty-string engine default, so a tripped assertion would emit a blank diagnostic; the
+/// message is required at load time.
+pub(super) const ASSERT_PARAM_RULES: &[crate::ParamRule] =
+    &[crate::ParamRule::Required { name: "message" }];
+
 fn make_assert(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Assert {
         message: string_param(p, "message", ""),

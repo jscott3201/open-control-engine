@@ -696,4 +696,28 @@ fn registry_exposes_block_param_rules() {
             .param_rules(),
         &[] as &[ParamRule]
     );
+    // Defaultless upstream params on the Logical/Utilities blocks (pin a131864): each declares its
+    // parameter with NO default value, so it is required at load time rather than silently
+    // defaulted (k=false / delayTime=0 / trueHoldDuration=0 / message=""). falseHoldDuration is
+    // NOT required — upstream defaults it to trueHoldDuration.
+    assert_eq!(
+        lookup("CDL.Logical.Sources.Constant")
+            .unwrap()
+            .param_rules(),
+        &[ParamRule::Required { name: "k" }]
+    );
+    assert_eq!(
+        lookup("CDL.Logical.TrueDelay").unwrap().param_rules(),
+        &[ParamRule::Required { name: "delayTime" }]
+    );
+    assert_eq!(
+        lookup("CDL.Logical.TrueFalseHold").unwrap().param_rules(),
+        &[ParamRule::Required {
+            name: "trueHoldDuration",
+        }]
+    );
+    assert_eq!(
+        lookup("CDL.Utilities.Assert").unwrap().param_rules(),
+        &[ParamRule::Required { name: "message" }]
+    );
 }
