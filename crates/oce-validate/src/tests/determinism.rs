@@ -40,7 +40,7 @@ fn t27_unify_and_validate_propagates_then_passes() {
     // Add input is unset → unify_and_validate propagates "K" AND passes every structural/type rule.
     let mut m = ModelGraph {
         blocks: vec![
-            block(0, "CDL.Reals.Sources.Constant", &[], &[0]),
+            constant_block(0, &[0]),
             block(1, "CDL.Reals.Add", &[1, 2], &[3]),
         ],
         connectors: vec![
@@ -114,7 +114,7 @@ fn t32_same_code_and_subject_sort_by_message() {
     // Two out-of-range connections → two MalformedDocument diagnostics, both subject=None (key_cid
     // u32::MAX), same code → the MESSAGE tie-breaker decides. Messages embed the connection index.
     let make = || ModelGraph {
-        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![conn_edge(0, 8), conn_edge(0, 9)], // both `to` out of range
         ..ModelGraph::new()

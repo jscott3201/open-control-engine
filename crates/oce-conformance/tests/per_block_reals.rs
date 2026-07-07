@@ -401,6 +401,17 @@ const CASES: &[BlockCase] = &[
         LIMITER_PARAMS,
         REAL_Y,
     ),
+    // Oracle-diff golden for the 2026-07-06 closeout divergence fix: the upstream Limiter
+    // equation is a comparison chain, so a NaN u passes through fail-visible (the engine
+    // previously absorbed it into uMin); also pins ±inf clamping and boundary-equal cells.
+    case(
+        "reals_limiter_non_finite",
+        "CDL.Reals.Limiter",
+        "Limiter/non_finite_and_boundary",
+        U,
+        LIMITER_PARAMS,
+        REAL_Y,
+    ),
     case(
         "reals_line",
         "CDL.Reals.Line",

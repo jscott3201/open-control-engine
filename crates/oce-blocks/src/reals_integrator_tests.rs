@@ -335,3 +335,56 @@ fn integrator_trace_is_byte_deterministic_across_runs() {
     }
     assert_eq!(region_a, region_b, "state words diverged");
 }
+
+#[test]
+fn nan_y_start_seed_emits_canonical_nan_and_rising_trigger_recovers() {
+    // Gain and start-state params carry NO finiteness rule by policy (upstream declares k=1,
+    // y_start=0 with no min/max): a NaN y_start follows plain IEEE propagation — canonical-NaN
+    // emits — until a rising trigger stores y_reset_in directly, which reads neither k nor
+    // y_start and fully recovers the state.
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: f64::from_bits(0xfff8_0000_0000_0000),
+    };
+    let steps = [
+        (0.0, 1.0, 7.0, false),
+        (0.5, 1.0, 7.0, false),
+        (1.0, 1.0, 7.0, true),
+        (1.5, 2.0, 7.0, true),
+        (2.0, 0.0, 7.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    // Emit-before-update: the t=1.0 rising-trigger tick still emits the poisoned state; the
+    // reset lands at the NEXT emit (7.0), then the held-high tick integrates 7 + 1*2*0.5 = 8.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x7ff8_0000_0000_0000,
+            0x7ff8_0000_0000_0000,
+            0x7ff8_0000_0000_0000,
+            7.0f64.to_bits(),
+            8.0f64.to_bits(),
+        ],
+    );
+    assert_eq!(region[0], 8.0f64.to_bits());
+}
+
+#[test]
+fn non_finite_gain_poisons_state_at_first_update_via_ieee() {
+    // k is unconstrained by policy (upstream k=1, no min/max). Emit-before-update means the
+    // first tick still emits y_start; the first update computes slope = k*u with dt = 0, so
+    // NaN*u (NaN) and inf*u*0 (inf*0 = NaN) both poison x at the very first update.
+    for poisoned_gain in [f64::NAN, f64::INFINITY] {
+        let block = IntegratorWithReset {
+            k: poisoned_gain,
+            y_start: 0.5,
+        };
+        let steps = [(0.0, 2.0, 0.0, false), (0.5, 2.0, 0.0, false)];
+        let (trace, region) = drive(&block, &steps);
+        assert_trace_bits(&trace, &[0.5f64.to_bits(), 0x7ff8_0000_0000_0000]);
+        assert!(
+            f64::from_bits(region[0]).is_nan(),
+            "gain {poisoned_gain} must poison the accumulator"
+        );
+    }
+}

@@ -227,11 +227,24 @@ fn algebraic() -> Vec<Golden> {
         );
     }
 
-    // Limiter: y = max(uMin, min(u, uMax)); uMin=0.0, uMax=5.5.
+    // Limiter: the upstream Buildings `Reals/Limiter.mo` (pin a131864) equation is the
+    // comparison chain `if u > uMax then uMax elseif u < uMin then uMin else u`, NOT a min/max
+    // pair — the two disagree for NaN u (the chain passes NaN through; min/max absorb it into
+    // a bound) and for signed-zero boundary equality.
     {
+        fn limiter_chain(u: f64, u_min: f64, u_max: f64) -> f64 {
+            if u > u_max {
+                u_max
+            } else if u < u_min {
+                u_min
+            } else {
+                u
+            }
+        }
+
         let (u_min, u_max) = (0.0_f64, 5.5_f64);
         let u = [-1.3_f64, 2.2, 9.9];
-        let y: Vec<Sample> = u.iter().map(|&x| r(u_min.max(x.min(u_max)))).collect();
+        let y: Vec<Sample> = u.iter().map(|&x| r(limiter_chain(x, u_min, u_max))).collect();
         out.push(
             Golden::new(
                 "CDL.Reals.Limiter",
@@ -240,8 +253,27 @@ fn algebraic() -> Vec<Golden> {
                 ticks(3),
                 y,
                 "params uMin=0.0, uMax=5.5; u=[-1.3,2.2,9.9]; below/in/above band",
-                "y = max(uMin, min(u, uMax)); _spec/03 §4.1 Limiter (the only legal saturation)",
+                "y = if u > uMax then uMax elseif u < uMin then uMin else u; Buildings Reals/Limiter.mo comparison chain; _spec/03 §4.1 Limiter (the only legal saturation)",
             )
+            .with_inputs(vec![input_r("u", u)]),
+        );
+
+        // Non-finite and boundary cells — the oracle-diff golden for the 2026-07-06 closeout
+        // fix: the engine previously absorbed a NaN u into uMin (fault-hiding); upstream passes
+        // it through. Also pins ±inf clamping and boundary-equal passthrough.
+        let u = [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, 5.5, 0.0, 2.2];
+        let y: Vec<Sample> = u.iter().map(|&x| r(limiter_chain(x, u_min, u_max))).collect();
+        out.push(
+            Golden::new(
+                "CDL.Reals.Limiter",
+                "y",
+                ValueKind::Real,
+                ticks(6),
+                y,
+                "params uMin=0.0, uMax=5.5; u=[NaN,+inf,-inf,5.5,0.0,2.2]: NaN passes through fail-visible, infinities clamp to the bounds, boundary-equal u returns verbatim",
+                "y = if u > uMax then uMax elseif u < uMin then uMin else u; NaN fails both comparisons and reaches y (upstream Reals/Limiter.mo); oracle-diff for the 2026-07-06 NaN-absorption divergence fix",
+            )
+            .with_scenario("non_finite_and_boundary")
             .with_inputs(vec![input_r("u", u)]),
         );
     }

@@ -2,8 +2,8 @@ use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
 use crate::{
-    Block, FallingEdge, Latch, LogicalChange, RegistryEntry, Timer, TimerAccumulating, Toggle,
-    TrueDelay, TrueFalseHold, TrueHoldWithReset,
+    Block, FallingEdge, Latch, LogicalChange, ParamRule, RegistryEntry, Timer, TimerAccumulating,
+    Toggle, TrueDelay, TrueFalseHold, TrueHoldWithReset,
 };
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
@@ -44,6 +44,23 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
         make: make_true_hold_with_reset,
     },
 ];
+
+/// Upstream `TrueDelay.mo` (pin `a131864`) declares `parameter Real delayTime` with NO default
+/// value (`delayOnInit` defaults to `false`). Omitting it previously fell through to a silent
+/// `delayTime=0` engine default, disabling the rising-edge delay; there is no upstream `min`
+/// annotation and the equations guard with `delayTime > 0`, so `delayTime` is required with no
+/// value bound.
+pub(super) const TRUE_DELAY_PARAM_RULES: &[ParamRule] =
+    &[ParamRule::Required { name: "delayTime" }];
+
+/// Upstream `TrueFalseHold.mo` (pin `a131864`) declares `parameter Real trueHoldDuration` with NO
+/// default value; `falseHoldDuration` DOES have a default (`= trueHoldDuration`) and so stays
+/// optional. Omitting `trueHoldDuration` previously fell through to a silent `0` engine default,
+/// disabling the minimum-hold dwell (on/off chatter); no upstream `min` annotation, so it is
+/// required with no value bound.
+pub(super) const TRUE_FALSE_HOLD_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "trueHoldDuration",
+}];
 
 fn make_falling_edge(p: &ParamTable) -> Box<dyn Block> {
     Box::new(FallingEdge {

@@ -67,7 +67,10 @@ pub enum OcError {
         /// The previous tick's time.
         prev: f64,
     },
-    /// A point/connector name not present in the loaded model's IO inventory.
+    /// A point/connector name that does not resolve for the requested operation: either not
+    /// present in the loaded model's IO inventory, or present with the wrong direction
+    /// (e.g. `get_output` on an input point, `set_input` on an output point). Also returned by
+    /// the parameter surface for a path that is not a parameter.
     #[error("unknown point/connector '{0}'")]
     UnknownPoint(String),
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).

@@ -89,7 +89,7 @@ fn public_api_surface_matches_blessed_baseline() {
         .unwrap_or_else(|e| {
             panic!(
                 "[public_api] failed to parse rustdoc JSON — a format_version skew against the \
-                 pinned COMPAT TRIPLE (see crates/oce-api/Cargo.toml [dev-dependencies])? {e}"
+                 pinned COMPAT TRIPLE (see crates/oce-store/Cargo.toml [dev-dependencies])? {e}"
             )
         });
 

@@ -23,7 +23,7 @@ fn t2_minimal_valid_graph_passes_all_rules() {
     // Constant.y(C0) → Add.u1(C1); Add.u2(C2) is a declared external boundary input; Add.y(C3).
     let m = ModelGraph {
         blocks: vec![
-            block(0, "CDL.Reals.Sources.Constant", &[], &[0]),
+            constant_block(0, &[0]),
             block(1, "CDL.Reals.Add", &[1, 2], &[3]),
         ],
         connectors: vec![
@@ -109,7 +109,7 @@ fn t6_external_input_driven_from_inside_is_still_an_error() {
 fn t7_output_with_zero_in_degree_is_fine() {
     // Outputs are never subject to the in-degree rule.
     let m = ModelGraph {
-        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],
@@ -240,7 +240,7 @@ fn t13_unknown_class_skips_rule3_silently() {
 fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
     // Connection references ids beyond the connector arena — must report, never index OOB.
     let m = ModelGraph {
-        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![conn_edge(0, 9)], // 9 is out of range
         ..ModelGraph::new()
@@ -265,7 +265,7 @@ fn t23_out_of_range_connection_endpoint_is_malformed_not_a_panic() {
 fn t39_connector_block_out_of_range_is_malformed() {
     // A connector whose owning BlockId is outside the block arena would panic in topo decl_key.
     let m = ModelGraph {
-        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 7, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],
@@ -284,7 +284,7 @@ fn t39_connector_block_out_of_range_is_malformed() {
 fn t40_connector_block_at_blocks_len_boundary_is_malformed() {
     // The exact off-by-one boundary (`block == blocks.len()`) is out of range.
     let m = ModelGraph {
-        blocks: vec![block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 1, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],
@@ -322,7 +322,7 @@ fn t41_block_ids_must_be_dense_unique_arena_indices() {
     // A block id that is in range but not equal to its arena index would panic in BUILD when the
     // feedthrough pass indexes instantiated blocks by `BlockId.0`.
     let m = ModelGraph {
-        blocks: vec![block(1, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![constant_block(1, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],

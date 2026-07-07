@@ -83,7 +83,13 @@ fn assert_build_validate_codes(
 #[test]
 fn build_model_in_memory_rejects_out_of_range_connection_endpoint_without_panic() {
     let model = ModelGraph {
-        blocks: vec![raw_block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Reals.Sources.Constant",
+            &[],
+            &[0],
+            vec![rp("k", 1.0)],
+        )],
         connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![raw_edge(0, 9)],
         ..ModelGraph::new()
@@ -125,7 +131,13 @@ fn build_model_in_memory_rejects_sample_trigger_zero_period_without_panic() {
 #[test]
 fn build_model_in_memory_rejects_out_of_range_connector_block_without_panic() {
     let model = ModelGraph {
-        blocks: vec![raw_block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Reals.Sources.Constant",
+            &[],
+            &[0],
+            vec![rp("k", 1.0)],
+        )],
         connectors: vec![raw_conn(0, 9, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],
@@ -143,7 +155,13 @@ fn build_model_in_memory_rejects_out_of_range_connector_block_without_panic() {
 #[test]
 fn build_model_in_memory_rejects_connector_block_at_blocks_len_boundary_without_panic() {
     let model = ModelGraph {
-        blocks: vec![raw_block(0, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Reals.Sources.Constant",
+            &[],
+            &[0],
+            vec![rp("k", 1.0)],
+        )],
         connectors: vec![raw_conn(0, 1, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],
@@ -161,7 +179,13 @@ fn build_model_in_memory_rejects_connector_block_at_blocks_len_boundary_without_
 #[test]
 fn build_model_in_memory_rejects_non_dense_block_id_without_panic() {
     let model = ModelGraph {
-        blocks: vec![raw_block(1, "CDL.Reals.Sources.Constant", &[], &[0])],
+        blocks: vec![raw_block_with_params(
+            1,
+            "CDL.Reals.Sources.Constant",
+            &[],
+            &[0],
+            vec![rp("k", 1.0)],
+        )],
         connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![],

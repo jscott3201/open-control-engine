@@ -114,6 +114,13 @@ pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
     },
 ];
 
+/// Upstream `Logical/Sources/Constant.mo` (pin `a131864`) declares `parameter Boolean k` with NO
+/// default value ("Constant output value"), mirroring the defaultless `k` on the `Reals`/`Integers`
+/// `Sources.Constant` siblings. Omitting it previously fell through to a silent `k=false` engine
+/// default — a silently-defeated enable/interlock constant in a safety-critical model — so `k` is
+/// required at load time.
+pub(super) const LOGICAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {
         k: bool_param(p, "k", false),

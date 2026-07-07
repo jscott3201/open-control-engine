@@ -42,6 +42,9 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
         "CDL.Logical.Sources.TimeTable" => logical::TIME_TABLE_PARAM_RULES,
+        "CDL.Logical.Sources.Constant" => logical::LOGICAL_CONSTANT_PARAM_RULES,
+        "CDL.Logical.TrueDelay" => logical_timing::TRUE_DELAY_PARAM_RULES,
+        "CDL.Logical.TrueFalseHold" => logical_timing::TRUE_FALSE_HOLD_PARAM_RULES,
         "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => logical::MULTI_LOGICAL_PARAM_RULES,
         "CDL.Logical.Sources.Pulse" | "CDL.Reals.Sources.Pulse" | "CDL.Integers.Sources.Pulse" => {
             SOURCE_PULSE_PARAM_RULES
@@ -51,7 +54,14 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Integers.MultiSum" => integers::MULTI_SUM_PARAM_RULES,
         "CDL.Integers.Sources.TimeTable" => integers::TIME_TABLE_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
+        "CDL.Integers.Sources.Constant" => integers::INTEGER_CONSTANT_PARAM_RULES,
+        "CDL.Integers.AddParameter" => integers::INTEGER_ADD_PARAMETER_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
+        "CDL.Reals.Round" => reals::ROUND_PARAM_RULES,
+        "CDL.Reals.AddParameter" => reals::ADD_PARAMETER_PARAM_RULES,
+        "CDL.Reals.MultiplyByParameter" => reals::MULTIPLY_BY_PARAMETER_PARAM_RULES,
+        "CDL.Reals.Sources.Constant" => reals::REAL_CONSTANT_PARAM_RULES,
+        "CDL.Reals.Hysteresis" => reals::HYSTERESIS_PARAM_RULES,
         "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => reals::MULTI_REAL_PARAM_RULES,
         "CDL.Reals.MultiSum" => reals::MULTI_SUM_PARAM_RULES,
         "CDL.Reals.MatrixGain" => reals::MATRIX_GAIN_PARAM_RULES,
@@ -85,6 +95,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
             psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
         }
+        "CDL.Utilities.Assert" => utilities::ASSERT_PARAM_RULES,
         "CDL.Utilities.SunRiseSet" => utilities::SUN_RISE_SET_RULES,
         "CDL.Discrete.FirstOrderHold"
         | "CDL.Discrete.Sampler"

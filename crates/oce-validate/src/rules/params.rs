@@ -531,8 +531,8 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                     Diagnostic::warning(
                         DiagCode::ParameterOutOfRange,
                         format!(
-                            "parameters `{left}` and `{right}` on block `{}` are equal; Limiter \
-                             will clamp to a constant",
+                            "parameters `{left}` and `{right}` on block `{}` are equal; the \
+                             interval they bound collapses to a single value",
                             blk.class_iri
                         ),
                     )
