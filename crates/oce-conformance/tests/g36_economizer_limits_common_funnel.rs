@@ -9,6 +9,9 @@ use oce_conformance::{
 };
 use serde_json::Value;
 
+#[path = "g36_funnel_band/policy.rs"]
+mod funnel_band_policy;
+
 const ECONOMIZER_LIMITS_COMMON: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld");
 
@@ -127,6 +130,39 @@ fn g36_economizer_limits_common_tier_a_oracle_matches_engine_output() {
             other => panic!("Economizer Limits.Common used non-exact comparison: {other:?}"),
         }
     }
+}
+
+/// Route this sequence's Real outputs through the L1 funnel band with the recorded per-signal
+/// tolerance (`_spec/07 §8`); any Boolean/Integer outputs stay on the exact oracle above and are
+/// excluded from the funnel entirely. Additive to that oracle, which is unchanged.
+#[test]
+fn funnel_band_routes_economizer_limits_common_real_outputs() {
+    let inputs = funnel_points(INPUTS);
+    let outputs = funnel_points(OUTPUTS);
+    let instants: Vec<f64> = (0..ROWS).map(|tick| tick as f64 * SAMPLE_STEP).collect();
+    funnel_band_policy::route_real_outputs_through_funnel_band(
+        &funnel_band_policy::FunnelRouting {
+            sequence: SEQUENCE,
+            cxf: ECONOMIZER_LIMITS_COMMON.as_bytes(),
+            inputs: &inputs,
+            outputs: &outputs,
+            instants: &instants,
+            sample_step: SAMPLE_STEP,
+            reference_csv: &reference_path(),
+            kind_to_str: kind_name,
+        },
+    );
+}
+
+fn funnel_points(specs: &[PointSpec]) -> Vec<funnel_band_policy::FunnelPoint> {
+    specs
+        .iter()
+        .map(|point| funnel_band_policy::FunnelPoint {
+            reference_name: point.reference_name,
+            cdl_name: point.cdl_name,
+            kind: point.kind,
+        })
+        .collect()
 }
 
 #[derive(Clone, Copy)]

@@ -19,7 +19,13 @@
 //! carry a discrete output alongside a Real one.
 #![allow(dead_code)]
 
-use oce_conformance::{OutputPattern, PartialTolerances, Series, Tolerances, compare};
+use std::path::Path;
+
+use oce_conformance::{
+    CombiTimeTable, ComparisonMode, ComparisonResult, DriveCadence, DriverInputReplay,
+    DriverOptions, OutputPattern, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec,
+    Series, Tolerances, ValueKind, VerifyConfig, compare, drive_trace_with_options,
+};
 
 /// Real-algebraic `[A]` last-ULP relative band (`_spec/07 §8`): pure f64 `Add`/`Gain`/`Limiter`/
 /// `Switch`/routing/conversion ops differ from a closed-form oracle only in the last ULP, so the one
@@ -150,6 +156,240 @@ pub fn assert_real_algebraic_band_is_falsifiable(times: &[f64], reference_y: &[f
         !beyond_result.passed && beyond_result.max_error > 0.0,
         "a trace outside the recorded band must fail — the band is not falsifiable"
     );
+}
+
+/// One point in a G36 funnel-band routing call: its reference-CSV column name, the engine-side
+/// connector id the mapping keys on, and its CDL value kind.
+#[derive(Clone, Copy)]
+pub(crate) struct FunnelPoint {
+    pub(crate) reference_name: &'static str,
+    pub(crate) cdl_name: &'static str,
+    pub(crate) kind: ValueKind,
+}
+
+/// One G36 sequence's funnel-band routing inputs, bundled into a struct to keep the call under the
+/// `clippy::too_many_arguments` threshold. `inputs` are replayed regardless of kind; `outputs` is
+/// filtered to Real before the mapping is built, so Boolean/Integer outputs are excluded from the
+/// funnel entirely (`_spec/07 §9.3`). `kind_to_str` is the consumer file's own `kind_name` so the
+/// funnel mapping's `PointEnd.kind` strings match that file's exact-oracle mapping byte-for-byte.
+pub(crate) struct FunnelRouting<'a> {
+    pub(crate) sequence: &'a str,
+    pub(crate) cxf: &'a [u8],
+    pub(crate) inputs: &'a [FunnelPoint],
+    pub(crate) outputs: &'a [FunnelPoint],
+    pub(crate) instants: &'a [f64],
+    pub(crate) sample_step: f64,
+    pub(crate) reference_csv: &'a Path,
+    pub(crate) kind_to_str: fn(ValueKind) -> &'static str,
+}
+
+/// Route only the Real (`[A]`) outputs of one G36 Tier-A sequence through the L1 funnel band with the
+/// recorded last-ULP band, keeping Boolean/Integer outputs OFF the type-blind funnel (`_spec/07 §9.3`)
+/// by omitting them from the mapping. Asserts, per Real output, that the band is the live comparison
+/// mechanism and actually resolved onto the signal, then runs the falsifiability control on the first
+/// Real output whose reference column varies.
+///
+/// # Panics
+/// Panics if there are no Real outputs (an all-discrete sequence must be skipped by the caller), if
+/// `instants.len()` disagrees with the reference row count, if the driver run or any per-output band
+/// assertion fails, or if no Real output varies (the falsifiability control needs a `range_y > 0`
+/// column; every sequence in this corpus has one, so an all-constant sequence fails loudly rather
+/// than silently dropping coverage).
+pub(crate) fn route_real_outputs_through_funnel_band(routing: &FunnelRouting) {
+    let real: Vec<FunnelPoint> = routing
+        .outputs
+        .iter()
+        .copied()
+        .filter(|point| matches!(point.kind, ValueKind::Real))
+        .collect();
+    assert!(
+        !real.is_empty(),
+        "{}: no Real output to route (all-discrete sequences must be skipped by the caller)",
+        routing.sequence
+    );
+
+    let reference = CombiTimeTable::read(routing.reference_csv)
+        .unwrap_or_else(|err| panic!("{} reference read failed: {err}", routing.sequence));
+    assert_eq!(
+        routing.instants.len(),
+        reference.n_rows,
+        "{}: driven instant count must match the reference row count (compared_points relies on \
+         instant/time bit-equality)",
+        routing.sequence
+    );
+
+    let mapping: Vec<PointMapEntry> = routing
+        .inputs
+        .iter()
+        .chain(real.iter())
+        .map(|point| PointMapEntry {
+            cdl: point_end(point.cdl_name, point.kind, routing.kind_to_str),
+            device: point_end(point.reference_name, point.kind, routing.kind_to_str),
+        })
+        .collect();
+    let overrides: Vec<OutputPattern> = real
+        .iter()
+        .map(|point| real_algebraic_override(point.cdl_name))
+        .collect();
+    let config = VerifyConfig {
+        references: vec![ReferenceSpec {
+            model: "g36".to_string(),
+            sequence: routing.sequence.to_string(),
+            point_name_mapping: mapping,
+        }],
+        tolerances: zero_base(),
+        outputs: overrides,
+        indicators: Vec::new(),
+        sampling: Some(routing.sample_step),
+        run_controller: true,
+    };
+
+    let run = drive_trace_with_options(
+        routing.cxf,
+        &config,
+        &reference,
+        &DriverOptions {
+            cadence: DriveCadence::EventAligned {
+                instants: routing.instants.to_vec(),
+            },
+            input_replay: DriverInputReplay::ReferenceTable,
+            comparison: ComparisonMode::Funnel,
+        },
+    )
+    .unwrap_or_else(|err| panic!("{} funnel driver run failed: {err}", routing.sequence));
+
+    // Exactly one comparison per Real output is the machine-checked proof that every discrete output
+    // was excluded from the funnel (omitted from the mapping), never banded.
+    assert_eq!(
+        run.comparisons.len(),
+        real.len(),
+        "{}: funnel comparison count (discrete outputs must be excluded)",
+        routing.sequence
+    );
+
+    for point in &real {
+        let comparison = run
+            .comparisons
+            .iter()
+            .find(|comparison| comparison.reference_column == point.reference_name)
+            .unwrap_or_else(|| {
+                panic!(
+                    "{} missing funnel comparison for {}",
+                    routing.sequence, point.reference_name
+                )
+            });
+        assert_eq!(
+            comparison.output, point.cdl_name,
+            "{} output",
+            routing.sequence
+        );
+        assert!(
+            !comparison.masked,
+            "{} {} must be an unmasked funnel comparison",
+            routing.sequence, point.reference_name
+        );
+        assert_recorded_real_algebraic_band(
+            routing.sequence,
+            point.reference_name,
+            &comparison.tolerance,
+        );
+        match &comparison.result {
+            ComparisonResult::Funnel(result) => {
+                assert!(
+                    result.passed,
+                    "{} funnel comparison failed for {}: {:?}",
+                    routing.sequence, point.reference_name, result.first_failure_x
+                );
+                assert_eq!(
+                    result.compared_points, reference.n_rows,
+                    "{} {} funnel compared points",
+                    routing.sequence, point.reference_name
+                );
+                assert!(
+                    result.compared_points > 0,
+                    "{} {} funnel passed vacuously",
+                    routing.sequence,
+                    point.reference_name
+                );
+                assert_eq!(
+                    result.max_error.to_bits(),
+                    0.0f64.to_bits(),
+                    "{} {} funnel max error",
+                    routing.sequence,
+                    point.reference_name
+                );
+                assert_eq!(
+                    result.first_failure_x, None,
+                    "{} {} funnel first failure",
+                    routing.sequence, point.reference_name
+                );
+            }
+            other => panic!(
+                "{} {} used non-funnel comparison: {other:?}",
+                routing.sequence, point.reference_name
+            ),
+        }
+    }
+
+    assert_first_varying_real_output_band_is_falsifiable(&reference, &real, routing.sequence);
+}
+
+/// Run the anti-tautology falsifiability control on the first Real output whose reference column
+/// varies (`range_y > 0`). A missing varying column is a hard failure, not a silent skip, so a future
+/// regression that flatlines every Real output surfaces rather than quietly dropping coverage.
+fn assert_first_varying_real_output_band_is_falsifiable(
+    reference: &CombiTimeTable,
+    real: &[FunnelPoint],
+    sequence: &str,
+) {
+    let columns = reference.col_names.as_ref().expect("reference columns");
+    let times: Vec<f64> = (0..reference.n_rows)
+        .map(|row| reference.data[row * reference.n_cols])
+        .collect();
+    let varying = real.iter().find_map(|point| {
+        let idx = columns
+            .iter()
+            .position(|name| name == point.reference_name)?;
+        let column: Vec<f64> = (0..reference.n_rows)
+            .map(|row| reference.data[row * reference.n_cols + idx])
+            .collect();
+        let min = column.iter().copied().fold(f64::INFINITY, f64::min);
+        let max = column.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        (max > min).then_some(column)
+    });
+    let varying = varying.unwrap_or_else(|| {
+        panic!("{sequence}: no varying Real output to exercise the falsifiable band")
+    });
+    assert_real_algebraic_band_is_falsifiable(&times, &varying);
+}
+
+fn point_end(name: &str, kind: ValueKind, kind_to_str: fn(ValueKind) -> &'static str) -> PointEnd {
+    PointEnd {
+        name: name.to_string(),
+        unit: None,
+        kind: Some(kind_to_str(kind).to_string()),
+    }
+}
+
+fn assert_recorded_real_algebraic_band(sequence: &str, signal: &str, tolerance: &Tolerances) {
+    assert_eq!(
+        tolerance.rtoly.to_bits(),
+        REAL_ALGEBRAIC_LAST_ULP.to_bits(),
+        "{sequence} {signal} recorded rtoly"
+    );
+    for (label, value) in [
+        ("atolx", tolerance.atolx),
+        ("atoly", tolerance.atoly),
+        ("rtolx", tolerance.rtolx),
+        ("ltolx", tolerance.ltolx),
+        ("ltoly", tolerance.ltoly),
+    ] {
+        assert_eq!(
+            value.to_bits(),
+            0.0f64.to_bits(),
+            "{sequence} {signal} {label} must stay zero"
+        );
+    }
 }
 
 /// Escape the regex metacharacters that could appear in an engine connector id so an override pattern
