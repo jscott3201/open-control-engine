@@ -35,6 +35,42 @@
       ]
     },
     {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/package.order",
+      "entries": [
+        "CoolingOnly",
+        "DualDuctColdDuctMin",
+        "DualDuctMixConDischargeSensor",
+        "DualDuctMixConInletSensor",
+        "DualDuctSnapActing",
+        "ParallelFanCVF",
+        "ParallelFanVVF",
+        "Reheat",
+        "SeriesFanCVF",
+        "SeriesFanVVF"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/package.order",
+      "entries": [
+        "Controller",
+        "Subsequences",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/package.order",
+      "entries": [
+        "ActiveAirFlow",
+        "Alarms",
+        "Dampers",
+        "SystemRequests",
+        "Validation"
+      ]
+    },
+    {
       "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/package.order",
       "entries": [
@@ -198,8 +234,8 @@
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
-      "status": "deferred",
-      "rationale": "Needed for full zone-to-AHU loop, not part of the first catalog/profile slice."
+      "status": "in-progress",
+      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow through its source-verified explicit-CXF variant; all other TerminalUnits sequences remain unimplemented."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
@@ -901,6 +937,24 @@
         "Runtime support is the checked-in explicit-CXF source-default FreezeProtection composite, not arbitrary Modelica parsing.",
         "The supported variant covers the source-default staged freeze-protection state machine, hot-water request and alarm outputs, chilled-water pump enable, outdoor/minimum outdoor/return damper switching, supply-fan shutdown, cooling-coil open command, and both PI heating-coil controllers.",
         "The oracle covers stage 1, stage 2, fast stage 3, operator reset back to stage 2, stage-2 expiry behavior, stage-1 clear timing, and the slow 900 s stage-3 path."
+      ]
+    },
+    {
+      "name": "cooling_only_active_air_flow",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.ActiveAirFlow",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_active_air_flow",
+      "supported_variant": "source-verified explicit CXF for scalar CoolingOnly ActiveAirFlow with VCooMax_flow=0.94 m3/s and grounded occupied=1, coolDown=2, and setUp=3 OperationModes constants",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_active_air_flow.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_active_air_flow.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/cooling_only_active_air_flow/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_cooling_only_active_air_flow_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar CoolingOnly ActiveAirFlow composite, not arbitrary Modelica parsing.",
+        "The independent Tier-A schedule visits all seven OperationModes values and includes matching nonzero occupied-minimum airflow controls in occupied and non-occupied modes to falsify pass-through and wrong-gate behavior.",
+        "VActMin_flow and VActHeaMax_flow are identical by upstream source construction because both connect from actMin.y; both remain asserted under their source names outside the unique-connector determinism snapshot."
       ]
     },
     {
@@ -1743,6 +1797,29 @@
         "Evidence proves restricted explicit-CXF source-default FreezeProtection composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes the 61 active source-default child components and omits inactive branches for DedicatedDampersPressure minimum outdoor air, return/relief fan pressure control, BAS/hardwired freeze stat, hardwired dummy passthroughs, and have_frePro=false passthrough behavior.",
         "Evidence does not claim arbitrary .mo parsing, no-freeze-protection variants, BAS or hardwired freeze-stat variants, return/relief-fan pressure branches, DedicatedDampersPressure minimum-OA support, alternate controller types, or non-default FreezeProtection parameterizations."
+      ]
+    },
+    {
+      "name": "cooling_only_active_air_flow",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.ActiveAirFlow",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_active_air_flow",
+      "fixture_top_child_count": 11,
+      "active_block_count": 11,
+      "input_count": 2,
+      "output_count": 3,
+      "supported_variant": "explicit CXF source transcription for scalar CoolingOnly ActiveAirFlow with VCooMax_flow=0.94 m3/s and grounded occupied, coolDown, and setUp OperationModes constants",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_cooling_only_active_air_flow.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_cooling_only_active_air_flow.rs",
+      "api_test": "crates/oce-api/tests/g36_cooling_only_active_air_flow.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent Tier-A exact matching, funnel-band routing with falsifiability, and unique-connector determinism coverage.",
+        "The fixture preserves all 11 source child components, both source inputs, all three named source outputs, and the parent VCooMax_flow binding on actCooMax.realTrue.",
+        "Evidence does not claim arbitrary .mo parsing, other CoolingOnly subsequences, the full CoolingOnly controller, or alternate ActiveAirFlow parameterizations."
       ]
     },
     {

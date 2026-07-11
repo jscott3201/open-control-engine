@@ -1,0 +1,135 @@
+//! Expected upstream package-order contents used by the G36 catalog guard.
+
+/// Return the source-pinned G36 package contents that catalog package-order rows must reproduce.
+pub(super) fn expected_package_orders() -> &'static [(&'static str, &'static [&'static str])] {
+    &[
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36",
+            &[
+                "AHUs",
+                "FanCoilUnits",
+                "Generic",
+                "TerminalUnits",
+                "ThermalZones",
+                "VentilationZones",
+                "ZoneGroups",
+                "Types",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV",
+            &["Controller", "Economizers", "SetPoints", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
+            &[
+                "CoolingOnly",
+                "DualDuctColdDuctMin",
+                "DualDuctMixConDischargeSensor",
+                "DualDuctMixConInletSensor",
+                "DualDuctSnapActing",
+                "ParallelFanCVF",
+                "ParallelFanVVF",
+                "Reheat",
+                "SeriesFanCVF",
+                "SeriesFanVVF",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly",
+            &["Controller", "Subsequences", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences",
+            &[
+                "ActiveAirFlow",
+                "Alarms",
+                "Dampers",
+                "SystemRequests",
+                "Validation",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers",
+            &["Controller", "Subsequences", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
+            &["Enable", "Limits", "Modulations", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints",
+            &[
+                "FreezeProtection",
+                "PlantRequests",
+                "ReliefDamper",
+                "ReliefFan",
+                "ReliefFanGroup",
+                "ReturnFanAirflowTracking",
+                "ReturnFanDirectPressure",
+                "SupplyFan",
+                "SupplySignals",
+                "SupplyTemperature",
+                "OutdoorAirFlow",
+                "Validation",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
+            &["ASHRAE62_1", "Title24"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
+            &["AHU", "SumZone", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24",
+            &["AHU", "SumZone", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints",
+            &[
+                "CoolingCoil",
+                "FreezeProtection",
+                "ModeAndSetPoints",
+                "PlantRequests",
+                "ReliefDamper",
+                "ReliefFan",
+                "ReliefFanGroup",
+                "ReturnFan",
+                "Supply",
+                "SupplyFan",
+                "SupplyTemperature",
+                "Validation",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.Generic",
+            &[
+                "AirEconomizerHighLimits",
+                "TimeSuppression",
+                "TrimAndRespond",
+                "Validation",
+            ],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types",
+            &[
+                "ASHRAEClimateZone",
+                "ControlEconomizer",
+                "CoolingCoil",
+                "EnergyStandard",
+                "FreezeStat",
+                "HeatingCoil",
+                "OutdoorAirSection",
+                "PressureControl",
+                "Title24ClimateZone",
+                "VentilationStandard",
+                "DemandLimitLevels",
+                "FreezeProtectionStages",
+                "OperationModes",
+                "ZoneStates",
+            ],
+        ),
+    ]
+}
