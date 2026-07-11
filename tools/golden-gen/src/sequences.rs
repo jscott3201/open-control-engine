@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod cooling_only_active_air_flow;
+mod cooling_only_alarms;
 mod cooling_only_dampers;
 mod cooling_only_system_requests;
 mod reheat_overrides;
@@ -87,6 +88,7 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
+const COOLING_ONLY_ALARMS: &str = "cooling_only_alarms";
 const COOLING_ONLY_DAMPERS: &str = "cooling_only_dampers";
 const COOLING_ONLY_SYSTEM_REQUESTS: &str = "cooling_only_system_requests";
 const REHEAT_OVERRIDES: &str = "reheat_overrides";
@@ -129,6 +131,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(air_economizer_high_limits::goldens());
     out.extend(freeze_protection::goldens());
     out.extend(cooling_only_active_air_flow::goldens());
+    out.extend(cooling_only_alarms::goldens());
     out.extend(cooling_only_dampers::goldens());
     out.extend(cooling_only_system_requests::goldens());
     out.extend(reheat_overrides::goldens());
