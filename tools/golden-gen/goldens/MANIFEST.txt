@@ -467,6 +467,10 @@ G36/ahu_economizer reference -> goldens/G36/ahu_economizer/reference.csv
 G36/ahu_supply_air_temp_reset cooling_demand -> goldens/G36/ahu_supply_air_temp_reset/cooling_demand.csv
 G36/ahu_supply_air_temp_reset reference -> goldens/G36/ahu_supply_air_temp_reset/reference.csv
 G36/ahu_supply_air_temp_reset sat_setpoint -> goldens/G36/ahu_supply_air_temp_reset/sat_setpoint.csv
+G36/cooling_only_active_air_flow active_cooling_maximum_airflow -> goldens/G36/cooling_only_active_air_flow/active_cooling_maximum_airflow.csv
+G36/cooling_only_active_air_flow active_heating_maximum_airflow -> goldens/G36/cooling_only_active_air_flow/active_heating_maximum_airflow.csv
+G36/cooling_only_active_air_flow active_minimum_airflow -> goldens/G36/cooling_only_active_air_flow/active_minimum_airflow.csv
+G36/cooling_only_active_air_flow reference -> goldens/G36/cooling_only_active_air_flow/reference.csv
 G36/generic_air_economizer_high_limits_ashrae_differential reference -> goldens/G36/generic_air_economizer_high_limits_ashrae_differential/reference.csv
 G36/generic_air_economizer_high_limits_ashrae_differential temperature_cutoff -> goldens/G36/generic_air_economizer_high_limits_ashrae_differential/temperature_cutoff.csv
 G36/generic_air_economizer_high_limits_ashrae_fixed_18 reference -> goldens/G36/generic_air_economizer_high_limits_ashrae_fixed_18/reference.csv
