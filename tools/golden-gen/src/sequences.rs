@@ -86,6 +86,7 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
 const REHEAT_OVERRIDES: &str = "reheat_overrides";
+
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
 pub struct DeferredProvenance {
     /// Path under `tools/golden-gen/goldens`.
