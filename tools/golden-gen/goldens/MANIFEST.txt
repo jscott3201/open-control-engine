@@ -471,6 +471,10 @@ G36/cooling_only_active_air_flow active_cooling_maximum_airflow -> goldens/G36/c
 G36/cooling_only_active_air_flow active_heating_maximum_airflow -> goldens/G36/cooling_only_active_air_flow/active_heating_maximum_airflow.csv
 G36/cooling_only_active_air_flow active_minimum_airflow -> goldens/G36/cooling_only_active_air_flow/active_minimum_airflow.csv
 G36/cooling_only_active_air_flow reference -> goldens/G36/cooling_only_active_air_flow/reference.csv
+G36/cooling_only_alarms airflow_sensor_alarm -> goldens/G36/cooling_only_alarms/airflow_sensor_alarm.csv
+G36/cooling_only_alarms leaking_damper_alarm -> goldens/G36/cooling_only_alarms/leaking_damper_alarm.csv
+G36/cooling_only_alarms low_airflow_alarm -> goldens/G36/cooling_only_alarms/low_airflow_alarm.csv
+G36/cooling_only_alarms reference -> goldens/G36/cooling_only_alarms/reference.csv
 G36/cooling_only_dampers airflow_setpoint -> goldens/G36/cooling_only_dampers/airflow_setpoint.csv
 G36/cooling_only_dampers damper_command -> goldens/G36/cooling_only_dampers/damper_command.csv
 G36/cooling_only_dampers reference -> goldens/G36/cooling_only_dampers/reference.csv

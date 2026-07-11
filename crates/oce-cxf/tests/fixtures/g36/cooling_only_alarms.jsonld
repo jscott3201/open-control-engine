@@ -1,0 +1,2306 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms",
+      "S231:label": "cooling_only_alarms",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.staPreMul"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.VCooMax_flow"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.fanOffTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaFloTim"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.floHys"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.damPosHys"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.staTim"
+        }
+      ],
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gai"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.les"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.truDel"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gai1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.conInt"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.proInt"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and8"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.assMes"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and4"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gai2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not3"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and5"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not4"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not5"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and11"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and10"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.occMod"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and6"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and7"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and3"
+        }
+      ],
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.VDis_flow"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.VActSet_flow"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.u1Fan"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.uOpeMod"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.uDam"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.yLowFloAla"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.yFloSenAla"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.yLeaDamAla"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.staPreMul",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.VCooMax_flow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "300.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.fanOffTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "600.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaFloTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "600.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.floHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.damPosHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.staTim",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": {
+        "@value": "1800.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.VDis_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.les.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.VActSet_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gai.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.u1Fan",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not3.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.uDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:unit": "1",
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.yLowFloAla",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.yFloSenAla",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.yLeaDamAla",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 0.5
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.les.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.les",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Less",
+      "S231:label": "les",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.les.h"
+      },
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.les.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.les.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.les.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.les.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.les.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.les.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.les.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 0.005
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "gre",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre.h"
+      },
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 0.7
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "lowFloAla",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u3"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u3",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.conInt.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.conInt.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 2
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.integerTrue"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.integerFalse"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 3
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.integerFalse",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u3"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "conInt1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "staPreMul"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.conInt1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.greThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt1",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.integerTrue"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.integerFalse"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 1
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.integerFalse",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.proInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Multiply",
+      "S231:label": "proInt",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.u2",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.proInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.yLowFloAla"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and8",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and8",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and8.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and8.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and8.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not1",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not1.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: airflow is less than 50% of the setpoint.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and4",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and4.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not2",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: airflow is less than 70% of the setpoint.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes1.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "cooMaxFlo",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "VCooMax_flow"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cooMaxFlo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 0.1
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gai2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not3",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "fanOffTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "gre1",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.h"
+      },
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.gre1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and5",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and5.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and5.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and5.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not4",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not4.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not4.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: airflow sensor should be calibrated.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes2",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt2",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.integerTrue"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.integerFalse"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 3
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.integerFalse",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.yFloSenAla"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel3",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "leaFloTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not5.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "cloDam",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.t"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.h"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.t",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "damPosHys"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.h",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": 0.005
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.cloDam.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "leaDamAla1",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u1"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "leaDamAla2",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.leaDamAla2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel3.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "not5",
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not5.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.not5.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not5.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.not5.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3.message",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:String"
+      },
+      "S231:value": "\"Warning: the damper is leaking.\""
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:label": "assMes3",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3.message"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.assMes3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt3",
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.integerTrue"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.integerFalse"
+        }
+      ],
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 4
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.integerFalse",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt3.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.yLeaDamAla"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "truDel4",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.truDel4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and1.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and11",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and11",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and11.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and11.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel1.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and10",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and10",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and10.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and10.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.truDel.u"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "fanIni",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.delayTime"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.delayTime",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": "staTim"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.fanIni.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and11.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and10.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.occMod",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "occMod",
+      "S231:hasParameter": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.occMod.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.occMod.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.occMod.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes"
+      },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.occMod.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u2"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "isOcc",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u1",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.u2",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.isOcc.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and6",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and6",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and6.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and6.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and6.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt2.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not4.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and7",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and7",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and7.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and7.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and7.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.lowFloAla.u2"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not1.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInput": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u1"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u2"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.cooling_only_alarms.and3.y"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and3.u2",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_alarms.and3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.booToInt.u"
+        },
+        {
+          "@id": "http://example.org#g36.source.cooling_only_alarms.not2.u"
+        }
+      ]
+    }
+  ]
+}
