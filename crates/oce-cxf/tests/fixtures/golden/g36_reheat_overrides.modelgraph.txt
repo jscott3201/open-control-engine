@@ -1,0 +1,72 @@
+blocks: 11
+  B0 decl=0 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.reheat_overrides.conInt3")
+    inputs=[] outputs=[0]
+    param k=Integer(1)
+  B1 decl=1 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.reheat_overrides.intEqu3")
+    inputs=[1, 2] outputs=[3]
+  B2 decl=2 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.reheat_overrides.intEqu4")
+    inputs=[4, 5] outputs=[6]
+  B3 decl=3 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.reheat_overrides.conInt4")
+    inputs=[] outputs=[7]
+    param k=Integer(2)
+  B4 decl=4 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.reheat_overrides.cloDam")
+    inputs=[8] outputs=[9]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B5 decl=5 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.reheat_overrides.opeDam")
+    inputs=[10] outputs=[11]
+    param realTrue=Real(0x3ff0000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B6 decl=6 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.reheat_overrides.add3")
+    inputs=[12, 13] outputs=[14]
+  B7 decl=7 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.reheat_overrides.or2")
+    inputs=[15, 16] outputs=[17]
+  B8 decl=8 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.reheat_overrides.swi1")
+    inputs=[18, 19, 20] outputs=[21]
+  B9 decl=9 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.reheat_overrides.pro")
+    inputs=[22, 23] outputs=[24]
+  B10 decl=10 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.reheat_overrides.booToRea")
+    inputs=[25] outputs=[26]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+connectors: 27
+  C0 block=B0 dir=Out type=Integer decl=0 iri=None
+  C1 block=B1 dir=In type=Integer decl=1 iri=Some("http://example.org#g36.source.reheat_overrides.oveDamPos")
+  C2 block=B1 dir=In type=Integer decl=2 iri=None
+  C3 block=B1 dir=Out type=Boolean decl=3 iri=None
+  C4 block=B2 dir=In type=Integer decl=4 iri=Some("http://example.org#g36.source.reheat_overrides.oveDamPos")
+  C5 block=B2 dir=In type=Integer decl=5 iri=None
+  C6 block=B2 dir=Out type=Boolean decl=6 iri=None
+  C7 block=B3 dir=Out type=Integer decl=7 iri=None
+  C8 block=B4 dir=In type=Boolean decl=8 iri=None
+  C9 block=B4 dir=Out type=Real decl=9 iri=None
+  C10 block=B5 dir=In type=Boolean decl=10 iri=None
+  C11 block=B5 dir=Out type=Real decl=11 iri=None
+  C12 block=B6 dir=In type=Real decl=12 iri=None
+  C13 block=B6 dir=In type=Real decl=13 iri=None
+  C14 block=B6 dir=Out type=Real decl=14 iri=None
+  C15 block=B7 dir=In type=Boolean decl=15 iri=None
+  C16 block=B7 dir=In type=Boolean decl=16 iri=None
+  C17 block=B7 dir=Out type=Boolean decl=17 iri=None
+  C18 block=B8 dir=In type=Real decl=18 iri=None
+  C19 block=B8 dir=In type=Boolean decl=19 iri=None
+  C20 block=B8 dir=In type=Real decl=20 iri=Some("http://example.org#g36.source.reheat_overrides.uDam")
+  C21 block=B8 dir=Out type=Real decl=21 iri=None
+  C22 block=B9 dir=In type=Real decl=22 iri=None
+  C23 block=B9 dir=In type=Real decl=23 iri=Some("http://example.org#g36.source.reheat_overrides.uVal")
+  C24 block=B9 dir=Out type=Real decl=24 iri=None
+  C25 block=B10 dir=In type=Boolean decl=25 iri=Some("http://example.org#g36.source.reheat_overrides.uHeaOff")
+  C26 block=B10 dir=Out type=Real decl=26 iri=None
+connections: 11
+  C0 -> C2
+  C3 -> C8
+  C3 -> C15
+  C6 -> C10
+  C6 -> C16
+  C7 -> C5
+  C9 -> C12
+  C11 -> C13
+  C14 -> C18
+  C17 -> C19
+  C26 -> C22
+external_inputs: [1, 4, 20, 25, 23]
