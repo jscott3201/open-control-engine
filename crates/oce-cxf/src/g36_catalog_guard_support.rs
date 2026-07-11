@@ -19,6 +19,7 @@ use crate::g36_catalog_guard_helpers::{
 use crate::g36_catalog_literal_guard::{
     validate_conditional_guards, validate_g36_literals_in_fixture,
 };
+use crate::g36_catalog_package_guard::expected_package_orders;
 
 const G36_BRIDGE_PREFIX: &str = "ASHRAE.G36.";
 
@@ -130,107 +131,7 @@ fn assert_sources(
 }
 
 fn validate_package_orders(catalog: &Value, errors: &mut Vec<String>) {
-    let expected: &[(&str, &[&str])] = &[
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36",
-            &[
-                "AHUs",
-                "FanCoilUnits",
-                "Generic",
-                "TerminalUnits",
-                "ThermalZones",
-                "VentilationZones",
-                "ZoneGroups",
-                "Types",
-            ],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV",
-            &["Controller", "Economizers", "SetPoints", "Validation"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers",
-            &["Controller", "Subsequences", "Validation"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences",
-            &["Enable", "Limits", "Modulations", "Validation"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints",
-            &[
-                "FreezeProtection",
-                "PlantRequests",
-                "ReliefDamper",
-                "ReliefFan",
-                "ReliefFanGroup",
-                "ReturnFanAirflowTracking",
-                "ReturnFanDirectPressure",
-                "SupplyFan",
-                "SupplySignals",
-                "SupplyTemperature",
-                "OutdoorAirFlow",
-                "Validation",
-            ],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow",
-            &["ASHRAE62_1", "Title24"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1",
-            &["AHU", "SumZone", "Validation"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24",
-            &["AHU", "SumZone", "Validation"],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.AHUs.SingleZone.VAV.SetPoints",
-            &[
-                "CoolingCoil",
-                "FreezeProtection",
-                "ModeAndSetPoints",
-                "PlantRequests",
-                "ReliefDamper",
-                "ReliefFan",
-                "ReliefFanGroup",
-                "ReturnFan",
-                "Supply",
-                "SupplyFan",
-                "SupplyTemperature",
-                "Validation",
-            ],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.Generic",
-            &[
-                "AirEconomizerHighLimits",
-                "TimeSuppression",
-                "TrimAndRespond",
-                "Validation",
-            ],
-        ),
-        (
-            "Buildings.Controls.OBC.ASHRAE.G36.Types",
-            &[
-                "ASHRAEClimateZone",
-                "ControlEconomizer",
-                "CoolingCoil",
-                "EnergyStandard",
-                "FreezeStat",
-                "HeatingCoil",
-                "OutdoorAirSection",
-                "PressureControl",
-                "Title24ClimateZone",
-                "VentilationStandard",
-                "DemandLimitLevels",
-                "FreezeProtectionStages",
-                "OperationModes",
-                "ZoneStates",
-            ],
-        ),
-    ];
+    let expected = expected_package_orders();
 
     for (package, entries) in expected {
         let Some(entry) = package_order(catalog, package) else {
@@ -261,12 +162,16 @@ fn validate_top_level_packages(catalog: &Value, errors: &mut Vec<String>) {
         errors
             .push("invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.Generic".to_owned());
     }
+    if status("Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits") != "in-progress" {
+        errors.push(
+            "invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits".to_owned(),
+        );
+    }
     if status("Buildings.Controls.OBC.ASHRAE.G36.Types") != "structural-type" {
         errors.push("invalid-top-level-status: Buildings.Controls.OBC.ASHRAE.G36.Types".to_owned());
     }
     for path in [
         "Buildings.Controls.OBC.ASHRAE.G36.FanCoilUnits",
-        "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
         "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
         "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones",
         "Buildings.Controls.OBC.ASHRAE.G36.ZoneGroups",

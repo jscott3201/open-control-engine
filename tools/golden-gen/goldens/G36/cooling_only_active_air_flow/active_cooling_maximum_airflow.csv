@@ -1,0 +1,17 @@
+#1
+# columns: time active_cooling_maximum_airflow
+double G36_cooling_only_active_air_flow_active_cooling_maximum_airflow(14,2)
+0.0 0.94
+1.0 0.94
+2.0 0.94
+3.0 0.94
+4.0 0.94
+5.0 0.94
+6.0 0.0
+7.0 0.0
+8.0 0.0
+9.0 0.0
+10.0 0.0
+11.0 0.0
+12.0 0.0
+13.0 0.0
