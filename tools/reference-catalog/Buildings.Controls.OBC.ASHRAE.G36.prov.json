@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "cdd604e7d3b63df8",
+  "catalog_fingerprint": "47bcddc80bb64626",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -23,6 +23,8 @@
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
@@ -57,6 +59,7 @@
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"
   ],

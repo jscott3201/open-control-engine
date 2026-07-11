@@ -6,6 +6,7 @@
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
 mod cooling_only_active_air_flow;
+mod reheat_overrides;
 mod freeze_protection;
 mod air_economizer_high_limits;
 mod economizer_limits_common;
@@ -84,6 +85,8 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
+const REHEAT_OVERRIDES: &str = "reheat_overrides";
+
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
 pub struct DeferredProvenance {
     /// Path under `tools/golden-gen/goldens`.
@@ -122,6 +125,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(air_economizer_high_limits::goldens());
     out.extend(freeze_protection::goldens());
     out.extend(cooling_only_active_air_flow::goldens());
+    out.extend(reheat_overrides::goldens());
     out
 }
 

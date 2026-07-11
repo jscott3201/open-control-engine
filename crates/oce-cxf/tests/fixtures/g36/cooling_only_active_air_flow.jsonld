@@ -122,9 +122,11 @@
       "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
       "S231:label": "booToRea",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.realTrue" },
       "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.y" }
     },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 1.0 },
     { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
     {
       "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.y",
