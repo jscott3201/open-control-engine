@@ -256,7 +256,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
       "status": "in-progress",
-      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow, CoolingOnly.Subsequences.Dampers, CoolingOnly.Subsequences.SystemRequests, and Reheat.Subsequences.Overrides through their source-verified explicit-CXF variants; all other TerminalUnits sequences remain unimplemented."
+      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow, CoolingOnly.Subsequences.Alarms, CoolingOnly.Subsequences.Dampers, CoolingOnly.Subsequences.SystemRequests, and Reheat.Subsequences.Overrides through their source-verified explicit-CXF variants; all other TerminalUnits sequences remain unimplemented."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
@@ -976,6 +976,24 @@
         "Runtime support is the checked-in explicit-CXF scalar CoolingOnly ActiveAirFlow composite, not arbitrary Modelica parsing.",
         "The independent Tier-A schedule visits all seven OperationModes values and includes matching nonzero occupied-minimum airflow controls in occupied and non-occupied modes to falsify pass-through and wrong-gate behavior.",
         "VActMin_flow and VActHeaMax_flow are identical by upstream source construction because both connect from actMin.y; both remain asserted under their source names outside the unique-connector determinism snapshot."
+      ]
+    },
+    {
+      "name": "cooling_only_alarms",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_alarms",
+      "supported_variant": "source-verified explicit CXF for scalar CoolingOnly Alarms with staPreMul=1, VCooMax_flow=0.5 m3/s, lowFloTim=300 s, fanOffTim=600 s, leaFloTim=600 s, floHys=0.01 m3/s, damPosHys=0.01, staTim=1800 s, occupied=1, and greThr.h and cloDam.h pre-grounded to 0.005",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_alarms.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_alarms.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/cooling_only_alarms/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_cooling_only_alarms_oracle.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar CoolingOnly Alarms composite, not arbitrary Modelica parsing.",
+        "The independent 58-tick recurrence covers the differentiated occupancy, fan-start, fan-off, and fan-on gates; severity 3-to-2 escalation; exact occupied-mode equality; comparator hold and release bands; delay expiry and reset; and leak and sensor alarm cycles.",
+        "All three outputs are Integer and remain on Tier-A Exact conformance with no vacuous funnel run; the fixture includes all four Utilities.Assert instances with their source message strings and no output connectors."
       ]
     },
     {
@@ -1895,6 +1913,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent Tier-A exact matching, funnel-band routing with falsifiability, and unique-connector determinism coverage.",
         "The fixture preserves all 11 source child components, both source inputs, all three named source outputs, and the parent VCooMax_flow binding on actCooMax.realTrue.",
         "Evidence does not claim arbitrary .mo parsing, other CoolingOnly subsequences, the full CoolingOnly controller, or alternate ActiveAirFlow parameterizations."
+      ]
+    },
+    {
+      "name": "cooling_only_alarms",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_alarms",
+      "fixture_top_child_count": 47,
+      "active_block_count": 47,
+      "input_count": 5,
+      "output_count": 3,
+      "supported_variant": "explicit CXF source transcription for scalar CoolingOnly Alarms with canonical Validation bindings, source-default timing, grounded occupied OperationModes constant, two pre-grounded half-hysteresis expressions, explicit BooleanToInteger values, and four Utilities.Assert messages",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_cooling_only_alarms.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_cooling_only_alarms.rs",
+      "api_test": "crates/oce-api/tests/g36_cooling_only_alarms.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and distinct-output determinism coverage.",
+        "The fixture preserves all 47 source child components, all five source inputs, all three named Integer outputs, all eight parent parameter bindings, all 65 source connects, and the four active Utilities.Assert instances with verbatim messages.",
+        "Evidence does not claim arbitrary .mo parsing, other CoolingOnly sequences, the full CoolingOnly controller, alternate Alarms parameterizations, the output-unobservable staPreMul=false branch, or Real-valued funnel coverage."
       ]
     },
     {
