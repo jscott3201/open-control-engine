@@ -27,7 +27,8 @@ decisions, rationale, open work, and handoffs — not these MD files.
 **On entering this repo, before substantial work:**
 
 1. **Read the project identity.** The project's **dedicated** Aionforge identity (`agent_id`
-   and `namespace`) lives in `claude-id.json` (git-ignored, machine-local). Load it from there —
+   and `namespace`) lives in the current agent's git-ignored, machine-local identity file:
+   Codex loads `codex-id.json`; Claude Code loads `claude-id.json`. Load it from there —
    never hardcode it — and pass it as `principal.agent_id` (and `viewer`) on every memory call.
    ⛔ Do **not** use the shared steward identity from the environment for project memory; it is
    **off-limits** for open-control.
@@ -47,7 +48,8 @@ The `aionforge-memory` plugin skills (`memory-loop`, `memory-recall`, `memory-ca
 `/aionforge-memory:memory-handoff`) encode this cadence. A SessionStart hook re-seeds it after a
 fresh context, resume, or compaction.
 
-- **Private namespace** — the project's own `agent:` namespace (from `claude-id.json`) →
+- **Private namespace** — the project's own `agent:` namespace (from the current agent's
+  local identity file) →
   open-control project working memory.
 - **Shared namespace** — the Aionforge Memory dogfooding team → cross-project dogfooding feedback
   **only**. Keep project internals out of it.
@@ -60,7 +62,7 @@ fresh context, resume, or compaction.
 | ------------- | -------------------------------------------------------------------------- |
 | `_research/`  | Research findings (`cdl/`, `selene-db/`). Inputs to the spec.              |
 | `_spec/`      | Architecture & engine specification (the design of record before code).    |
-| `claude-id.json` | Machine-local Aionforge identity (git-ignored).                         |
+| `codex-id.json` / `claude-id.json` | Machine-local Aionforge identities (git-ignored).       |
 
 ---
 

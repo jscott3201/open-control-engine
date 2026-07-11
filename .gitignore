@@ -26,3 +26,6 @@ _*/
 *~
 .idea/
 .vscode/
+
+# --- Claude Code local worktrees (agent scratch) — never commit ---
+.claude/worktrees/
