@@ -71,6 +71,27 @@
       ]
     },
     {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/package.order",
+      "entries": [
+        "Controller",
+        "Subsequences",
+        "Validation"
+      ]
+    },
+    {
+      "package": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/package.order",
+      "entries": [
+        "ActiveAirFlow",
+        "Alarms",
+        "DamperValves",
+        "Overrides",
+        "SystemRequests",
+        "Validation"
+      ]
+    },
+    {
       "package": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone",
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/package.order",
       "entries": [
@@ -235,7 +256,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
       "status": "in-progress",
-      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow through its source-verified explicit-CXF variant; all other TerminalUnits sequences remain unimplemented."
+      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow and Reheat.Subsequences.Overrides through their source-verified explicit-CXF variants; all other TerminalUnits sequences remain unimplemented."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
@@ -955,6 +976,24 @@
         "Runtime support is the checked-in explicit-CXF scalar CoolingOnly ActiveAirFlow composite, not arbitrary Modelica parsing.",
         "The independent Tier-A schedule visits all seven OperationModes values and includes matching nonzero occupied-minimum airflow controls in occupied and non-occupied modes to falsify pass-through and wrong-gate behavior.",
         "VActMin_flow and VActHeaMax_flow are identical by upstream source construction because both connect from actMin.y; both remain asserted under their source names outside the unique-connector determinism snapshot."
+      ]
+    },
+    {
+      "name": "reheat_overrides",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences.Overrides",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/reheat_overrides.jsonld",
+      "top_id": "http://example.org#g36.source.reheat_overrides",
+      "supported_variant": "source-verified explicit CXF for scalar Reheat Overrides with integer damper override index, dimensionless damper and valve commands, and all BooleanToReal true and false values grounded explicitly",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/reheat_overrides.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/reheat_overrides.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/reheat_overrides/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_reheat_overrides_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar Reheat Overrides composite, not arbitrary Modelica parsing.",
+        "The independent Tier-A schedule distinguishes force-close, force-open, passthrough, valve-off, combined overrides, and a non-special positive index that falsifies inequality substitutions for the equality comparators.",
+        "The damper and heating-valve paths are independent and both distinct source outputs are covered by exact, funnel-band, facade, and determinism evidence."
       ]
     },
     {
@@ -1820,6 +1859,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent Tier-A exact matching, funnel-band routing with falsifiability, and unique-connector determinism coverage.",
         "The fixture preserves all 11 source child components, both source inputs, all three named source outputs, and the parent VCooMax_flow binding on actCooMax.realTrue.",
         "Evidence does not claim arbitrary .mo parsing, other CoolingOnly subsequences, the full CoolingOnly controller, or alternate ActiveAirFlow parameterizations."
+      ]
+    },
+    {
+      "name": "reheat_overrides",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences.Overrides",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/reheat_overrides.jsonld",
+      "top_id": "http://example.org#g36.source.reheat_overrides",
+      "fixture_top_child_count": 11,
+      "active_block_count": 11,
+      "input_count": 4,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for scalar Reheat Overrides with k=1 and k=2 integer equality constants and all BooleanToReal true and false values grounded explicitly",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_reheat_overrides.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_reheat_overrides.rs",
+      "api_test": "crates/oce-api/tests/g36_reheat_overrides.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, funnel-band routing with falsifiability, and distinct-output determinism coverage.",
+        "The fixture preserves all 11 source child components, all four source inputs, both named source outputs, and the eight explicitly grounded Constant and BooleanToReal values.",
+        "Evidence does not claim arbitrary .mo parsing, other Reheat subsequences, the full Reheat controller, or alternate Overrides topology."
       ]
     },
     {

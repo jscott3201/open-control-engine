@@ -50,6 +50,21 @@ pub(super) fn expected_package_orders() -> &'static [(&'static str, &'static [&'
             ],
         ),
         (
+            "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat",
+            &["Controller", "Subsequences", "Validation"],
+        ),
+        (
+            "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences",
+            &[
+                "ActiveAirFlow",
+                "Alarms",
+                "DamperValves",
+                "Overrides",
+                "SystemRequests",
+                "Validation",
+            ],
+        ),
+        (
             "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers",
             &["Controller", "Subsequences", "Validation"],
         ),
