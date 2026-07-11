@@ -1,0 +1,15 @@
+#1
+# columns: time damper_override_index damper_command_input heating_valve_off heating_valve_command_input damper_command heating_valve_command
+double G36_reheat_overrides_reference(12,7)
+0.0 1.0 0.37 0.0 0.62 0.0 0.62
+1.0 2.0 0.37 0.0 0.62 1.0 0.62
+2.0 0.0 0.37 0.0 0.62 0.37 0.62
+3.0 0.0 0.37 1.0 0.62 0.37 0.0
+4.0 2.0 0.37 1.0 0.62 1.0 0.0
+5.0 3.0 0.37 0.0 0.62 0.37 0.62
+6.0 1.0 0.37 1.0 0.62 0.0 0.0
+7.0 3.0 0.37 1.0 0.62 0.37 0.0
+8.0 -1.0 0.81 0.0 0.23 0.81 0.23
+9.0 1.0 0.81 0.0 0.23 0.0 0.23
+10.0 2.0 0.81 0.0 0.23 1.0 0.23
+11.0 0.0 0.81 1.0 0.23 0.81 0.0
