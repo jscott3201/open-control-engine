@@ -1,0 +1,30 @@
+{
+  "class_path": "G36",
+  "scenario": "cooling_only_system_requests",
+  "signal": "zone_pressure_reset_request",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Integer",
+  "compare_regime": "exact encoded integer",
+  "n_samples": 31,
+  "n_reference_columns": 10,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "after_suppression", "cooling_setpoint", "zone_temperature", "cooling_loop", "airflow_setpoint", "discharge_airflow", "damper_position", "zone_temperature_reset_request", "zone_pressure_reset_request"],
+  "inputs": [
+    { "name": "after_suppression", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "cooling_setpoint", "value_kind": "Real", "values": [295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0] },
+    { "name": "zone_temperature", "value_kind": "Real", "values": [295.0, 298.5, 298.5, 298.5, 297.9, 297.7, 295.0, 297.5, 295.0, 297.5, 297.5, 297.5, 295.0, 295.0, 295.0, 295.0, 295.0, 298.5, 298.5, 298.5, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0] },
+    { "name": "cooling_loop", "value_kind": "Real", "values": [0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.945, 0.945, 0.93, 0.93, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
+    { "name": "airflow_setpoint", "value_kind": "Real", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.006, 0.006, 0.006, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "discharge_airflow", "value_kind": "Real", "values": [0.1, 0.2, 0.2, 0.2, 0.6, 0.8, 0.8, 0.001, 0.001, 0.001, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.49, 0.49, 0.505, 0.505, 0.515, 0.515, 0.705, 0.705, 0.715, 0.715] },
+    { "name": "damper_position", "value_kind": "Real", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.945, 0.945, 0.93, 0.93, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] }
+  ],
+  "input": "SystemRequests: sampled damper/flow/setpoint recurrence covers raw request 1, delayed 3/2 paths, setpoint gate, and comparator hold bands",
+  "reference_rule": "SystemRequests.mo lines 273-324: raw greThr3 supplies request 1; delayed damper and greThr4 gate the 50%/70% Greater hysteresis switch ladder",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -256,7 +256,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
       "status": "in-progress",
-      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow and Reheat.Subsequences.Overrides through their source-verified explicit-CXF variants; all other TerminalUnits sequences remain unimplemented."
+      "rationale": "Restricted runtime support covers CoolingOnly.Subsequences.ActiveAirFlow, CoolingOnly.Subsequences.SystemRequests, and Reheat.Subsequences.Overrides through their source-verified explicit-CXF variants; all other TerminalUnits sequences remain unimplemented."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones",
@@ -976,6 +976,24 @@
         "Runtime support is the checked-in explicit-CXF scalar CoolingOnly ActiveAirFlow composite, not arbitrary Modelica parsing.",
         "The independent Tier-A schedule visits all seven OperationModes values and includes matching nonzero occupied-minimum airflow controls in occupied and non-occupied modes to falsify pass-through and wrong-gate behavior.",
         "VActMin_flow and VActHeaMax_flow are identical by upstream source construction because both connect from actMin.y; both remain asserted under their source names outside the unique-connector determinism snapshot."
+      ]
+    },
+    {
+      "name": "cooling_only_system_requests",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.SystemRequests",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_system_requests.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_system_requests",
+      "supported_variant": "source-verified explicit CXF for scalar CoolingOnly SystemRequests with thrTemDif=3 K, twoTemDif=2 K, durTimTem=120 s, durTimFlo=60 s, dTHys=0.25 K, floHys=0.01 m3/s, looHys=0.01, damPosHys=0.01, samplePeriod=120 s, and greThr4.h pre-grounded to 0.005",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_system_requests.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_system_requests.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/cooling_only_system_requests/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_cooling_only_system_requests_oracle.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar CoolingOnly SystemRequests composite, not arbitrary Modelica parsing.",
+        "The independent 31-tick recurrence covers 3/2/1/0 temperature and pressure requests, hysteresis hold and release, TrueDelay expiry and reset, sampler zero-order hold, suppression gating, and the positive-below-threshold pressure gate trap.",
+        "Both outputs are Integer and remain on Tier-A Exact conformance; the type-blind funnel excludes Boolean and Integer signals by policy, so this variant has no vacuous funnel-band run."
       ]
     },
     {
@@ -1859,6 +1877,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support, independent Tier-A exact matching, funnel-band routing with falsifiability, and unique-connector determinism coverage.",
         "The fixture preserves all 11 source child components, both source inputs, all three named source outputs, and the parent VCooMax_flow binding on actCooMax.realTrue.",
         "Evidence does not claim arbitrary .mo parsing, other CoolingOnly subsequences, the full CoolingOnly controller, or alternate ActiveAirFlow parameterizations."
+      ]
+    },
+    {
+      "name": "cooling_only_system_requests",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.SystemRequests",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_system_requests.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_system_requests",
+      "fixture_top_child_count": 33,
+      "active_block_count": 33,
+      "input_count": 7,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for scalar CoolingOnly SystemRequests with canonical Validation hysteresis bindings, default timing and temperature thresholds, 120 s samplers, and greThr4.h=0.005 pre-grounded from 0.5*floHys",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_cooling_only_system_requests.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_cooling_only_system_requests.rs",
+      "api_test": "crates/oce-api/tests/g36_cooling_only_system_requests.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and distinct-output determinism coverage.",
+        "The fixture preserves all 33 source child components, all seven source inputs, both named Integer outputs, all nine parent parameter bindings, and all 48 source connects.",
+        "Evidence does not claim arbitrary .mo parsing, other CoolingOnly subsequences, the full CoolingOnly controller, alternate SystemRequests parameterizations, or Real-valued funnel coverage."
       ]
     },
     {
