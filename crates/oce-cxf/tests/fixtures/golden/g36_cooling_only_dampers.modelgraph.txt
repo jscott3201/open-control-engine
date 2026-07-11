@@ -1,0 +1,229 @@
+blocks: 35
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.con")
+    inputs=[] outputs=[0]
+    param k=Real(0x0000000000000000)
+  B1 decl=1 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.con1")
+    inputs=[] outputs=[1]
+    param k=Real(0x3ff0000000000000)
+  B2 decl=2 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.lin")
+    inputs=[2, 3, 4, 5, 6] outputs=[7]
+  B3 decl=3 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.gre")
+    inputs=[8, 9] outputs=[10]
+    param h=Real(0x3fd0000000000000)
+  B4 decl=4 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.swi")
+    inputs=[11, 12, 13] outputs=[14]
+  B5 decl=5 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.actFlo")
+    inputs=[15, 16, 17] outputs=[18]
+  B6 decl=6 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conPID")
+    inputs=[19, 20, 21] outputs=[22]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3ff0000000000000)
+    param Ti=Real(0x4072c00000000000)
+    param Td=Real(0x3fb999999999999a)
+    param y_reset=Real(0x3f847ae147ae147b)
+  B7 decl=7 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt")
+    inputs=[] outputs=[23]
+    param k=Integer(3)
+  B8 decl=8 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.cooSta")
+    inputs=[24, 25] outputs=[26]
+  B9 decl=9 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.nomFlow")
+    inputs=[] outputs=[27]
+    param k=Real(0x3fb70a3d70a3d70a)
+  B10 decl=10 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor")
+    inputs=[28, 29] outputs=[30]
+  B11 decl=11 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.VDis_flowNor")
+    inputs=[31, 32] outputs=[33]
+  B12 decl=12 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt1")
+    inputs=[] outputs=[34]
+    param k=Integer(1)
+  B13 decl=13 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.forZerFlo")
+    inputs=[35, 36] outputs=[37]
+  B14 decl=14 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.forCooMax")
+    inputs=[38, 39] outputs=[40]
+  B15 decl=15 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt2")
+    inputs=[] outputs=[41]
+    param k=Integer(2)
+  B16 decl=16 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.forMinFlo")
+    inputs=[42, 43] outputs=[44]
+  B17 decl=17 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt3")
+    inputs=[] outputs=[45]
+    param k=Integer(3)
+  B18 decl=18 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.zerFlo")
+    inputs=[46] outputs=[47]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B19 decl=19 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.cooMax")
+    inputs=[48] outputs=[49]
+    param realTrue=Real(0x3fb70a3d70a3d70a)
+    param realFalse=Real(0x0000000000000000)
+  B20 decl=20 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.minFlo")
+    inputs=[50] outputs=[51]
+    param realTrue=Real(0x3f847ae147ae147b)
+    param realFalse=Real(0x0000000000000000)
+  B21 decl=21 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.add2")
+    inputs=[52, 53] outputs=[54]
+  B22 decl=22 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.add1")
+    inputs=[55, 56] outputs=[57]
+  B23 decl=23 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.swi1")
+    inputs=[58, 59, 60] outputs=[61]
+  B24 decl=24 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.or3")
+    inputs=[62, 63] outputs=[64]
+  B25 decl=25 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt4")
+    inputs=[] outputs=[65]
+    param k=Integer(1)
+  B26 decl=26 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.intEqu3")
+    inputs=[66, 67] outputs=[68]
+  B27 decl=27 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.intEqu4")
+    inputs=[69, 70] outputs=[71]
+  B28 decl=28 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.conInt5")
+    inputs=[] outputs=[72]
+    param k=Integer(2)
+  B29 decl=29 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.cloDam")
+    inputs=[73] outputs=[74]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B30 decl=30 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.opeDam")
+    inputs=[75] outputs=[76]
+    param realTrue=Real(0x3ff0000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B31 decl=31 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.add3")
+    inputs=[77, 78] outputs=[79]
+  B32 decl=32 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.or2")
+    inputs=[80, 81] outputs=[82]
+  B33 decl=33 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.swi2")
+    inputs=[83, 84, 85] outputs=[86]
+  B34 decl=34 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_dampers.or1")
+    inputs=[87, 88] outputs=[89]
+connectors: 90
+  C0 block=B0 dir=Out type=Real decl=0 iri=None
+  C1 block=B1 dir=Out type=Real decl=1 iri=None
+  C2 block=B2 dir=In type=Real decl=2 iri=None
+  C3 block=B2 dir=In type=Real decl=3 iri=Some("http://example.org#g36.source.cooling_only_dampers.VActMin_flow")
+  C4 block=B2 dir=In type=Real decl=4 iri=None
+  C5 block=B2 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.cooling_only_dampers.VActCooMax_flow")
+  C6 block=B2 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.cooling_only_dampers.uCoo")
+  C7 block=B2 dir=Out type=Real decl=7 iri=None
+  C8 block=B3 dir=In type=Real decl=8 iri=Some("http://example.org#g36.source.cooling_only_dampers.TSup")
+  C9 block=B3 dir=In type=Real decl=9 iri=Some("http://example.org#g36.source.cooling_only_dampers.TZon")
+  C10 block=B3 dir=Out type=Boolean decl=10 iri=None
+  C11 block=B4 dir=In type=Real decl=11 iri=Some("http://example.org#g36.source.cooling_only_dampers.VActMin_flow")
+  C12 block=B4 dir=In type=Boolean decl=12 iri=None
+  C13 block=B4 dir=In type=Real decl=13 iri=None
+  C14 block=B4 dir=Out type=Real decl=14 iri=None
+  C15 block=B5 dir=In type=Real decl=15 iri=None
+  C16 block=B5 dir=In type=Boolean decl=16 iri=None
+  C17 block=B5 dir=In type=Real decl=17 iri=Some("http://example.org#g36.source.cooling_only_dampers.VActMin_flow")
+  C18 block=B5 dir=Out type=Real decl=18 iri=None
+  C19 block=B6 dir=In type=Real decl=19 iri=None
+  C20 block=B6 dir=In type=Real decl=20 iri=None
+  C21 block=B6 dir=In type=Boolean decl=21 iri=Some("http://example.org#g36.source.cooling_only_dampers.u1Fan")
+  C22 block=B6 dir=Out type=Real decl=22 iri=None
+  C23 block=B7 dir=Out type=Integer decl=23 iri=None
+  C24 block=B8 dir=In type=Integer decl=24 iri=None
+  C25 block=B8 dir=In type=Integer decl=25 iri=Some("http://example.org#g36.source.cooling_only_dampers.uZonSta")
+  C26 block=B8 dir=Out type=Boolean decl=26 iri=None
+  C27 block=B9 dir=Out type=Real decl=27 iri=None
+  C28 block=B10 dir=In type=Real decl=28 iri=None
+  C29 block=B10 dir=In type=Real decl=29 iri=None
+  C30 block=B10 dir=Out type=Real decl=30 iri=None
+  C31 block=B11 dir=In type=Real decl=31 iri=Some("http://example.org#g36.source.cooling_only_dampers.VDis_flow")
+  C32 block=B11 dir=In type=Real decl=32 iri=None
+  C33 block=B11 dir=Out type=Real decl=33 iri=None
+  C34 block=B12 dir=Out type=Integer decl=34 iri=None
+  C35 block=B13 dir=In type=Integer decl=35 iri=Some("http://example.org#g36.source.cooling_only_dampers.oveFloSet")
+  C36 block=B13 dir=In type=Integer decl=36 iri=None
+  C37 block=B13 dir=Out type=Boolean decl=37 iri=None
+  C38 block=B14 dir=In type=Integer decl=38 iri=Some("http://example.org#g36.source.cooling_only_dampers.oveFloSet")
+  C39 block=B14 dir=In type=Integer decl=39 iri=None
+  C40 block=B14 dir=Out type=Boolean decl=40 iri=None
+  C41 block=B15 dir=Out type=Integer decl=41 iri=None
+  C42 block=B16 dir=In type=Integer decl=42 iri=Some("http://example.org#g36.source.cooling_only_dampers.oveFloSet")
+  C43 block=B16 dir=In type=Integer decl=43 iri=None
+  C44 block=B16 dir=Out type=Boolean decl=44 iri=None
+  C45 block=B17 dir=Out type=Integer decl=45 iri=None
+  C46 block=B18 dir=In type=Boolean decl=46 iri=None
+  C47 block=B18 dir=Out type=Real decl=47 iri=None
+  C48 block=B19 dir=In type=Boolean decl=48 iri=None
+  C49 block=B19 dir=Out type=Real decl=49 iri=None
+  C50 block=B20 dir=In type=Boolean decl=50 iri=None
+  C51 block=B20 dir=Out type=Real decl=51 iri=None
+  C52 block=B21 dir=In type=Real decl=52 iri=None
+  C53 block=B21 dir=In type=Real decl=53 iri=None
+  C54 block=B21 dir=Out type=Real decl=54 iri=None
+  C55 block=B22 dir=In type=Real decl=55 iri=None
+  C56 block=B22 dir=In type=Real decl=56 iri=None
+  C57 block=B22 dir=Out type=Real decl=57 iri=None
+  C58 block=B23 dir=In type=Real decl=58 iri=None
+  C59 block=B23 dir=In type=Boolean decl=59 iri=None
+  C60 block=B23 dir=In type=Real decl=60 iri=None
+  C61 block=B23 dir=Out type=Real decl=61 iri=None
+  C62 block=B24 dir=In type=Boolean decl=62 iri=None
+  C63 block=B24 dir=In type=Boolean decl=63 iri=None
+  C64 block=B24 dir=Out type=Boolean decl=64 iri=None
+  C65 block=B25 dir=Out type=Integer decl=65 iri=None
+  C66 block=B26 dir=In type=Integer decl=66 iri=Some("http://example.org#g36.source.cooling_only_dampers.oveDamPos")
+  C67 block=B26 dir=In type=Integer decl=67 iri=None
+  C68 block=B26 dir=Out type=Boolean decl=68 iri=None
+  C69 block=B27 dir=In type=Integer decl=69 iri=Some("http://example.org#g36.source.cooling_only_dampers.oveDamPos")
+  C70 block=B27 dir=In type=Integer decl=70 iri=None
+  C71 block=B27 dir=Out type=Boolean decl=71 iri=None
+  C72 block=B28 dir=Out type=Integer decl=72 iri=None
+  C73 block=B29 dir=In type=Boolean decl=73 iri=None
+  C74 block=B29 dir=Out type=Real decl=74 iri=None
+  C75 block=B30 dir=In type=Boolean decl=75 iri=None
+  C76 block=B30 dir=Out type=Real decl=76 iri=None
+  C77 block=B31 dir=In type=Real decl=77 iri=None
+  C78 block=B31 dir=In type=Real decl=78 iri=None
+  C79 block=B31 dir=Out type=Real decl=79 iri=None
+  C80 block=B32 dir=In type=Boolean decl=80 iri=None
+  C81 block=B32 dir=In type=Boolean decl=81 iri=None
+  C82 block=B32 dir=Out type=Boolean decl=82 iri=None
+  C83 block=B33 dir=In type=Real decl=83 iri=None
+  C84 block=B33 dir=In type=Boolean decl=84 iri=None
+  C85 block=B33 dir=In type=Real decl=85 iri=None
+  C86 block=B33 dir=Out type=Real decl=86 iri=None
+  C87 block=B34 dir=In type=Boolean decl=87 iri=None
+  C88 block=B34 dir=In type=Boolean decl=88 iri=None
+  C89 block=B34 dir=Out type=Boolean decl=89 iri=None
+connections: 40
+  C0 -> C2
+  C1 -> C4
+  C7 -> C13
+  C10 -> C12
+  C14 -> C15
+  C18 -> C60
+  C22 -> C85
+  C23 -> C24
+  C26 -> C16
+  C27 -> C29
+  C27 -> C32
+  C30 -> C19
+  C33 -> C20
+  C34 -> C36
+  C37 -> C46
+  C37 -> C63
+  C40 -> C48
+  C40 -> C62
+  C41 -> C39
+  C44 -> C50
+  C44 -> C87
+  C45 -> C43
+  C47 -> C55
+  C49 -> C52
+  C51 -> C53
+  C54 -> C56
+  C57 -> C58
+  C61 -> C28
+  C64 -> C88
+  C65 -> C67
+  C68 -> C73
+  C68 -> C80
+  C71 -> C75
+  C71 -> C81
+  C72 -> C70
+  C74 -> C77
+  C76 -> C78
+  C79 -> C83
+  C82 -> C84
+  C89 -> C59
+external_inputs: [3, 11, 17, 8, 9, 6, 5, 25, 35, 38, 42, 21, 31, 66, 69]

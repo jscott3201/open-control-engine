@@ -1,0 +1,10 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "engine_rev": "897e216b976104ee028a1bbb5cc50057b3d5c98a",
+  "reference_columns": [
+    "http://example.org#g36.source.cooling_only_dampers.VSet_flow",
+    "http://example.org#g36.source.cooling_only_dampers.yDam"
+  ]
+}
