@@ -9,7 +9,7 @@ use super::{
     AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3,
     AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21, AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22,
     AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_23, AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_24,
-    COOLING_ONLY_ACTIVE_AIR_FLOW, COOLING_ONLY_SYSTEM_REQUESTS, ECON,
+    COOLING_ONLY_ACTIVE_AIR_FLOW, COOLING_ONLY_DAMPERS, COOLING_ONLY_SYSTEM_REQUESTS, ECON,
     ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21, ECONOMIZER_ENABLE,
     ECONOMIZER_LIMITS_COMMON, ECONOMIZER_MODULATIONS_RELIEFS, ECONOMIZER_MODULATIONS_RETURN_FAN,
     ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER, FREEZE_PROTECTION, OUTDOOR_AIRFLOW_AHU,
@@ -71,6 +71,7 @@ pub(super) fn source_files(sequence: &str) -> &'static str {
         }
         FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
         COOLING_ONLY_ACTIVE_AIR_FLOW => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+        COOLING_ONLY_DAMPERS => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.mo",
         COOLING_ONLY_SYSTEM_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.mo",
         REHEAT_OVERRIDES => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
         _ => unreachable!("unknown G36 sequence {sequence}"),
@@ -117,6 +118,7 @@ pub(super) fn fixture_status(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
         | FREEZE_PROTECTION
         | COOLING_ONLY_ACTIVE_AIR_FLOW
+        | COOLING_ONLY_DAMPERS
         | COOLING_ONLY_SYSTEM_REQUESTS
         | REHEAT_OVERRIDES => {
             "supported-runtime-sequence source-verified composite"
