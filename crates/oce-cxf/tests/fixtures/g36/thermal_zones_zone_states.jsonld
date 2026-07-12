@@ -1,0 +1,385 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates",
+      "S231:label": "thermal_zones_zone_states",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uLow" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHigh" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uCoo" }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#g36.source.thermal_zones_zone_states.yZonSta"
+      }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": {
+        "@value": "0.05",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHea",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uCoo",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.yZonSta",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToIntHea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.integerTrue" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.integerFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates" },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.heating"
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.integerFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 0 },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToIntCoo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.integerTrue" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.integerFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates" },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling"
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.integerFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 0 },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Nor",
+      "S231:label": "isDea",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToIntDea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.integerTrue" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.integerFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.integerTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates" },
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.deadband"
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.integerFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 0 },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "isHea",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "hysUHea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.uLow" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.uHigh" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.pre_y_start" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.uLow", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "uLow" },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.uHigh", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "uHigh" },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.pre_y_start", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUHea.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "hysUCoo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.uLow" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.uHigh" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.pre_y_start" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.uLow", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "uLow" },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.uHigh", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "uHigh" },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.pre_y_start", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "uHeaMinUCoo",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "isCoo",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isDea.u2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:label": "hysU",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.uLow" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.uHigh" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.pre_y_start" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.uLow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": {
+        "@value": "-0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.uHigh",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.pre_y_start", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.hysU.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isHea.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "notHea",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.notHea.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.isCoo.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Add",
+      "S231:label": "addInt",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Add",
+      "S231:label": "addInt1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_zone_states.addInt1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_zone_states.yZonSta" }
+    }
+  ]
+}
