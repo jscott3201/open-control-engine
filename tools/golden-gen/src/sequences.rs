@@ -31,14 +31,15 @@ mod return_fan_airflow_tracking;
 mod return_fan_direct_pressure;
 mod supply_fan;
 mod supply_signals;
+mod time_suppression;
 mod trim_and_respond;
 mod vav_single_zone;
 
 #[allow(unused_imports)]
 pub(crate) use cdl_recurrences::{
-    buildings_line, buildings_round_six, clamp, greater_hysteretic, hysteresis,
-    initial_sample_time, latch, less_hysteretic, sample_due, sample_index, sampler_output,
-    true_delay, true_delay_output,
+    buildings_line, buildings_round_six, clamp, edge, greater_hysteretic, hysteresis,
+    initial_sample_time, latch, less_hysteretic, pre, sample_due, sample_index, sampler_output,
+    timer, triggered_sampler, true_delay, true_delay_on_init, true_delay_output, unit_delay,
 };
 use provenance::{SOURCE_COMMIT, fixture_status, source_files};
 
@@ -93,6 +94,7 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_2";
 const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
+const TIME_SUPPRESSION: &str = "generic_time_suppression";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
 const COOLING_ONLY_ALARMS: &str = "cooling_only_alarms";
@@ -136,6 +138,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(air_economizer_high_limits::goldens());
+    out.extend(time_suppression::goldens());
     out.extend(freeze_protection::goldens());
     out.extend(cooling_only_active_air_flow::goldens());
     out.extend(cooling_only_alarms::goldens());

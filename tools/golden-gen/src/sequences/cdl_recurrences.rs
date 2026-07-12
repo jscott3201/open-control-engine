@@ -156,3 +156,136 @@ pub(crate) fn sample_due(t_now: f64, t0: f64, period: f64, last_index: i64) -> (
     let index = sample_index(t_now, t0, period);
     (index > last_index, index)
 }
+
+/// Mirror `CDL.Discrete.TriggeredSampler`: capture `u` on each rising trigger and otherwise hold.
+///
+/// `y_start` is emitted before the first rising trigger. The returned trace has one row per input.
+///
+/// # Panics
+/// Panics when `u` and `trigger` have different lengths.
+pub(crate) fn triggered_sampler(u: &[f64], trigger: &[bool], y_start: f64) -> Vec<f64> {
+    assert_eq!(
+        u.len(),
+        trigger.len(),
+        "TriggeredSampler input/trigger length mismatch"
+    );
+    let mut held = y_start;
+    let mut previous_trigger = false;
+    let mut out = Vec::with_capacity(u.len());
+    for (&input, &triggered) in u.iter().zip(trigger) {
+        if triggered && !previous_trigger {
+            held = input;
+        }
+        out.push(held);
+        previous_trigger = triggered;
+    }
+    out
+}
+
+/// Mirror `CDL.Discrete.UnitDelay`: emit the previous periodic sample and hold between samples.
+///
+/// The held and staged samples both begin at `y_start`. At the first on-grid sample instant the
+/// output remains `y_start` while the current input is staged for the next sample instant.
+///
+/// # Panics
+/// Panics when `time` and `u` differ in length or `sample_period` is not finite and positive.
+pub(crate) fn unit_delay(time: &[f64], u: &[f64], sample_period: f64, y_start: f64) -> Vec<f64> {
+    assert_eq!(time.len(), u.len(), "UnitDelay time/input length mismatch");
+    assert!(
+        sample_period.is_finite() && sample_period > 0.0,
+        "UnitDelay sample period must be finite and positive"
+    );
+    let Some(&first_time) = time.first() else {
+        return Vec::new();
+    };
+
+    let t0 = initial_sample_time(first_time, sample_period);
+    let mut last_index = sample_index(first_time, t0, sample_period);
+    let mut held = y_start;
+    let mut staged = y_start;
+    let mut out = Vec::with_capacity(time.len());
+
+    for (index, (&t, &input)) in time.iter().zip(u).enumerate() {
+        if index == 0 {
+            out.push(held);
+            let sample_position = (t - t0) / sample_period;
+            if (sample_position - last_index as f64).abs() <= 1e-9 {
+                staged = input;
+            }
+            continue;
+        }
+
+        let (due, sample_index) = sample_due(t, t0, sample_period, last_index);
+        if due {
+            held = staged;
+            staged = input;
+            last_index = sample_index;
+        }
+        out.push(held);
+    }
+    out
+}
+
+/// Mirror `CDL.Logical.Timer.y`: elapsed seconds while `u` is true, reset to zero when false.
+///
+/// Each rising input starts a new interval at zero; elapsed time is a single subtraction from that
+/// entry time, matching the Buildings recurrence.
+///
+/// # Panics
+/// Panics when `time` and `u` have different lengths.
+pub(crate) fn timer(time: &[f64], u: &[bool]) -> Vec<f64> {
+    assert_eq!(time.len(), u.len(), "Timer time/input length mismatch");
+    let mut entry_time = None;
+    let mut previous_u = false;
+    let mut out = Vec::with_capacity(time.len());
+    for (&t, &input) in time.iter().zip(u) {
+        if input && !previous_u {
+            entry_time = Some(t);
+        }
+        out.push(if input {
+            entry_time.map_or(0.0, |entry| t - entry)
+        } else {
+            entry_time = None;
+            0.0
+        });
+        previous_u = input;
+    }
+    out
+}
+
+/// Mirror `CDL.Logical.Edge`: emit true only for a false-to-true input transition.
+///
+/// `pre_u_start` supplies the input state immediately before the first row.
+pub(crate) fn edge(u: &[bool], pre_u_start: bool) -> Vec<bool> {
+    let mut previous = pre_u_start;
+    let mut out = Vec::with_capacity(u.len());
+    for &input in u {
+        out.push(input && !previous);
+        previous = input;
+    }
+    out
+}
+
+/// Mirror `CDL.Logical.Pre`: emit the previous tick's Boolean input.
+///
+/// `pre_u_start` is emitted on the first row and the current input becomes the next row's output.
+pub(crate) fn pre(u: &[bool], pre_u_start: bool) -> Vec<bool> {
+    let mut previous = pre_u_start;
+    let mut out = Vec::with_capacity(u.len());
+    for &input in u {
+        out.push(previous);
+        previous = input;
+    }
+    out
+}
+
+/// Mirror `CDL.Logical.TrueDelay` with `delayOnInit=true`.
+///
+/// A true input present on the first row starts, rather than bypasses, the rising-edge delay.
+///
+/// # Panics
+/// Panics when `time` and `u` have different lengths.
+pub(crate) fn true_delay_on_init(time: &[f64], u: &[bool], delay_time: f64) -> Vec<bool> {
+    assert_eq!(time.len(), u.len(), "TrueDelay time/input length mismatch");
+    true_delay(time, u, delay_time)
+}
