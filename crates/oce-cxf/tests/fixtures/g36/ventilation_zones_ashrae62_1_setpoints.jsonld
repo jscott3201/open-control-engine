@@ -92,16 +92,16 @@
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonDisEff_heat", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0.8", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.dTHys", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "TemperatureDifference", "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
 
-    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.u1Win", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConditionalComponent": true, "S231:conditionalExpression": "have_winSen", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.u" } },
-    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.u1Occ", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConditionalComponent": true, "S231:conditionalExpression": "have_occSen", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc.u" } },
+    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.u1Win", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.u" } },
+    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.u1Occ", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc.u" } },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.uOpeMod", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.inOccMod.u1" } },
-    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.ppmCO2Set", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConditionalComponent": true, "S231:conditionalExpression": "have_CO2Sen", "S231:isConnectedTo": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.u" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.x2" } ] },
-    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.ppmCO2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConditionalComponent": true, "S231:conditionalExpression": "have_CO2Sen", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.u" } },
+    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.ppmCO2Set", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.u" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.x2" } ] },
+    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.ppmCO2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.u" } },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.TZon", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "ThermodynamicTemperature", "S231:displayUnit": "degC", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.cooSup.u1" } },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.TDis", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "ThermodynamicTemperature", "S231:displayUnit": "degC", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.cooSup.u2" } },
 
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VAdjPopBreZon_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
-    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VOccZonMin_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConditionalComponent": true, "S231:conditionalExpression": "not have_SZVAV" },
+    { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VOccZonMin_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VAdjAreBreZon_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
     { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VMinOA_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
 
@@ -122,8 +122,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
       "S231:label": "lin",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasParameter": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.limitBelow" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.limitAbove" } ],
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.x1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.f1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.x2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.f2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.u" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.lin.y" }
@@ -141,8 +139,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zer",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
       "S231:label": "zer",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zer.k" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zer.y" }
     },
@@ -153,8 +149,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.one",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
       "S231:label": "one",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.one.k" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.one.y" }
     },
@@ -165,8 +159,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.AddParameter",
       "S231:label": "addPar",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.p" },
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.addPar.y" }
@@ -190,8 +182,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
       "S231:label": "booToRea",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea.y" }
     },
@@ -202,8 +192,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.co2Con",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
       "S231:label": "co2Con",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.co2Con.u1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.co2Con.u2" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.co2Con.y" }
     },
@@ -215,8 +203,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
       "S231:label": "occMinAirSet",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen and not have_SZVAV",
       "S231:hasParameter": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.limitBelow" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.limitAbove" } ],
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.x1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.f1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.x2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.f2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.u" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAirSet.y" }
@@ -234,8 +220,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonMinFlo",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
       "S231:label": "zonMinFlo",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "not have_SZVAV",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonMinFlo.k" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonMinFlo.y" }
     },
@@ -246,8 +230,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonCooMaxFlo",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
       "S231:label": "zonCooMaxFlo",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen and not have_SZVAV",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonCooMaxFlo.k" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.zonCooMaxFlo.y" }
     },
@@ -258,8 +240,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
       "S231:label": "popBreOutAir",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen",
       "S231:hasParameter": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.limitBelow" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.limitAbove" } ],
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.x1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.f1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.x2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.f2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.u" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.popBreOutAir.y" }
@@ -298,8 +278,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.perOccSta",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
       "S231:label": "perOccSta",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_occSen",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.perOccSta.k" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.perOccSta.y" }
     },
@@ -344,8 +322,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
       "S231:label": "occMinAir",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "not have_SZVAV",
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.u1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.u2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.u3" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.y" }
     },
@@ -358,8 +334,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
       "S231:label": "notOcc",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_occSen",
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.notOcc.y" }
     },
@@ -382,8 +356,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
       "S231:label": "booToRea1",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_occSen",
       "S231:hasParameter": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1.realTrue" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1.realFalse" } ],
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.booToRea1.y" }
@@ -397,8 +369,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unPopAreBreAir",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
       "S231:label": "unPopAreBreAir",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_occSen",
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unPopAreBreAir.u1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unPopAreBreAir.u2" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unPopAreBreAir.y" }
     },
@@ -410,8 +380,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonFlo",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
       "S231:label": "unpMinZonFlo",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_occSen and not have_SZVAV",
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonFlo.u1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonFlo.u2" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonFlo.y" }
     },
@@ -435,8 +403,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
       "S231:label": "unpMinZonAir",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "not have_SZVAV",
       "S231:hasInput": [ { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir.u1" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir.u2" }, { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir.u3" } ],
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.unpMinZonAir.y" }
     },
@@ -494,8 +460,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.gai2",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
       "S231:label": "gai2",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_CO2Sen and not have_SZVAV and not have_parFanPowUni",
       "S231:hasParameter": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.gai2.k" },
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.gai2.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.gai2.y" }
@@ -528,8 +492,6 @@
       "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe",
       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
       "S231:label": "winOpe",
-      "S231:isConditionalComponent": true,
-      "S231:conditionalExpression": "have_winSen",
       "S231:hasInput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.u" },
       "S231:hasOutput": { "@id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.winOpe.y" }
     },
