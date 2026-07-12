@@ -1,0 +1,387 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ControlLoops",
+      "S231:label": "thermal_zones_control_loops",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.kCooCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TiCooCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.kHeaCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TiHeaCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.timChe" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.dTHys" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.looHys" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TCooSet" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TZon" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.THeaSet" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yCoo" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yHea" }
+      ]
+    },
+
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.kCooCon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TiCooCon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "s", "S231:quantity": "Time", "S231:value": { "@value": "900", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.kHeaCon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.TiHeaCon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "s", "S231:quantity": "Time", "S231:value": { "@value": "900", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.timChe", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "s", "S231:quantity": "Time", "S231:value": { "@value": "30", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.dTHys", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "TemperatureDifference", "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.looHys", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.TCooSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_s" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.TZon",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u2" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_m" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_m" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.THeaSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u2" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_s" }
+      ]
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yCoo", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }, "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yHea", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:min": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" }, "S231:max": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:label": "conCoo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.controllerType" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.k" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.Ti" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.reverseActing" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.y_reset" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_s" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_m" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.trigger" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.controllerType", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController" }, "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "kCooCon" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.Ti", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "TiCooCon" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.reverseActing", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.y_reset", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_s", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.u_m", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.trigger", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:label": "conHea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.controllerType" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.k" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.Ti" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.reverseActing" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.y_reset" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_s" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_m" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.trigger" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.controllerType", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController" }, "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "kHeaCon" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.Ti", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "TiHeaCon" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.reverseActing", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": true },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.y_reset", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_s", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.u_m", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.trigger", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Less",
+      "S231:label": "enaHeaLoo",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dTHys" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaHeaLoo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon.u" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conHea.trigger" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Less",
+      "S231:label": "enaCooLoo",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dTHys" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.enaCooLoo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.conCoo.trigger" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon.u" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "disCoo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.delayTime" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.delayOnInit" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.delayTime", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "timChe" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.delayOnInit", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u1" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "colZon",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.colZon.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "zerCoo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.realTrue" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "cooConSig",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yCoo" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "holZon",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.holZon.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "disHea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.delayTime" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.delayOnInit" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.delayTime", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "timChe" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.delayOnInit", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u1" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "zerHea",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.realTrue" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "heaConSig",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.yHea" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "zerCon",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.t" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "looHys" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0.008", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCoo.u" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:label": "zerCon1",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.t" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "looHys" },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0.008", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCon1.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHea.u" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "disCooCon",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disCooCon.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerCoo.u" } },
+
+    {
+      "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "disHeaCon",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u1" },
+        { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.y" }
+    },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.thermal_zones_control_loops.disHeaCon.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.thermal_zones_control_loops.zerHea.u" } }
+  ]
+}
