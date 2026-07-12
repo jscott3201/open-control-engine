@@ -1015,6 +1015,24 @@
       ]
     },
     {
+      "name": "thermal_zones_zone_states",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld",
+      "top_id": "http://example.org#g36.source.thermal_zones_zone_states",
+      "supported_variant": "source-verified explicit CXF for scalar ThermalZones ZoneStates with source-default uLow=0.01 and uHigh=0.05, hysU.uLow=-0.01 and hysU.uHigh=0.01 pre-grounded from source expressions, three explicit pre_y_start=false Boolean bindings, three integerFalse=0 bindings, and ZoneStates heating/deadband/cooling literals grounded to Integer 1/2/3",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/thermal_zones_zone_states.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/thermal_zones_zone_states.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/thermal_zones_zone_states/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_thermal_zones_zone_states_oracle.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar ThermalZones ZoneStates composite, not arbitrary Modelica parsing.",
+        "The independent 44-tick recurrence covers ZS1-ZS5: strict demand boundaries, asymmetric tie-break crossings and holds in both directions, simultaneous demands under both latch histories, heating priority, all three enum plateaus, and every required state transition pair.",
+        "The single yZonSta output is Integer and remains on Tier-A Exact conformance with no vacuous funnel run; this is also the first composite fixture proving Logical.Nor and Integers.Add."
+      ]
+    },
+    {
       "name": "cooling_only_dampers",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers",
@@ -1977,6 +1995,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and Boolean-output determinism coverage.",
         "The fixture preserves all 24 source child components, both source inputs, the single named Boolean output, all four parent parameter bindings, and all 33 source connects including the Pre-broken latch loop and both TriggeredSampler trigger edges.",
         "Evidence does not claim arbitrary .mo parsing, alternate TimeSuppression parameterizations, the full CoolingOnly controller, or Real-valued funnel coverage."
+      ]
+    },
+    {
+      "name": "thermal_zones_zone_states",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld",
+      "top_id": "http://example.org#g36.source.thermal_zones_zone_states",
+      "fixture_top_child_count": 13,
+      "active_block_count": 13,
+      "input_count": 2,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for scalar ThermalZones ZoneStates with source-default parent parameters, four benign self-named reference bindings, hysU.uLow=-0.01 and hysU.uHigh=0.01 pre-grounded from enclosing-scope source expressions, three explicit Boolean starts, and three ZoneStates literals bound at BooleanToInteger.integerTrue",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_thermal_zones_zone_states.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_thermal_zones_zone_states.rs",
+      "api_test": "crates/oce-api/tests/g36_thermal_zones_zone_states.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and Integer-output determinism coverage.",
+        "The fixture preserves all 13 source child components, both source inputs, the single named Integer output, both parent parameter bindings, and all 20 source connects including the three-way isHea fan-out and heating-priority ladder.",
+        "Evidence does not claim arbitrary .mo parsing, alternate ZoneStates parameterizations, other ThermalZones sequences, the full CoolingOnly controller, or Real-valued funnel coverage."
       ]
     },
     {

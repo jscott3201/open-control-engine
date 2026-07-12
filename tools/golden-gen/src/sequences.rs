@@ -34,6 +34,7 @@ mod supply_signals;
 mod time_suppression;
 mod trim_and_respond;
 mod vav_single_zone;
+mod zone_states;
 
 #[allow(unused_imports)]
 pub(crate) use cdl_recurrences::{
@@ -95,6 +96,7 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str =
 const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
 const TIME_SUPPRESSION: &str = "generic_time_suppression";
+const THERMAL_ZONES_ZONE_STATES: &str = "thermal_zones_zone_states";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
 const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
 const COOLING_ONLY_ALARMS: &str = "cooling_only_alarms";
@@ -139,6 +141,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(air_economizer_high_limits::goldens());
     out.extend(time_suppression::goldens());
+    out.extend(zone_states::goldens());
     out.extend(freeze_protection::goldens());
     out.extend(cooling_only_active_air_flow::goldens());
     out.extend(cooling_only_alarms::goldens());
