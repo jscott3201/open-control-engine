@@ -961,6 +961,25 @@
       ]
     },
     {
+      "name": "cooling_only_controller",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Controller",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_controller",
+      "supported_variant": "source-verified explicit CXF for the Controller.Validation CoolingOnly assembly with venStd=ASHRAE62_1, all three sensor flags and permit_occStandby=true, VAreBreZon_flow=0.006 m3/s, VPopBreZon_flow=0.005 m3/s, VMin_flow=0.5 m3/s, VCooMax_flow=1.5 m3/s, PI loop and damper control, kDam=0.5, floHys=0.01 m3/s, damPosHys=0.01, samplePeriod=120 s, and the inactive Title24 minimum-flow branch pruned",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_controller.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_controller.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/cooling_only_controller/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_cooling_only_controller_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in two-level nested explicit-CXF CoolingOnly.Controller assembly, not arbitrary Modelica parsing.",
+        "The supported variant composes the eight active source children timSup, conLoo, setPoi, actAirSet, zonSta, dam, sysReq, and ala into exactly 213 flattened leaves while preserving the source-level parameter bindings and 48 active top-level connects.",
+        "The independent whole-controller oracle re-derives all eight child behaviors inline and covers all ten distinct outputs at 60 s intervals across the upstream 86400 s Controller.Validation scenario.",
+        "Evidence does not claim California Title24 ventilation, inactive minFlo outputs, alternate sensor flags, alternate controller parameterizations, arbitrary .mo parsing, or package-level TerminalUnits support."
+      ]
+    },
+    {
       "name": "cooling_only_active_air_flow",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.ActiveAirFlow",
@@ -1962,6 +1981,40 @@
         "Evidence proves restricted explicit-CXF source-default FreezeProtection composite import, facade load/simulation support, independent oracle matching, and determinism golden coverage.",
         "The fixture includes the 61 active source-default child components and omits inactive branches for DedicatedDampersPressure minimum outdoor air, return/relief fan pressure control, BAS/hardwired freeze stat, hardwired dummy passthroughs, and have_frePro=false passthrough behavior.",
         "Evidence does not claim arbitrary .mo parsing, no-freeze-protection variants, BAS or hardwired freeze-stat variants, return/relief-fan pressure branches, DedicatedDampersPressure minimum-OA support, alternate controller types, or non-default FreezeProtection parameterizations."
+      ]
+    },
+    {
+      "name": "cooling_only_controller",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Controller",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld",
+      "top_id": "http://example.org#g36.source.cooling_only_controller",
+      "fixture_top_child_count": 8,
+      "active_block_count": 213,
+      "input_count": 14,
+      "output_count": 10,
+      "supported_variant": "two-level nested explicit CXF source transcription for the Controller.Validation CoolingOnly assembly with ASHRAE62_1 ventilation, all sensor flags and occupied standby enabled, VMin_flow=0.5 m3/s, VCooMax_flow=1.5 m3/s, PI loop and damper control, kDam=0.5, literal floHys=0.01 m3/s, damPosHys=0.01, and the inactive Title24 minFlo child and connections pre-pruned",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_cooling_only_controller.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_cooling_only_controller.rs",
+      "api_test": "crates/oce-api/tests/g36_cooling_only_controller.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "oracle_reference": "tools/golden-gen/goldens/G36/cooling_only_controller/reference.csv",
+      "conformance_test": "crates/oce-conformance/tests/g36_cooling_only_controller_funnel.rs",
+      "determinism_golden": "crates/oce-conformance/tests/fixtures/golden/g36_traces/cooling_only_controller.csv",
+      "known_deferred_branches": [
+        "California_Title_24 ventilation and the conditional minFlo child",
+        "window, occupancy, or CO2 sensor-disabled variants",
+        "occupied-standby-disabled variants",
+        "alternate controller parameterizations",
+        "package-level TerminalUnits support"
+      ],
+      "notes": [
+        "Evidence proves restricted two-level nested explicit-CXF import, 213-leaf flattening, facade load and simulation support, independent whole-controller oracle matching, mixed Real/Integer conformance, and determinism golden coverage.",
+        "The fixture contains exactly eight active source child composites with per-child leaf counts 24, 16, 34, 11, 13, 35, 33, and 47; it has 14 active inputs, ten distinct active outputs, and 48 active top-level source connects that expand to 268 flattened runtime connections.",
+        "The inactive Title24 minFlo child, its nine touching connects, and the three Title24-only outputs are absent without conditional annotations; all 39 Controller parameters remain declared.",
+        "Evidence does not claim arbitrary .mo parsing, inactive conditional branches, alternate sensor or ventilation configurations, non-PI control, alternate parameterizations, or full TerminalUnits package support."
       ]
     },
     {

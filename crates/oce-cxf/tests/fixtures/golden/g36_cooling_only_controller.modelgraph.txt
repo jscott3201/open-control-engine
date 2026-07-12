@@ -1,0 +1,1386 @@
+blocks: 213
+  B0 decl=0 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.actCooMax")
+    inputs=[0] outputs=[1]
+    param realTrue=Real(0x3ff8000000000000)
+  B1 decl=1 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.or3")
+    inputs=[2, 3] outputs=[4]
+  B2 decl=2 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.booToRea")
+    inputs=[5] outputs=[6]
+    param realTrue=Integer(1)
+  B3 decl=3 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.actMin")
+    inputs=[7, 8] outputs=[9]
+  B4 decl=4 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.occMod")
+    inputs=[] outputs=[10]
+    param k=Integer(1)
+  B5 decl=5 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu")
+    inputs=[11, 12] outputs=[13]
+  B6 decl=6 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.cooDowMod")
+    inputs=[] outputs=[14]
+    param k=Integer(2)
+  B7 decl=7 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.setUpMod")
+    inputs=[] outputs=[15]
+    param k=Integer(3)
+  B8 decl=8 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu2")
+    inputs=[16, 17] outputs=[18]
+  B9 decl=9 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.intEqu1")
+    inputs=[19, 20] outputs=[21]
+  B10 decl=10 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.actAirSet.or2")
+    inputs=[22, 23] outputs=[24]
+  B11 decl=11 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greThr1")
+    inputs=[25] outputs=[26]
+    param t=Real(0x4008000000000000)
+    param h=Real(0x3fd0000000000000)
+  B12 decl=12 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greThr2")
+    inputs=[27] outputs=[28]
+    param t=Real(0x4000000000000000)
+    param h=Real(0x3fd0000000000000)
+  B13 decl=13 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greThr3")
+    inputs=[29] outputs=[30]
+    param t=Real(0x3fee666666666666)
+    param h=Real(0x3f847ae147ae147b)
+  B14 decl=14 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greThr")
+    inputs=[31] outputs=[32]
+    param t=Real(0x3fee666666666666)
+    param h=Real(0x3f847ae147ae147b)
+  B15 decl=15 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greThr4")
+    inputs=[33] outputs=[34]
+    param t=Real(0x3f847ae147ae147b)
+    param h=Real(0x3f747ae147ae147b)
+  B16 decl=16 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.booToInt")
+    inputs=[35] outputs=[36]
+  B17 decl=17 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.booToInt1")
+    inputs=[37] outputs=[38]
+  B18 decl=18 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.gai1")
+    inputs=[39] outputs=[40]
+    param k=Real(0x3fe0000000000000)
+  B19 decl=19 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.gai2")
+    inputs=[41] outputs=[42]
+    param k=Real(0x3fe6666666666666)
+  B20 decl=20 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sub2")
+    inputs=[43, 44] outputs=[45]
+  B21 decl=21 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sub3")
+    inputs=[46, 47] outputs=[48]
+  B22 decl=22 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.and1")
+    inputs=[49, 50] outputs=[51]
+  B23 decl=23 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.and2")
+    inputs=[52, 53] outputs=[54]
+  B24 decl=24 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.and3")
+    inputs=[55, 56] outputs=[57]
+  B25 decl=25 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.and4")
+    inputs=[58, 59] outputs=[60]
+  B26 decl=26 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.thrCooResReq")
+    inputs=[] outputs=[61]
+    param k=Integer(3)
+  B27 decl=27 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.twoCooResReq")
+    inputs=[] outputs=[62]
+    param k=Integer(2)
+  B28 decl=28 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.thrPreResReq")
+    inputs=[] outputs=[63]
+    param k=Integer(3)
+  B29 decl=29 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.twoPreResReq")
+    inputs=[] outputs=[64]
+    param k=Integer(2)
+  B30 decl=30 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.intSwi")
+    inputs=[65, 66, 67] outputs=[68]
+  B31 decl=31 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.intSwi1")
+    inputs=[69, 70, 71] outputs=[72]
+  B32 decl=32 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.swi4")
+    inputs=[73, 74, 75] outputs=[76]
+  B33 decl=33 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.swi5")
+    inputs=[77, 78, 79] outputs=[80]
+  B34 decl=34 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.tim1")
+    inputs=[81] outputs=[82]
+    param delayTime=Real(0x405e000000000000)
+  B35 decl=35 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.tim2")
+    inputs=[83] outputs=[84]
+    param delayTime=Real(0x405e000000000000)
+  B36 decl=36 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.tim3")
+    inputs=[85] outputs=[86]
+    param delayTime=Real(0x404e000000000000)
+  B37 decl=37 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greEqu")
+    inputs=[87, 88] outputs=[89]
+    param h=Real(0x3f847ae147ae147b)
+  B38 decl=38 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.greEqu1")
+    inputs=[90, 91] outputs=[92]
+    param h=Real(0x3f847ae147ae147b)
+  B39 decl=39 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.and5")
+    inputs=[93, 94] outputs=[95]
+  B40 decl=40 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sampler")
+    inputs=[96] outputs=[97]
+    param samplePeriod=Real(0x405e000000000000)
+  B41 decl=41 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sampler1")
+    inputs=[98] outputs=[99]
+    param samplePeriod=Real(0x405e000000000000)
+  B42 decl=42 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sampler2")
+    inputs=[100] outputs=[101]
+    param samplePeriod=Real(0x405e000000000000)
+  B43 decl=43 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.sysReq.sampler3")
+    inputs=[102] outputs=[103]
+    param samplePeriod=Real(0x405e000000000000)
+  B44 decl=44 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.conCoo")
+    inputs=[104, 105, 106] outputs=[107]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3fb999999999999a)
+    param Ti=Real(0x408c200000000000)
+    param reverseActing=Boolean(false)
+    param y_reset=Real(0x0000000000000000)
+  B45 decl=45 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.conHea")
+    inputs=[108, 109, 110] outputs=[111]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3fb999999999999a)
+    param Ti=Real(0x408c200000000000)
+    param reverseActing=Boolean(true)
+    param y_reset=Real(0x0000000000000000)
+  B46 decl=46 class=CDL.Reals.Less instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.enaHeaLoo")
+    inputs=[112, 113] outputs=[114]
+    param h=Real(0x3fd0000000000000)
+  B47 decl=47 class=CDL.Reals.Less instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.enaCooLoo")
+    inputs=[115, 116] outputs=[117]
+    param h=Real(0x3fd0000000000000)
+  B48 decl=48 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.disCoo")
+    inputs=[118] outputs=[119]
+    param delayTime=Real(0x403e000000000000)
+    param delayOnInit=Boolean(false)
+  B49 decl=49 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.colZon")
+    inputs=[120] outputs=[121]
+  B50 decl=50 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.zerCoo")
+    inputs=[122] outputs=[123]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B51 decl=51 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.cooConSig")
+    inputs=[124, 125] outputs=[126]
+  B52 decl=52 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.holZon")
+    inputs=[127] outputs=[128]
+  B53 decl=53 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.disHea")
+    inputs=[129] outputs=[130]
+    param delayTime=Real(0x403e000000000000)
+    param delayOnInit=Boolean(false)
+  B54 decl=54 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.zerHea")
+    inputs=[131] outputs=[132]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B55 decl=55 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.heaConSig")
+    inputs=[133, 134] outputs=[135]
+  B56 decl=56 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.zerCon")
+    inputs=[136] outputs=[137]
+    param t=Real(0x3f847ae147ae147b)
+    param h=Real(0x3f80624dd2f1a9fc)
+  B57 decl=57 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.zerCon1")
+    inputs=[138] outputs=[139]
+    param t=Real(0x3f847ae147ae147b)
+    param h=Real(0x3f80624dd2f1a9fc)
+  B58 decl=58 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.disCooCon")
+    inputs=[140, 141] outputs=[142]
+  B59 decl=59 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.conLoo.disHeaCon")
+    inputs=[143, 144] outputs=[145]
+  B60 decl=60 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.gai")
+    inputs=[146] outputs=[147]
+    param k=Real(0x3fe0000000000000)
+  B61 decl=61 class=CDL.Reals.Less instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.les")
+    inputs=[148, 149] outputs=[150]
+    param h=Real(0x3f847ae147ae147b)
+  B62 decl=62 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.truDel")
+    inputs=[151] outputs=[152]
+    param delayTime=Real(0x4072c00000000000)
+  B63 decl=63 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.greThr")
+    inputs=[153] outputs=[154]
+    param t=Real(0x3f847ae147ae147b)
+    param h=Real(0x3f747ae147ae147b)
+  B64 decl=64 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.gre")
+    inputs=[155, 156] outputs=[157]
+    param h=Real(0x3f847ae147ae147b)
+  B65 decl=65 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.gai1")
+    inputs=[158] outputs=[159]
+    param k=Real(0x3fe6666666666666)
+  B66 decl=66 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.truDel1")
+    inputs=[160] outputs=[161]
+    param delayTime=Real(0x4072c00000000000)
+  B67 decl=67 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and2")
+    inputs=[162, 163] outputs=[164]
+  B68 decl=68 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and1")
+    inputs=[165, 166] outputs=[167]
+  B69 decl=69 class=CDL.Integers.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.lowFloAla")
+    inputs=[168, 169, 170] outputs=[171]
+  B70 decl=70 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.conInt")
+    inputs=[] outputs=[172]
+    param k=Integer(2)
+  B71 decl=71 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.booToInt")
+    inputs=[173] outputs=[174]
+    param integerTrue=Integer(3)
+    param integerFalse=Integer(0)
+  B72 decl=72 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.conInt1")
+    inputs=[] outputs=[175]
+    param k=Real(0x3ff0000000000000)
+  B73 decl=73 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.greThr1")
+    inputs=[176] outputs=[177]
+    param t=Real(0x0000000000000000)
+    param h=Real(0x0000000000000000)
+  B74 decl=74 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.booToInt1")
+    inputs=[178] outputs=[179]
+    param integerTrue=Integer(1)
+    param integerFalse=Integer(0)
+  B75 decl=75 class=CDL.Integers.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.proInt")
+    inputs=[180, 181] outputs=[182]
+  B76 decl=76 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and8")
+    inputs=[183, 184] outputs=[185]
+  B77 decl=77 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.not1")
+    inputs=[186] outputs=[187]
+  B78 decl=78 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.assMes")
+    inputs=[188] outputs=[]
+    param message=String("Warning: airflow is less than 50% of the setpoint.")
+  B79 decl=79 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and4")
+    inputs=[189, 190] outputs=[191]
+  B80 decl=80 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.not2")
+    inputs=[192] outputs=[193]
+  B81 decl=81 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.assMes1")
+    inputs=[194] outputs=[]
+    param message=String("Warning: airflow is less than 70% of the setpoint.")
+  B82 decl=82 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.cooMaxFlo")
+    inputs=[] outputs=[195]
+    param k=Real(0x3ff8000000000000)
+  B83 decl=83 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.gai2")
+    inputs=[196] outputs=[197]
+    param k=Real(0x3fb999999999999a)
+  B84 decl=84 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.not3")
+    inputs=[198] outputs=[199]
+  B85 decl=85 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.truDel2")
+    inputs=[200] outputs=[201]
+    param delayTime=Real(0x4082c00000000000)
+  B86 decl=86 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.gre1")
+    inputs=[202, 203] outputs=[204]
+    param h=Real(0x3f847ae147ae147b)
+  B87 decl=87 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and5")
+    inputs=[205, 206] outputs=[207]
+  B88 decl=88 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.not4")
+    inputs=[208] outputs=[209]
+  B89 decl=89 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.assMes2")
+    inputs=[210] outputs=[]
+    param message=String("Warning: airflow sensor should be calibrated.")
+  B90 decl=90 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.booToInt2")
+    inputs=[211] outputs=[212]
+    param integerTrue=Integer(3)
+    param integerFalse=Integer(0)
+  B91 decl=91 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.truDel3")
+    inputs=[213] outputs=[214]
+    param delayTime=Real(0x4082c00000000000)
+  B92 decl=92 class=CDL.Reals.LessThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.cloDam")
+    inputs=[215] outputs=[216]
+    param t=Real(0x3f847ae147ae147b)
+    param h=Real(0x3f747ae147ae147b)
+  B93 decl=93 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.leaDamAla1")
+    inputs=[217, 218] outputs=[219]
+  B94 decl=94 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.leaDamAla2")
+    inputs=[220, 221] outputs=[222]
+  B95 decl=95 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.not5")
+    inputs=[223] outputs=[224]
+  B96 decl=96 class=CDL.Utilities.Assert instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.assMes3")
+    inputs=[225] outputs=[]
+    param message=String("Warning: the damper is leaking.")
+  B97 decl=97 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.booToInt3")
+    inputs=[226] outputs=[227]
+    param integerTrue=Integer(4)
+    param integerFalse=Integer(0)
+  B98 decl=98 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.truDel4")
+    inputs=[228] outputs=[229]
+    param delayTime=Real(0x4072c00000000000)
+  B99 decl=99 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and11")
+    inputs=[230, 231] outputs=[232]
+  B100 decl=100 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and10")
+    inputs=[233, 234] outputs=[235]
+  B101 decl=101 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.fanIni")
+    inputs=[236] outputs=[237]
+    param delayTime=Real(0x409c200000000000)
+  B102 decl=102 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.occMod")
+    inputs=[] outputs=[238]
+    param k=Integer(1)
+  B103 decl=103 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.isOcc")
+    inputs=[239, 240] outputs=[241]
+  B104 decl=104 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and6")
+    inputs=[242, 243] outputs=[244]
+  B105 decl=105 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and7")
+    inputs=[245, 246] outputs=[247]
+  B106 decl=106 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.ala.and3")
+    inputs=[248, 249] outputs=[250]
+  B107 decl=107 class=CDL.Reals.Min instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.supTim")
+    inputs=[251, 252] outputs=[253]
+  B108 decl=108 class=CDL.Discrete.Sampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.samSet")
+    inputs=[254] outputs=[255]
+    param samplePeriod=Real(0x405e000000000000)
+  B109 decl=109 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.uniDel")
+    inputs=[256] outputs=[257]
+    param samplePeriod=Real(0x405e000000000000)
+    param y_start=Real(0x0000000000000000)
+  B110 decl=110 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.abs1")
+    inputs=[258] outputs=[259]
+  B111 decl=111 class=CDL.Discrete.TriggeredSampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.triSam")
+    inputs=[260, 261] outputs=[262]
+    param y_start=Real(0x0000000000000000)
+  B112 decl=112 class=CDL.Logical.Edge instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.edg")
+    inputs=[263] outputs=[264]
+  B113 decl=113 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.lat")
+    inputs=[265, 266] outputs=[267]
+  B114 decl=114 class=CDL.Logical.Latch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.lat1")
+    inputs=[268, 269] outputs=[270]
+  B115 decl=115 class=CDL.Logical.Timer instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.tim")
+    inputs=[271] outputs=[272, 273]
+    param t=Real(0x0000000000000000)
+  B116 decl=116 class=CDL.Reals.GreaterThreshold instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.greThr")
+    inputs=[274] outputs=[275]
+    param t=Real(0x3fd0000000000000)
+    param h=Real(0x3fc0000000000000)
+  B117 decl=117 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.gai")
+    inputs=[276] outputs=[277]
+    param k=Real(0x4080e00000000000)
+  B118 decl=118 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.sub1")
+    inputs=[278, 279] outputs=[280]
+  B119 decl=119 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.conZer")
+    inputs=[] outputs=[281]
+    param k=Real(0x0000000000000000)
+  B120 decl=120 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.maxSupTim")
+    inputs=[] outputs=[282]
+    param k=Real(0x409c200000000000)
+  B121 decl=121 class=CDL.Logical.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.con5")
+    inputs=[] outputs=[283]
+    param k=Boolean(true)
+  B122 decl=122 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.swi")
+    inputs=[284, 285, 286] outputs=[287]
+  B123 decl=123 class=CDL.Logical.Pre instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.pre1")
+    inputs=[288] outputs=[289]
+    param pre_u_start=Boolean(false)
+  B124 decl=124 class=CDL.Logical.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.pasSupTim")
+    inputs=[290, 291, 292] outputs=[293]
+  B125 decl=125 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.pasSup")
+    inputs=[294, 295] outputs=[296]
+    param h=Real(0x0000000000000000)
+  B126 decl=126 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.temDif")
+    inputs=[297, 298] outputs=[299]
+  B127 decl=127 class=CDL.Discrete.TriggeredSampler instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.triSam1")
+    inputs=[300, 301] outputs=[302]
+    param y_start=Real(0x0000000000000000)
+  B128 decl=128 class=CDL.Reals.Abs instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.abs2")
+    inputs=[303] outputs=[304]
+  B129 decl=129 class=CDL.Logical.TrueDelay instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.truDel")
+    inputs=[305] outputs=[306]
+    param delayTime=Real(0x405e000000000000)
+    param delayOnInit=Boolean(true)
+  B130 decl=130 class=CDL.Logical.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.timSup.con1")
+    inputs=[] outputs=[307]
+    param k=Boolean(true)
+  B131 decl=131 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.airDisEff")
+    inputs=[308] outputs=[309]
+    param realTrue=Real(0x3ff0000000000000)
+    param realFalse=Real(0x3fe999999999999a)
+  B132 decl=132 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.lin")
+    inputs=[310, 311, 312, 313, 314] outputs=[315]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(true)
+  B133 decl=133 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.zer")
+    inputs=[] outputs=[316]
+    param k=Real(0x0000000000000000)
+  B134 decl=134 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.one")
+    inputs=[] outputs=[317]
+    param k=Real(0x3ff0000000000000)
+  B135 decl=135 class=CDL.Reals.AddParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.addPar")
+    inputs=[318] outputs=[319]
+    param p=Real(0xc069000000000000)
+  B136 decl=136 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.inOccMod")
+    inputs=[320, 321] outputs=[322]
+  B137 decl=137 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.booToRea")
+    inputs=[323] outputs=[324]
+  B138 decl=138 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.co2Con")
+    inputs=[325, 326] outputs=[327]
+  B139 decl=139 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.occMinAirSet")
+    inputs=[328, 329, 330, 331, 332] outputs=[333]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(true)
+  B140 decl=140 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.zonMinFlo")
+    inputs=[] outputs=[334]
+    param k=Real(0x3fe0000000000000)
+  B141 decl=141 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.zonCooMaxFlo")
+    inputs=[] outputs=[335]
+    param k=Real(0x3ff8000000000000)
+  B142 decl=142 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.popBreOutAir")
+    inputs=[336, 337, 338, 339, 340] outputs=[341]
+    param limitBelow=Boolean(true)
+    param limitAbove=Boolean(true)
+  B143 decl=143 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.or2")
+    inputs=[342, 343] outputs=[344]
+  B144 decl=144 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.notOccMod")
+    inputs=[345] outputs=[346]
+  B145 decl=145 class=CDL.Logical.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.perOccSta")
+    inputs=[] outputs=[347]
+    param k=Boolean(true)
+  B146 decl=146 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.zer1")
+    inputs=[] outputs=[348]
+    param k=Real(0x0000000000000000)
+  B147 decl=147 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.modPopBreAir")
+    inputs=[349, 350, 351] outputs=[352]
+  B148 decl=148 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.modAreBreAir")
+    inputs=[353, 354, 355] outputs=[356]
+  B149 decl=149 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.occMinAir")
+    inputs=[357, 358, 359] outputs=[360]
+  B150 decl=150 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.notOcc")
+    inputs=[361] outputs=[362]
+  B151 decl=151 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.unpPopBreAir")
+    inputs=[363, 364, 365] outputs=[366]
+  B152 decl=152 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.booToRea1")
+    inputs=[367] outputs=[368]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x3ff0000000000000)
+  B153 decl=153 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.unPopAreBreAir")
+    inputs=[369, 370] outputs=[371]
+  B154 decl=154 class=CDL.Reals.Multiply instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.unpMinZonFlo")
+    inputs=[372, 373] outputs=[374]
+  B155 decl=155 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.unpAreBreAir")
+    inputs=[375, 376, 377] outputs=[378]
+  B156 decl=156 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.unpMinZonAir")
+    inputs=[379, 380, 381] outputs=[382]
+  B157 decl=157 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.reqBreAir")
+    inputs=[383, 384] outputs=[385]
+  B158 decl=158 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.minOA")
+    inputs=[386, 387] outputs=[388]
+  B159 decl=159 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.occMod")
+    inputs=[] outputs=[389]
+    param k=Integer(1)
+  B160 decl=160 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.cooSup")
+    inputs=[390, 391] outputs=[392]
+    param h=Real(0x3fd0000000000000)
+  B161 decl=161 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.gai2")
+    inputs=[393] outputs=[394]
+    param k=Real(0x3ff0000000000000)
+  B162 decl=162 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.desAreAir")
+    inputs=[] outputs=[395]
+    param k=Real(0x3f789374bc6a7efa)
+  B163 decl=163 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.desPopAir")
+    inputs=[] outputs=[396]
+    param k=Real(0x3f747ae147ae147b)
+  B164 decl=164 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.setPoi.winOpe")
+    inputs=[397] outputs=[398]
+  B165 decl=165 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.con")
+    inputs=[] outputs=[399]
+    param k=Real(0x0000000000000000)
+  B166 decl=166 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.con1")
+    inputs=[] outputs=[400]
+    param k=Real(0x3ff0000000000000)
+  B167 decl=167 class=CDL.Reals.Line instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.lin")
+    inputs=[401, 402, 403, 404, 405] outputs=[406]
+  B168 decl=168 class=CDL.Reals.Greater instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.gre")
+    inputs=[407, 408] outputs=[409]
+    param h=Real(0x3fd0000000000000)
+  B169 decl=169 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.swi")
+    inputs=[410, 411, 412] outputs=[413]
+  B170 decl=170 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.actFlo")
+    inputs=[414, 415, 416] outputs=[417]
+  B171 decl=171 class=CDL.Reals.PIDWithReset instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conPID")
+    inputs=[418, 419, 420] outputs=[421]
+    param controllerType=Enum(class=1,ordinal=2)
+    param k=Real(0x3fe0000000000000)
+    param Ti=Real(0x4072c00000000000)
+    param Td=Real(0x3fb999999999999a)
+    param y_reset=Real(0x3f847ae147ae147b)
+  B172 decl=172 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt")
+    inputs=[] outputs=[422]
+    param k=Integer(3)
+  B173 decl=173 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.cooSta")
+    inputs=[423, 424] outputs=[425]
+  B174 decl=174 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.nomFlow")
+    inputs=[] outputs=[426]
+    param k=Real(0x3ff8000000000000)
+  B175 decl=175 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.VDisSet_flowNor")
+    inputs=[427, 428] outputs=[429]
+  B176 decl=176 class=CDL.Reals.Divide instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.VDis_flowNor")
+    inputs=[430, 431] outputs=[432]
+  B177 decl=177 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt1")
+    inputs=[] outputs=[433]
+    param k=Integer(1)
+  B178 decl=178 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.forZerFlo")
+    inputs=[434, 435] outputs=[436]
+  B179 decl=179 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.forCooMax")
+    inputs=[437, 438] outputs=[439]
+  B180 decl=180 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt2")
+    inputs=[] outputs=[440]
+    param k=Integer(2)
+  B181 decl=181 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.forMinFlo")
+    inputs=[441, 442] outputs=[443]
+  B182 decl=182 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt3")
+    inputs=[] outputs=[444]
+    param k=Integer(3)
+  B183 decl=183 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.zerFlo")
+    inputs=[445] outputs=[446]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B184 decl=184 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.cooMax")
+    inputs=[447] outputs=[448]
+    param realTrue=Real(0x3ff8000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B185 decl=185 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.minFlo")
+    inputs=[449] outputs=[450]
+    param realTrue=Real(0x3fe0000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B186 decl=186 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.add2")
+    inputs=[451, 452] outputs=[453]
+  B187 decl=187 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.add1")
+    inputs=[454, 455] outputs=[456]
+  B188 decl=188 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.swi1")
+    inputs=[457, 458, 459] outputs=[460]
+  B189 decl=189 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.or3")
+    inputs=[461, 462] outputs=[463]
+  B190 decl=190 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt4")
+    inputs=[] outputs=[464]
+    param k=Integer(1)
+  B191 decl=191 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.intEqu3")
+    inputs=[465, 466] outputs=[467]
+  B192 decl=192 class=CDL.Integers.Equal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.intEqu4")
+    inputs=[468, 469] outputs=[470]
+  B193 decl=193 class=CDL.Integers.Sources.Constant instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.conInt5")
+    inputs=[] outputs=[471]
+    param k=Integer(2)
+  B194 decl=194 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.cloDam")
+    inputs=[472] outputs=[473]
+    param realTrue=Real(0x0000000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B195 decl=195 class=CDL.Conversions.BooleanToReal instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.opeDam")
+    inputs=[474] outputs=[475]
+    param realTrue=Real(0x3ff0000000000000)
+    param realFalse=Real(0x0000000000000000)
+  B196 decl=196 class=CDL.Reals.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.add3")
+    inputs=[476, 477] outputs=[478]
+  B197 decl=197 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.or2")
+    inputs=[479, 480] outputs=[481]
+  B198 decl=198 class=CDL.Reals.Switch instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.swi2")
+    inputs=[482, 483, 484] outputs=[485]
+  B199 decl=199 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.cooling_only_controller.dam.or1")
+    inputs=[486, 487] outputs=[488]
+  B200 decl=200 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.booToIntHea")
+    inputs=[489] outputs=[490]
+    param integerTrue=Integer(1)
+    param integerFalse=Integer(0)
+  B201 decl=201 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.booToIntCoo")
+    inputs=[491] outputs=[492]
+    param integerTrue=Integer(3)
+    param integerFalse=Integer(0)
+  B202 decl=202 class=CDL.Logical.Nor instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.isDea")
+    inputs=[493, 494] outputs=[495]
+  B203 decl=203 class=CDL.Conversions.BooleanToInteger instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.booToIntDea")
+    inputs=[496] outputs=[497]
+    param integerTrue=Integer(2)
+    param integerFalse=Integer(0)
+  B204 decl=204 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.isHea")
+    inputs=[498, 499] outputs=[500]
+  B205 decl=205 class=CDL.Reals.Hysteresis instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.hysUHea")
+    inputs=[501] outputs=[502]
+    param uLow=Real(0x3f847ae147ae147b)
+    param uHigh=Real(0x3fa999999999999a)
+    param pre_y_start=Boolean(false)
+  B206 decl=206 class=CDL.Reals.Hysteresis instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.hysUCoo")
+    inputs=[503] outputs=[504]
+    param uLow=Real(0x3f847ae147ae147b)
+    param uHigh=Real(0x3fa999999999999a)
+    param pre_y_start=Boolean(false)
+  B207 decl=207 class=CDL.Reals.Subtract instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.uHeaMinUCoo")
+    inputs=[505, 506] outputs=[507]
+  B208 decl=208 class=CDL.Logical.And instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.isCoo")
+    inputs=[508, 509] outputs=[510]
+  B209 decl=209 class=CDL.Reals.Hysteresis instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.hysU")
+    inputs=[511] outputs=[512]
+    param uLow=Real(0xbf847ae147ae147b)
+    param uHigh=Real(0x3f847ae147ae147b)
+    param pre_y_start=Boolean(false)
+  B210 decl=210 class=CDL.Logical.Not instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.notHea")
+    inputs=[513] outputs=[514]
+  B211 decl=211 class=CDL.Integers.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.addInt")
+    inputs=[515, 516] outputs=[517]
+  B212 decl=212 class=CDL.Integers.Add instance_iri=Some("http://example.org#g36.source.cooling_only_controller.zonSta.addInt1")
+    inputs=[518, 519] outputs=[520]
+connectors: 521
+  C0 block=B0 dir=In type=Boolean decl=0 iri=None
+  C1 block=B0 dir=Out type=Real decl=1 iri=None
+  C2 block=B1 dir=In type=Boolean decl=2 iri=None
+  C3 block=B1 dir=In type=Boolean decl=3 iri=None
+  C4 block=B1 dir=Out type=Boolean decl=4 iri=None
+  C5 block=B2 dir=In type=Boolean decl=5 iri=None
+  C6 block=B2 dir=Out type=Real decl=6 iri=None
+  C7 block=B3 dir=In type=Real decl=7 iri=None
+  C8 block=B3 dir=In type=Real decl=8 iri=None
+  C9 block=B3 dir=Out type=Real decl=9 iri=None
+  C10 block=B4 dir=Out type=Integer decl=10 iri=None
+  C11 block=B5 dir=In type=Integer decl=11 iri=None
+  C12 block=B5 dir=In type=Integer decl=12 iri=Some("http://example.org#g36.source.cooling_only_controller.uOpeMod")
+  C13 block=B5 dir=Out type=Boolean decl=13 iri=None
+  C14 block=B6 dir=Out type=Integer decl=14 iri=None
+  C15 block=B7 dir=Out type=Integer decl=15 iri=None
+  C16 block=B8 dir=In type=Integer decl=16 iri=None
+  C17 block=B8 dir=In type=Integer decl=17 iri=Some("http://example.org#g36.source.cooling_only_controller.uOpeMod")
+  C18 block=B8 dir=Out type=Boolean decl=18 iri=None
+  C19 block=B9 dir=In type=Integer decl=19 iri=None
+  C20 block=B9 dir=In type=Integer decl=20 iri=Some("http://example.org#g36.source.cooling_only_controller.uOpeMod")
+  C21 block=B9 dir=Out type=Boolean decl=21 iri=None
+  C22 block=B10 dir=In type=Boolean decl=22 iri=None
+  C23 block=B10 dir=In type=Boolean decl=23 iri=None
+  C24 block=B10 dir=Out type=Boolean decl=24 iri=None
+  C25 block=B11 dir=In type=Real decl=25 iri=None
+  C26 block=B11 dir=Out type=Boolean decl=26 iri=None
+  C27 block=B12 dir=In type=Real decl=27 iri=None
+  C28 block=B12 dir=Out type=Boolean decl=28 iri=None
+  C29 block=B13 dir=In type=Real decl=29 iri=None
+  C30 block=B13 dir=Out type=Boolean decl=30 iri=None
+  C31 block=B14 dir=In type=Real decl=31 iri=None
+  C32 block=B14 dir=Out type=Boolean decl=32 iri=None
+  C33 block=B15 dir=In type=Real decl=33 iri=None
+  C34 block=B15 dir=Out type=Boolean decl=34 iri=None
+  C35 block=B16 dir=In type=Boolean decl=35 iri=None
+  C36 block=B16 dir=Out type=Integer decl=36 iri=None
+  C37 block=B17 dir=In type=Boolean decl=37 iri=None
+  C38 block=B17 dir=Out type=Integer decl=38 iri=None
+  C39 block=B18 dir=In type=Real decl=39 iri=None
+  C40 block=B18 dir=Out type=Real decl=40 iri=None
+  C41 block=B19 dir=In type=Real decl=41 iri=None
+  C42 block=B19 dir=Out type=Real decl=42 iri=None
+  C43 block=B20 dir=In type=Real decl=43 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C44 block=B20 dir=In type=Real decl=44 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C45 block=B20 dir=Out type=Real decl=45 iri=None
+  C46 block=B21 dir=In type=Real decl=46 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C47 block=B21 dir=In type=Real decl=47 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C48 block=B21 dir=Out type=Real decl=48 iri=None
+  C49 block=B22 dir=In type=Boolean decl=49 iri=None
+  C50 block=B22 dir=In type=Boolean decl=50 iri=None
+  C51 block=B22 dir=Out type=Boolean decl=51 iri=None
+  C52 block=B23 dir=In type=Boolean decl=52 iri=None
+  C53 block=B23 dir=In type=Boolean decl=53 iri=None
+  C54 block=B23 dir=Out type=Boolean decl=54 iri=None
+  C55 block=B24 dir=In type=Boolean decl=55 iri=None
+  C56 block=B24 dir=In type=Boolean decl=56 iri=None
+  C57 block=B24 dir=Out type=Boolean decl=57 iri=None
+  C58 block=B25 dir=In type=Boolean decl=58 iri=None
+  C59 block=B25 dir=In type=Boolean decl=59 iri=None
+  C60 block=B25 dir=Out type=Boolean decl=60 iri=None
+  C61 block=B26 dir=Out type=Integer decl=61 iri=None
+  C62 block=B27 dir=Out type=Integer decl=62 iri=None
+  C63 block=B28 dir=Out type=Integer decl=63 iri=None
+  C64 block=B29 dir=Out type=Integer decl=64 iri=None
+  C65 block=B30 dir=In type=Integer decl=65 iri=None
+  C66 block=B30 dir=In type=Boolean decl=66 iri=None
+  C67 block=B30 dir=In type=Integer decl=67 iri=None
+  C68 block=B30 dir=Out type=Integer decl=68 iri=None
+  C69 block=B31 dir=In type=Integer decl=69 iri=None
+  C70 block=B31 dir=In type=Boolean decl=70 iri=None
+  C71 block=B31 dir=In type=Integer decl=71 iri=None
+  C72 block=B31 dir=Out type=Integer decl=72 iri=None
+  C73 block=B32 dir=In type=Integer decl=73 iri=None
+  C74 block=B32 dir=In type=Boolean decl=74 iri=None
+  C75 block=B32 dir=In type=Integer decl=75 iri=None
+  C76 block=B32 dir=Out type=Integer decl=76 iri=None
+  C77 block=B33 dir=In type=Integer decl=77 iri=None
+  C78 block=B33 dir=In type=Boolean decl=78 iri=None
+  C79 block=B33 dir=In type=Integer decl=79 iri=None
+  C80 block=B33 dir=Out type=Integer decl=80 iri=None
+  C81 block=B34 dir=In type=Boolean decl=81 iri=None
+  C82 block=B34 dir=Out type=Boolean decl=82 iri=None
+  C83 block=B35 dir=In type=Boolean decl=83 iri=None
+  C84 block=B35 dir=Out type=Boolean decl=84 iri=None
+  C85 block=B36 dir=In type=Boolean decl=85 iri=None
+  C86 block=B36 dir=Out type=Boolean decl=86 iri=None
+  C87 block=B37 dir=In type=Real decl=87 iri=None
+  C88 block=B37 dir=In type=Real decl=88 iri=None
+  C89 block=B37 dir=Out type=Boolean decl=89 iri=None
+  C90 block=B38 dir=In type=Real decl=90 iri=None
+  C91 block=B38 dir=In type=Real decl=91 iri=None
+  C92 block=B38 dir=Out type=Boolean decl=92 iri=None
+  C93 block=B39 dir=In type=Boolean decl=93 iri=None
+  C94 block=B39 dir=In type=Boolean decl=94 iri=None
+  C95 block=B39 dir=Out type=Boolean decl=95 iri=None
+  C96 block=B40 dir=In type=Real decl=96 iri=None
+  C97 block=B40 dir=Out type=Real decl=97 iri=None
+  C98 block=B41 dir=In type=Real decl=98 iri=None
+  C99 block=B41 dir=Out type=Real decl=99 iri=None
+  C100 block=B42 dir=In type=Real decl=100 iri=Some("http://example.org#g36.source.cooling_only_controller.VDis_flow")
+  C101 block=B42 dir=Out type=Real decl=101 iri=None
+  C102 block=B43 dir=In type=Real decl=102 iri=None
+  C103 block=B43 dir=Out type=Real decl=103 iri=None
+  C104 block=B44 dir=In type=Real decl=104 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C105 block=B44 dir=In type=Real decl=105 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C106 block=B44 dir=In type=Boolean decl=106 iri=None
+  C107 block=B44 dir=Out type=Real decl=107 iri=None
+  C108 block=B45 dir=In type=Real decl=108 iri=Some("http://example.org#g36.source.cooling_only_controller.THeaSet")
+  C109 block=B45 dir=In type=Real decl=109 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C110 block=B45 dir=In type=Boolean decl=110 iri=None
+  C111 block=B45 dir=Out type=Real decl=111 iri=None
+  C112 block=B46 dir=In type=Real decl=112 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C113 block=B46 dir=In type=Real decl=113 iri=Some("http://example.org#g36.source.cooling_only_controller.THeaSet")
+  C114 block=B46 dir=Out type=Boolean decl=114 iri=None
+  C115 block=B47 dir=In type=Real decl=115 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C116 block=B47 dir=In type=Real decl=116 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C117 block=B47 dir=Out type=Boolean decl=117 iri=None
+  C118 block=B48 dir=In type=Boolean decl=118 iri=None
+  C119 block=B48 dir=Out type=Boolean decl=119 iri=None
+  C120 block=B49 dir=In type=Boolean decl=120 iri=None
+  C121 block=B49 dir=Out type=Boolean decl=121 iri=None
+  C122 block=B50 dir=In type=Boolean decl=122 iri=None
+  C123 block=B50 dir=Out type=Real decl=123 iri=None
+  C124 block=B51 dir=In type=Real decl=124 iri=None
+  C125 block=B51 dir=In type=Real decl=125 iri=None
+  C126 block=B51 dir=Out type=Real decl=126 iri=None
+  C127 block=B52 dir=In type=Boolean decl=127 iri=None
+  C128 block=B52 dir=Out type=Boolean decl=128 iri=None
+  C129 block=B53 dir=In type=Boolean decl=129 iri=None
+  C130 block=B53 dir=Out type=Boolean decl=130 iri=None
+  C131 block=B54 dir=In type=Boolean decl=131 iri=None
+  C132 block=B54 dir=Out type=Real decl=132 iri=None
+  C133 block=B55 dir=In type=Real decl=133 iri=None
+  C134 block=B55 dir=In type=Real decl=134 iri=None
+  C135 block=B55 dir=Out type=Real decl=135 iri=None
+  C136 block=B56 dir=In type=Real decl=136 iri=None
+  C137 block=B56 dir=Out type=Boolean decl=137 iri=None
+  C138 block=B57 dir=In type=Real decl=138 iri=None
+  C139 block=B57 dir=Out type=Boolean decl=139 iri=None
+  C140 block=B58 dir=In type=Boolean decl=140 iri=None
+  C141 block=B58 dir=In type=Boolean decl=141 iri=None
+  C142 block=B58 dir=Out type=Boolean decl=142 iri=None
+  C143 block=B59 dir=In type=Boolean decl=143 iri=None
+  C144 block=B59 dir=In type=Boolean decl=144 iri=None
+  C145 block=B59 dir=Out type=Boolean decl=145 iri=None
+  C146 block=B60 dir=In type=Real decl=146 iri=None
+  C147 block=B60 dir=Out type=Real decl=147 iri=None
+  C148 block=B61 dir=In type=Real decl=148 iri=Some("http://example.org#g36.source.cooling_only_controller.VDis_flow")
+  C149 block=B61 dir=In type=Real decl=149 iri=None
+  C150 block=B61 dir=Out type=Boolean decl=150 iri=None
+  C151 block=B62 dir=In type=Boolean decl=151 iri=None
+  C152 block=B62 dir=Out type=Boolean decl=152 iri=None
+  C153 block=B63 dir=In type=Real decl=153 iri=None
+  C154 block=B63 dir=Out type=Boolean decl=154 iri=None
+  C155 block=B64 dir=In type=Real decl=155 iri=None
+  C156 block=B64 dir=In type=Real decl=156 iri=Some("http://example.org#g36.source.cooling_only_controller.VDis_flow")
+  C157 block=B64 dir=Out type=Boolean decl=157 iri=None
+  C158 block=B65 dir=In type=Real decl=158 iri=None
+  C159 block=B65 dir=Out type=Real decl=159 iri=None
+  C160 block=B66 dir=In type=Boolean decl=160 iri=None
+  C161 block=B66 dir=Out type=Boolean decl=161 iri=None
+  C162 block=B67 dir=In type=Boolean decl=162 iri=None
+  C163 block=B67 dir=In type=Boolean decl=163 iri=None
+  C164 block=B67 dir=Out type=Boolean decl=164 iri=None
+  C165 block=B68 dir=In type=Boolean decl=165 iri=None
+  C166 block=B68 dir=In type=Boolean decl=166 iri=None
+  C167 block=B68 dir=Out type=Boolean decl=167 iri=None
+  C168 block=B69 dir=In type=Integer decl=168 iri=None
+  C169 block=B69 dir=In type=Boolean decl=169 iri=None
+  C170 block=B69 dir=In type=Integer decl=170 iri=None
+  C171 block=B69 dir=Out type=Integer decl=171 iri=None
+  C172 block=B70 dir=Out type=Integer decl=172 iri=None
+  C173 block=B71 dir=In type=Boolean decl=173 iri=None
+  C174 block=B71 dir=Out type=Integer decl=174 iri=None
+  C175 block=B72 dir=Out type=Real decl=175 iri=None
+  C176 block=B73 dir=In type=Real decl=176 iri=None
+  C177 block=B73 dir=Out type=Boolean decl=177 iri=None
+  C178 block=B74 dir=In type=Boolean decl=178 iri=None
+  C179 block=B74 dir=Out type=Integer decl=179 iri=None
+  C180 block=B75 dir=In type=Integer decl=180 iri=None
+  C181 block=B75 dir=In type=Integer decl=181 iri=None
+  C182 block=B75 dir=Out type=Integer decl=182 iri=None
+  C183 block=B76 dir=In type=Boolean decl=183 iri=None
+  C184 block=B76 dir=In type=Boolean decl=184 iri=None
+  C185 block=B76 dir=Out type=Boolean decl=185 iri=None
+  C186 block=B77 dir=In type=Boolean decl=186 iri=None
+  C187 block=B77 dir=Out type=Boolean decl=187 iri=None
+  C188 block=B78 dir=In type=Boolean decl=188 iri=None
+  C189 block=B79 dir=In type=Boolean decl=189 iri=None
+  C190 block=B79 dir=In type=Boolean decl=190 iri=None
+  C191 block=B79 dir=Out type=Boolean decl=191 iri=None
+  C192 block=B80 dir=In type=Boolean decl=192 iri=None
+  C193 block=B80 dir=Out type=Boolean decl=193 iri=None
+  C194 block=B81 dir=In type=Boolean decl=194 iri=None
+  C195 block=B82 dir=Out type=Real decl=195 iri=None
+  C196 block=B83 dir=In type=Real decl=196 iri=None
+  C197 block=B83 dir=Out type=Real decl=197 iri=None
+  C198 block=B84 dir=In type=Boolean decl=198 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Fan")
+  C199 block=B84 dir=Out type=Boolean decl=199 iri=None
+  C200 block=B85 dir=In type=Boolean decl=200 iri=None
+  C201 block=B85 dir=Out type=Boolean decl=201 iri=None
+  C202 block=B86 dir=In type=Real decl=202 iri=Some("http://example.org#g36.source.cooling_only_controller.VDis_flow")
+  C203 block=B86 dir=In type=Real decl=203 iri=None
+  C204 block=B86 dir=Out type=Boolean decl=204 iri=None
+  C205 block=B87 dir=In type=Boolean decl=205 iri=None
+  C206 block=B87 dir=In type=Boolean decl=206 iri=None
+  C207 block=B87 dir=Out type=Boolean decl=207 iri=None
+  C208 block=B88 dir=In type=Boolean decl=208 iri=None
+  C209 block=B88 dir=Out type=Boolean decl=209 iri=None
+  C210 block=B89 dir=In type=Boolean decl=210 iri=None
+  C211 block=B90 dir=In type=Boolean decl=211 iri=None
+  C212 block=B90 dir=Out type=Integer decl=212 iri=None
+  C213 block=B91 dir=In type=Boolean decl=213 iri=None
+  C214 block=B91 dir=Out type=Boolean decl=214 iri=None
+  C215 block=B92 dir=In type=Real decl=215 iri=None
+  C216 block=B92 dir=Out type=Boolean decl=216 iri=None
+  C217 block=B93 dir=In type=Boolean decl=217 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Fan")
+  C218 block=B93 dir=In type=Boolean decl=218 iri=None
+  C219 block=B93 dir=Out type=Boolean decl=219 iri=None
+  C220 block=B94 dir=In type=Boolean decl=220 iri=None
+  C221 block=B94 dir=In type=Boolean decl=221 iri=None
+  C222 block=B94 dir=Out type=Boolean decl=222 iri=None
+  C223 block=B95 dir=In type=Boolean decl=223 iri=None
+  C224 block=B95 dir=Out type=Boolean decl=224 iri=None
+  C225 block=B96 dir=In type=Boolean decl=225 iri=None
+  C226 block=B97 dir=In type=Boolean decl=226 iri=None
+  C227 block=B97 dir=Out type=Integer decl=227 iri=None
+  C228 block=B98 dir=In type=Boolean decl=228 iri=None
+  C229 block=B98 dir=Out type=Boolean decl=229 iri=None
+  C230 block=B99 dir=In type=Boolean decl=230 iri=None
+  C231 block=B99 dir=In type=Boolean decl=231 iri=None
+  C232 block=B99 dir=Out type=Boolean decl=232 iri=None
+  C233 block=B100 dir=In type=Boolean decl=233 iri=None
+  C234 block=B100 dir=In type=Boolean decl=234 iri=None
+  C235 block=B100 dir=Out type=Boolean decl=235 iri=None
+  C236 block=B101 dir=In type=Boolean decl=236 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Fan")
+  C237 block=B101 dir=Out type=Boolean decl=237 iri=None
+  C238 block=B102 dir=Out type=Integer decl=238 iri=None
+  C239 block=B103 dir=In type=Integer decl=239 iri=Some("http://example.org#g36.source.cooling_only_controller.uOpeMod")
+  C240 block=B103 dir=In type=Integer decl=240 iri=None
+  C241 block=B103 dir=Out type=Boolean decl=241 iri=None
+  C242 block=B104 dir=In type=Boolean decl=242 iri=None
+  C243 block=B104 dir=In type=Boolean decl=243 iri=None
+  C244 block=B104 dir=Out type=Boolean decl=244 iri=None
+  C245 block=B105 dir=In type=Boolean decl=245 iri=None
+  C246 block=B105 dir=In type=Boolean decl=246 iri=None
+  C247 block=B105 dir=Out type=Boolean decl=247 iri=None
+  C248 block=B106 dir=In type=Boolean decl=248 iri=None
+  C249 block=B106 dir=In type=Boolean decl=249 iri=None
+  C250 block=B106 dir=Out type=Boolean decl=250 iri=None
+  C251 block=B107 dir=In type=Real decl=251 iri=None
+  C252 block=B107 dir=In type=Real decl=252 iri=None
+  C253 block=B107 dir=Out type=Real decl=253 iri=None
+  C254 block=B108 dir=In type=Real decl=254 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C255 block=B108 dir=Out type=Real decl=255 iri=None
+  C256 block=B109 dir=In type=Real decl=256 iri=None
+  C257 block=B109 dir=Out type=Real decl=257 iri=None
+  C258 block=B110 dir=In type=Real decl=258 iri=None
+  C259 block=B110 dir=Out type=Real decl=259 iri=None
+  C260 block=B111 dir=In type=Real decl=260 iri=Some("http://example.org#g36.source.cooling_only_controller.TCooSet")
+  C261 block=B111 dir=In type=Boolean decl=261 iri=None
+  C262 block=B111 dir=Out type=Real decl=262 iri=None
+  C263 block=B112 dir=In type=Boolean decl=263 iri=None
+  C264 block=B112 dir=Out type=Boolean decl=264 iri=None
+  C265 block=B113 dir=In type=Boolean decl=265 iri=None
+  C266 block=B113 dir=In type=Boolean decl=266 iri=None
+  C267 block=B113 dir=Out type=Boolean decl=267 iri=None
+  C268 block=B114 dir=In type=Boolean decl=268 iri=None
+  C269 block=B114 dir=In type=Boolean decl=269 iri=None
+  C270 block=B114 dir=Out type=Boolean decl=270 iri=None
+  C271 block=B115 dir=In type=Boolean decl=271 iri=None
+  C272 block=B115 dir=Out type=Real decl=272 iri=None
+  C273 block=B115 dir=Out type=Boolean decl=273 iri=None
+  C274 block=B116 dir=In type=Real decl=274 iri=None
+  C275 block=B116 dir=Out type=Boolean decl=275 iri=None
+  C276 block=B117 dir=In type=Real decl=276 iri=None
+  C277 block=B117 dir=Out type=Real decl=277 iri=None
+  C278 block=B118 dir=In type=Real decl=278 iri=None
+  C279 block=B118 dir=In type=Real decl=279 iri=None
+  C280 block=B118 dir=Out type=Real decl=280 iri=None
+  C281 block=B119 dir=Out type=Real decl=281 iri=None
+  C282 block=B120 dir=Out type=Real decl=282 iri=None
+  C283 block=B121 dir=Out type=Boolean decl=283 iri=None
+  C284 block=B122 dir=In type=Real decl=284 iri=None
+  C285 block=B122 dir=In type=Boolean decl=285 iri=None
+  C286 block=B122 dir=In type=Real decl=286 iri=None
+  C287 block=B122 dir=Out type=Real decl=287 iri=None
+  C288 block=B123 dir=In type=Boolean decl=288 iri=None
+  C289 block=B123 dir=Out type=Boolean decl=289 iri=None
+  C290 block=B124 dir=In type=Boolean decl=290 iri=None
+  C291 block=B124 dir=In type=Boolean decl=291 iri=None
+  C292 block=B124 dir=In type=Boolean decl=292 iri=None
+  C293 block=B124 dir=Out type=Boolean decl=293 iri=None
+  C294 block=B125 dir=In type=Real decl=294 iri=None
+  C295 block=B125 dir=In type=Real decl=295 iri=None
+  C296 block=B125 dir=Out type=Boolean decl=296 iri=None
+  C297 block=B126 dir=In type=Real decl=297 iri=None
+  C298 block=B126 dir=In type=Real decl=298 iri=None
+  C299 block=B126 dir=Out type=Real decl=299 iri=None
+  C300 block=B127 dir=In type=Real decl=300 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C301 block=B127 dir=In type=Boolean decl=301 iri=None
+  C302 block=B127 dir=Out type=Real decl=302 iri=None
+  C303 block=B128 dir=In type=Real decl=303 iri=None
+  C304 block=B128 dir=Out type=Real decl=304 iri=None
+  C305 block=B129 dir=In type=Boolean decl=305 iri=None
+  C306 block=B129 dir=Out type=Boolean decl=306 iri=None
+  C307 block=B130 dir=Out type=Boolean decl=307 iri=None
+  C308 block=B131 dir=In type=Boolean decl=308 iri=None
+  C309 block=B131 dir=Out type=Real decl=309 iri=None
+  C310 block=B132 dir=In type=Real decl=310 iri=None
+  C311 block=B132 dir=In type=Real decl=311 iri=None
+  C312 block=B132 dir=In type=Real decl=312 iri=Some("http://example.org#g36.source.cooling_only_controller.ppmCO2Set")
+  C313 block=B132 dir=In type=Real decl=313 iri=None
+  C314 block=B132 dir=In type=Real decl=314 iri=Some("http://example.org#g36.source.cooling_only_controller.ppmCO2")
+  C315 block=B132 dir=Out type=Real decl=315 iri=None
+  C316 block=B133 dir=Out type=Real decl=316 iri=None
+  C317 block=B134 dir=Out type=Real decl=317 iri=None
+  C318 block=B135 dir=In type=Real decl=318 iri=Some("http://example.org#g36.source.cooling_only_controller.ppmCO2Set")
+  C319 block=B135 dir=Out type=Real decl=319 iri=None
+  C320 block=B136 dir=In type=Integer decl=320 iri=Some("http://example.org#g36.source.cooling_only_controller.uOpeMod")
+  C321 block=B136 dir=In type=Integer decl=321 iri=None
+  C322 block=B136 dir=Out type=Boolean decl=322 iri=None
+  C323 block=B137 dir=In type=Boolean decl=323 iri=None
+  C324 block=B137 dir=Out type=Real decl=324 iri=None
+  C325 block=B138 dir=In type=Real decl=325 iri=None
+  C326 block=B138 dir=In type=Real decl=326 iri=None
+  C327 block=B138 dir=Out type=Real decl=327 iri=None
+  C328 block=B139 dir=In type=Real decl=328 iri=None
+  C329 block=B139 dir=In type=Real decl=329 iri=None
+  C330 block=B139 dir=In type=Real decl=330 iri=None
+  C331 block=B139 dir=In type=Real decl=331 iri=None
+  C332 block=B139 dir=In type=Real decl=332 iri=None
+  C333 block=B139 dir=Out type=Real decl=333 iri=None
+  C334 block=B140 dir=Out type=Real decl=334 iri=None
+  C335 block=B141 dir=Out type=Real decl=335 iri=None
+  C336 block=B142 dir=In type=Real decl=336 iri=None
+  C337 block=B142 dir=In type=Real decl=337 iri=None
+  C338 block=B142 dir=In type=Real decl=338 iri=None
+  C339 block=B142 dir=In type=Real decl=339 iri=None
+  C340 block=B142 dir=In type=Real decl=340 iri=None
+  C341 block=B142 dir=Out type=Real decl=341 iri=None
+  C342 block=B143 dir=In type=Boolean decl=342 iri=None
+  C343 block=B143 dir=In type=Boolean decl=343 iri=None
+  C344 block=B143 dir=Out type=Boolean decl=344 iri=None
+  C345 block=B144 dir=In type=Boolean decl=345 iri=None
+  C346 block=B144 dir=Out type=Boolean decl=346 iri=None
+  C347 block=B145 dir=Out type=Boolean decl=347 iri=None
+  C348 block=B146 dir=Out type=Real decl=348 iri=None
+  C349 block=B147 dir=In type=Real decl=349 iri=None
+  C350 block=B147 dir=In type=Boolean decl=350 iri=None
+  C351 block=B147 dir=In type=Real decl=351 iri=None
+  C352 block=B147 dir=Out type=Real decl=352 iri=None
+  C353 block=B148 dir=In type=Real decl=353 iri=None
+  C354 block=B148 dir=In type=Boolean decl=354 iri=None
+  C355 block=B148 dir=In type=Real decl=355 iri=None
+  C356 block=B148 dir=Out type=Real decl=356 iri=None
+  C357 block=B149 dir=In type=Real decl=357 iri=None
+  C358 block=B149 dir=In type=Boolean decl=358 iri=None
+  C359 block=B149 dir=In type=Real decl=359 iri=None
+  C360 block=B149 dir=Out type=Real decl=360 iri=None
+  C361 block=B150 dir=In type=Boolean decl=361 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Occ")
+  C362 block=B150 dir=Out type=Boolean decl=362 iri=None
+  C363 block=B151 dir=In type=Real decl=363 iri=None
+  C364 block=B151 dir=In type=Boolean decl=364 iri=None
+  C365 block=B151 dir=In type=Real decl=365 iri=None
+  C366 block=B151 dir=Out type=Real decl=366 iri=None
+  C367 block=B152 dir=In type=Boolean decl=367 iri=None
+  C368 block=B152 dir=Out type=Real decl=368 iri=None
+  C369 block=B153 dir=In type=Real decl=369 iri=None
+  C370 block=B153 dir=In type=Real decl=370 iri=None
+  C371 block=B153 dir=Out type=Real decl=371 iri=None
+  C372 block=B154 dir=In type=Real decl=372 iri=None
+  C373 block=B154 dir=In type=Real decl=373 iri=None
+  C374 block=B154 dir=Out type=Real decl=374 iri=None
+  C375 block=B155 dir=In type=Real decl=375 iri=None
+  C376 block=B155 dir=In type=Boolean decl=376 iri=None
+  C377 block=B155 dir=In type=Real decl=377 iri=None
+  C378 block=B155 dir=Out type=Real decl=378 iri=None
+  C379 block=B156 dir=In type=Real decl=379 iri=None
+  C380 block=B156 dir=In type=Boolean decl=380 iri=None
+  C381 block=B156 dir=In type=Real decl=381 iri=None
+  C382 block=B156 dir=Out type=Real decl=382 iri=None
+  C383 block=B157 dir=In type=Real decl=383 iri=None
+  C384 block=B157 dir=In type=Real decl=384 iri=None
+  C385 block=B157 dir=Out type=Real decl=385 iri=None
+  C386 block=B158 dir=In type=Real decl=386 iri=None
+  C387 block=B158 dir=In type=Real decl=387 iri=None
+  C388 block=B158 dir=Out type=Real decl=388 iri=None
+  C389 block=B159 dir=Out type=Integer decl=389 iri=None
+  C390 block=B160 dir=In type=Real decl=390 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C391 block=B160 dir=In type=Real decl=391 iri=Some("http://example.org#g36.source.cooling_only_controller.TDis")
+  C392 block=B160 dir=Out type=Boolean decl=392 iri=None
+  C393 block=B161 dir=In type=Real decl=393 iri=None
+  C394 block=B161 dir=Out type=Real decl=394 iri=None
+  C395 block=B162 dir=Out type=Real decl=395 iri=None
+  C396 block=B163 dir=Out type=Real decl=396 iri=None
+  C397 block=B164 dir=In type=Boolean decl=397 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Win")
+  C398 block=B164 dir=Out type=Boolean decl=398 iri=None
+  C399 block=B165 dir=Out type=Real decl=399 iri=None
+  C400 block=B166 dir=Out type=Real decl=400 iri=None
+  C401 block=B167 dir=In type=Real decl=401 iri=None
+  C402 block=B167 dir=In type=Real decl=402 iri=None
+  C403 block=B167 dir=In type=Real decl=403 iri=None
+  C404 block=B167 dir=In type=Real decl=404 iri=None
+  C405 block=B167 dir=In type=Real decl=405 iri=None
+  C406 block=B167 dir=Out type=Real decl=406 iri=None
+  C407 block=B168 dir=In type=Real decl=407 iri=Some("http://example.org#g36.source.cooling_only_controller.TSup")
+  C408 block=B168 dir=In type=Real decl=408 iri=Some("http://example.org#g36.source.cooling_only_controller.TZon")
+  C409 block=B168 dir=Out type=Boolean decl=409 iri=None
+  C410 block=B169 dir=In type=Real decl=410 iri=None
+  C411 block=B169 dir=In type=Boolean decl=411 iri=None
+  C412 block=B169 dir=In type=Real decl=412 iri=None
+  C413 block=B169 dir=Out type=Real decl=413 iri=None
+  C414 block=B170 dir=In type=Real decl=414 iri=None
+  C415 block=B170 dir=In type=Boolean decl=415 iri=None
+  C416 block=B170 dir=In type=Real decl=416 iri=None
+  C417 block=B170 dir=Out type=Real decl=417 iri=None
+  C418 block=B171 dir=In type=Real decl=418 iri=None
+  C419 block=B171 dir=In type=Real decl=419 iri=None
+  C420 block=B171 dir=In type=Boolean decl=420 iri=Some("http://example.org#g36.source.cooling_only_controller.u1Fan")
+  C421 block=B171 dir=Out type=Real decl=421 iri=None
+  C422 block=B172 dir=Out type=Integer decl=422 iri=None
+  C423 block=B173 dir=In type=Integer decl=423 iri=None
+  C424 block=B173 dir=In type=Integer decl=424 iri=None
+  C425 block=B173 dir=Out type=Boolean decl=425 iri=None
+  C426 block=B174 dir=Out type=Real decl=426 iri=None
+  C427 block=B175 dir=In type=Real decl=427 iri=None
+  C428 block=B175 dir=In type=Real decl=428 iri=None
+  C429 block=B175 dir=Out type=Real decl=429 iri=None
+  C430 block=B176 dir=In type=Real decl=430 iri=Some("http://example.org#g36.source.cooling_only_controller.VDis_flow")
+  C431 block=B176 dir=In type=Real decl=431 iri=None
+  C432 block=B176 dir=Out type=Real decl=432 iri=None
+  C433 block=B177 dir=Out type=Integer decl=433 iri=None
+  C434 block=B178 dir=In type=Integer decl=434 iri=Some("http://example.org#g36.source.cooling_only_controller.oveFloSet")
+  C435 block=B178 dir=In type=Integer decl=435 iri=None
+  C436 block=B178 dir=Out type=Boolean decl=436 iri=None
+  C437 block=B179 dir=In type=Integer decl=437 iri=Some("http://example.org#g36.source.cooling_only_controller.oveFloSet")
+  C438 block=B179 dir=In type=Integer decl=438 iri=None
+  C439 block=B179 dir=Out type=Boolean decl=439 iri=None
+  C440 block=B180 dir=Out type=Integer decl=440 iri=None
+  C441 block=B181 dir=In type=Integer decl=441 iri=Some("http://example.org#g36.source.cooling_only_controller.oveFloSet")
+  C442 block=B181 dir=In type=Integer decl=442 iri=None
+  C443 block=B181 dir=Out type=Boolean decl=443 iri=None
+  C444 block=B182 dir=Out type=Integer decl=444 iri=None
+  C445 block=B183 dir=In type=Boolean decl=445 iri=None
+  C446 block=B183 dir=Out type=Real decl=446 iri=None
+  C447 block=B184 dir=In type=Boolean decl=447 iri=None
+  C448 block=B184 dir=Out type=Real decl=448 iri=None
+  C449 block=B185 dir=In type=Boolean decl=449 iri=None
+  C450 block=B185 dir=Out type=Real decl=450 iri=None
+  C451 block=B186 dir=In type=Real decl=451 iri=None
+  C452 block=B186 dir=In type=Real decl=452 iri=None
+  C453 block=B186 dir=Out type=Real decl=453 iri=None
+  C454 block=B187 dir=In type=Real decl=454 iri=None
+  C455 block=B187 dir=In type=Real decl=455 iri=None
+  C456 block=B187 dir=Out type=Real decl=456 iri=None
+  C457 block=B188 dir=In type=Real decl=457 iri=None
+  C458 block=B188 dir=In type=Boolean decl=458 iri=None
+  C459 block=B188 dir=In type=Real decl=459 iri=None
+  C460 block=B188 dir=Out type=Real decl=460 iri=None
+  C461 block=B189 dir=In type=Boolean decl=461 iri=None
+  C462 block=B189 dir=In type=Boolean decl=462 iri=None
+  C463 block=B189 dir=Out type=Boolean decl=463 iri=None
+  C464 block=B190 dir=Out type=Integer decl=464 iri=None
+  C465 block=B191 dir=In type=Integer decl=465 iri=Some("http://example.org#g36.source.cooling_only_controller.oveDamPos")
+  C466 block=B191 dir=In type=Integer decl=466 iri=None
+  C467 block=B191 dir=Out type=Boolean decl=467 iri=None
+  C468 block=B192 dir=In type=Integer decl=468 iri=Some("http://example.org#g36.source.cooling_only_controller.oveDamPos")
+  C469 block=B192 dir=In type=Integer decl=469 iri=None
+  C470 block=B192 dir=Out type=Boolean decl=470 iri=None
+  C471 block=B193 dir=Out type=Integer decl=471 iri=None
+  C472 block=B194 dir=In type=Boolean decl=472 iri=None
+  C473 block=B194 dir=Out type=Real decl=473 iri=None
+  C474 block=B195 dir=In type=Boolean decl=474 iri=None
+  C475 block=B195 dir=Out type=Real decl=475 iri=None
+  C476 block=B196 dir=In type=Real decl=476 iri=None
+  C477 block=B196 dir=In type=Real decl=477 iri=None
+  C478 block=B196 dir=Out type=Real decl=478 iri=None
+  C479 block=B197 dir=In type=Boolean decl=479 iri=None
+  C480 block=B197 dir=In type=Boolean decl=480 iri=None
+  C481 block=B197 dir=Out type=Boolean decl=481 iri=None
+  C482 block=B198 dir=In type=Real decl=482 iri=None
+  C483 block=B198 dir=In type=Boolean decl=483 iri=None
+  C484 block=B198 dir=In type=Real decl=484 iri=None
+  C485 block=B198 dir=Out type=Real decl=485 iri=None
+  C486 block=B199 dir=In type=Boolean decl=486 iri=None
+  C487 block=B199 dir=In type=Boolean decl=487 iri=None
+  C488 block=B199 dir=Out type=Boolean decl=488 iri=None
+  C489 block=B200 dir=In type=Boolean decl=489 iri=None
+  C490 block=B200 dir=Out type=Integer decl=490 iri=None
+  C491 block=B201 dir=In type=Boolean decl=491 iri=None
+  C492 block=B201 dir=Out type=Integer decl=492 iri=None
+  C493 block=B202 dir=In type=Boolean decl=493 iri=None
+  C494 block=B202 dir=In type=Boolean decl=494 iri=None
+  C495 block=B202 dir=Out type=Boolean decl=495 iri=None
+  C496 block=B203 dir=In type=Boolean decl=496 iri=None
+  C497 block=B203 dir=Out type=Integer decl=497 iri=None
+  C498 block=B204 dir=In type=Boolean decl=498 iri=None
+  C499 block=B204 dir=In type=Boolean decl=499 iri=None
+  C500 block=B204 dir=Out type=Boolean decl=500 iri=None
+  C501 block=B205 dir=In type=Real decl=501 iri=None
+  C502 block=B205 dir=Out type=Boolean decl=502 iri=None
+  C503 block=B206 dir=In type=Real decl=503 iri=None
+  C504 block=B206 dir=Out type=Boolean decl=504 iri=None
+  C505 block=B207 dir=In type=Real decl=505 iri=None
+  C506 block=B207 dir=In type=Real decl=506 iri=None
+  C507 block=B207 dir=Out type=Real decl=507 iri=None
+  C508 block=B208 dir=In type=Boolean decl=508 iri=None
+  C509 block=B208 dir=In type=Boolean decl=509 iri=None
+  C510 block=B208 dir=Out type=Boolean decl=510 iri=None
+  C511 block=B209 dir=In type=Real decl=511 iri=None
+  C512 block=B209 dir=Out type=Boolean decl=512 iri=None
+  C513 block=B210 dir=In type=Boolean decl=513 iri=None
+  C514 block=B210 dir=Out type=Boolean decl=514 iri=None
+  C515 block=B211 dir=In type=Integer decl=515 iri=None
+  C516 block=B211 dir=In type=Integer decl=516 iri=None
+  C517 block=B211 dir=Out type=Integer decl=517 iri=None
+  C518 block=B212 dir=In type=Integer decl=518 iri=None
+  C519 block=B212 dir=In type=Integer decl=519 iri=None
+  C520 block=B212 dir=Out type=Integer decl=520 iri=None
+connections: 268
+  C1 -> C404
+  C4 -> C22
+  C6 -> C7
+  C9 -> C402
+  C9 -> C410
+  C9 -> C416
+  C10 -> C11
+  C13 -> C2
+  C13 -> C5
+  C14 -> C19
+  C15 -> C16
+  C18 -> C23
+  C21 -> C3
+  C24 -> C0
+  C26 -> C81
+  C28 -> C83
+  C30 -> C85
+  C30 -> C37
+  C32 -> C35
+  C34 -> C93
+  C36 -> C71
+  C38 -> C79
+  C40 -> C87
+  C42 -> C90
+  C45 -> C25
+  C48 -> C27
+  C51 -> C70
+  C54 -> C66
+  C57 -> C74
+  C60 -> C78
+  C61 -> C65
+  C62 -> C69
+  C63 -> C73
+  C64 -> C77
+  C72 -> C67
+  C80 -> C75
+  C82 -> C53
+  C84 -> C50
+  C86 -> C94
+  C89 -> C56
+  C92 -> C59
+  C95 -> C55
+  C95 -> C58
+  C97 -> C31
+  C99 -> C29
+  C101 -> C88
+  C101 -> C91
+  C103 -> C33
+  C103 -> C39
+  C103 -> C41
+  C107 -> C124
+  C107 -> C136
+  C111 -> C133
+  C111 -> C138
+  C114 -> C127
+  C114 -> C110
+  C117 -> C106
+  C117 -> C120
+  C119 -> C140
+  C121 -> C141
+  C123 -> C125
+  C126 -> C405
+  C126 -> C96
+  C126 -> C503
+  C126 -> C506
+  C128 -> C144
+  C130 -> C143
+  C132 -> C134
+  C135 -> C501
+  C135 -> C505
+  C137 -> C118
+  C139 -> C129
+  C142 -> C122
+  C145 -> C131
+  C147 -> C149
+  C150 -> C233
+  C152 -> C162
+  C154 -> C228
+  C157 -> C230
+  C159 -> C155
+  C161 -> C166
+  C164 -> C183
+  C167 -> C189
+  C171 -> C180
+  C172 -> C168
+  C174 -> C170
+  C175 -> C176
+  C177 -> C178
+  C177 -> C184
+  C177 -> C190
+  C179 -> C181
+  C185 -> C245
+  C187 -> C188
+  C191 -> C248
+  C193 -> C194
+  C195 -> C196
+  C197 -> C203
+  C199 -> C206
+  C201 -> C242
+  C204 -> C205
+  C204 -> C221
+  C207 -> C200
+  C209 -> C210
+  C214 -> C226
+  C214 -> C223
+  C216 -> C218
+  C219 -> C220
+  C222 -> C213
+  C224 -> C225
+  C229 -> C165
+  C229 -> C163
+  C232 -> C160
+  C235 -> C151
+  C237 -> C231
+  C237 -> C234
+  C238 -> C240
+  C241 -> C243
+  C241 -> C246
+  C241 -> C249
+  C244 -> C211
+  C244 -> C208
+  C247 -> C169
+  C247 -> C186
+  C250 -> C173
+  C250 -> C192
+  C253 -> C295
+  C255 -> C256
+  C255 -> C278
+  C257 -> C279
+  C259 -> C274
+  C262 -> C297
+  C264 -> C269
+  C264 -> C301
+  C264 -> C261
+  C267 -> C271
+  C267 -> C263
+  C267 -> C291
+  C270 -> C290
+  C272 -> C294
+  C275 -> C265
+  C277 -> C251
+  C280 -> C284
+  C281 -> C286
+  C282 -> C252
+  C283 -> C292
+  C287 -> C258
+  C289 -> C266
+  C293 -> C52
+  C293 -> C49
+  C296 -> C268
+  C296 -> C288
+  C299 -> C303
+  C302 -> C298
+  C304 -> C276
+  C306 -> C285
+  C307 -> C305
+  C309 -> C387
+  C315 -> C326
+  C316 -> C311
+  C316 -> C328
+  C316 -> C336
+  C316 -> C337
+  C317 -> C313
+  C317 -> C330
+  C317 -> C338
+  C319 -> C310
+  C322 -> C323
+  C322 -> C345
+  C324 -> C325
+  C327 -> C332
+  C327 -> C340
+  C333 -> C381
+  C334 -> C329
+  C334 -> C373
+  C335 -> C393
+  C341 -> C365
+  C344 -> C350
+  C344 -> C354
+  C344 -> C358
+  C346 -> C343
+  C347 -> C367
+  C348 -> C349
+  C348 -> C353
+  C348 -> C357
+  C348 -> C363
+  C352 -> C383
+  C356 -> C384
+  C360 -> C8
+  C362 -> C364
+  C362 -> C376
+  C362 -> C380
+  C366 -> C351
+  C368 -> C370
+  C368 -> C372
+  C371 -> C375
+  C374 -> C379
+  C378 -> C355
+  C382 -> C359
+  C385 -> C386
+  C389 -> C321
+  C392 -> C308
+  C394 -> C331
+  C395 -> C377
+  C395 -> C369
+  C396 -> C339
+  C398 -> C342
+  C399 -> C401
+  C400 -> C403
+  C406 -> C412
+  C409 -> C411
+  C413 -> C414
+  C417 -> C459
+  C421 -> C484
+  C422 -> C423
+  C425 -> C415
+  C426 -> C428
+  C426 -> C431
+  C429 -> C418
+  C432 -> C419
+  C433 -> C435
+  C436 -> C445
+  C436 -> C462
+  C439 -> C447
+  C439 -> C461
+  C440 -> C438
+  C443 -> C449
+  C443 -> C486
+  C444 -> C442
+  C446 -> C454
+  C448 -> C451
+  C450 -> C452
+  C453 -> C455
+  C456 -> C457
+  C460 -> C102
+  C460 -> C146
+  C460 -> C153
+  C460 -> C158
+  C460 -> C427
+  C463 -> C487
+  C464 -> C466
+  C467 -> C472
+  C467 -> C479
+  C470 -> C474
+  C470 -> C480
+  C471 -> C469
+  C473 -> C476
+  C475 -> C477
+  C478 -> C482
+  C481 -> C483
+  C485 -> C98
+  C485 -> C215
+  C488 -> C458
+  C490 -> C515
+  C492 -> C516
+  C495 -> C496
+  C497 -> C519
+  C500 -> C489
+  C500 -> C513
+  C500 -> C493
+  C502 -> C498
+  C504 -> C509
+  C507 -> C511
+  C510 -> C491
+  C510 -> C494
+  C512 -> C499
+  C514 -> C508
+  C517 -> C518
+  C520 -> C424
+external_inputs: [300, 112, 116, 105, 109, 390, 408, 43, 46, 254, 260, 115, 104, 44, 47, 113, 108, 397, 361, 320, 12, 20, 17, 239, 318, 312, 314, 391, 407, 430, 100, 148, 156, 202, 434, 437, 441, 465, 468, 198, 236, 217, 420]
