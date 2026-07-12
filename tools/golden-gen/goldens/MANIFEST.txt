@@ -475,6 +475,17 @@ G36/cooling_only_alarms airflow_sensor_alarm -> goldens/G36/cooling_only_alarms/
 G36/cooling_only_alarms leaking_damper_alarm -> goldens/G36/cooling_only_alarms/leaking_damper_alarm.csv
 G36/cooling_only_alarms low_airflow_alarm -> goldens/G36/cooling_only_alarms/low_airflow_alarm.csv
 G36/cooling_only_alarms reference -> goldens/G36/cooling_only_alarms/reference.csv
+G36/cooling_only_controller adjusted_area_flow -> goldens/G36/cooling_only_controller/adjusted_area_flow.csv
+G36/cooling_only_controller adjusted_population_flow -> goldens/G36/cooling_only_controller/adjusted_population_flow.csv
+G36/cooling_only_controller airflow_sensor_alarm -> goldens/G36/cooling_only_controller/airflow_sensor_alarm.csv
+G36/cooling_only_controller airflow_setpoint -> goldens/G36/cooling_only_controller/airflow_setpoint.csv
+G36/cooling_only_controller damper_command -> goldens/G36/cooling_only_controller/damper_command.csv
+G36/cooling_only_controller leaking_damper_alarm -> goldens/G36/cooling_only_controller/leaking_damper_alarm.csv
+G36/cooling_only_controller low_airflow_alarm -> goldens/G36/cooling_only_controller/low_airflow_alarm.csv
+G36/cooling_only_controller minimum_outdoor_airflow -> goldens/G36/cooling_only_controller/minimum_outdoor_airflow.csv
+G36/cooling_only_controller reference -> goldens/G36/cooling_only_controller/reference.csv
+G36/cooling_only_controller zone_pressure_reset_request -> goldens/G36/cooling_only_controller/zone_pressure_reset_request.csv
+G36/cooling_only_controller zone_temperature_reset_request -> goldens/G36/cooling_only_controller/zone_temperature_reset_request.csv
 G36/cooling_only_dampers airflow_setpoint -> goldens/G36/cooling_only_dampers/airflow_setpoint.csv
 G36/cooling_only_dampers damper_command -> goldens/G36/cooling_only_dampers/damper_command.csv
 G36/cooling_only_dampers reference -> goldens/G36/cooling_only_dampers/reference.csv
