@@ -251,7 +251,7 @@
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic",
       "status": "in-progress",
-      "rationale": "Reusable G36 logic; AirEconomizerHighLimits has restricted source-verified ASHRAE90_1 and California_Title_24 FixedDryBulb plus DifferentialDryBulb runtime-sequence variants, and TrimAndRespond has restricted source-verified explicit-CXF runtime-sequence support for have_hol=false."
+      "rationale": "Reusable G36 logic; AirEconomizerHighLimits has restricted source-verified ASHRAE90_1 and California_Title_24 FixedDryBulb plus DifferentialDryBulb runtime-sequence variants, TimeSuppression has restricted source-verified explicit-CXF runtime-sequence support for its source-default scalar parameterization, and TrimAndRespond has restricted source-verified explicit-CXF runtime-sequence support for have_hol=false."
     },
     {
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits",
@@ -994,6 +994,24 @@
         "Runtime support is the checked-in explicit-CXF scalar CoolingOnly Alarms composite, not arbitrary Modelica parsing.",
         "The independent 58-tick recurrence covers the differentiated occupancy, fan-start, fan-off, and fan-on gates; severity 3-to-2 escalation; exact occupied-mode equality; comparator hold and release bands; delay expiry and reset; and leak and sensor alarm cycles.",
         "All three outputs are Integer and remain on Tier-A Exact conformance with no vacuous funnel run; the fixture includes all four Utilities.Assert instances with their source message strings and no output connectors."
+      ]
+    },
+    {
+      "name": "generic_time_suppression",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TimeSuppression",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld",
+      "top_id": "http://example.org#g36.source.generic_time_suppression",
+      "supported_variant": "source-verified explicit CXF for scalar Generic TimeSuppression with chaRat=540 s/K, maxTim=1800 s, samplePeriod=120 s, dTHys=0.25 K, greThr.h pre-grounded to 0.125, six typed Real-zero block parameters, and four explicit Boolean block parameters",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_time_suppression.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/generic_time_suppression.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/generic_time_suppression/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_generic_time_suppression_oracle.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar Generic TimeSuppression composite, not arbitrary Modelica parsing.",
+        "The independent 91-tick recurrence covers TS1-TS8: the Pre one-tick clear lag, aligned and misaligned sample-grid changes, startup masking, hysteresis hold/release, short and capped suppression formulas, strict-greater equality, output polarity, and active-window change swallowing.",
+        "The single yAftSup output is Boolean and remains on Tier-A Exact conformance with no vacuous funnel run; this is also the first composite fixture proving Discrete.TriggeredSampler."
       ]
     },
     {
@@ -1936,6 +1954,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and distinct-output determinism coverage.",
         "The fixture preserves all 47 source child components, all five source inputs, all three named Integer outputs, all eight parent parameter bindings, all 65 source connects, and the four active Utilities.Assert instances with verbatim messages.",
         "Evidence does not claim arbitrary .mo parsing, other CoolingOnly sequences, the full CoolingOnly controller, alternate Alarms parameterizations, the output-unobservable staPreMul=false branch, or Real-valued funnel coverage."
+      ]
+    },
+    {
+      "name": "generic_time_suppression",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TimeSuppression",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld",
+      "top_id": "http://example.org#g36.source.generic_time_suppression",
+      "fixture_top_child_count": 24,
+      "active_block_count": 24,
+      "input_count": 2,
+      "output_count": 1,
+      "supported_variant": "explicit CXF source transcription for scalar Generic TimeSuppression with source-default parent parameters, direct reference grounding, greThr.h=0.125 pre-grounded from 0.5*dTHys, six typed Real-zero block parameters, and four explicit Boolean block parameters",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_generic_time_suppression.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_generic_time_suppression.rs",
+      "api_test": "crates/oce-api/tests/g36_generic_time_suppression.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and Boolean-output determinism coverage.",
+        "The fixture preserves all 24 source child components, both source inputs, the single named Boolean output, all four parent parameter bindings, and all 33 source connects including the Pre-broken latch loop and both TriggeredSampler trigger edges.",
+        "Evidence does not claim arbitrary .mo parsing, alternate TimeSuppression parameterizations, the full CoolingOnly controller, or Real-valued funnel coverage."
       ]
     },
     {
