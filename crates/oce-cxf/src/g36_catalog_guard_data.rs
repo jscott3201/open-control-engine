@@ -40,6 +40,8 @@ pub(super) const G36_RELIEF_FAN_GROUP: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld");
 pub(super) const G36_FREEZE_PROTECTION: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_freeze_protection.jsonld");
+pub(super) const G36_COOLING_ONLY_CONTROLLER: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_controller.jsonld");
 pub(super) const G36_COOLING_ONLY_ACTIVE_AIR_FLOW: &str =
     include_str!("../tests/fixtures/g36/cooling_only_active_air_flow.jsonld");
 pub(super) const G36_COOLING_ONLY_ALARMS: &str =
@@ -119,7 +121,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "0b382e36d7f1cde2";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "0e0eeb77bf9a9826";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -173,6 +175,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.mo",
@@ -272,6 +275,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_freeze_protection",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_freeze_protection.jsonld",
         text: G36_FREEZE_PROTECTION,
+    },
+    FixtureSource {
+        name: "cooling_only_controller",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld",
+        text: G36_COOLING_ONLY_CONTROLLER,
     },
     FixtureSource {
         name: "cooling_only_active_air_flow",
