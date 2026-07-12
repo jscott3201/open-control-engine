@@ -16,6 +16,8 @@ pub(super) const VAV_SINGLE_ZONE: &str =
     include_str!("../tests/fixtures/g36/vav_single_zone.jsonld");
 pub(super) const G36_TRIM_AND_RESPOND: &str =
     include_str!("../tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
+pub(super) const G36_GENERIC_TIME_SUPPRESSION: &str =
+    include_str!("../tests/fixtures/g36/generic_time_suppression.jsonld");
 pub(super) const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 pub(super) const G36_SUPPLY_FAN: &str =
@@ -111,7 +113,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "7628929251931618";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "d4764d69789fb9e7";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -172,6 +174,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
 ];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
@@ -270,6 +273,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "cooling_only_alarms",
         path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld",
         text: G36_COOLING_ONLY_ALARMS,
+    },
+    FixtureSource {
+        name: "generic_time_suppression",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld",
+        text: G36_GENERIC_TIME_SUPPRESSION,
     },
     FixtureSource {
         name: "cooling_only_dampers",
