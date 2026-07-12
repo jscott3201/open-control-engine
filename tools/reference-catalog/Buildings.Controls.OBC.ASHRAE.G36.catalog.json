@@ -1033,6 +1033,24 @@
       ]
     },
     {
+      "name": "thermal_zones_control_loops",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ControlLoops",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld",
+      "top_id": "http://example.org#g36.source.thermal_zones_control_loops",
+      "supported_variant": "source-verified explicit CXF for scalar ThermalZones ControlLoops with source-default kCooCon=0.1, TiCooCon=900 s, kHeaCon=0.1, TiHeaCon=900 s, timChe=30 s, dTHys=0.25 K, and looHys=0.01; direct conCoo and reverse conHea PI controllers; two 0.008 LessThreshold hysteresis pre-groundings; four explicit Boolean bindings; and six typed Real whole-number bindings",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/thermal_zones_control_loops.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/thermal_zones_control_loops.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/thermal_zones_control_loops/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_thermal_zones_control_loops_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF scalar ThermalZones ControlLoops composite, not arbitrary Modelica parsing.",
+        "The independent 54-tick recurrence covers CL1-CL8: opposite enable-comparator orders and PID acting directions, both rising-edge resets, live disabled integration, the two-leg disable ladder, inverted multiplier gates, LessThreshold hold and release, and sustained saturation with back-calculation recovery.",
+        "Both yCoo and yHea are Real outputs checked by Tier-A Exact conformance and routed through the shared uniform NEAR_ULP_RTOLY=1e-9 funnel band."
+      ]
+    },
+    {
       "name": "cooling_only_dampers",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers",
@@ -2018,6 +2036,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, and Integer-output determinism coverage.",
         "The fixture preserves all 13 source child components, both source inputs, the single named Integer output, both parent parameter bindings, and all 20 source connects including the three-way isHea fan-out and heating-priority ladder.",
         "Evidence does not claim arbitrary .mo parsing, alternate ZoneStates parameterizations, other ThermalZones sequences, the full CoolingOnly controller, or Real-valued funnel coverage."
+      ]
+    },
+    {
+      "name": "thermal_zones_control_loops",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ControlLoops",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld",
+      "top_id": "http://example.org#g36.source.thermal_zones_control_loops",
+      "fixture_top_child_count": 16,
+      "active_block_count": 16,
+      "input_count": 3,
+      "output_count": 2,
+      "supported_variant": "explicit CXF source transcription for scalar ThermalZones ControlLoops with all seven source-default parent parameters, opposite direct/reverse PI controller directions, typed Real reset targets and inverted BooleanToReal values, two 0.008 pre-grounded expressions, and explicit delayOnInit=false bindings",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_thermal_zones_control_loops.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_thermal_zones_control_loops.rs",
+      "api_test": "crates/oce-api/tests/g36_thermal_zones_control_loops.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, two-output Real funnel routing, and determinism coverage.",
+        "The fixture preserves all 16 source child components, all three source inputs, both named Real outputs, all seven parent parameter bindings, and all 28 source connects including the controller-output, enable-trigger, and output-gate fan-outs.",
+        "Evidence does not claim arbitrary .mo parsing, alternate ControlLoops parameterizations, other unsupported ThermalZones sequences, or the full CoolingOnly controller."
       ]
     },
     {
