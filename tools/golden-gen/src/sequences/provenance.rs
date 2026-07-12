@@ -17,7 +17,7 @@ use super::{
     OUTDOOR_AIRFLOW_SUMZONE, OUTDOOR_AIRFLOW_TITLE24_AHU, OUTDOOR_AIRFLOW_TITLE24_SUMZONE,
     PLANT_REQUESTS, REHEAT_OVERRIDES, RELIEF_DAMPER, RELIEF_FAN, RELIEF_FAN_GROUP, RETURN_FAN_AIRFLOW,
     RETURN_FAN_DIRECT_PRESSURE, SAT, SUPPLY_FAN, SUPPLY_SIGNALS, SUPPLY_TEMP, TIME_SUPPRESSION,
-    THERMAL_ZONES_ZONE_STATES, TRIM_AND_RESPOND_HAVE_HOL_FALSE, VAV,
+    THERMAL_ZONES_CONTROL_LOOPS, THERMAL_ZONES_ZONE_STATES, TRIM_AND_RESPOND_HAVE_HOL_FALSE, VAV,
 };
 
 /// Pinned Buildings source revision used by every G36 Tier-A sequence oracle.
@@ -77,6 +77,9 @@ pub(super) fn source_files(sequence: &str) -> &'static str {
         THERMAL_ZONES_ZONE_STATES => {
             "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo"
         }
+        THERMAL_ZONES_CONTROL_LOOPS => {
+            "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo"
+        }
         COOLING_ONLY_ACTIVE_AIR_FLOW => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
         COOLING_ONLY_ALARMS => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.mo",
         COOLING_ONLY_DAMPERS => "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.mo",
@@ -126,6 +129,7 @@ pub(super) fn fixture_status(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
         | FREEZE_PROTECTION
         | TIME_SUPPRESSION
+        | THERMAL_ZONES_CONTROL_LOOPS
         | THERMAL_ZONES_ZONE_STATES
         | COOLING_ONLY_ACTIVE_AIR_FLOW
         | COOLING_ONLY_ALARMS

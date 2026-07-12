@@ -609,6 +609,9 @@ G36/multizone_vav_supply_temperature supply_air_temperature_setpoint -> goldens/
 G36/reheat_overrides damper_command -> goldens/G36/reheat_overrides/damper_command.csv
 G36/reheat_overrides heating_valve_command -> goldens/G36/reheat_overrides/heating_valve_command.csv
 G36/reheat_overrides reference -> goldens/G36/reheat_overrides/reference.csv
+G36/thermal_zones_control_loops cooling_loop_signal -> goldens/G36/thermal_zones_control_loops/cooling_loop_signal.csv
+G36/thermal_zones_control_loops heating_loop_signal -> goldens/G36/thermal_zones_control_loops/heating_loop_signal.csv
+G36/thermal_zones_control_loops reference -> goldens/G36/thermal_zones_control_loops/reference.csv
 G36/thermal_zones_zone_states reference -> goldens/G36/thermal_zones_zone_states/reference.csv
 G36/thermal_zones_zone_states zone_state -> goldens/G36/thermal_zones_zone_states/zone_state.csv
 G36/trim_and_respond_have_hol_false reference -> goldens/G36/trim_and_respond_have_hol_false/reference.csv

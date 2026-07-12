@@ -20,6 +20,8 @@ pub(super) const G36_GENERIC_TIME_SUPPRESSION: &str =
     include_str!("../tests/fixtures/g36/generic_time_suppression.jsonld");
 pub(super) const G36_THERMAL_ZONES_ZONE_STATES: &str =
     include_str!("../tests/fixtures/g36/thermal_zones_zone_states.jsonld");
+pub(super) const G36_THERMAL_ZONES_CONTROL_LOOPS: &str =
+    include_str!("../tests/fixtures/g36/thermal_zones_control_loops.jsonld");
 pub(super) const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 pub(super) const G36_SUPPLY_FAN: &str =
@@ -115,7 +117,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "6cc53671d11d44af";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "4ca60676e7256d15";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -177,6 +179,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
 ];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
@@ -286,6 +289,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "thermal_zones_zone_states",
         path: "crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld",
         text: G36_THERMAL_ZONES_ZONE_STATES,
+    },
+    FixtureSource {
+        name: "thermal_zones_control_loops",
+        path: "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld",
+        text: G36_THERMAL_ZONES_CONTROL_LOOPS,
     },
     FixtureSource {
         name: "cooling_only_dampers",
