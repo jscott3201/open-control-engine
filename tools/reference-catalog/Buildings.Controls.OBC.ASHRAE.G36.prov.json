@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "d4764d69789fb9e7",
+  "catalog_fingerprint": "6cc53671d11d44af",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -65,7 +65,8 @@
     "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
-    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo"
   ],
   "type_source_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
