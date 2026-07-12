@@ -1,0 +1,30 @@
+{
+  "class_path": "G36",
+  "scenario": "ventilation_zones_ashrae62_1_setpoints",
+  "signal": "adjusted_area_flow",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 60,
+  "n_reference_columns": 12,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "window_status", "occupancy_status", "operating_mode", "co2_setpoint", "co2_concentration", "zone_temperature", "discharge_air_temperature", "adjusted_population_flow", "occupied_minimum_flow", "adjusted_area_flow", "minimum_outdoor_airflow"],
+  "inputs": [
+    { "name": "window_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "occupancy_status", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "operating_mode", "value_kind": "Integer", "values": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 4.0, 4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "co2_setpoint", "value_kind": "Real", "values": [900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0] },
+    { "name": "co2_concentration", "value_kind": "Real", "values": [650.0, 650.0, 650.0, 650.0, 650.0, 650.0, 700.0, 750.0, 800.0, 850.0, 900.0, 950.0, 1000.0, 1050.0, 800.0, 800.0, 800.0, 800.0, 800.0, 800.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 900.0, 1050.0, 1050.0, 1050.0, 1050.0, 1050.0, 1050.0] },
+    { "name": "zone_temperature", "value_kind": "Real", "values": [297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.6, 297.4, 297.3, 297.2, 297.45, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.8, 297.2, 297.2, 297.2, 297.2, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.0, 297.9, 297.9, 297.9, 297.9, 297.9, 297.9] },
+    { "name": "discharge_air_temperature", "value_kind": "Real", "values": [297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5, 297.5] }
+  ],
+  "input": "ASHRAE62_1 Setpoints adjusted area flow: design-area pass-through and distinct standby/window/operation zero paths",
+  "reference_rule": "Setpoints.mo lines 207-232 and 342-447: permit_occStandby drives a typed-zero multiply into unpAreBreAir before the priority modAreBreAir Switch",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

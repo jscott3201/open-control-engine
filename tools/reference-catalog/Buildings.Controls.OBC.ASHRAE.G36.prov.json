@@ -5,7 +5,7 @@
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-06-27",
   "catalog_file": "tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json",
-  "catalog_fingerprint": "4ca60676e7256d15",
+  "catalog_fingerprint": "0b382e36d7f1cde2",
   "package_order_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.order",
@@ -67,7 +67,8 @@
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
-    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo"
+    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo"
   ],
   "type_source_files": [
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",

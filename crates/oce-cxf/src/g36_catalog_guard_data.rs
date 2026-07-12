@@ -22,6 +22,8 @@ pub(super) const G36_THERMAL_ZONES_ZONE_STATES: &str =
     include_str!("../tests/fixtures/g36/thermal_zones_zone_states.jsonld");
 pub(super) const G36_THERMAL_ZONES_CONTROL_LOOPS: &str =
     include_str!("../tests/fixtures/g36/thermal_zones_control_loops.jsonld");
+pub(super) const G36_VENTILATION_ZONES_ASHRAE62_1_SETPOINTS: &str =
+    include_str!("../tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld");
 pub(super) const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 pub(super) const G36_SUPPLY_FAN: &str =
@@ -117,7 +119,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "4ca60676e7256d15";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "0b382e36d7f1cde2";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -181,6 +183,7 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo",
 ];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
@@ -294,6 +297,11 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "thermal_zones_control_loops",
         path: "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld",
         text: G36_THERMAL_ZONES_CONTROL_LOOPS,
+    },
+    FixtureSource {
+        name: "ventilation_zones_ashrae62_1_setpoints",
+        path: "crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld",
+        text: G36_VENTILATION_ZONES_ASHRAE62_1_SETPOINTS,
     },
     FixtureSource {
         name: "cooling_only_dampers",

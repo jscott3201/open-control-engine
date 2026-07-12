@@ -621,3 +621,8 @@ G36/vav_single_zone cooling_signal -> goldens/G36/vav_single_zone/cooling_signal
 G36/vav_single_zone damper_command -> goldens/G36/vav_single_zone/damper_command.csv
 G36/vav_single_zone heating_enabled -> goldens/G36/vav_single_zone/heating_enabled.csv
 G36/vav_single_zone reference -> goldens/G36/vav_single_zone/reference.csv
+G36/ventilation_zones_ashrae62_1_setpoints adjusted_area_flow -> goldens/G36/ventilation_zones_ashrae62_1_setpoints/adjusted_area_flow.csv
+G36/ventilation_zones_ashrae62_1_setpoints adjusted_population_flow -> goldens/G36/ventilation_zones_ashrae62_1_setpoints/adjusted_population_flow.csv
+G36/ventilation_zones_ashrae62_1_setpoints minimum_outdoor_airflow -> goldens/G36/ventilation_zones_ashrae62_1_setpoints/minimum_outdoor_airflow.csv
+G36/ventilation_zones_ashrae62_1_setpoints occupied_minimum_flow -> goldens/G36/ventilation_zones_ashrae62_1_setpoints/occupied_minimum_flow.csv
+G36/ventilation_zones_ashrae62_1_setpoints reference -> goldens/G36/ventilation_zones_ashrae62_1_setpoints/reference.csv

@@ -5,6 +5,7 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+mod ashrae62_1_setpoints;
 mod cdl_recurrences;
 mod cooling_only_active_air_flow;
 mod cooling_only_alarms;
@@ -96,6 +97,7 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_2";
 const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
+const ASHRAE62_1_SETPOINTS: &str = "ventilation_zones_ashrae62_1_setpoints";
 const TIME_SUPPRESSION: &str = "generic_time_suppression";
 const THERMAL_ZONES_ZONE_STATES: &str = "thermal_zones_zone_states";
 const THERMAL_ZONES_CONTROL_LOOPS: &str = "thermal_zones_control_loops";
@@ -142,6 +144,7 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(air_economizer_high_limits::goldens());
+    out.extend(ashrae62_1_setpoints::goldens());
     out.extend(time_suppression::goldens());
     out.extend(zone_states::goldens());
     out.extend(control_loops::goldens());

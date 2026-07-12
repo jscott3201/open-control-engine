@@ -1051,6 +1051,24 @@
       ]
     },
     {
+      "name": "ventilation_zones_ashrae62_1_setpoints",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld",
+      "top_id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints",
+      "supported_variant": "source-verified explicit CXF for the CoolingOnly.Controller capstone specialization with have_winSen=true, have_occSen=true, have_CO2Sen=true, have_typTerUni=true, have_parFanPowUni=false, have_SZVAV=false, permit_occStandby=true, VAreBreZon_flow=0.006 m3/s, VPopBreZon_flow=0.005 m3/s, VMin_flow=0.5 m3/s, VCooMax_flow=1.5 m3/s, zonDisEff_cool=1.0, zonDisEff_heat=0.8, dTHys=0.25 K, 34 active blocks of 44, and 61 active connections",
+      "golden_trace": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ventilation_zones_ashrae62_1_setpoints.csv",
+      "determinism_provenance": "crates/oce-conformance/tests/fixtures/golden/g36_traces/ventilation_zones_ashrae62_1_setpoints.prov.json",
+      "oracle_reference": "tools/golden-gen/goldens/G36/ventilation_zones_ashrae62_1_setpoints/reference.csv",
+      "oracle_test": "crates/oce-conformance/tests/g36_ventilation_zones_ashrae62_1_setpoints_funnel.rs",
+      "notes": [
+        "Runtime support is the checked-in explicit-CXF VentilationZones ASHRAE62_1 Setpoints capstone specialization, not arbitrary Modelica parsing or support for alternate conditional variants.",
+        "The independent 60-tick recurrence covers low/high CO2 Line clamps, the setpoint-dependent lower knee, occupied-mode gating, occupied-standby and window priorities, compound overrides, and Greater hysteresis set/hold/release/re-entry while outputs are zeroed.",
+        "All four Real outputs are checked by Tier-A Exact conformance and routed through the shared uniform NEAR_ULP_RTOLY=1e-9 funnel band."
+      ]
+    },
+    {
       "name": "cooling_only_dampers",
       "status": "supported-runtime-sequence",
       "class_path": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers",
@@ -2059,6 +2077,29 @@
         "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, two-output Real funnel routing, and determinism coverage.",
         "The fixture preserves all 16 source child components, all three source inputs, both named Real outputs, all seven parent parameter bindings, and all 28 source connects including the controller-output, enable-trigger, and output-gate fan-outs.",
         "Evidence does not claim arbitrary .mo parsing, alternate ControlLoops parameterizations, other unsupported ThermalZones sequences, or the full CoolingOnly controller."
+      ]
+    },
+    {
+      "name": "ventilation_zones_ashrae62_1_setpoints",
+      "status": "supported-runtime-sequence",
+      "class_path": "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints",
+      "source": "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo",
+      "fixture": "crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld",
+      "top_id": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints",
+      "fixture_top_child_count": 34,
+      "active_block_count": 34,
+      "input_count": 7,
+      "output_count": 4,
+      "supported_variant": "explicit CXF source transcription for the CoolingOnly.Controller capstone specialization with all seven sensors/mode/temperature inputs, all 14 parent parameter bindings, only the 34 active protected blocks and 61 active source connections, explicit Line limit bindings, typed whole-number Real literals, OperationModes.occupied grounding, the active gai2 identity gain, and one stateful cooSup Greater",
+      "modelgraph_golden": "crates/oce-cxf/tests/fixtures/golden/g36_ventilation_zones_ashrae62_1_setpoints.modelgraph.txt",
+      "resolver_test": "crates/oce-cxf/tests/resolve_g36_ventilation_zones_ashrae62_1_setpoints.rs",
+      "api_test": "crates/oce-api/tests/g36_ventilation_zones_ashrae62_1_setpoints.rs",
+      "oracle_status": "complete",
+      "supported_runtime_sequence": true,
+      "notes": [
+        "Evidence proves restricted explicit-CXF composite import, facade load and simulation support, independent Tier-A exact matching, four-output Real funnel routing, and determinism coverage.",
+        "The fixture preserves all 34 active source child components, seven logical source inputs, four distinct named Real outputs, all 14 capstone parameter bindings, and all 61 active source connects including both output-plus-internal-consumer fan-outs.",
+        "Evidence does not claim arbitrary .mo parsing, any pruned Setpoints conditional branch, alternate VentilationZones variants, package-level VentilationZones support, or the full CoolingOnly controller."
       ]
     },
     {
