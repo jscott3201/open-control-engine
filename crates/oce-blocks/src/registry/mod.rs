@@ -27,6 +27,10 @@ mod utilities;
 mod catalog_guard_support;
 #[cfg(test)]
 mod catalog_tests;
+#[cfg(test)]
+mod manifest;
+#[cfg(test)]
+mod manifest_tests;
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
 /// (an unresolved external / extension block — never a panic; R-IMPL-2).

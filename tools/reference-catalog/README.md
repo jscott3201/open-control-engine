@@ -14,6 +14,18 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   runtime-sequence support.
 - `Buildings.Controls.OBC.ASHRAE.G36.prov.json` pins the upstream G36 package/type files and local
   evidence files used by that sequence/profile snapshot.
+- `oce-blocks.registry-manifest.json` is the machine-readable manifest of the `oce-blocks` native
+  block registry, generated from the registry itself rather than fetched upstream. It is a
+  top-level ordered JSON array in registry catalog order; each element carries `class_path`, typed
+  positional `inputs`/`outputs` (`"Real"`/`"Integer"`/`"Boolean"`, resolved at default parameters
+  — variadic blocks whose width parameters default to 0 record empty port lists), `width_driven`
+  (true when a `Structural`/`StructuralArrayElements` rule makes port arity parameter-driven), and
+  the complete `param_rules` list (each rule object names its variant under `"rule"` plus every
+  embedded guard field in declaration order). The regenerate-and-diff test
+  `registry::manifest_tests::checked_in_manifest_matches_regenerated_bytes` in `oce-blocks` keeps
+  this file byte-identical to the live registry; re-bless a deliberate registry change with
+  `UPDATE_EXPECT=1 cargo nextest run -p oce-blocks checked_in_manifest_matches_regenerated_bytes`
+  and review the diff.
 
 CI and local tests must use these checked-in files only. Updating the catalog requires re-fetching
 the upstream files named in the provenance file and updating this snapshot deliberately.
