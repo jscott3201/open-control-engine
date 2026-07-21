@@ -6,9 +6,10 @@
 //! `Integer op Integer → Integer` for `+ - *`; `/` is always `Real`; any `Real` operand promotes.
 //!
 //! [`eval_node`] is the scalar-or-array entry point: array constructs route to the
-//! [`crate::eval_array`] module, everything else through [`eval_scalar`]. In scalar operand
-//! position (operators, built-in arguments) an array is a typed [`ExprError::TypeError`] —
-//! element-wise operators and the array built-ins are not in the subset.
+//! [`crate::eval_array`] module, array-shaped built-in calls to
+//! [`crate::eval_array_builtins`], everything else through [`eval_scalar`]. In scalar operand
+//! position (operators, scalar built-in arguments) an array is a typed
+//! [`ExprError::TypeError`] — element-wise operators are not in the subset.
 
 use oce_model::{
     Value,
@@ -101,14 +102,16 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 }
 
 /// Evaluate `ast` to a scalar-or-array [`EvalResult`]. Array constructs route to
-/// [`crate::eval_array`]; an identifier yields whatever shape the scope holds (arrays are
-/// cloned and re-canonicalized, like the scalar read); everything else is scalar.
+/// [`crate::eval_array`]; a built-in call may return either shape ([`eval_call`]); an
+/// identifier yields whatever shape the scope holds (arrays are cloned and re-canonicalized,
+/// like the scalar read); everything else is scalar.
 pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
             crate::eval_array::eval_range(start, step.as_deref(), stop, scope)
         }
+        ExprAst::Call(b, args) => eval_call(*b, args, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
             Some(EvalResult::Scalar(v)) => Ok(EvalResult::Scalar(canonicalize_value(v))),
             Some(EvalResult::Array(a)) => Ok(EvalResult::Array(a.canonicalized_clone())),
@@ -119,7 +122,7 @@ pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, 
 }
 
 /// Unwrap a scalar result; an array in scalar position is a typed error (element-wise
-/// operators and the array-shaped built-ins are deferred).
+/// operators are not in the subset).
 fn expect_scalar(r: EvalResult) -> Result<Value, ExprError> {
     match r {
         EvalResult::Scalar(v) => Ok(v),
@@ -131,8 +134,8 @@ fn expect_scalar(r: EvalResult) -> Result<Value, ExprError> {
 }
 
 /// Evaluate `ast` to a ground scalar [`Value`]. Total over every AST form: constructs that can
-/// produce arrays (identifier, literal, range) go through [`eval_node`] and reject an array
-/// result with a typed error.
+/// produce arrays (identifier, literal, range, built-in call) go through [`eval_node`] and
+/// reject an array result with a typed error.
 pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, ExprError> {
     match ast {
         ExprAst::Real(r) => Ok(real(*r)),
@@ -145,8 +148,7 @@ pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Exp
         ExprAst::Binary(op, a, b) => {
             eval_binary(*op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?)
         }
-        ExprAst::Call(b, args) => eval_call(*b, args, scope),
-        ExprAst::Ident(_) | ExprAst::ArrayLit(_) | ExprAst::Range { .. } => {
+        ExprAst::Call(..) | ExprAst::Ident(_) | ExprAst::ArrayLit(_) | ExprAst::Range { .. } => {
             expect_scalar(eval_node(ast, scope)?)
         }
     }
@@ -273,14 +275,40 @@ fn values_equal(a: &Value, b: &Value) -> Result<bool, ExprError> {
     }
 }
 
-/// Evaluate a built-in call. Arity is already checked by the parser; the slice patterns below
-/// keep evaluation panic-free even so (a mismatch yields a typed error, never an index panic).
-fn eval_call(b: Builtin, args: &[ExprAst], scope: &dyn Scope) -> Result<Value, ExprError> {
-    let vals: Vec<Value> = args
-        .iter()
-        .map(|a| eval_scalar(a, scope))
-        .collect::<Result<_, _>>()?;
-    match (b, vals.as_slice()) {
+/// Evaluate a built-in call, dispatching on the built-in's shape. Array-shaped built-ins
+/// receive their arguments as scalar-or-array [`EvalResult`]s (via [`eval_node`]) and route to
+/// [`crate::eval_array_builtins`]; scalar built-ins keep the scalar-only argument path, so an
+/// array argument to one is the same typed [`ExprError::TypeError`] as before. Both paths
+/// evaluate arguments left to right.
+fn eval_call(b: Builtin, args: &[ExprAst], scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    match b {
+        Builtin::Sum
+        | Builtin::Size
+        | Builtin::Fill
+        | Builtin::Cat
+        | Builtin::MinArr
+        | Builtin::MaxArr => {
+            let vals: Vec<EvalResult> = args
+                .iter()
+                .map(|a| eval_node(a, scope))
+                .collect::<Result<_, _>>()?;
+            crate::eval_array_builtins::eval_array_builtin(b, &vals)
+        }
+        _ => {
+            let vals: Vec<Value> = args
+                .iter()
+                .map(|a| eval_scalar(a, scope))
+                .collect::<Result<_, _>>()?;
+            eval_scalar_call(b, &vals).map(EvalResult::Scalar)
+        }
+    }
+}
+
+/// Evaluate a scalar built-in over already-evaluated scalar arguments. Arity is already checked
+/// by the parser; the slice patterns below keep evaluation panic-free even so (a mismatch
+/// yields a typed error, never an index panic).
+fn eval_scalar_call(b: Builtin, vals: &[Value]) -> Result<Value, ExprError> {
+    match (b, vals) {
         (Builtin::Abs, [v]) => builtin_abs(v),
         (Builtin::Sign, [v]) => Ok(Value::Integer(builtin_sign(num_of(v)?))),
         (Builtin::Sqrt, [v]) => builtin_sqrt(num_of(v)?),

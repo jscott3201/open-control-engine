@@ -498,8 +498,8 @@ impl Parser {
     }
 
     /// Parse a comma-separated argument list (the opening `(` is already consumed), then resolve
-    /// the call against the scalar §7.7.2 built-in table with an arity check. Arguments are
-    /// full range expressions so a future `sum(1:3)` needs no grammar change.
+    /// the call against the §7.7.2 built-in table with an arity check. Arguments are full range
+    /// expressions, so `sum(1:3)` consumes the range as one argument.
     fn parse_call(&mut self, name: &str) -> Result<ExprAst, ExprError> {
         let mut args = Vec::new();
         if self.peek() != Some(&Tok::RParen) {
@@ -541,9 +541,10 @@ fn recognize_const(name: &str) -> Option<BuiltinConst> {
     }
 }
 
-/// Map a function name + argument count to a scalar [`Builtin`], or a typed error. Array-shaped
-/// §7.7.2 built-ins are recognized and reported as deferred (not "unsupported"); everything else
-/// outside the table is [`ExprError::UnsupportedFunction`] (R9 closed-world).
+/// Map a function name + argument count to a [`Builtin`], or a typed error. `min`/`max`
+/// dispatch on arity (one argument → array reduction, two → scalar); a `fill` with more than
+/// one extent would build a 2-D array and is reported as deferred. Everything outside the
+/// table is [`ExprError::UnsupportedFunction`] (R9 closed-world).
 fn resolve_builtin(name: &str, argc: usize) -> Result<Builtin, ExprError> {
     let arity_err = |n: &str, want: &str| parse_err(format!("'{n}' expects {want}, got {argc}"));
     match name {
@@ -571,19 +572,42 @@ fn resolve_builtin(name: &str, argc: usize) -> Result<Builtin, ExprError> {
             })
         }
         "min" | "max" => match argc {
+            1 => Ok(if name == "min" {
+                Builtin::MinArr
+            } else {
+                Builtin::MaxArr
+            }),
             2 => Ok(if name == "min" {
                 Builtin::MinScalar
             } else {
                 Builtin::MaxScalar
             }),
-            1 => Err(parse_err(format!(
-                "array form '{name}(A)' is deferred to M1-PR-9 (only scalar '{name}(x, y)' is supported)"
-            ))),
+            _ => Err(arity_err(name, "1 array argument or 2 scalar arguments")),
+        },
+        "sum" => {
+            if argc != 1 {
+                return Err(arity_err(name, "1 argument"));
+            }
+            Ok(Builtin::Sum)
+        }
+        "size" => match argc {
+            1 | 2 => Ok(Builtin::Size),
+            _ => Err(arity_err(name, "1 or 2 arguments")),
+        },
+        "fill" => match argc {
+            2 => Ok(Builtin::Fill),
+            n if n >= 3 => Err(parse_err(
+                "'fill' with more than one extent builds a 2-D or higher array, which is \
+                 deferred (only 1-D 'fill(x, n)' is supported)",
+            )),
             _ => Err(arity_err(name, "2 arguments")),
         },
-        "sum" | "cat" | "fill" | "size" => Err(parse_err(format!(
-            "array built-in '{name}' is deferred to M1-PR-9"
-        ))),
+        "cat" => {
+            if argc < 3 {
+                return Err(arity_err(name, "at least 3 arguments: cat(k, A, B, ...)"));
+            }
+            Ok(Builtin::Cat)
+        }
         other => Err(ExprError::UnsupportedFunction(other.to_string())),
     }
 }

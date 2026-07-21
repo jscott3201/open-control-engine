@@ -455,9 +455,9 @@ fn unary_minus_binds_inside_range_operands() {
 #[test]
 fn range_parses_in_parentheses_and_call_arguments() {
     assert_integer_elements(&array("(1:3)"), &[1, 2, 3]);
-    // The grammar threads ranges through argument lists (so a future `sum(1:3)` needs no
-    // parser change); today's scalar built-ins then reject the array at evaluation — a
-    // TypeError, not a parse error.
+    // The grammar threads ranges through argument lists (`sum(1:3)` consumes one as its
+    // argument); the scalar built-ins reject the array at evaluation — a TypeError, not a
+    // parse error.
     assert!(parse("min(1:3, 2)").is_ok());
     assert!(matches!(
         run("min(1:3, 2)"),
