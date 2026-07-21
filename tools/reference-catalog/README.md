@@ -25,7 +25,13 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   `registry::manifest_tests::checked_in_manifest_matches_regenerated_bytes` in `oce-blocks` keeps
   this file byte-identical to the live registry; re-bless a deliberate registry change with
   `UPDATE_EXPECT=1 cargo nextest run -p oce-blocks checked_in_manifest_matches_regenerated_bytes`
-  and review the diff.
+  and review the diff. Two by-design limits: widened variadic port element types are not in the
+  manifest — they are defined by block semantics, so a consumer drawing a widened
+  `MultiAnd`/`VectorFilter` instance must look beyond the manifest; and compound param-rule
+  semantics (e.g. `RealTimesIntegerInclusiveRange`, or `IntegerArrayElementsInRange`'s integer
+  `min` vs parameter-name-string `max`) are defined in the `ParamRule` rustdoc in
+  `crates/oce-blocks/src/lib.rs` — the manifest carries names and fields, the rustdoc carries
+  meaning.
 
 CI and local tests must use these checked-in files only. Updating the catalog requires re-fetching
 the upstream files named in the provenance file and updating this snapshot deliberately.

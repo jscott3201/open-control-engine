@@ -1,4 +1,10 @@
 //! Block-registry manifest guard tests: byte golden, coverage oracle, and variadic-width pins.
+//!
+//! Only the byte golden compares against the checked-in `MANIFEST_JSON`; every other test asserts
+//! on freshly rendered output, so a generator/serializer defect fails them even when a stale or
+//! bad re-bless has aligned the artifact with the defect. The `UPDATE_EXPECT=1` write branch in
+//! the byte golden is deliberately test-uncovered — exercising it would overwrite the artifact;
+//! it is a human-diff-reviewed re-bless path.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -193,6 +199,7 @@ fn resolved_signature_widens_variadic_inputs_that_static_signature_omits() {
 
 #[test]
 fn float_guard_fields_serialize_as_shortest_round_trip_decimals() {
+    let rendered = render_manifest();
     for pinned_rule_line in [
         r#"{ "rule": "RealGreaterOrEqual", "name": "deltaU", "min": 0.001 }"#,
         r#"{ "rule": "RealLessOrEqualConstant", "name": "deltaU", "max": 0.5 }"#,
@@ -201,19 +208,21 @@ fn float_guard_fields_serialize_as_shortest_round_trip_decimals() {
         r#"{ "rule": "RealGreaterOrEqual", "name": "Td", "min": 1e-15 }"#,
     ] {
         assert!(
-            MANIFEST_JSON.contains(pinned_rule_line),
-            "checked-in manifest must pin the exact serde_json f64 decimal: {pinned_rule_line}"
+            rendered.contains(pinned_rule_line),
+            "rendered manifest must pin the exact serde_json f64 decimal: {pinned_rule_line}"
         );
     }
 }
 
-/// Parse the checked-in manifest's top-level entry array.
+/// Parse the freshly rendered manifest's top-level entry array (generator coverage, independent
+/// of the checked-in artifact — the byte golden ties the two together).
 fn manifest_entries() -> Vec<JsonValue> {
-    let manifest: JsonValue = serde_json::from_str(MANIFEST_JSON).expect("manifest JSON parses");
+    let manifest: JsonValue =
+        serde_json::from_str(&render_manifest()).expect("manifest JSON parses");
     manifest.as_array().expect("top-level JSON array").clone()
 }
 
-/// Find one entry object by class path in the checked-in manifest.
+/// Find one entry object by class path in the freshly rendered manifest.
 fn manifest_entry(class_path: &str) -> JsonValue {
     manifest_entries()
         .into_iter()
