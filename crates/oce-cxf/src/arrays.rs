@@ -1,18 +1,20 @@
 //! Array-parameter normalization machinery (doc 04 §3.6.1) — the resolver-owned expansion of a
 //! **preserved** array parameter (`isArray=true`) into per-element scalar entries keyed by the
 //! 1-based row-major underscore name (`k[2]` → `k_1`,`k_2`; `B[2,2]` → `B_1_1`,`B_1_2`,`B_2_1`,
-//! `B_2_2`, last index fastest). Split out of `resolve.rs` to keep that file under the 700-LOC cap;
-//! the only entry point the resolver calls is [`expand_array_param`].
+//! `B_2_2`, last index fastest). Values arrive either as a JSON list of element literals or as an
+//! array *expression* string (`fill(1, nin)`, `{1, 2}`, `1:3`) evaluated through the `oce-expr`
+//! array subset. Split out of `resolve.rs` to keep that file under the 700-LOC cap; the only entry
+//! point the resolver calls is [`expand_array_param`].
 
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_expr::EvalResult;
+use oce_expr::{ArrayValue, EvalResult};
 use oce_model::Value;
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{ParamScope, ground_value};
+use crate::ground::{GroundErr, ParamScope, ground_value};
 use crate::resolve::local_name;
 
 /// Strip a trailing array-decoration `[...]` from a local name: `k[2]` → `k`, `k` → `k`. Total —
@@ -130,18 +132,109 @@ fn array_element_names(base: &str, dims: &[usize]) -> Result<Vec<String>, String
     Ok(names)
 }
 
+/// Evaluate an array-*expression* binding (`fill(1, nin)`, `{1, 2}`, `1:3`) against `scope` and
+/// shape-check it against the declared dims. Returns the evaluated elements, or the
+/// `GroundingFailed` message. Rules (doc 04 §3.6.1):
+///
+/// - Declared dims of rank ≥ 2 with an expression value are rejected up front — `oce-expr` cannot
+///   construct 2-D arrays, and reshaping a flat 1-D result into a matrix would invent structure the
+///   author never wrote.
+/// - A scalar-evaluating expression is an error, **never** a fill-like broadcast — the author
+///   writes `fill(x, n)` explicitly.
+/// - A 1-D result must have exactly `expected` elements (`av.len() == n`, including `0 == 0` for a
+///   declared size-0 array).
+///
+/// The element count is doubly bounded: the declared-dims side by `MAX_ARRAY_ELEMENTS` (checked in
+/// [`array_element_names`] before this runs) and the expression side by `oce-expr`'s own 2^20
+/// construction cap — a hostile `fill(1, 2000000000)` returns `ExprError::ArrayTooLarge`, surfaced
+/// here as the error message. Total; never panics.
+fn eval_array_expression(
+    text: &str,
+    dims: &[usize],
+    expected: usize,
+    scope: &dyn oce_expr::Scope,
+) -> Result<ArrayValue, String> {
+    if dims.len() > 1 {
+        return Err(format!(
+            "array expression value on a {}-dimensional array parameter is not supported \
+             (2-D array expressions are deferred; oce-expr arrays are 1-D)",
+            dims.len()
+        ));
+    }
+    match oce_expr::eval_str(text, scope) {
+        Ok(EvalResult::Array(av)) => {
+            if av.len() != expected {
+                return Err(format!(
+                    "array expression evaluated to {} element(s) but the declared dimensions \
+                     imply {expected}",
+                    av.len()
+                ));
+            }
+            Ok(av)
+        }
+        // `EvalResult` is `#[non_exhaustive]`; any non-array result (a scalar today) cannot fill
+        // an array parameter — no broadcast, see above.
+        Ok(_) => Err("array parameter expression must evaluate to an array".to_owned()),
+        Err(e) => Err(GroundErr::Expr(e).to_string()),
+    }
+}
+
+/// Report the `ArrayFlattenCollision` diagnostic when a minted element name collides with a
+/// sibling parameter's local name. Returns `true` when a collision was reported (the caller skips
+/// the element).
+fn collides_with_sibling(
+    siblings: &HashSet<&str>,
+    ename: &str,
+    piri: &str,
+    diags: &mut Vec<Diagnostic>,
+) -> bool {
+    if !siblings.contains(ename) {
+        return false;
+    }
+    diags.push(
+        Diagnostic::error(
+            DiagCode::ArrayFlattenCollision,
+            format!(
+                "array element {ename:?} collides with an existing sibling parameter of the same name"
+            ),
+        )
+        .with_subject(piri.to_owned()),
+    );
+    true
+}
+
+/// Append one minted per-element entry to both the param table and the incremental scope (so a
+/// later sibling binding can reference it by its `k_i` name).
+fn mint_element(
+    ename: &str,
+    value: Value,
+    table: &mut Vec<(Arc<str>, Value)>,
+    scope_entries: &mut Vec<(Arc<str>, EvalResult)>,
+) {
+    let key: Arc<str> = Arc::from(ename);
+    scope_entries.push((Arc::clone(&key), EvalResult::Scalar(value.clone())));
+    table.push((key, value));
+}
+
 /// Expand one **preserved** array parameter (`isArray=true`) into per-element scalar entries on the
 /// owning instance's `table`/`scope_entries`, in 1-based row-major order (doc 04 §3.6.1).
 /// The flattened encoding (separate `k_1`/`k_2` scalar nodes) needs no expansion — it is the
 /// convergence target — so both encodings yield the identical ordered `ParamTable`.
 ///
-/// Value rule: the binding must be a [`CxfValue::List`] of element literals; `m == N` is positional
-/// (including the empty `0 == 0` case), `m == 1` broadcasts the single value to all `N` **when
-/// `N >= 1`** (the structural `fill(value, N)` equivalent). A non-empty list against a declared
-/// *empty* (size-0) array — or any other length — is `GroundingFailed`; broadcasting one value into
-/// a zero-element array would otherwise silently drop it (even a malformed value), accepting broken
-/// input as valid. An array *expression* (`fill(...)`) arrives as [`CxfValue::Expr`] (not a `List`)
-/// and is rejected `GroundingFailed` until array expressions are implemented.
+/// Value rules:
+/// - A [`CxfValue::List`] of element literals: `m == N` is positional (including the empty
+///   `0 == 0` case), `m == 1` broadcasts the single value to all `N` **when `N >= 1`** (the
+///   structural `fill(value, N)` equivalent). A non-empty list against a declared *empty* (size-0)
+///   array — or any other length — is `GroundingFailed`; broadcasting one value into a
+///   zero-element array would otherwise silently drop it (even a malformed value), accepting
+///   broken input as valid.
+/// - A [`CxfValue::Expr`] array expression (`fill(1, nin)`, `{1, 2}`, `1:3`): evaluated through
+///   `oce-expr` against the same incremental scope the list path uses (earlier-declared sibling
+///   parameters are visible; a *later*-declared one is not — the Step-7 forward-reference
+///   limitation), then shape-checked per [`eval_array_expression`]. The evaluated elements are
+///   minted exactly as list elements are, already canonicalized by `oce-expr`.
+/// - Any other shape (a bare/typed scalar literal) is `GroundingFailed`.
+///
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn expand_array_param(
@@ -182,35 +275,7 @@ pub(crate) fn expand_array_param(
             return;
         }
     };
-    // Preserved per-element values are a JSON list; array expressions are deferred.
-    let CxfValue::List(elems) = cxf_val else {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::GroundingFailed,
-                "array parameter value must be a JSON list of element literals \
-                 (array expressions such as fill(...) are M2)",
-            )
-            .with_subject(piri.to_owned()),
-        );
-        return;
-    };
     let n = names.len();
-    let m = elems.len();
-    // Positional (m == n, incl. the empty 0 == 0 case) or broadcast (one value to N >= 1 elements).
-    // A non-empty list against a declared empty (size-0) array is NOT a broadcast — the value would
-    // be silently dropped — so it falls through to this GroundingFailed length error.
-    if !(m == n || (m == 1 && n >= 1)) {
-        diags.push(
-            Diagnostic::error(
-                DiagCode::GroundingFailed,
-                format!(
-                    "array value list has {m} element(s) but the declared dimensions imply {n}"
-                ),
-            )
-            .with_subject(piri.to_owned()),
-        );
-        return;
-    }
     // Sibling local-names (every OTHER param node on this instance) for the minted-name collision
     // check. Lookup-only set — never iterated into a model id/vector order (determinism contract).
     // Current scope: flat single-level instances (no hasInstance nesting); revisit name scoping when
@@ -220,30 +285,69 @@ pub(crate) fn expand_array_param(
         .filter(|&&p| p != piri)
         .map(|&p| local_name(p))
         .collect();
-    for (k, ename) in names.iter().enumerate() {
-        if siblings.contains(ename.as_str()) {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::ArrayFlattenCollision,
-                    format!(
-                        "array element {ename:?} collides with an existing sibling parameter of the same name"
-                    ),
-                )
-                .with_subject(piri.to_owned()),
-            );
-            continue;
-        }
-        let elem = if m == 1 { &elems[0] } else { &elems[k] };
-        match ground_value(elem, &ParamScope::new(&scope_entries[..])) {
-            Ok(v) => {
-                let key: Arc<str> = Arc::from(ename.as_str());
-                scope_entries.push((Arc::clone(&key), EvalResult::Scalar(v.clone())));
-                table.push((key, v));
-            }
-            Err(e) => diags.push(
-                Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
+    match cxf_val {
+        // Preserved per-element values as a JSON list of element literals.
+        CxfValue::List(elems) => {
+            let m = elems.len();
+            // Positional (m == n, incl. the empty 0 == 0 case) or broadcast (one value to N >= 1
+            // elements). A non-empty list against a declared empty (size-0) array is NOT a
+            // broadcast — the value would be silently dropped — so it falls through to this
+            // GroundingFailed length error.
+            if !(m == n || (m == 1 && n >= 1)) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::GroundingFailed,
+                        format!(
+                            "array value list has {m} element(s) but the declared dimensions imply {n}"
+                        ),
+                    )
                     .with_subject(piri.to_owned()),
-            ),
+                );
+                return;
+            }
+            for (k, ename) in names.iter().enumerate() {
+                if collides_with_sibling(&siblings, ename, piri, diags) {
+                    continue;
+                }
+                let elem = if m == 1 { &elems[0] } else { &elems[k] };
+                match ground_value(elem, &ParamScope::new(&scope_entries[..])) {
+                    Ok(v) => mint_element(ename, v, table, scope_entries),
+                    Err(e) => diags.push(
+                        Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
+                            .with_subject(piri.to_owned()),
+                    ),
+                }
+            }
         }
+        // An array *expression* string, evaluated through oce-expr against the incremental scope.
+        // Bound first so the immutable scope borrow ends before elements are minted.
+        CxfValue::Expr(text) => {
+            let evaluated =
+                eval_array_expression(text, &dims, n, &ParamScope::new(&scope_entries[..]));
+            match evaluated {
+                Ok(av) => {
+                    // av.len() == names.len() (shape-checked above); elements are already
+                    // canonicalized by oce-expr, so they are pushed as-is.
+                    for (ename, v) in names.iter().zip(av.as_slice()) {
+                        if collides_with_sibling(&siblings, ename, piri, diags) {
+                            continue;
+                        }
+                        mint_element(ename, v.clone(), table, scope_entries);
+                    }
+                }
+                Err(msg) => diags.push(
+                    Diagnostic::error(DiagCode::GroundingFailed, msg).with_subject(piri.to_owned()),
+                ),
+            }
+        }
+        // A bare/typed scalar literal on an isArray parameter is malformed.
+        _ => diags.push(
+            Diagnostic::error(
+                DiagCode::GroundingFailed,
+                "array parameter value must be a JSON list of element literals or an \
+                 array expression string",
+            )
+            .with_subject(piri.to_owned()),
+        ),
     }
 }

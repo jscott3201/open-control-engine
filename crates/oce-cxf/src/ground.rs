@@ -37,9 +37,9 @@ pub(crate) enum GroundErr {
     UnknownDatatype(String),
     /// An `Expr` binding failed to evaluate to a ground value (unbound symbol, type error, …).
     Expr(oce_expr::ExprError),
-    /// The binding did not ground to a scalar — either an `Expr` that evaluated to a non-scalar
-    /// (reserved; the scalar subset never produces this) or a `List` (array) value on a non-array
-    /// parameter node.
+    /// The binding did not ground to a scalar — an `Expr` that evaluated to an array (legal only
+    /// on an `isArray` parameter, which the resolver expands in `arrays.rs` before reaching here)
+    /// or a `List` (array) value on a non-array parameter node.
     NonScalar,
 }
 
@@ -84,7 +84,9 @@ pub(crate) fn ground_value(value: &CxfValue, scope: &dyn Scope) -> Result<Value,
                 return Ok(Value::Integer(value));
             }
             match oce_expr::eval_str(text, scope) {
-                // `EvalResult` is `#[non_exhaustive]`; the scalar subset only yields `Scalar`.
+                // `EvalResult` is `#[non_exhaustive]`; the wildcard rejects every non-scalar
+                // result — today an `Array` on a scalar parameter (array parameters never reach
+                // this: the resolver expands them in `arrays.rs` first).
                 Ok(EvalResult::Scalar(v)) => Ok(v),
                 Ok(_) => Err(GroundErr::NonScalar),
                 Err(e) => Err(GroundErr::Expr(e)),
@@ -297,6 +299,20 @@ mod tests {
             &no_scope(),
         );
         assert!(matches!(r, Err(GroundErr::Expr(_))));
+    }
+
+    #[test]
+    fn expr_evaluating_to_array_on_scalar_binding_is_non_scalar() {
+        // Regression guard for the `Ok(_)` wildcard above: now that `EvalResult::Array` is a live
+        // variant, an array-evaluating Expr on a SCALAR (non-array) parameter must still be the
+        // typed NonScalar rejection, never a silent acceptance or a panic.
+        for text in ["{1, 2}", "1:3", "fill(1.0, 2)"] {
+            let r = ground_value(&CxfValue::Expr(text.to_owned()), &no_scope());
+            assert!(
+                matches!(r, Err(GroundErr::NonScalar)),
+                "{text:?} on a scalar binding must be NonScalar, got {r:?}"
+            );
+        }
     }
 
     #[test]

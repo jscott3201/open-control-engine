@@ -4,8 +4,10 @@
 //! arrays. Plus: per-rank goldens, determinism, 1-based-at-boundary, the element-value oracle,
 //! row-major / last-index-fastest ordering (a column-major flip fails the 2-D golden), param-only
 //! connector-neutrality, the `ArrayFlattenCollision` gate, and a panic-free edge corpus (malformed
-//! dims, missing/negative dims, length mismatch, broadcast, symbolic dims, array-expr rejection,
-//! size-0, size-0-with-value rejection, usize-overflow, and the `MAX_ARRAY_ELEMENTS` DoS ceiling).
+//! dims, missing/negative dims, length mismatch, broadcast, symbolic dims, size-0,
+//! size-0-with-value rejection, usize-overflow, and the `MAX_ARRAY_ELEMENTS` DoS ceiling).
+//! Array-*expression* values ground through the oce-expr evaluator — the smoke test lives here,
+//! the full suite in `resolve_array_expression.rs`.
 //! Floats compared by IEEE-754 bits (`TESTING.md` pillar 2).
 //!
 //! Regenerate the goldens after an intentional change:
@@ -305,11 +307,18 @@ fn single_value_broadcasts_to_all_elements() {
 }
 
 #[test]
-fn array_expression_value_is_grounding_failed() {
-    // An array EXPRESSION (fill/comprehension) arrives as an Expr string, not a List.
-    assert_error_code(
-        &array_doc("(2)", json!(1), json!("fill(1, 2)")),
-        DiagCode::GroundingFailed,
+fn array_expression_value_grounds_through_the_evaluator() {
+    // FLIPPED (issue #142): an array EXPRESSION value (an Expr string, not a List) formerly hit a
+    // GroundingFailed deferral here; it now grounds through the oce-expr array evaluator. The full
+    // expression suite lives in resolve_array_expression.rs.
+    let g = import_json(&array_doc("(2)", json!(1), json!("fill(1, 2)")))
+        .expect("array expression value must resolve");
+    let vals = &g.blocks[0].params.values;
+    let keys: Vec<&str> = vals.iter().map(|(n, _)| n.as_ref()).collect();
+    assert_eq!(keys, vec!["k_1", "k_2"]);
+    assert!(
+        vals.iter().all(|(_, v)| v.bit_eq(&Value::Integer(1))),
+        "every filled element == Integer(1)"
     );
 }
 

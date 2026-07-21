@@ -373,8 +373,9 @@ pub enum CxfValue {
     /// grounds them per-element into the canonical per-element-scalar params (`k_1`, `k_2`, …). A
     /// JSON array matches none of the scalar/object/string arms above, so this is the only arm an
     /// array value can take (variant order vs `Expr` is immaterial — a string never matches a `Vec`).
-    /// Array *expression* values (`fill(...)`, comprehensions) arrive as [`CxfValue::Expr`] and are
-    /// rejected as `grounding-failed` until array `oce-expr` builtins are implemented.
+    /// Array *expression* values (`fill(...)`, `{…}` literals, ranges) arrive as
+    /// [`CxfValue::Expr`] and are evaluated through the `oce-expr` array subset by the resolver
+    /// (comprehensions stay rejected at parse).
     List(Vec<CxfValue>),
     /// An unevaluated CDL/Modelica expression string, or a fully-qualified enumeration value.
     Expr(String),
