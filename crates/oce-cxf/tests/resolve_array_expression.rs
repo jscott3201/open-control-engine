@@ -282,6 +282,29 @@ fn fill_expression_grounds_elements_with_integer_type() {
 }
 
 #[test]
+fn expression_minted_elements_are_visible_to_later_sibling_bindings() {
+    // mint_element pushes each k_i into the incremental scope so a LATER sibling binding can
+    // reference it — the promise its doc comment makes. Pins the scope_entries write on the
+    // expression path: a mutation dropping it leaves k_1/k_2 in the table but makes `s` fail
+    // to ground (unknown identifier), so this test fails.
+    let doc = constant_doc(
+        json!([pref("k"), pref("s")]),
+        &[
+            json!({ "@id": "http://example.org#A.con.k", "S231:label": "k[2]",
+                    "S231:isArray": true, "S231:numberDimensions": 1,
+                    "S231:sizeOfDimensions": "(2)", "S231:value": "fill(1, 2)" }),
+            json!({ "@id": "http://example.org#A.con.s", "S231:label": "s",
+                    "S231:value": "k_1 + k_2" }),
+        ],
+    );
+    let g = import_json(&doc).expect("later sibling referencing minted elements must resolve");
+    let vals = &g.blocks[0].params.values;
+    let keys: Vec<&str> = vals.iter().map(|(n, _)| n.as_ref()).collect();
+    assert_eq!(keys, vec!["k_1", "k_2", "s"]);
+    assert!(vals[2].1.bit_eq(&Value::Integer(2)), "s == k_1 + k_2 == 2");
+}
+
+#[test]
 fn brace_literal_expression_grounds_real_elements_by_bits() {
     let g = import_json(&expr_array_doc(
         "k[2]",
@@ -350,6 +373,30 @@ fn two_dimensional_declared_dims_reject_any_expression_value() {
             &expr_array_doc("k[2,2]", "(2, 2)", json!(2), json!(expr)),
             &["2-dimensional", "deferred"],
         );
+    }
+}
+
+#[test]
+fn two_dimensional_deferral_precedes_expression_evaluation() {
+    // Reject-before-eval ordering, pinned permanently: a MALFORMED expression on a rank-2
+    // declaration still reports the deferral (the actionable message), never a parse error.
+    let doc = expr_array_doc("k[2,2]", "(2, 2)", json!(2), json!("@#$%"));
+    match import_json(&doc) {
+        Err(CxfError::Validation(diags)) => {
+            assert!(
+                diags.iter().any(|d| d.code == DiagCode::GroundingFailed
+                    && d.is_error()
+                    && d.message.contains("2-dimensional")
+                    && d.message.contains("deferred")),
+                "expected the 2-D deferral diagnostic, got {diags:#?}"
+            );
+            assert!(
+                !diags.iter().any(|d| d.message.contains("parse")),
+                "the malformed expression must never reach the parser, got {diags:#?}"
+            );
+        }
+        Ok(_) => panic!("expected Validation(GroundingFailed), but import succeeded"),
+        Err(other) => panic!("expected Validation(GroundingFailed), got {other:?}"),
     }
 }
 

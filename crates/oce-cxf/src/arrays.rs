@@ -157,7 +157,7 @@ fn eval_array_expression(
     if dims.len() > 1 {
         return Err(format!(
             "array expression value on a {}-dimensional array parameter is not supported \
-             (2-D array expressions are deferred; oce-expr arrays are 1-D)",
+             (multi-dimensional array expressions are deferred; oce-expr arrays are 1-D)",
             dims.len()
         ));
     }
@@ -320,7 +320,10 @@ pub(crate) fn expand_array_param(
             }
         }
         // An array *expression* string, evaluated through oce-expr against the incremental scope.
-        // Bound first so the immutable scope borrow ends before elements are minted.
+        // Bound first so the immutable scope borrow ends before elements are minted. Note the G36
+        // integer-constant shim lives only in scalar `ground_value`, so a G36 constant path inside
+        // an array expression fails as an unknown identifier (documented asymmetry, tracked
+        // separately).
         CxfValue::Expr(text) => {
             let evaluated =
                 eval_array_expression(text, &dims, n, &ParamScope::new(&scope_entries[..]));
