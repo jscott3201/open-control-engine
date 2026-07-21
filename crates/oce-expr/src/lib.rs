@@ -300,9 +300,11 @@ pub enum Shape {
 /// parameter/constant table that `oce-flatten` supplies. Pure and total: never reads
 /// attributes, connectors, or time (R11).
 ///
-/// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4). The scalar subset
-/// never calls them; default implementations return `None`, so scalar-only scopes need only provide
-/// [`Scope::lookup`]. They gain real bodies when enum references are implemented.
+/// `enum_class`/`enum_ordinal` back enumeration-reference grounding (`02` §7.4): evaluating an
+/// [`ExprAst::EnumRef`] calls both to resolve the class and ordinal. The default
+/// implementations return `None` — a convenience for scopes that never see enum references,
+/// which then need only provide [`Scope::lookup`] (an enum reference against such a scope is a
+/// typed [`ExprError::UnknownIdent`]).
 pub trait Scope {
     /// Look up a parameter/constant by name, borrowing its already-evaluated value.
     fn lookup(&self, name: &str) -> Option<&EvalResult>;

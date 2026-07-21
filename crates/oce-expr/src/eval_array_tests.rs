@@ -5,7 +5,7 @@
 
 use oce_model::{Value, ValueType};
 
-use super::{ArrayValue, EvalResult, ExprError, Scope, Shape, eval_str, parse};
+use super::{ArrayValue, EvalResult, ExprAst, ExprError, Scope, Shape, eval, eval_str, parse};
 
 /// A tiny linear-scan scope that can hold scalar *and* array bindings.
 struct TestScope {
@@ -185,6 +185,11 @@ fn real_range_elements_match_hand_computed_closed_form_oracles() {
     // Bits precomputed offline as `start + (k as f64) * step` and pinned literally. These
     // vectors discriminate the closed form from an accumulating `acc += step` loop, which
     // drifts one ulp low on 0:0.1:1 from k = 6 onward and one ulp high on 1:0.1:1.3 at k = 2.
+    // The 1:0.1:1.75 vector additionally discriminates FMA: a fused
+    // `(k as f64).mul_add(step, start)` (the rewrite clippy's suboptimal_flops suggests —
+    // forbidden here, its single rounding is not IEEE-reproducible across targets) agrees with
+    // the two-rounding closed form on every other pinned element but diverges at k = 7:
+    // fused 0x3FFB333333333333 (1.7) vs closed 0x3FFB333333333334 (1.7000000000000002).
     assert_real_element_bits(
         &array("0:0.1:1"), // 11 elements — a naive `while acc <= stop` loop is off by one
         &[
@@ -219,6 +224,21 @@ fn real_range_elements_match_hand_computed_closed_form_oracles() {
             0x3FF199999999999A, // 1.1
             0x3FF3333333333333, // 1.2
             0x3FF4CCCCCCCCCCCD, // 1.3
+        ],
+    );
+    assert_real_element_bits(
+        // 8 elements: (1.75 - 1)/0.1 = 7.499999999999999, floor + 1 = 8. A stop of 1.7 would
+        // NOT reach the FMA-discriminating k = 7 — its f64 count is 7 (see the comment above).
+        &array("1:0.1:1.75"),
+        &[
+            0x3FF0000000000000, // 1.0
+            0x3FF199999999999A, // 1.1
+            0x3FF3333333333333, // 1.2
+            0x3FF4CCCCCCCCCCCD, // 1.3
+            0x3FF6666666666666, // 1.4
+            0x3FF8000000000000, // 1.5
+            0x3FF999999999999A, // 1.6
+            0x3FFB333333333334, // 1.7000000000000002 — mul_add would give 0x3FFB333333333333
         ],
     );
     assert_real_element_bits(
@@ -342,6 +362,7 @@ fn element_cap_boundary_is_exact() {
     assert_eq!(at_cap.len(), 1 << 20);
     assert!(at_cap.as_slice()[0].bit_eq(&Value::Integer(1)));
     assert!(at_cap.as_slice()[(1 << 20) - 1].bit_eq(&Value::Integer(1_048_576)));
+    drop(at_cap); // release before the Real-path array below halves peak test memory
     // One element past the cap: rejected with the exact count.
     assert_eq!(
         run("1:1048577").unwrap_err(),
@@ -356,6 +377,21 @@ fn element_cap_boundary_is_exact() {
         run("1.0:1048577.0").unwrap_err(),
         ExprError::ArrayTooLarge {
             count: 1_048_577,
+            max: 1 << 20,
+        }
+    );
+}
+
+#[test]
+fn oversized_literal_ast_is_rejected_before_evaluating_elements() {
+    // Binding text can't practically spell a literal this large (its element count equals its
+    // AST node count), so build the AST directly to pin that the literal path checks the cap
+    // before allocating its value Vec — uniformly with the range paths.
+    let elems = vec![ExprAst::Int(0); (1 << 20) + 1];
+    assert_eq!(
+        eval(&ExprAst::ArrayLit(elems), &TestScope::new(&[])).unwrap_err(),
+        ExprError::ArrayTooLarge {
+            count: (1 << 20) + 1,
             max: 1 << 20,
         }
     );
@@ -435,8 +471,10 @@ fn identifier_bound_to_an_array_reads_back_bit_identical() {
     let source = array_in("{1.0, a}", &TestScope::new(&[("a", nan)]));
     let scope = TestScope::new(&[]).bind_array("arr", source);
     let read = array_in("arr", &scope);
-    // The literal canonicalized the NaN element; the identifier read re-canonicalizes and
-    // must reproduce the same bits.
+    // The literal already canonicalized the NaN element, and ArrayValue's sole constructor
+    // canonicalizes every Real — so the read-path re-canonicalization is structural
+    // belt-and-braces, not behavior this assertion can observe (a plain clone would pass too).
+    // What IS under test: the identifier read returns the stored array bit-identically.
     assert_real_element_bits(&read, &[1.0f64.to_bits(), 0x7FF8_0000_0000_0000]);
     // An array-valued identifier in scalar operand position is a TypeError, like any array.
     assert!(matches!(
@@ -454,8 +492,9 @@ fn negative_zero_and_nan_element_bits_are_pinned() {
         &array("{0.0, -0.0}"),
         &[0.0f64.to_bits(), (-0.0f64).to_bits()],
     );
-    // A NaN element (reachable only via the scope) canonicalizes to the positive quiet NaN,
-    // in a plain literal and through Integer→Real promotion alike.
+    // A NaN element (bound here via the scope; pure binding text reaches NaN too, e.g.
+    // `0.0/0.0`) canonicalizes to the positive quiet NaN, in a plain literal and through
+    // Integer→Real promotion alike.
     let nan = Value::Real(f64::from_bits(0xfff8_0000_0000_0000));
     assert_real_element_bits(
         &array_in("{a}", &TestScope::new(&[("a", nan.clone())])),
@@ -469,7 +508,11 @@ fn negative_zero_and_nan_element_bits_are_pinned() {
     // surfaces as +0.0 (IEEE addition normalizes the sign).
     assert_real_element_bits(&array("-0.0:1.0"), &[0.0f64.to_bits(), 1.0f64.to_bits()]);
     // A NaN range operand defeats the count comparison: the result is a legal empty Real
-    // array, never a panic and never a NaN-length allocation.
+    // array — the deliberate total-function policy — never a panic and never a NaN-length
+    // allocation. NaN is reachable from pure binding text, not just a scope value:
+    let folded_nan = array("0.0/0.0:1.0"); // `/` is IEEE, so 0.0/0.0 folds to a NaN start
+    assert_eq!(folded_nan.elem_type(), ValueType::Real);
+    assert!(folded_nan.is_empty());
     let scope = TestScope::new(&[("a", nan)]);
     let empty = array_in("a:1.0", &scope);
     assert_eq!(empty.elem_type(), ValueType::Real);

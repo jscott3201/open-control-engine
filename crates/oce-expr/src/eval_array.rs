@@ -89,6 +89,15 @@ pub(crate) fn eval_array_literal(
     if elems.is_empty() {
         return Err(ExprError::EmptyArray);
     }
+    // Cap before ANY allocation, uniformly with the range paths. A literal's element count
+    // equals its AST node count (already parsed), so this cannot amplify input size the way a
+    // range can — the check keeps the cap rule uniform rather than guarding a live hazard.
+    if elems.len() > MAX_ARRAY_ELEMENTS {
+        return Err(ExprError::ArrayTooLarge {
+            count: elems.len() as u128,
+            max: MAX_ARRAY_ELEMENTS,
+        });
+    }
     let mut values = Vec::with_capacity(elems.len());
     for e in elems {
         match eval::eval_node(e, scope)? {
@@ -228,8 +237,10 @@ fn integer_range(start: i64, step: i64, stop: i64) -> Result<EvalResult, ExprErr
 /// `floor((stop - start) / step) + 1`, kept in `f64` until after the cap check (see the module
 /// header for why). Elements come from the closed form `start + k * step`, canonicalized —
 /// note `k == 0` yields `start + 0.0`, which normalizes a `-0.0` start to `+0.0` (IEEE
-/// addition); the determinism goldens pin this. A NaN operand fails the `count >= 1` test and
-/// yields a legal empty Real array, the same as a span that opposes the step's direction.
+/// addition); the determinism goldens pin this. A NaN operand — reachable from pure binding
+/// text (`0.0/0.0:1.0` folds to a NaN start), not just from a scope value — fails the
+/// `count >= 1` test and yields a legal empty Real array, the same as a span that opposes the
+/// step's direction: the deliberate total-function policy, pinned by the goldens.
 fn real_range(start: f64, step: f64, stop: f64) -> Result<EvalResult, ExprError> {
     if step == 0.0 {
         return Err(ExprError::DomainError("range step is zero"));
