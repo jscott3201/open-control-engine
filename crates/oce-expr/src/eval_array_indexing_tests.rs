@@ -4,7 +4,7 @@
 //! contract. The bounds and subscript-type suites assert exact error *fields*, not just
 //! variants: the reported index/size pair is diagnostic surface the flattener relays.
 
-use oce_model::Value;
+use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
 use super::{ArrayValue, EvalResult, ExprError, Scope, eval_str, parse};
 
@@ -32,6 +32,14 @@ impl TestScope {
 impl Scope for TestScope {
     fn lookup(&self, name: &str) -> Option<&EvalResult> {
         self.vars.iter().find(|(k, _)| k == name).map(|(_, v)| v)
+    }
+
+    fn enum_class(&self, qualified: &str) -> Option<EnumClassId> {
+        enum_class_id(qualified)
+    }
+
+    fn enum_ordinal(&self, class: EnumClassId, literal: &str) -> Option<u32> {
+        enum_member_ordinal(class, literal)
     }
 }
 
@@ -232,6 +240,14 @@ fn non_integer_subscripts_are_rejected_without_coercion() {
         run("{1, 2}[1.0]").unwrap_err(),
         ExprError::NonIntegerIndex { found: "Real" }
     );
+    // An Enumeration subscript is rejected like any other non-Integer scalar — an enum's
+    // 1-based ordinal is NOT usable as an index without an explicit conversion.
+    assert_eq!(
+        run("{1, 2}[Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2017]").unwrap_err(),
+        ExprError::NonIntegerIndex {
+            found: "Enumeration"
+        }
+    );
     // An array-valued subscript is the established array-in-scalar-position TypeError
     // (vector subscripts are a slicing feature, and slicing is out of subset).
     assert!(matches!(
@@ -327,7 +343,7 @@ fn empty_subscript_brackets_are_a_parse_error() {
 fn multiple_subscripts_parse_then_defer_at_evaluation() {
     assert!(parse("a[1, 2]").is_ok());
     let deferral = "arrays are 1-D, so a subscript takes exactly one index \
-                    (multi-dimensional indexing is deferred; oce-expr arrays are 1-D)";
+                    (multi-dimensional indexing is deferred)";
     assert_eq!(
         run("{1, 2}[1, 2]").unwrap_err(),
         ExprError::DomainError(deferral)

@@ -6,7 +6,7 @@
 //! bit-deterministic:
 //!
 //! - **Integer subscripts only.** A subscript must evaluate to an Integer scalar; Real,
-//!   Boolean, String, and Enum subscripts are [`ExprError::NonIntegerIndex`] — `A[1.0]` is
+//!   Boolean, String, and Enumeration subscripts are [`ExprError::NonIntegerIndex`] — `A[1.0]` is
 //!   rejected, never floored. Routing a subscript through the saturating `integer()` built-in
 //!   coercion would turn `A[0.999999…]` (a rounding artifact) into a silent read of the wrong
 //!   element; on a control engine a wrong element is a physical hazard, so the type gate is
@@ -58,7 +58,7 @@ pub(crate) fn eval_index(
     let [index] = indices else {
         return Err(ExprError::DomainError(
             "arrays are 1-D, so a subscript takes exactly one index \
-             (multi-dimensional indexing is deferred; oce-expr arrays are 1-D)",
+             (multi-dimensional indexing is deferred)",
         ));
     };
     // The scalar path already rejects an array-valued subscript with the established
