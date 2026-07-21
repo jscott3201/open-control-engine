@@ -91,6 +91,7 @@ mod eval_array_indexing;
 mod eval_array_indexing_tests;
 #[cfg(test)]
 mod eval_array_tests;
+mod lex;
 mod parse;
 #[cfg(test)]
 mod tests;
