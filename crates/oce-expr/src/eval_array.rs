@@ -1,10 +1,12 @@
 //! Array construction and evaluation: 1-D brace literals and `a:b` / `a:step:b` ranges.
 //!
 //! Everything that *builds* arrays lives here (the scalar evaluator stays in
-//! [`mod@crate::eval`]; the consuming built-ins in [`mod@crate::eval_array_builtins`] and
-//! subscript reads in [`mod@crate::eval_array_indexing`]): literal element folding and type
-//! resolution, range counting and element generation, and the [`ArrayValue`] constructor that
-//! enforces the shape/type/canonicalization invariants. Two rules keep results
+//! [`mod@crate::eval`]; the consuming built-ins in [`mod@crate::eval_array_builtins`],
+//! subscript reads in [`mod@crate::eval_array_indexing`], and comprehension iteration in
+//! [`mod@crate::eval_comprehension`] — which collects through this module's
+//! [`array_from_scalars`]): literal element folding and type resolution, range counting and
+//! element generation, and the [`ArrayValue`] constructor that enforces the
+//! shape/type/canonicalization invariants. Two rules keep results
 //! bit-deterministic and panic-free:
 //!
 //! - **Closed-form elements.** Range element `k` is `start + k * step` (Integer in `i128`,
@@ -76,14 +78,13 @@ impl ArrayValue {
     }
 }
 
-/// Evaluate a `{a, b, c}` literal: elements left-to-right, then resolve the element type.
+/// Evaluate a `{a, b, c}` literal: elements left-to-right, then resolve the element type
+/// through [`array_from_scalars`].
 ///
-/// Typing (§7.1 promotion, element-wise): all-Integer stays Integer; any Real promotes every
-/// Integer element to Real (canonicalized); homogeneous Boolean is legal. String or Enum
-/// elements, and Boolean/numeric mixing, are [`ExprError::TypeError`]. An element that itself
-/// evaluates to an array (nested literal, or a range element) is a [`ExprError::TypeError`] —
-/// 2-D/nested arrays are deferred. `{}` is [`ExprError::EmptyArray`]: its element type is
-/// unknowable, and fabricating `Real[0]` would risk silent mistyping downstream.
+/// An element that itself evaluates to an array (nested literal, or a range element) is a
+/// [`ExprError::TypeError`] — 2-D/nested arrays are deferred. `{}` is
+/// [`ExprError::EmptyArray`]: its element type is unknowable, and fabricating `Real[0]` would
+/// risk silent mistyping downstream.
 pub(crate) fn eval_array_literal(
     elems: &[ExprAst],
     scope: &dyn Scope,
@@ -111,6 +112,20 @@ pub(crate) fn eval_array_literal(
                 });
             }
         }
+    }
+    Ok(EvalResult::Array(array_from_scalars(values)?))
+}
+
+/// Resolve the element type of already-evaluated scalar elements and build the 1-D array —
+/// the §7.1 element-wise promotion shared by brace literals and comprehensions, so both
+/// collect through **identical** rules: all-Integer stays Integer; any Real promotes every
+/// Integer element to Real (through the [`crate::eval::real`] canonicalization choke point);
+/// homogeneous Boolean is legal. String or Enum elements, and Boolean/numeric mixing, are
+/// [`ExprError::TypeError`]. An empty `values` is [`ExprError::EmptyArray`] — no element can
+/// carry the type (belt-and-braces: both callers reject the empty case before evaluating).
+pub(crate) fn array_from_scalars(values: Vec<Value>) -> Result<ArrayValue, ExprError> {
+    if values.is_empty() {
+        return Err(ExprError::EmptyArray);
     }
     let mut has_real = false;
     let mut has_int = false;
@@ -149,7 +164,7 @@ pub(crate) fn eval_array_literal(
     } else {
         (ValueType::Integer, values)
     };
-    Ok(EvalResult::Array(ArrayValue::vector(elem_type, data)?))
+    ArrayValue::vector(elem_type, data)
 }
 
 /// Evaluate a range: operands in source order (`start`, `step` if present, `stop`), each a

@@ -1,4 +1,5 @@
-//! Lexer + recursive-descent parser for the CDL binding subset (`02` §6).
+//! Recursive-descent parser for the CDL binding subset (`02` §6), over the [`Tok`] stream
+//! produced by [`mod@crate::lex`].
 //!
 //! Operator precedence follows Modelica (low → high): range (`:`) < `or` < `and` < `not` <
 //! relational (`> >= < <= == <>`) < additive (`+ -`) < multiplicative (`* /`) < unary sign
@@ -10,272 +11,17 @@
 //! subscript binds tighter still, so `-A[i]` is `-(A[i])`. Relational operators are
 //! non-associative (`a < b < c` is rejected) and live inside range operands. Exponentiation
 //! (`^`) is **not** in the CDL binding subset (§6.1) and is rejected. Brace array literals
-//! `{a, b, c}`, ranges, and postfix indexing parse; comprehensions and `[a,b;c,d]` matrix
-//! constructors are deferred, and array slicing (`A[a:b]`) is out of subset — each produces a
-//! typed [`ExprError::Parse`], never a panic.
+//! `{a, b, c}`, ranges, postfix indexing, and comprehensions (`{e for i in r}`, plus the
+//! `sum(e for i in r)` reduction sugar) parse; `for` and `in` are **contextual** keywords —
+//! recognized only after a brace element or a `sum` argument — so an identifier named `for`
+//! anywhere else keeps parsing as an [`ExprAst::Ident`]. `[a,b;c,d]` matrix constructors are
+//! deferred and array slicing (`A[a:b]`) is out of subset — each produces a typed
+//! [`ExprError::Parse`], never a panic.
 
 use std::sync::Arc;
 
+use crate::lex::{Tok, lex, parse_err};
 use crate::{BinOp, Builtin, BuiltinConst, ExprAst, ExprError, UnOp};
-
-/// A lexical token. `Real` carries an `f64`, so the enum is `PartialEq` but not `Eq`.
-#[derive(Clone, Debug, PartialEq)]
-enum Tok {
-    /// An integer literal (no `.`/exponent).
-    Int(i64),
-    /// A real literal (had a `.` or an exponent).
-    Real(f64),
-    /// A string literal (quotes stripped, simple escapes resolved).
-    Str(Arc<str>),
-    /// An identifier or dotted qualified name (also `true`/`false`/`and`/`or`/`not`).
-    Name(String),
-    /// `+`
-    Plus,
-    /// `-`
-    Minus,
-    /// `*`
-    Star,
-    /// `/`
-    Slash,
-    /// `>`
-    Gt,
-    /// `>=`
-    Ge,
-    /// `<`
-    Lt,
-    /// `<=`
-    Le,
-    /// `==`
-    EqEq,
-    /// `<>`
-    Ne,
-    /// `(`
-    LParen,
-    /// `)`
-    RParen,
-    /// `,`
-    Comma,
-    /// `{` — opens a brace array literal.
-    LBrace,
-    /// `}` — closes a brace array literal.
-    RBrace,
-    /// `:` — the range separator.
-    Colon,
-    /// `[` — opens a postfix subscript after a primary; in primary position it is the
-    /// deferred matrix constructor and is rejected with a typed error.
-    LBracket,
-    /// `]` — closes a postfix subscript.
-    RBracket,
-}
-
-fn parse_err(msg: impl Into<String>) -> ExprError {
-    ExprError::Parse(msg.into())
-}
-
-/// Tokenize `text`, rejecting characters outside the scalar subset with a typed error.
-fn lex(text: &str) -> Result<Vec<Tok>, ExprError> {
-    let bytes: Vec<char> = text.chars().collect();
-    let mut i = 0;
-    let mut out = Vec::new();
-    while i < bytes.len() {
-        let c = bytes[i];
-        match c {
-            ' ' | '\t' | '\r' | '\n' => i += 1,
-            '0'..='9' => {
-                let (tok, next) = lex_number(&bytes, i)?;
-                out.push(tok);
-                i = next;
-            }
-            'a'..='z' | 'A'..='Z' | '_' => {
-                let (tok, next) = lex_name(&bytes, i);
-                out.push(tok);
-                i = next;
-            }
-            '"' => {
-                let (tok, next) = lex_string(&bytes, i)?;
-                out.push(tok);
-                i = next;
-            }
-            '+' => {
-                out.push(Tok::Plus);
-                i += 1;
-            }
-            '-' => {
-                out.push(Tok::Minus);
-                i += 1;
-            }
-            '*' => {
-                out.push(Tok::Star);
-                i += 1;
-            }
-            '/' => {
-                out.push(Tok::Slash);
-                i += 1;
-            }
-            '>' => {
-                if bytes.get(i + 1) == Some(&'=') {
-                    out.push(Tok::Ge);
-                    i += 2;
-                } else {
-                    out.push(Tok::Gt);
-                    i += 1;
-                }
-            }
-            '<' => match bytes.get(i + 1) {
-                Some('=') => {
-                    out.push(Tok::Le);
-                    i += 2;
-                }
-                Some('>') => {
-                    out.push(Tok::Ne);
-                    i += 2;
-                }
-                _ => {
-                    out.push(Tok::Lt);
-                    i += 1;
-                }
-            },
-            '=' => {
-                if bytes.get(i + 1) == Some(&'=') {
-                    out.push(Tok::EqEq);
-                    i += 2;
-                } else {
-                    return Err(parse_err(
-                        "bare '=' is a binding, not a value expression (use '==' for equality)",
-                    ));
-                }
-            }
-            '(' => {
-                out.push(Tok::LParen);
-                i += 1;
-            }
-            ')' => {
-                out.push(Tok::RParen);
-                i += 1;
-            }
-            ',' => {
-                out.push(Tok::Comma);
-                i += 1;
-            }
-            '{' => {
-                out.push(Tok::LBrace);
-                i += 1;
-            }
-            '}' => {
-                out.push(Tok::RBrace);
-                i += 1;
-            }
-            ':' => {
-                out.push(Tok::Colon);
-                i += 1;
-            }
-            '[' => {
-                out.push(Tok::LBracket);
-                i += 1;
-            }
-            ']' => {
-                out.push(Tok::RBracket);
-                i += 1;
-            }
-            other => return Err(parse_err(format!("unexpected character {other:?}"))),
-        }
-    }
-    Ok(out)
-}
-
-/// Lex a Modelica `UNSIGNED_NUMBER`: integer part, optional `.frac`, optional `e[+|-]exp`.
-/// Integer iff it has neither a fractional part nor an exponent.
-fn lex_number(bytes: &[char], start: usize) -> Result<(Tok, usize), ExprError> {
-    let mut i = start;
-    let mut is_real = false;
-    while i < bytes.len() && bytes[i].is_ascii_digit() {
-        i += 1;
-    }
-    if i < bytes.len() && bytes[i] == '.' {
-        is_real = true;
-        i += 1;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i += 1;
-        }
-    }
-    if i < bytes.len() && (bytes[i] == 'e' || bytes[i] == 'E') {
-        is_real = true;
-        i += 1;
-        if i < bytes.len() && (bytes[i] == '+' || bytes[i] == '-') {
-            i += 1;
-        }
-        let exp_start = i;
-        while i < bytes.len() && bytes[i].is_ascii_digit() {
-            i += 1;
-        }
-        if i == exp_start {
-            return Err(parse_err("malformed number: exponent has no digits"));
-        }
-    }
-    let text: String = bytes[start..i].iter().collect();
-    let tok = if is_real {
-        Tok::Real(
-            text.parse::<f64>()
-                .map_err(|_| parse_err(format!("malformed real literal {text:?}")))?,
-        )
-    } else {
-        Tok::Int(
-            text.parse::<i64>()
-                .map_err(|_| parse_err(format!("integer literal out of range {text:?}")))?,
-        )
-    };
-    Ok((tok, i))
-}
-
-/// Lex an identifier or dotted qualified name (`Modelica.Constants.pi`). A `.` continues the
-/// name only when followed by an identifier start; `.` before a digit cannot occur (numbers
-/// never start with `.`), so there is no ambiguity with member/array syntax.
-fn lex_name(bytes: &[char], start: usize) -> (Tok, usize) {
-    let mut i = start;
-    loop {
-        while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == '_') {
-            i += 1;
-        }
-        if i + 1 < bytes.len()
-            && bytes[i] == '.'
-            && (bytes[i + 1].is_ascii_alphabetic() || bytes[i + 1] == '_')
-        {
-            i += 1; // consume '.', continue the qualified name
-        } else {
-            break;
-        }
-    }
-    let text: String = bytes[start..i].iter().collect();
-    (Tok::Name(text), i)
-}
-
-/// Lex a `"..."` string literal, resolving the `\"`, `\\`, `\n`, `\t` escapes.
-fn lex_string(bytes: &[char], start: usize) -> Result<(Tok, usize), ExprError> {
-    let mut i = start + 1; // skip opening quote
-    let mut s = String::new();
-    while i < bytes.len() {
-        match bytes[i] {
-            '"' => return Ok((Tok::Str(Arc::from(s.as_str())), i + 1)),
-            '\\' => {
-                i += 1;
-                match bytes.get(i) {
-                    Some('"') => s.push('"'),
-                    Some('\\') => s.push('\\'),
-                    Some('n') => s.push('\n'),
-                    Some('t') => s.push('\t'),
-                    Some(other) => s.push(*other),
-                    None => return Err(parse_err("string ends with a dangling backslash")),
-                }
-                i += 1;
-            }
-            other => {
-                s.push(other);
-                i += 1;
-            }
-        }
-    }
-    Err(parse_err("unterminated string literal"))
-}
 
 /// A recursive-descent parser over the lexed token stream.
 struct Parser {
@@ -500,24 +246,108 @@ impl Parser {
         }
     }
 
-    /// `array_literal : "{" [ range ("," range)* ] "}"` — the opening `{` is already consumed.
-    /// Elements are full range expressions (`{1:3, 5}` is legal); no trailing comma
-    /// (Modelica). `{}` parses to an empty [`ExprAst::ArrayLit`] and is rejected at
-    /// evaluation ([`ExprError::EmptyArray`]), where the distinction from a legal empty
-    /// range can be reported precisely.
+    /// `array_literal : "{" [ range ("," range)* ] "}"` or the comprehension
+    /// `"{" range for_clauses "}"` — the opening `{` is already consumed. Elements are full
+    /// range expressions (`{1:3, 5}` is legal); no trailing comma (Modelica). `{}` parses to
+    /// an empty [`ExprAst::ArrayLit`] and is rejected at evaluation
+    /// ([`ExprError::EmptyArray`]), where the distinction from a legal empty range can be
+    /// reported precisely.
+    ///
+    /// The contextual keyword `for` after the **first** element re-interprets the brace: the
+    /// already-parsed expression is the comprehension BODY and `for i in r` clauses follow.
+    /// After a comma-separated element the same `for` is a typed error — a comprehension has
+    /// exactly one body, so `{1, 2 for i in 1:3}` is malformed, and `{for i in 1:3}` has no
+    /// body at all (its `for` parses as an identifier, and the clause tokens after it fail
+    /// the close-brace expectation).
     fn parse_array_literal(&mut self) -> Result<ExprAst, ExprError> {
-        let mut elems = Vec::new();
-        if self.peek() != Some(&Tok::RBrace) {
-            loop {
-                elems.push(self.parse_range()?);
-                match self.peek() {
-                    Some(Tok::Comma) => self.pos += 1,
-                    _ => break,
-                }
+        if self.peek() == Some(&Tok::RBrace) {
+            self.pos += 1;
+            return Ok(ExprAst::ArrayLit(Vec::new()));
+        }
+        let first = self.parse_range()?;
+        if self.peek_keyword("for") {
+            self.pos += 1; // consume the contextual 'for'
+            let iters = self.parse_comprehension_iterators()?;
+            self.expect(&Tok::RBrace, "'}' to close an array comprehension")?;
+            return Ok(ExprAst::Comprehension {
+                body: Box::new(first),
+                iters,
+            });
+        }
+        let mut elems = vec![first];
+        while self.peek() == Some(&Tok::Comma) {
+            self.pos += 1;
+            elems.push(self.parse_range()?);
+            if self.peek_keyword("for") {
+                return Err(parse_err(
+                    "a comprehension takes a single body expression before 'for' \
+                     (list elements cannot be mixed with a for-clause)",
+                ));
             }
         }
         self.expect(&Tok::RBrace, "'}' to close an array literal")?;
         Ok(ExprAst::ArrayLit(elems))
+    }
+
+    /// `for_clauses : iterator ("," iterator)*` where `iterator : IDENT "in" range` — the
+    /// leading contextual `for` is already consumed. The iteration source is a full range
+    /// expression. Comma-separated clauses PARSE into one node (the reserved multi-iterator
+    /// surface); evaluation rejects more than one clause naming the deferral.
+    fn parse_comprehension_iterators(&mut self) -> Result<Vec<(Arc<str>, ExprAst)>, ExprError> {
+        let mut iters = Vec::new();
+        loop {
+            let name = self.expect_iterator_name()?;
+            if !self.peek_keyword("in") {
+                return Err(parse_err(
+                    "expected 'in' after the comprehension iterator name",
+                ));
+            }
+            self.pos += 1;
+            let source = self.parse_range()?;
+            iters.push((name, source));
+            match self.peek() {
+                Some(Tok::Comma) => self.pos += 1,
+                _ => break,
+            }
+        }
+        Ok(iters)
+    }
+
+    /// Consume the iterator name of a `for` clause: a **plain** identifier — one the grammar
+    /// could resolve back to an [`ExprAst::Ident`] in the body. Keyword literals
+    /// (`true`/`and`/…), the contextual `for`/`in`, dotted qualified names, and the named
+    /// constants (`pi`/`eps`/`small`/`inf`) all parse to non-`Ident` nodes in body position,
+    /// so a binding under any of those names would be silently unreachable — each is rejected
+    /// with a typed error instead.
+    fn expect_iterator_name(&mut self) -> Result<Arc<str>, ExprError> {
+        match self.bump() {
+            Some(Tok::Name(n)) => {
+                if matches!(
+                    n.as_str(),
+                    "true" | "false" | "and" | "or" | "not" | "for" | "in"
+                ) {
+                    return Err(parse_err(format!(
+                        "'{n}' is a keyword and cannot name a comprehension iterator"
+                    )));
+                }
+                if n.contains('.') {
+                    return Err(parse_err(format!(
+                        "a comprehension iterator must be a plain identifier, \
+                         found qualified name '{n}'"
+                    )));
+                }
+                if recognize_const(&n).is_some() {
+                    return Err(parse_err(format!(
+                        "'{n}' is a named constant and cannot name a comprehension iterator"
+                    )));
+                }
+                Ok(Arc::from(n.as_str()))
+            }
+            Some(other) => Err(parse_err(format!(
+                "expected a comprehension iterator name, found {other:?}"
+            ))),
+            None => Err(parse_err("expected a comprehension iterator name")),
+        }
     }
 
     /// Resolve a `Name` token in primary position: keyword literal, function call, named
@@ -547,11 +377,38 @@ impl Parser {
     /// Parse a comma-separated argument list (the opening `(` is already consumed), then resolve
     /// the call against the §7.7.2 built-in table with an arity check. Arguments are full range
     /// expressions, so `sum(1:3)` consumes the range as one argument.
+    ///
+    /// The contextual keyword `for` after an argument is the Modelica reduction expression
+    /// `f(e for i in r)`. Ratified scope: only `sum` takes the sugar, and only as its single
+    /// first argument — the already-parsed expression becomes the comprehension BODY and the
+    /// [`ExprAst::Comprehension`] becomes `sum`'s argument (the existing `sum` built-in then
+    /// receives an array; no new built-in). Any other placement is a typed error naming the
+    /// sum-only support.
     fn parse_call(&mut self, name: &str) -> Result<ExprAst, ExprError> {
         let mut args = Vec::new();
         if self.peek() != Some(&Tok::RParen) {
             loop {
-                args.push(self.parse_range()?);
+                let mut arg = self.parse_range()?;
+                if self.peek_keyword("for") {
+                    if name != "sum" {
+                        return Err(parse_err(format!(
+                            "'{name}' does not take a reduction expression \
+                             ('e for i in r' is only supported in 'sum')"
+                        )));
+                    }
+                    if !args.is_empty() {
+                        return Err(parse_err(
+                            "'sum' takes a reduction expression as its only argument",
+                        ));
+                    }
+                    self.pos += 1; // consume the contextual 'for'
+                    let iters = self.parse_comprehension_iterators()?;
+                    arg = ExprAst::Comprehension {
+                        body: Box::new(arg),
+                        iters,
+                    };
+                }
+                args.push(arg);
                 match self.peek() {
                     Some(Tok::Comma) => self.pos += 1,
                     _ => break,
