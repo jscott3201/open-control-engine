@@ -41,6 +41,7 @@ impl Scope for TestScope {
 fn scalar(r: EvalResult) -> Value {
     match r {
         EvalResult::Scalar(v) => v,
+        other => panic!("expected a scalar result, got {other:?}"),
     }
 }
 
@@ -400,10 +401,19 @@ fn type_errors_have_no_implicit_coercion() {
 
 #[test]
 fn array_constructs_are_deferred_not_panicking() {
-    assert!(matches!(run("{1, 2}"), Err(ExprError::Parse(_))));
-    assert!(matches!(run("1:3"), Err(ExprError::Parse(_))));
+    // 1-D literals and ranges now evaluate (full coverage in `eval_array_tests`); the
+    // still-deferred forms keep their typed rejections.
+    let scope = TestScope::new(&[]);
+    assert!(matches!(
+        eval_str("{1, 2}", &scope),
+        Ok(EvalResult::Array(_))
+    ));
+    assert!(matches!(eval_str("1:3", &scope), Ok(EvalResult::Array(_))));
     assert!(matches!(run("sum(x)"), Err(ExprError::Parse(_))));
     assert!(matches!(run("min(a)"), Err(ExprError::Parse(_)))); // 1-arg array form
+    assert!(matches!(run("a[1]"), Err(ExprError::Parse(_)))); // indexing
+    assert!(matches!(run("[1, 2]"), Err(ExprError::Parse(_)))); // matrix constructor
+    assert!(matches!(run("{i for i in 1:3}"), Err(ExprError::Parse(_)))); // comprehension
 }
 
 // --- Malformed input is a typed parse error -----------------------------------------------
