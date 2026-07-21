@@ -32,11 +32,37 @@
 //! [`ExprError::ArrayTooLarge`], checked before any allocation). An array in scalar operand
 //! position is a [`ExprError::TypeError`] — element-wise operators are not in the subset.
 //!
+//! # Array built-ins
+//!
+//! The array-shaped §7.7.2 built-ins evaluate over those arrays: `sum(A)`, one-argument
+//! `min(A)`/`max(A)`, `fill(x, n)`, `size(A)`/`size(A, i)`, and `cat(1, A, B, …)`. Reductions
+//! fold strictly left to right (no reassociation, no FMA), so result bits are deterministic;
+//! `sum` over an empty numeric array is the element-type identity (`Real(0.0)` / `Integer(0)`),
+//! while an empty `min`/`max` is [`ExprError::EmptyArray`]. Anything 2-D-shaped — a `fill`
+//! with more than one extent, `size(A, 2)`, a `cat` dimension other than 1 — is a typed
+//! error naming the deferral.
+//!
+//! ```
+//! use oce_expr::{EvalResult, Scope, eval_str};
+//! use oce_model::Value;
+//!
+//! struct Empty;
+//! impl Scope for Empty {
+//!     fn lookup(&self, _: &str) -> Option<&EvalResult> {
+//!         None
+//!     }
+//! }
+//!
+//! let EvalResult::Scalar(total) = eval_str("sum(1:100)", &Empty).unwrap() else {
+//!     panic!("sum reduces to a scalar");
+//! };
+//! assert!(total.bit_eq(&Value::Integer(5050)));
+//! ```
+//!
 //! Still deferred: array comprehensions, `A[i]` indexing, 2-D/matrix constructors
-//! (`[a, b; c, d]`), the array-shaped built-ins (`sum`/`cat`/`fill`/`size` and the array forms
-//! of `min`/`max`), and the `Modelica.Math.*` alias whitelist. They appear in `02` §7.4 and are
-//! reserved here via `#[non_exhaustive]` so adding them is not a breaking change; encountering
-//! them in a binding today is a typed error, never a panic.
+//! (`[a, b; c, d]`), and the `Modelica.Math.*` alias whitelist. They appear in `02` §7.4 and
+//! are reserved here via `#[non_exhaustive]` so adding them is not a breaking change;
+//! encountering them in a binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
@@ -47,6 +73,9 @@ use oce_model::{EnumClassId, Value, ValueType};
 
 mod eval;
 mod eval_array;
+mod eval_array_builtins;
+#[cfg(test)]
+mod eval_array_builtins_tests;
 #[cfg(test)]
 mod eval_array_tests;
 mod parse;
@@ -160,8 +189,10 @@ pub enum BinOp {
     Or,
 }
 
-/// The closed §7.7.2 built-in function set implemented for the **scalar** subset (R9: anything
-/// outside this set, and the deferred array-shaped built-ins, is rejected).
+/// The closed §7.7.2 built-in function set — scalar built-ins plus the array-shaped
+/// `sum`/`size`/`fill`/`cat` and the one-argument `min`/`max` reductions (R9: anything outside
+/// this set is rejected at parse). `min`/`max` resolve by arity: one argument maps to
+/// [`Builtin::MinArr`]/[`Builtin::MaxArr`], two to the scalar forms.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[non_exhaustive]
 pub enum Builtin {
@@ -187,6 +218,19 @@ pub enum Builtin {
     MinScalar,
     /// `max(x, y)` — maximum of two scalars; promoted numeric type.
     MaxScalar,
+    /// `sum(A)` — left-to-right fold over a numeric array; the empty sum is the element-type
+    /// identity (`Real(0.0)` / `Integer(0)`, provisional under R10.6).
+    Sum,
+    /// `size(A)` — the shape vector `{n}`; `size(A, i)` — the scalar extent of dimension `i`.
+    Size,
+    /// `fill(x, n)` — an `n`-element array of copies of the scalar `x`.
+    Fill,
+    /// `cat(k, A, B, …)` — concatenation along dimension `k` (arrays are 1-D: only `k == 1`).
+    Cat,
+    /// `min(A)` — smallest element of a non-empty numeric array.
+    MinArr,
+    /// `max(A)` — largest element of a non-empty numeric array.
+    MaxArr,
 }
 
 /// A fully-evaluated binding result: a scalar or a 1-D array. Further result shapes remain
@@ -320,8 +364,8 @@ pub trait Scope {
     }
 }
 
-/// A typed expression error (never a panic; R10/R11). Array-shaped variants (`IndexOutOfBounds`,
-/// `ShapeMismatch`, …) from `02` §7.4 are reserved via `#[non_exhaustive]`.
+/// A typed expression error (never a panic; R10/R11). Indexing variants (`IndexOutOfBounds`, …)
+/// from `02` §7.4 remain reserved via `#[non_exhaustive]` until `A[i]` indexing lands.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExprError {
@@ -359,19 +403,25 @@ pub enum ExprError {
         /// The crate's element cap (2^20).
         max: usize,
     },
-    /// An empty array construct whose element type is unknowable (`{}`); fabricating a typed
-    /// empty array here would risk silent mistyping. Empty *ranges* are legal — their operands
-    /// carry the type.
-    #[error("empty array literal has no element type")]
+    /// An array or reduction with no usable elements: the `{}` literal (its element type is
+    /// unknowable; fabricating a typed empty array would risk silent mistyping) and
+    /// `min`/`max` over an empty array (no extremum exists — unlike `sum`, they have no
+    /// identity element). Empty *ranges* are legal — their operands carry the type.
+    #[error("empty array: no element type or no elements to reduce")]
     EmptyArray,
+    /// An array built-in was asked about a dimension the value's shape does not have: a
+    /// dimension index below 1, or a dimension of 2 or higher while every array is 1-D
+    /// (2-D arrays are deferred).
+    #[error("shape mismatch: {0}")]
+    ShapeMismatch(&'static str),
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
 ///
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
-/// function outside the §7.7.2 scalar set (the still-deferred constructs — indexing,
-/// comprehensions, matrix syntax, array built-ins — are reported as parse errors).
+/// function outside the §7.7.2 set (the still-deferred constructs — indexing, comprehensions,
+/// matrix syntax — are reported as parse errors).
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }
