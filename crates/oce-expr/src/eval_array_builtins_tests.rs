@@ -168,12 +168,33 @@ fn sum_integer_overflow_is_a_domain_error_not_a_panic() {
         eval_str("sum(fill(hi, 3))", &scope).unwrap_err(),
         ExprError::DomainError("integer overflow in sum")
     );
-    // A cancelling fold lands back inside i64 and succeeds — the accumulator is what widens.
+    // A cancelling fold (MAX + MIN = -1) succeeds. Every partial sum here stays inside i64,
+    // so this pins totality of the success path only — the accumulator-width golden is
+    // `sum_partial_overflow_beyond_i64_recovers_in_the_i128_accumulator`.
     let lo_hi = TestScope::new(&[
         ("hi", Value::Integer(i64::MAX)),
         ("lo", Value::Integer(i64::MIN)),
     ]);
     assert!(scalar_in("sum(cat(1, fill(hi, 1), fill(lo, 1)))", &lo_hi).bit_eq(&Value::Integer(-1)));
+}
+
+#[test]
+fn sum_partial_overflow_beyond_i64_recovers_in_the_i128_accumulator() {
+    // ACCUMULATOR-WIDTH golden: the partial sums are MAX, 2·MAX (outside i64), 2·MAX + MIN
+    // (= MAX - 1), then MAX - 1 + MIN = -2. A checked-i64 accumulator errors mid-fold at the
+    // second element; only the ratified i128 widening reaches the in-range total. This is the
+    // test that discriminates the accumulator's width.
+    let scope = TestScope::new(&[
+        ("hi", Value::Integer(i64::MAX)),
+        ("lo", Value::Integer(i64::MIN)),
+    ]);
+    assert!(scalar_in("sum(cat(1, fill(hi, 2), fill(lo, 2)))", &scope).bit_eq(&Value::Integer(-2)));
+    // MAX, 2·MAX, then + MIN → i64::MAX - 1: the excursion above i64 also recovers to a
+    // positive total.
+    assert!(
+        scalar_in("sum(cat(1, fill(hi, 2), fill(lo, 1)))", &scope)
+            .bit_eq(&Value::Integer(i64::MAX - 1))
+    );
 }
 
 #[test]
@@ -186,8 +207,26 @@ fn sum_rejects_boolean_arrays_and_scalar_arguments() {
         run("sum({true, false})"),
         Err(ExprError::TypeError { .. })
     ));
-    assert!(matches!(run("sum(1)"), Err(ExprError::TypeError { .. })));
+    // One representative scalar-arg case pins the exact field content (the rest of the suite
+    // stays at variant granularity).
+    assert_eq!(
+        run("sum(1)").unwrap_err(),
+        ExprError::TypeError {
+            expected: "an array argument",
+            found: "Integer",
+        }
+    );
     assert!(matches!(run("sum(1.5)"), Err(ExprError::TypeError { .. })));
+}
+
+#[test]
+fn sum_canonicalizes_a_nan_producing_fold() {
+    // The elements are finite constructs of ±inf (IEEE `/`); the fold itself produces the
+    // NaN (inf + -inf), which must leave through the eval::real choke point as the canonical
+    // positive quiet NaN.
+    assert_scalar_real_bits(scalar("sum({1.0/0.0, -1.0/0.0})"), 0x7FF8_0000_0000_0000);
+    // A same-signed infinity fold stays an infinity, bit-pinned.
+    assert_scalar_real_bits(scalar("sum({1.0/0.0})"), f64::INFINITY.to_bits());
 }
 
 // --- min / max (one-argument array forms) ---------------------------------------------------
@@ -317,7 +356,8 @@ fn fill_of_zero_elements_is_a_typed_empty_array() {
 fn negative_fill_counts_are_domain_errors_not_wraps() {
     // The wrap trap: `-1 as usize` is ~1.8e19, so a cast-based guard would misreport a
     // negative count as ArrayTooLarge (or worse, allocate). The distinct DomainError proves
-    // the checked usize::try_from conversion runs first.
+    // the sign check on the i64 runs before any conversion — the classification is the same
+    // on every target width.
     assert_eq!(
         run("fill(1, -1)").unwrap_err(),
         ExprError::DomainError("negative array size")
@@ -339,7 +379,8 @@ fn fill_counts_beyond_the_cap_are_rejected_before_allocation() {
         }
     );
     // An i64::MAX-element Vec is unallocatable; this test completing proves the reject path
-    // allocates nothing.
+    // allocates nothing. The cap compare runs in u128 on the i64 itself, so i64::MAX is
+    // ArrayTooLarge on every target width — even where usize could not represent it.
     let scope = TestScope::new(&[("hi", Value::Integer(i64::MAX))]);
     assert_eq!(
         eval_str("fill(1, hi)", &scope).unwrap_err(),
@@ -473,11 +514,16 @@ fn cat_with_empty_operands_keeps_type_and_order() {
 
 #[test]
 fn cat_element_type_mismatch_is_a_type_error() {
-    // No Integer→Real promotion across cat operands (unlike inside one array literal).
-    assert!(matches!(
-        run("cat(1, {1}, {2.0})"),
-        Err(ExprError::TypeError { .. })
-    ));
+    // No Integer→Real promotion across cat operands (unlike inside one array literal). This
+    // representative case pins the exact field content: the first operand's type is the
+    // expectation and the mismatching operand's type is what was found.
+    assert_eq!(
+        run("cat(1, {1}, {2.0})").unwrap_err(),
+        ExprError::TypeError {
+            expected: "an Integer array",
+            found: "a Real array",
+        }
+    );
     assert!(matches!(
         run("cat(1, {1.0}, fill(true, 1))"),
         Err(ExprError::TypeError { .. })
@@ -492,11 +538,23 @@ fn cat_element_type_mismatch_is_a_type_error() {
 #[test]
 fn cat_result_cap_applies_to_the_summed_length_before_allocation() {
     // Each operand is individually at or under the cap; their sum is one element over. The
-    // reject must fire on the summed length before the result Vec is allocated.
+    // asserted error VALUE would be identical if only the ArrayValue::vector backstop caught
+    // the oversize result, so this assertion pins the contract, not which layer enforced it;
+    // cat's own summed-u128 pre-check exists so the reject fires BEFORE the result Vec is
+    // speculatively allocated (defense in depth over the constructor's re-check).
     assert_eq!(
         run("cat(1, 1:1048576, 1:1)").unwrap_err(),
         ExprError::ArrayTooLarge {
             count: (1 << 20) + 1,
+            max: 1 << 20,
+        }
+    );
+    // Many small operands breach the cap only in aggregate: five operands of 300,000
+    // elements each — every one far under the cap — sum to 1,500,000.
+    assert_eq!(
+        run("cat(1, 1:300000, 1:300000, 1:300000, 1:300000, 1:300000)").unwrap_err(),
+        ExprError::ArrayTooLarge {
+            count: 1_500_000,
             max: 1 << 20,
         }
     );

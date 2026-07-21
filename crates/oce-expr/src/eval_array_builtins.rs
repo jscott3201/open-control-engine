@@ -12,10 +12,11 @@
 //!   and their order. Integer sums accumulate in `i128` (2^20 addends of `i64` cannot
 //!   overflow it) and narrow once at the end; Real folds go through the [`crate::eval::real`]
 //!   canonicalization choke point.
-//! - **Count before allocation.** `fill` converts its count through `usize::try_from` (a
-//!   negative `i64` must become a typed [`ExprError::DomainError`], never the ~1.8e19-element
-//!   wrap of an `as usize` cast) and `cat` sums operand lengths in `u128`, both checked
-//!   against [`MAX_ARRAY_ELEMENTS`] *before* any `Vec` is sized.
+//! - **Count before allocation.** `fill` guards its count on the `i64` itself — sign check
+//!   first (a negative count must become a typed [`ExprError::DomainError`], never the
+//!   ~1.8e19-element wrap of an `as usize` cast), then the cap compared in `u128` so the
+//!   classification is identical on every target width — and `cat` sums operand lengths in
+//!   `u128`; both are checked against [`MAX_ARRAY_ELEMENTS`] *before* any `Vec` is sized.
 //! - **Typed errors only.** A scalar where an array is required (or vice versa), a
 //!   non-numeric reduction, a non-Integer count/dimension, or a dimension other than 1 is a
 //!   typed [`ExprError`] — never a panic and never an index expression that could become one.
@@ -154,12 +155,14 @@ fn fold_extremum(a: &ArrayValue, want_min: bool) -> Result<Value, ExprError> {
 
 /// `fill(x, n)`: an `n`-element array of copies of the scalar `x` (Real, Integer, or Boolean —
 /// the same element policy as array literals; String/Enum/array `x` is a typed error). `n`
-/// must be an Integer scalar. Guard order matters and is deliberate: `usize::try_from(n)`
-/// **first**, so a negative count is a typed [`ExprError::DomainError`] (an `as usize` cast
-/// would wrap `-1` to ~1.8e19 and misreport it as too-large); then the
-/// [`MAX_ARRAY_ELEMENTS`] cap ([`ExprError::ArrayTooLarge`]); only then the allocation.
-/// `n == 0` is a legal typed empty array carrying `x`'s type; Real elements are canonicalized
-/// by the [`ArrayValue::vector`] constructor.
+/// must be an Integer scalar. Guard order matters and is deliberate, and every guard runs on
+/// the `i64` itself so behavior is identical on every target width: the sign check **first**,
+/// so a negative count is a typed [`ExprError::DomainError`] (an `as usize` cast would wrap
+/// `-1` to ~1.8e19 and misreport it as too-large); then the [`MAX_ARRAY_ELEMENTS`] cap
+/// compared in `u128` ([`ExprError::ArrayTooLarge`] — even where `usize` could not hold `n`);
+/// only then the exact narrowing and the allocation. `n == 0` is a legal typed empty array
+/// carrying `x`'s type; Real elements are canonicalized by the [`ArrayValue::vector`]
+/// constructor.
 fn fill_array(x: &EvalResult, n: &EvalResult) -> Result<EvalResult, ExprError> {
     let x = match x {
         EvalResult::Scalar(v) => v,
@@ -180,13 +183,18 @@ fn fill_array(x: &EvalResult, n: &EvalResult) -> Result<EvalResult, ExprError> {
         }
     }
     let n = integer_operand(n, "an Integer element count")?;
-    let count = usize::try_from(n).map_err(|_| ExprError::DomainError("negative array size"))?;
-    if count > MAX_ARRAY_ELEMENTS {
+    if n < 0 {
+        return Err(ExprError::DomainError("negative array size"));
+    }
+    // Compare in u128, not usize: on a 32-bit target `usize` cannot even represent a large
+    // `n`, and the guards must classify it the same way on every target width.
+    if n as u128 > MAX_ARRAY_ELEMENTS as u128 {
         return Err(ExprError::ArrayTooLarge {
-            count: count as u128,
+            count: n as u128,
             max: MAX_ARRAY_ELEMENTS,
         });
     }
+    let count = n as usize; // 0 ..= MAX_ARRAY_ELEMENTS after the guards, so the cast is exact
     Ok(EvalResult::Array(ArrayValue::vector(
         x.value_type(),
         vec![x.clone(); count],
