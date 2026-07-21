@@ -38,6 +38,9 @@ use crate::{CxfError, bridge};
 
 mod attrs;
 mod composite;
+mod composite_rules;
+#[cfg(test)]
+mod composite_rules_tests;
 mod diags;
 mod specialize;
 
