@@ -11,9 +11,12 @@
 //! subscript binds tighter still, so `-A[i]` is `-(A[i])`. Relational operators are
 //! non-associative (`a < b < c` is rejected) and live inside range operands. Exponentiation
 //! (`^`) is **not** in the CDL binding subset (§6.1) and is rejected. Brace array literals
-//! `{a, b, c}`, ranges, and postfix indexing parse; comprehensions and `[a,b;c,d]` matrix
-//! constructors are deferred, and array slicing (`A[a:b]`) is out of subset — each produces a
-//! typed [`ExprError::Parse`], never a panic.
+//! `{a, b, c}`, ranges, postfix indexing, and comprehensions (`{e for i in r}`, plus the
+//! `sum(e for i in r)` reduction sugar) parse; `for` and `in` are **contextual** keywords —
+//! recognized only after a brace element or a `sum` argument — so an identifier named `for`
+//! anywhere else keeps parsing as an [`ExprAst::Ident`]. `[a,b;c,d]` matrix constructors are
+//! deferred and array slicing (`A[a:b]`) is out of subset — each produces a typed
+//! [`ExprError::Parse`], never a panic.
 
 use std::sync::Arc;
 
@@ -243,24 +246,108 @@ impl Parser {
         }
     }
 
-    /// `array_literal : "{" [ range ("," range)* ] "}"` — the opening `{` is already consumed.
-    /// Elements are full range expressions (`{1:3, 5}` is legal); no trailing comma
-    /// (Modelica). `{}` parses to an empty [`ExprAst::ArrayLit`] and is rejected at
-    /// evaluation ([`ExprError::EmptyArray`]), where the distinction from a legal empty
-    /// range can be reported precisely.
+    /// `array_literal : "{" [ range ("," range)* ] "}"` or the comprehension
+    /// `"{" range for_clauses "}"` — the opening `{` is already consumed. Elements are full
+    /// range expressions (`{1:3, 5}` is legal); no trailing comma (Modelica). `{}` parses to
+    /// an empty [`ExprAst::ArrayLit`] and is rejected at evaluation
+    /// ([`ExprError::EmptyArray`]), where the distinction from a legal empty range can be
+    /// reported precisely.
+    ///
+    /// The contextual keyword `for` after the **first** element re-interprets the brace: the
+    /// already-parsed expression is the comprehension BODY and `for i in r` clauses follow.
+    /// After a comma-separated element the same `for` is a typed error — a comprehension has
+    /// exactly one body, so `{1, 2 for i in 1:3}` is malformed, and `{for i in 1:3}` has no
+    /// body at all (its `for` parses as an identifier, and the clause tokens after it fail
+    /// the close-brace expectation).
     fn parse_array_literal(&mut self) -> Result<ExprAst, ExprError> {
-        let mut elems = Vec::new();
-        if self.peek() != Some(&Tok::RBrace) {
-            loop {
-                elems.push(self.parse_range()?);
-                match self.peek() {
-                    Some(Tok::Comma) => self.pos += 1,
-                    _ => break,
-                }
+        if self.peek() == Some(&Tok::RBrace) {
+            self.pos += 1;
+            return Ok(ExprAst::ArrayLit(Vec::new()));
+        }
+        let first = self.parse_range()?;
+        if self.peek_keyword("for") {
+            self.pos += 1; // consume the contextual 'for'
+            let iters = self.parse_comprehension_iterators()?;
+            self.expect(&Tok::RBrace, "'}' to close an array comprehension")?;
+            return Ok(ExprAst::Comprehension {
+                body: Box::new(first),
+                iters,
+            });
+        }
+        let mut elems = vec![first];
+        while self.peek() == Some(&Tok::Comma) {
+            self.pos += 1;
+            elems.push(self.parse_range()?);
+            if self.peek_keyword("for") {
+                return Err(parse_err(
+                    "a comprehension takes a single body expression before 'for' \
+                     (list elements cannot be mixed with a for-clause)",
+                ));
             }
         }
         self.expect(&Tok::RBrace, "'}' to close an array literal")?;
         Ok(ExprAst::ArrayLit(elems))
+    }
+
+    /// `for_clauses : iterator ("," iterator)*` where `iterator : IDENT "in" range` — the
+    /// leading contextual `for` is already consumed. The iteration source is a full range
+    /// expression. Comma-separated clauses PARSE into one node (the reserved multi-iterator
+    /// surface); evaluation rejects more than one clause naming the deferral.
+    fn parse_comprehension_iterators(&mut self) -> Result<Vec<(Arc<str>, ExprAst)>, ExprError> {
+        let mut iters = Vec::new();
+        loop {
+            let name = self.expect_iterator_name()?;
+            if !self.peek_keyword("in") {
+                return Err(parse_err(
+                    "expected 'in' after the comprehension iterator name",
+                ));
+            }
+            self.pos += 1;
+            let source = self.parse_range()?;
+            iters.push((name, source));
+            match self.peek() {
+                Some(Tok::Comma) => self.pos += 1,
+                _ => break,
+            }
+        }
+        Ok(iters)
+    }
+
+    /// Consume the iterator name of a `for` clause: a **plain** identifier — one the grammar
+    /// could resolve back to an [`ExprAst::Ident`] in the body. Keyword literals
+    /// (`true`/`and`/…), the contextual `for`/`in`, dotted qualified names, and the named
+    /// constants (`pi`/`eps`/`small`/`inf`) all parse to non-`Ident` nodes in body position,
+    /// so a binding under any of those names would be silently unreachable — each is rejected
+    /// with a typed error instead.
+    fn expect_iterator_name(&mut self) -> Result<Arc<str>, ExprError> {
+        match self.bump() {
+            Some(Tok::Name(n)) => {
+                if matches!(
+                    n.as_str(),
+                    "true" | "false" | "and" | "or" | "not" | "for" | "in"
+                ) {
+                    return Err(parse_err(format!(
+                        "'{n}' is a keyword and cannot name a comprehension iterator"
+                    )));
+                }
+                if n.contains('.') {
+                    return Err(parse_err(format!(
+                        "a comprehension iterator must be a plain identifier, \
+                         found qualified name '{n}'"
+                    )));
+                }
+                if recognize_const(&n).is_some() {
+                    return Err(parse_err(format!(
+                        "'{n}' is a named constant and cannot name a comprehension iterator"
+                    )));
+                }
+                Ok(Arc::from(n.as_str()))
+            }
+            Some(other) => Err(parse_err(format!(
+                "expected a comprehension iterator name, found {other:?}"
+            ))),
+            None => Err(parse_err("expected a comprehension iterator name")),
+        }
     }
 
     /// Resolve a `Name` token in primary position: keyword literal, function call, named
@@ -290,11 +377,38 @@ impl Parser {
     /// Parse a comma-separated argument list (the opening `(` is already consumed), then resolve
     /// the call against the §7.7.2 built-in table with an arity check. Arguments are full range
     /// expressions, so `sum(1:3)` consumes the range as one argument.
+    ///
+    /// The contextual keyword `for` after an argument is the Modelica reduction expression
+    /// `f(e for i in r)`. Ratified scope: only `sum` takes the sugar, and only as its single
+    /// first argument — the already-parsed expression becomes the comprehension BODY and the
+    /// [`ExprAst::Comprehension`] becomes `sum`'s argument (the existing `sum` built-in then
+    /// receives an array; no new built-in). Any other placement is a typed error naming the
+    /// sum-only support.
     fn parse_call(&mut self, name: &str) -> Result<ExprAst, ExprError> {
         let mut args = Vec::new();
         if self.peek() != Some(&Tok::RParen) {
             loop {
-                args.push(self.parse_range()?);
+                let mut arg = self.parse_range()?;
+                if self.peek_keyword("for") {
+                    if name != "sum" {
+                        return Err(parse_err(format!(
+                            "'{name}' does not take a reduction expression \
+                             ('e for i in r' is only supported in 'sum')"
+                        )));
+                    }
+                    if !args.is_empty() {
+                        return Err(parse_err(
+                            "'sum' takes a reduction expression as its only argument",
+                        ));
+                    }
+                    self.pos += 1; // consume the contextual 'for'
+                    let iters = self.parse_comprehension_iterators()?;
+                    arg = ExprAst::Comprehension {
+                        body: Box::new(arg),
+                        iters,
+                    };
+                }
+                args.push(arg);
                 match self.peek() {
                     Some(Tok::Comma) => self.pos += 1,
                     _ => break,

@@ -7,8 +7,8 @@
 //!
 //! [`eval_node`] is the scalar-or-array entry point: array constructs route to the
 //! [`crate::eval_array`] module, array-shaped built-in calls to
-//! [`crate::eval_array_builtins`], subscripts to [`crate::eval_array_indexing`], everything
-//! else through [`eval_scalar`]. In scalar operand position (operators, scalar built-in
+//! [`crate::eval_array_builtins`], subscripts to [`crate::eval_array_indexing`],
+//! comprehensions to [`crate::eval_comprehension`], everything else through [`eval_scalar`]. In scalar operand position (operators, scalar built-in
 //! arguments) an array is a typed [`ExprError::TypeError`] — element-wise operators are not
 //! in the subset.
 
@@ -116,6 +116,9 @@ pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, 
         ExprAst::Index { base, indices } => {
             crate::eval_array_indexing::eval_index(base, indices, scope)
         }
+        ExprAst::Comprehension { body, iters } => {
+            crate::eval_comprehension::eval_comprehension(body, iters, scope)
+        }
         ExprAst::Call(b, args) => eval_call(*b, args, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
             Some(EvalResult::Scalar(v)) => Ok(EvalResult::Scalar(canonicalize_value(v))),
@@ -157,7 +160,8 @@ pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Exp
         | ExprAst::Ident(_)
         | ExprAst::ArrayLit(_)
         | ExprAst::Range { .. }
-        | ExprAst::Index { .. } => expect_scalar(eval_node(ast, scope)?),
+        | ExprAst::Index { .. }
+        | ExprAst::Comprehension { .. } => expect_scalar(eval_node(ast, scope)?),
     }
 }
 

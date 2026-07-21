@@ -416,7 +416,12 @@ fn array_constructs_are_deferred_not_panicking() {
     // Indexing parses now too; with `a` unbound the failure moves to evaluation.
     assert!(matches!(run("a[1]"), Err(ExprError::UnknownIdent(_))));
     assert!(matches!(run("[1, 2]"), Err(ExprError::Parse(_)))); // matrix constructor
-    assert!(matches!(run("{i for i in 1:3}"), Err(ExprError::Parse(_)))); // comprehension
+    // The comprehension canary flips: single-iterator comprehensions evaluate now (full
+    // coverage in `eval_comprehension_tests`); multi-iterator stays deferred at evaluation.
+    assert!(matches!(
+        eval_str("{i for i in 1:3}", &scope),
+        Ok(EvalResult::Array(_))
+    ));
 }
 
 // --- Malformed input is a typed parse error -----------------------------------------------

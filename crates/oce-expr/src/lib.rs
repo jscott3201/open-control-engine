@@ -4,7 +4,7 @@
 //!
 //! Parameter/constant *bindings* may carry a restricted, closed-world expression language
 //! (literals, identifier references, arithmetic/relational/boolean operators, the §7.7.2
-//! built-in function set, 1-D array literals/ranges/indexing, and — later — comprehensions).
+//! built-in function set, and 1-D array literals/ranges/indexing/comprehensions).
 //! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total, and never reads the clock,
@@ -68,11 +68,24 @@
 //! sign (`-A[i]` is `-(A[i])`) and composes with any array-producing expression
 //! (`(1:5)[3]`, `size(A)[1]`).
 //!
-//! Still deferred: array comprehensions, array slicing (`A[a:b]`), 2-D/matrix constructors
-//! (`[a, b; c, d]`) and multi-subscript indexing (`A[i, j]`), and the `Modelica.Math.*` alias
-//! whitelist. They appear in `02` §7.4 and are reserved here via `#[non_exhaustive]` so adding
-//! them is not a breaking change; encountering them in a binding today is a typed error, never
-//! a panic.
+//! # Comprehensions
+//!
+//! `{e for i in r}` evaluates the iteration source `r` to an array, binds the iterator name
+//! to each element **in source order** in a child scope layered over the outer one (the
+//! iterator shadows an outer binding of the same name), and collects the scalar body results
+//! under the same element-type promotion rules as array literals. `sum(e for i in r)` is
+//! reduction sugar: the comprehension array becomes `sum`'s argument (only `sum` takes the
+//! sugar). `for` and `in` are *contextual* keywords — an identifier named `for` anywhere else
+//! still parses as an identifier. An empty iteration source never evaluates the body, so the
+//! result's element type is unknowable: it is [`ExprError::EmptyArray`], the same policy as
+//! `{}`. Multi-iterator syntax (`{e for i in r, j in s}`) parses as the reserved surface but
+//! is rejected at evaluation with a typed error naming the deferral.
+//!
+//! Still deferred: array slicing (`A[a:b]`), 2-D/matrix constructors (`[a, b; c, d]`),
+//! multi-subscript indexing (`A[i, j]`) and multi-iterator comprehensions, and the
+//! `Modelica.Math.*` alias whitelist. They appear in `02` §7.4 and are reserved here via
+//! `#[non_exhaustive]` so adding them is not a breaking change; encountering them in a
+//! binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
@@ -91,14 +104,17 @@ mod eval_array_indexing;
 mod eval_array_indexing_tests;
 #[cfg(test)]
 mod eval_array_tests;
+mod eval_comprehension;
+#[cfg(test)]
+mod eval_comprehension_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
 mod tests;
 
 /// A parsed binding expression. Unknown functions are **not representable** — they are
-/// rejected during parse/resolve (R9). Comprehension constructs (`02` §7.4) remain reserved
-/// via `#[non_exhaustive]`.
+/// rejected during parse/resolve (R9). The still-deferred `02` §7.4 constructs (slicing,
+/// matrices) remain reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExprAst {
@@ -146,6 +162,18 @@ pub enum ExprAst {
         /// One subscript per dimension, left to right; only a single subscript evaluates
         /// today.
         indices: Vec<ExprAst>,
+    },
+    /// An array comprehension `{e for i in r}` (`02` §7.4), also produced as `sum`'s argument
+    /// by the reduction sugar `sum(e for i in r)`. The body is evaluated once per element of
+    /// the iteration source, in source order, with the iterator name bound in a child scope
+    /// that shadows any outer binding of the same name.
+    Comprehension {
+        /// The body expression, evaluated once per iteration to a scalar.
+        body: Box<ExprAst>,
+        /// The `i in r` clauses, in source order. Multi-iterator syntax parses (one node,
+        /// several clauses — the reserved surface) but is rejected at evaluation while
+        /// comprehensions are single-iterator.
+        iters: Vec<(Arc<str>, ExprAst)>,
     },
 }
 
@@ -429,9 +457,11 @@ pub enum ExprError {
         max: usize,
     },
     /// An array or reduction with no usable elements: the `{}` literal (its element type is
-    /// unknowable; fabricating a typed empty array would risk silent mistyping) and
-    /// `min`/`max` over an empty array (no extremum exists — unlike `sum`, they have no
-    /// identity element). Empty *ranges* are legal — their operands carry the type.
+    /// unknowable; fabricating a typed empty array would risk silent mistyping), an
+    /// empty-source comprehension (its body never evaluates, so its element type is just as
+    /// unknowable), and `min`/`max` over an empty array (no extremum exists — unlike `sum`,
+    /// they have no identity element). Empty *ranges* are legal — their operands carry the
+    /// type.
     #[error("empty array: no element type or no elements to reduce")]
     EmptyArray,
     /// An array built-in was asked about a dimension the value's shape does not have: a
@@ -465,8 +495,8 @@ pub enum ExprError {
 ///
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
-/// function outside the §7.7.2 set (the still-deferred constructs — array slicing,
-/// comprehensions, matrix syntax — are reported as parse errors).
+/// function outside the §7.7.2 set (the still-deferred constructs — array slicing, matrix
+/// syntax — are reported as parse errors).
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }
