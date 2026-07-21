@@ -4,7 +4,8 @@
 //!
 //! Parameter/constant *bindings* may carry a restricted, closed-world expression language
 //! (literals, identifier references, arithmetic/relational/boolean operators, the §7.7.2
-//! built-in function set, and — later — array literals/comprehensions). `oce-expr` parses
+//! built-in function set, 1-D array literals/ranges, and — later — comprehensions). `oce-expr`
+//! parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total, and never reads the clock,
 //! connectors, or computation-affecting attributes (R11).
@@ -23,27 +24,38 @@
 //! - **Scalar built-ins** — `abs sign sqrt div mod rem floor ceil integer min max` (2-arg
 //!   `min`/`max`), with the exact CDL numeric promotion and R10.x semantics.
 //!
-//! Arrays (`{…}` literals, comprehensions, `A[i]` indexing, `a:b` ranges) and the array-shaped
-//! built-ins (`sum`/`cat`/`fill`/`size`, the array forms of `min`/`max`), plus enumeration references
-//! and the `Modelica.Math.*` alias whitelist are deferred. They appear in `02` §7.4 and are reserved
-//! here via `#[non_exhaustive]` so adding them is not a breaking change; encountering them in a
-//! binding today is a typed error, never a panic.
+//! # 1-D arrays
+//!
+//! Brace literals (`{a, b, c}`) and ranges (`a:b`, `a:step:b`) evaluate to an [`ArrayValue`]
+//! carried by [`EvalResult::Array`]: homogeneous element type, flat storage, Real elements
+//! NaN-canonicalized, element count capped at 2^20 (a larger construct is
+//! [`ExprError::ArrayTooLarge`], checked before any allocation). An array in scalar operand
+//! position is a [`ExprError::TypeError`] — element-wise operators are not in the subset.
+//!
+//! Still deferred: array comprehensions, `A[i]` indexing, 2-D/matrix constructors
+//! (`[a, b; c, d]`), the array-shaped built-ins (`sum`/`cat`/`fill`/`size` and the array forms
+//! of `min`/`max`), and the `Modelica.Math.*` alias whitelist. They appear in `02` §7.4 and are
+//! reserved here via `#[non_exhaustive]` so adding them is not a breaking change; encountering
+//! them in a binding today is a typed error, never a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
 
 use std::sync::Arc;
 
-use oce_model::{EnumClassId, Value};
+use oce_model::{EnumClassId, Value, ValueType};
 
 mod eval;
+mod eval_array;
+#[cfg(test)]
+mod eval_array_tests;
 mod parse;
 #[cfg(test)]
 mod tests;
 
 /// A parsed binding expression. Unknown functions are **not representable** — they are
-/// rejected during parse/resolve (R9). Array constructs (`02` §7.4: `ArrayLit`,
-/// `Comprehension`, `Index`, `Range`) are reserved via `#[non_exhaustive]`.
+/// rejected during parse/resolve (R9). Comprehension and indexing constructs (`02` §7.4)
+/// remain reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExprAst {
@@ -67,6 +79,20 @@ pub enum ExprAst {
     Binary(BinOp, Box<ExprAst>, Box<ExprAst>),
     /// A call to one of the closed §7.7.2 built-in functions (R9).
     Call(Builtin, Vec<ExprAst>),
+    /// A 1-D brace array literal `{a, b, c}`. `{}` is representable and evaluates to
+    /// [`ExprError::EmptyArray`] — its element type is unknowable.
+    ArrayLit(Vec<ExprAst>),
+    /// A range `start:stop` or `start:step:stop`; `a:b` is `a:1:b`. Elements run from `start`
+    /// in `step` strides while they remain on the `stop` side of the sequence (an empty range
+    /// is legal).
+    Range {
+        /// The first element (also the anchor of the closed-form element formula).
+        start: Box<ExprAst>,
+        /// The stride between consecutive elements; `None` means a step of one.
+        step: Option<Box<ExprAst>>,
+        /// The inclusive bound: the last element never steps past it.
+        stop: Box<ExprAst>,
+    },
 }
 
 /// A named fold-time constant from Buildings `CDL.Constants` (§6.1), plus the retained
@@ -163,13 +189,111 @@ pub enum Builtin {
     MaxScalar,
 }
 
-/// A fully-evaluated binding result. Arrays (an `EvalResult::Array` variant in `02` §7.4) are
-/// reserved here via `#[non_exhaustive]`.
+/// A fully-evaluated binding result: a scalar or a 1-D array. Further result shapes remain
+/// reserved via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum EvalResult {
     /// A scalar ground value.
     Scalar(Value),
+    /// A 1-D array of ground values (a `{…}` literal or an `a:b` range).
+    Array(ArrayValue),
+}
+
+/// A rectangular array of ground scalar [`Value`]s, produced by evaluating a `{…}` literal or
+/// an `a:b`/`a:step:b` range.
+///
+/// Fields are private so the invariants cannot be broken after construction:
+///
+/// - `data.len()` equals the element count of the shape (`n` for [`Shape::D1`]).
+/// - Every element's [`Value::value_type`] equals the array's element type — arrays are
+///   homogeneous; the promotion to `Real` already happened during evaluation.
+/// - Every `Real` element has passed the crate's NaN canonicalization choke point
+///   ([`oce_model::determinism::canonicalize_real`]), so element bits are deterministic.
+///   `-0.0` is preserved (only NaN is canonicalized).
+/// - The element count never exceeds the crate array cap (2^20 = 1,048,576 elements); a
+///   larger construct is rejected with [`ExprError::ArrayTooLarge`] before any allocation.
+///
+/// Storage is a flat, row-major `Vec<Value>` — never nested. Construction is crate-internal;
+/// consumers read through the accessors.
+///
+/// ```
+/// use oce_expr::{EvalResult, Scope, eval_str};
+/// use oce_model::{Value, ValueType};
+///
+/// struct Empty;
+/// impl Scope for Empty {
+///     fn lookup(&self, _: &str) -> Option<&EvalResult> {
+///         None
+///     }
+/// }
+///
+/// // `2:2:8` steps by two through the inclusive bound: four Integer elements.
+/// let EvalResult::Array(a) = eval_str("2:2:8", &Empty).unwrap() else {
+///     panic!("a range evaluates to an array");
+/// };
+/// assert_eq!(a.elem_type(), ValueType::Integer);
+/// assert_eq!(a.len(), 4);
+/// assert!(a.as_slice()[3].bit_eq(&Value::Integer(8)));
+/// ```
+#[derive(Clone, Debug)]
+pub struct ArrayValue {
+    /// The homogeneous type of every element in `data`.
+    elem_type: ValueType,
+    /// The rectangular shape; `data.len()` equals its element count.
+    shape: Shape,
+    /// The elements, flat and row-major.
+    data: Vec<Value>,
+}
+
+impl ArrayValue {
+    /// The homogeneous element type of this array.
+    #[must_use]
+    pub fn elem_type(&self) -> ValueType {
+        self.elem_type
+    }
+
+    /// The rectangular shape. Every array this crate produces today is [`Shape::D1`].
+    #[must_use]
+    pub fn shape(&self) -> Shape {
+        self.shape
+    }
+
+    /// Total number of elements.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    /// `true` when the array has no elements — a legal outcome (e.g. the empty range `5:3`).
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    /// The elements in flat row-major order.
+    #[must_use]
+    pub fn as_slice(&self) -> &[Value] {
+        &self.data
+    }
+}
+
+/// The rectangular shape of an [`ArrayValue`].
+///
+/// Only [`Shape::D1`] is produced today. [`Shape::D2`] is declared for the planned 2-D subset —
+/// matrix constructors are still rejected at parse — so downstream matches can be written once.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[non_exhaustive]
+pub enum Shape {
+    /// A vector of `n` elements.
+    D1(usize),
+    /// A `rows × cols` matrix, stored row-major. Never constructed yet.
+    D2 {
+        /// Number of rows.
+        rows: usize,
+        /// Number of columns.
+        cols: usize,
+    },
 }
 
 /// Resolves identifiers to ground values during evaluation. Implemented over the in-scope
@@ -222,14 +346,30 @@ pub enum ExprError {
         /// The operand type actually supplied.
         found: &'static str,
     },
+    /// An array construct would produce more elements than the engine will allocate — a
+    /// resource-limit rejection, distinct from [`ExprError::DomainError`]. The count is checked
+    /// before any allocation; `count` reports the requested element count (saturated at
+    /// `u128::MAX` when even `u128` cannot hold it, e.g. `0:1e-300:1`).
+    #[error("array too large: {count} elements exceed the supported maximum ({max})")]
+    ArrayTooLarge {
+        /// The element count the construct asked for.
+        count: u128,
+        /// The crate's element cap (2^20).
+        max: usize,
+    },
+    /// An empty array construct whose element type is unknowable (`{}`); fabricating a typed
+    /// empty array here would risk silent mistyping. Empty *ranges* are legal — their operands
+    /// carry the type.
+    #[error("empty array literal has no element type")]
+    EmptyArray,
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
 ///
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
-/// function outside the §7.7.2 scalar set (array constructs are reported as parse errors until
-/// implemented).
+/// function outside the §7.7.2 scalar set (the still-deferred constructs — indexing,
+/// comprehensions, matrix syntax, array built-ins — are reported as parse errors).
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }

@@ -1,13 +1,16 @@
-//! Lexer + recursive-descent parser for the scalar CDL binding subset (`02` §6).
+//! Lexer + recursive-descent parser for the CDL binding subset (`02` §6).
 //!
-//! Operator precedence follows Modelica (low → high): `or` < `and` < `not` < relational
-//! (`> >= < <= == <>`) < additive (`+ -`) < multiplicative (`* /`) < unary sign (`+ -`) <
-//! primary. Placing the unary sign tighter than `*`/`/` keeps `-a*b == -(a*b)` (because
-//! `(-a)*b == -(a*b)`) while also accepting a sign in factor position (`2 * -3`, `3 - -2`),
-//! which real CXF-serialized binding strings contain. Relational operators are non-associative
-//! (`a < b < c` is rejected). Exponentiation (`^`) is **not** in the CDL binding subset (§6.1)
-//! and is rejected. Arrays/comprehensions/indexing/ranges are deferred and produce a typed
-//! [`ExprError::Parse`], never a panic.
+//! Operator precedence follows Modelica (low → high): range (`:`) < `or` < `and` < `not` <
+//! relational (`> >= < <= == <>`) < additive (`+ -`) < multiplicative (`* /`) < unary sign
+//! (`+ -`) < primary. The range colon is the *outermost* binary construct (MLS
+//! `simple_expression`), so `1:n-1` spans a whole arithmetic expression on each side and
+//! `-1:2` is `(-1):2`. Placing the unary sign tighter than `*`/`/` keeps `-a*b == -(a*b)`
+//! (because `(-a)*b == -(a*b)`) while also accepting a sign in factor position (`2 * -3`,
+//! `3 - -2`), which real CXF-serialized binding strings contain. Relational operators are
+//! non-associative (`a < b < c` is rejected) and live inside range operands. Exponentiation
+//! (`^`) is **not** in the CDL binding subset (§6.1) and is rejected. Brace array literals
+//! `{a, b, c}` and ranges parse; comprehensions, `A[i]` indexing, and `[a,b;c,d]` matrix
+//! constructors are deferred and produce a typed [`ExprError::Parse`], never a panic.
 
 use std::sync::Arc;
 
@@ -50,8 +53,16 @@ enum Tok {
     RParen,
     /// `,`
     Comma,
-    /// `[`, `]`, `{`, `}`, or `:` — array/range punctuation, deferred.
-    ArrayPunct(char),
+    /// `{` — opens a brace array literal.
+    LBrace,
+    /// `}` — closes a brace array literal.
+    RBrace,
+    /// `:` — the range separator.
+    Colon,
+    /// `[` — matrix/indexing punctuation; rejected with a typed error (deferred).
+    LBracket,
+    /// `]` — matrix/indexing punctuation; rejected with a typed error (deferred).
+    RBracket,
 }
 
 fn parse_err(msg: impl Into<String>) -> ExprError {
@@ -143,8 +154,24 @@ fn lex(text: &str) -> Result<Vec<Tok>, ExprError> {
                 out.push(Tok::Comma);
                 i += 1;
             }
-            '[' | ']' | '{' | '}' | ':' => {
-                out.push(Tok::ArrayPunct(c));
+            '{' => {
+                out.push(Tok::LBrace);
+                i += 1;
+            }
+            '}' => {
+                out.push(Tok::RBrace);
+                i += 1;
+            }
+            ':' => {
+                out.push(Tok::Colon);
+                i += 1;
+            }
+            '[' => {
+                out.push(Tok::LBracket);
+                i += 1;
+            }
+            ']' => {
+                out.push(Tok::RBracket);
                 i += 1;
             }
             other => return Err(parse_err(format!("unexpected character {other:?}"))),
@@ -276,6 +303,33 @@ impl Parser {
         }
     }
 
+    /// `simple_expression : logical_expression [":" logical_expression [":" logical_expression]]`
+    /// (MLS). The range colon is the loosest binary construct — looser than `or` — so each
+    /// operand is a full `parse_or` expression and `-1:2` parses as `(-1):2`. Non-nesting:
+    /// after `a:b:c` a further `:` is left unconsumed and rejected by the caller.
+    fn parse_range(&mut self) -> Result<ExprAst, ExprError> {
+        let first = self.parse_or()?;
+        if self.peek() != Some(&Tok::Colon) {
+            return Ok(first);
+        }
+        self.pos += 1;
+        let second = self.parse_or()?;
+        if self.peek() != Some(&Tok::Colon) {
+            return Ok(ExprAst::Range {
+                start: Box::new(first),
+                step: None,
+                stop: Box::new(second),
+            });
+        }
+        self.pos += 1;
+        let third = self.parse_or()?;
+        Ok(ExprAst::Range {
+            start: Box::new(first),
+            step: Some(Box::new(second)),
+            stop: Box::new(third),
+        })
+    }
+
     /// `logical_expression : logical_term ("or" logical_term)*`
     fn parse_or(&mut self) -> Result<ExprAst, ExprError> {
         let mut lhs = self.parse_and()?;
@@ -377,24 +431,46 @@ impl Parser {
         }
     }
 
-    /// `primary : NUMBER | STRING | "(" expr ")" | name [ "(" args ")" ] | true | false`.
+    /// `primary : NUMBER | STRING | "(" expr ")" | "{" array_args "}" | name [ "(" args ")" ]
+    /// | true | false`. A parenthesized inner expression is a full range expression, so
+    /// `(1:3)` parses. A leading `[` is the Modelica matrix constructor — deferred, with an
+    /// explicit typed rejection rather than a stray-token fall-through.
     fn parse_primary(&mut self) -> Result<ExprAst, ExprError> {
         match self.bump() {
             Some(Tok::Int(v)) => Ok(ExprAst::Int(v)),
             Some(Tok::Real(v)) => Ok(ExprAst::Real(v)),
             Some(Tok::Str(s)) => Ok(ExprAst::Str(s)),
             Some(Tok::LParen) => {
-                let inner = self.parse_or()?;
+                let inner = self.parse_range()?;
                 self.expect(&Tok::RParen, "')' to close a parenthesized expression")?;
                 Ok(inner)
             }
+            Some(Tok::LBrace) => self.parse_array_literal(),
+            Some(Tok::LBracket) => Err(parse_err("matrix constructor [a,b;c,d] is not supported")),
             Some(Tok::Name(n)) => self.parse_name(n),
-            Some(Tok::ArrayPunct(c)) => Err(parse_err(format!(
-                "array/range syntax {c:?} is not supported in M1 (deferred to M1-PR-9)"
-            ))),
             Some(other) => Err(parse_err(format!("unexpected token {other:?}"))),
             None => Err(parse_err("unexpected end of expression")),
         }
+    }
+
+    /// `array_literal : "{" [ range ("," range)* ] "}"` — the opening `{` is already consumed.
+    /// Elements are full range expressions (`{1:3, 5}` is legal); no trailing comma
+    /// (Modelica). `{}` parses to an empty [`ExprAst::ArrayLit`] and is rejected at
+    /// evaluation ([`ExprError::EmptyArray`]), where the distinction from a legal empty
+    /// range can be reported precisely.
+    fn parse_array_literal(&mut self) -> Result<ExprAst, ExprError> {
+        let mut elems = Vec::new();
+        if self.peek() != Some(&Tok::RBrace) {
+            loop {
+                elems.push(self.parse_range()?);
+                match self.peek() {
+                    Some(Tok::Comma) => self.pos += 1,
+                    _ => break,
+                }
+            }
+        }
+        self.expect(&Tok::RBrace, "'}' to close an array literal")?;
+        Ok(ExprAst::ArrayLit(elems))
     }
 
     /// Resolve a `Name` token in primary position: keyword literal, function call, named
@@ -422,12 +498,13 @@ impl Parser {
     }
 
     /// Parse a comma-separated argument list (the opening `(` is already consumed), then resolve
-    /// the call against the scalar §7.7.2 built-in table with an arity check.
+    /// the call against the scalar §7.7.2 built-in table with an arity check. Arguments are
+    /// full range expressions so a future `sum(1:3)` needs no grammar change.
     fn parse_call(&mut self, name: &str) -> Result<ExprAst, ExprError> {
         let mut args = Vec::new();
         if self.peek() != Some(&Tok::RParen) {
             loop {
-                args.push(self.parse_or()?);
+                args.push(self.parse_range()?);
                 match self.peek() {
                     Some(Tok::Comma) => self.pos += 1,
                     _ => break,
@@ -511,15 +588,15 @@ fn resolve_builtin(name: &str, argc: usize) -> Result<Builtin, ExprError> {
     }
 }
 
-/// Parse opaque CDL binding text into an [`ExprAst`] (scalar subset). The full token stream must
-/// be consumed; trailing tokens are a parse error.
+/// Parse opaque CDL binding text into an [`ExprAst`]. The full token stream must be consumed;
+/// trailing tokens are a parse error.
 pub(crate) fn parse(text: &str) -> Result<ExprAst, ExprError> {
     let toks = lex(text)?;
     if toks.is_empty() {
         return Err(parse_err("empty expression"));
     }
     let mut parser = Parser { toks, pos: 0 };
-    let ast = parser.parse_or()?;
+    let ast = parser.parse_range()?;
     if parser.pos != parser.toks.len() {
         return Err(parse_err(format!(
             "unexpected trailing input after a complete expression: {:?}",
