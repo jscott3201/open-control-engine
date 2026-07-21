@@ -1,0 +1,1261 @@
+[
+  {
+    "class_path": "CDL.Reals.Sources.Constant",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "k" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sources.CivilTime",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Sources.Pulse",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
+      { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
+      { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sources.Ramp",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "duration" },
+      { "rule": "RealGreaterOrEqual", "name": "duration", "min": 1e-37 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sources.Sin",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "freqHz" },
+      { "rule": "Real", "name": "amplitude" },
+      { "rule": "Real", "name": "freqHz" },
+      { "rule": "Real", "name": "phase" },
+      { "rule": "Real", "name": "offset" },
+      { "rule": "Real", "name": "startTime" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sources.CalendarTime",
+    "inputs": [],
+    "outputs": ["Integer", "Integer", "Integer", "Integer", "Real", "Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "zerTim" },
+      { "rule": "EnumMembers", "name": "zerTim", "members": ["UnixTimeStamp", "UnixTimeStampGMT", "Custom", "NY2010", "NY2011", "NY2012", "NY2013", "NY2014", "NY2015", "NY2016", "NY2017", "NY2018", "NY2019", "NY2020", "NY2021", "NY2022", "NY2023", "NY2024", "NY2025", "NY2026", "NY2027", "NY2028", "NY2029", "NY2030", "NY2031", "NY2032", "NY2033", "NY2034", "NY2035", "NY2036", "NY2037", "NY2038", "NY2039", "NY2040", "NY2041", "NY2042", "NY2043", "NY2044", "NY2045", "NY2046", "NY2047", "NY2048", "NY2049", "NY2050"] },
+      { "rule": "IntegerGreaterOrEqual", "name": "yearRef", "min": 2010 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "yearRef", "max": 2031 },
+      { "rule": "RealFinite", "name": "offset" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sources.TimeTable",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "TimeTableMatrix", "base": "table", "values": "Real", "time_scale": "timeScale", "period": null, "extrapolation": "extrapolation" },
+      { "rule": "TimeTableOffset", "base": "offset", "table": "table" },
+      { "rule": "EnumMembers", "name": "smoothness", "members": ["LinearSegments", "ConstantSegments"] },
+      { "rule": "EnumMembers", "name": "extrapolation", "members": ["HoldLastPoint", "LastTwoPoints", "Periodic"] },
+      { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Add",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Subtract",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Multiply",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Divide",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Sqrt",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Sin",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Cos",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Tan",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Asin",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Acos",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Atan",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Atan2",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Exp",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Log",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Log10",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Average",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Modulo",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Round",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "n" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.AddParameter",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "p" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MultiplyByParameter",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "k" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Abs",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Min",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Max",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.MultiMax",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MultiMin",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MultiSum",
+    "inputs": [],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "RealArrayElements", "base": "k", "len": "nin" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MatrixGain",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real", "Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nout", "right": "nin", "max": 1048576 },
+      { "rule": "RealMatrixElements", "base": "K", "rows": "nout", "default_rows": 2, "cols": "nin", "default_cols": 2 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MatrixMax",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Required", "name": "nRow" },
+      { "rule": "Required", "name": "nCol" },
+      { "rule": "Structural", "name": "nRow" },
+      { "rule": "Structural", "name": "nCol" },
+      { "rule": "Structural", "name": "rowMax" },
+      { "rule": "Boolean", "name": "rowMax" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nRow", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nRow", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nCol", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nCol", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nRow", "right": "nCol", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MatrixMin",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Required", "name": "nRow" },
+      { "rule": "Required", "name": "nCol" },
+      { "rule": "Structural", "name": "nRow" },
+      { "rule": "Structural", "name": "nCol" },
+      { "rule": "Structural", "name": "rowMin" },
+      { "rule": "Boolean", "name": "rowMin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nRow", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nRow", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nCol", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nCol", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nRow", "right": "nCol", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Sort",
+    "inputs": [],
+    "outputs": [],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Boolean", "name": "ascending" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Limiter",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "uMax" },
+      { "rule": "Required", "name": "uMin" },
+      { "rule": "RealLessOrEqual", "lower": "uMin", "upper": "uMax" },
+      { "rule": "RealEqualWarning", "left": "uMin", "right": "uMax" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Line",
+    "inputs": ["Real", "Real", "Real", "Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Greater",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.GreaterThreshold",
+    "inputs": ["Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Hysteresis",
+    "inputs": ["Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "uLow" },
+      { "rule": "Required", "name": "uHigh" },
+      { "rule": "RealLessOrEqual", "lower": "uLow", "upper": "uHigh" },
+      { "rule": "RealEqualWarning", "left": "uLow", "right": "uHigh" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Less",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.LessThreshold",
+    "inputs": ["Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Switch",
+    "inputs": ["Real", "Boolean", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.IntegratorWithReset",
+    "inputs": ["Real", "Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.Derivative",
+    "inputs": ["Real", "Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Reals.LimitSlewRate",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "raisingSlewRate" },
+      { "rule": "RealGreaterThan", "name": "Td", "min": 0.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.MovingAverage",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "delta" },
+      { "rule": "RealGreaterThan", "name": "delta", "min": 0.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.Ramp",
+    "inputs": ["Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "raisingSlewRate" },
+      { "rule": "RealGreaterOrEqual", "name": "raisingSlewRate", "min": 1e-37 },
+      { "rule": "RealLessOrEqualConstant", "name": "fallingSlewRate", "max": -1e-37 },
+      { "rule": "RealGreaterOrEqual", "name": "Td", "min": 1e-15 }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.PID",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "RealGreaterOrEqual", "name": "k", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Ti", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Td", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "r", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Ni", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Nd", "min": 1e-13 },
+      { "rule": "RealLessOrEqual", "lower": "yMin", "upper": "yMax" },
+      { "rule": "RealEqualWarning", "left": "yMin", "right": "yMax" }
+    ]
+  },
+  {
+    "class_path": "CDL.Reals.PIDWithReset",
+    "inputs": ["Real", "Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "RealGreaterOrEqual", "name": "k", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Ti", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Td", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "r", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Ni", "min": 1e-13 },
+      { "rule": "RealGreaterOrEqual", "name": "Nd", "min": 1e-13 },
+      { "rule": "RealLessOrEqual", "lower": "yMin", "upper": "yMax" },
+      { "rule": "RealEqualWarning", "left": "yMin", "right": "yMax" }
+    ]
+  },
+  {
+    "class_path": "CDL.Psychrometrics.DewPoint_TDryBulPhi",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "RealFiniteGreaterThan", "name": "pAtm", "min": 0.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Psychrometrics.WetBulb_TDryBulPhi",
+    "inputs": ["Real", "Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Sources.Constant",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "k" }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.Sources.Pulse",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
+      { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
+      { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.Sources.TimeTable",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "TimeTableMatrix", "base": "table", "values": "Boolean", "time_scale": "timeScale", "period": "period", "extrapolation": null },
+      { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 },
+      { "rule": "RealFiniteGreaterThan", "name": "period", "min": 0.0 },
+      { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-6 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.And",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Or",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.MultiAnd",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.MultiOr",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.Not",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Nand",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Nor",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Xor",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Switch",
+    "inputs": ["Boolean", "Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Pre",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Edge",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Sources.SampleTrigger",
+    "inputs": [],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "RealGreaterThan", "name": "period", "min": 0.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.Proof",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean", "Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "debounce" },
+      { "rule": "Required", "name": "feedbackDelay" },
+      { "rule": "RealLessOrEqualWarning", "lower": "debounce", "upper": "feedbackDelay" }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.VariablePulse",
+    "inputs": ["Real"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "RealGreaterOrEqual", "name": "deltaU", "min": 0.001 },
+      { "rule": "RealLessOrEqualConstant", "name": "deltaU", "max": 0.5 },
+      { "rule": "RealGreaterOrEqual", "name": "minTruFalHol", "min": 1e-37 },
+      { "rule": "RealGreaterOrEqualScaledWarning", "left": "period", "right": "minTruFalHol", "factor": 2.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.FallingEdge",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Change",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Latch",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Toggle",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.Timer",
+    "inputs": ["Boolean"],
+    "outputs": ["Real", "Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.TimerAccumulating",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Real", "Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Logical.TrueDelay",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "delayTime" }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.TrueFalseHold",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "trueHoldDuration" }
+    ]
+  },
+  {
+    "class_path": "CDL.Logical.TrueHoldWithReset",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Conversions.BooleanToInteger",
+    "inputs": ["Boolean"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Conversions.BooleanToReal",
+    "inputs": ["Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Conversions.IntegerToReal",
+    "inputs": ["Integer"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Conversions.RealToInteger",
+    "inputs": ["Real"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Sources.Constant",
+    "inputs": [],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "k" }
+    ]
+  },
+  {
+    "class_path": "CDL.Integers.Sources.Pulse",
+    "inputs": [],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
+      { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
+      { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ]
+  },
+  {
+    "class_path": "CDL.Integers.Sources.TimeTable",
+    "inputs": [],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "period" },
+      { "rule": "TimeTableMatrix", "base": "table", "values": "Integer", "time_scale": "timeScale", "period": "period", "extrapolation": null },
+      { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 },
+      { "rule": "RealFiniteGreaterThan", "name": "period", "min": 0.0 },
+      { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-6 }
+    ]
+  },
+  {
+    "class_path": "CDL.Integers.Abs",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Add",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Subtract",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Multiply",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.AddParameter",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "p" }
+    ]
+  },
+  {
+    "class_path": "CDL.Integers.Max",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Min",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.MultiSum",
+    "inputs": [],
+    "outputs": ["Integer"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerArrayElements", "base": "k", "len": "nin" }
+    ]
+  },
+  {
+    "class_path": "CDL.Integers.Switch",
+    "inputs": ["Integer", "Boolean", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Equal",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Greater",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.GreaterThreshold",
+    "inputs": ["Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.GreaterEqual",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.GreaterEqualThreshold",
+    "inputs": ["Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Less",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.LessThreshold",
+    "inputs": ["Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.LessEqual",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.LessEqualThreshold",
+    "inputs": ["Integer"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.OnCounter",
+    "inputs": ["Boolean", "Boolean"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Change",
+    "inputs": ["Integer"],
+    "outputs": ["Boolean", "Boolean", "Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Integers.Stage",
+    "inputs": ["Real"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "n" },
+      { "rule": "Required", "name": "holdDuration" },
+      { "rule": "IntegerGreaterOrEqual", "name": "n", "min": 1 },
+      { "rule": "RealGreaterOrEqual", "name": "holdDuration", "min": 0.0 },
+      { "rule": "RealTimesIntegerInclusiveRange", "real": "h", "integer": "n", "min": 0.001, "max": 0.5 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.BooleanExtractSignal",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "extract" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.BooleanExtractor",
+    "inputs": ["Integer", "Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.BooleanScalarReplicator",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.BooleanVectorFilter",
+    "inputs": [],
+    "outputs": [],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Required", "name": "nin" },
+      { "rule": "Required", "name": "nout" },
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "msk" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
+      { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.BooleanVectorReplicator",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.IntegerExtractSignal",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "extract" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.IntegerExtractor",
+    "inputs": ["Integer", "Integer"],
+    "outputs": ["Integer"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.IntegerScalarReplicator",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.IntegerVectorFilter",
+    "inputs": [],
+    "outputs": [],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Required", "name": "nin" },
+      { "rule": "Required", "name": "nout" },
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "msk" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
+      { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.IntegerVectorReplicator",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.RealExtractSignal",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "extract" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.RealExtractor",
+    "inputs": ["Integer", "Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.RealScalarReplicator",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.RealVectorFilter",
+    "inputs": [],
+    "outputs": [],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Required", "name": "nin" },
+      { "rule": "Required", "name": "nout" },
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "StructuralArrayElements", "base": "msk" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
+      { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ]
+  },
+  {
+    "class_path": "CDL.Routing.RealVectorReplicator",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": true,
+    "param_rules": [
+      { "rule": "Structural", "name": "nin" },
+      { "rule": "Structural", "name": "nout" },
+      { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
+      { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
+      { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
+      { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ]
+  },
+  {
+    "class_path": "CDL.Discrete.FirstOrderHold",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ]
+  },
+  {
+    "class_path": "CDL.Discrete.Sampler",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ]
+  },
+  {
+    "class_path": "CDL.Discrete.TriggeredMax",
+    "inputs": ["Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Discrete.TriggeredMovingMean",
+    "inputs": ["Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "n" },
+      { "rule": "IntegerGreaterOrEqual", "name": "n", "min": 1 }
+    ]
+  },
+  {
+    "class_path": "CDL.Discrete.TriggeredSampler",
+    "inputs": ["Real", "Boolean"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "CDL.Discrete.UnitDelay",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ]
+  },
+  {
+    "class_path": "CDL.Discrete.ZeroOrderHold",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ]
+  },
+  {
+    "class_path": "CDL.Utilities.Assert",
+    "inputs": ["Boolean"],
+    "outputs": [],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "message" }
+    ]
+  },
+  {
+    "class_path": "CDL.Utilities.SunRiseSet",
+    "inputs": [],
+    "outputs": ["Real", "Real", "Boolean"],
+    "width_driven": false,
+    "param_rules": [
+      { "rule": "Required", "name": "lat" },
+      { "rule": "Required", "name": "lon" },
+      { "rule": "Required", "name": "timZon" },
+      { "rule": "RealGreaterOrEqual", "name": "lat", "min": -1.5707963267948966 },
+      { "rule": "RealLessOrEqualConstant", "name": "lat", "max": 1.5707963267948966 },
+      { "rule": "RealGreaterOrEqual", "name": "lon", "min": -3.141592653589793 },
+      { "rule": "RealLessOrEqualConstant", "name": "lon", "max": 3.141592653589793 },
+      { "rule": "RealFinite", "name": "timZon" }
+    ]
+  }
+]
