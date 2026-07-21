@@ -276,6 +276,29 @@ fn sum_sugar_is_the_same_node_as_an_explicit_comprehension_argument() {
     assert_scalar_real_bits(scalar("sum({i*0.1 for i in 1:3})"), 0x3FE3333333333334);
 }
 
+#[test]
+fn boolean_bodies_are_rejected_by_sums_numeric_gate() {
+    // A Boolean body is a legal comprehension (pinned above) but not a legal sum operand:
+    // the collected Boolean array hits sum's existing numeric gate, exact to the fields —
+    // the sugar adds no coercion and no bypass around the built-in's type checks.
+    assert_eq!(
+        run("sum(i > 2 for i in 1:4)").unwrap_err(),
+        ExprError::TypeError {
+            expected: "a numeric array",
+            found: "a Boolean array",
+        }
+    );
+    // Identical through the explicit-argument spelling, pinning sugar/argument equivalence
+    // on the error path too.
+    assert_eq!(
+        run("sum({i > 2 for i in 1:4})").unwrap_err(),
+        ExprError::TypeError {
+            expected: "a numeric array",
+            found: "a Boolean array",
+        }
+    );
+}
+
 // --- Empty-source policy --------------------------------------------------------------------
 
 #[test]
@@ -516,6 +539,65 @@ fn mixed_scalar_elements_are_type_errors_at_the_shared_promotion_seam() {
         eval_array::array_from_scalars(Vec::new()).unwrap_err(),
         ExprError::EmptyArray
     );
+}
+
+// --- Body errors propagate mid-iteration ----------------------------------------------------
+
+#[test]
+fn body_errors_halt_iteration_with_the_typed_error_never_a_partial_array() {
+    // A body raising its own typed error propagates cleanly out of the comprehension —
+    // never a panic, never a truncated partial array — halting at the first failing element
+    // in source order. Three probe shapes cover the failure position across the iteration:
+    //
+    // First element: sqrt(1 - 3) fails before any element is collected.
+    assert_eq!(
+        run("{sqrt(i - 3) for i in 1:3}").unwrap_err(),
+        ExprError::DomainError("sqrt of a negative value")
+    );
+    // Mid-iteration: div(1, i - 2) succeeds at i = 1 and fails at i = 2 — one element was
+    // already collected, and the error still surfaces instead of a shortened array.
+    assert_eq!(
+        run("{div(1, i - 2) for i in 1:3}").unwrap_err(),
+        ExprError::DivisionByZero
+    );
+    // Last element: a[3] over a 2-element array fails only after every earlier element
+    // succeeded, exact to the diagnostic fields — the fullest possible partial result is
+    // still discarded in favor of the typed error.
+    let scope = TestScope::new(&[]).bind_array("a", array("{10, 20}"));
+    assert_eq!(
+        eval_str("{a[i] for i in 1:3}", &scope).unwrap_err(),
+        ExprError::IndexOutOfBounds { index: 3, size: 2 }
+    );
+    // The sum sugar propagates the same mid-iteration error — no identity fallback.
+    assert_eq!(
+        run("sum(div(1, i - 2) for i in 1:3)").unwrap_err(),
+        ExprError::DivisionByZero
+    );
+}
+
+// --- The element cap guards the iteration source --------------------------------------------
+
+#[test]
+fn the_cap_rejects_oversized_sources_before_the_comprehension_allocates() {
+    // The comprehension itself needs no cap site: the result length equals the source
+    // length, and an oversized source is already rejected — with the exact count — at range
+    // construction, BEFORE the comprehension allocates or evaluates anything.
+    assert_eq!(
+        run("{i for i in 1:2000000}").unwrap_err(),
+        ExprError::ArrayTooLarge {
+            count: 2_000_000,
+            max: 1 << 20,
+        }
+    );
+    assert_eq!(
+        run("sum(i for i in 1:2000000)").unwrap_err(),
+        ExprError::ArrayTooLarge {
+            count: 2_000_000,
+            max: 1 << 20,
+        }
+    );
+    // Exactly at the cap is legal end to end: source, per-element body, and result.
+    assert_eq!(array("{0 for i in 1:1048576}").len(), 1 << 20);
 }
 
 // --- Composition ----------------------------------------------------------------------------
