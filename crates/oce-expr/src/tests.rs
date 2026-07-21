@@ -413,7 +413,8 @@ fn array_constructs_are_deferred_not_panicking() {
     // Array built-ins parse now; the unbound identifier fails at evaluation, not parse.
     assert!(matches!(run("sum(x)"), Err(ExprError::UnknownIdent(_))));
     assert!(matches!(run("min(a)"), Err(ExprError::UnknownIdent(_)))); // 1-arg array form
-    assert!(matches!(run("a[1]"), Err(ExprError::Parse(_)))); // indexing
+    // Indexing parses now too; with `a` unbound the failure moves to evaluation.
+    assert!(matches!(run("a[1]"), Err(ExprError::UnknownIdent(_))));
     assert!(matches!(run("[1, 2]"), Err(ExprError::Parse(_)))); // matrix constructor
     assert!(matches!(run("{i for i in 1:3}"), Err(ExprError::Parse(_)))); // comprehension
 }

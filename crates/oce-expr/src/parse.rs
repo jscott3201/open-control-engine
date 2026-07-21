@@ -2,15 +2,17 @@
 //!
 //! Operator precedence follows Modelica (low → high): range (`:`) < `or` < `and` < `not` <
 //! relational (`> >= < <= == <>`) < additive (`+ -`) < multiplicative (`* /`) < unary sign
-//! (`+ -`) < primary. The range colon is the *outermost* binary construct (MLS
-//! `simple_expression`), so `1:n-1` spans a whole arithmetic expression on each side and
-//! `-1:2` is `(-1):2`. Placing the unary sign tighter than `*`/`/` keeps `-a*b == -(a*b)`
-//! (because `(-a)*b == -(a*b)`) while also accepting a sign in factor position (`2 * -3`,
-//! `3 - -2`), which real CXF-serialized binding strings contain. Relational operators are
+//! (`+ -`) < postfix subscript (`A[i]`) < primary. The range colon is the *outermost* binary
+//! construct (MLS `simple_expression`), so `1:n-1` spans a whole arithmetic expression on
+//! each side and `-1:2` is `(-1):2`. Placing the unary sign tighter than `*`/`/` keeps
+//! `-a*b == -(a*b)` (because `(-a)*b == -(a*b)`) while also accepting a sign in factor
+//! position (`2 * -3`, `3 - -2`), which real CXF-serialized binding strings contain; the
+//! subscript binds tighter still, so `-A[i]` is `-(A[i])`. Relational operators are
 //! non-associative (`a < b < c` is rejected) and live inside range operands. Exponentiation
 //! (`^`) is **not** in the CDL binding subset (§6.1) and is rejected. Brace array literals
-//! `{a, b, c}` and ranges parse; comprehensions, `A[i]` indexing, and `[a,b;c,d]` matrix
-//! constructors are deferred and produce a typed [`ExprError::Parse`], never a panic.
+//! `{a, b, c}`, ranges, and postfix indexing parse; comprehensions and `[a,b;c,d]` matrix
+//! constructors are deferred, and array slicing (`A[a:b]`) is out of subset — each produces a
+//! typed [`ExprError::Parse`], never a panic.
 
 use std::sync::Arc;
 
@@ -59,9 +61,10 @@ enum Tok {
     RBrace,
     /// `:` — the range separator.
     Colon,
-    /// `[` — matrix/indexing punctuation; rejected with a typed error (deferred).
+    /// `[` — opens a postfix subscript after a primary; in primary position it is the
+    /// deferred matrix constructor and is rejected with a typed error.
     LBracket,
-    /// `]` — matrix/indexing punctuation; rejected with a typed error (deferred).
+    /// `]` — closes a postfix subscript.
     RBracket,
 }
 
@@ -414,9 +417,10 @@ impl Parser {
         Ok(lhs)
     }
 
-    /// `unary : [add_op] unary | primary` — a unary `+`/`-` binds tighter than `*`/`/`, so a
+    /// `unary : [add_op] unary | postfix` — a unary `+`/`-` binds tighter than `*`/`/`, so a
     /// sign is accepted in factor position (`2 * -3`, `3 - -2`). Numerically `-a*b == -(a*b)`
-    /// since `(-a)*b == -(a*b)`.
+    /// since `(-a)*b == -(a*b)`. The operand is a [`Parser::parse_postfix`] production, so a
+    /// subscript binds tighter than the sign: `-A[i]` is `-(A[i])`.
     fn parse_unary(&mut self) -> Result<ExprAst, ExprError> {
         match self.peek() {
             Some(Tok::Minus) => {
@@ -427,8 +431,51 @@ impl Parser {
                 self.pos += 1;
                 self.parse_unary()
             }
-            _ => self.parse_primary(),
+            _ => self.parse_postfix(),
         }
+    }
+
+    /// `postfix : primary ("[" subscript ("," subscript)* "]")*` — zero or more subscript
+    /// groups after a primary, so chains like `A[1][2]` parse naturally as nested
+    /// [`ExprAst::Index`] nodes. Grammatically each subscript is a full range expression
+    /// ([`Parser::parse_range`]), but a subscript that parses *to* a range is array slicing
+    /// (`A[a:b]`) — out of subset, rejected here with a typed error rather than left to
+    /// surface as a confusing evaluation-time shape problem. Comma-separated subscripts
+    /// build one node with several indices; the evaluator enforces the 1-D limit so the
+    /// rejection can name the multi-dimensional deferral. `A[]` is malformed. A `[` in
+    /// *primary* position never reaches here — [`Parser::parse_primary`] rejects it as the
+    /// deferred matrix constructor.
+    fn parse_postfix(&mut self) -> Result<ExprAst, ExprError> {
+        let mut base = self.parse_primary()?;
+        while self.peek() == Some(&Tok::LBracket) {
+            self.pos += 1;
+            if self.peek() == Some(&Tok::RBracket) {
+                return Err(parse_err(
+                    "empty subscript: 'A[]' needs at least one index expression",
+                ));
+            }
+            let mut indices = Vec::new();
+            loop {
+                let index = self.parse_range()?;
+                if matches!(index, ExprAst::Range { .. }) {
+                    return Err(parse_err(
+                        "array slicing 'A[a:b]' is not supported (a subscript must be a \
+                         scalar index)",
+                    ));
+                }
+                indices.push(index);
+                match self.peek() {
+                    Some(Tok::Comma) => self.pos += 1,
+                    _ => break,
+                }
+            }
+            self.expect(&Tok::RBracket, "']' to close an array subscript")?;
+            base = ExprAst::Index {
+                base: Box::new(base),
+                indices,
+            };
+        }
+        Ok(base)
     }
 
     /// `primary : NUMBER | STRING | "(" expr ")" | "{" array_args "}" | name [ "(" args ")" ]

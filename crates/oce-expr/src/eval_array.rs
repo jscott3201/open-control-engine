@@ -1,9 +1,11 @@
 //! Array construction and evaluation: 1-D brace literals and `a:b` / `a:step:b` ranges.
 //!
-//! Everything array-shaped that *evaluates* lives here (the scalar evaluator stays in
-//! [`mod@crate::eval`]): literal element folding and type resolution, range counting and element
-//! generation, and the [`ArrayValue`] constructor that enforces the shape/type/canonicalization
-//! invariants. Two rules keep results bit-deterministic and panic-free:
+//! Everything that *builds* arrays lives here (the scalar evaluator stays in
+//! [`mod@crate::eval`]; the consuming built-ins in [`mod@crate::eval_array_builtins`] and
+//! subscript reads in [`mod@crate::eval_array_indexing`]): literal element folding and type
+//! resolution, range counting and element generation, and the [`ArrayValue`] constructor that
+//! enforces the shape/type/canonicalization invariants. Two rules keep results
+//! bit-deterministic and panic-free:
 //!
 //! - **Closed-form elements.** Range element `k` is `start + k * step` (Integer in `i128`,
 //!   Real in `f64`) — never an accumulating `acc += step` loop, so element bits depend only on

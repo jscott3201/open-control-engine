@@ -4,8 +4,8 @@
 //!
 //! Parameter/constant *bindings* may carry a restricted, closed-world expression language
 //! (literals, identifier references, arithmetic/relational/boolean operators, the §7.7.2
-//! built-in function set, 1-D array literals/ranges, and — later — comprehensions). `oce-expr`
-//! parses
+//! built-in function set, 1-D array literals/ranges/indexing, and — later — comprehensions).
+//! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
 //! value. It is **Group A** (no store, no database), pure, total, and never reads the clock,
 //! connectors, or computation-affecting attributes (R11).
@@ -59,10 +59,20 @@
 //! assert!(total.bit_eq(&Value::Integer(5050)));
 //! ```
 //!
-//! Still deferred: array comprehensions, `A[i]` indexing, 2-D/matrix constructors
-//! (`[a, b; c, d]`), and the `Modelica.Math.*` alias whitelist. They appear in `02` §7.4 and
-//! are reserved here via `#[non_exhaustive]` so adding them is not a breaking change;
-//! encountering them in a binding today is a typed error, never a panic.
+//! # Indexing
+//!
+//! `A[i]` reads one element of a 1-D array: the base must evaluate to an array, the subscript
+//! to an **Integer** scalar — there is no Real coercion, so `A[1.0]` is
+//! [`ExprError::NonIntegerIndex`] — and CDL/Modelica indexing is 1-based, so `i < 1` or
+//! `i > size(A, 1)` is [`ExprError::IndexOutOfBounds`]. Indexing binds tighter than the unary
+//! sign (`-A[i]` is `-(A[i])`) and composes with any array-producing expression
+//! (`(1:5)[3]`, `size(A)[1]`).
+//!
+//! Still deferred: array comprehensions, array slicing (`A[a:b]`), 2-D/matrix constructors
+//! (`[a, b; c, d]`) and multi-subscript indexing (`A[i, j]`), and the `Modelica.Math.*` alias
+//! whitelist. They appear in `02` §7.4 and are reserved here via `#[non_exhaustive]` so adding
+//! them is not a breaking change; encountering them in a binding today is a typed error, never
+//! a panic.
 //!
 //! The public surface below (`parse`/`eval`/`eval_str`, [`ExprAst`], [`Scope`], [`EvalResult`],
 //! [`ExprError`]) is the **stable contract** `oce-flatten` binds to.
@@ -76,6 +86,9 @@ mod eval_array;
 mod eval_array_builtins;
 #[cfg(test)]
 mod eval_array_builtins_tests;
+mod eval_array_indexing;
+#[cfg(test)]
+mod eval_array_indexing_tests;
 #[cfg(test)]
 mod eval_array_tests;
 mod parse;
@@ -83,8 +96,8 @@ mod parse;
 mod tests;
 
 /// A parsed binding expression. Unknown functions are **not representable** — they are
-/// rejected during parse/resolve (R9). Comprehension and indexing constructs (`02` §7.4)
-/// remain reserved via `#[non_exhaustive]`.
+/// rejected during parse/resolve (R9). Comprehension constructs (`02` §7.4) remain reserved
+/// via `#[non_exhaustive]`.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExprAst {
@@ -121,6 +134,17 @@ pub enum ExprAst {
         step: Option<Box<ExprAst>>,
         /// The inclusive bound: the last element never steps past it.
         stop: Box<ExprAst>,
+    },
+    /// A postfix subscript `base[i]` (`02` §7.4). Chains like `A[1][2]` parse as nested
+    /// `Index` nodes; a multi-subscript `A[i, j]` parses (one node, several `indices`) but is
+    /// rejected at evaluation while arrays are 1-D. Subscripts are 1-based Integer scalars —
+    /// a range subscript (`A[a:b]` slicing) never reaches the AST; the parser rejects it.
+    Index {
+        /// The expression being indexed; must evaluate to an array.
+        base: Box<ExprAst>,
+        /// One subscript per dimension, left to right; only a single subscript evaluates
+        /// today.
+        indices: Vec<ExprAst>,
     },
 }
 
@@ -364,8 +388,8 @@ pub trait Scope {
     }
 }
 
-/// A typed expression error (never a panic; R10/R11). Indexing variants (`IndexOutOfBounds`, …)
-/// from `02` §7.4 remain reserved via `#[non_exhaustive]` until `A[i]` indexing lands.
+/// A typed expression error (never a panic; R10/R11). `#[non_exhaustive]` keeps room for the
+/// variants the still-deferred `02` §7.4 constructs (comprehensions, 2-D arrays) will need.
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExprError {
@@ -414,14 +438,34 @@ pub enum ExprError {
     /// (2-D arrays are deferred).
     #[error("shape mismatch: {0}")]
     ShapeMismatch(&'static str),
+    /// An array subscript outside the array's 1-based bounds — CDL/Modelica indexing is
+    /// 1-based, so the valid subscripts are exactly `1..=size`. Every subscript of an empty
+    /// array is out of bounds (`size` is 0). The check runs on the `i64` subscript itself,
+    /// so `i64::MAX`/`i64::MIN` report here rather than wrapping or saturating.
+    #[error("index out of bounds: subscript {index} is outside 1..={size}")]
+    IndexOutOfBounds {
+        /// The subscript value the expression supplied.
+        index: i64,
+        /// The element count of the indexed array.
+        size: usize,
+    },
+    /// An array subscript that is not an Integer scalar. There is deliberately **no**
+    /// coercion — `A[1.0]` is rejected, never floored: Modelica subscripts are
+    /// Integer-typed, and coercing whole-valued Reals would invite the `0.999999…` rounding
+    /// trap, where a computed subscript one ulp low floors to the wrong element.
+    #[error("non-integer index: array subscripts must be Integer, found {found}")]
+    NonIntegerIndex {
+        /// The type of the value actually supplied as the subscript.
+        found: &'static str,
+    },
 }
 
 /// Parse opaque CDL binding text into an [`ExprAst`], rejecting out-of-subset constructs (R9).
 ///
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
-/// function outside the §7.7.2 set (the still-deferred constructs — indexing, comprehensions,
-/// matrix syntax — are reported as parse errors).
+/// function outside the §7.7.2 set (the still-deferred constructs — array slicing,
+/// comprehensions, matrix syntax — are reported as parse errors).
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }

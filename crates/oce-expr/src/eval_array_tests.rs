@@ -554,8 +554,7 @@ fn malformed_array_syntax_is_a_parse_error_never_a_panic() {
         "1:2:3:4",
         "{:}",
         "1:}",
-        "a[",
-        "a[1]",
+        "a[", // an unclosed subscript is still malformed — `a[1]` itself parses now
         "(1:3",
         "{1}{2}",
     ];
