@@ -7,9 +7,10 @@
 //!
 //! [`eval_node`] is the scalar-or-array entry point: array constructs route to the
 //! [`crate::eval_array`] module, array-shaped built-in calls to
-//! [`crate::eval_array_builtins`], everything else through [`eval_scalar`]. In scalar operand
-//! position (operators, scalar built-in arguments) an array is a typed
-//! [`ExprError::TypeError`] — element-wise operators are not in the subset.
+//! [`crate::eval_array_builtins`], subscripts to [`crate::eval_array_indexing`], everything
+//! else through [`eval_scalar`]. In scalar operand position (operators, scalar built-in
+//! arguments) an array is a typed [`ExprError::TypeError`] — element-wise operators are not
+//! in the subset.
 
 use oce_model::{
     Value,
@@ -102,14 +103,18 @@ pub(crate) fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprE
 }
 
 /// Evaluate `ast` to a scalar-or-array [`EvalResult`]. Array constructs route to
-/// [`crate::eval_array`]; a built-in call may return either shape ([`eval_call`]); an
-/// identifier yields whatever shape the scope holds (arrays are cloned and re-canonicalized,
-/// like the scalar read); everything else is scalar.
+/// [`crate::eval_array`] and subscripts to [`crate::eval_array_indexing`]; a built-in call
+/// may return either shape ([`eval_call`]); an identifier yields whatever shape the scope
+/// holds (arrays are cloned and re-canonicalized, like the scalar read); everything else is
+/// scalar.
 pub(crate) fn eval_node(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     match ast {
         ExprAst::ArrayLit(elems) => crate::eval_array::eval_array_literal(elems, scope),
         ExprAst::Range { start, step, stop } => {
             crate::eval_array::eval_range(start, step.as_deref(), stop, scope)
+        }
+        ExprAst::Index { base, indices } => {
+            crate::eval_array_indexing::eval_index(base, indices, scope)
         }
         ExprAst::Call(b, args) => eval_call(*b, args, scope),
         ExprAst::Ident(name) => match scope.lookup(name) {
@@ -148,9 +153,11 @@ pub(crate) fn eval_scalar(ast: &ExprAst, scope: &dyn Scope) -> Result<Value, Exp
         ExprAst::Binary(op, a, b) => {
             eval_binary(*op, &eval_scalar(a, scope)?, &eval_scalar(b, scope)?)
         }
-        ExprAst::Call(..) | ExprAst::Ident(_) | ExprAst::ArrayLit(_) | ExprAst::Range { .. } => {
-            expect_scalar(eval_node(ast, scope)?)
-        }
+        ExprAst::Call(..)
+        | ExprAst::Ident(_)
+        | ExprAst::ArrayLit(_)
+        | ExprAst::Range { .. }
+        | ExprAst::Index { .. } => expect_scalar(eval_node(ast, scope)?),
     }
 }
 
