@@ -320,6 +320,98 @@ fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
 }
 
 #[test]
+fn composite_containing_itself_reports_the_degenerate_two_entry_cycle() {
+    // A self-loop is the shortest reachable cycle: the re-entered id sits at the TOP of the
+    // traversal path, so the reconstruction slice is a single element and the pinned participant
+    // list names the node twice. This locks the `start == path.len() - 1` edge of the slice
+    // arithmetic — a mis-slice or off-by-one there would drop an endpoint or panic.
+    let doc = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#R", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#A" } },
+            { "@id": "http://example.org#A", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#A" } }
+        ]
+    });
+    assert_eq!(
+        reject(&doc),
+        vec![error_with_subject(
+            DiagCode::MalformedDocument,
+            "http://example.org#A",
+            "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+             http://example.org#A -> http://example.org#A",
+        )],
+        "a self-looping composite must name itself as both cycle endpoints"
+    );
+}
+
+#[test]
+fn two_disjoint_cycles_under_one_root_report_one_rejection_per_reentry_in_subject_order() {
+    // Two disjoint cycles reachable from one root: the traversal re-enters once per cycle, so
+    // the report carries exactly one rejection per re-entry, and `finalize_diags` orders them
+    // by subject. (Traversal follows `containsBlock` document order, so here document order and
+    // subject order coincide — the pin is on the POST-SORT vector.)
+    let doc = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#R", "@type": "S231:Block",
+              "S231:containsBlock": [
+                  { "@id": "http://example.org#A" }, { "@id": "http://example.org#X" } ] },
+            { "@id": "http://example.org#A", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#B" } },
+            { "@id": "http://example.org#B", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#A" } },
+            { "@id": "http://example.org#X", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#Y" } },
+            { "@id": "http://example.org#Y", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#X" } }
+        ]
+    });
+    assert_eq!(
+        reject(&doc),
+        vec![
+            error_with_subject(
+                DiagCode::MalformedDocument,
+                "http://example.org#A",
+                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                 http://example.org#A -> http://example.org#B -> http://example.org#A",
+            ),
+            error_with_subject(
+                DiagCode::MalformedDocument,
+                "http://example.org#X",
+                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                 http://example.org#X -> http://example.org#Y -> http://example.org#X",
+            ),
+        ],
+        "each cycle re-entry must produce its own rejection, sorted by subject"
+    );
+    assert_eq!(
+        reject(&doc),
+        reject(&doc),
+        "the multi-cycle report must be byte-identical across repeated imports"
+    );
+}
+
+#[test]
+fn replaceable_root_composite_is_rejected_while_still_classifying_as_the_single_root() {
+    // `reject_unsupported_constructs` scans every active node, so a replaceable TOP composite is
+    // rejected with the root id as subject. Pinning the FULL single-element vector also proves
+    // root classification still succeeded — no root-count (or any other) rejection accompanies
+    // it, i.e. the otherwise-clean document failed for exactly this one contract violation.
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:isReplaceable"] = json!(true);
+    assert_eq!(
+        reject(&doc),
+        vec![error_with_subject(
+            DiagCode::UnresolvedPolymorphism,
+            "http://example.org#M",
+            "composite/replaceable: replaceable CXF components must be resolved before import",
+        )]
+    );
+}
+
+#[test]
 fn co_located_contract_rejections_keep_the_pinned_post_sort_order() {
     // Two contract rules violated on the SAME node: `finalize_diags` sorts non-connector
     // subjects by (subject, code, message), so the NonSubsetConstruct banned-key rejection
