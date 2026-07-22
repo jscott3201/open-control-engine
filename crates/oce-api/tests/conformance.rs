@@ -205,6 +205,181 @@ fn warning_stream_is_byte_identical_across_loads() {
     assert_eq!(format!("{:?}", r1.warnings), format!("{:?}", r2.warnings));
 }
 
+// ---- composite-subset contract corpus, end-to-end -----------------------------------------------
+
+/// Root of the composite-contract conformance corpus (`docs/cxf-composite-subset.md`), shared
+/// with the resolver-layer drivers in `oce-cxf` — the files are read at run time, not embedded,
+/// so an emitter-authored fixture dropped into the corpus is picked up without a rebuild.
+fn composite_corpus_dir() -> std::path::PathBuf {
+    std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../oce-cxf/tests/fixtures/composite_contract")
+}
+
+/// Drive one corpus fixture through the full `Engine::load_cxf` pipeline.
+fn load_composite_fixture(rel: &str) -> Result<LoadReport, OcError> {
+    let path = composite_corpus_dir().join(rel);
+    let bytes = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("corpus fixture {} must be readable: {e}", path.display()));
+    Engine::in_memory().load_cxf(&bytes)
+}
+
+/// Deterministically sorted `*.jsonld` listing of one corpus subdirectory.
+fn sorted_composite_listing(subdir: &str) -> Vec<String> {
+    let dir = composite_corpus_dir().join(subdir);
+    let mut names: Vec<String> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("corpus subdir {} must exist: {e}", dir.display()))
+        .map(|entry| entry.expect("readable directory entry").file_name())
+        .filter_map(|name| {
+            let name = name.to_str().expect("UTF-8 fixture name").to_owned();
+            name.ends_with(".jsonld").then_some(name)
+        })
+        .collect();
+    names.sort();
+    names
+}
+
+/// The end-to-end pin per rejected corpus fixture: its contract rule id plus the exact
+/// (code, subject, message) triple `Engine::load_cxf` must surface. Subjects appear only where
+/// the contract defines one — the pure-cycle zero-root rejection carries `None`.
+type CompositeRejection = (
+    &'static str,
+    &'static str,
+    DiagCode,
+    Option<&'static str>,
+    &'static str,
+);
+
+const COMPOSITE_REJECTIONS: [CompositeRejection; 9] = [
+    (
+        "multi_root.jsonld",
+        "root-count",
+        DiagCode::MalformedDocument,
+        Some("http://example.org#M"),
+        "composite/root-count: expected exactly one top composite root after nested \
+         classification, found 2 candidate roots: http://example.org#M, http://example.org#M2",
+    ),
+    (
+        "pure_cycle.jsonld",
+        "root-count",
+        DiagCode::MalformedDocument,
+        None,
+        "composite/root-count: expected exactly one top composite root after nested \
+         classification, found zero candidate roots",
+    ),
+    (
+        "reachable_cycle.jsonld",
+        "contains-cycle",
+        DiagCode::MalformedDocument,
+        Some("http://example.org#A"),
+        "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+         http://example.org#A -> http://example.org#B -> http://example.org#C -> \
+         http://example.org#A",
+    ),
+    (
+        "self_loop.jsonld",
+        "contains-cycle",
+        DiagCode::MalformedDocument,
+        Some("http://example.org#A"),
+        "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+         http://example.org#A -> http://example.org#A",
+    ),
+    (
+        "banned_key_bare.jsonld",
+        "banned-modelica-key",
+        DiagCode::NonSubsetConstruct,
+        Some("http://example.org#M.c2"),
+        "composite/banned-modelica-key: unsupported Modelica construct `redeclare` survived \
+         CXF lowering",
+    ),
+    (
+        "banned_key_prefixed.jsonld",
+        "banned-modelica-key",
+        DiagCode::NonSubsetConstruct,
+        Some("http://example.org#M.c2"),
+        "composite/banned-modelica-key: unsupported Modelica construct `S231:extendsFrom` \
+         survived CXF lowering",
+    ),
+    (
+        "banned_key_absolute_iri.jsonld",
+        "banned-modelica-key",
+        DiagCode::NonSubsetConstruct,
+        Some("http://example.org#M.c2"),
+        "composite/banned-modelica-key: unsupported Modelica construct \
+         `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+    ),
+    (
+        "array_parameter.jsonld",
+        "array-parameter",
+        DiagCode::NonSubsetConstruct,
+        Some("http://example.org#M.p"),
+        "composite/array-parameter: array-valued composite parameters are not supported by \
+         this CXF lowering subset",
+    ),
+    (
+        "replaceable.jsonld",
+        "replaceable",
+        DiagCode::UnresolvedPolymorphism,
+        Some("http://example.org#M.c2"),
+        "composite/replaceable: replaceable CXF components must be resolved before import",
+    ),
+];
+
+#[test]
+fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() {
+    // The published contract, proven through the FULL pipeline: every rejected corpus file
+    // surfaces its exact (code, subject, message) triple, and the message always begins with
+    // the `composite/<rule-id>: ` tag the catalog publishes for that rule.
+    for (file, rule_id, code, subject, message) in COMPOSITE_REJECTIONS {
+        let err = load_composite_fixture(&format!("rejected/{file}"))
+            .expect_err("every rejected corpus fixture must fail to load");
+        let signature = error_signature(&err);
+        assert_eq!(
+            signature,
+            vec![(code, subject.map(str::to_owned), message.to_owned())],
+            "rejected/{file}: the end-to-end error signature must match its published pin"
+        );
+        let prefix = format!("composite/{rule_id}: ");
+        assert!(
+            signature.iter().all(|(_, _, msg)| msg.starts_with(&prefix)),
+            "rejected/{file}: every contract rejection must start with {prefix:?}"
+        );
+    }
+}
+
+#[test]
+fn composite_contract_rejected_listing_matches_the_pinned_table() {
+    // No unpinned fixture, no phantom pin: the on-disk rejected corpus and the expectation
+    // table stay one-to-one, so a new emitter-facing fixture cannot land silently untested.
+    let mut pinned: Vec<String> = COMPOSITE_REJECTIONS
+        .iter()
+        .map(|(file, ..)| (*file).to_owned())
+        .collect();
+    pinned.sort();
+    assert_eq!(sorted_composite_listing("rejected"), pinned);
+}
+
+#[test]
+fn composite_contract_accepted_fixtures_load_warning_free_end_to_end() {
+    // The accepted corpus is warning-FREE by contract (not merely error-free): the same
+    // documents the resolver goldens bless must also build through flatten/validate/BUILD
+    // with an empty diagnostic stream.
+    let listing = sorted_composite_listing("accepted");
+    assert!(!listing.is_empty(), "the accepted corpus must not be empty");
+    for file in listing {
+        let report = load_composite_fixture(&format!("accepted/{file}"))
+            .unwrap_or_else(|e| panic!("accepted/{file} must load end-to-end: {e:?}"));
+        assert!(
+            report.block_count >= 1,
+            "accepted/{file}: a non-trivial model was built"
+        );
+        assert!(
+            report.warnings.is_empty(),
+            "accepted/{file}: the corpus promises a warning-free load, got {:?}",
+            report.warnings
+        );
+    }
+}
+
 #[test]
 fn full_pipeline_trace_is_bit_deterministic() {
     // exit #4 through the WHOLE pipeline: two independent load_cxf + multi-tick runs produce a
