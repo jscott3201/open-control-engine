@@ -277,42 +277,68 @@ mod tests {
         assert_eq!(Severity::Warning.to_string(), "warning");
     }
 
+    /// Single source of truth for the pin table: expands to both the `PINNED_CODES` list the
+    /// test iterates and a wildcard-free `match` over `DiagCode`. In-crate, the match is checked
+    /// exhaustively despite `#[non_exhaustive]`, so adding a variant without pinning its string
+    /// here — or dropping an entry from this list — fails to compile before any test runs, and a
+    /// duplicated entry dies as an unreachable match arm.
+    macro_rules! pinned_diag_code_strings {
+        ($($variant:ident => $string:literal,)+) => {
+            /// Every `DiagCode` variant, derived from the same list as the exhaustive match.
+            const PINNED_CODES: &[DiagCode] = &[$(DiagCode::$variant,)+];
+
+            /// The pinned kebab-case string for `code` — the compile-time exhaustiveness guard.
+            fn pinned_str(code: DiagCode) -> &'static str {
+                match code {
+                    $(DiagCode::$variant => $string,)+
+                }
+            }
+        };
+    }
+
+    pinned_diag_code_strings! {
+        DuplicateId => "duplicate-id",
+        UnresolvedReference => "unresolved-reference",
+        ClassNotFound => "class-not-found",
+        OverlayTargetNotFound => "overlay-target-not-found",
+        ArrayFlattenCollision => "array-flatten-collision",
+        GroundingFailed => "grounding-failed",
+        UnknownEnumType => "unknown-enum-type",
+        UnknownEnumLiteral => "unknown-enum-literal",
+        EnumIntegerStandin => "enum-integer-standin",
+        ConditionalGuardUnknownParameter => "conditional-guard-unknown-parameter",
+        ConditionalGuardUnsupported => "conditional-guard-unsupported",
+        InactiveConditionalNode => "inactive-conditional-node",
+        MissingActiveConditionalNode => "missing-active-conditional-node",
+        UnresolvedPolymorphism => "unresolved-polymorphism",
+        NonSubsetConstruct => "non-subset-construct",
+        MalformedDocument => "malformed-document",
+        SingleAssignment => "single-assignment",
+        DirectionMismatch => "direction-mismatch",
+        TypeMismatch => "type-mismatch",
+        PortKindMismatch => "port-kind-mismatch",
+        UnitQuantityMismatch => "unit-quantity-mismatch",
+        BoundMismatch => "bound-mismatch",
+        MissingRequiredParameter => "missing-required-parameter",
+        ParameterOutOfRange => "parameter-out-of-range",
+        DisplayUnitDivergence => "display-unit-divergence",
+        AnalogCoercedToReal => "analog-coerced-to-real",
+        MissingFmuPath => "missing-fmu-path",
+        UnknownProperty => "unknown-property",
+        ExportUnsupported => "export-unsupported",
+    }
+
     #[test]
     fn diag_codes_have_stable_unique_strings() {
-        let codes = [
-            DiagCode::DuplicateId,
-            DiagCode::UnresolvedReference,
-            DiagCode::ClassNotFound,
-            DiagCode::OverlayTargetNotFound,
-            DiagCode::ArrayFlattenCollision,
-            DiagCode::GroundingFailed,
-            DiagCode::UnresolvedPolymorphism,
-            DiagCode::NonSubsetConstruct,
-            DiagCode::MalformedDocument,
-            DiagCode::SingleAssignment,
-            DiagCode::DirectionMismatch,
-            DiagCode::TypeMismatch,
-            DiagCode::PortKindMismatch,
-            DiagCode::UnitQuantityMismatch,
-            DiagCode::BoundMismatch,
-            DiagCode::MissingRequiredParameter,
-            DiagCode::ParameterOutOfRange,
-            DiagCode::DisplayUnitDivergence,
-            DiagCode::AnalogCoercedToReal,
-            DiagCode::MissingFmuPath,
-            DiagCode::UnknownProperty,
-            DiagCode::ExportUnsupported,
-        ];
-        // Every code maps to a kebab-case string, and all are distinct.
+        // Every code emits exactly its pinned kebab-case string, and all strings are distinct.
         let mut seen = Vec::new();
-        for c in codes {
-            let s = c.as_str();
+        for &code in PINNED_CODES {
+            let s = code.as_str();
+            assert_eq!(s, pinned_str(code), "{code:?} must keep its pinned string");
             assert!(!s.is_empty() && s.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-'));
             assert!(!seen.contains(&s), "duplicate code string {s:?}");
             seen.push(s);
         }
-        // Pin the export-floor code exactly: hosts and the oce-cxf staged rejection key on it.
-        assert_eq!(DiagCode::ExportUnsupported.as_str(), "export-unsupported");
     }
 
     #[test]
