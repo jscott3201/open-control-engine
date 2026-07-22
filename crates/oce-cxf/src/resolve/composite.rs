@@ -9,6 +9,9 @@ use crate::{bridge, resolve::local_name};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 
+use super::composite_rules::{
+    ARRAY_PARAMETER, BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT,
+};
 use super::specialize::{Specialization, validate_g36_parameter_value};
 
 /// A CXF document lowered to the existing single-root, flat-child resolver shape.
@@ -43,6 +46,7 @@ pub(super) fn lower(
     let boundary = BoundaryIndex::new(doc, by_id, root, specialization);
     let mut leaf_order = Vec::new();
     let mut stack = HashSet::new();
+    let mut path = Vec::new();
     collect_leaves(
         root,
         Vec::new(),
@@ -50,6 +54,7 @@ pub(super) fn lower(
         specialization,
         diags,
         &mut stack,
+        &mut path,
         &mut leaf_order,
         &mut inherited_scope,
     );
@@ -105,14 +110,34 @@ fn root_composite<'a>(
         .collect();
     match roots.as_slice() {
         [root] => Some(*root),
-        _ => {
+        [] => {
+            // A pure `containsBlock` cycle lands HERE, not in the cycle detector: every cycle
+            // member is referenced, so classification yields zero candidate roots and `lower`
+            // returns before `collect_leaves` can run.
             diags.push(Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "expected exactly one top composite root after nested classification, found {}",
-                    roots.len()
+                ROOT_COUNT.code,
+                ROOT_COUNT.message(
+                    "expected exactly one top composite root after nested classification, \
+                     found zero candidate roots",
                 ),
             ));
+            None
+        }
+        candidates => {
+            // Candidates are already in document `@graph` order (`composites` derives from
+            // `doc.graph.iter()`); the first one is the deterministic subject.
+            diags.push(
+                Diagnostic::error(
+                    ROOT_COUNT.code,
+                    ROOT_COUNT.message(format!(
+                        "expected exactly one top composite root after nested classification, \
+                         found {} candidate roots: {}",
+                        candidates.len(),
+                        candidates.join(", ")
+                    )),
+                )
+                .with_subject(candidates[0].to_owned()),
+            );
             None
         }
     }
@@ -148,8 +173,9 @@ fn reject_unsupported_constructs(
         if node.is_replaceable == Some(true) {
             diags.push(
                 Diagnostic::error(
-                    DiagCode::UnresolvedPolymorphism,
-                    "replaceable CXF components must be resolved before import",
+                    REPLACEABLE.code,
+                    REPLACEABLE
+                        .message("replaceable CXF components must be resolved before import"),
                 )
                 .with_subject(node.id.clone()),
             );
@@ -158,8 +184,10 @@ fn reject_unsupported_constructs(
             if unsupported_modelica_key(key) {
                 diags.push(
                     Diagnostic::error(
-                        DiagCode::NonSubsetConstruct,
-                        format!("unsupported Modelica construct `{key}` survived CXF lowering"),
+                        BANNED_MODELICA_KEY.code,
+                        BANNED_MODELICA_KEY.message(format!(
+                            "unsupported Modelica construct `{key}` survived CXF lowering"
+                        )),
                     )
                     .with_subject(node.id.clone()),
                 );
@@ -176,6 +204,9 @@ fn unsupported_modelica_key(key: &str) -> bool {
     )
 }
 
+/// Depth-first `containsBlock` flattening. `stack` gives O(1) cycle membership; `path` mirrors it
+/// as the ordered traversal spine so a detected cycle can name every participant in path order.
+/// Both are pushed/popped together — `stack` and `path` always hold the same ids.
 #[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     composite_id: &str,
@@ -184,25 +215,41 @@ fn collect_leaves(
     specialization: &Specialization,
     diags: &mut Vec<Diagnostic>,
     stack: &mut HashSet<String>,
+    path: &mut Vec<String>,
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
 ) {
     if !stack.insert(composite_id.to_owned()) {
+        // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
+        // closing with the re-entered id itself. Traversal follows `containsBlock` document
+        // order, so the participant list is deterministic. (`position` cannot miss — `stack`
+        // membership implies `path` membership — but fall back to the whole spine, never panic.)
+        let start = path
+            .iter()
+            .position(|id| id == composite_id)
+            .unwrap_or_default();
+        let mut participants: Vec<&str> = path[start..].iter().map(String::as_str).collect();
+        participants.push(composite_id);
         diags.push(
             Diagnostic::error(
-                DiagCode::MalformedDocument,
-                "cycle in nested composite containsBlock graph",
+                CONTAINS_CYCLE.code,
+                CONTAINS_CYCLE.message(format!(
+                    "cycle in nested composite containsBlock graph: {}",
+                    participants.join(" -> ")
+                )),
             )
             .with_subject(composite_id.to_owned()),
         );
         return;
     }
+    path.push(composite_id.to_owned());
     let Some(composite) = by_id.get(composite_id).copied() else {
         diags.push(
             Diagnostic::error(DiagCode::UnresolvedReference, "composite node not found")
                 .with_subject(composite_id.to_owned()),
         );
         stack.remove(composite_id);
+        path.pop();
         return;
     };
     let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
@@ -228,6 +275,7 @@ fn collect_leaves(
                 specialization,
                 diags,
                 stack,
+                path,
                 leaf_order,
                 inherited_scope,
             );
@@ -237,6 +285,7 @@ fn collect_leaves(
         }
     }
     stack.remove(composite_id);
+    path.pop();
 }
 
 fn composite_scope(
@@ -265,8 +314,11 @@ fn composite_scope(
         if pnode.is_array == Some(true) {
             diags.push(
                 Diagnostic::error(
-                    DiagCode::NonSubsetConstruct,
-                    "array-valued composite parameters are not supported by this CXF lowering subset",
+                    ARRAY_PARAMETER.code,
+                    ARRAY_PARAMETER.message(
+                        "array-valued composite parameters are not supported by this CXF \
+                         lowering subset",
+                    ),
                 )
                 .with_subject(piri.to_owned()),
             );

@@ -32,6 +32,22 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   `min` vs parameter-name-string `max`) are defined in the `ParamRule` rustdoc in
   `crates/oce-blocks/src/lib.rs` — the manifest carries names and fields, the rustdoc carries
   meaning.
+- `oce-cxf.composite-rules.json` is the machine-readable catalog of the `oce-cxf`
+  composite-subset contract rules, generated from the in-crate rule table
+  (`crates/oce-cxf/src/resolve/composite_rules.rs`) rather than fetched upstream. It is a
+  top-level JSON object keyed by rule id, in rule-table order; each entry carries `diag_code`
+  (the `DiagCode::as_str` string the rejection is emitted under), `message_prefix` (the exact
+  `composite/<rule-id>: ` tag every rejection message under that rule begins with — the prefix
+  is the machine convention, the remainder of the message stays human prose), and a one-line
+  `summary`. An external CXF generator maps a rejection back to its rule by matching the message
+  prefix, and back to its source graph node by the diagnostic `subject`. The regenerate-and-diff
+  test `resolve::composite_rules_tests::checked_in_catalog_matches_regenerated_bytes` in
+  `oce-cxf` keeps this file byte-identical to the live rule table; re-bless a deliberate rule
+  change with `UPDATE_EXPECT=1 cargo nextest run -p oce-cxf
+  checked_in_catalog_matches_regenerated_bytes` and review the diff. Scope limit by design: only
+  the five composite-subset contract rules are cataloged — the resolver's generic lookup-miss
+  (`unresolved-reference`) and grounding (`grounding-failed`) diagnostics are shared machinery,
+  not contract rules, and carry no tag.
 
 CI and local tests must use these checked-in files only. Updating the catalog requires re-fetching
 the upstream files named in the provenance file and updating this snapshot deliberately.
