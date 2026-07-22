@@ -13,7 +13,7 @@
 //! Boundary: the generic lookup-miss (`UnresolvedReference`) and grounding (`GroundingFailed`)
 //! diagnostics in `composite.rs` are shared machinery, not contract rules — they stay untagged.
 //!
-//! Determinism contract: catalog entries are written in [`COMPOSITE_RULES`] slice order, object
+//! Determinism contract: catalog entries are written in `COMPOSITE_RULES` slice order, object
 //! fields in fixed source order, and every string serializes through `serde_json`. Repeated
 //! generation is byte-identical; the checked-in artifact is the byte golden.
 
