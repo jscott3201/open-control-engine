@@ -10,14 +10,17 @@
 //! `oce-blocks` (the registry, for class resolution) and `oce-expr` (Ground-mode bindings).
 //!
 //! The lossless Layer-A DTO ([`dto`]), [`parse_document`], and §7.1 resolver ([`import_cxf`]) are
-//! implemented. The exporter ([`export`]) is deferred and currently panics if called; it is never on
-//! a load path.
+//! implemented. The exporter ([`export`]) is deferred: until it lands it rejects every model with
+//! a typed [`CxfError::Validation`] carrying [`oce_diag::DiagCode::ExportUnsupported`] — it never
+//! panics, and it is never on a load path.
 
 use oce_model::ModelGraph;
 
 mod arrays;
 mod bridge;
 pub mod dto;
+#[cfg(test)]
+mod export_tests;
 #[cfg(test)]
 mod g36_catalog_fixture_manifest;
 #[cfg(test)]
@@ -98,8 +101,18 @@ pub fn import_cxf(
 
 /// Export a [`ModelGraph`] back to a CXF JSON-LD document.
 ///
+/// The exporter has not landed yet: this is a staged floor that rejects **every** model, without
+/// inspecting it, via a single [`oce_diag::DiagCode::ExportUnsupported`] error diagnostic. The
+/// diagnostic's `subject` is `None` because the deferral concerns the whole operation, not any
+/// node in the model. The signature — including the `Result` shape — is the permanent API; only
+/// the unconditional rejection is temporary.
+///
 /// # Errors
-/// Returns [`CxfError`] if serialization fails.
+/// Always returns [`CxfError::Validation`] with exactly one
+/// [`oce_diag::DiagCode::ExportUnsupported`] error diagnostic, until the exporter lands.
 pub fn export(_model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
-    unimplemented!("oce-cxf::export — M1-PR-5")
+    Err(CxfError::Validation(vec![oce_diag::Diagnostic::error(
+        oce_diag::DiagCode::ExportUnsupported,
+        "CXF export is not yet implemented; every model is rejected until the exporter lands.",
+    )]))
 }
