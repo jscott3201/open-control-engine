@@ -1,78 +1,324 @@
-//! Tests for the staged [`export`](crate::export) floor: every model — freshly imported or
-//! hand-built — is rejected with a single typed `ExportUnsupported` error diagnostic (subject
-//! `None`, pinned message), never a panic, and the whole rejection is identical across calls
-//! and inputs.
+//! Tests for the minimal exporter's acceptance and rejection surfaces: an imported
+//! `minimal_loop` now exports cleanly, while everything outside the flat/ground/scalar/attr-free
+//! subset — an empty graph, declared connector attrs, enum parameters, IRI-less blocks,
+//! non-finite Reals — is a typed `ExportUnsupported` rejection (subject = the owning block's
+//! `instance_iri`), never a panic, and identical across repeated calls.
+
+use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, Severity};
-use oce_model::ModelGraph;
+use oce_model::{
+    Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, RealAttrs,
+    Value, ValueType,
+};
 
 use super::{CxfError, ResolveOptions, export, import_cxf};
 
-const FIXTURE: &str = include_str!("../tests/fixtures/minimal_loop.jsonld");
+const MINIMAL_LOOP: &str = include_str!("../tests/fixtures/minimal_loop.jsonld");
+const CONNECTOR_ATTRS: &str = include_str!("../tests/fixtures/connector_attrs.jsonld");
+const G36_ENUM_PARAM: &str = include_str!("../tests/fixtures/g36/cooling_only_dampers.jsonld");
 
-/// The pinned, host-visible rejection message. Changing it is a breaking stability event.
-const EXPECTED_MESSAGE: &str =
-    "CXF export is not yet implemented; every model is rejected until the exporter lands.";
+fn import(src: &str) -> ModelGraph {
+    let (graph, _report) =
+        import_cxf(src.as_bytes(), &ResolveOptions::default()).expect("fixture resolves");
+    graph
+}
 
-/// Unwrap the staged rejection: `export` must return `Err(CxfError::Validation(_))` carrying
-/// exactly one diagnostic. Panics (failing the calling test) on `Ok` or any other error shape.
-fn sole_rejection(model: &ModelGraph) -> Diagnostic {
+/// Unwrap a rejection: `export` must return `Err(CxfError::Validation(_))` with a non-empty
+/// diagnostic list where every entry is an `ExportUnsupported` error. Panics (failing the
+/// calling test) on `Ok` or any other error shape.
+fn rejection(model: &ModelGraph) -> Vec<Diagnostic> {
     match export(model) {
         Err(CxfError::Validation(diags)) => {
-            assert_eq!(
-                diags.len(),
-                1,
-                "the export floor must emit exactly one diagnostic, got {diags:?}"
-            );
-            diags.into_iter().next().expect("length checked above")
+            assert!(!diags.is_empty(), "a rejection must carry diagnostics");
+            for d in &diags {
+                assert_eq!(
+                    d.code,
+                    DiagCode::ExportUnsupported,
+                    "unexpected code: {d:?}"
+                );
+                assert_eq!(d.severity, Severity::Error, "unexpected severity: {d:?}");
+            }
+            diags
         }
         Ok(bytes) => panic!(
-            "the export floor must reject every model, but got Ok with {} byte(s)",
+            "expected an export rejection, but got Ok with {} byte(s)",
             bytes.len()
         ),
         Err(other) => panic!("expected CxfError::Validation, got {other:?}"),
     }
 }
 
-#[test]
-fn resolved_import_is_rejected_with_a_single_export_unsupported_error() {
-    let (graph, _report) =
-        import_cxf(FIXTURE.as_bytes(), &ResolveOptions::default()).expect("minimal_loop resolves");
-    let diag = sole_rejection(&graph);
-    assert_eq!(diag.code, DiagCode::ExportUnsupported);
-    assert_eq!(diag.severity, Severity::Error);
-    assert_eq!(
-        diag.subject, None,
-        "a whole-operation deferral must not blame any node"
-    );
-    assert_eq!(diag.message, EXPECTED_MESSAGE);
-}
-
-#[test]
-fn rejection_is_identical_across_repeated_calls() {
-    let (graph, _report) =
-        import_cxf(FIXTURE.as_bytes(), &ResolveOptions::default()).expect("minimal_loop resolves");
-    let first = sole_rejection(&graph);
-    for _ in 0..3 {
-        let again = sole_rejection(&graph);
-        // Diagnostic equality covers the full (code, subject, message) triple plus severity.
-        assert_eq!(again, first, "the rejection must be stable across calls");
+/// A hand-built one-block graph: `Constant` (registered, arity 0/1) with the given params and a
+/// single Real output connector — the smallest graph inside the export subset.
+fn constant_graph(params: Vec<(Arc<str>, Value)>) -> ModelGraph {
+    ModelGraph {
+        blocks: vec![BlockInstance {
+            id: BlockId(0),
+            class_iri: Arc::from("CDL.Reals.Sources.Constant"),
+            inputs: vec![],
+            outputs: vec![ConnectorId(0)],
+            params: ParamTable { values: params },
+            decl_order: 0,
+            instance_iri: Some(Arc::from("http://example.org#Hand.con")),
+        }],
+        connectors: vec![Connector::new(
+            ConnectorId(0),
+            BlockId(0),
+            Dir::Out,
+            ValueType::Real,
+            0,
+        )],
+        connections: vec![],
+        external_inputs: vec![],
     }
 }
 
 #[test]
-fn hand_built_empty_graph_gets_the_same_rejection_as_an_imported_one() {
-    let (imported, _report) =
-        import_cxf(FIXTURE.as_bytes(), &ResolveOptions::default()).expect("minimal_loop resolves");
-    let from_import = sole_rejection(&imported);
+fn resolved_import_now_exports_cleanly() {
+    // R4's staged floor rejected this exact graph; the exporter accepts it.
+    let bytes = export(&import(MINIMAL_LOOP)).expect("minimal_loop is inside the export subset");
+    assert!(!bytes.is_empty());
+}
 
-    let from_empty = sole_rejection(&ModelGraph::new());
+#[test]
+fn empty_model_graph_is_rejected_without_a_subject() {
+    // Pinned decision: a zero-block ModelGraph rejects. A root with no containsBlock is not a
+    // runtime composite — a root-only document re-imports as MalformedDocument (zero candidate
+    // roots), so there is no warning-free document to emit.
+    let diags = rejection(&ModelGraph::new());
+    assert_eq!(diags.len(), 1);
     assert_eq!(
-        from_empty, from_import,
-        "the floor is input-independent: every model gets the identical rejection"
+        diags[0].subject, None,
+        "a whole-operation rejection must not blame any node"
     );
-    assert_eq!(from_empty.code, DiagCode::ExportUnsupported);
-    assert_eq!(from_empty.severity, Severity::Error);
-    assert_eq!(from_empty.subject, None);
-    assert_eq!(from_empty.message, EXPECTED_MESSAGE);
+    assert_eq!(
+        diags[0].message,
+        "CXF export requires at least one block: an empty ModelGraph has no runtime composite \
+         to emit"
+    );
+}
+
+#[test]
+fn declared_connector_attrs_are_rejected_with_the_owning_block_subject() {
+    // connector_attrs.jsonld's attr-bearing connector is an OUTPUT (`A.con.y`, iri=None), so the
+    // subject must be the OWNING BLOCK's instance_iri — connectors carry no IRI of their own.
+    let graph = import(CONNECTOR_ATTRS);
+    let diags = rejection(&graph);
+    assert_eq!(diags.len(), 1, "exactly one offending connector: {diags:?}");
+    assert_eq!(
+        diags[0].subject.as_deref(),
+        Some("http://example.org#A.con")
+    );
+    assert_eq!(
+        diags[0].message,
+        "export subset: connector declares §7.4.1 attributes, which the minimal exporter cannot \
+         emit"
+    );
+}
+
+#[test]
+fn rejection_is_identical_across_repeated_calls() {
+    let graph = import(CONNECTOR_ATTRS);
+    let first = rejection(&graph);
+    for _ in 0..3 {
+        assert_eq!(
+            rejection(&graph),
+            first,
+            "the rejection must be stable across calls"
+        );
+    }
+}
+
+#[test]
+fn enum_valued_parameter_is_rejected_with_the_owning_block_subject() {
+    // cooling_only_dampers surfaces `controllerType = Enum` on the conPID BlockInstance (the
+    // high-limits/EnergyStandard fixtures do NOT — their enums are specialization-consumed and
+    // never reach a BlockInstance param, so those graphs would be accepted).
+    let graph = import(G36_ENUM_PARAM);
+    let diags = rejection(&graph);
+    assert_eq!(
+        diags[0].subject.as_deref(),
+        Some("http://example.org#g36.source.cooling_only_dampers.conPID"),
+        "the first offender in block order is the enum-carrying conPID"
+    );
+    assert!(
+        diags[0].message.contains("parameter `controllerType`")
+            && diags[0].message.contains("enumeration-valued"),
+        "got: {}",
+        diags[0].message
+    );
+    assert_eq!(rejection(&graph), diags, "stable across repeated calls");
+}
+
+#[test]
+fn block_without_an_instance_iri_is_rejected() {
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.blocks[0].instance_iri = None;
+    let diags = rejection(&graph);
+    assert_eq!(diags[0].subject.as_deref(), Some("block#0"));
+    assert_eq!(
+        diags[0].message,
+        "export subset: block has no instance_iri to name its CXF node"
+    );
+}
+
+#[test]
+fn non_finite_real_parameters_are_rejected() {
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        // serde_json serializes a non-finite f64 as `null`, which no CxfValue arm re-parses —
+        // emitting it would poison the whole document. Reject instead.
+        let graph = constant_graph(vec![(Arc::from("k"), Value::Real(bad))]);
+        let diags = rejection(&graph);
+        assert_eq!(
+            diags[0].subject.as_deref(),
+            Some("http://example.org#Hand.con")
+        );
+        assert!(
+            diags[0].message.contains("non-finite Real"),
+            "got: {}",
+            diags[0].message
+        );
+    }
+}
+
+#[test]
+fn dotted_parameter_name_is_rejected() {
+    // Re-import recovers the parameter name as the segment after the last `.`; a dotted name
+    // would silently come back renamed.
+    let graph = constant_graph(vec![(Arc::from("k.nested"), Value::Real(2.0))]);
+    let diags = rejection(&graph);
+    assert_eq!(
+        diags[0].subject.as_deref(),
+        Some("http://example.org#Hand.con")
+    );
+    assert!(
+        diags[0].message.contains("not a bare member name"),
+        "got: {}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn string_parameter_round_trips_through_export_and_reimport() {
+    // Strings are in-subset: emitted as a quoted CDL string-literal expression (escaping `\` and
+    // `"`), re-grounded by oce-expr to the bit-identical Value::String.
+    let tricky = r#"deg "C" \ path"#;
+    let graph = constant_graph(vec![
+        (Arc::from("k"), Value::Real(2.0)),
+        (Arc::from("note"), Value::String(Arc::from(tricky))),
+    ]);
+    let bytes = export(&graph).expect("String params are inside the subset");
+    let (reimported, report) =
+        import_cxf(&bytes, &ResolveOptions::default()).expect("exported doc re-imports");
+    assert!(
+        report.is_empty(),
+        "clean reimport: {:?}",
+        report.diagnostics
+    );
+    let note = reimported.blocks[0]
+        .params
+        .values
+        .iter()
+        .find(|(n, _)| n.as_ref() == "note")
+        .expect("note parameter survives");
+    assert!(
+        note.1.bit_eq(&Value::String(Arc::from(tricky))),
+        "got {:?}",
+        note.1
+    );
+}
+
+#[test]
+fn mismatched_port_wiring_is_rejected_not_exported_shifted() {
+    // The block lists its Out connector under `inputs`: structurally inconsistent — exporting it
+    // would emit wiring the importer rebuilds differently.
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.blocks[0].inputs = vec![ConnectorId(0)];
+    graph.blocks[0].outputs = vec![];
+    let diags = rejection(&graph);
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.message.contains("structurally inconsistent")),
+        "got: {diags:?}"
+    );
+}
+
+#[test]
+fn external_input_without_a_boundary_iri_is_rejected() {
+    // The resolver always stores the elided boundary IRI on the driven child input; a hand-built
+    // graph without one cannot rebuild the root's hasInput.
+    let graph = ModelGraph {
+        blocks: vec![BlockInstance {
+            id: BlockId(0),
+            class_iri: Arc::from("CDL.Reals.Abs"),
+            inputs: vec![ConnectorId(0)],
+            outputs: vec![ConnectorId(1)],
+            params: ParamTable::default(),
+            decl_order: 0,
+            instance_iri: Some(Arc::from("http://example.org#Hand.abs")),
+        }],
+        connectors: vec![
+            Connector::new(ConnectorId(0), BlockId(0), Dir::In, ValueType::Real, 0),
+            Connector::new(ConnectorId(1), BlockId(0), Dir::Out, ValueType::Real, 1),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+    };
+    let diags = rejection(&graph);
+    assert_eq!(
+        diags[0].subject.as_deref(),
+        Some("http://example.org#Hand.abs")
+    );
+    assert!(
+        diags[0].message.contains("no boundary IRI"),
+        "got: {}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn hand_built_attr_bearing_connector_is_rejected() {
+    // Same rejection as the imported connector_attrs fixture, proven on the builder path: any
+    // Some field in the attrs set is out of subset because the exporter emits none.
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
+        .with_attrs(Attrs::Real(RealAttrs {
+            unit: Some(Arc::from("K")),
+            ..RealAttrs::default()
+        }))
+        .expect("Real attrs on a Real connector");
+    let diags = rejection(&graph);
+    assert_eq!(
+        diags[0].subject.as_deref(),
+        Some("http://example.org#Hand.con")
+    );
+}
+
+#[test]
+fn every_rejection_path_returns_instead_of_panicking() {
+    // The never-panics property from the R4 floor survives on every path: exercise each
+    // rejection shape and the acceptance shape through the same call.
+    let graphs: Vec<ModelGraph> = vec![
+        ModelGraph::new(),
+        import(MINIMAL_LOOP),
+        import(CONNECTOR_ATTRS),
+        import(G36_ENUM_PARAM),
+        constant_graph(vec![(Arc::from("k"), Value::Real(f64::NAN))]),
+        constant_graph(vec![(
+            Arc::from("mode"),
+            Value::Enum {
+                class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 1,
+            },
+        )]),
+    ];
+    for g in &graphs {
+        // Ok or a typed Validation error — anything else (or a panic) fails the test.
+        match export(g) {
+            Ok(_) | Err(CxfError::Validation(_)) => {}
+            Err(other) => panic!("unexpected error shape: {other:?}"),
+        }
+    }
 }

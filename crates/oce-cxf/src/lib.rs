@@ -9,16 +9,18 @@
 //! is **Group A** (no store, no database); it depends on `serde`/`serde_json`/`oce-diag` plus
 //! `oce-blocks` (the registry, for class resolution) and `oce-expr` (Ground-mode bindings).
 //!
-//! The lossless Layer-A DTO ([`dto`]), [`parse_document`], and §7.1 resolver ([`import_cxf`]) are
-//! implemented. The exporter ([`export`]) is deferred: until it lands it rejects every model with
-//! a typed [`CxfError::Validation`] carrying [`oce_diag::DiagCode::ExportUnsupported`] — it never
-//! panics, and it is never on a load path.
+//! The lossless Layer-A DTO ([`dto`]), [`parse_document`], the §7.1 resolver ([`import_cxf`]),
+//! and the minimal RT-2 exporter ([`export()`]) are implemented. The exporter covers the flat,
+//! ground, single-root, scalar-parameter, attribute-free subset — exactly what the resolver
+//! produces for that shape of document; anything outside it is a typed [`CxfError::Validation`]
+//! carrying [`oce_diag::DiagCode::ExportUnsupported`] — never a panic.
 
 use oce_model::ModelGraph;
 
 mod arrays;
 mod bridge;
 pub mod dto;
+mod export;
 #[cfg(test)]
 mod export_tests;
 #[cfg(test)]
@@ -99,20 +101,27 @@ pub fn import_cxf(
     resolve::resolve(&doc, opts)
 }
 
-/// Export a [`ModelGraph`] back to a CXF JSON-LD document.
+/// Export a [`ModelGraph`] back to a CXF JSON-LD document — the RT-2 partner of [`import_cxf`].
 ///
-/// The exporter has not landed yet: this is a staged floor that rejects **every** model, without
-/// inspecting it, via a single [`oce_diag::DiagCode::ExportUnsupported`] error diagnostic. The
-/// diagnostic's `subject` is `None` because the deferral concerns the whole operation, not any
-/// node in the model. The signature — including the `Result` shape — is the permanent API; only
-/// the unconditional rejection is temporary.
+/// Accepts the flat, ground, single-root, scalar-parameter, attribute-free subset (the shape the
+/// resolver produces for documents like the `minimal_loop` fixture). The emitted bytes are
+/// deterministic — repeated calls are byte-identical — and re-import to a `ModelGraph`
+/// bit-identical to the input (Reals by IEEE-754 bits). The source root `@id` is not recorded in
+/// [`ModelGraph`], so the root composite is emitted under the fixed synthetic IRI
+/// `urn:open-control:cxf-export:root`; block nodes reuse their `instance_iri` verbatim, and port
+/// nodes get deterministically minted `@id`s (re-import rebuilds wiring from `isConnectedTo`, so
+/// port names never round-trip). Parameter bindings are bare JSON literals; Reals always carry a
+/// fractional part or exponent, so a whole-number Real never re-grounds as an Integer.
 ///
 /// # Errors
-/// Always returns [`CxfError::Validation`] with exactly one
-/// [`oce_diag::DiagCode::ExportUnsupported`] error diagnostic, until the exporter lands.
-pub fn export(_model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
-    Err(CxfError::Validation(vec![oce_diag::Diagnostic::error(
-        oce_diag::DiagCode::ExportUnsupported,
-        "CXF export is not yet implemented; every model is rejected until the exporter lands.",
-    )]))
+/// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
+///   (subject = the owning block's `instance_iri`; connectors carry no IRI of their own) for
+///   anything outside the subset: enumeration-valued or non-finite parameters, connectors with
+///   declared §7.4.1 attributes, String/Enum-typed connectors, blocks without an `instance_iri`,
+///   external inputs without a recorded boundary IRI, structurally inconsistent wiring, or an
+///   empty (zero-block) graph. Never panics.
+/// - [`CxfError::Json`] if document serialization itself fails.
+pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
+    let doc = export::document(model)?;
+    write_document(&doc)
 }

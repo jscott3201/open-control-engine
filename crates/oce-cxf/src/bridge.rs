@@ -16,7 +16,9 @@
 //! fails the registry lookup), so a malformed `@type` is a typed diagnostic, never a crash.
 
 /// The OBC namespace prefix stripped from a class IRI fragment to obtain the canonical class path.
-const OBC_PREFIX: &str = "Buildings.Controls.OBC.";
+/// The exporter re-prepends the same constant (its inverse direction), so the two directions
+/// cannot drift.
+pub(crate) const OBC_PREFIX: &str = "Buildings.Controls.OBC.";
 
 /// Map a CXF `@type` class IRI to its candidate canonical class path (the registry key).
 ///
