@@ -43,7 +43,7 @@
 //! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` is the owning
 //! block's `instance_iri` (connectors have none) — never a panic.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{Attrs, Connector, Dir, IntAttrs, ModelGraph, RealAttrs, Value, ValueType};
@@ -73,8 +73,10 @@ const MSG_EMPTY: &str =
 /// A block without an `instance_iri` cannot name its CXF node (hand-built graphs only; every
 /// imported block carries one).
 const MSG_NO_INSTANCE_IRI: &str = "export subset: block has no instance_iri to name its CXF node";
-/// The emitted `@type` would not re-bridge to the identical `class_iri` (a `#` in the class path,
-/// or a path already carrying the OBC prefix) — accepting it would silently flip block identity.
+/// The class path cannot round-trip through the class-IRI bridge: a `#` in it changes the
+/// re-imported fragment (a silent identity flip), and a path already carrying the OBC prefix
+/// re-bridges verbatim but can never name a registry class, so its bytes would always fail
+/// re-import — both are rejected under this message.
 const MSG_CLASS_BRIDGE: &str =
     "export subset: class path does not survive the class-IRI bridge round-trip";
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
@@ -94,6 +96,11 @@ const MSG_ENUM_CONNECTOR: &str =
 /// root's `hasInput` (hand-built graphs only; the resolver always stores it).
 const MSG_EXTERNAL_IRI: &str =
     "export subset: external input carries no boundary IRI to rebuild the root hasInput";
+/// Two emitted nodes would share one `@id` — duplicate block `instance_iri`s, a parameter named
+/// like a minted port (`out0`), a boundary IRI reusing another node's id. The document would
+/// fail re-import with `DuplicateId`; reject at plan time with the owner named instead.
+const MSG_DUPLICATE_ID: &str =
+    "export subset: emitted node @id collides with another emitted node @id";
 
 /// Everything [`build`] needs, fully validated: no `Option` left to unwrap, no index that can
 /// miss. Produced by [`plan`] only when the subset checks all pass.
@@ -139,6 +146,20 @@ fn reject(message: impl Into<String>, subject: &str) -> Diagnostic {
     Diagnostic::error(DiagCode::ExportUnsupported, message).with_subject(subject.to_owned())
 }
 
+/// Record an `@id` the document will emit. A repeat is rejected at plan time with the owning
+/// block as subject — the emitted document would otherwise fail re-import with `DuplicateId`
+/// (or worse, silently merge two nodes in a permissive consumer).
+fn claim_emitted_id(
+    seen: &mut BTreeSet<String>,
+    id: &str,
+    subject: &str,
+    diags: &mut Vec<Diagnostic>,
+) {
+    if !seen.insert(id.to_owned()) {
+        diags.push(reject(MSG_DUPLICATE_ID, subject));
+    }
+}
+
 /// The diagnostic subject for a connector: its owning block's `instance_iri`, else a synthetic
 /// position tag (mirrors the resolver's `connector#N` convention for IRI-less connectors).
 fn owner_subject(g: &ModelGraph, c: &Connector, position: usize) -> String {
@@ -180,6 +201,10 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
     let mut diags: Vec<Diagnostic> = Vec::new();
     let mut port_iri: Vec<Option<String>> = vec![None; g.connectors.len()];
     let mut blocks: Vec<PlannedBlock> = Vec::with_capacity(g.blocks.len());
+    // Every @id the document will carry, for duplicate detection only — membership checks,
+    // never iteration, so emission order still derives from the ModelGraph vectors alone.
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    seen.insert(EXPORT_ROOT_IRI.to_owned());
 
     for (bi, b) in g.blocks.iter().enumerate() {
         let subject: String = match b.instance_iri.as_deref() {
@@ -190,10 +215,16 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
                 synthetic
             }
         };
+        claim_emitted_id(&mut seen, &subject, &subject, &mut diags);
         let type_iri = format!("{CLASS_IRI_BASE}{}{}", bridge::OBC_PREFIX, b.class_iri);
-        // Self-oracle: run the actual import bridge over the @type we are about to emit. Anything
-        // that would re-import under a different class identity is rejected here, loudly.
-        if bridge::class_path_of(&type_iri) != b.class_iri.as_ref() {
+        // Self-oracle: run the actual import bridge over the @type we are about to emit — anything
+        // that would re-import under a different class identity is rejected here, loudly. An
+        // already-OBC-prefixed class path passes that round-trip (the bridge strips exactly the
+        // one prefix we just added) yet can never name a registry class, so it is rejected
+        // explicitly rather than emitted as bytes that always fail re-import.
+        if b.class_iri.starts_with(bridge::OBC_PREFIX)
+            || bridge::class_path_of(&type_iri) != b.class_iri.as_ref()
+        {
             diags.push(reject(MSG_CLASS_BRIDGE, &subject));
         }
 
@@ -210,7 +241,9 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
                 continue;
             }
             if let Some(binding) = param_binding(name, value, &subject, &mut diags) {
-                params.push((format!("{subject}.{name}"), binding));
+                let param_id = format!("{subject}.{name}");
+                claim_emitted_id(&mut seen, &param_id, &subject, &mut diags);
+                params.push((param_id, binding));
             }
         }
 
@@ -227,6 +260,7 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
                 &subject,
                 &mut diags,
             ) {
+                claim_emitted_id(&mut seen, &minted, &subject, &mut diags);
                 input_ports.push(minted);
             }
         }
@@ -243,6 +277,7 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
                 &subject,
                 &mut diags,
             ) {
+                claim_emitted_id(&mut seen, &minted, &subject, &mut diags);
                 output_ports.push(minted);
             }
         }
@@ -296,10 +331,17 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         let output_to_input = g.connectors.get(f).is_some_and(|c| c.dir == Dir::Out)
             && g.connectors.get(t).is_some_and(|c| c.dir == Dir::In);
         if !output_to_input {
-            diags.push(Diagnostic::error(
-                DiagCode::ExportUnsupported,
-                MSG_STRUCTURE,
-            ));
+            // Name the source endpoint's owner when it is in range (else the target's); only a
+            // fully dangling edge — both endpoints out of range — stays subjectless.
+            let subject = g
+                .connectors
+                .get(f)
+                .map(|c| owner_subject(g, c, f))
+                .or_else(|| g.connectors.get(t).map(|c| owner_subject(g, c, t)));
+            diags.push(match &subject {
+                Some(s) => reject(MSG_STRUCTURE, s),
+                None => Diagnostic::error(DiagCode::ExportUnsupported, MSG_STRUCTURE),
+            });
             continue;
         }
         // An unclaimed target was already rejected by the orphan scan; nothing to add here.
@@ -314,6 +356,8 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
     for cid in &g.external_inputs {
         let idx = cid.0 as usize;
         let Some(c) = g.connectors.get(idx) else {
+            // Out of range: there is no connector, so no owner to name — genuinely subjectless
+            // (like the whole-graph dense-id rejection, and unlike every per-node rejection).
             diags.push(Diagnostic::error(
                 DiagCode::ExportUnsupported,
                 MSG_STRUCTURE,
@@ -334,10 +378,15 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         };
         match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
             Some(pb) => pb.targets.push(target.clone()),
-            None => boundaries.push(PlannedBoundary {
-                iri: boundary_iri.to_owned(),
-                targets: vec![target.clone()],
-            }),
+            None => {
+                // First occurrence mints the boundary node, so its @id joins the emitted set;
+                // later same-IRI entries reuse the node (fan-out grouping), not a duplicate.
+                claim_emitted_id(&mut seen, boundary_iri, &subject, &mut diags);
+                boundaries.push(PlannedBoundary {
+                    iri: boundary_iri.to_owned(),
+                    targets: vec![target.clone()],
+                });
+            }
         }
     }
 

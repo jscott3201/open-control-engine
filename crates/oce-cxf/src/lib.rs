@@ -105,8 +105,12 @@ pub fn import_cxf(
 ///
 /// Accepts the flat, ground, single-root, scalar-parameter, attribute-free subset (the shape the
 /// resolver produces for documents like the `minimal_loop` fixture). The emitted bytes are
-/// deterministic — repeated calls are byte-identical — and re-import to a `ModelGraph`
-/// bit-identical to the input (Reals by IEEE-754 bits). The source root `@id` is not recorded in
+/// deterministic — repeated calls are byte-identical — and, for any accepted graph whose class
+/// paths name registered block classes (everything the resolver itself produces), re-import to a
+/// `ModelGraph` bit-identical to the input (Reals by IEEE-754 bits). Export deliberately takes
+/// no registry dependency, so a hand-built graph with an unregistered class path still exports;
+/// its bytes then fail re-import loudly with `ClassNotFound` — never silently. The source root
+/// `@id` is not recorded in
 /// [`ModelGraph`], so the root composite is emitted under the fixed synthetic IRI
 /// `urn:open-control:cxf-export:root`; block nodes reuse their `instance_iri` verbatim, and port
 /// nodes get deterministically minted `@id`s (re-import rebuilds wiring from `isConnectedTo`, so
