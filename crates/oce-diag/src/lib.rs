@@ -137,6 +137,11 @@ pub enum DiagCode {
     MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
+
+    // --- Export-time `shall`-errors (oce-cxf exporter) ---
+    /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
+    /// so the diagnostic's `subject` is `None` — no individual node is at fault.
+    ExportUnsupported,
 }
 
 impl DiagCode {
@@ -172,6 +177,7 @@ impl DiagCode {
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
+            DiagCode::ExportUnsupported => "export-unsupported",
         }
     }
 }
@@ -295,6 +301,7 @@ mod tests {
             DiagCode::AnalogCoercedToReal,
             DiagCode::MissingFmuPath,
             DiagCode::UnknownProperty,
+            DiagCode::ExportUnsupported,
         ];
         // Every code maps to a kebab-case string, and all are distinct.
         let mut seen = Vec::new();
@@ -304,6 +311,8 @@ mod tests {
             assert!(!seen.contains(&s), "duplicate code string {s:?}");
             seen.push(s);
         }
+        // Pin the export-floor code exactly: hosts and the oce-cxf staged rejection key on it.
+        assert_eq!(DiagCode::ExportUnsupported.as_str(), "export-unsupported");
     }
 
     #[test]
