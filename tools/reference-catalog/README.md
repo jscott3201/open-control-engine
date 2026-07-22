@@ -47,7 +47,12 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   checked_in_catalog_matches_regenerated_bytes` and review the diff. Scope limit by design: only
   the five composite-subset contract rules are cataloged — the resolver's generic lookup-miss
   (`unresolved-reference`) and grounding (`grounding-failed`) diagnostics are shared machinery,
-  not contract rules, and carry no tag.
+  not contract rules, and carry no tag. The normative statement of the rules behind these
+  identities — including the non-rejecting classification/ordering/transform rules that have no
+  catalog entry — is `docs/cxf-composite-subset.md`, with its conformance corpus under
+  `crates/oce-cxf/tests/fixtures/composite_contract/`; the drift-guard test
+  `crates/oce-cxf/tests/composite_contract_doc.rs` holds that document's rule table to this
+  artifact.
 
 CI and local tests must use these checked-in files only. Updating the catalog requires re-fetching
 the upstream files named in the provenance file and updating this snapshot deliberately.

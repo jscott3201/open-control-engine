@@ -1,0 +1,30 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@graph": [
+    { "@id": "http://example.org#M", "@type": "S231:Block",
+      "S231:containsBlock": [ { "@id": "http://example.org#M.c1" }, { "@id": "http://example.org#M.c2" } ] },
+
+    { "@id": "http://example.org#M.c1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#M.c1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#M.c1.y" } },
+    { "@id": "http://example.org#M.c1.k",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#M.c1.y", "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#M.c2.u" } },
+
+    { "@id": "http://example.org#M.c2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:isReplaceable": true,
+      "S231:hasParameter": { "@id": "http://example.org#M.c2.k" },
+      "S231:hasInput": { "@id": "http://example.org#M.c2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#M.c2.y2" } },
+    { "@id": "http://example.org#M.c2.k",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#M.c2.u", "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#M.c2.y2", "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" } }
+  ]
+}
