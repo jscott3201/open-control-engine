@@ -238,105 +238,149 @@ fn sorted_composite_listing(subdir: &str) -> Vec<String> {
     names
 }
 
-/// The end-to-end pin per rejected corpus fixture: its contract rule id plus the exact
-/// (code, subject, message) triple `Engine::load_cxf` must surface. Subjects appear only where
-/// the contract defines one — the pure-cycle zero-root rejection carries `None`.
+/// The end-to-end pin per rejected corpus fixture: its contract rule id plus the exact ordered
+/// (code, subject, message) triples `Engine::load_cxf` must surface. Subjects appear only where
+/// the contract defines one — the pure-cycle zero-root rejection carries `None`. Most fixtures
+/// pin one triple; `diamond_cycle` pins two (one per cycle re-entry).
 type CompositeRejection = (
     &'static str,
     &'static str,
-    DiagCode,
-    Option<&'static str>,
-    &'static str,
+    &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 9] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 10] = [
     (
         "multi_root.jsonld",
         "root-count",
-        DiagCode::MalformedDocument,
-        Some("http://example.org#M"),
-        "composite/root-count: expected exactly one top composite root after nested \
-         classification, found 2 candidate roots: http://example.org#M, http://example.org#M2",
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#M"),
+            "composite/root-count: expected exactly one top composite root after nested \
+             classification, found 2 candidate roots: http://example.org#M, \
+             http://example.org#M2",
+        )],
     ),
     (
         "pure_cycle.jsonld",
         "root-count",
-        DiagCode::MalformedDocument,
-        None,
-        "composite/root-count: expected exactly one top composite root after nested \
-         classification, found zero candidate roots",
+        &[(
+            DiagCode::MalformedDocument,
+            None,
+            "composite/root-count: expected exactly one top composite root after nested \
+             classification, found zero candidate roots",
+        )],
     ),
     (
         "reachable_cycle.jsonld",
         "contains-cycle",
-        DiagCode::MalformedDocument,
-        Some("http://example.org#A"),
-        "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-         http://example.org#A -> http://example.org#B -> http://example.org#C -> \
-         http://example.org#A",
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#A"),
+            "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+             http://example.org#A -> http://example.org#B -> http://example.org#C -> \
+             http://example.org#A",
+        )],
     ),
     (
         "self_loop.jsonld",
         "contains-cycle",
-        DiagCode::MalformedDocument,
-        Some("http://example.org#A"),
-        "composite/contains-cycle: cycle in nested composite containsBlock graph: \
-         http://example.org#A -> http://example.org#A",
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#A"),
+            "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+             http://example.org#A -> http://example.org#A",
+        )],
+    ),
+    (
+        // ONE structural cycle {A, C} reachable via TWO containsBlock paths: the k-re-entry
+        // contract end-to-end — one truthful path-ordered diagnostic per re-entry, in
+        // post-finalize_diags subject order.
+        "diamond_cycle.jsonld",
+        "contains-cycle",
+        &[
+            (
+                DiagCode::MalformedDocument,
+                Some("http://example.org#A"),
+                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                 http://example.org#A -> http://example.org#C -> http://example.org#A",
+            ),
+            (
+                DiagCode::MalformedDocument,
+                Some("http://example.org#C"),
+                "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                 http://example.org#C -> http://example.org#A -> http://example.org#C",
+            ),
+        ],
     ),
     (
         "banned_key_bare.jsonld",
         "banned-modelica-key",
-        DiagCode::NonSubsetConstruct,
-        Some("http://example.org#M.c2"),
-        "composite/banned-modelica-key: unsupported Modelica construct `redeclare` survived \
-         CXF lowering",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.c2"),
+            "composite/banned-modelica-key: unsupported Modelica construct `redeclare` \
+             survived CXF lowering",
+        )],
     ),
     (
         "banned_key_prefixed.jsonld",
         "banned-modelica-key",
-        DiagCode::NonSubsetConstruct,
-        Some("http://example.org#M.c2"),
-        "composite/banned-modelica-key: unsupported Modelica construct `S231:extendsFrom` \
-         survived CXF lowering",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.c2"),
+            "composite/banned-modelica-key: unsupported Modelica construct `S231:extendsFrom` \
+             survived CXF lowering",
+        )],
     ),
     (
         "banned_key_absolute_iri.jsonld",
         "banned-modelica-key",
-        DiagCode::NonSubsetConstruct,
-        Some("http://example.org#M.c2"),
-        "composite/banned-modelica-key: unsupported Modelica construct \
-         `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.c2"),
+            "composite/banned-modelica-key: unsupported Modelica construct \
+             `http://data.ashrae.org/S231P#moSource` survived CXF lowering",
+        )],
     ),
     (
         "array_parameter.jsonld",
         "array-parameter",
-        DiagCode::NonSubsetConstruct,
-        Some("http://example.org#M.p"),
-        "composite/array-parameter: array-valued composite parameters are not supported by \
-         this CXF lowering subset",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.p"),
+            "composite/array-parameter: array-valued composite parameters are not supported \
+             by this CXF lowering subset",
+        )],
     ),
     (
         "replaceable.jsonld",
         "replaceable",
-        DiagCode::UnresolvedPolymorphism,
-        Some("http://example.org#M.c2"),
-        "composite/replaceable: replaceable CXF components must be resolved before import",
+        &[(
+            DiagCode::UnresolvedPolymorphism,
+            Some("http://example.org#M.c2"),
+            "composite/replaceable: replaceable CXF components must be resolved before import",
+        )],
     ),
 ];
 
 #[test]
 fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() {
     // The published contract, proven through the FULL pipeline: every rejected corpus file
-    // surfaces its exact (code, subject, message) triple, and the message always begins with
-    // the `composite/<rule-id>: ` tag the catalog publishes for that rule.
-    for (file, rule_id, code, subject, message) in COMPOSITE_REJECTIONS {
+    // surfaces exactly its ordered (code, subject, message) triples, and every message begins
+    // with the `composite/<rule-id>: ` tag the catalog publishes for that rule.
+    for (file, rule_id, expected) in COMPOSITE_REJECTIONS {
         let err = load_composite_fixture(&format!("rejected/{file}"))
             .expect_err("every rejected corpus fixture must fail to load");
         let signature = error_signature(&err);
+        let expected: Vec<(DiagCode, Option<String>, String)> = expected
+            .iter()
+            .map(|(code, subject, message)| {
+                (*code, subject.map(str::to_owned), (*message).to_owned())
+            })
+            .collect();
         assert_eq!(
-            signature,
-            vec![(code, subject.map(str::to_owned), message.to_owned())],
-            "rejected/{file}: the end-to-end error signature must match its published pin"
+            signature, expected,
+            "rejected/{file}: the end-to-end error signature must match its published pins"
         );
         let prefix = format!("composite/{rule_id}: ");
         assert!(

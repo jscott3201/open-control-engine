@@ -178,6 +178,26 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
+            // ONE structural cycle {A, C} reachable via TWO paths (root→A and root→B→C):
+            // the k-re-entry contract — one truthful path-ordered diagnostic per re-entry,
+            // post-finalize_diags subject order.
+            "rejected/diamond_cycle.jsonld",
+            vec![
+                error_with_subject(
+                    DiagCode::MalformedDocument,
+                    "http://example.org#A",
+                    "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                     http://example.org#A -> http://example.org#C -> http://example.org#A",
+                ),
+                error_with_subject(
+                    DiagCode::MalformedDocument,
+                    "http://example.org#C",
+                    "composite/contains-cycle: cycle in nested composite containsBlock graph: \
+                     http://example.org#C -> http://example.org#A -> http://example.org#C",
+                ),
+            ],
+        ),
+        (
             "rejected/banned_key_bare.jsonld",
             vec![error_with_subject(
                 DiagCode::NonSubsetConstruct,
