@@ -18,6 +18,12 @@ use oce_model::ModelGraph;
 const FIXTURE: &str = include_str!("fixtures/minimal_loop.jsonld");
 const GOLDEN_REL: &str = "tests/fixtures/export/minimal_loop.export.cxf.json";
 
+/// The §7.4.1 attr-rich fixture (all three `TermAttr` wire shapes + Real `min`/`max`), used by
+/// the R6 attr-bearing byte golden + idempotence test.
+const ATTRS_FIXTURE: &str = include_str!("fixtures/connector_attrs.jsonld");
+/// The checked-in exported-bytes golden for the attr-bearing fixture (`export(import(...))`).
+const ATTRS_GOLDEN_REL: &str = "tests/fixtures/export/connector_attrs.export.cxf.json";
+
 /// The synthesized root `@id` (`ModelGraph` does not record the source root IRI). Pinned here
 /// against the exporter's constant: changing it is a byte-format break.
 const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
@@ -35,6 +41,10 @@ fn import_ok(src: &str) -> ModelGraph {
 
 fn golden_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_REL)
+}
+
+fn attrs_golden_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(ATTRS_GOLDEN_REL)
 }
 
 #[test]
@@ -67,6 +77,46 @@ fn export_is_byte_idempotent_across_calls() {
             export(&g).expect("export succeeds"),
             first,
             "repeated exports of the same graph must be byte-identical"
+        );
+    }
+}
+
+#[test]
+fn attr_bearing_exported_bytes_match_the_checked_in_golden() {
+    // R6 byte golden for the attr-bearing fixture: the exact bytes of
+    // `export(import(connector_attrs.jsonld))`, with the five BSC §7.4.1 attrs on the port node.
+    // Regenerate after an intentional format change with:
+    //   OCE_BLESS=1 cargo test -p oce-cxf --test export_golden attr_bearing_exported_bytes_match_the_checked_in_golden
+    // and review the diff — any unreviewed byte drift is a determinism defect.
+    let g = import_ok(ATTRS_FIXTURE);
+    let bytes = export(&g).expect("attr-bearing connector exports under BSC");
+
+    if std::env::var_os("OCE_BLESS").is_some() {
+        std::fs::create_dir_all(attrs_golden_path().parent().unwrap()).unwrap();
+        std::fs::write(attrs_golden_path(), &bytes).unwrap();
+        return;
+    }
+    let expected = std::fs::read(attrs_golden_path())
+        .expect("attr export golden missing — regenerate with OCE_BLESS=1");
+    assert_eq!(
+        String::from_utf8_lossy(&bytes),
+        String::from_utf8_lossy(&expected),
+        "attr-bearing exported document diverged from the checked-in byte golden"
+    );
+    assert_eq!(bytes, expected, "byte-level divergence (non-UTF-8?)");
+}
+
+#[test]
+fn attr_bearing_export_is_byte_idempotent_across_calls() {
+    // R6 idempotence: repeated exports of the same attr-bearing graph are byte-identical (no map
+    // iteration feeds emission; the bare shapes are deterministic).
+    let g = import_ok(ATTRS_FIXTURE);
+    let first = export(&g).expect("attr-bearing connector exports under BSC");
+    for _ in 0..3 {
+        assert_eq!(
+            export(&g).expect("attr-bearing connector exports under BSC"),
+            first,
+            "repeated exports of the same attr-bearing graph must be byte-identical"
         );
     }
 }

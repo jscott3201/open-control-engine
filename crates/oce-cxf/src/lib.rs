@@ -103,27 +103,30 @@ pub fn import_cxf(
 
 /// Export a [`ModelGraph`] back to a CXF JSON-LD document — the RT-2 partner of [`import_cxf`].
 ///
-/// Accepts the flat, ground, single-root, scalar-parameter, attribute-free subset (the shape the
-/// resolver produces for documents like the `minimal_loop` fixture). The emitted bytes are
-/// deterministic — repeated calls are byte-identical — and, for any accepted graph whose class
-/// paths name registered block classes (everything the resolver itself produces), re-import to a
-/// `ModelGraph` bit-identical to the input (Reals by IEEE-754 bits). Export deliberately takes
-/// no registry dependency, so a hand-built graph with an unregistered class path still exports;
-/// its bytes then fail re-import loudly with `ClassNotFound` — never silently. The source root
-/// `@id` is not recorded in
-/// [`ModelGraph`], so the root composite is emitted under the fixed synthetic IRI
-/// `urn:open-control:cxf-export:root`; block nodes reuse their `instance_iri` verbatim, and port
-/// nodes get deterministically minted `@id`s (re-import rebuilds wiring from `isConnectedTo`, so
-/// port names never round-trip). Parameter bindings are bare JSON literals; Reals always carry a
-/// fractional part or exponent, so a whole-number Real never re-grounds as an Integer.
+/// Accepts the flat, ground, single-root, scalar-parameter subset (the shape the resolver
+/// produces for documents like the `minimal_loop` fixture) and emits the in-subset §7.4.1
+/// connector attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`) on each port node under
+/// the Bare-Scalar Canonical wire shape. The emitted bytes are deterministic — repeated calls are
+/// byte-identical — and, for any accepted graph whose class paths name registered block classes
+/// (everything the resolver itself produces), re-import to a `ModelGraph` that renders
+/// bit-identically to the input (Reals by IEEE-754 bits). Export deliberately takes no registry
+/// dependency, so a hand-built graph with an unregistered class path still exports; its bytes
+/// then fail re-import loudly with `ClassNotFound` — never silently. The source root `@id` is
+/// not recorded in [`ModelGraph`], so the root composite is emitted under the fixed synthetic
+/// IRI `urn:open-control:cxf-export:root`; block nodes reuse their `instance_iri` verbatim, and
+/// port nodes get deterministically minted `@id`s (re-import rebuilds wiring from
+/// `isConnectedTo`, so port names never round-trip). Parameter bindings are bare JSON literals;
+/// Reals always carry a fractional part or exponent, so a whole-number Real never re-grounds as
+/// an Integer.
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   (subject = the owning block's `instance_iri`; connectors carry no IRI of their own) for
-///   anything outside the subset: enumeration-valued or non-finite parameters, connectors with
-///   declared §7.4.1 attributes, String/Enum-typed connectors, blocks without an `instance_iri`,
-///   external inputs without a recorded boundary IRI, structurally inconsistent wiring, or an
-///   empty (zero-block) graph. Never panics.
+///   anything outside the subset: enumeration-valued or non-finite parameters, connectors
+///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
+///   subset), String/Enum-typed connectors, blocks without an `instance_iri`, external inputs
+///   without a recorded boundary IRI, structurally inconsistent wiring, or an empty (zero-block)
+///   graph. Never panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let doc = export::document(model)?;

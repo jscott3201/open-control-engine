@@ -1,5 +1,6 @@
-//! Minimal CXF exporter (#141): emit a flat, ground, single-root, scalar-parameter,
-//! attribute-free [`ModelGraph`] as a CXF JSON-LD document.
+//! Minimal CXF exporter (#141): emit a flat, ground, single-root, scalar-parameter
+//! [`ModelGraph`] as a CXF JSON-LD document, carrying the in-subset §7.4.1 connector attributes
+//! under the **Bare-Scalar Canonical** wire shape.
 //!
 //! The contract is the RT-2 fixpoint, not source recovery: for a graph `G1` produced by
 //! [`import_cxf`](crate::import_cxf), `import(export(G1))` lowers to a graph that renders
@@ -24,6 +25,18 @@
 //!   owning block's own `hasInput` list — sharing one `@id` between the root's and a child's
 //!   port list re-imports as a rejection.
 //!
+//! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
+//! The five in-subset §7.4.1 attrs live on the **minted child port node** (never the shared
+//! boundary node), each emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
+//! `displayUnit` as bare strings ([`TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
+//! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
+//! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
+//! render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
+//! field default is `None`); `None` fields are omitted, so an all-default connector emits zero
+//! attr keys — byte-identical to an attr-free port node. `nominal`/`unbounded` (the importer
+//! hardcodes `None`) and non-finite Real `min`/`max` (which serialize as JSON `null`) are
+//! rejected, not emitted — see [`classify_attrs`].
+//!
 //! ## Determinism
 //! Emission order derives from the `ModelGraph` vectors alone: root, then blocks in `BlockId`
 //! order (each followed by its parameter nodes in `ParamTable` order), then one port node per
@@ -44,11 +57,12 @@
 //! block's `instance_iri` (connectors have none) — never a panic.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{Attrs, Connector, Dir, IntAttrs, ModelGraph, RealAttrs, Value, ValueType};
+use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
-use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
+use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 use crate::{CxfError, bridge};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
@@ -82,10 +96,20 @@ const MSG_CLASS_BRIDGE: &str =
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
 /// connector claimed twice or never, a connection endpoint out of range or not output→input).
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
-/// The connector carries declared §7.4.1 attributes; the minimal exporter emits none, so
-/// accepting it would silently drop them.
-const MSG_ATTRS: &str =
-    "export subset: connector declares §7.4.1 attributes, which the minimal exporter cannot emit";
+/// The connector carries a non-default `nominal` attribute (the importer hardcodes
+/// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
+/// dropped rather than round-tripped).
+const MSG_ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+/// The connector carries a non-default `unbounded` attribute (the importer hardcodes
+/// `unbounded: None`, so any `Some` is outside the canonical export subset).
+const MSG_ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+/// A Real `min`/`max` bound is non-finite (`NaN`/`INFINITY`/`NEG_INFINITY`). `serde_json`
+/// serializes a non-finite `f64` as JSON `null`, which re-imports as `None`, silently breaking
+/// the RT-2 render fixpoint — so the bound is rejected instead of emitted.
+const MSG_ATTR_NONFINITE_BOUND: &str = "export subset: connector carries a non-finite §7.4.1 min/max bound, \
+     which is outside the canonical (bare-scalar) export subset";
 /// String connectors have no importable CXF form (§7.8 forbids them).
 const MSG_STRING_CONNECTOR: &str =
     "export subset: String connectors are not permitted in CXF (§7.8)";
@@ -120,11 +144,13 @@ struct PlannedBlock {
     output_ports: Vec<String>,
 }
 
-/// One port node: minted `@id`, `isOfDataType` term, and `isConnectedTo` targets (outputs only).
+/// One port node: minted `@id`, `isOfDataType` term, `isConnectedTo` targets (outputs only),
+/// and the classified §7.4.1 attributes to emit (Bare-Scalar Canonical).
 struct PlannedPort {
     iri: String,
     datatype: &'static str,
     targets: Vec<String>,
+    attrs: PortAttrs,
 }
 
 /// One boundary-input node: the stored boundary IRI and the minted child ports it drives.
@@ -299,9 +325,14 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         }
     }
 
-    // Connector-level subset checks: importable value type, and zero declared §7.4.1 attributes
-    // (the exporter emits none, so any `Some` field would be silently dropped otherwise).
+    // Connector-level subset checks: importable value type, then attribute classification. A
+    // tag-mismatched connector (attrs variant ≠ value_type) pushes `MSG_STRUCTURE` only —
+    // `classify_attrs` is NOT called on it, so nominal/unbounded/non-finite diags do not
+    // double-fire alongside the structural rejection. A type-matched connector is classified:
+    // the five in-subset §7.4.1 fields are carried onto `PortAttrs` for emission, while
+    // `nominal`/`unbounded`/non-finite bounds are rejected (outside the canonical subset).
     let mut datatypes: Vec<&'static str> = Vec::with_capacity(g.connectors.len());
+    let mut classified: Vec<PortAttrs> = Vec::with_capacity(g.connectors.len());
     for (i, c) in g.connectors.iter().enumerate() {
         let subject = owner_subject(g, c, i);
         datatypes.push(match c.value_type {
@@ -318,9 +349,10 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
             }
         });
         if !c.attrs.matches(c.value_type) {
+            classified.push(PortAttrs::None);
             diags.push(reject(MSG_STRUCTURE, &subject));
-        } else if !attrs_are_empty(&c.attrs) {
-            diags.push(reject(MSG_ATTRS, &subject));
+        } else {
+            classified.push(classify_attrs(&c.attrs, &subject, &mut diags));
         }
     }
 
@@ -408,6 +440,7 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
             iri,
             datatype: datatypes[i],
             targets: std::mem::take(&mut targets[i]),
+            attrs: classified[i].clone(),
         });
     }
 
@@ -483,13 +516,133 @@ fn param_binding(
     }
 }
 
-/// Whether a connector's attribute set is entirely undeclared (every field `None`). The minimal
-/// exporter emits no §7.4.1 attributes, so anything else must be rejected, not dropped.
-fn attrs_are_empty(attrs: &Attrs) -> bool {
+/// The classified §7.4.1 attributes for one port node, narrowed to the Bare-Scalar Canonical
+/// emit subset. Produced by [`classify_attrs`] only when the connector's `Attrs` variant matches
+/// its `value_type` (the mismatch branch takes [`PortAttrs::None`] and a `MSG_STRUCTURE` diag
+/// instead, so no rejection double-fires). `build()` consumes this infallibly via
+/// [`emit_port_attrs`]: every variant is total, and `build()` never sees `PortAttrs::Real` on an
+/// `Integer` connector (`plan()`'s `attrs.matches` gate rejects that first).
+#[derive(Clone, Debug)]
+enum PortAttrs {
+    /// Real connector attrs: the three term attrs plus the two finite Real bounds. Any
+    /// `nominal`/`unbounded`/non-finite bound was already rejected by [`classify_attrs`] and is
+    /// absent here.
+    Real {
+        /// `S231:unit` (bare string).
+        unit: Option<Arc<str>>,
+        /// `S231:quantity` (bare string).
+        quantity: Option<Arc<str>>,
+        /// `S231:displayUnit` (bare string).
+        display_unit: Option<Arc<str>>,
+        /// `S231:min` (bare number, finite).
+        min: Option<f64>,
+        /// `S231:max` (bare number, finite).
+        max: Option<f64>,
+    },
+    /// Integer connector attrs: the two integer bounds (no non-finite hazard — `i64` has no NaN).
+    Integer {
+        /// `S231:min` (bare integer).
+        min: Option<i64>,
+        /// `S231:max` (bare integer).
+        max: Option<i64>,
+    },
+    /// No attrs to emit: a Boolean/String/Enum connector, or a tag-mismatched one. Emits zero
+    /// attr keys, byte-identical to an attr-free port node.
+    None,
+}
+
+/// Classify a type-matched connector's [`Attrs`] into the [`PortAttrs`] emit subset, rejecting
+/// `nominal`/`unbounded`/non-finite bounds (outside the canonical subset) into `diags`. A safe,
+/// total `match attrs` — no `as_real().unwrap()`, so no `plan()`-reachable panic. The importer
+/// hardcodes `nominal: None` and `unbounded: None` (`resolve/attrs.rs`), so any `Some` is outside
+/// the imported-graph contract; a non-finite Real bound would serialize as JSON `null` and
+/// re-import as `None`, silently breaking the RT-2 render fixpoint, so it is rejected too (R6-C).
+fn classify_attrs(attrs: &Attrs, subject: &str, diags: &mut Vec<Diagnostic>) -> PortAttrs {
     match attrs {
-        Attrs::Real(a) => *a == RealAttrs::default(),
-        Attrs::Integer(a) => *a == IntAttrs::default(),
-        Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => true,
+        Attrs::Real(a) => {
+            if a.nominal.is_some() {
+                diags.push(reject(MSG_ATTR_NOMINAL, subject));
+            }
+            if a.unbounded.is_some() {
+                diags.push(reject(MSG_ATTR_UNBOUNDED, subject));
+            }
+            let min = finite_real_bound(a.min, subject, diags);
+            let max = finite_real_bound(a.max, subject, diags);
+            PortAttrs::Real {
+                unit: a.unit.clone(),
+                quantity: a.quantity.clone(),
+                display_unit: a.display_unit.clone(),
+                min,
+                max,
+            }
+        }
+        Attrs::Integer(a) => PortAttrs::Integer {
+            min: a.min,
+            max: a.max,
+        },
+        Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => PortAttrs::None,
+    }
+}
+
+/// Emit a finite Real bound, or reject a non-finite one (R6-C). Mirrors the `is_finite()` guard on
+/// `param_binding`'s Real arm: `serde_json` serializes a non-finite `f64` as JSON `null`, which
+/// `Option<CxfValue>` deserializes back to `None`, so emitting `Some(NaN)` would silently break
+/// `render(G1) == render(G2)`. The importer's `real_connector_bound` stores `Some(r)` with no
+/// `is_finite()` check, so `Some(NaN)` IS import-reachable — this guard is required for RT-2 on
+/// imported graphs, not merely defense-in-depth.
+fn finite_real_bound(v: Option<f64>, subject: &str, diags: &mut Vec<Diagnostic>) -> Option<f64> {
+    match v {
+        Some(x) if x.is_finite() => Some(x),
+        Some(_) => {
+            diags.push(reject(MSG_ATTR_NONFINITE_BOUND, subject));
+            None
+        }
+        None => None,
+    }
+}
+
+/// Emit a port node's classified §7.4.1 attributes under the Bare-Scalar Canonical wire shape.
+/// Infallible: a total `match attrs` with no `Option::unwrap`, no index, no partial match. Term
+/// attrs go out as [`TermAttr::Bare`] (the self-reproducing shape; `Arc<str>` → `String` via
+/// `as_ref().to_owned()` since `TermAttr::Bare` owns a `String`); Real bounds as
+/// [`CxfValue::Float`], Integer bounds as [`CxfValue::Int`]. `None` fields stay `None` (omitted
+/// on serialization by `skip_serializing_if = "Option::is_none"`), so an all-default connector
+/// emits zero attr keys. `serde` serializes `Node` in its declared field order regardless of
+/// assignment order here.
+fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
+    match attrs {
+        PortAttrs::Real {
+            unit,
+            quantity,
+            display_unit,
+            min,
+            max,
+        } => {
+            if let Some(u) = unit {
+                node.unit = Some(TermAttr::Bare(u.as_ref().to_owned()));
+            }
+            if let Some(q) = quantity {
+                node.quantity = Some(TermAttr::Bare(q.as_ref().to_owned()));
+            }
+            if let Some(d) = display_unit {
+                node.display_unit = Some(TermAttr::Bare(d.as_ref().to_owned()));
+            }
+            if let Some(m) = min {
+                node.min = Some(CxfValue::Float(*m));
+            }
+            if let Some(m) = max {
+                node.max = Some(CxfValue::Float(*m));
+            }
+        }
+        PortAttrs::Integer { min, max } => {
+            if let Some(m) = min {
+                node.min = Some(CxfValue::Int(*m));
+            }
+            if let Some(m) = max {
+                node.max = Some(CxfValue::Int(*m));
+            }
+        }
+        PortAttrs::None => {}
     }
 }
 
@@ -538,6 +691,7 @@ fn build(plan: Plan) -> CxfDocument {
         let mut node = blank_node(port.iri);
         node.is_of_data_type = Some(iri_ref(port.datatype.to_owned()));
         node.is_connected_to = refs(port.targets);
+        emit_port_attrs(&mut node, &port.attrs);
         graph.push(node);
     }
 

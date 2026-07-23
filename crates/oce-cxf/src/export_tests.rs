@@ -1,8 +1,9 @@
 //! Tests for the minimal exporter's acceptance and rejection surfaces: an imported
-//! `minimal_loop` now exports cleanly, while everything outside the flat/ground/scalar/attr-free
-//! subset — an empty graph, declared connector attrs, enum parameters, IRI-less blocks,
-//! non-finite Reals — is a typed `ExportUnsupported` rejection (subject = the owning block's
-//! `instance_iri`), never a panic, and identical across repeated calls.
+//! `minimal_loop` and `connector_attrs` fixture both export cleanly (the five in-subset §7.4.1
+//! attrs emitted under the Bare-Scalar Canonical shape), while everything outside the subset —
+//! an empty graph, `nominal`/`unbounded`/non-finite bounds, enum parameters, IRI-less blocks,
+//! non-finite Real parameters — is a typed `ExportUnsupported` rejection (subject = the owning
+//! block's `instance_iri`), never a panic, and identical across repeated calls.
 
 use std::sync::Arc;
 
@@ -100,32 +101,38 @@ fn empty_model_graph_is_rejected_without_a_subject() {
 }
 
 #[test]
-fn declared_connector_attrs_are_rejected_with_the_owning_block_subject() {
-    // connector_attrs.jsonld's attr-bearing connector is an OUTPUT (`A.con.y`, iri=None), so the
-    // subject must be the OWNING BLOCK's instance_iri — connectors carry no IRI of their own.
+fn declared_connector_attrs_export_cleanly_under_the_bare_scalar_canonical_shape() {
+    // R6: the five in-subset §7.4.1 attrs on `A.con.y` (an OUTPUT, iri=None) are EMITTED, not
+    // rejected. The full RT-2 render fixpoint (`render(import(export(G))) == render(G)`, all five
+    // BSC `RealAttrs` fields) lives in `tests/export_roundtrip.rs` — `render()` is not reachable
+    // from this `src/` unit-test module. Here we assert the unit-level acceptance: the export is
+    // `Ok` and the emitted port carries the bare `S231:unit` key (string-contains on the bytes).
     let graph = import(CONNECTOR_ATTRS);
-    let diags = rejection(&graph);
-    assert_eq!(diags.len(), 1, "exactly one offending connector: {diags:?}");
-    assert_eq!(
-        diags[0].subject.as_deref(),
-        Some("http://example.org#A.con")
+    let bytes = export(&graph).expect("attr-bearing connector exports under BSC");
+    let text = std::str::from_utf8(&bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        text.contains(r#""S231:unit":"K""#),
+        "the bare-string unit must be emitted on the port node, got: {text}"
     );
-    assert_eq!(
-        diags[0].message,
-        "export subset: connector declares §7.4.1 attributes, which the minimal exporter cannot \
-         emit"
+    // The owning block's instance_iri is the port @id prefix (the connector carries no IRI).
+    assert!(
+        text.contains(r#""@id":"http://example.org#A.con.out0""#),
+        "the attr-bearing port is minted under the owning block, got: {text}"
     );
 }
 
 #[test]
-fn rejection_is_identical_across_repeated_calls() {
+fn attr_bearing_export_is_byte_stable_across_repeated_calls() {
+    // R6 repurpose: `CONNECTOR_ATTRS` no longer rejects — it exports. Repeated exports of the
+    // same graph must be byte-identical (determinism), the acceptance analog of the old
+    // rejection-stability test.
     let graph = import(CONNECTOR_ATTRS);
-    let first = rejection(&graph);
+    let first = export(&graph).expect("attr-bearing connector exports under BSC");
     for _ in 0..3 {
         assert_eq!(
-            rejection(&graph),
+            export(&graph).expect("attr-bearing connector exports under BSC"),
             first,
-            "the rejection must be stable across calls"
+            "repeated exports of the same attr-bearing graph must be byte-identical"
         );
     }
 }
@@ -288,9 +295,10 @@ fn external_input_without_a_boundary_iri_is_rejected() {
 }
 
 #[test]
-fn hand_built_attr_bearing_connector_is_rejected() {
-    // Same rejection as the imported connector_attrs fixture, proven on the builder path: any
-    // Some field in the attrs set is out of subset because the exporter emits none.
+fn hand_built_attr_bearing_connector_exports_under_the_bare_scalar_canonical_shape() {
+    // R6 rewrite: a Real connector with `unit: Some("K")` is a BSC EMIT field, not a rejection.
+    // Proven on the builder path (mirrors the imported fixture): the export is `Ok` and the
+    // emitted port carries the bare `S231:unit` "K" key (assert on bytes — no `render()` needed).
     let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
     graph.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
         .with_attrs(Attrs::Real(RealAttrs {
@@ -298,10 +306,158 @@ fn hand_built_attr_bearing_connector_is_rejected() {
             ..RealAttrs::default()
         }))
         .expect("Real attrs on a Real connector");
+    let bytes = export(&graph).expect("a unit-bearing Real connector exports under BSC");
+    let text = std::str::from_utf8(&bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        text.contains(r#""S231:unit":"K""#),
+        "the bare-string unit must be emitted on the port node, got: {text}"
+    );
+}
+
+/// The owning block `instance_iri` for the hand-built `constant_graph` (the subject of every
+/// per-connector rejection in these unit tests — connectors carry no IRI of their own).
+const HAND_CON_SUBJECT: &str = "http://example.org#Hand.con";
+
+#[test]
+fn nominal_attr_on_real_connector_is_rejected_with_the_owning_block_subject() {
+    // Removal-mutation pin: delete the `a.nominal.is_some()` check in `classify_attrs` → the
+    // graph is accepted (nominal is silently dropped) → `rejection()` panics on `Ok`. The
+    // importer hardcodes `nominal: None`, so any `Some` is outside the canonical subset. A Real
+    // OUTPUT connector so the subject is the OWNING BLOCK's `instance_iri`.
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
+        .with_attrs(Attrs::Real(RealAttrs {
+            nominal: Some(1.0),
+            ..RealAttrs::default()
+        }))
+        .expect("Real attrs on a Real connector");
     let diags = rejection(&graph);
+    assert_eq!(diags.len(), 1, "exactly one offender: {diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
+    assert_eq!(diags[0].subject.as_deref(), Some(HAND_CON_SUBJECT));
+    assert_eq!(
+        diags[0].message,
+        "export subset: connector carries a non-default §7.4.1 nominal attribute, \
+         which is outside the canonical (bare-scalar) export subset"
+    );
+}
+
+#[test]
+fn unbounded_attr_on_real_connector_is_rejected_with_the_owning_block_subject() {
+    // Removal-mutation pin: delete the `a.unbounded.is_some()` check in `classify_attrs` → the
+    // graph is accepted → `rejection()` panics on `Ok`. The importer hardcodes
+    // `unbounded: None`, so any `Some` is outside the canonical subset.
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
+        .with_attrs(Attrs::Real(RealAttrs {
+            unbounded: Some(true),
+            ..RealAttrs::default()
+        }))
+        .expect("Real attrs on a Real connector");
+    let diags = rejection(&graph);
+    assert_eq!(diags.len(), 1, "exactly one offender: {diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
+    assert_eq!(diags[0].subject.as_deref(), Some(HAND_CON_SUBJECT));
+    assert_eq!(
+        diags[0].message,
+        "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
+         which is outside the canonical (bare-scalar) export subset"
+    );
+}
+
+#[test]
+fn non_finite_real_bound_is_rejected_with_the_owning_block_subject() {
+    // Removal-mutation pin (R6-C): delete the `is_finite()` guard in `finite_real_bound` →
+    // `CxfValue::Float(NaN)` emits as JSON `null` → the export is `Ok` → `rejection()` panics on
+    // `Ok`. Mirrors `non_finite_real_parameters_are_rejected`. Each of the 6 cases sets exactly
+    // ONE field non-finite (`min` XOR `max`) and the other `None`, so each yields exactly one
+    // `MSG_ATTR_NONFINITE_BOUND` diag — `assert_eq!(diags.len(), 1)` per case (NOT both fields
+    // non-finite at once, which would yield 2 diags).
+    let check = |attrs: RealAttrs, label: &str, bad: f64| {
+        let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+        graph.connectors[0] =
+            Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::Real, 0)
+                .with_attrs(Attrs::Real(attrs))
+                .expect("Real attrs on a Real connector");
+        let diags = rejection(&graph);
+        assert_eq!(
+            diags.len(),
+            1,
+            "{label} (bad={bad}): exactly one non-finite-bound diag, got: {diags:?}"
+        );
+        assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
+        assert_eq!(diags[0].subject.as_deref(), Some(HAND_CON_SUBJECT));
+        assert_eq!(
+            diags[0].message,
+            "export subset: connector carries a non-finite §7.4.1 min/max bound, \
+             which is outside the canonical (bare-scalar) export subset"
+        );
+    };
+    for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        check(
+            RealAttrs {
+                min: Some(bad),
+                max: None,
+                ..RealAttrs::default()
+            },
+            "min non-finite, max None",
+            bad,
+        );
+        check(
+            RealAttrs {
+                min: None,
+                max: Some(bad),
+                ..RealAttrs::default()
+            },
+            "max non-finite, min None",
+            bad,
+        );
+    }
+}
+
+#[test]
+fn out_of_range_external_input_is_rejected_without_a_subject() {
+    // Removal-mutation pin (residual slice a): delete the diag push in the `let Some(c) = … else`
+    // arm of the `external_inputs` loop (keep the `let-else`) → the out-of-range entry silently
+    // `continue`s with no diag → `diags` is empty → the export is `Ok` → `rejection()` panics on
+    // `Ok`. Subjectless: there is no connector (index 99 is out of range), so no owner to name.
+    let mut graph = abs_graph();
+    graph.external_inputs = vec![ConnectorId(99)];
+    let diags = rejection(&graph);
+    assert_eq!(diags.len(), 1, "exactly one subjectless diag: {diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
+    assert_eq!(
+        diags[0].subject, None,
+        "no connector → no owner → subjectless"
+    );
+    assert_eq!(
+        diags[0].message,
+        "export subset: block/connector wiring is structurally inconsistent"
+    );
+}
+
+#[test]
+fn root_urn_collision_is_rejected_as_a_duplicate_id() {
+    // Removal-mutation pin (residual slice b): delete the `seen.insert(EXPORT_ROOT_IRI.to_owned())`
+    // pre-seed in `plan()` → the colliding block's first `claim_emitted_id` insert SUCCEEDS → no
+    // `MSG_DUPLICATE_ID` → the export is `Ok` → `rejection()` panics on `Ok`. The subject is the
+    // colliding `instance_iri` itself (the root URN). Arms the existing `MSG_DUPLICATE_ID` gate
+    // against the pre-seed's removal.
+    let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    graph.blocks[0].instance_iri = Some(Arc::from("urn:open-control:cxf-export:root"));
+    let diags = rejection(&graph);
+    // The colliding block node emits under the root URN; `claim_emitted_id` then fires on the
+    // pre-seeded entry. (The minted port id `urn:open-control:cxf-export:root.out0` is distinct,
+    // so only the block node collides.)
+    assert_eq!(diags.len(), 1, "exactly one duplicate-id diag: {diags:?}");
+    assert_eq!(diags[0].code, DiagCode::ExportUnsupported);
     assert_eq!(
         diags[0].subject.as_deref(),
-        Some("http://example.org#Hand.con")
+        Some("urn:open-control:cxf-export:root")
+    );
+    assert_eq!(
+        diags[0].message,
+        "export subset: emitted node @id collides with another emitted node @id"
     );
 }
 
@@ -484,12 +640,48 @@ fn parameter_named_like_a_minted_port_id_is_rejected() {
 
 #[test]
 fn every_rejection_path_returns_instead_of_panicking() {
-    // The never-panics property from the R4 floor survives on every path: exercise each
-    // rejection shape and the acceptance shape through the same call.
-    let mut graphs: Vec<ModelGraph> = vec![
+    // The never-panics property from the R4 floor survives on every path: every shape returns
+    // either `Ok` (acceptance) or `Err(Validation(_))` (rejection) — never a panic, never
+    // another error shape. After R6 the acceptance shapes are named explicitly and split out of
+    // the rejection loop, and the rejection loop asserts each graph actually REJECTS (not
+    // `Ok|Err(Validation)`), so the blanket test can no longer mask a silent-acceptance
+    // regression like the OOR deletion (slice a).
+    let with_class = |class: &str| {
+        let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+        g.blocks[0].class_iri = Arc::from(class);
+        g
+    };
+    let mut non_dense = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+    non_dense.blocks[0].id = BlockId(5);
+    let mut backwards = abs_graph();
+    backwards.connections = vec![oce_model::Connection {
+        from: ConnectorId(0),
+        to: ConnectorId(1),
+    }];
+    let mut no_boundary_iri = abs_graph();
+    no_boundary_iri.external_inputs = vec![ConnectorId(0)];
+    let mut out_of_range_external = abs_graph();
+    out_of_range_external.external_inputs = vec![ConnectorId(9)];
+
+    // Acceptance shapes (after R6 these export cleanly — emit, not reject). Named explicitly so
+    // a future regression that silently accepts a rejection shape cannot hide among them.
+    let acceptance: Vec<ModelGraph> = vec![import(MINIMAL_LOOP), import(CONNECTOR_ATTRS)];
+    for g in &acceptance {
+        match export(g) {
+            Ok(_) => {}
+            Err(CxfError::Validation(diags)) => panic!(
+                "expected an acceptance shape to export, but it rejected: {:?}",
+                diags
+            ),
+            Err(other) => panic!("unexpected error shape for an acceptance graph: {other:?}"),
+        }
+    }
+
+    // Rejection shapes: every one must return `Err(Validation(_))` (not `Ok`). The OOR external
+    // input (slice a) is in this list — a silent `continue` deletion would make it `Ok`, caught
+    // here, where the old `Ok|Err(Validation)` blanket would have masked it.
+    let rejections: Vec<ModelGraph> = vec![
         ModelGraph::new(),
-        import(MINIMAL_LOOP),
-        import(CONNECTOR_ATTRS),
         import(G36_ENUM_PARAM),
         constant_graph(vec![(Arc::from("k"), Value::Real(f64::NAN))]),
         constant_graph(vec![(
@@ -500,44 +692,35 @@ fn every_rejection_path_returns_instead_of_panicking() {
             },
         )]),
         constant_graph(vec![(Arc::from("out0"), Value::Real(1.0))]),
+        with_class("CDL.Reals.Sources#Constant"),
+        with_class("Buildings.Controls.OBC.CDL.Reals.Sources.Constant"),
+        {
+            let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+            g.connectors[0] =
+                Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::String, 0);
+            g
+        },
+        {
+            let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
+            g.connectors[0] = Connector::new(
+                ConnectorId(0),
+                BlockId(0),
+                Dir::Out,
+                ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
+                0,
+            );
+            g
+        },
+        non_dense,
+        backwards,
+        no_boundary_iri,
+        out_of_range_external,
     ];
-    let with_class = |class: &str| {
-        let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-        g.blocks[0].class_iri = Arc::from(class);
-        g
-    };
-    graphs.push(with_class("CDL.Reals.Sources#Constant"));
-    graphs.push(with_class(
-        "Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-    ));
-    for value_type in [
-        ValueType::String,
-        ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
-    ] {
-        let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-        g.connectors[0] = Connector::new(ConnectorId(0), BlockId(0), Dir::Out, value_type, 0);
-        graphs.push(g);
-    }
-    let mut non_dense = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-    non_dense.blocks[0].id = BlockId(5);
-    graphs.push(non_dense);
-    let mut backwards = abs_graph();
-    backwards.connections = vec![oce_model::Connection {
-        from: ConnectorId(0),
-        to: ConnectorId(1),
-    }];
-    graphs.push(backwards);
-    let mut no_boundary_iri = abs_graph();
-    no_boundary_iri.external_inputs = vec![ConnectorId(0)];
-    graphs.push(no_boundary_iri);
-    let mut out_of_range_external = abs_graph();
-    out_of_range_external.external_inputs = vec![ConnectorId(9)];
-    graphs.push(out_of_range_external);
-    for g in &graphs {
-        // Ok or a typed Validation error — anything else (or a panic) fails the test.
+    for g in &rejections {
         match export(g) {
-            Ok(_) | Err(CxfError::Validation(_)) => {}
-            Err(other) => panic!("unexpected error shape: {other:?}"),
+            Err(CxfError::Validation(_)) => {}
+            Ok(_) => panic!("a rejection shape was silently accepted (no diag) — {g:?}"),
+            Err(other) => panic!("unexpected error shape for a rejection graph: {other:?}"),
         }
     }
 }
