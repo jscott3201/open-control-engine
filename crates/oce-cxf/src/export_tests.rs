@@ -7,13 +7,13 @@
 
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic, Severity};
+use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};
 use oce_model::{
     Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, RealAttrs,
     Value, ValueType,
 };
 
-use super::{CxfError, ResolveOptions, export, import_cxf};
+use super::{CxfError, ResolveOptions, export, export_with_report, import_cxf};
 
 const MINIMAL_LOOP: &str = include_str!("../tests/fixtures/minimal_loop.jsonld");
 const CONNECTOR_ATTRS: &str = include_str!("../tests/fixtures/connector_attrs.jsonld");
@@ -138,23 +138,72 @@ fn attr_bearing_export_is_byte_stable_across_repeated_calls() {
 }
 
 #[test]
-fn enum_valued_parameter_is_rejected_with_the_owning_block_subject() {
-    // cooling_only_dampers surfaces `controllerType = Enum` on the conPID BlockInstance (the
+fn enum_valued_parameter_defers_with_the_owning_block_subject_and_cascades() {
+    // R7: cooling_only_dampers carries `controllerType = Enum` on the conPID BlockInstance (the
     // high-limits/EnergyStandard fixtures do NOT — their enums are specialization-consumed and
-    // never reach a BlockInstance param, so those graphs would be accepted).
+    // never reach a BlockInstance param). Under deferral the export is `Ok`, the bytes re-import
+    // enum-free with zero error diags, and the report carries ≥1 `ExportDeferred` warning. This
+    // is BOTH the retirement of the pre-R7 enum-param rejection AND the cascade smoke test
+    // (conPID.y drives swi2.u3, so swi2 and its downstream cone are cascade-deferred) — folded,
+    // not duplicated. The cone is large, so an exact count is NOT asserted (only ≥1).
     let graph = import(G36_ENUM_PARAM);
-    let diags = rejection(&graph);
-    assert_eq!(
-        diags[0].subject.as_deref(),
-        Some("http://example.org#g36.source.cooling_only_dampers.conPID"),
-        "the first offender in block order is the enum-carrying conPID"
+    let report = export_with_report(&graph).expect("enum-carrying graph defers, not rejects");
+    assert!(
+        !report.bytes.is_empty(),
+        "the enum-free survivor subset still emits bytes"
     );
-    assert_eq!(
-        diags[0].message,
-        "export subset: parameter `controllerType` is enumeration-valued, which has no CXF \
-         literal form in the minimal export subset"
+    // T1: Ok (above). T3: ≥1 ExportDeferred warning naming conPID (the enum-bearing block).
+    let conpid_deferred = report.warnings.iter().any(|d| {
+        d.code == DiagCode::ExportDeferred
+            && d.subject.as_deref()
+                == Some("http://example.org#g36.source.cooling_only_dampers.conPID")
+    });
+    assert!(
+        conpid_deferred,
+        "the enum-bearing conPID must be named by an ExportDeferred warning: {:?}",
+        report.warnings
     );
-    assert_eq!(rejection(&graph), diags, "stable across repeated calls");
+    assert!(
+        report
+            .warnings
+            .iter()
+            .all(|d| d.code == DiagCode::ExportDeferred),
+        "every warning is a deferral (no errors): {:?}",
+        report.warnings
+    );
+    // T2: the emitted bytes re-import to an enum-free graph with zero error diags.
+    let (reimported, re_report) =
+        import_cxf(&report.bytes, &ResolveOptions::default()).expect("emitted bytes re-import");
+    assert!(
+        !has_errors(&re_report.diagnostics),
+        "re-import has no error diags (no SingleAssignment/UnresolvedReference): {:?}",
+        re_report.diagnostics
+    );
+    assert!(
+        reimported
+            .connectors
+            .iter()
+            .all(|c| !matches!(c.value_type, ValueType::Enum(_))),
+        "zero enum connectors in the re-imported graph"
+    );
+    assert!(
+        reimported.blocks.iter().all(|b| b
+            .params
+            .values
+            .iter()
+            .all(|(_, v)| !matches!(v, Value::Enum { .. }))),
+        "zero enum params in the re-imported graph"
+    );
+    // T4: the enum-bearing conPID emits NO node (block or port) in the @graph.
+    let text = std::str::from_utf8(&report.bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        !text.contains("\"@id\":\"http://example.org#g36.source.cooling_only_dampers.conPID\""),
+        "conPID's block node must be absent from the emitted @graph: {text}"
+    );
+    assert!(
+        !text.contains("\"http://example.org#g36.source.cooling_only_dampers.conPID."),
+        "no minted port @id under conPID may appear in the emitted @graph: {text}"
+    );
 }
 
 #[test]
@@ -519,10 +568,11 @@ fn string_typed_connector_is_rejected_with_the_owning_block_subject() {
 }
 
 #[test]
-fn enum_typed_connector_is_rejected_with_the_owning_block_subject() {
-    // Hand-built for isolation, but this arm is import-reachable too: the resolver's
-    // `value_type_of_datatype` maps enum datatype IRIs to `ValueType::Enum`, so an imported
-    // graph can carry one. Same placeholder-datatype hazard as the String arm.
+fn enum_typed_connector_defers_with_the_owning_block_subject() {
+    // R7: a `ValueType::Enum` connector is deferred (warning), not rejected (error). Hand-built
+    // for isolation, but this arm is import-reachable too: the resolver's
+    // `value_type_of_datatype` maps enum datatype IRIs to `ValueType::Enum`. The export is `Ok`
+    // and the report carries exactly one `ExportDeferred` warning naming the owning block.
     let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
     graph.connectors[0] = Connector::new(
         ConnectorId(0),
@@ -531,15 +581,29 @@ fn enum_typed_connector_is_rejected_with_the_owning_block_subject() {
         ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
         0,
     );
-    let diags = rejection(&graph);
-    assert_eq!(diags.len(), 1, "got: {diags:?}");
+    let report = export_with_report(&graph).expect("enum connector defers, not rejects");
+    let defers: Vec<&Diagnostic> = report
+        .warnings
+        .iter()
+        .filter(|d| d.code == DiagCode::ExportDeferred)
+        .collect();
     assert_eq!(
-        diags[0].subject.as_deref(),
-        Some("http://example.org#Hand.con")
+        defers.len(),
+        1,
+        "exactly one deferral warning: {:?}",
+        report.warnings
     );
+    assert_eq!(defers[0].severity, Severity::Warning, "non-aborting");
     assert_eq!(
-        diags[0].message,
-        "export subset: enumeration-typed connectors are outside the minimal export subset"
+        defers[0].subject.as_deref(),
+        Some("http://example.org#Hand.con"),
+        "the owning block is the subject"
+    );
+    // The enum connector's port node is absent from the emitted @graph (T4-style pin).
+    let text = std::str::from_utf8(&report.bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        !text.contains("\"http://example.org#Hand.con.out0\""),
+        "the enum connector's port node must be absent: {text}"
     );
 }
 
@@ -679,18 +743,11 @@ fn every_rejection_path_returns_instead_of_panicking() {
 
     // Rejection shapes: every one must return `Err(Validation(_))` (not `Ok`). The OOR external
     // input (slice a) is in this list — a silent `continue` deletion would make it `Ok`, caught
-    // here, where the old `Ok|Err(Validation)` blanket would have masked it.
+    // here, where the old `Ok|Err(Validation)` blanket would have masked it. Enum-carrying graphs
+    // are NOT here — after R7 they defer (Ok with warnings), they do not reject.
     let rejections: Vec<ModelGraph> = vec![
         ModelGraph::new(),
-        import(G36_ENUM_PARAM),
         constant_graph(vec![(Arc::from("k"), Value::Real(f64::NAN))]),
-        constant_graph(vec![(
-            Arc::from("mode"),
-            Value::Enum {
-                class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
-                ordinal: 1,
-            },
-        )]),
         constant_graph(vec![(Arc::from("out0"), Value::Real(1.0))]),
         with_class("CDL.Reals.Sources#Constant"),
         with_class("Buildings.Controls.OBC.CDL.Reals.Sources.Constant"),
@@ -698,17 +755,6 @@ fn every_rejection_path_returns_instead_of_panicking() {
             let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
             g.connectors[0] =
                 Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::String, 0);
-            g
-        },
-        {
-            let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-            g.connectors[0] = Connector::new(
-                ConnectorId(0),
-                BlockId(0),
-                Dir::Out,
-                ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
-                0,
-            );
             g
         },
         non_dense,

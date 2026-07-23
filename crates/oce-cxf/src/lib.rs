@@ -21,6 +21,7 @@ mod arrays;
 mod bridge;
 pub mod dto;
 mod export;
+mod export_defer;
 #[cfg(test)]
 mod export_tests;
 #[cfg(test)]
@@ -119,16 +120,68 @@ pub fn import_cxf(
 /// Reals always carry a fractional part or exponent, so a whole-number Real never re-grounds as
 /// an Integer.
 ///
+/// Enum-carrying blocks (any `ValueType::Enum` connector or `Value::Enum` parameter) are
+/// **deferred**, not rejected: the block and its transitive downstream consumers are omitted from
+/// the emitted document so the enum-free remainder can still export, and the omission is reported
+/// as an [`oce_diag::DiagCode::ExportDeferred`] **warning** (non-aborting). This function
+/// **discards deferral warnings**; use [`export_with_report`] for deferral visibility.
+///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   (subject = the owning block's `instance_iri`; connectors carry no IRI of their own) for
-///   anything outside the subset: enumeration-valued or non-finite parameters, connectors
+///   anything outside the subset that is NOT an enum deferral: non-finite parameters, connectors
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
-///   subset), String/Enum-typed connectors, blocks without an `instance_iri`, external inputs
+///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, structurally inconsistent wiring, or an empty (zero-block)
-///   graph. Never panics.
+///   graph. Enum-carrying blocks are deferred (a warning, not a rejection) and do NOT trigger
+///   this variant. Never panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
-    let doc = export::document(model)?;
+    let (doc, _warnings) = export::document(model)?;
     write_document(&doc)
+}
+
+/// The result of [`export_with_report`]: the emitted CXF bytes plus the deferral warnings
+/// (empty for a fully-in-subset graph). `#[non_exhaustive]` so future report fields (e.g. a
+/// deferred-block census) can land without breaking callers.
+///
+/// # Examples
+/// ```
+/// use oce_cxf::{ResolveOptions, export_with_report, import_cxf};
+///
+/// let (graph, _report) =
+///     import_cxf(include_bytes!("../tests/fixtures/minimal_loop.jsonld"),
+///                &ResolveOptions::default()).unwrap();
+/// let report = export_with_report(&graph).unwrap();
+/// assert!(!report.bytes.is_empty());
+/// // minimal_loop carries no enum, so no deferral warnings are emitted.
+/// assert!(report.warnings.is_empty());
+/// ```
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct ExportReport {
+    /// The emitted CXF JSON-LD document bytes (deterministic; a fixpoint of `import ∘ export`
+    /// for the enum-free survivor cone).
+    pub bytes: Vec<u8>,
+    /// The [`oce_diag::DiagCode::ExportDeferred`] warnings naming every deferred block (empty
+    /// when the whole graph was inside the export subset). Always `Warning` severity — never an
+    /// error, so a non-`Err` result here does not imply a clean graph.
+    pub warnings: Vec<oce_diag::Diagnostic>,
+}
+
+/// Export a [`ModelGraph`] and surface the deferral warnings — the non-discarding partner of
+/// [`export()`]. The `bytes` are identical to what [`export()`] returns for the same graph; the
+/// `warnings` carry every [`oce_diag::DiagCode::ExportDeferred`] diagnostic naming a deferred
+/// block (an enum-carrying block plus its transitive downstream consumers). Use this when a host
+/// needs to know which blocks were omitted; use [`export()`] when it does not.
+///
+/// # Errors
+/// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
+///   for any error-severity subset failure (same surface as [`export()`]); enum deferrals are
+///   warnings and do NOT trigger this variant.
+/// - [`CxfError::Json`] if document serialization itself fails.
+pub fn export_with_report(model: &ModelGraph) -> Result<ExportReport, CxfError> {
+    let (doc, warnings) = export::document(model)?;
+    let bytes = write_document(&doc)?;
+    Ok(ExportReport { bytes, warnings })
 }

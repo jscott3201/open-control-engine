@@ -59,10 +59,11 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
 use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
+use crate::export_defer::deferral_set;
 use crate::{CxfError, bridge};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
@@ -159,12 +160,17 @@ struct PlannedBoundary {
     targets: Vec<String>,
 }
 
-/// Export `model` as a CXF document, or reject it with `ExportUnsupported` diagnostics.
+/// Export `model` as a CXF document plus the deferral warnings (empty for a fully-in-subset
+/// graph). The warnings are `ExportDeferred` (Warning, non-aborting) — they surface via
+/// [`crate::export_with_report`] and are discarded by `crate::export`.
 ///
 /// # Errors
-/// [`CxfError::Validation`] when any subset check fails; see the module docs for the surface.
-pub(crate) fn document(model: &ModelGraph) -> Result<CxfDocument, CxfError> {
-    plan(model).map(build).map_err(CxfError::Validation)
+/// [`CxfError::Validation`] when any **error**-severity subset check fails (the three-state gate
+/// treats `ExportDeferred` warnings as non-aborting); see the module docs for the surface.
+pub(crate) fn document(model: &ModelGraph) -> Result<(CxfDocument, Vec<Diagnostic>), CxfError> {
+    plan(model)
+        .map(|(plan, warnings)| (build(plan), warnings))
+        .map_err(CxfError::Validation)
 }
 
 /// An `ExportUnsupported` error diagnostic with a subject.
@@ -195,10 +201,12 @@ fn owner_subject(g: &ModelGraph, c: &Connector, position: usize) -> String {
         .map_or_else(|| format!("connector#{position}"), str::to_owned)
 }
 
-/// Validate the export subset and mint every `@id`. Returns the full diagnostic list (all
-/// offenders, in block-then-connector-then-connection scan order) when anything is outside the
-/// subset. All ordering derives from the `ModelGraph` vectors.
-fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
+/// Validate the export subset and mint every `@id`. Returns either the plan plus the deferral
+/// warnings (empty for a fully-in-subset graph), or the full **error**-severity diagnostic list
+/// (all offenders, in block-then-connector-then-connection scan order) when any error-severity
+/// check fails. `ExportDeferred` warnings are non-aborting (the three-state gate). All ordering
+/// derives from the `ModelGraph` vectors.
+fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     if g.blocks.is_empty() {
         return Err(vec![Diagnostic::error(
             DiagCode::ExportUnsupported,
@@ -224,7 +232,12 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         )]);
     }
 
-    let mut diags: Vec<Diagnostic> = Vec::new();
+    // Phase 1 — DEFERRAL PRE-PASS: detect enum-carrying blocks, grow `deferred` to its transitive
+    // cascade fixpoint, and emit the `ExportDeferred` warnings (Warning, non-aborting). A
+    // deferred block contributes ZERO entries to the plan below (no `@id` claimed, no param
+    // diag, no `PlannedBlock`); its connectors are placeholder-indexed but never emitted.
+    let (deferred, warnings) = deferral_set(g);
+    let mut diags: Vec<Diagnostic> = warnings;
     let mut port_iri: Vec<Option<String>> = vec![None; g.connectors.len()];
     let mut blocks: Vec<PlannedBlock> = Vec::with_capacity(g.blocks.len());
     // Every @id the document will carry, for duplicate detection only — membership checks,
@@ -232,7 +245,16 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
     let mut seen: BTreeSet<String> = BTreeSet::new();
     seen.insert(EXPORT_ROOT_IRI.to_owned());
 
+    // Phase 2 — per-block plan loop. The `deferred.contains(bi)` continue is the FIRST statement
+    // of the loop body, BEFORE the subject mint, `claim_emitted_id`, the class-bridge check, the
+    // param loop, and `blocks.push`. Placing it later leaks the deferred block's `@id` into
+    // `seen` (poisoning duplicate detection for survivors) and/or pushes a `PlannedBlock` for a
+    // deferred block (subset-escape). The `param_binding` `Value::Enum` arm is thus unreachable
+    // for any deferred block (the whole param loop is skipped).
     for (bi, b) in g.blocks.iter().enumerate() {
+        if deferred.contains(&bi) {
+            continue;
+        }
         let subject: String = match b.instance_iri.as_deref() {
             Some(iri) => iri.to_owned(),
             None => {
@@ -317,35 +339,47 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         });
     }
 
-    // Every connector must be claimed by exactly one owner port list (double claims were caught
-    // above); an orphan would silently vanish from the document.
+    // Phase 3 — orphan scan. SKIP connectors whose owning block is deferred: a deferred block's
+    // connectors are never claimed (Phase 2 skipped `claim_port`), so `port_iri[i]` is `None`.
+    // Without this skip the orphan scan would inject `MSG_STRUCTURE` Errors for every deferred
+    // connector → `has_errors` true → the Defer state (warnings-only) would be unreachable. The
+    // gate flip alone is insufficient; this skip is load-bearing.
     for (i, c) in g.connectors.iter().enumerate() {
+        if deferred.contains(&(c.block.0 as usize)) {
+            continue;
+        }
         if port_iri[i].is_none() {
             diags.push(reject(MSG_STRUCTURE, &owner_subject(g, c, i)));
         }
     }
 
-    // Connector-level subset checks: importable value type, then attribute classification. A
-    // tag-mismatched connector (attrs variant ≠ value_type) pushes `MSG_STRUCTURE` only —
-    // `classify_attrs` is NOT called on it, so nominal/unbounded/non-finite diags do not
-    // double-fire alongside the structural rejection. A type-matched connector is classified:
-    // the five in-subset §7.4.1 fields are carried onto `PortAttrs` for emission, while
-    // `nominal`/`unbounded`/non-finite bounds are rejected (outside the canonical subset).
+    // Phase 4 — connector-level subset checks. DO NOT top-of-loop `continue` on deferred
+    // connectors: `datatypes`/`classified` are PUSH-built and `plan.ports` indexes them
+    // POSITIONALLY (by connector position), so a `continue` would shrink them and shift the
+    // index. Instead push a PLACEHOLDER for a deferred connector (`S231:Real` + `PortAttrs::None`)
+    // and skip ONLY the enum-arm reject — the `ValueType::Enum` arm defers (warned in Phase 1b),
+    // while the `ValueType::String` arm STILL rejects (a deferred block also carrying a String
+    // connector aborts with Error, not defers — the String axis pre-empts the deferral).
     let mut datatypes: Vec<&'static str> = Vec::with_capacity(g.connectors.len());
     let mut classified: Vec<PortAttrs> = Vec::with_capacity(g.connectors.len());
     for (i, c) in g.connectors.iter().enumerate() {
         let subject = owner_subject(g, c, i);
+        let is_deferred = deferred.contains(&(c.block.0 as usize));
         datatypes.push(match c.value_type {
             ValueType::Real => "S231:Real",
             ValueType::Integer => "S231:Integer",
             ValueType::Boolean => "S231:Boolean",
             ValueType::String => {
                 diags.push(reject(MSG_STRING_CONNECTOR, &subject));
-                "S231:Real" // placeholder; the non-empty diags gate discards the plan
+                "S231:Real" // placeholder; the error gate discards the plan
             }
             ValueType::Enum(_) => {
-                diags.push(reject(MSG_ENUM_CONNECTOR, &subject));
-                "S231:Real" // placeholder; the non-empty diags gate discards the plan
+                // Deferred (warned in Phase 1b), not rejected. The placeholder is never read —
+                // Phase 7 skips the connector — but the slot must exist to preserve the index.
+                if !is_deferred {
+                    diags.push(reject(MSG_ENUM_CONNECTOR, &subject));
+                }
+                "S231:Real"
             }
         });
         if !c.attrs.matches(c.value_type) {
@@ -356,7 +390,11 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         }
     }
 
-    // Connections become each source port's isConnectedTo list, in `connections` vector order.
+    // Phase 5 — connections. The orphan guard `port_iri[t].is_none()` drops any edge whose TARGET
+    // endpoint owner is deferred (a deferred block's connectors are unclaimed). The NEW
+    // source-side `continue` is defense-in-depth: it drops an edge whose SOURCE endpoint owner is
+    // deferred even if a future change re-enabled `claim_port` for deferred blocks. Either guard
+    // alone suffices for correctness with Phase 2 in place; both are required by the brief.
     let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
     for conn in &g.connections {
         let (f, t) = (conn.from.0 as usize, conn.to.0 as usize);
@@ -376,14 +414,23 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
             });
             continue;
         }
-        // An unclaimed target was already rejected by the orphan scan; nothing to add here.
+        // Defense-in-depth: drop edges whose source owner is deferred.
+        if g.connectors
+            .get(f)
+            .is_some_and(|c| deferred.contains(&(c.block.0 as usize)))
+        {
+            continue;
+        }
+        // Orphan guard: an unclaimed target (including any deferred-target endpoint) is dropped.
         if let Some(to_iri) = port_iri[t].as_ref() {
             targets[f].push(to_iri.clone());
         }
     }
 
-    // Boundary inputs: group `external_inputs` by their stored boundary IRI in first-occurrence
-    // order (one boundary node may fan out to several child inputs).
+    // Phase 6 — boundary inputs. SKIP any `external_inputs` entry whose target owner is deferred:
+    // a boundary input driving a deferred block's child port would emit a boundary node whose
+    // `isConnectedTo` target is a port node Phase 7 did NOT emit → re-import `UnresolvedReference`
+    // (resolve/mod.rs:527-533). This is the third importer-inertness invariant.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
     for cid in &g.external_inputs {
         let idx = cid.0 as usize;
@@ -396,6 +443,9 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
             ));
             continue;
         };
+        if deferred.contains(&(c.block.0 as usize)) {
+            continue; // boundary drives a deferred block's child — drop the whole entry
+        }
         let subject = owner_subject(g, c, idx);
         if c.dir != Dir::In {
             diags.push(reject(MSG_STRUCTURE, &subject));
@@ -422,15 +472,31 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         }
     }
 
-    if !diags.is_empty() {
+    // Phase 8 — three-state gate. Abort ONLY on error-severity diagnostics (the
+    // `ExportDeferred` warnings are non-aborting). The gate flip alone is insufficient — the
+    // Phase 3 orphan-scan skip is load-bearing to keep deferred connectors from injecting
+    // `MSG_STRUCTURE` Errors.
+    if has_errors(&diags) {
         return Err(diags);
     }
 
-    // All checks passed: every connector is claimed exactly once, so every `port_iri` is `Some`.
+    // All error checks passed. `port_iri` may still hold `None` for deferred connectors (never
+    // claimed); Phase 7 skips them, so the `let Some(iri) = minted` arm below never hits its
+    // fallback for a deferred connector. Every survivor connector is claimed exactly once.
     let mut ports = Vec::with_capacity(g.connectors.len());
     for (i, minted) in port_iri.into_iter().enumerate() {
+        // Phase 7 — SKIP connectors whose owner is deferred. The placeholder `datatypes[i]`/
+        // `classified[i]` from Phase 4 is never read for a deferred connector. Forgetting this
+        // skip emits a deferred enum connector as a `S231:Real` port (silent type-mutation,
+        // subset-escape), NOT a loud arity failure.
+        let Some(c) = g.connectors.get(i) else {
+            continue;
+        };
+        if deferred.contains(&(c.block.0 as usize)) {
+            continue;
+        }
         let Some(iri) = minted else {
-            // Unreachable after the orphan scan above; kept total (never a panic) regardless.
+            // Unreachable for a survivor after the orphan scan; kept total (never a panic).
             return Err(vec![Diagnostic::error(
                 DiagCode::ExportUnsupported,
                 MSG_STRUCTURE,
@@ -444,11 +510,14 @@ fn plan(g: &ModelGraph) -> Result<Plan, Vec<Diagnostic>> {
         });
     }
 
-    Ok(Plan {
-        blocks,
-        ports,
-        boundaries,
-    })
+    Ok((
+        Plan {
+            blocks,
+            ports,
+            boundaries,
+        },
+        diags,
+    ))
 }
 
 /// Claim connector `raw_cid` for owner block `bi` under `dir`, recording `minted` as its port
