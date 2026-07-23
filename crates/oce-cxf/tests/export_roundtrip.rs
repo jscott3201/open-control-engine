@@ -11,10 +11,13 @@
 mod render;
 
 use oce_cxf::{ResolveOptions, export, import_cxf};
-use oce_model::{ConnectorId, ModelGraph, Value};
+use oce_model::{Attrs, ConnectorId, ModelGraph, RealAttrs, Value};
 use render::render;
 
 const FIXTURE: &str = include_str!("fixtures/minimal_loop.jsonld");
+/// The §7.4.1 attr-rich fixture: all three `TermAttr` wire shapes (bare/typed/IRI) plus Real
+/// `min`/`max` on one Real output connector. Used by the R6 attr-bearing RT-2 fixpoint test.
+const ATTRS_FIXTURE: &str = include_str!("fixtures/connector_attrs.jsonld");
 
 fn import_ok(bytes: &[u8]) -> ModelGraph {
     let (g, report) =
@@ -28,7 +31,7 @@ fn import_ok(bytes: &[u8]) -> ModelGraph {
 }
 
 fn export_ok(g: &ModelGraph) -> Vec<u8> {
-    export(g).expect("minimal_loop is inside the minimal export subset")
+    export(g).expect("graph is inside the minimal export subset")
 }
 
 #[test]
@@ -191,5 +194,121 @@ fn boundary_input_reconstruction_reelides_to_the_original_iri() {
     assert_eq!(
         boundary["S231:isConnectedTo"]["@id"], "http://example.org#MinLoop.gt.in1",
         "the boundary drives the minted child port"
+    );
+}
+
+#[test]
+fn attr_bearing_connector_reaches_the_rt2_render_fixpoint() {
+    // R6 attr-bearing RT-2 fixpoint: `G1 = import(connector_attrs.jsonld)`; `bytes = export(G1)`;
+    // `G2 = import(bytes)`; `render(G1) == render(G2)` bit-exact. The fixture uses all three
+    // `TermAttr` wire shapes (bare "K", typed quantity, IRI displayUnit) plus Real `min`/`max`.
+    // Under Bare-Scalar Canonical, export emits bare shapes where the original had typed/IRI;
+    // `import(export(G1))` then re-parses those bare shapes back to the identical `Arc<str>` terms
+    // and finite `f64` bounds, so `render(G1) == render(G2)` holds (render compares `as_deref()`
+    // for terms and `to_bits()` for bounds — the BSC shape survives the `as_term()` collapse and
+    // reproduces itself).
+    let g1 = import_ok(ATTRS_FIXTURE.as_bytes());
+    let bytes = export_ok(&g1);
+    let g2 = import_ok(&bytes);
+    assert_eq!(
+        render(&g1),
+        render(&g2),
+        "render(G1) must equal render(G2) bit-exactly for the attr-bearing fixture"
+    );
+    // Second order: exporting G2 reproduces the same bytes — the fixpoint holds at the byte level
+    // too (the bare shapes are a fixpoint of `import ∘ export`).
+    assert_eq!(export_ok(&g2), bytes);
+}
+
+#[test]
+fn attr_bearing_connector_reproduces_all_five_bsc_real_attrs_field_by_field() {
+    // Oracle cross-check independent of the render string: the five in-subset §7.4.1 `RealAttrs`
+    // fields (unit, quantity, display_unit, min, max) survive `export ∘ import` bit-identically.
+    // The fixture carries all three term wire shapes and both numeric bounds, so each field is
+    // exercised. `nominal`/`unbounded` stay `None` on both sides (the importer hardcodes them).
+    let g1 = import_ok(ATTRS_FIXTURE.as_bytes());
+    let g2 = import_ok(&export_ok(&g1));
+    let attrs_of = |g: &ModelGraph| match &g
+        .connectors
+        .iter()
+        .find(|c| matches!(&c.attrs, Attrs::Real(a) if a.unit.is_some()))
+        .expect("the con.y Real connector carries attrs")
+        .attrs
+    {
+        Attrs::Real(a) => a.clone(),
+        _ => unreachable!("matched a Real connector"),
+    };
+    let a1 = attrs_of(&g1);
+    let a2 = attrs_of(&g2);
+    assert_eq!(a1.unit, a2.unit, "bare-string unit survives BSC");
+    assert_eq!(
+        a1.quantity, a2.quantity,
+        "typed-literal quantity survives BSC"
+    );
+    assert_eq!(
+        a1.display_unit, a2.display_unit,
+        "IRI-node displayUnit survives BSC"
+    );
+    assert_eq!(
+        a1.min.map(f64::to_bits),
+        a2.min.map(f64::to_bits),
+        "Real min survives BSC bit-exactly"
+    );
+    assert_eq!(
+        a1.max.map(f64::to_bits),
+        a2.max.map(f64::to_bits),
+        "Real max survives BSC bit-exactly"
+    );
+    assert_eq!(a1.nominal, a2.nominal, "nominal stays None on both sides");
+    assert_eq!(
+        a1.unbounded, a2.unbounded,
+        "unbounded stays None on both sides"
+    );
+    // Sanity: the fixture's parsed attrs are the expected rich set (guards against a future
+    // fixture edit silently weakening this oracle).
+    let expected = RealAttrs {
+        unit: Some(std::sync::Arc::from("K")),
+        quantity: Some(std::sync::Arc::from("ThermodynamicTemperature")),
+        display_unit: Some(std::sync::Arc::from("degC")),
+        min: Some(0.0),
+        max: Some(350.0),
+        nominal: None,
+        unbounded: None,
+    };
+    assert_eq!(
+        a1, expected,
+        "the fixture's parsed attrs are the expected rich set"
+    );
+}
+
+#[test]
+fn attr_bearing_port_emits_the_bare_scalar_canonical_keys() {
+    // Structural pin on the emitted document: the attr-bearing port node carries the five BSC
+    // keys as bare scalars/strings — `S231:unit`/`quantity`/`displayUnit` as bare strings, and
+    // `S231:min`/`max` as bare JSON numbers (fractional when whole, per the type-flip guard).
+    // The bare shape is what survives `as_term()` and reproduces itself; a typed/IRI shape would
+    // not reproduce the original `RealAttrs` on re-import.
+    let g1 = import_ok(ATTRS_FIXTURE.as_bytes());
+    let bytes = export_ok(&g1);
+    let text = std::str::from_utf8(&bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        text.contains(r#""S231:unit":"K""#),
+        "unit emits as a bare string, got: {text}"
+    );
+    assert!(
+        text.contains(r#""S231:quantity":"ThermodynamicTemperature""#),
+        "quantity emits as a bare string (the typed literal collapses to bare), got: {text}"
+    );
+    assert!(
+        text.contains(r#""S231:displayUnit":"degC""#),
+        "displayUnit emits as a bare string (the IRI node collapses to bare), got: {text}"
+    );
+    assert!(
+        text.contains(r#""S231:min":0.0"#),
+        "min emits as a bare number with its fractional part, got: {text}"
+    );
+    assert!(
+        text.contains(r#""S231:max":350.0"#),
+        "max emits as a bare number with its fractional part, got: {text}"
     );
 }
