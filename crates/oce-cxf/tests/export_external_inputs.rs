@@ -16,8 +16,8 @@ use std::sync::Arc;
 use oce_cxf::{CxfError, ResolveOptions, export_with_report, import_cxf};
 use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};
 use oce_model::{
-    BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph, ParamTable,
-    Value, ValueType,
+    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, EnumClassId, ModelGraph,
+    ParamTable, Value, ValueType,
 };
 
 /// IRI prefix for every hand-built block here.
@@ -59,6 +59,25 @@ fn conn(idx: u32, owner: u32, dir: Dir, value_type: ValueType) -> Connector {
 /// A single Real parameter — in-subset payload for a survivor block.
 fn real_param(k: f64) -> Vec<(Arc<str>, Value)> {
     vec![(Arc::from("k"), Value::Real(k))]
+}
+
+/// An enum-valued parameter — the payload that puts a block in the deferred set on its own.
+fn enum_param() -> Vec<(Arc<str>, Value)> {
+    vec![(
+        Arc::from("controllerType"),
+        Value::Enum {
+            class: EnumClassId::SIMPLE_CONTROLLER,
+            ordinal: 1,
+        },
+    )]
+}
+
+/// An output→input connection between two raw connector indices.
+fn wire(from: u32, to: u32) -> Connection {
+    Connection {
+        from: ConnectorId(from),
+        to: ConnectorId(to),
+    }
 }
 
 /// Export `g`, requiring rejection, and return the diagnostics.
@@ -164,7 +183,93 @@ fn one_boundary_driving_several_distinct_inputs_still_exports() {
 }
 
 #[test]
-fn a_duplicate_external_input_on_a_deferred_block_does_not_abort_the_export() {
+fn a_duplicate_external_input_on_a_cascade_deferred_block_does_not_abort_the_export() {
+    // The half of the survivor scoping the locally-enum-bearing case cannot see. `add` carries no
+    // enum of its own — it is deferred only because `enumsrc`, its sole driver on `in0`, was. Its
+    // *other* input is the one listed twice.
+    //
+    // The distinction is load-bearing because Phase 6 skips on `deferred.contains`, not on "this
+    // block carries an enum". Narrow that skip to locally enum-bearing blocks and every other
+    // test in the crate still passes — a review did exactly that — while this graph wrongly
+    // rejects with `ExportUnsupported` instead of exporting `keep` with two deferral warnings.
+    // A cascade-deferred block is as absent from the document as the block that doomed it, so
+    // its boundary entries cannot reach the wire either.
+    let g = ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "enumsrc",
+                &[],
+                &[0],
+                enum_param(),
+            ),
+            block(1, "CDL.Reals.Add", "add", &[1, 2], &[3], vec![]),
+            block(
+                2,
+                "CDL.Reals.Sources.Constant",
+                "keep",
+                &[],
+                &[4],
+                real_param(3.0),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::In, ValueType::Real),
+            conn(2, 1, Dir::In, ValueType::Real).with_iri("http://example.org#Bound.uSet"),
+            conn(3, 1, Dir::Out, ValueType::Real),
+            conn(4, 2, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![wire(0, 1)],
+        external_inputs: vec![ConnectorId(2), ConnectorId(2)],
+    };
+
+    let report =
+        export_with_report(&g).expect("a cascade-deferred block's duplicate must not abort");
+    let subjects: Vec<&str> = report
+        .warnings
+        .iter()
+        .map(|d| {
+            assert_eq!(d.code, DiagCode::ExportDeferred, "no rejection may appear");
+            assert_eq!(d.severity, Severity::Warning);
+            d.subject.as_deref().expect("a deferral names its block")
+        })
+        .collect();
+    assert_eq!(
+        subjects,
+        vec![iri("enumsrc"), iri("add")],
+        "the enum source defers, then the cascade reaches `add`"
+    );
+
+    let doc: serde_json::Value = serde_json::from_slice(&report.bytes).expect("export emits JSON");
+    let ids: Vec<String> = doc["@graph"]
+        .as_array()
+        .expect("@graph is an array")
+        .iter()
+        .filter_map(|n| n["@id"].as_str().map(String::from))
+        .collect();
+    assert!(
+        ids.contains(&iri("keep")),
+        "the survivor must be emitted, got: {ids:?}"
+    );
+    for gone in [iri("enumsrc"), iri("add")] {
+        assert!(
+            !ids.iter()
+                .any(|id| *id == gone || id.starts_with(&format!("{gone}."))),
+            "no node belonging to the deferred block `{gone}` may be emitted, got: {ids:?}"
+        );
+    }
+    let g2 = reimport_clean(&report.bytes);
+    assert!(
+        g2.external_inputs.is_empty(),
+        "the cascade-deferred block's boundary entries are dropped entirely: {:?}",
+        g2.external_inputs
+    );
+}
+
+#[test]
+fn a_duplicate_external_input_on_an_enum_bearing_deferred_block_does_not_abort_the_export() {
     // The rejection is scoped to survivors. `sink` is deferred on its enum input, so its boundary
     // entries describe a port the document never contains — repeated or not, they are dropped in
     // Phase 6 before the duplicate check can see them. Rejecting here would sink an export whose
