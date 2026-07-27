@@ -217,7 +217,11 @@ fn every_cascade_warning_names_an_input_whose_drivers_are_all_deferred() {
     // This is what catches a `k` sourced from any list other than the deferred block's own inputs.
     // A wrong index either falls outside the vector or lands on a port whose drivers are not all
     // deferred — the single-position check in the first test cannot see the second case.
-    for g in [misowned_connector_graph(), staggered_cascade_graph()] {
+    for g in [
+        misowned_connector_graph(),
+        staggered_cascade_graph(),
+        deep_position_cascade_graph(),
+    ] {
         let report = export_ok(&g);
         let deferred: Vec<&str> = report
             .warnings
@@ -237,11 +241,23 @@ fn every_cascade_warning_names_an_input_whose_drivers_are_all_deferred() {
                 .expect("the cascade slot renders a bare index");
 
             let subject = d.subject.as_deref().expect("a warning names its block");
-            let b = g
+            // The subject must identify ONE block. `k` is a position in a specific block's input
+            // list, so it means nothing if two blocks share an `instance_iri` — and export's
+            // duplicate-`@id` claim only covers SURVIVORS, so a deferred block sharing an IRI with
+            // a survivor is not rejected. That is a pre-existing gap in the duplicate-id surface
+            // rather than a naming defect, but it bounds what "the warning names the port" can
+            // mean, so the ambiguity is asserted away here rather than assumed absent.
+            let matches: Vec<&BlockInstance> = g
                 .blocks
                 .iter()
-                .find(|b| b.instance_iri.as_deref() == Some(subject))
-                .expect("the subject resolves to a block in this graph");
+                .filter(|b| b.instance_iri.as_deref() == Some(subject))
+                .collect();
+            assert_eq!(
+                matches.len(),
+                1,
+                "`{subject}` must identify exactly one block for `in{k}` to be meaningful"
+            );
+            let b = matches[0];
 
             let cid = b
                 .inputs
@@ -305,6 +321,60 @@ fn staggered_cascade_graph() -> ModelGraph {
         connections: vec![wire(0, 2), wire(3, 4)],
         external_inputs: vec![ConnectorId(1)],
     }
+}
+
+/// A cascade trigger at port position **2**, with positions 0 and 1 both boundary inputs.
+///
+/// Positions 0 and 1 alone cannot distinguish a correct `k` from one clamped to the first two
+/// slots: `format!("in{}", k.min(1))` satisfies every test that only reaches position 1. The
+/// deferral loop breaks at the first triggering input, so 0 and 1 must be undriven for the trigger
+/// to land at 2.
+fn deep_position_cascade_graph() -> ModelGraph {
+    ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "enumsrc",
+                &[],
+                &[0],
+                enum_param(),
+            ),
+            block(1, "CDL.Reals.MultiSum", "deep", &[1, 2, 3], &[4], vec![]),
+            block(
+                2,
+                "CDL.Reals.Sources.Constant",
+                "keeper",
+                &[],
+                &[5],
+                real_param(2.0),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out),
+            conn(1, 1, Dir::In).with_iri("http://example.org#Cascade.uOne"),
+            conn(2, 1, Dir::In).with_iri("http://example.org#Cascade.uTwo"),
+            conn(3, 1, Dir::In),
+            conn(4, 1, Dir::Out),
+            conn(5, 2, Dir::Out),
+        ],
+        connections: vec![wire(0, 3)],
+        external_inputs: vec![ConnectorId(1), ConnectorId(2)],
+    }
+}
+
+#[test]
+fn a_cascade_trigger_beyond_the_first_two_positions_is_named_exactly() {
+    // Guards against a `k` clamped to a small range. Only an index taken from the real port-list
+    // position can produce `in2` here; anything saturating at 1 reports the wrong port, and the
+    // two ports it would name are boundary inputs that did not cascade.
+    let report = export_ok(&deep_position_cascade_graph());
+    let warning = cascade_warning_for(&report, &iri("deep"))
+        .expect("`deep` cascade-defers on its third input");
+    assert!(
+        warning.contains("input connector `in2`"),
+        "the trigger is `deep.inputs[2]`: {warning}"
+    );
 }
 
 #[test]

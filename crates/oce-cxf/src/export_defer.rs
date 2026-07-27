@@ -84,7 +84,16 @@ fn msg_enum_defer_param(subject: &str, name: &str, class: &str) -> String {
 
 /// Deferral message for a cascade-deferred block: every driver of one of its input connectors was
 /// itself deferred upstream. Pushed in Phase 1d over `deferred \ enum_blocks` as the cascade
-/// fixpoint grows. `conn` is the input connector's owning-block-relative name.
+/// fixpoint grows.
+///
+/// `conn` is `in{k}` for the triggering input's position in the DEFERRED BLOCK'S OWN `inputs`
+/// vector — the same position `crate::export::plan` mints into that block's port `@id`. Not the
+/// connector's "owning-block-relative" name: that phrasing belonged to a deleted helper which
+/// resolved the list from `Connector::block`, the owner a connector *claims*, and so could name a
+/// port in a different block entirely. The caveat on reading the pair as a navigable reference is
+/// the `instance_iri`, not the position: `crate::export::plan` claims duplicate `@id`s only among
+/// SURVIVORS, so two blocks sharing an `instance_iri` — one deferred, one not — leave the subject
+/// ambiguous and `k` indexed against whichever block the reader picks.
 fn msg_enum_defer_cascade(subject: &str, conn: &str) -> String {
     format!(
         "export subset: deferring block `{subject}` — all drivers of input connector `{conn}` \

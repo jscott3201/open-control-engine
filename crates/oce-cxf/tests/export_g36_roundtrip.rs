@@ -29,9 +29,13 @@ mod render;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use oce_cxf::{ExportReport, ResolveOptions, export_with_report, import_cxf};
-use oce_model::{Dir, ModelGraph, Value, ValueType};
+use oce_model::{
+    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
+    ValueType,
+};
 use render::{render, render_attrs, render_value};
 
 /// Every `*.jsonld` under `tests/fixtures/g36/`, sorted. Checked in so that adding a fixture is a
@@ -156,7 +160,16 @@ fn block_profiles(g: &ModelGraph) -> BTreeMap<String, String> {
                 ids.iter()
                     .map(|cid| {
                         let c = &g.connectors[cid.0 as usize];
-                        format!("{:?}/{}", c.value_type, render_attrs(&c.attrs))
+                        // `iri` is in the key on purpose. It is the connector's own boundary
+                        // identity, and without it a mutation that collapsed three distinct
+                        // external-input IRIs onto one, or renamed the canonical input ids,
+                        // reached the emitted bytes with the whole suite green.
+                        format!(
+                            "{:?}/iri={:?}/{}",
+                            c.value_type,
+                            c.iri.as_deref(),
+                            render_attrs(&c.attrs)
+                        )
                     })
                     .collect()
             };
@@ -222,61 +235,114 @@ fn assert_full_graph_rt2(fixture: &str, g1: &ModelGraph, report: &ExportReport) 
     );
 }
 
-/// Every deferred block must be deferred for a reason the algorithm actually licenses: it carries
-/// enumeration content itself, or one of its inputs was driven and lost *every* driver to the
-/// deferred set.
+/// The deferred set recomputed from the graph alone, as the LEAST fixpoint reachable from blocks
+/// that carry enumeration content: seed with the enum roots, then repeatedly add any block having a
+/// driven input whose every driver is already in the set.
 ///
-/// This is the one assertion here that does NOT trust the warnings. Everything else derives the
-/// survivor cone from the warning subjects, which makes those checks self-consistent under a
-/// cascade that over-defers — a smaller cone still round-trips perfectly, so the profile, edge and
-/// no-leak assertions all pass while a third of the document silently vanishes. Verified: with the
-/// cascade widened from "every driver deferred" to "any driver deferred", the whole-corpus RT-2
-/// test stayed green and only the pinned counts noticed. This check recomputes the justification
-/// from the graph, so an unjustified deferral fails on the fixture that carries it rather than on
-/// the two whose counts happen to be pinned.
-fn assert_every_deferral_is_justified(fixture: &str, g: &ModelGraph, deferred: &BTreeSet<String>) {
-    let owner_iri = |cid: oce_model::ConnectorId| -> Option<&str> {
+/// "Least fixpoint from the roots" is the whole point, and a weaker phrasing was the defect this
+/// replaced. Checking each deferred block against the FINAL set only asks whether the set is
+/// internally consistent, and a feedback CYCLE satisfies that vacuously: two blocks driving each
+/// other are each "justified" by the other, so an arbitrary cycle can be added to the deferred set
+/// and every block in it still passes — while tracing back to no enum root at all. A review
+/// reproduced exactly that on `multizone_vav_supply_fan`, growing deferrals from 2 to 10 and
+/// dropping a block from the emitted bytes, with the whole suite green. Growing outward from the
+/// roots cannot admit a cycle that no root reaches.
+fn least_deferred_closure(g: &ModelGraph) -> BTreeSet<String> {
+    let iri_of = |bi: usize| -> Option<&str> { g.blocks.get(bi)?.instance_iri.as_deref() };
+    let owner_of = |cid: oce_model::ConnectorId| -> Option<&str> {
         let c = g.connectors.get(cid.0 as usize)?;
-        g.blocks.get(c.block.0 as usize)?.instance_iri.as_deref()
+        iri_of(c.block.0 as usize)
     };
 
-    for b in &g.blocks {
-        let Some(iri) = b.instance_iri.as_deref() else {
-            continue;
-        };
-        if !deferred.contains(iri) {
-            continue;
-        }
+    let mut set: BTreeSet<String> = g
+        .blocks
+        .iter()
+        .filter(|b| {
+            b.params
+                .values
+                .iter()
+                .any(|(_, v)| matches!(v, Value::Enum { .. }))
+                || b.inputs.iter().chain(b.outputs.iter()).any(|cid| {
+                    g.connectors
+                        .get(cid.0 as usize)
+                        .is_some_and(|c| matches!(c.value_type, ValueType::Enum(_)))
+                })
+        })
+        .filter_map(|b| b.instance_iri.as_deref().map(str::to_owned))
+        .collect();
 
-        let carries_enum = b
-            .params
-            .values
-            .iter()
-            .any(|(_, v)| matches!(v, Value::Enum { .. }))
-            || b.inputs.iter().chain(b.outputs.iter()).any(|cid| {
-                g.connectors
-                    .get(cid.0 as usize)
-                    .is_some_and(|c| matches!(c.value_type, ValueType::Enum(_)))
+    let mut grew = true;
+    while grew {
+        grew = false;
+        for b in &g.blocks {
+            let Some(iri) = b.instance_iri.as_deref() else {
+                continue;
+            };
+            if set.contains(iri) {
+                continue;
+            }
+            let cascades = b.inputs.iter().any(|cid| {
+                let drivers: Vec<&oce_model::Connection> =
+                    g.connections.iter().filter(|c| c.to == *cid).collect();
+                !drivers.is_empty()
+                    && drivers
+                        .iter()
+                        .all(|c| owner_of(c.from).is_some_and(|o| set.contains(o)))
             });
-        if carries_enum {
-            continue; // a root cause, not a cascade
+            if cascades {
+                set.insert(iri.to_owned());
+                grew = true;
+            }
         }
-
-        let cascaded = b.inputs.iter().any(|cid| {
-            let drivers: Vec<&oce_model::Connection> =
-                g.connections.iter().filter(|c| c.to == *cid).collect();
-            !drivers.is_empty()
-                && drivers
-                    .iter()
-                    .all(|c| owner_iri(c.from).is_some_and(|o| deferred.contains(o)))
-        });
-        assert!(
-            cascaded,
-            "`{fixture}` deferred `{iri}`, which carries no enumeration content and has no input \
-             whose drivers were all deferred — the cascade reached a block it had no licence to \
-             omit"
-        );
     }
+    set
+}
+
+/// The warned set must equal the least closure exactly — no block omitted without a licence, and
+/// none kept that the cascade should have reached.
+///
+/// This is the one assertion here that does not trust the warnings at all. Everything else derives
+/// the survivor cone FROM the warning subjects, which makes those checks self-consistent under any
+/// bug that merely shrinks the cone: a smaller cone still round-trips perfectly, so the profile,
+/// edge and no-leak assertions all pass while blocks silently vanish from the document.
+///
+/// Equality, not containment, because the two directions catch different bugs: a superset is
+/// over-deferral (the document loses blocks it should carry) and a subset is under-deferral (enum
+/// content, or something downstream of it, survives into bytes that cannot re-import).
+fn assert_deferred_set_is_the_least_closure(
+    fixture: &str,
+    g: &ModelGraph,
+    deferred: &BTreeSet<String>,
+) {
+    let expected = least_deferred_closure(g);
+    let extra: Vec<&String> = deferred.difference(&expected).collect();
+    let missing: Vec<&String> = expected.difference(deferred).collect();
+    assert!(
+        extra.is_empty() && missing.is_empty(),
+        "`{fixture}` deferred set is not the least closure from the enum roots.\n  \
+         deferred without a licence (over-deferral, blocks lost from the document): {extra:?}\n  \
+         reachable from an enum root but NOT deferred (under-deferral): {missing:?}"
+    );
+}
+
+/// The graph's `external_inputs` named by owner IRI and port position, skipping entries on an
+/// excluded block. The document's whole external interface: omit it and a mutation that collapses
+/// several boundary entries into one, or drops one entirely, round-trips unnoticed — `edge_set`
+/// covers block-to-block wiring only, and a boundary input is by definition undriven by any block.
+fn boundary_set(g: &ModelGraph, excluded: &BTreeSet<String>) -> BTreeSet<String> {
+    g.external_inputs
+        .iter()
+        .filter_map(|cid| {
+            let c = g.connectors.get(cid.0 as usize)?;
+            let b = g.blocks.get(c.block.0 as usize)?;
+            let owner = b.instance_iri.as_deref()?;
+            if excluded.contains(owner) {
+                return None;
+            }
+            let k = b.inputs.iter().position(|x| x == cid)?;
+            Some(format!("{owner}.in{k} <- {:?}", c.iri.as_deref()))
+        })
+        .collect()
 }
 
 /// RT-2 for a fixture whose export deferred blocks: equality over the survivor cone.
@@ -287,7 +353,7 @@ fn assert_every_deferral_is_justified(fixture: &str, g: &ModelGraph, deferred: &
 /// wiring is identical, and the bytes are a fixpoint.
 fn assert_survivor_cone_rt2(fixture: &str, g1: &ModelGraph, report: &ExportReport) {
     let deferred = deferred_subjects(report);
-    assert_every_deferral_is_justified(fixture, g1, &deferred);
+    assert_deferred_set_is_the_least_closure(fixture, g1, &deferred);
     let g2 = import_ok(fixture, &report.bytes);
 
     let all_iris: BTreeSet<&str> = g1
@@ -334,6 +400,12 @@ fn assert_survivor_cone_rt2(fixture: &str, g1: &ModelGraph, report: &ExportRepor
     );
 
     assert_eq!(
+        boundary_set(&g2, &BTreeSet::new()),
+        boundary_set(g1, &deferred),
+        "`{fixture}` survivor external inputs must round-trip exactly"
+    );
+
+    assert_eq!(
         export_ok(fixture, &g2).bytes,
         report.bytes,
         "`{fixture}` second-order byte fixpoint"
@@ -346,6 +418,85 @@ fn assert_survivor_cone_rt2(fixture: &str, g1: &ModelGraph, report: &ExportRepor
                 .all(|(_, v)| !matches!(v, Value::Enum { .. }))
         }),
         "`{fixture}` re-imported document still carries an enum parameter"
+    );
+}
+
+#[test]
+fn the_least_closure_excludes_a_cycle_no_enum_root_reaches() {
+    // The property that makes `least_deferred_closure` an oracle rather than a restatement, on a
+    // hand-built graph because the G36 corpus has no cycle reachable this way.
+    //
+    // `spinA` and `spinB` drive each other and nothing else feeds them, so under a rule phrased as
+    // "every deferred block has an input whose drivers are all deferred" the PAIR is
+    // self-supporting: each is licensed by the other, and the set {spinA, spinB} passes while
+    // tracing back to no enumeration anywhere. Growing outward from the enum roots cannot reach
+    // them, which is why the closure is computed in that direction and compared for EQUALITY.
+    let iri = |n: &str| Some(Arc::from(format!("http://example.org#Cyc.{n}").as_str()));
+    let b = |id: u32, name: &str, ins: &[u32], outs: &[u32], params: Vec<(Arc<str>, Value)>| {
+        BlockInstance {
+            id: BlockId(id),
+            class_iri: Arc::from("CDL.Reals.Abs"),
+            inputs: ins.iter().copied().map(ConnectorId).collect(),
+            outputs: outs.iter().copied().map(ConnectorId).collect(),
+            params: ParamTable { values: params },
+            decl_order: id,
+            instance_iri: iri(name),
+        }
+    };
+    let c = |id: u32, owner: u32, dir: Dir| {
+        Connector::new(ConnectorId(id), BlockId(owner), dir, ValueType::Real, 0)
+    };
+    let enum_param: Vec<(Arc<str>, Value)> = vec![(
+        Arc::from("controllerType"),
+        Value::Enum {
+            class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+            ordinal: 1,
+        },
+    )];
+
+    let g = ModelGraph {
+        blocks: vec![
+            b(0, "enumroot", &[], &[0], enum_param),
+            b(1, "downstream", &[1], &[2], vec![]),
+            b(2, "spinA", &[3], &[4], vec![]),
+            b(3, "spinB", &[5], &[6], vec![]),
+        ],
+        connectors: vec![
+            c(0, 0, Dir::Out),
+            c(1, 1, Dir::In),
+            c(2, 1, Dir::Out),
+            c(3, 2, Dir::In),
+            c(4, 2, Dir::Out),
+            c(5, 3, Dir::In),
+            c(6, 3, Dir::Out),
+        ],
+        connections: vec![
+            Connection {
+                from: ConnectorId(0),
+                to: ConnectorId(1),
+            }, // enumroot -> downstream
+            Connection {
+                from: ConnectorId(4),
+                to: ConnectorId(5),
+            }, // spinA -> spinB
+            Connection {
+                from: ConnectorId(6),
+                to: ConnectorId(3),
+            }, // spinB -> spinA
+        ],
+        external_inputs: vec![],
+    };
+
+    let closure = least_deferred_closure(&g);
+    assert!(
+        closure.contains("http://example.org#Cyc.enumroot")
+            && closure.contains("http://example.org#Cyc.downstream"),
+        "the enum root and its downstream cone are in the closure: {closure:?}"
+    );
+    assert!(
+        !closure.contains("http://example.org#Cyc.spinA")
+            && !closure.contains("http://example.org#Cyc.spinB"),
+        "a self-supporting cycle no enum root reaches must NOT be in the closure: {closure:?}"
     );
 }
 
