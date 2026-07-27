@@ -6,18 +6,31 @@ the architecture and invariants are the design of record.
 ## How changes land
 
 - Every logical change opens a pull request into the **`development`** branch.
-- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
-  formatting, the file-size cap, the no-secret scan, `rustdoc -D warnings`,
-  `clippy -D warnings`, a workspace build, the default-no-db gate, and — for dependency changes —
-  `cargo-deny`. Releases batch `development` → `main`, and a version tag drives the gated publish.
+- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+  `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
+  in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
+  per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
+  batch `development` → `main`, and a version tag drives the gated publish.
+- **Open your PR non-draft.** Every `ci.yml` job is conditioned on
+  `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
 ## Local setup
 
 The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.95.0, edition
-2024); `rustup` installs it automatically on first build. Install the git hooks once after
-cloning:
+2024); `rustup` installs it automatically on first build.
+
+`.agents/gate.sh` also needs three cargo subcommands that do not ship with rustup. Without them
+each step fails with "no such command" on a fresh clone:
+
+```bash
+cargo install cargo-nextest --locked --version 0.9.133   # pinned; see TESTING.md
+cargo install cargo-machete --locked
+cargo install cargo-deny --locked
+```
+
+Install the git hooks once after cloning:
 
 ```bash
 bash scripts/install-hooks.sh
@@ -35,28 +48,25 @@ session).
 ## Before you open a PR
 
 ```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo build --workspace --locked
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --lib --document-private-items --locked
+bash .agents/gate.sh
 ```
 
-Run the fast repository gates:
+That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
+no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
+`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
+determinism subset in debug and release codegen.
+
+If your change touches any other crate, its tests did not run. Add `full`:
 
 ```bash
-bash .github/scripts/check-file-size.sh
-bash .github/scripts/check-no-secrets.sh
-bash .github/scripts/check-default-no-db.sh
+bash .agents/gate.sh full
 ```
 
-Dependency or manifest changes (`Cargo.lock`, `Cargo.toml`, any `crates/*/Cargo.toml`,
-`deny.toml`) also require:
-
-```bash
-cargo deny check bans licenses sources
-```
-
-These mirror [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+[`.agents/gate.sh`](.agents/gate.sh) is the single source of truth for these commands, and it
+prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
+and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--bins` rustdoc pass,
+and the determinism matrix — while claiming to mirror it. Change a command in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) first, then in the script.
 
 ## Invariants a change must not violate
 

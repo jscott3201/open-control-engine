@@ -58,13 +58,16 @@ comparison that fails if even one bit differs.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
-Worked examples — the bar each **upcoming** PR must clear (none of these have landed yet; they
-are the targets this standard sets, not existing artifacts):
-- **PR-5 (resolver):** golden `ModelGraph` lowered from `minimal_loop.jsonld` + a `decl_order`
-  determinism golden + malformed-input edge cases each asserting their `DiagCode`.
-- **PR-6 (engine loop):** golden converging trace for the feedback loop (`2.0 → … → 4.0`),
-  bit-exact at every tick.
-- **PR-9 (arrays):** round-trip goldens — preserved vs flattened forms compared bit-for-bit.
+Worked examples of the bar, and where each stands:
+- **Resolver** — golden `ModelGraph` lowered from `minimal_loop.jsonld`, plus malformed-input
+  edge cases each asserting their `DiagCode`. **Landed**:
+  `crates/oce-cxf/tests/fixtures/golden/minimal_loop.modelgraph.txt`.
+- **Engine loop** — golden converging trace for the feedback loop, bit-exact at every tick.
+  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the G36 traces
+  beside it, each with a `.prov.json` recording the oracle's provenance.
+- **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit.
+  **Landed**: `crates/oce-cxf/tests/fixtures/golden/array.modelgraph.txt`,
+  `array2d.modelgraph.txt` and `array_expression.modelgraph.txt`.
 
 ### 3. Oracle cross-checks — agreement with the reference implementation
 
@@ -72,10 +75,10 @@ CDL has a normative reference (the Modelica *Buildings* library / OpenModelica).
 expression has a reference result, **cross-check against it** rather than against our own
 re-derived expectation — otherwise we are grading our own homework.
 
-- Oracle vectors **will live** in the `oce-conformance` crate — its planned role as the home for
-  reference traces and the CDL §7.7.2 expression-semantics vectors (R10.x). (Today that crate is
-  deferred: `compare()` is not yet implemented and it holds no vectors — this standard is what it
-  gets built out to satisfy.)
+- Oracle vectors live in the `oce-conformance` crate — the home for reference traces and the CDL
+  §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
+  (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
+  fixtures under `tests/fixtures/golden/`.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
@@ -132,9 +135,18 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
+| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
 | `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
+
+Read the first row in the dangerous direction and you will trust a green PR you
+should not. A change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag`
+can show every check green having run none of its own tests. Before claiming tests
+pass on such a change, run the suite yourself:
+
+```bash
+bash .agents/gate.sh full
+```
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
 
@@ -143,9 +155,23 @@ cargo nextest run --workspace            # unit + integration tests (the whole w
 cargo nextest run --profile ci           # reproduce the release gate's profile locally
 cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
 cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
-OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-api --test public_api --locked
-OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-store --test public_api --locked
 ```
+
+The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
+in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
+block, so read it from there rather than copying the date:
+
+```bash
+OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
+  cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
+  --profile public-api --locked --no-tests=fail
+```
+
+`--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
+deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
+`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. Swap `-p oce-api`
+for `-p oce-store` for the other baseline — keep the package selectors in separate invocations,
+which is what preserves vanish-to-RED for the re-exported port surface.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.
