@@ -10,9 +10,11 @@ equipment control sequences.**
 
 CDL is a declarative, object-oriented language — a strict subset of Modelica — that expresses
 building control logic as block diagrams. Its determinism contract (CDL §7.16: synchronous
-data flow + single assignment) means identical inputs and parameters yield identical outputs,
-which makes the Open Control Engine a valid **executable specification** for commissioning and
-continuous functional verification — the same control sequence, run bit-for-bit reproducibly.
+data flow + single assignment) means identical inputs and parameters yield identical outputs. The
+engine is built to be an **executable specification** on that basis — the same control sequence,
+run bit-for-bit reproducibly, for commissioning and continuous functional verification.
+Reproducibility is enforced and tested here; agreement with the normative Modelica reference is
+not yet (see the goldens note below).
 
 It is designed to be the **core engine under the hood** of larger building-control products: the
 public API and core semantics stay small, embeddable, and stable.
@@ -21,8 +23,9 @@ public API and core semantics stay small, embeddable, and stable.
 
 ## Status
 
-The architecture specification is the design of record and is complete; the implementation is
-progressing milestone by milestone, each gated by extensive tests.
+The architecture specification is the design of record. It lives in a working directory that is
+not part of this repository, so nothing below can be checked against it from a clone — the
+implementation is progressing milestone by milestone, each gated by extensive tests.
 
 | Milestone | Scope | State |
 | --- | --- | --- |
@@ -38,20 +41,43 @@ end-to-end through the frozen facade, against a registry of **133 CDL elementary
 `Reals`, 26 `Logical`, 24 `Integers`, 15 `Routing`, 7 `Discrete`, 4 `Conversions`, 3
 `Psychrometrics`, 2 `Utilities`. The workspace suite is over **1300 tests** plus doctests.
 
-CXF is bidirectional. `oce-cxf` imports via the §7.1 resolver and **exports** under a round-trip
-contract (RT-2): re-importing the emitted bytes renders bit-identically to what was exported, Reals
-compared by IEEE-754 bits rather than by epsilon. Export covers the flat, ground, single-root,
-scalar-parameter subset plus the §7.4.1 connector attributes. Enum-carrying blocks are deferred
-rather than fatal: they are omitted with warnings so the enum-free remainder still exports. Export
-is reached through `oce-cxf` directly; the `oce-api` facade exposes import only.
+Read that as breadth of the fixture corpus, not as a general G36 compiler. Those 46 documents
+reference 90 distinct `Buildings.Controls.OBC.ASHRAE.G36.*` class paths, but they are
+**pre-flattened CXF** at specific parameterizations. The engine executes the block graph CXF hands
+it; it does not parse or flatten Modelica `.mo` sources (see `oce-flatten`).
 
-**What the goldens do and do not prove.** Each G36 fixture carries a whole-sequence trace and a
-`.prov.json` recording its provenance, and all 46 are **Tier 2 — engine self-output, a determinism
-snapshot and explicitly not a correctness oracle**. They catch drift, not wrongness. Independent
-checks that do bound correctness are narrower: closed-form conformance bounds and a self-contained
-schedule cross-check. **External Modelica / Buildings reference cross-checks (Tier 4) are not
-wired** — that is the deliberately deferred tail, and until it lands no G36 sequence in this repo has
-been verified against the normative reference implementation.
+CXF is bidirectional. `oce-cxf` imports via the §7.1 resolver and **exports** under a round-trip
+contract (RT-2): for a graph inside the export subset, re-importing the emitted bytes renders
+bit-identically to what was exported, Reals compared by IEEE-754 bits rather than by epsilon.
+Export covers the flat, ground, single-root, scalar-parameter subset, and emits the §7.4.1
+connector attributes that fall in the canonical subset — `unit`, `quantity`, `displayUnit`, and
+finite `min`/`max`; a connector carrying `nominal` or `unbounded` is rejected rather than silently
+dropped. Export takes no registry dependency, which leaves two documented ways for an `Ok` export
+to produce bytes that fail re-import, both reachable only from a hand-built graph: a block whose
+declared port arity contradicts the class its `class_path` names (`MalformedDocument`), and an
+unregistered class path (`ClassNotFound`). Every graph the resolver produces is correct by
+construction on both axes.
+
+Enum-carrying blocks are deferred rather than fatal: the block and its transitive downstream
+consumers are omitted so the enum-free remainder still exports. **`export()` discards those
+warnings** — a caller using it alone cannot distinguish a complete export from one that dropped
+most of the graph, and the dropped cone can be large (the G36 corpus pins cones of 83 and 63
+blocks). Use `export_with_report` to tell the two apart: an empty `warnings` list is what certifies
+the round trip covered the whole input. Export is reached through `oce-cxf` directly; the `oce-api`
+facade exposes import only.
+
+**What the goldens do and do not prove.** Each of the 46 G36 fixtures carries a whole-sequence
+trace and a `.prov.json` recording its provenance, and every one of them records `"tier": "2"` —
+**engine self-output, a determinism snapshot and explicitly not a correctness oracle**
+(`depends_on_oce_blocks: true`). They catch drift, not wrongness.
+
+Correctness is bounded by a narrower, genuinely independent layer: **9 of those sequences carry
+hand-derived Tier-A oracles covering 32 output signals**, generated by `tools/golden-gen` — a
+crate held off the workspace and forbidden from depending on `oce-blocks`, so its references are
+re-derived from the CDL spec math rather than from the implementation under test. CI enforces that
+firewall. **What is not wired is Tier 3 — cross-implementation differential against an external
+Modelica / Buildings toolchain.** No sequence here has been executed against the normative
+reference implementation; that is the deliberately deferred tail.
 
 The project is **pre-1.0** and not yet published to crates.io.
 
@@ -77,6 +103,14 @@ cleanest seam in the system, and the engine is built around it.
 A downstream project can embed the engine for *load → flatten → validate → schedule → tick →
 simulate* with no database at all.
 
+**Input quality is the host's job, not the engine's.** Staging is deliberately status-agnostic: a
+sample is converted from its value regardless of `PointStatus`, so `Fault`, `Stale`, and
+`Uninitialized` all stage exactly like `Ok`. A missing sample is not an error either — the
+connector holds its previous value indefinitely (before the first sample, the type's
+`zero_value()`). The engine therefore implements **no fail-safe policy of its own**. An embedder
+driving real equipment must enforce staleness limits, fault reactions, and safe-state fallback in
+the host layer above the engine.
+
 ![Pipeline: load, flatten, validate, and schedule run once per load; tick and simulate run on the deterministic hot path](docs/diagrams/pipeline.svg)
 
 ---
@@ -93,14 +127,18 @@ The engine is, by design:
 - **edition 2024, Rust 1.95.0** (pinned in [`rust-toolchain.toml`](rust-toolchain.toml)),
   `resolver = "3"`.
 - **Deterministic on the tick** — a frozen, topologically-sorted schedule evaluated over flat
-  arrays: no graph walks, no hashing, no allocation, no I/O, and no store access on the hot path.
+  arrays: no graph walks, no hashing, no allocation, and no store access **in the graph
+  evaluator**. That is the scope of the claim. `Engine::tick` itself is store-free only when the
+  model declares no store-backed inputs; otherwise it takes one `store.snapshot()` per tick —
+  one allocation and one read per staged input — before handing off to the evaluator.
 
 ---
 
 ## Quickstart
 
-> The facade crate is **`oce-api`**, published under the umbrella name **`open-control-engine`**.
-> Until the first crates.io release, depend on it via git:
+> The facade crate is **`oce-api`** — that is the package name today, and the name the workspace
+> publish uses. Releasing it under the umbrella name **`open-control-engine`** is a planned change,
+> not a current alias. Until the first crates.io release, depend on it via git:
 
 ```toml
 [dependencies]
@@ -146,7 +184,7 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | `oce-flatten` | Elaboration / CXF-path resolution (CXF arrives pre-flattened; full `.mo` flattening is deferred). |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type/attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler/executor: direct-feedthrough DAG, algebraic-loop rejection, own Kahn topological sort, the tick loop. |
-| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ the model graph, both directions. Import is the §7.1 resolver; export emits the flat/ground/scalar subset under the RT-2 round-trip contract, deferring enum-carrying blocks with warnings rather than failing. |
+| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ the model graph, both directions. Import is the §7.1 resolver; export emits the flat/ground/scalar subset under the RT-2 round-trip contract, deferring enum-carrying blocks with warnings rather than failing. `export_with_report` surfaces those warnings; plain `export` discards them. |
 | `oce-semantics` | Vendor-annotation parsing → effective (non-computational) point/trend/semantic metadata. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. |
 
@@ -164,8 +202,8 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | --- | --- |
 | `oce-conformance` | The funnel-style tolerance-band / golden-trace conformance harness. |
 | `oce-extension` | The FMI / extension-block boundary (v1 surfaces extension blocks as unresolved externals). |
-| `oce-docs` | Sequence-spec (Word/HTML) and point-list document export. |
-| `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface. Published as **`open-control-engine`**. |
+| `oce-docs` | **Reserved seam, not implemented.** The sequence-spec (Word/HTML) and point-list export surface is declared; every exporter is deferred to M4 and `point_list_html` currently panics with `unimplemented!`. |
+| `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface. Package name is `oce-api`; the `open-control-engine` umbrella name is planned for first publish. |
 
 ---
 
@@ -198,9 +236,14 @@ behavior fixtures, and a determinism subset covering `oce-blocks` and `oce-expr`
 architectures in debug and release codegen. One job runs `.agents/gate.sh` itself, so the commands
 above gate a PR whether or not each is also wired as its own job.
 
-**The full test suite runs only on `development → main` release gates.** Read that in the dangerous
+**No PR into `development` runs the full test suite.** It runs on `development → main` release
+gates, on a daily cron against `development`, and on manual dispatch. Read that in the dangerous
 direction: a change confined to `oce-cxf`, `oce-store`, `oce-api` or `oce-diag` can show every check
 green having run none of its own tests. Run `bash .agents/gate.sh full` before claiming otherwise.
+
+**Open your PR non-draft.** Every job in `ci.yml` is conditioned on
+`github.event.pull_request.draft == false`, so a draft PR runs no gates at all — not a subset,
+none.
 
 ---
 
@@ -210,9 +253,11 @@ green having run none of its own tests. Run `bash .agents/gate.sh full` before c
 cargo build --workspace        # the engine only — no database, no async runtime
 ```
 
-`oce-api` exposes one feature today: `default = ["mem"]`, which wires the in-memory store as the
-default `Store` backend. Durable/queryable backends are the consuming application's responsibility,
-authored app-side as an adapter behind the `oce-store` port.
+`oce-api` declares one feature today, `default = ["mem"]`. It is a marker rather than a switch:
+`mem = []` gates nothing, and `oce-store-mem` is an unconditional dependency, so disabling default
+features does not remove the in-memory backend. What actually makes it the default is the type
+parameter — `Engine<S: Store = MemStore>`. Durable/queryable backends are the consuming
+application's responsibility, authored app-side as an adapter behind the `oce-store` port.
 
 Install the shared git hooks once after cloning (fast format/lint/no-DB gates on commit and push):
 

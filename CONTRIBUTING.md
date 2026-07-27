@@ -82,8 +82,11 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   `selene-db`, no `tokio`, no `async-std`. The default-no-db gate enforces this.
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
-- **Keep the tick deterministic.** The hot path performs no allocation, hashing, I/O, or store
-  access; identical inputs and parameters must yield identical outputs.
+- **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
+  The graph evaluator performs no allocation, hashing, I/O, or store access — keep it that way.
+  (`Engine::tick` itself takes one `store.snapshot()` per tick when the model declares
+  store-backed inputs; that staging step is outside the evaluator, and nothing new should be
+  added to it.)
 
 ## Commits
 

@@ -63,8 +63,10 @@ Worked examples of the bar, and where each stands:
   edge cases each asserting their `DiagCode`. **Landed**:
   `crates/oce-cxf/tests/fixtures/golden/minimal_loop.modelgraph.txt`.
 - **Engine loop** — golden converging trace for the feedback loop, bit-exact at every tick.
-  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the G36 traces
-  beside it, each with a `.prov.json` recording the oracle's provenance.
+  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the 46 G36 traces
+  beside it, each with a `.prov.json`. Read that sidecar before citing a trace as evidence of
+  correctness: all 46 record `"tier": "2"` and `depends_on_oce_blocks: true` — engine self-output,
+  a determinism snapshot and explicitly **not** a correctness oracle.
 - **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit.
   **Landed**: `crates/oce-cxf/tests/fixtures/golden/array.modelgraph.txt`,
   `array2d.modelgraph.txt` and `array_expression.modelgraph.txt`.
@@ -79,6 +81,12 @@ re-derived expectation — otherwise we are grading our own homework.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
+- **The independent layer is `tools/golden-gen`.** It generates the Tier-A references for the 9
+  sequences in `tests/g36_funnel_band/sequences.rs` (32 output signals), deriving every expected
+  value from the CDL spec math in closed form. It is deliberately kept **off the workspace** and
+  **forbidden from depending on `oce-blocks`** — that firewall is what makes it an oracle rather
+  than a second opinion from the same code, and CI enforces it. Extending Tier-A coverage means
+  adding to that generator, never blessing engine output.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
