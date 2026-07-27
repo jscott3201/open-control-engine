@@ -45,10 +45,18 @@
 //!
 //! # What it does NOT check
 //!
-//! Blocks whose upstream interface is an **array port** (`u[nin]`) are skipped: we flatten those
-//! into N scalar connectors, so the names cannot correspond one-to-one. That leaves the
-//! `Reals.MatrixGain` instances unverified. Skips are asserted against an exact expected count
-//! rather than merely tolerated, so a change that silently widens the skip set fails the test.
+//! Sides whose upstream interface is an **array port** (`u[nin]`) are skipped: we flatten those
+//! into N scalar connectors, so names cannot correspond one-to-one. Skips are asserted against an
+//! exact count rather than tolerated, so a change that silently widens the skip set fails.
+//!
+//! The two pins are 2112 checked / 60 skipped, and 2112 + 60 equals the 2135 + 37 an earlier
+//! revision reported — the same sides, reclassified. That revision inferred "array port" from an
+//! arity mismatch, so 23 array-flattened sides whose lengths happened to coincide were counted as
+//! *checked* when their comparison could not fail. Marking array-ness per direction as a declared
+//! fact in the table moves those 23 into skipped, which is a correction rather than a coverage
+//! loss: the old figure was inflated by vacuous comparisons.
+//!
+//! Also unchecked: parameter names and defaults, and composite wiring.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -59,6 +67,17 @@ use serde_json::Value;
 struct ClassPorts {
     inputs: Vec<String>,
     outputs: Vec<String>,
+    input_kinds: Vec<String>,
+    output_kinds: Vec<String>,
+    /// Upstream declares an array-valued connector (`u[nin]`) on that side. We flatten those into
+    /// N scalars, so names cannot correspond 1:1.
+    ///
+    /// Recorded **per direction and as a declared fact**. Inferring it from an arity mismatch made
+    /// every genuine arity disagreement look like an array port and hid 21 real wirings from an
+    /// earlier revision. Marking the whole class exempt instead discarded checkable coverage:
+    /// `MultiSum` has an array input but a scalar output `y`, which is verifiable.
+    inputs_are_array: bool,
+    outputs_are_array: bool,
 }
 
 fn repo_root() -> PathBuf {
@@ -70,6 +89,68 @@ fn repo_root() -> PathBuf {
         .expect("repo root")
 }
 
+/// Cross-check the table against the **shipping block registry** before trusting a word of it.
+///
+/// The registry is a genuinely independent artifact: it is compiled shipping code
+/// (`oce_blocks::lookup` → `resolved_signature`), authored separately from this table and
+/// exercised by every other test in the workspace. Agreeing with it on arity *and* kind means a
+/// hand-edit to the table has to also be a correct edit, which is the only property that matters.
+///
+/// Array-port classes are exempt: upstream declares one array connector (`u[nin]`) where we carry
+/// N flattened scalars, so the arities legitimately differ.
+///
+/// # This does NOT make the table tamper-proof, and that limitation is load-bearing
+///
+/// The registry stores port **kinds**, not names — that absence is the very gap this audit
+/// exists to cover. So this cross-check catches a table whose *arity or kinds* are wrong (it
+/// caught three separate extraction bugs: a nested-block leak, `end if` miscounted as a class
+/// close, and `model` vs `block`), and it is **blind to a reordering of two same-kind ports** —
+/// exactly the blind spot the audit exists to close, reproduced one level up.
+///
+/// Verified, not assumed: reversing `Reals.PID`'s inputs in the table *and* in all 8 fixture
+/// instances still passes. Name-order integrity of the table therefore rests on review of its
+/// diff plus the recorded provenance, **not** on any runtime check. Closing that would mean
+/// vendoring the ~768 KB of upstream BSD-licensed `.mo` sources and deriving the table at test
+/// time, so there is no table to bless — an open decision, not an oversight.
+fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
+    let mut disagreements = Vec::new();
+    for (class_path, ports) in table {
+        if ports.inputs_are_array || ports.outputs_are_array {
+            continue;
+        }
+        let Some(entry) = oce_blocks::lookup(class_path) else {
+            continue;
+        };
+        // Default parameters: every class compared here is non-array, so its signature is fixed
+        // and does not depend on a width parameter.
+        let probe = (entry.make)(&oce_model::ParamTable::default());
+        let sig = probe.resolved_signature();
+        let kind_of = |k: &oce_blocks::PortKind| match k {
+            oce_blocks::PortKind::Real => "Real",
+            oce_blocks::PortKind::Integer => "Integer",
+            oce_blocks::PortKind::Boolean => "Boolean",
+        };
+        let reg_in: Vec<&str> = sig.inputs.iter().map(kind_of).collect();
+        let reg_out: Vec<&str> = sig.outputs.iter().map(kind_of).collect();
+        let tab_in: Vec<&str> = ports.input_kinds.iter().map(String::as_str).collect();
+        let tab_out: Vec<&str> = ports.output_kinds.iter().map(String::as_str).collect();
+        if reg_in != tab_in || reg_out != tab_out {
+            disagreements.push(format!(
+                "{class_path}\n      table    : in {tab_in:?} out {tab_out:?}\n      \
+                 registry : in {reg_in:?} out {reg_out:?}"
+            ));
+        }
+    }
+    assert!(
+        disagreements.is_empty(),
+        "the port-order table disagrees with the shipping block registry on {} class(es). \
+         The table is wrong, or the registry is — either way the fixture comparison below would \
+         be meaningless.\n\n{}",
+        disagreements.len(),
+        disagreements.join("\n\n")
+    );
+}
+
 fn load_table() -> BTreeMap<String, ClassPorts> {
     let path = repo_root()
         .join("tools")
@@ -79,21 +160,21 @@ fn load_table() -> BTreeMap<String, ClassPorts> {
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let doc: Value = serde_json::from_str(&raw).expect("cdl-port-order.json is valid JSON");
     assert_eq!(
-        doc["schema"], "oce-cdl-port-order-v1",
+        doc["schema"], "oce-cdl-port-order-v2",
         "unexpected port-order table schema"
     );
 
-    let names = |v: &Value| -> Vec<String> {
+    let field = |v: &Value, key: &str| -> Vec<String> {
         v.as_array()
             .map(|a| {
                 a.iter()
-                    .map(|p| p["name"].as_str().expect("port name").to_owned())
+                    .map(|p| p[key].as_str().expect("port field").to_owned())
                     .collect()
             })
             .unwrap_or_default()
     };
 
-    doc["classes"]
+    let table: BTreeMap<String, ClassPorts> = doc["classes"]
         .as_array()
         .expect("classes array")
         .iter()
@@ -101,12 +182,20 @@ fn load_table() -> BTreeMap<String, ClassPorts> {
             (
                 c["class_path"].as_str().expect("class_path").to_owned(),
                 ClassPorts {
-                    inputs: names(&c["inputs"]),
-                    outputs: names(&c["outputs"]),
+                    inputs: field(&c["inputs"], "name"),
+                    outputs: field(&c["outputs"], "name"),
+                    input_kinds: field(&c["inputs"], "kind"),
+                    output_kinds: field(&c["outputs"], "kind"),
+                    inputs_are_array: c["inputs_are_array"].as_bool().unwrap_or(false),
+                    outputs_are_array: c["outputs_are_array"].as_bool().unwrap_or(false),
                 },
             )
         })
-        .collect()
+        .collect();
+
+    // Never trust the table on its own word — see the function's rustdoc.
+    cross_check_against_registry(&table);
+    table
 }
 
 /// `http://example.org#g36.fixture.instance.u1` -> `u1`.
@@ -175,15 +264,35 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
             let Some(cp) = class_of(node) else { continue };
             let Some(want) = table.get(&cp) else { continue };
 
-            for (key, expected, side) in [
-                ("S231:hasInput", &want.inputs, "inputs"),
-                ("S231:hasOutput", &want.outputs, "outputs"),
+            for (key, expected, side, is_array) in [
+                (
+                    "S231:hasInput",
+                    &want.inputs,
+                    "inputs",
+                    want.inputs_are_array,
+                ),
+                (
+                    "S231:hasOutput",
+                    &want.outputs,
+                    "outputs",
+                    want.outputs_are_array,
+                ),
             ] {
                 let Some(got) = refs(node, key) else { continue };
-                // Array-typed upstream port flattened by us into N scalars: names cannot
-                // correspond one-to-one. Counted, not silently dropped.
-                if got.len() != expected.len() {
+                // Skip on the DECLARED fact for THIS side, not on an arity mismatch and not for
+                // the whole class — see the field rustdoc for both failure modes.
+                if is_array {
                     skipped_array += 1;
+                    continue;
+                }
+                // A length difference on a NON-array class is a real defect, not a skip: the
+                // document declares an interface the class does not have.
+                if got.len() != expected.len() {
+                    let id = node["@id"].as_str().unwrap_or("?");
+                    failures.push(format!(
+                        "{fixture} :: {cp} [{side}] ARITY\n      instance : {id}\n      \
+                         document : {got:?}\n      upstream : {expected:?}"
+                    ));
                     continue;
                 }
                 checked += 1;
@@ -203,12 +312,12 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
     // Pin the volume. Without this, a change that stops discovering ports would leave the
     // comparison vacuously green — the failure mode this whole audit exists to prevent.
     assert_eq!(
-        checked, 2135,
+        checked, 2112,
         "port-list volume changed: expected 2135 comparisons, made {checked}. \
          If the corpus legitimately changed, update this pin deliberately."
     );
     assert_eq!(
-        skipped_array, 37,
+        skipped_array, 60,
         "array-port skip count changed: expected 37, got {skipped_array}. \
          A rising skip count hides wirings from this audit — investigate before re-pinning."
     );

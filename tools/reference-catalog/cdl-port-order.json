@@ -1,10 +1,12 @@
 {
-  "schema": "oce-cdl-port-order-v1",
-  "description": "Declaration order of CDL elementary-block interface ports, extracted from upstream Modelica source. The engine assigns port POSITIONS from CXF document array order; this table is what that order must equal.",
+  "schema": "oce-cdl-port-order-v2",
+  "description": "Top-level interface declaration order of CDL elementary blocks, extracted scope-aware from upstream Modelica source. The engine assigns port POSITIONS from CXF document array order; this table is what that order must equal. inputs_are_array / outputs_are_array mark the sides we flatten, per direction.",
   "classes": [
     {
       "class_path": "CDL.Conversions.BooleanToInteger",
       "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToInteger.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -21,6 +23,8 @@
     {
       "class_path": "CDL.Conversions.BooleanToReal",
       "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -37,6 +41,8 @@
     {
       "class_path": "CDL.Conversions.IntegerToReal",
       "source": "Buildings/Controls/OBC/CDL/Conversions/IntegerToReal.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -53,6 +59,8 @@
     {
       "class_path": "CDL.Conversions.RealToInteger",
       "source": "Buildings/Controls/OBC/CDL/Conversions/RealToInteger.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -69,6 +77,8 @@
     {
       "class_path": "CDL.Discrete.FirstOrderHold",
       "source": "Buildings/Controls/OBC/CDL/Discrete/FirstOrderHold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -85,6 +95,8 @@
     {
       "class_path": "CDL.Discrete.Sampler",
       "source": "Buildings/Controls/OBC/CDL/Discrete/Sampler.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -101,6 +113,8 @@
     {
       "class_path": "CDL.Discrete.TriggeredMax",
       "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredMax.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -121,6 +135,8 @@
     {
       "class_path": "CDL.Discrete.TriggeredMovingMean",
       "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredMovingMean.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -141,6 +157,8 @@
     {
       "class_path": "CDL.Discrete.TriggeredSampler",
       "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredSampler.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -161,6 +179,8 @@
     {
       "class_path": "CDL.Discrete.UnitDelay",
       "source": "Buildings/Controls/OBC/CDL/Discrete/UnitDelay.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -177,6 +197,8 @@
     {
       "class_path": "CDL.Discrete.ZeroOrderHold",
       "source": "Buildings/Controls/OBC/CDL/Discrete/ZeroOrderHold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -193,6 +215,8 @@
     {
       "class_path": "CDL.Integers.Abs",
       "source": "Buildings/Controls/OBC/CDL/Integers/Abs.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -209,6 +233,8 @@
     {
       "class_path": "CDL.Integers.Add",
       "source": "Buildings/Controls/OBC/CDL/Integers/Add.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -229,6 +255,8 @@
     {
       "class_path": "CDL.Integers.AddParameter",
       "source": "Buildings/Controls/OBC/CDL/Integers/AddParameter.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -245,6 +273,8 @@
     {
       "class_path": "CDL.Integers.Change",
       "source": "Buildings/Controls/OBC/CDL/Integers/Change.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -269,6 +299,8 @@
     {
       "class_path": "CDL.Integers.Equal",
       "source": "Buildings/Controls/OBC/CDL/Integers/Equal.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -289,6 +321,8 @@
     {
       "class_path": "CDL.Integers.Greater",
       "source": "Buildings/Controls/OBC/CDL/Integers/Greater.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -309,6 +343,8 @@
     {
       "class_path": "CDL.Integers.GreaterEqual",
       "source": "Buildings/Controls/OBC/CDL/Integers/GreaterEqual.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -329,6 +365,8 @@
     {
       "class_path": "CDL.Integers.GreaterEqualThreshold",
       "source": "Buildings/Controls/OBC/CDL/Integers/GreaterEqualThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -345,6 +383,8 @@
     {
       "class_path": "CDL.Integers.GreaterThreshold",
       "source": "Buildings/Controls/OBC/CDL/Integers/GreaterThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -361,6 +401,8 @@
     {
       "class_path": "CDL.Integers.Less",
       "source": "Buildings/Controls/OBC/CDL/Integers/Less.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -381,6 +423,8 @@
     {
       "class_path": "CDL.Integers.LessEqual",
       "source": "Buildings/Controls/OBC/CDL/Integers/LessEqual.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -401,6 +445,8 @@
     {
       "class_path": "CDL.Integers.LessEqualThreshold",
       "source": "Buildings/Controls/OBC/CDL/Integers/LessEqualThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -417,6 +463,8 @@
     {
       "class_path": "CDL.Integers.LessThreshold",
       "source": "Buildings/Controls/OBC/CDL/Integers/LessThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -433,6 +481,8 @@
     {
       "class_path": "CDL.Integers.Max",
       "source": "Buildings/Controls/OBC/CDL/Integers/Max.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -453,6 +503,8 @@
     {
       "class_path": "CDL.Integers.Min",
       "source": "Buildings/Controls/OBC/CDL/Integers/Min.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -473,6 +525,8 @@
     {
       "class_path": "CDL.Integers.MultiSum",
       "source": "Buildings/Controls/OBC/CDL/Integers/MultiSum.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -489,6 +543,8 @@
     {
       "class_path": "CDL.Integers.Multiply",
       "source": "Buildings/Controls/OBC/CDL/Integers/Multiply.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -509,6 +565,8 @@
     {
       "class_path": "CDL.Integers.OnCounter",
       "source": "Buildings/Controls/OBC/CDL/Integers/OnCounter.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "trigger",
@@ -529,6 +587,8 @@
     {
       "class_path": "CDL.Integers.Sources.Constant",
       "source": "Buildings/Controls/OBC/CDL/Integers/Sources/Constant.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -540,6 +600,8 @@
     {
       "class_path": "CDL.Integers.Sources.Pulse",
       "source": "Buildings/Controls/OBC/CDL/Integers/Sources/Pulse.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -551,6 +613,8 @@
     {
       "class_path": "CDL.Integers.Sources.TimeTable",
       "source": "Buildings/Controls/OBC/CDL/Integers/Sources/TimeTable.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": true,
       "inputs": [],
       "outputs": [
         {
@@ -562,6 +626,8 @@
     {
       "class_path": "CDL.Integers.Stage",
       "source": "Buildings/Controls/OBC/CDL/Integers/Stage.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -578,6 +644,8 @@
     {
       "class_path": "CDL.Integers.Subtract",
       "source": "Buildings/Controls/OBC/CDL/Integers/Subtract.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -598,6 +666,8 @@
     {
       "class_path": "CDL.Integers.Switch",
       "source": "Buildings/Controls/OBC/CDL/Integers/Switch.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -622,6 +692,8 @@
     {
       "class_path": "CDL.Logical.And",
       "source": "Buildings/Controls/OBC/CDL/Logical/And.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -642,6 +714,8 @@
     {
       "class_path": "CDL.Logical.Change",
       "source": "Buildings/Controls/OBC/CDL/Logical/Change.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -658,6 +732,8 @@
     {
       "class_path": "CDL.Logical.Edge",
       "source": "Buildings/Controls/OBC/CDL/Logical/Edge.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -674,6 +750,8 @@
     {
       "class_path": "CDL.Logical.FallingEdge",
       "source": "Buildings/Controls/OBC/CDL/Logical/FallingEdge.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -690,6 +768,8 @@
     {
       "class_path": "CDL.Logical.Latch",
       "source": "Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -710,6 +790,8 @@
     {
       "class_path": "CDL.Logical.MultiAnd",
       "source": "Buildings/Controls/OBC/CDL/Logical/MultiAnd.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -726,6 +808,8 @@
     {
       "class_path": "CDL.Logical.MultiOr",
       "source": "Buildings/Controls/OBC/CDL/Logical/MultiOr.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -742,6 +826,8 @@
     {
       "class_path": "CDL.Logical.Nand",
       "source": "Buildings/Controls/OBC/CDL/Logical/Nand.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -762,6 +848,8 @@
     {
       "class_path": "CDL.Logical.Nor",
       "source": "Buildings/Controls/OBC/CDL/Logical/Nor.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -782,6 +870,8 @@
     {
       "class_path": "CDL.Logical.Not",
       "source": "Buildings/Controls/OBC/CDL/Logical/Not.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -798,6 +888,8 @@
     {
       "class_path": "CDL.Logical.Or",
       "source": "Buildings/Controls/OBC/CDL/Logical/Or.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -818,6 +910,8 @@
     {
       "class_path": "CDL.Logical.Pre",
       "source": "Buildings/Controls/OBC/CDL/Logical/Pre.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -834,6 +928,8 @@
     {
       "class_path": "CDL.Logical.Proof",
       "source": "Buildings/Controls/OBC/CDL/Logical/Proof.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u_s",
@@ -858,6 +954,8 @@
     {
       "class_path": "CDL.Logical.Sources.Constant",
       "source": "Buildings/Controls/OBC/CDL/Logical/Sources/Constant.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -869,6 +967,8 @@
     {
       "class_path": "CDL.Logical.Sources.Pulse",
       "source": "Buildings/Controls/OBC/CDL/Logical/Sources/Pulse.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -880,6 +980,8 @@
     {
       "class_path": "CDL.Logical.Sources.SampleTrigger",
       "source": "Buildings/Controls/OBC/CDL/Logical/Sources/SampleTrigger.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -891,6 +993,8 @@
     {
       "class_path": "CDL.Logical.Sources.TimeTable",
       "source": "Buildings/Controls/OBC/CDL/Logical/Sources/TimeTable.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": true,
       "inputs": [],
       "outputs": [
         {
@@ -902,6 +1006,8 @@
     {
       "class_path": "CDL.Logical.Switch",
       "source": "Buildings/Controls/OBC/CDL/Logical/Switch.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -926,6 +1032,8 @@
     {
       "class_path": "CDL.Logical.Timer",
       "source": "Buildings/Controls/OBC/CDL/Logical/Timer.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -946,6 +1054,8 @@
     {
       "class_path": "CDL.Logical.TimerAccumulating",
       "source": "Buildings/Controls/OBC/CDL/Logical/TimerAccumulating.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -970,6 +1080,8 @@
     {
       "class_path": "CDL.Logical.Toggle",
       "source": "Buildings/Controls/OBC/CDL/Logical/Toggle.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -990,6 +1102,8 @@
     {
       "class_path": "CDL.Logical.TrueDelay",
       "source": "Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1006,6 +1120,8 @@
     {
       "class_path": "CDL.Logical.TrueFalseHold",
       "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1022,14 +1138,12 @@
     {
       "class_path": "CDL.Logical.VariablePulse",
       "source": "Buildings/Controls/OBC/CDL/Logical/VariablePulse.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
           "kind": "Real"
-        },
-        {
-          "name": "go",
-          "kind": "Boolean"
         }
       ],
       "outputs": [
@@ -1042,6 +1156,8 @@
     {
       "class_path": "CDL.Logical.Xor",
       "source": "Buildings/Controls/OBC/CDL/Logical/Xor.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1062,6 +1178,8 @@
     {
       "class_path": "CDL.Psychrometrics.DewPoint_TDryBulPhi",
       "source": "Buildings/Controls/OBC/CDL/Psychrometrics/DewPoint_TDryBulPhi.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "TDryBul",
@@ -1082,6 +1200,8 @@
     {
       "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
       "source": "Buildings/Controls/OBC/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "TDryBul",
@@ -1102,6 +1222,8 @@
     {
       "class_path": "CDL.Psychrometrics.WetBulb_TDryBulPhi",
       "source": "Buildings/Controls/OBC/CDL/Psychrometrics/WetBulb_TDryBulPhi.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "TDryBul",
@@ -1122,6 +1244,8 @@
     {
       "class_path": "CDL.Reals.Abs",
       "source": "Buildings/Controls/OBC/CDL/Reals/Abs.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1138,6 +1262,8 @@
     {
       "class_path": "CDL.Reals.Acos",
       "source": "Buildings/Controls/OBC/CDL/Reals/Acos.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1154,6 +1280,8 @@
     {
       "class_path": "CDL.Reals.Add",
       "source": "Buildings/Controls/OBC/CDL/Reals/Add.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1174,6 +1302,8 @@
     {
       "class_path": "CDL.Reals.AddParameter",
       "source": "Buildings/Controls/OBC/CDL/Reals/AddParameter.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1190,6 +1320,8 @@
     {
       "class_path": "CDL.Reals.Asin",
       "source": "Buildings/Controls/OBC/CDL/Reals/Asin.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1206,6 +1338,8 @@
     {
       "class_path": "CDL.Reals.Atan",
       "source": "Buildings/Controls/OBC/CDL/Reals/Atan.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1222,6 +1356,8 @@
     {
       "class_path": "CDL.Reals.Atan2",
       "source": "Buildings/Controls/OBC/CDL/Reals/Atan2.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1242,6 +1378,8 @@
     {
       "class_path": "CDL.Reals.Average",
       "source": "Buildings/Controls/OBC/CDL/Reals/Average.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1262,6 +1400,8 @@
     {
       "class_path": "CDL.Reals.Cos",
       "source": "Buildings/Controls/OBC/CDL/Reals/Cos.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1278,6 +1418,8 @@
     {
       "class_path": "CDL.Reals.Derivative",
       "source": "Buildings/Controls/OBC/CDL/Reals/Derivative.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "k",
@@ -1302,6 +1444,8 @@
     {
       "class_path": "CDL.Reals.Divide",
       "source": "Buildings/Controls/OBC/CDL/Reals/Divide.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1322,6 +1466,8 @@
     {
       "class_path": "CDL.Reals.Exp",
       "source": "Buildings/Controls/OBC/CDL/Reals/Exp.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1338,6 +1484,8 @@
     {
       "class_path": "CDL.Reals.Greater",
       "source": "Buildings/Controls/OBC/CDL/Reals/Greater.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1358,6 +1506,8 @@
     {
       "class_path": "CDL.Reals.GreaterThreshold",
       "source": "Buildings/Controls/OBC/CDL/Reals/GreaterThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1374,6 +1524,8 @@
     {
       "class_path": "CDL.Reals.Hysteresis",
       "source": "Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1390,6 +1542,8 @@
     {
       "class_path": "CDL.Reals.IntegratorWithReset",
       "source": "Buildings/Controls/OBC/CDL/Reals/IntegratorWithReset.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1414,6 +1568,8 @@
     {
       "class_path": "CDL.Reals.Less",
       "source": "Buildings/Controls/OBC/CDL/Reals/Less.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1434,6 +1590,8 @@
     {
       "class_path": "CDL.Reals.LessThreshold",
       "source": "Buildings/Controls/OBC/CDL/Reals/LessThreshold.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1450,6 +1608,8 @@
     {
       "class_path": "CDL.Reals.LimitSlewRate",
       "source": "Buildings/Controls/OBC/CDL/Reals/LimitSlewRate.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1466,6 +1626,8 @@
     {
       "class_path": "CDL.Reals.Limiter",
       "source": "Buildings/Controls/OBC/CDL/Reals/Limiter.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1482,6 +1644,8 @@
     {
       "class_path": "CDL.Reals.Line",
       "source": "Buildings/Controls/OBC/CDL/Reals/Line.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "x1",
@@ -1514,6 +1678,8 @@
     {
       "class_path": "CDL.Reals.Log",
       "source": "Buildings/Controls/OBC/CDL/Reals/Log.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1530,6 +1696,8 @@
     {
       "class_path": "CDL.Reals.Log10",
       "source": "Buildings/Controls/OBC/CDL/Reals/Log10.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1546,6 +1714,8 @@
     {
       "class_path": "CDL.Reals.MatrixGain",
       "source": "Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1562,6 +1732,8 @@
     {
       "class_path": "CDL.Reals.MatrixMax",
       "source": "Buildings/Controls/OBC/CDL/Reals/MatrixMax.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1578,6 +1750,8 @@
     {
       "class_path": "CDL.Reals.MatrixMin",
       "source": "Buildings/Controls/OBC/CDL/Reals/MatrixMin.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1594,6 +1768,8 @@
     {
       "class_path": "CDL.Reals.Max",
       "source": "Buildings/Controls/OBC/CDL/Reals/Max.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1614,6 +1790,8 @@
     {
       "class_path": "CDL.Reals.Min",
       "source": "Buildings/Controls/OBC/CDL/Reals/Min.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1634,6 +1812,8 @@
     {
       "class_path": "CDL.Reals.Modulo",
       "source": "Buildings/Controls/OBC/CDL/Reals/Modulo.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1654,6 +1834,8 @@
     {
       "class_path": "CDL.Reals.MovingAverage",
       "source": "Buildings/Controls/OBC/CDL/Reals/MovingAverage.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1670,6 +1852,8 @@
     {
       "class_path": "CDL.Reals.MultiMax",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiMax.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1686,6 +1870,8 @@
     {
       "class_path": "CDL.Reals.MultiMin",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiMin.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1702,6 +1888,8 @@
     {
       "class_path": "CDL.Reals.MultiSum",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiSum.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1718,6 +1906,8 @@
     {
       "class_path": "CDL.Reals.Multiply",
       "source": "Buildings/Controls/OBC/CDL/Reals/Multiply.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -1738,6 +1928,8 @@
     {
       "class_path": "CDL.Reals.MultiplyByParameter",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1754,6 +1946,8 @@
     {
       "class_path": "CDL.Reals.PID",
       "source": "Buildings/Controls/OBC/CDL/Reals/PID.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u_s",
@@ -1774,6 +1968,8 @@
     {
       "class_path": "CDL.Reals.PIDWithReset",
       "source": "Buildings/Controls/OBC/CDL/Reals/PIDWithReset.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u_s",
@@ -1798,6 +1994,8 @@
     {
       "class_path": "CDL.Reals.Ramp",
       "source": "Buildings/Controls/OBC/CDL/Reals/Ramp.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1818,6 +2016,8 @@
     {
       "class_path": "CDL.Reals.Round",
       "source": "Buildings/Controls/OBC/CDL/Reals/Round.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1834,6 +2034,8 @@
     {
       "class_path": "CDL.Reals.Sin",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sin.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1850,6 +2052,8 @@
     {
       "class_path": "CDL.Reals.Sort",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sort.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -1870,6 +2074,8 @@
     {
       "class_path": "CDL.Reals.Sources.CalendarTime",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/CalendarTime.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1901,6 +2107,8 @@
     {
       "class_path": "CDL.Reals.Sources.CivilTime",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/CivilTime.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1912,6 +2120,8 @@
     {
       "class_path": "CDL.Reals.Sources.Constant",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Constant.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1923,6 +2133,8 @@
     {
       "class_path": "CDL.Reals.Sources.Pulse",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Pulse.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1934,6 +2146,8 @@
     {
       "class_path": "CDL.Reals.Sources.Ramp",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Ramp.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1945,6 +2159,8 @@
     {
       "class_path": "CDL.Reals.Sources.Sin",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Sin.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {
@@ -1956,6 +2172,8 @@
     {
       "class_path": "CDL.Reals.Sources.TimeTable",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sources/TimeTable.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": true,
       "inputs": [],
       "outputs": [
         {
@@ -1967,6 +2185,8 @@
     {
       "class_path": "CDL.Reals.Sqrt",
       "source": "Buildings/Controls/OBC/CDL/Reals/Sqrt.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1983,6 +2203,8 @@
     {
       "class_path": "CDL.Reals.Subtract",
       "source": "Buildings/Controls/OBC/CDL/Reals/Subtract.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -2003,6 +2225,8 @@
     {
       "class_path": "CDL.Reals.Switch",
       "source": "Buildings/Controls/OBC/CDL/Reals/Switch.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u1",
@@ -2027,6 +2251,8 @@
     {
       "class_path": "CDL.Reals.Tan",
       "source": "Buildings/Controls/OBC/CDL/Reals/Tan.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -2043,6 +2269,8 @@
     {
       "class_path": "CDL.Routing.BooleanExtractSignal",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanExtractSignal.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2059,6 +2287,8 @@
     {
       "class_path": "CDL.Routing.BooleanExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanExtractor.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "index",
@@ -2079,6 +2309,8 @@
     {
       "class_path": "CDL.Routing.BooleanScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanScalarReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2095,6 +2327,8 @@
     {
       "class_path": "CDL.Routing.BooleanVectorFilter",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanVectorFilter.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2111,6 +2345,8 @@
     {
       "class_path": "CDL.Routing.BooleanVectorReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanVectorReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2127,6 +2363,8 @@
     {
       "class_path": "CDL.Routing.IntegerExtractSignal",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerExtractSignal.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2143,6 +2381,8 @@
     {
       "class_path": "CDL.Routing.IntegerExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerExtractor.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "index",
@@ -2163,6 +2403,8 @@
     {
       "class_path": "CDL.Routing.IntegerScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerScalarReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2179,6 +2421,8 @@
     {
       "class_path": "CDL.Routing.IntegerVectorFilter",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerVectorFilter.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2195,6 +2439,8 @@
     {
       "class_path": "CDL.Routing.IntegerVectorReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerVectorReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2211,6 +2457,8 @@
     {
       "class_path": "CDL.Routing.RealExtractSignal",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealExtractSignal.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2227,6 +2475,8 @@
     {
       "class_path": "CDL.Routing.RealExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealExtractor.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "index",
@@ -2247,6 +2497,8 @@
     {
       "class_path": "CDL.Routing.RealScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealScalarReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2263,6 +2515,8 @@
     {
       "class_path": "CDL.Routing.RealVectorFilter",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealVectorFilter.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2279,6 +2533,8 @@
     {
       "class_path": "CDL.Routing.RealVectorReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealVectorReplicator.mo",
+      "inputs_are_array": true,
+      "outputs_are_array": true,
       "inputs": [
         {
           "name": "u",
@@ -2295,6 +2551,8 @@
     {
       "class_path": "CDL.Utilities.Assert",
       "source": "Buildings/Controls/OBC/CDL/Utilities/Assert.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -2306,6 +2564,8 @@
     {
       "class_path": "CDL.Utilities.SunRiseSet",
       "source": "Buildings/Controls/OBC/CDL/Utilities/SunRiseSet.mo",
+      "inputs_are_array": false,
+      "outputs_are_array": false,
       "inputs": [],
       "outputs": [
         {

@@ -1,15 +1,18 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "artifact": "cdl-port-order.json",
   "repository": "https://github.com/lbl-srg/modelica-buildings",
   "branch": "master",
   "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
   "fetched_at": "2026-07-27",
-  "table_fingerprint": "442fe803356d5f83",
+  "table_fingerprint": "20c55eb4dc5d1500",
   "class_count": 132,
-  "extraction": "First occurrence of each `Interfaces.<Kind><Dir> <ident>` declaration, in source order. Deduplicated by identifier: CDL sources repeat their interface declarations inside the `info` documentation block (e.g. Reals/Greater.mo declares u1/u2 at lines 11/14 and again at 35/38 and 71/74), and counting the repeats inflates arity 3x.",
-  "not_covered": [
-    "CDL.Logical.TrueHoldWithReset \u2014 absent upstream at this commit; classified as a legacy_compat extension whose oracle is the CDL specification (Ch.7 Elementary Blocks), not the Buildings library."
-  ],
-  "drift_check": "Port declaration order is identical between this pin and master c4117ccec1f288ee6bc7f0ee0cb40a45d6940b0c (2026-07-22): 0 of 132 classes differ."
+  "extraction": "Scope-aware. Tracks class depth (`block`/`model` open, `end <Ident>;` close, excluding `end if|when|for|while`) and takes only DEPTH-1 declarations. CDL sources define nested helper blocks with their own connectors \u2014 Logical/VariablePulse.mo opens `block Cycle` at line 69 whose BooleanInput `go` is at line 82 \u2014 and a scope-blind regex leaks those into the parent interface.",
+  "superseded_v1": "v1 deduplicated by identifier on the mistaken belief the repeats came from `info` documentation text. They come from nested blocks. Dedup masked nested ports sharing a parent name (u1/u2) and silently failed for uniquely-named ones, recording CDL.Logical.VariablePulse as inputs [u, go] where upstream and our registry both have [u].",
+  "independent_cross_check": "Every non-array class in this table agrees with tools/reference-catalog/oce-blocks.registry-manifest.json on both arity and kind: 0 disagreements over 132 classes. The consuming test re-runs that comparison, so this table cannot self-bless a coordinated edit.",
+  "drift_check": "Port declaration order is identical between this pin and master c4117ccec1f288ee6bc7f0ee0cb40a45d6940b0c: 0 of 132 classes differ.",
+  "array_sides": {
+    "inputs": 25,
+    "outputs": 28
+  }
 }
