@@ -39,10 +39,14 @@ Base branch is `development`. Feature branches carry the executor as the prefix:
 `codex/<slug>` for a Codex lane, `claude/<slug>` for an in-house lane. Fix rounds
 push to the **same** branch — never a second PR for the same work.
 
-Merging requires review findings addressed, CI green on the final head, and explicit
-owner authorization. An agent never merges its own work. Standing authorization
-covers Codex-authored branches; it does **not** extend to a branch the lead authored,
-which needs the owner's sign-off on that branch.
+**The reviewer always comes from the other model family than the implementer.** Opus
+implements, Codex reviews; Codex implements, Opus reviews. This is a rule, not a route
+recommendation to weigh per change — model families share blind spots, so a same-family
+review is systematically weakest exactly where it needs to be strongest.
+
+The lead may merge once **a review has been done on the PR and CI is passing**. That is
+the owner's standing authorization, and this paragraph is where it is on record. An agent
+never merges its own work.
 
 Branch protection blocks direct pushes to `development`. Everything lands by
 squash-merge through a PR.
@@ -75,6 +79,13 @@ Codex sandbox, not of worktrees.
 
 A brief must also name the files to copy in. `_codex-briefs/` is gitignored, so the
 brief itself does not exist in a clone unless dispatch puts it there.
+
+**A Codex lane can review even though it cannot implement-and-push.** Review needs no
+network: the reviewer reads source, builds, runs the suite, and commits nothing. So the
+no-network limit above constrains implementation lanes, not review lanes — which matters,
+because the cross-family rule makes Codex the reviewer for every in-house change. Dispatch
+still has to copy in the brief, `codex-id.json`, and any `_spec/` excerpt the review
+depends on, and the brief must carry no memory instructions.
 
 ## Working directories are gitignored
 
