@@ -310,6 +310,51 @@ mod tests {
         );
     }
 
+    /// No slot ordering can corrupt another slot's value — the property the test above only
+    /// half-proves.
+    ///
+    /// A sequential renderer corrupts slot `A` when `A` is filled *before* `B` and `A`'s value
+    /// contains `B`'s marker. The case above gives every value a marker naming a *later* slot, so
+    /// it kills the original `subject → name → class` order and nothing else: a review swapped in
+    /// a `class → name → subject` chain and the whole suite stayed green while a parameter named
+    /// `{subject}` rendered as the block IRI.
+    ///
+    /// So each argument here carries the markers of *both* other slots, which leaves no order to
+    /// be lucky in — whichever slot a chain fills first, its value carries a marker a later step
+    /// would rewrite. Only the class and connector slots are exempt, and by construction rather
+    /// than by luck: `enum_class_label` and `connector_local_name` both derive their text
+    /// (`EnumClass#<digits>`, `in<k>`/`out<k>`), so neither can carry a brace to begin with.
+    #[test]
+    fn no_slot_ordering_can_corrupt_another_slots_value() {
+        let param = msg_enum_defer_param("blk{name}{class}", "{subject}{class}", "EnumClass#3");
+        assert!(
+            param.contains("block `blk{name}{class}`"),
+            "a later step must not rewrite the subject's markers: {param}"
+        );
+        assert!(
+            param.contains("parameter `{subject}{class}`"),
+            "a later step must not rewrite the name's markers: {param}"
+        );
+        assert!(
+            param.contains("class `EnumClass#3`"),
+            "the class slot must still be filled: {param}"
+        );
+
+        let connector = msg_enum_defer_connector("blk{class}{subject}", "EnumClass#2");
+        assert!(
+            connector.contains("block `blk{class}{subject}`")
+                && connector.contains("class `EnumClass#2`"),
+            "a self-naming marker in the subject must survive too: {connector}"
+        );
+
+        let cascade = msg_enum_defer_cascade("blk{conn}{subject}", "out2");
+        assert!(
+            cascade.contains("block `blk{conn}{subject}`")
+                && cascade.contains("input connector `out2`"),
+            "the cascade subject's markers must survive both orders: {cascade}"
+        );
+    }
+
     /// Every enum class `oce-model` pins gets its own label. The previous label folded every id
     /// of 2 or more into the literal `EnumClass#N`, so ten of the fourteen pinned classes — the
     /// whole G36 block, `101..=110` — read identically in a deferral warning, and a technician

@@ -482,6 +482,57 @@ fn a_parameter_named_like_a_placeholder_survives_verbatim() {
 }
 
 #[test]
+fn a_parameter_named_like_the_subject_slot_survives_verbatim() {
+    // The permutation the test above cannot see. `{class}` names a slot filled *after* the
+    // parameter name, so it only catches a renderer working front to back; `{subject}` names one
+    // filled *before* it, and catches a renderer working the other way. A review built exactly
+    // that — a `class → name → subject` chain — and every test passed while this parameter
+    // rendered as `parameter \`http://example.org#Defer.tuned\``, naming the block instead.
+    let g = ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "keep",
+                &[],
+                &[0],
+                real_param(1.0),
+            ),
+            block(
+                1,
+                "CDL.Reals.Sources.Constant",
+                "tuned",
+                &[],
+                &[1],
+                enum_param("{subject}", EnumClassId::EXTRAPOLATION),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+
+    let report = export_report(&g);
+    let message = &report.warnings[0].message;
+    assert!(
+        message.contains("parameter `{subject}`"),
+        "the parameter's real name must appear verbatim, got: {message}"
+    );
+    assert!(
+        message.contains(&format!("block `{}`", iri("tuned"))),
+        "the subject slot must still carry the block IRI, got: {message}"
+    );
+    assert!(
+        !message.contains(&format!("parameter `{}`", iri("tuned"))),
+        "the block IRI must not have overwritten the parameter name, got: {message}"
+    );
+    reimport_clean(&report.bytes);
+}
+
+#[test]
 fn a_block_iri_shaped_like_a_placeholder_survives_verbatim() {
     // The wider hole: `{subject}` is substituted first, and its value is an `instance_iri` — host
     // -supplied rather than derived — so under the chain every later slot rewrote the text it had

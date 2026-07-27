@@ -14,9 +14,10 @@
 //! ground, single-root, scalar-parameter subset — exactly what the resolver produces for that
 //! shape of document — plus the in-subset §7.4.1 connector attributes. Content outside that
 //! subset is a typed [`CxfError::Validation`] carrying
-//! [`oce_diag::DiagCode::ExportUnsupported`], except enum-carrying blocks, which defer with a
-//! non-aborting warning rather than reject; never a panic either way. See [`export()`] for the
-//! full contract.
+//! [`oce_diag::DiagCode::ExportUnsupported`], except on a **deferred** block — one carrying an
+//! enumeration, or any downstream consumer the cascade reached from it — where the block is
+//! omitted from the document with a non-aborting warning and its out-of-subset content is never
+//! rejected; never a panic either way. See [`export()`] for the full contract.
 
 use oce_model::ModelGraph;
 
@@ -150,16 +151,19 @@ pub fn import_cxf(
 ///   anything outside the subset that is NOT an enum deferral: non-finite parameters, connectors
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
-///   without a recorded boundary IRI, structurally inconsistent wiring, or an empty (zero-block)
+///   without a recorded boundary IRI, the same connector listed more than once in
+///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip),
+///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a
-///   parameter defect, an external input with no boundary IRI — reject only where the offender
-///   sits on a **surviving** block; a deferred block is omitted from the document and so
-///   contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
+///   parameter defect, an external input with no boundary IRI or listed twice — reject only where
+///   the offender sits on a **surviving** block; a deferred block is omitted from the document and
+///   so contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
 ///   non-dense ids) and a connection that is not output→input reject either way, being
-///   attributable to no single block's presence in the document. Enum-carrying blocks are
-///   deferred (a warning, not a rejection) and do NOT trigger this variant — unless deferral is
-///   *total*, which leaves no block to emit and rejects. Never panics.
+///   attributable to no single block's presence in the document. Deferred blocks — enum-carrying
+///   ones and the cascade they reach alike — are a warning, not a rejection, and do NOT trigger
+///   this variant, unless deferral is *total*, which leaves no block to emit and rejects. Never
+///   panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let (doc, _warnings) = export::document(model)?;

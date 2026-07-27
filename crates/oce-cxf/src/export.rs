@@ -137,6 +137,14 @@ const MSG_ENUM_CONNECTOR: &str =
 /// root's `hasInput` (hand-built graphs only; the resolver always stores it).
 const MSG_EXTERNAL_IRI: &str =
     "export subset: external input carries no boundary IRI to rebuild the root hasInput";
+/// The same connector is listed twice in `external_inputs`. Phase 6 groups boundary targets by
+/// IRI, so the repeat only re-pushes an `isConnectedTo` target the node already carries, and the
+/// importer deduplicates it away (`resolve`'s `external_inputs.contains` guard). The export would
+/// be `Ok` with bytes that come back one entry short — silent round-trip loss, which this exporter
+/// rejects rather than emits. Hand-built graphs only: the resolver dedupes on the way in, so no
+/// imported graph can reach this.
+const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed more than once in external_inputs, and re-import \
+     deduplicates the repeat away";
 /// Two emitted nodes would share one `@id` — duplicate block `instance_iri`s, a parameter named
 /// like a minted port (`out0`), a boundary IRI reusing another node's id. The document would
 /// fail re-import with `DuplicateId`; reject at plan time with the owner named instead.
@@ -485,6 +493,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // scan: an omitted block contributes no errors. That arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
+    // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
+    // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
+    // deferred block never reaches the check and never aborts an export whose document omits it.
+    let mut seen_external: BTreeSet<usize> = BTreeSet::new();
     for cid in &g.external_inputs {
         let idx = cid.0 as usize;
         let Some(c) = g.connectors.get(idx) else {
@@ -500,6 +512,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue; // boundary drives a deferred block's child — drop the whole entry
         }
         let subject = owner_subject(g, c, idx);
+        // Reject a repeat of the SAME connector. Boundary fan-out — one boundary IRI driving
+        // several DISTINCT child inputs — is untouched: those are different connectors, grouped
+        // by the `find(|pb| pb.iri == boundary_iri)` arm below, and only a second listing of one
+        // connector is lost on re-import.
+        if !seen_external.insert(idx) {
+            diags.push(reject(MSG_DUPLICATE_EXTERNAL_INPUT, &subject));
+            continue;
+        }
         if c.dir != Dir::In {
             diags.push(reject(MSG_STRUCTURE, &subject));
             continue;
