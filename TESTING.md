@@ -135,7 +135,7 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
+| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself (+ cargo-deny on manifest change). |
 | `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 

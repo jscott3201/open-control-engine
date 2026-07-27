@@ -56,6 +56,11 @@ no-secret scan, the database-free and golden-gen invariant checks, the gate fixt
 `cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
 determinism subset in debug and release codegen.
 
+CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
+`release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
+its own job — but that is coverage, not proof that the script and the workflows still agree.
+Nothing verifies that mechanically; change a command in CI first, then here.
+
 If your change touches any other crate, its tests did not run. Add `full`:
 
 ```bash
