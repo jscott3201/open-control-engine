@@ -135,9 +135,15 @@ pub fn import_cxf(
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, structurally inconsistent wiring, or an empty (zero-block)
-///   graph. Enum-carrying blocks are deferred (a warning, not a rejection) and do NOT trigger
-///   this variant — unless deferral is *total*, which leaves no block to emit and rejects. Never
-///   panics.
+///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
+///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a
+///   parameter defect, an external input with no boundary IRI — reject only where the offender
+///   sits on a **surviving** block; a deferred block is omitted from the document and so
+///   contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
+///   non-dense ids) and a connection that is not output→input reject either way, being
+///   attributable to no single block's presence in the document. Enum-carrying blocks are
+///   deferred (a warning, not a rejection) and do NOT trigger this variant — unless deferral is
+///   *total*, which leaves no block to emit and rejects. Never panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let (doc, _warnings) = export::document(model)?;

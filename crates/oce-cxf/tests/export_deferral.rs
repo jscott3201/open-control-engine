@@ -115,6 +115,12 @@ fn export_rejection(g: &ModelGraph) -> Vec<Diagnostic> {
 /// The set of blocks the deferral pre-pass reached, read off the report as sorted `@id`s. Every
 /// warning is required to be an `ExportDeferred` at `Warning` severity on the way through, so a
 /// severity or code regression fails here rather than silently widening the set.
+///
+/// Sorting is what makes this a *set* comparison, and it makes every assertion built on it blind
+/// to the order the warnings were emitted in — including a wholesale reversal. `deferral_set`
+/// promises block-then-cascade order, and that promise is pinned in
+/// `tests/export_deferral_diagnostics.rs`, which reads the sequence as emitted. Do not add
+/// ordering assertions here; add them there.
 fn deferred_blocks(report: &ExportReport) -> Vec<String> {
     let mut subjects: Vec<String> = report
         .warnings

@@ -386,9 +386,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // connectors: `datatypes`/`classified` are PUSH-built and `plan.ports` indexes them
     // POSITIONALLY (by connector position), so a `continue` would shrink them and shift the
     // index. Instead push a PLACEHOLDER for a deferred connector (`S231:Real` + `PortAttrs::None`)
-    // and skip ONLY the enum-arm reject — the `ValueType::Enum` arm defers (warned in Phase 1b),
-    // while the `ValueType::String` arm STILL rejects (a deferred block also carrying a String
-    // connector aborts with Error, not defers — the String axis pre-empts the deferral).
+    // and skip ONLY the reject — every out-of-subset arm here (String as well as Enum) is silent
+    // on a deferred block, because the document never carries that connector. A surviving block's
+    // String connector still rejects; an enum connector's deferral was warned in Phase 1b.
     let mut datatypes: Vec<&'static str> = Vec::with_capacity(g.connectors.len());
     let mut classified: Vec<PortAttrs> = Vec::with_capacity(g.connectors.len());
     for (i, c) in g.connectors.iter().enumerate() {
@@ -399,7 +399,13 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ValueType::Integer => "S231:Integer",
             ValueType::Boolean => "S231:Boolean",
             ValueType::String => {
-                diags.push(reject(MSG_STRING_CONNECTOR, &subject));
+                // Same deferral rule as the enum arm below: a block the document omits cannot
+                // leak a String datatype onto the wire, so aborting the whole export over it
+                // would sink a document whose only defect is in bytes nobody emits. No warning
+                // either — the block's own deferral warning was already pushed in Phase 1b.
+                if !is_deferred {
+                    diags.push(reject(MSG_STRING_CONNECTOR, &subject));
+                }
                 "S231:Real" // placeholder; the error gate discards the plan
             }
             ValueType::Enum(_) => {

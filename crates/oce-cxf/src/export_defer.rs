@@ -161,7 +161,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
             warnings.push(defer(
                 MSG_ENUM_DEFER_CONNECTOR
                     .replace("{subject}", &subject)
-                    .replace("{class}", class),
+                    .replace("{class}", &class),
                 &subject,
             ));
         } else if let Some((name, id)) = has_enum_param(g, bi) {
@@ -170,7 +170,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
                 MSG_ENUM_DEFER_PARAM
                     .replace("{subject}", &subject)
                     .replace("{name}", name)
-                    .replace("{class}", class),
+                    .replace("{class}", &class),
                 &subject,
             ));
         }
@@ -225,12 +225,13 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
 /// deferral message's `{class}` slot. The minimal exporter deliberately does not build the
 /// `EnumClassId → isOfDataType IRI` inverse table (that is a future R8), so the numeric id is the
 /// honest class identifier available on the export side.
-fn enum_class_label(id: EnumClassId) -> &'static str {
-    match id.0 {
-        0 => "EnumClass#0",
-        1 => "EnumClass#1",
-        _ => "EnumClass#N",
-    }
+///
+/// The label is injective in `id`: distinct classes never render the same text. That matters
+/// because the id space is dense at both ends — `oce-model` pins `1..=4` for the CDL `Types`
+/// classes and `101..=110` for the G36 ones — so any label that collapsed a tail range would make
+/// most of a G36 model's enum classes indistinguishable in a warning a host shows a technician.
+fn enum_class_label(id: EnumClassId) -> String {
+    format!("EnumClass#{}", id.0)
 }
 
 #[cfg(test)]
@@ -265,5 +266,49 @@ mod tests {
              so the enum-free remainder can export",
             "cascade deferral const must be byte-exact"
         );
+    }
+
+    /// Every enum class `oce-model` pins gets its own label. The previous label folded every id
+    /// of 2 or more into the literal `EnumClass#N`, so ten of the fourteen pinned classes — the
+    /// whole G36 block, `101..=110` — read identically in a deferral warning, and a technician
+    /// told "class `EnumClass#N`" learned nothing about which type stopped the export.
+    #[test]
+    fn every_pinned_enum_class_gets_a_distinct_label() {
+        let pinned = [
+            EnumClassId::SIMPLE_CONTROLLER,
+            EnumClassId::SMOOTHNESS,
+            EnumClassId::EXTRAPOLATION,
+            EnumClassId::ZERO_TIME,
+            EnumClassId::G36_ASHRAE_CLIMATE_ZONE,
+            EnumClassId::G36_CONTROL_ECONOMIZER,
+            EnumClassId::G36_COOLING_COIL,
+            EnumClassId::G36_ENERGY_STANDARD,
+            EnumClassId::G36_FREEZE_STAT,
+            EnumClassId::G36_HEATING_COIL,
+            EnumClassId::G36_OUTDOOR_AIR_SECTION,
+            EnumClassId::G36_PRESSURE_CONTROL,
+            EnumClassId::G36_TITLE24_CLIMATE_ZONE,
+            EnumClassId::G36_VENTILATION_STANDARD,
+        ];
+        let labels: BTreeSet<String> = pinned.iter().copied().map(enum_class_label).collect();
+        assert_eq!(
+            labels.len(),
+            pinned.len(),
+            "each pinned class needs its own label, got: {labels:?}"
+        );
+    }
+
+    /// The label shape itself, pinned: `EnumClass#` plus the decimal `EnumClassId` — what the
+    /// function's rustdoc promises and what a host greps for. Covers the id that used to be the
+    /// fold's first casualty (`SMOOTHNESS` = 2) and one from the G36 range.
+    #[test]
+    fn the_label_renders_the_decimal_class_id() {
+        assert_eq!(enum_class_label(EnumClassId::SMOOTHNESS), "EnumClass#2");
+        assert_eq!(enum_class_label(EnumClassId::EXTRAPOLATION), "EnumClass#3");
+        assert_eq!(
+            enum_class_label(EnumClassId::G36_VENTILATION_STANDARD),
+            "EnumClass#110"
+        );
+        assert_eq!(enum_class_label(EnumClassId(0)), "EnumClass#0");
     }
 }
