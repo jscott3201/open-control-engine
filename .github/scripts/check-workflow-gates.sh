@@ -109,13 +109,6 @@ require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matr
 require_pattern "$ci" 'ubuntu-24\.04-arm' 'arm64 determinism matrix runner'
 require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
   'debug determinism subset with hard-fail-on-zero-tests'
-# The gate script is executed by CI, not merely mirrored by it. Pinned by the exact invocation
-# rather than by the path alone: `bash .agents/gate.sh` and `bash .agents/gate.sh full` are
-# different gates, and ci.yml running only the `full` one would leave the per-PR mode — the
-# default, and the one a contributor gets by typing `bash .agents/gate.sh` — unexecuted anywhere.
-# The `$` anchor is what keeps this pin from being satisfied by the `full` invocation.
-require_pattern "$ci" 'run: bash \.agents/gate\.sh$' 'ci executes the gate script in light mode'
-require_pattern "$ci" 'name: gate \(light\)' 'gate job keeps the name branch protection requires'
 require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
 
@@ -130,8 +123,6 @@ require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci 
 require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail' \
   'release-codegen nextest with hard-fail-on-zero-tests'
 require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate'
-require_pattern "$release" 'run: bash \.agents/gate\.sh full$' \
-  'release gate executes the gate script in full mode'
 require_pattern "$release" 'OCE_REQUIRE_SURFACE_CHECK:[[:space:]]*"1"' 'armed public-api surface gate'
 require_pattern "$release" 'cargo public-api surface gate \(oce-store\)' \
   'dedicated oce-store public-api surface gate step'

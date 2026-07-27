@@ -240,6 +240,19 @@ jobs:
   # It duplicates roughly a minute of compute per PR. On a public repo the runner minutes are not
   # metered, and the duplication is the point — a backstop that shared a cause of failure with the
   # thing it backs up would not be one.
+  #
+  # NOT protected by a grep pin in check-workflow-gates.sh, deliberately. A pin was written for
+  # this job and removed after review: a `run: "true"` step plus the pinned text left behind in a
+  # COMMENT satisfied it, and a decoy no-op job carrying this display name satisfied it alongside a
+  # real job rewired to skip. That is the same false-green that got the earlier parity mechanism
+  # withdrawn, and a text search cannot be made to tell an executable step from a comment. Making
+  # it sound means parsing the YAML and reasoning about `if:` / `needs:` / `continue-on-error`,
+  # which is the unbounded reimplementation that attempt died on.
+  #
+  # What protects it instead is branch protection: `gate (light)` is a REQUIRED status check on
+  # `development`, so deleting or renaming this job means the required context never reports and
+  # the PR cannot merge. That is enforced by GitHub rather than by a string search, and it is the
+  # reason the display name below must not change casually.
   gate:
     name: gate (light)
     if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
