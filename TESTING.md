@@ -230,12 +230,13 @@ silent until someone edits a fixture, which is exactly when a person will not re
 cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 ```
 
-**Expect it to fail when you legitimately add a fixture.** Four volume pins
-(`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, and on the registry cross-check
-`compared == 104` / `exempt_array == 28`) are deliberate: a change that stops discovering ports
-would otherwise leave the comparison vacuously green, which is the exact failure mode the check
-exists to prevent. Re-pin only after understanding why the count moved — a *rising* skip count
-means wirings are being hidden from the audit.
+**Expect it to fail when you legitimately add a fixture.** Seven volume pins are deliberate —
+`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, `compared == 104` and
+`exempt_array == 28` on the registry cross-check, and on the vendored corpus itself
+`classes == 132` and `175 inputs / 144 outputs`. A change that stops discovering ports would
+otherwise leave the comparison vacuously green, which is the exact failure mode the check exists
+to prevent. Re-pin only after understanding why the count moved — a *rising* skip count means
+wirings are being hidden from the audit.
 
 **What the derived table rests on.** Before comparing anything the test cross-checks all 104
 non-array classes against the shipping block registry, which agrees on arity and per-position
@@ -246,9 +247,18 @@ since upstream's single `u[nin]` connector has no arity in common with our N fla
 So names still have no runtime authority. What changed is where the trust sits. Renaming a port
 to something upstream never used now requires editing vendored third-party source that `diff`s
 against a public clone at the pinned commit, instead of editing a catalog entry nobody would
-notice. The audit's own scanner is also asserted against silence: a class that parses to zero
-ports is a hard failure, because "found nothing" is how every scope bug in this extractor's
-history presented itself.
+notice.
+
+**The scanner is asserted against its own silence**, because "found nothing" is how every scope
+bug in this extractor's history presented itself. A class that parses to zero ports is a hard
+failure — but that only catches *total* loss, and a class shedding one connector is the worse
+case. `Reals.Sort` is the worked example: drop `yIdx` and the class still reports ports, still
+carries an array flag from `y[nin]`, and is skipped by both the registry cross-check and the
+fixture comparison, so nothing else here can see it. The `175 / 144` port totals are what close
+that; they are blind to no per-class exemption. Separately, a connector-shaped line that fails to
+parse is rejected rather than skipped, which names the offending file and line instead of leaving
+a count to explain. Modelica lets a declaration span lines and this scanner reads one line at a
+time, so a re-vendor that reformats fails loudly here rather than quietly shrinking the table.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
 Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are

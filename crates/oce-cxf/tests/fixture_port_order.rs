@@ -50,6 +50,13 @@
 //! into N scalar connectors, so names cannot correspond one-to-one. Skips are asserted against an
 //! exact count rather than tolerated, so a change that silently widens the skip set fails.
 //!
+//! A class can also shed *some* connectors without shedding all of them, and that is invisible to
+//! every per-class check here — `Reals.Sort` losing `yIdx` keeps its other ports, keeps the array
+//! flag `y[nin]` gives it, and is skipped by the registry cross-check and the fixture comparison
+//! alike. The 175-input / 144-output totals over the vendored corpus are what close that case;
+//! they answer to no exemption. A connector-shaped line that does not parse is rejected outright
+//! on top of that, to name the file and line rather than leave a moved count to explain.
+//!
 //! The pins are 2135 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
 //! 23-side difference was vacuous array comparisons being correctly reclassified. That was wrong
 //! in the dangerous direction: the generator OR-ed the registry's `width_driven` flag into BOTH
@@ -313,13 +320,53 @@ fn port_decl(line: &str) -> Option<(String, &'static str, bool, bool)> {
     Some((name.to_owned(), kind, is_output, is_array))
 }
 
+/// Bare spellings of every connector type this scanner recognizes.
+const CONNECTOR_TYPES: [&str; 6] = [
+    "RealInput",
+    "RealOutput",
+    "IntegerInput",
+    "IntegerOutput",
+    "BooleanInput",
+    "BooleanOutput",
+];
+
+/// Is this line connector-shaped — does it mention the `Interfaces` package or a connector type?
+///
+/// Paired with [`port_decl`] this separates two things the `Option` cannot: a line that is not a
+/// declaration, and a declaration the scanner failed to understand. `port_decl` returning `None`
+/// on a line that is connector-shaped means the second, and that is an error rather than a line to
+/// skip. Modelica permits a declaration to span lines, so
+///
+/// ```text
+/// Buildings.Controls.OBC.CDL.Interfaces.IntegerOutput
+///   yIdx[nin]
+/// ```
+///
+/// is valid, parses to nothing, and drops `yIdx` from `Reals.Sort` while every other guard here
+/// stays green: the class keeps its other ports, its array flag survives on `y[nin]`, and both the
+/// registry cross-check and the fixture comparison skip array sides. A scanner that silently
+/// discards input it cannot read is the failure mode all five of this extractor's predecessor
+/// defects shared, so the answer is to refuse the input, not to guess at it.
+///
+/// The predicate deliberately over-approximates: it fires on the `Interfaces.` package prefix
+/// alone, which catches a split placed inside the type name itself.
+fn mentions_connector(line: &str) -> bool {
+    line.contains("Interfaces.") || CONNECTOR_TYPES.iter().any(|ty| line.contains(ty))
+}
+
 /// Derive one class's interface from vendored upstream source, in declaration order.
 ///
 /// **Only depth-1 declarations count.** CDL sources define nested helper blocks that declare their
 /// own connectors: `Logical/VariablePulse.mo` opens `block Cycle` at line 69 whose `BooleanInput
 /// go` sits at line 82. A scope-blind scan leaks `go` into the parent interface, yielding inputs
 /// `[u, go]` where upstream — and our own shipping registry — carry only `[u]`.
-fn parse_class(path: &Path) -> ClassPorts {
+///
+/// Connector-shaped lines that do not parse are pushed onto `unparsed` as `<label>:<line>: <text>`
+/// rather than skipped; [`load_table`] rejects the corpus if any survive. That check runs at
+/// **every** depth on purpose. Scope tracking is the part of this scanner with the worst history —
+/// three of the five predecessor defects were miscounted depth — so a backstop that consults
+/// `depth` would depend on the subsystem it exists to backstop.
+fn parse_class(path: &Path, label: &str, unparsed: &mut Vec<String>) -> ClassPorts {
     let src =
         std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let mut ports = ClassPorts {
@@ -331,7 +378,10 @@ fn parse_class(path: &Path) -> ClassPorts {
         outputs_are_array: false,
     };
     let mut depth = 0usize;
-    for line in src.lines() {
+    for (lineno, line) in src.lines().enumerate() {
+        if mentions_connector(line) && port_decl(line).is_none() {
+            unparsed.push(format!("{label}:{}: {}", lineno + 1, line.trim()));
+        }
         if opens_class(line) {
             depth += 1;
             continue;
@@ -379,6 +429,7 @@ fn load_table() -> BTreeMap<String, ClassPorts> {
     mo_files(&root, &mut paths);
 
     let mut table = BTreeMap::new();
+    let mut unparsed = Vec::new();
     for path in &paths {
         let rel = path.strip_prefix(&root).expect("path under CDL root");
         // `Reals/PID.mo` -> `CDL.Reals.PID`. The directory layout mirrors upstream, so this
@@ -389,8 +440,20 @@ fn load_table() -> BTreeMap<String, ClassPorts> {
                 .components()
                 .map(|c| c.as_os_str().to_string_lossy().into_owned()),
         );
-        table.insert(segments.join("."), parse_class(path));
+        let label = rel.to_string_lossy().into_owned();
+        table.insert(segments.join("."), parse_class(path, &label, &mut unparsed));
     }
+
+    assert!(
+        unparsed.is_empty(),
+        "{} connector-shaped line(s) in vendored source did not parse as a declaration:\n  {}\n\
+         Each is a port this scanner would drop in silence. Modelica lets a declaration span \
+         lines; this scanner reads one line at a time and rejects what it cannot read rather than \
+         guessing, so a re-vendor that reformats fails here instead of quietly shrinking the \
+         table.",
+        unparsed.len(),
+        unparsed.join("\n  ")
+    );
 
     assert_eq!(
         table.len(),
@@ -410,6 +473,20 @@ fn load_table() -> BTreeMap<String, ClassPorts> {
          mode that made a scope bug look like a clean run.",
         portless.len(),
         portless
+    );
+
+    // A class losing SOME of its ports is the dangerous case the portless check above cannot see,
+    // and `Reals.Sort` is the worked example: drop `yIdx` and the class still has ports, still
+    // carries an array flag from `y[nin]`, and is skipped by both the registry cross-check and the
+    // fixture comparison. Totals are blind to none of that.
+    let inputs: usize = table.values().map(|p| p.inputs.len()).sum();
+    let outputs: usize = table.values().map(|p| p.outputs.len()).sum();
+    assert_eq!(
+        (inputs, outputs),
+        (175, 144),
+        "vendored corpus port totals changed. Upstream declares 175 inputs and 144 outputs across \
+         the 132 classes; a drop means the scanner stopped seeing declarations it used to see, \
+         which is invisible to every per-class check here."
     );
 
     // Never trust the derived table on its own word — see the function's rustdoc.
