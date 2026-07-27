@@ -119,3 +119,18 @@ Do not add `--all-features`. `oce-api` declares `default = ["mem"]`, and the pro
 this repo gates on is that the *default* build links no database and no async
 runtime. Linting all features checks a configuration that never ships and lets a
 default-build regression through.
+
+## Run `cargo clean` between PRs
+
+At every merge boundary, before the next branch is cut, clean the tree you just
+worked in. This workspace builds large: a single review worktree has reached 4.9 GB
+of `target/` against 1.2 GB in the main checkout, and artifacts otherwise drag
+forward from one PR into the next indefinitely.
+
+Two things make this safe to do and easy to get wrong:
+
+- **Never clean a tree while a build is running in it.** An agent mid-gate in that
+  tree will fail in a way that looks like a code defect.
+- **Worktrees have independent `target/` directories** — `.cargo/config.toml` sets no
+  shared `[build] target-dir`. Cleaning the main checkout therefore cannot disturb an
+  agent working in a worktree, and vice versa. Clean each tree on its own schedule.
