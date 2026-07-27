@@ -7,13 +7,13 @@
 
 use std::sync::Arc;
 
-use oce_diag::{DiagCode, Diagnostic, Severity};
+use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};
 use oce_model::{
     Attrs, BlockId, BlockInstance, Connector, ConnectorId, Dir, ModelGraph, ParamTable, RealAttrs,
     Value, ValueType,
 };
 
-use super::{CxfError, ResolveOptions, export, import_cxf};
+use super::{CxfError, ResolveOptions, export, export_with_report, import_cxf};
 
 const MINIMAL_LOOP: &str = include_str!("../tests/fixtures/minimal_loop.jsonld");
 const CONNECTOR_ATTRS: &str = include_str!("../tests/fixtures/connector_attrs.jsonld");
@@ -138,23 +138,104 @@ fn attr_bearing_export_is_byte_stable_across_repeated_calls() {
 }
 
 #[test]
-fn enum_valued_parameter_is_rejected_with_the_owning_block_subject() {
-    // cooling_only_dampers surfaces `controllerType = Enum` on the conPID BlockInstance (the
+fn enum_valued_parameter_defers_with_the_owning_block_subject_and_cascades() {
+    // R7: cooling_only_dampers carries `controllerType = Enum` on the conPID BlockInstance (the
     // high-limits/EnergyStandard fixtures do NOT — their enums are specialization-consumed and
-    // never reach a BlockInstance param, so those graphs would be accepted).
+    // never reach a BlockInstance param). Under deferral the export is `Ok`, the bytes re-import
+    // enum-free with zero error diags, and the report carries ≥1 `ExportDeferred` warning. This
+    // is BOTH the retirement of the pre-R7 enum-param rejection AND the cascade smoke test —
+    // folded, not duplicated. The deferred set is pinned EXACTLY, in both directions: a G36-scale
+    // graph is precisely where an over-reaching cascade could delete most of the document while a
+    // "≥1 warning" assertion still passed, and where a cascade that stopped short could emit a
+    // block whose only driver the document omits. The cone here is two blocks — the enum-bearing
+    // conPID, and swi2, whose u3 input conPID.y solely drives.
     let graph = import(G36_ENUM_PARAM);
-    let diags = rejection(&graph);
+    let report = export_with_report(&graph).expect("enum-carrying graph defers, not rejects");
+    assert!(
+        !report.bytes.is_empty(),
+        "the enum-free survivor subset still emits bytes"
+    );
+    // T1: Ok (above). T3: the deferred set is exactly {conPID, swi2}, every warning a deferral.
+    assert!(
+        report
+            .warnings
+            .iter()
+            .all(|d| d.code == DiagCode::ExportDeferred && d.severity == Severity::Warning),
+        "every warning is a non-aborting deferral (no errors): {:?}",
+        report.warnings
+    );
+    let mut deferred: Vec<&str> = report
+        .warnings
+        .iter()
+        .filter_map(|d| d.subject.as_deref())
+        .collect();
+    deferred.sort_unstable();
+    deferred.dedup();
     assert_eq!(
-        diags[0].subject.as_deref(),
-        Some("http://example.org#g36.source.cooling_only_dampers.conPID"),
-        "the first offender in block order is the enum-carrying conPID"
+        deferred,
+        vec![
+            "http://example.org#g36.source.cooling_only_dampers.conPID",
+            "http://example.org#g36.source.cooling_only_dampers.swi2",
+        ],
+        "the cascade must reach exactly conPID and its sole-driven consumer swi2"
+    );
+    // T2: the emitted bytes re-import to an enum-free graph with zero error diags.
+    let (reimported, re_report) =
+        import_cxf(&report.bytes, &ResolveOptions::default()).expect("emitted bytes re-import");
+    assert!(
+        !has_errors(&re_report.diagnostics),
+        "re-import has no error diags (no SingleAssignment/UnresolvedReference): {:?}",
+        re_report.diagnostics
+    );
+    assert!(
+        reimported
+            .connectors
+            .iter()
+            .all(|c| !matches!(c.value_type, ValueType::Enum(_))),
+        "zero enum connectors in the re-imported graph"
+    );
+    assert!(
+        reimported.blocks.iter().all(|b| b
+            .params
+            .values
+            .iter()
+            .all(|(_, v)| !matches!(v, Value::Enum { .. }))),
+        "zero enum params in the re-imported graph"
+    );
+    // The survivor set is the input's blocks minus exactly those two, named individually — the
+    // structural counterpart to the deferred-set pin above. Asserted against the RE-IMPORTED graph
+    // so it also covers the emission path, not just the pre-pass.
+    fn survivors(g: &ModelGraph, deferred: &[&str]) -> Vec<String> {
+        let mut iris: Vec<String> = g
+            .blocks
+            .iter()
+            .filter_map(|b| b.instance_iri.as_deref())
+            .filter(|iri| !deferred.contains(iri))
+            .map(str::to_owned)
+            .collect();
+        iris.sort();
+        iris
+    }
+    assert_eq!(
+        survivors(&reimported, &deferred),
+        survivors(&graph, &deferred),
+        "every non-deferred block survives to the re-imported graph, and nothing else appears"
     );
     assert_eq!(
-        diags[0].message,
-        "export subset: parameter `controllerType` is enumeration-valued, which has no CXF \
-         literal form in the minimal export subset"
+        reimported.blocks.len(),
+        graph.blocks.len() - deferred.len(),
+        "exactly the deferred blocks are missing"
     );
-    assert_eq!(rejection(&graph), diags, "stable across repeated calls");
+    // T4: the enum-bearing conPID emits NO node (block or port) in the @graph.
+    let text = std::str::from_utf8(&report.bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        !text.contains("\"@id\":\"http://example.org#g36.source.cooling_only_dampers.conPID\""),
+        "conPID's block node must be absent from the emitted @graph: {text}"
+    );
+    assert!(
+        !text.contains("\"http://example.org#g36.source.cooling_only_dampers.conPID."),
+        "no minted port @id under conPID may appear in the emitted @graph: {text}"
+    );
 }
 
 #[test]
@@ -519,10 +600,16 @@ fn string_typed_connector_is_rejected_with_the_owning_block_subject() {
 }
 
 #[test]
-fn enum_typed_connector_is_rejected_with_the_owning_block_subject() {
-    // Hand-built for isolation, but this arm is import-reachable too: the resolver's
-    // `value_type_of_datatype` maps enum datatype IRIs to `ValueType::Enum`, so an imported
-    // graph can carry one. Same placeholder-datatype hazard as the String arm.
+fn enum_typed_connector_defers_with_the_owning_block_subject() {
+    // R7: a `ValueType::Enum` connector is deferred (warning), not rejected (error). Hand-built
+    // for isolation, but this arm is import-reachable too: the resolver's
+    // `value_type_of_datatype` maps enum datatype IRIs to `ValueType::Enum`. The export is `Ok`
+    // and the report carries exactly one `ExportDeferred` warning naming the owning block.
+    //
+    // The graph carries a SECOND, enum-free block. Without it every block would be deferred, and
+    // total deferral is a rejection, not an `Ok` with an empty composite — the shape this test
+    // used to assert `Ok` on, regress-locking that defect. The lone-block variant is asserted
+    // below; the deferral-cascade behaviour itself lives in `tests/export_deferral.rs`.
     let mut graph = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
     graph.connectors[0] = Connector::new(
         ConnectorId(0),
@@ -531,15 +618,66 @@ fn enum_typed_connector_is_rejected_with_the_owning_block_subject() {
         ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
         0,
     );
-    let diags = rejection(&graph);
-    assert_eq!(diags.len(), 1, "got: {diags:?}");
+    let lone = graph.clone();
+    graph.blocks.push(BlockInstance {
+        id: BlockId(1),
+        class_iri: Arc::from("CDL.Reals.Sources.Constant"),
+        inputs: vec![],
+        outputs: vec![ConnectorId(1)],
+        params: ParamTable::default(),
+        decl_order: 1,
+        instance_iri: Some(Arc::from("http://example.org#Hand.keep")),
+    });
+    graph.connectors.push(Connector::new(
+        ConnectorId(1),
+        BlockId(1),
+        Dir::Out,
+        ValueType::Real,
+        1,
+    ));
+
+    let report = export_with_report(&graph).expect("enum connector defers, not rejects");
+    let defers: Vec<&Diagnostic> = report
+        .warnings
+        .iter()
+        .filter(|d| d.code == DiagCode::ExportDeferred)
+        .collect();
     assert_eq!(
-        diags[0].subject.as_deref(),
-        Some("http://example.org#Hand.con")
+        defers.len(),
+        1,
+        "exactly one deferral warning: {:?}",
+        report.warnings
     );
+    assert_eq!(defers[0].severity, Severity::Warning, "non-aborting");
     assert_eq!(
-        diags[0].message,
-        "export subset: enumeration-typed connectors are outside the minimal export subset"
+        defers[0].subject.as_deref(),
+        Some("http://example.org#Hand.con"),
+        "the owning block is the subject"
+    );
+    // The enum connector's port node is absent from the emitted @graph (T4-style pin).
+    let text = std::str::from_utf8(&report.bytes).expect("export emits UTF-8 JSON");
+    assert!(
+        !text.contains("\"http://example.org#Hand.con.out0\""),
+        "the enum connector's port node must be absent: {text}"
+    );
+
+    // The corrected expectation for the lone-block shape: deferring the only block leaves no
+    // runtime composite, so the export rejects instead of returning a root-only document.
+    let diags = match export(&lone) {
+        Err(CxfError::Validation(diags)) => diags,
+        Ok(bytes) => panic!(
+            "total deferral must reject, got Ok with {} byte(s)",
+            bytes.len()
+        ),
+        Err(other) => panic!("expected CxfError::Validation, got {other:?}"),
+    };
+    assert!(
+        diags.iter().any(|d| d.severity == Severity::Error
+            && d.code == DiagCode::ExportUnsupported
+            && d.subject.is_none()
+            && d.message
+                .starts_with("CXF export requires at least one surviving block:")),
+        "total deferral must carry the surviving-block error: {diags:?}"
     );
 }
 
@@ -679,36 +817,28 @@ fn every_rejection_path_returns_instead_of_panicking() {
 
     // Rejection shapes: every one must return `Err(Validation(_))` (not `Ok`). The OOR external
     // input (slice a) is in this list — a silent `continue` deletion would make it `Ok`, caught
-    // here, where the old `Ok|Err(Validation)` blanket would have masked it.
+    // here, where the old `Ok|Err(Validation)` blanket would have masked it. Enum-carrying graphs
+    // are here only in their TOTALLY-deferred form: after R7 a partly enum-bearing graph defers
+    // (Ok with warnings), but a graph the cascade empties has no composite to emit and rejects.
+    // The enum-param entry restores the coverage the retired enum-param rejection graph carried —
+    // that exact shape is what surfaced the root-only-document defect.
     let rejections: Vec<ModelGraph> = vec![
         ModelGraph::new(),
-        import(G36_ENUM_PARAM),
         constant_graph(vec![(Arc::from("k"), Value::Real(f64::NAN))]),
+        constant_graph(vec![(Arc::from("out0"), Value::Real(1.0))]),
         constant_graph(vec![(
-            Arc::from("mode"),
+            Arc::from("controllerType"),
             Value::Enum {
                 class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
                 ordinal: 1,
             },
         )]),
-        constant_graph(vec![(Arc::from("out0"), Value::Real(1.0))]),
         with_class("CDL.Reals.Sources#Constant"),
         with_class("Buildings.Controls.OBC.CDL.Reals.Sources.Constant"),
         {
             let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
             g.connectors[0] =
                 Connector::new(ConnectorId(0), BlockId(0), Dir::Out, ValueType::String, 0);
-            g
-        },
-        {
-            let mut g = constant_graph(vec![(Arc::from("k"), Value::Real(2.0))]);
-            g.connectors[0] = Connector::new(
-                ConnectorId(0),
-                BlockId(0),
-                Dir::Out,
-                ValueType::Enum(oce_model::EnumClassId::SIMPLE_CONTROLLER),
-                0,
-            );
             g
         },
         non_dense,

@@ -1,28 +1,51 @@
-//! Byte-determinism goldens for the minimal CXF exporter (#141): the checked-in exported bytes,
-//! export idempotence, and emission-order stability.
+//! Byte goldens for the CXF exporter (#141): checked-in expected output files compared
+//! byte-for-byte, plus export idempotence and emission-order stability.
 //!
-//! The golden is the exact byte output of `export(import(minimal_loop.jsonld))`. To regenerate
-//! after an *intentional* format change, run:
+//! These are the only export tests that can catch a regression which is *stable across the round
+//! trip*. The RT-2 fixpoint assertions elsewhere (`render(G1) == render(G2)`,
+//! `export(G2) == bytes`) are self-consistency checks: a change that alters the emitted bytes but
+//! alters them identically on both sides of the trip satisfies every one of them. Only an
+//! expectation recorded outside the implementation — a file in the repo — pins the actual wire
+//! format. `TESTING.md` pillar 2 requires that, which is why each fixture below carries a golden
+//! rather than only a fixpoint.
+//!
+//! Each golden covers a distinct emission axis:
+//!
+//! | golden                                   | pins                                              |
+//! |------------------------------------------|---------------------------------------------------|
+//! | `minimal_loop.export.cxf.json`           | the base wire format: root, blocks, params, ports, boundary node |
+//! | `connector_attrs.export.cxf.json`        | the five §7.4.1 attrs in Bare-Scalar Canonical shape |
+//! | `array_flattened.export.cxf.json`        | 1-D flattened array params (`k_1`, `k_2`)         |
+//! | `array2d_flattened.export.cxf.json`      | 2-D flattened array params (multi-underscore `k_1_1`) |
+//! | `g36_vav_single_zone.export.cxf.json`    | an enum-free G36-scale topology at full node count |
+//! | `enum_deferral_miniature.export.cxf.json`| the deferral survivor cone — what is emitted *and* what is absent |
+//!
+//! To regenerate a golden after an **intentional** format change:
 //!
 //! ```text
-//! OCE_BLESS=1 cargo test -p oce-cxf --test export_golden exported_bytes_match_the_checked_in_golden
+//! OCE_BLESS=1 cargo test -p oce-cxf --test export_golden
 //! ```
 //!
-//! and review the diff — any unreviewed byte drift is a determinism defect.
+//! then review the diff. Blessing is opt-in and never happens on a default run — a test that
+//! recomputed its own expectation would assert nothing. Any unreviewed byte drift is a
+//! determinism defect.
 
 use std::path::PathBuf;
 
-use oce_cxf::{ResolveOptions, export, import_cxf};
+use oce_cxf::{ResolveOptions, export, export_with_report, import_cxf};
+use oce_diag::DiagCode;
 use oce_model::ModelGraph;
 
 const FIXTURE: &str = include_str!("fixtures/minimal_loop.jsonld");
-const GOLDEN_REL: &str = "tests/fixtures/export/minimal_loop.export.cxf.json";
-
-/// The §7.4.1 attr-rich fixture (all three `TermAttr` wire shapes + Real `min`/`max`), used by
-/// the R6 attr-bearing byte golden + idempotence test.
+/// The §7.4.1 attr-rich fixture (all three `TermAttr` wire shapes + Real `min`/`max`).
 const ATTRS_FIXTURE: &str = include_str!("fixtures/connector_attrs.jsonld");
-/// The checked-in exported-bytes golden for the attr-bearing fixture (`export(import(...))`).
-const ATTRS_GOLDEN_REL: &str = "tests/fixtures/export/connector_attrs.export.cxf.json";
+/// 1-D and 2-D flattened array fixtures — the flattened `local_name` emission path.
+const ARRAY_FIXTURE: &str = include_str!("fixtures/array_flattened.jsonld");
+const ARRAY_2D_FIXTURE: &str = include_str!("fixtures/array2d_flattened.jsonld");
+/// An enum-free G36 fixture: the largest in-subset topology, exported whole (nothing defers).
+const G36_FIXTURE: &str = include_str!("fixtures/g36/vav_single_zone.jsonld");
+/// The enum-deferral miniature — exported down to its survivor cone.
+const DEFERRAL_FIXTURE: &str = include_str!("fixtures/enum_deferral_miniature.jsonld");
 
 /// The synthesized root `@id` (`ModelGraph` does not record the source root IRI). Pinned here
 /// against the exporter's constant: changing it is a byte-format break.
@@ -30,7 +53,7 @@ const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
 fn import_ok(src: &str) -> ModelGraph {
     let (g, report) = import_cxf(src.as_bytes(), &ResolveOptions::default())
-        .expect("minimal_loop must resolve without error");
+        .expect("fixture must resolve without error");
     assert!(
         report.is_empty(),
         "expected zero diagnostics, got: {:?}",
@@ -39,86 +62,126 @@ fn import_ok(src: &str) -> ModelGraph {
     g
 }
 
-fn golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_REL)
+fn golden_path(rel: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/export")
+        .join(rel)
 }
 
-fn attrs_golden_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(ATTRS_GOLDEN_REL)
-}
-
-#[test]
-fn exported_bytes_match_the_checked_in_golden() {
-    let g = import_ok(FIXTURE);
-    let bytes = export(&g).expect("minimal_loop is inside the minimal export subset");
-
+/// Compare `bytes` against the checked-in golden `rel`, or rewrite it when `OCE_BLESS` is set.
+/// The comparison runs twice — once as text so a mismatch prints a readable diff, once raw so a
+/// non-UTF-8 divergence cannot slip through the lossy conversion.
+fn assert_golden(bytes: &[u8], rel: &str) {
+    let path = golden_path(rel);
     if std::env::var_os("OCE_BLESS").is_some() {
-        std::fs::create_dir_all(golden_path().parent().unwrap()).unwrap();
-        std::fs::write(golden_path(), &bytes).unwrap();
+        std::fs::create_dir_all(path.parent().expect("the golden dir has a parent"))
+            .expect("golden dir is creatable");
+        std::fs::write(&path, bytes).expect("golden is writable");
         return;
     }
-    let expected =
-        std::fs::read(golden_path()).expect("export golden missing — regenerate with OCE_BLESS=1");
-    // Compare as strings so a mismatch prints a readable diff, then re-assert raw bytes.
+    let expected = std::fs::read(&path)
+        .unwrap_or_else(|e| panic!("golden {rel} missing ({e}) — regenerate with OCE_BLESS=1"));
     assert_eq!(
-        String::from_utf8_lossy(&bytes),
+        String::from_utf8_lossy(bytes),
         String::from_utf8_lossy(&expected),
-        "exported document diverged from the checked-in byte golden"
+        "{rel}: exported document diverged from the checked-in byte golden"
     );
-    assert_eq!(bytes, expected, "byte-level divergence (non-UTF-8?)");
+    assert_eq!(bytes, expected, "{rel}: byte-level divergence (non-UTF-8?)");
 }
 
-#[test]
-fn export_is_byte_idempotent_across_calls() {
-    let g = import_ok(FIXTURE);
-    let first = export(&g).expect("export succeeds");
+/// Export `src` and require repeated exports of the same graph to be byte-identical. Returns the
+/// bytes so the caller can golden them.
+fn export_stable(src: &str) -> Vec<u8> {
+    let g = import_ok(src);
+    let first = export(&g).expect("fixture is inside the export subset");
     for _ in 0..3 {
         assert_eq!(
-            export(&g).expect("export succeeds"),
+            export(&g).expect("fixture is inside the export subset"),
             first,
             "repeated exports of the same graph must be byte-identical"
         );
     }
+    first
 }
 
 #[test]
-fn attr_bearing_exported_bytes_match_the_checked_in_golden() {
-    // R6 byte golden for the attr-bearing fixture: the exact bytes of
-    // `export(import(connector_attrs.jsonld))`, with the five BSC §7.4.1 attrs on the port node.
-    // Regenerate after an intentional format change with:
-    //   OCE_BLESS=1 cargo test -p oce-cxf --test export_golden attr_bearing_exported_bytes_match_the_checked_in_golden
-    // and review the diff — any unreviewed byte drift is a determinism defect.
-    let g = import_ok(ATTRS_FIXTURE);
-    let bytes = export(&g).expect("attr-bearing connector exports under BSC");
+fn minimal_loop_bytes_match_the_checked_in_golden() {
+    assert_golden(&export_stable(FIXTURE), "minimal_loop.export.cxf.json");
+}
 
-    if std::env::var_os("OCE_BLESS").is_some() {
-        std::fs::create_dir_all(attrs_golden_path().parent().unwrap()).unwrap();
-        std::fs::write(attrs_golden_path(), &bytes).unwrap();
-        return;
-    }
-    let expected = std::fs::read(attrs_golden_path())
-        .expect("attr export golden missing — regenerate with OCE_BLESS=1");
-    assert_eq!(
-        String::from_utf8_lossy(&bytes),
-        String::from_utf8_lossy(&expected),
-        "attr-bearing exported document diverged from the checked-in byte golden"
+#[test]
+fn attr_bearing_bytes_match_the_checked_in_golden() {
+    // The five BSC §7.4.1 attrs on the port node, recorded on the wire rather than inferred from a
+    // round trip: a change to how `unit`/`quantity`/`displayUnit`/`min`/`max` serialize survives
+    // every fixpoint assertion (both sides move together) but breaks this file.
+    assert_golden(
+        &export_stable(ATTRS_FIXTURE),
+        "connector_attrs.export.cxf.json",
     );
-    assert_eq!(bytes, expected, "byte-level divergence (non-UTF-8?)");
 }
 
 #[test]
-fn attr_bearing_export_is_byte_idempotent_across_calls() {
-    // R6 idempotence: repeated exports of the same attr-bearing graph are byte-identical (no map
-    // iteration feeds emission; the bare shapes are deterministic).
-    let g = import_ok(ATTRS_FIXTURE);
-    let first = export(&g).expect("attr-bearing connector exports under BSC");
-    for _ in 0..3 {
-        assert_eq!(
-            export(&g).expect("attr-bearing connector exports under BSC"),
-            first,
-            "repeated exports of the same attr-bearing graph must be byte-identical"
-        );
-    }
+fn flattened_array_bytes_match_the_checked_in_golden() {
+    // The 1-D flattened parameter names (`k_1`, `k_2`) as emitted `@id` suffixes.
+    assert_golden(
+        &export_stable(ARRAY_FIXTURE),
+        "array_flattened.export.cxf.json",
+    );
+}
+
+#[test]
+fn flattened_2d_array_bytes_match_the_checked_in_golden() {
+    // The 2-D case is a separate golden because multi-underscore names (`k_1_1` .. `k_2_2`) are a
+    // distinct emission path from the single-underscore 1-D ones; the 1-D golden does not cover it.
+    assert_golden(
+        &export_stable(ARRAY_2D_FIXTURE),
+        "array2d_flattened.export.cxf.json",
+    );
+}
+
+#[test]
+fn enum_free_g36_topology_bytes_match_the_checked_in_golden() {
+    // A full G36 controller, enum-free, so nothing defers and the whole graph is emitted. At this
+    // node count a regression in ordering, minting, or edge emission has room to be *consistently*
+    // wrong — which is exactly what a round-trip fixpoint cannot see and this file can.
+    assert_golden(
+        &export_stable(G36_FIXTURE),
+        "g36_vav_single_zone.export.cxf.json",
+    );
+}
+
+#[test]
+fn deferral_survivor_cone_bytes_match_the_checked_in_golden() {
+    // The deferral golden records what the survivor cone actually looks like on the wire — and,
+    // by omission, what the cascade removed. A cascade that grew or shrank changes this file even
+    // when every survivor-cone fixpoint assertion still holds, because those compare the survivors
+    // to themselves.
+    let g = import_ok(DEFERRAL_FIXTURE);
+    let report = export_with_report(&g).expect("the miniature defers, it does not reject");
+    assert!(
+        report
+            .warnings
+            .iter()
+            .all(|d| d.code == DiagCode::ExportDeferred),
+        "every warning is a deferral: {:?}",
+        report.warnings
+    );
+    let mut deferred: Vec<&str> = report
+        .warnings
+        .iter()
+        .filter_map(|d| d.subject.as_deref())
+        .collect();
+    deferred.sort_unstable();
+    deferred.dedup();
+    assert_eq!(
+        deferred,
+        vec![
+            "http://example.org#Mini.con",
+            "http://example.org#Mini.cons"
+        ],
+        "the golden below is only meaningful for this exact deferred set"
+    );
+    assert_golden(&report.bytes, "enum_deferral_miniature.export.cxf.json");
 }
 
 #[test]

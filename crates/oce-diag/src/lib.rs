@@ -142,6 +142,11 @@ pub enum DiagCode {
     /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
     /// so the diagnostic's `subject` is `None` — no individual node is at fault.
     ExportUnsupported,
+    /// An export subsetting deferral: an enum-carrying block (and, by cascade, its downstream
+    /// consumers) was omitted from the emitted document so the enum-free remainder could still
+    /// export. NOT an error — the export succeeds with this diagnostic carried out as a warning
+    /// (see `oce_cxf::export_with_report`); `export()` discards it.
+    ExportDeferred,
 }
 
 impl DiagCode {
@@ -178,6 +183,7 @@ impl DiagCode {
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
             DiagCode::ExportUnsupported => "export-unsupported",
+            DiagCode::ExportDeferred => "export-deferred",
         }
     }
 }
@@ -326,6 +332,7 @@ mod tests {
         MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
         ExportUnsupported => "export-unsupported",
+        ExportDeferred => "export-deferred",
     }
 
     #[test]
