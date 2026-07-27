@@ -38,6 +38,8 @@ step 'no-db fixtures' bash .github/scripts/test-check-default-no-db.sh
 step 'golden-gen fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
 step 'crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
 step 'crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
+step 'workflow fixtures' bash .github/scripts/test-workflow-gates.sh
+step 'workflow smoke' bash .github/scripts/check-workflow-gates.sh
 step 'machete' cargo machete
 step 'clippy' cargo clippy --workspace --all-targets --locked -- -D warnings
 step 'build' cargo build --workspace --locked
@@ -484,6 +486,8 @@ PINNED_COMMANDS=(
   'bash .github/scripts/test-check-golden-gen-anti-tautology.sh'
   'bash .github/scripts/test-check-stale-crate-status.sh'
   'bash .github/scripts/check-stale-crate-status.sh'
+  'bash .github/scripts/test-workflow-gates.sh'
+  'bash .github/scripts/check-workflow-gates.sh'
   'cargo machete'
   'cargo clippy --workspace --all-targets --locked -- -D warnings'
   'cargo build --workspace --locked'

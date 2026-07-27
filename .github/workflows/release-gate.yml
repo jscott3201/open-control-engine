@@ -21,9 +21,10 @@
 #       - `cargo test --doc`  for doctests (nextest cannot run doctests),
 #       - two armed per-crate public-API surface snapshots (`oce-api` and `oce-store`).
 #     `--no-tests=fail` is explicit: a run that discovers zero tests HARD-FAILS, catching the
-#     regression where tests silently stop compiling or being discovered. (Today: all unit
-#     tests across the workspace; there are no integration-test targets or doctests yet —
-#     `crates/oce-cxf/tests/` holds only `fixtures/`. The command needs no change as those land.)
+#     regression where tests silently stop compiling or being discovered. It covers unit tests,
+#     the workspace's integration-test targets (`crates/*/tests/`, including the `oce-cxf`
+#     round-trip and deferral suites), and — via the separate `cargo test --doc` step — the
+#     doctests nextest cannot run.
 #   * Re-run of the light correctness gates against the RELEASE TIP. A `development` -> `main`
 #     PR matches no other workflow, so without these the release PR would be ENTIRELY ungated.
 #     `development` also drifts between the last per-PR run and the release cut, and the merge

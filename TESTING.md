@@ -65,8 +65,9 @@ Worked examples of the bar, and where each stands:
 - **Engine loop** — golden converging trace for the feedback loop, bit-exact at every tick.
   **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the G36 traces
   beside it, each with a `.prov.json` recording the oracle's provenance.
-- **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit. **Not on
-  `development` yet**; they arrive with the CXF array/deferral work.
+- **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit.
+  **Landed**: `crates/oce-cxf/tests/fixtures/golden/array.modelgraph.txt`,
+  `array2d.modelgraph.txt` and `array_expression.modelgraph.txt`.
 
 ### 3. Oracle cross-checks — agreement with the reference implementation
 

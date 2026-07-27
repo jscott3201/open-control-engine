@@ -173,9 +173,18 @@ GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
 require_file "$GATE_SCRIPT"
 
 gate_cmds="$(mktemp)"
-trap 'rm -f "$gate_cmds"' EXIT
-if ! bash "$GATE_SCRIPT" list > "$gate_cmds" 2>/dev/null; then
+gate_stderr="$(mktemp)"
+gate_shim="$(mktemp -d)"
+gate_exec_log="$(mktemp)"
+trap 'rm -f "$gate_cmds" "$gate_stderr" "$gate_exec_log"; rm -rf "$gate_shim"' EXIT
+if ! bash "$GATE_SCRIPT" list > "$gate_cmds" 2>"$gate_stderr"; then
   echo "FAIL: $GATE_SCRIPT does not support 'list' mode, so its commands cannot be pinned"
+  # Surface the interpreter's own diagnosis. Swallowing it reported a syntactically broken
+  # gate as "no list mode", which fails closed but sends the reader hunting the wrong bug.
+  if [ -s "$gate_stderr" ]; then
+    echo "       the script reported:"
+    sed 's/^/       | /' "$gate_stderr" >&2
+  fi
   exit 1
 fi
 # A listing that emits nothing — or emits prose instead of CMD lines — would make every
@@ -186,6 +195,52 @@ if ! grep -q '^CMD ' "$gate_cmds"; then
 fi
 if grep -qv '^CMD ' "$gate_cmds"; then
   echo "FAIL: $GATE_SCRIPT list emitted non-CMD output; listing must be machine-readable only"
+  exit 1
+fi
+
+# The listing is produced by a `list` branch inside `step`/`step_env`, so on its own it is the
+# script's own account of what it would do — self-attestation, not evidence. A review proved the
+# gap both ways: early-returning from the NORMAL branch left the listing intact while `gate.sh
+# light` executed nothing and printed GATE PASSED, and a command added to the normal branch alone
+# ran without ever appearing in the listing.
+#
+# So run the gate for real against a PATH shim that records argv and executes nothing, and require
+# the recorded set to equal the listed set. `cargo` and `bash` are the only external programs the
+# steps invoke; `step_env` reaches `cargo` through `env`, so the shim reads RUSTDOCFLAGS back out
+# of its own environment to reproduce the listed form. The gate script's own interpreter is given
+# as an absolute path so shimming `bash` cannot displace it.
+cat > "$gate_shim/cargo" <<'SHIM'
+#!/bin/sh
+if [ -n "${RUSTDOCFLAGS:-}" ]; then
+  printf 'CMD RUSTDOCFLAGS=%s cargo %s\n' "$RUSTDOCFLAGS" "$*" >> "$OCE_EXEC_LOG"
+else
+  printf 'CMD cargo %s\n' "$*" >> "$OCE_EXEC_LOG"
+fi
+exit 0
+SHIM
+cat > "$gate_shim/bash" <<'SHIM'
+#!/bin/sh
+printf 'CMD bash %s\n' "$*" >> "$OCE_EXEC_LOG"
+exit 0
+SHIM
+chmod +x "$gate_shim/cargo" "$gate_shim/bash"
+
+if ! OCE_EXEC_LOG="$gate_exec_log" PATH="$gate_shim:$PATH" \
+     /bin/bash "$GATE_SCRIPT" full >/dev/null 2>&1; then
+  echo "FAIL: $GATE_SCRIPT full did not complete against a no-op shim; its commands cannot be traced"
+  exit 1
+fi
+
+listed_only="$(comm -23 <(sort -u "$gate_cmds") <(sort -u "$gate_exec_log"))"
+if [ -n "$listed_only" ]; then
+  echo "FAIL: $GATE_SCRIPT lists commands it does not execute — the listing is not evidence:"
+  printf '%s\n' "$listed_only" | sed 's/^/       /'
+  exit 1
+fi
+executed_only="$(comm -13 <(sort -u "$gate_cmds") <(sort -u "$gate_exec_log"))"
+if [ -n "$executed_only" ]; then
+  echo "FAIL: $GATE_SCRIPT executes commands it does not list — the pin cannot see them:"
+  printf '%s\n' "$executed_only" | sed 's/^/       /'
   exit 1
 fi
 
@@ -217,6 +272,10 @@ require_gate_cmd 'bash .github/scripts/test-check-default-no-db.sh'
 require_gate_cmd 'bash .github/scripts/test-check-golden-gen-anti-tautology.sh'
 require_gate_cmd 'bash .github/scripts/test-check-stale-crate-status.sh'
 require_gate_cmd 'bash .github/scripts/check-stale-crate-status.sh'
+# The gate's own fixture suite and workflow smoke. Unpinned in the first version of this block,
+# which meant the local gate could silently stop testing its own gates.
+require_gate_cmd 'bash .github/scripts/test-workflow-gates.sh'
+require_gate_cmd 'bash .github/scripts/check-workflow-gates.sh'
 require_gate_cmd 'cargo machete'
 require_gate_cmd 'cargo clippy --workspace --all-targets --locked -- -D warnings'
 require_gate_cmd 'cargo build --workspace --locked'
