@@ -18,71 +18,40 @@ responsibility, authored app-side behind the storage port.
 
 ---
 
-## 🧠 Memory bootstrap → Aionforge Memory (the long-term substrate)
+## 🧭 Start here
 
-This file is only a **pointer**. The durable working substrate for this project is the
-**Aionforge Memory** MCP server (`aionforge-memory`). Treat it as the source of truth for
-decisions, rationale, open work, and handoffs — not these MD files.
+Read [`.agents/project-facts.md`](.agents/project-facts.md) before your first change. It
+covers the gate, what CI does and does not run, and the conventions this repo enforces
+mechanically.
 
-**On entering this repo, before substantial work:**
-
-1. **Read the project identity.** The project's **dedicated** Aionforge identity (`agent_id`
-   and `namespace`) lives in the current agent's git-ignored, machine-local identity file:
-   Codex loads `codex-id.json`; Claude Code loads `claude-id.json`. Load it from there —
-   never hardcode it — and pass it as `principal.agent_id` (and `viewer`) on every memory call.
-   ⛔ Do **not** use the shared steward identity from the environment for project memory; it is
-   **off-limits** for open-control.
-2. **Recall first.** `search` for relevant prior decisions/preferences/failures and `work_query`
-   (status `todo` / `in_progress`) for open work. Recall again when new files, errors, or
-   subsystem names appear.
-3. **Capture durable facts the moment they land** — decisions, corrections, validation results,
-   failed approaches, release/handoff state — via `capture` / `batch_capture`. Don't batch to the
-   end; a context compaction can drop them first.
-4. **Track work as it moves** — `work_create` for tasks/blockers/TODOs, `work_advance` as status
-   changes, `work_link` to tag. Work items are persistent and status-tracked; memory episodes
-   decay.
-5. **Never store secrets** (keys, tokens, credentials). User direction overrides memory.
-
-The `aionforge-memory` plugin skills (`memory-loop`, `memory-recall`, `memory-capture`,
-`work-tracking`, `memory-maintenance`) and commands (`/aionforge-memory:memory-session`,
-`/aionforge-memory:memory-handoff`) encode this cadence. A SessionStart hook re-seeds it after a
-fresh context, resume, or compaction.
-
-There are **three** namespaces, and conflating them loses work:
-
-- **Private** — the agent's own `agent:` namespace, from its local identity file. That agent's
-  own working scratch, readable by nobody else.
-- **Shared project** — `team:open-control-engine-team`, co-owned by the Claude lead and the Codex
-  implementor. Cross-agent project decisions, dispatches, and handoffs go here. This is the one a
-  round-trip between the two agents depends on; a handoff written anywhere else is invisible to
-  the other agent.
-- **Shared dogfooding** — `team:aionforge-memory-team`, for cross-project Aionforge Memory
-  feedback **only**. Keep open-control internals out of it.
-
-Reads widen to a team namespace only when the call asserts that team; writes need
-`target_namespace` set as well.
+If you are an agent working on this project, `.agents/` also holds local operating notes
+that are not published — the memory protocol and identity handling in
+`memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are
+gitignored, so they exist only in a working checkout. If you cloned this repo and they are
+absent, you are a contributor and `project-facts.md` is what you need.
 
 ---
 
 ## 📂 Repository layout
 
-| Path          | Purpose                                                                    |
-| ------------- | -------------------------------------------------------------------------- |
-| `_research/`  | Research findings (`cdl/`, `selene-db/`). Inputs to the spec.              |
-| `_spec/`      | Architecture & engine specification (the design of record before code).    |
-| `codex-id.json` / `claude-id.json` | Machine-local Aionforge identities (git-ignored).       |
+Everything below is local-only unless marked tracked. `.gitignore` excludes every
+top-level `_*/` directory, so a clone contains **none** of the working directories —
+if you cloned this repo, you will not find them, and that is expected.
+
+| Path | Tracked? | Purpose |
+| --- | --- | --- |
+| `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
+| `.agents/` | partly | `gate.sh` and `project-facts.md` are tracked; other files there are local operating notes. |
+| `_spec/` | local-only | Architecture and engine specification — the design of record before code. Four conformance fixtures under `_spec/oce_g36_gap_specs_v1/reference/` are force-added and therefore tracked; nothing else is. |
+| `_research/` | local-only | Research findings that feed the spec. |
+| `_codex-briefs/`, `_review/`, `_tracker/` | local-only | Working artifacts. |
+| `*-id.json` | never committed | Machine-local agent identities. |
 
 ---
 
 ## 🛠️ Working norms
 
-- **Ultracode / workflows:** orchestrate substantive research and design via the Workflow tool.
-  **Never fan out more than 5 agents at once** (owner directive) — a ceiling, not a target. Where a
-  stage has more than five items, batch them in chunks of five or fewer; do not hand the whole list
-  to one `parallel()` and rely on the runtime's internal queue, which is set higher than this cap.
-  The per-finding verification stage of a review counts.
-- Spec before code: land architecture decisions in `_spec/` (and Aionforge Memory) before
-  scaffolding crates.
+- Spec before code: land architecture decisions in `_spec/` before scaffolding crates.
 - **Testing standard (safety-critical):** this engine controls real equipment — a wrong result
   is a physical hazard, so testing is a **first-class deliverable, not an afterthought**. Every
   PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
