@@ -35,28 +35,25 @@ session).
 ## Before you open a PR
 
 ```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo build --workspace --locked
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --lib --document-private-items --locked
+bash .agents/gate.sh
 ```
 
-Run the fast repository gates:
+That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
+no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
+`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
+determinism subset in debug and release codegen.
+
+If your change touches any other crate, its tests did not run. Add `full`:
 
 ```bash
-bash .github/scripts/check-file-size.sh
-bash .github/scripts/check-no-secrets.sh
-bash .github/scripts/check-default-no-db.sh
+bash .agents/gate.sh full
 ```
 
-Dependency or manifest changes (`Cargo.lock`, `Cargo.toml`, any `crates/*/Cargo.toml`,
-`deny.toml`) also require:
-
-```bash
-cargo deny check bans licenses sources
-```
-
-These mirror [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+[`.agents/gate.sh`](.agents/gate.sh) is the single source of truth for these commands, and it
+prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
+and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--bins` rustdoc pass,
+and the determinism matrix — while claiming to mirror it. Change a command in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) first, then in the script.
 
 ## Invariants a change must not violate
 

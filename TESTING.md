@@ -132,9 +132,18 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **No engine tests** — fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
+| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
 | `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
+
+Read the first row in the dangerous direction and you will trust a green PR you
+should not. A change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag`
+can show every check green having run none of its own tests. Before claiming tests
+pass on such a change, run the suite yourself:
+
+```bash
+bash .agents/gate.sh full
+```
 
 **Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
 

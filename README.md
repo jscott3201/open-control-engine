@@ -168,8 +168,16 @@ cargo nextest run        # unit + integration tests
 cargo test --doc         # doctests (nextest does not run these)
 ```
 
+To run the gate the way CI runs it:
+
+```bash
+bash .agents/gate.sh        # the per-PR gate
+bash .agents/gate.sh full   # adds the workspace suite and doctests
+```
+
 CI is **dev-light / release-heavy**: per-PR gates into `development` run fmt / clippy / build /
-rustdoc / file-size / no-secret / database-free checks; the **full test suite runs on
+rustdoc / file-size / no-secret / database-free checks plus a determinism subset covering
+`oce-blocks` and `oce-expr` on two architectures; the **full test suite runs on
 `development → main` release gates**.
 
 ---

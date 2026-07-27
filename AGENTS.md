@@ -48,11 +48,19 @@ The `aionforge-memory` plugin skills (`memory-loop`, `memory-recall`, `memory-ca
 `/aionforge-memory:memory-handoff`) encode this cadence. A SessionStart hook re-seeds it after a
 fresh context, resume, or compaction.
 
-- **Private namespace** — the project's own `agent:` namespace (from the current agent's
-  local identity file) →
-  open-control project working memory.
-- **Shared namespace** — the Aionforge Memory dogfooding team → cross-project dogfooding feedback
-  **only**. Keep project internals out of it.
+There are **three** namespaces, and conflating them loses work:
+
+- **Private** — the agent's own `agent:` namespace, from its local identity file. That agent's
+  own working scratch, readable by nobody else.
+- **Shared project** — `team:open-control-engine-team`, co-owned by the Claude lead and the Codex
+  implementor. Cross-agent project decisions, dispatches, and handoffs go here. This is the one a
+  round-trip between the two agents depends on; a handoff written anywhere else is invisible to
+  the other agent.
+- **Shared dogfooding** — `team:aionforge-memory-team`, for cross-project Aionforge Memory
+  feedback **only**. Keep open-control internals out of it.
+
+Reads widen to a team namespace only when the call asserts that team; writes need
+`target_namespace` set as well.
 
 ---
 
@@ -77,16 +85,23 @@ fresh context, resume, or compaction.
   PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
   bit-exactly), oracle cross-checks, and determinism goldens** per `TESTING.md`. Thin coverage
   is a **blocking review defect**. See `TESTING.md` for the full standard.
-- **Testing & the CI gate split:** **cargo-nextest is the test runner**, locally and in CI. Run
-  `cargo nextest run` for unit + integration tests and `cargo test --doc` for doctests (nextest
-  cannot run doctests). Config lives at `.config/nextest.toml` (`default` profile = fast local
-  fail-fast; `ci` profile = the release gate). CI is **dev-light / release-heavy**: per-PR gates
-  into `development` (`ci.yml`) run fmt/clippy/build/rustdoc/file-size/no-secret/default-no-db
-  (+ cargo-deny on manifest change) plus the targeted `determinism-matrix` nextest subset for
-  `oce-blocks`/`oce-expr` on x86_64 and arm64 in debug and release codegen; the **full test suite
-  runs only on `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the
-  light gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
-  git hooks — keep commits and pushes fast.
+- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate; `bash .agents/gate.sh full` adds
+  the workspace suite and doctests. That script is the single source of truth for gate commands —
+  do not restate them here or anywhere else, and change one only by changing `ci.yml` first. Nine
+  divergent copies of the command list existed before it was written, two of them materially
+  weaker than CI.
+- **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
+  **`oce-blocks` and `oce-expr` only** (the `determinism-matrix` job, x86_64 and arm64, debug and
+  release codegen). Every other crate's tests run only on `development` -> `main` release PRs via
+  `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
+  run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
+  (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = the release gate); it cannot
+  run doctests, which is why they are a separate step. The git hooks run no tests — keep commits
+  and pushes fast.
+- **Delegated work:** constants an executor needs and cannot derive from the code live in
+  `.agents/project-facts.md` — branch and merge rules, what a sandboxed lane can and cannot do,
+  and the gitignored working directories. Structure and discipline for briefs, dispatch, and
+  review come from the `agent-toolkit` skills, not from this repo.
 
 ### Naming, modularization & docs
 
