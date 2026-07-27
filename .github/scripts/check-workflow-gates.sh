@@ -35,41 +35,100 @@ require_pattern() {
 # survived only in the step name, and this script reported OK. Same defect as grepping gate.sh's
 # text — a string being present is not the string being executed.
 #
-# Emits, tab-separated:
-#   RUN     <job> <run command, whitespace-flattened>
-#   JOBIF   <job> <the job's `if:` condition, empty when absent>
-#   DOCSTEP <job> <step index> <RUSTDOCFLAGS in scope for that step, empty when absent>
+# Emits, tab-separated, with `-` standing in for an absent value. The placeholder is load-bearing:
+# bash treats tab as IFS *whitespace*, so consecutive tabs collapse and empty fields silently
+# shift every later field left.
+#   JOB     <job> <the job's `if:` condition, whitespace-normalised>
+#   RUNNER  <job> <a runner it executes on, matrix expanded>
+#   STEP    <job> <step index> <step `if:`> <continue-on-error> <one line of the step's script>
+#   DOCSTEP <job> <step index> <RUSTDOCFLAGS in scope, workflow + job + step env merged>
 workflow_facts() {
   python3 - "$1" <<'PY'
 import sys
 try:
     import yaml
 except ImportError:
-    sys.exit("FAIL: PyYAML is required to verify workflow commands and is not installed")
+    sys.exit("FAIL: PyYAML is required to verify workflow commands and is not installed. "
+             "Install it (pip install pyyaml) — see CONTRIBUTING.md, Local setup.")
 with open(sys.argv[1]) as fh:
     doc = yaml.safe_load(fh) or {}
+
+# GitHub applies workflow-level `env` to every step, so it has to be the base of the chain;
+# reading only job and step env reported a correct configuration as broken.
+wf_env = doc.get("env") or {}
+
 for name, job in (doc.get("jobs") or {}).items():
-    print(f"JOBIF\t{name}\t{job.get('if', '')}")
+    # A multi-line YAML `if:` resolves to a string with newlines, which would break this
+    # tab-separated record in half. Normalise to one line.
+    cond = " ".join(str(job.get("if", "")).split())
+    print(f"JOB\t{name}\t{cond or chr(45)}")
+
+    # `runs-on` may name a matrix key. Expand it so a runner removed from the matrix is visible
+    # as a missing runner rather than as text still present somewhere in the file.
+    runs_on = str(job.get("runs-on", ""))
+    matrix = ((job.get("strategy") or {}).get("matrix") or {})
+    expanded = []
+    if "matrix." in runs_on:
+        key = runs_on.split("matrix.", 1)[1].strip(" }${'\"")
+        expanded = [str(v) for v in (matrix.get(key) or [])]
+    elif runs_on:
+        expanded = [runs_on]
+    for r in expanded:
+        print(f"RUNNER\t{name}\t{r}")
+
     job_env = job.get("env") or {}
     for i, step in enumerate(job.get("steps") or []):
         run = step.get("run")
         if not run:
             continue
+        guard = str(step.get("if", ""))
+        coe = str(step.get("continue-on-error", "")).lower()
+        # One record per LINE of the script. A `run: >-` block folds to a single line, a `run: |`
+        # block keeps its lines — PyYAML resolves both, so splitting the resolved string is right
+        # either way. Per-line records are what let a pin demand the command BE a line rather than
+        # appear somewhere inside one: `echo cargo clippy ... -D warnings` is its own line and
+        # never equals the command it quotes.
+        for raw in str(run).splitlines():
+            line = " ".join(raw.split())
+            if not line or line.startswith("#"):
+                continue
+            print(f"STEP\t{name}\t{i}\t{guard or chr(45)}\t{coe or chr(45)}\t{line}")
+
         flat = " ".join(str(run).split())
-        print(f"RUN\t{name}\t{flat}")
         if "cargo doc" in flat:
-            env = dict(job_env)
+            env = dict(wf_env)
+            env.update(job_env)
             env.update(step.get("env") or {})
-            print(f"DOCSTEP\t{name}\t{i}\t{env.get('RUSTDOCFLAGS', '')}")
+            print(f"DOCSTEP\t{name}\t{i}\t{env.get('RUSTDOCFLAGS', '') or chr(45)}")
 PY
 }
 
-# A command CI genuinely executes, matched only against RUN lines.
+# A command CI genuinely executes: present as a whole line of some step's script, in a step that
+# is neither conditionally skipped nor allowed to fail.
+#
+# Each guard here closes a proven false green. Substring matching accepted the command inside an
+# `echo` while a weaker one ran beneath it. A step with `if: ${{ false }}` never executes. A step
+# with `continue-on-error: true` may fail without failing the job — a gate that cannot fail the
+# build is not a gate. No step in this repo's workflows carries either today, so requiring their
+# absence costs nothing and makes adding one a deliberate act.
 require_ci_run() {
   facts="$1"
   cmd="$2"
   label="$3"
-  if ! grep '^RUN	' "$facts" | cut -f3- | grep -Fq -- "$cmd"; then
+  found=0
+  while IFS=$'\t' read -r _ job idx guard coe line; do
+    [ "$line" = "$cmd" ] || continue
+    if [ "$guard" != "-" ]; then
+      echo "FAIL: $label — the step running it is conditional (job '$job' step $idx, if: $guard)"
+      exit 1
+    fi
+    if [ "$coe" = "true" ]; then
+      echo "FAIL: $label — the step running it has continue-on-error: true (job '$job' step $idx)"
+      exit 1
+    fi
+    found=1
+  done < <(grep '^STEP	' "$facts")
+  if [ "$found" -eq 0 ]; then
     echo "FAIL: no CI step runs: $cmd  ($label)"
     exit 1
   fi
@@ -202,17 +261,46 @@ fi
 # while clippy silently stopped gating anything. A draft PR already runs nothing, which is why
 # contributors are told to open non-draft — that instruction is only worth stating if the
 # condition is actually on every job.
+# EXACT match against a small allowlist, not "contains". A review appended `|| true` (runs on
+# draft PRs after all) and `&& false` (never runs at all); both contain the expected text and both
+# passed a substring check. Evaluating arbitrary GitHub expressions is out of scope for a shell
+# gate — requiring one of a known set is stricter than evaluating and far simpler. A new legitimate
+# form means adding it here, deliberately.
+DRAFT_GUARD="github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'"
+DRAFT_GUARD_DEPS="(github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch') && needs.changes.outputs.deps == 'true'"
 ungated=""
 while IFS=$'\t' read -r _ job cond; do
   case "$cond" in
-    *pull_request.draft\ ==\ false*) ;;
-    *) ungated="$ungated $job" ;;
+    "$DRAFT_GUARD" | "$DRAFT_GUARD_DEPS") ;;
+    *) ungated="$ungated $job($cond)" ;;
   esac
-done < <(grep '^JOBIF	' "$ci_facts")
+done < <(grep '^JOB	' "$ci_facts")
 if [ -n "$ungated" ]; then
-  echo "FAIL: $ci jobs not gated on \`pull_request.draft == false\`:$ungated"
+  echo "FAIL: $ci jobs whose \`if:\` is not an allowlisted draft guard:$ungated"
+  echo "      allowed: $DRAFT_GUARD"
   exit 1
 fi
+
+# The determinism subset is the ONLY engine testing in the per-PR gate, and the arm runner is the
+# only place cross-arch determinism is exercised at all. Both were pinned by whole-file regex: a
+# review moved the commands into step names, left `echo determinism-tests-removed` running, and
+# dropped arm from the matrix while keeping the string in a comment — green on both counts.
+require_ci_run "$ci_facts" \
+  'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+  'debug determinism subset'
+require_ci_run "$ci_facts" \
+  'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
+  'release determinism subset'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-default-no-db.sh' 'default-no-db smoke'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-golden-gen-anti-tautology.sh' \
+  'golden-gen anti-tautology firewall'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-stale-crate-status.sh' 'stale crate-status smoke'
+for arch in ubuntu-latest ubuntu-24.04-arm; do
+  if ! grep -q "^RUNNER	.*	$arch\$" "$ci_facts"; then
+    echo "FAIL: $ci runs no job on '$arch'; cross-arch determinism coverage is gone"
+    exit 1
+  fi
+done
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'

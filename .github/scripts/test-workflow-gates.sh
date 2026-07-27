@@ -84,45 +84,45 @@ on:
     branches: [development]
 jobs:
   fmt:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: cargo fmt --all --check
   file-size-cap:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: bash .github/scripts/check-file-size.sh
   no-secret-scan:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: bash .github/scripts/check-no-secrets.sh
   clippy:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
   build:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: cargo build --workspace --locked
   rustdoc:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     env:
       RUSTDOCFLAGS: "-D warnings"
     steps:
       - run: cargo doc --no-deps --workspace --lib --document-private-items --locked
       - run: cargo doc --no-deps --workspace --bins --document-private-items --locked
   default-no-db:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-machete
       - run: cargo machete
   gate-fixtures:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
       - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
@@ -131,11 +131,11 @@ jobs:
       - run: bash .github/scripts/test-workflow-gates.sh
       - run: bash .github/scripts/check-workflow-gates.sh
   golden-gen-firewall:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
   determinism-matrix:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
@@ -726,7 +726,7 @@ ci_partial_case() {
 import sys, pathlib
 p = pathlib.Path(sys.argv[1]); s = p.read_text(); which = sys.argv[2]
 if which == "one-job-ungated":
-    old = "  clippy:\n    if: github.event.pull_request.draft == false\n"
+    old = "  clippy:\n    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'\n"
     assert old in s, "fixture shape changed"
     s = s.replace(old, "  clippy:\n", 1)
 elif which == "rustdoc-env-dropped":
@@ -739,6 +739,26 @@ elif which == "run-weakened-name-kept":
     s = s.replace(old,
         "      - name: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
         "        run: cargo clippy --workspace --all-targets --locked -- -A warnings\n", 1)
+elif which == "step-if-false":
+    old = "      - run: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "      - if: ${{ false }}\n        run: cargo clippy --workspace --all-targets --locked -- -D warnings\n", 1)
+elif which == "step-continue-on-error":
+    old = "      - run: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "      - continue-on-error: true\n        run: cargo clippy --workspace --all-targets --locked -- -D warnings\n", 1)
+elif which == "echoed-not-run":
+    old = "      - run: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "      - run: |\n          echo cargo clippy --workspace --all-targets --locked -- -D warnings\n          cargo clippy --workspace --all-targets --locked -- -A warnings\n", 1)
+elif which == "guard-or-true":
+    old = "  clippy:\n    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "  clippy:\n    if: github.event.pull_request.draft == false || true\n", 1)
+elif which == "arm-runner-dropped":
+    old = "        runner: [ubuntu-latest, ubuntu-24.04-arm]\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "        runner: [ubuntu-latest]  # ubuntu-24.04-arm\n", 1)
 else:
     raise SystemExit(f"unknown mutation {which}")
 p.write_text(s)
@@ -763,10 +783,20 @@ PY
 }
 
 ci_partial_case one-job-ungated one-job-ungated \
-  "jobs not gated on \`pull_request.draft == false\`: clippy"
+  "not an allowlisted draft guard: clippy"
 ci_partial_case rustdoc-env-dropped rustdoc-env-dropped \
   "runs cargo doc without RUSTDOCFLAGS=-D warnings"
 ci_partial_case run-weakened-name-kept run-weakened-name-kept \
   "no CI step runs: cargo clippy --workspace --all-targets --locked -- -D warnings"
+ci_partial_case step-if-false step-if-false \
+  "the step running it is conditional"
+ci_partial_case step-continue-on-error step-continue-on-error \
+  "continue-on-error: true"
+ci_partial_case echoed-not-run echoed-not-run \
+  "no CI step runs: cargo clippy --workspace --all-targets --locked -- -D warnings"
+ci_partial_case guard-or-true guard-or-true \
+  "not an allowlisted draft guard: clippy"
+ci_partial_case arm-runner-dropped arm-runner-dropped \
+  "runs no job on 'ubuntu-24.04-arm'"
 
-echo "OK: workflow gate fixtures passed (${pinned_case} gate commands, ${ci_case} CI commands, 3 partial-loss cases individually verified)."
+echo "OK: workflow gate fixtures passed (${pinned_case} gate commands, ${ci_case} CI commands, 8 partial-loss cases individually verified)."
