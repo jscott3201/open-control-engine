@@ -19,15 +19,17 @@ write_gate_fixture() {
 #!/usr/bin/env bash
 set -euo pipefail
 MODE="${1:-light}"
+failures=0
+# Mirrors the real gate's contract: a failing step never aborts the run, it accumulates.
 step() {
   local label="$1"; shift
   if [ "$MODE" = list ]; then printf 'CMD %s\n' "$*"; return 0; fi
-  "$@"
+  if "$@"; then :; else failures=$((failures + 1)); fi
 }
 step_env() {
   local label="$1" var="$2" val="$3"; shift 3
   if [ "$MODE" = list ]; then printf 'CMD %s=%s %s\n' "$var" "$val" "$*"; return 0; fi
-  env "$var=$val" "$@"
+  if env "$var=$val" "$@"; then :; else failures=$((failures + 1)); fi
 }
 step 'fmt' cargo fmt --all --check
 step 'file-size' bash .github/scripts/check-file-size.sh
@@ -57,6 +59,12 @@ step 'workspace' cargo nextest run --workspace --locked --profile ci --no-tests=
 step 'workspace release' \
   cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail
 step 'doctests' cargo test --workspace --doc --locked
+if [ "$MODE" = list ]; then exit 0; fi
+if [ "$failures" -gt 0 ]; then
+  echo "GATE FAILED — $failures step(s)"
+  exit 1
+fi
+echo "GATE PASSED"
 GATEEOF
 }
 
@@ -69,7 +77,32 @@ write_positive() {
   mkdir -p "$dir"
   write_gate_fixture "$gate_script"
   cat > "$dir/ci.yml" <<'EOF'
+on:
+  pull_request:
+    branches: [development]
 jobs:
+  fmt:
+    if: github.event.pull_request.draft == false
+    steps:
+      - run: cargo fmt --all --check
+  file-size-cap:
+    steps:
+      - run: bash .github/scripts/check-file-size.sh
+  no-secret-scan:
+    steps:
+      - run: bash .github/scripts/check-no-secrets.sh
+  clippy:
+    steps:
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+  build:
+    steps:
+      - run: cargo build --workspace --locked
+  rustdoc:
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - run: cargo doc --no-deps --workspace --lib --document-private-items --locked
+      - run: cargo doc --no-deps --workspace --bins --document-private-items --locked
   default-no-db:
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
@@ -411,6 +444,41 @@ gate_list_emits_prose() {
   } > "$gate_script"
 }
 
+gate_lists_without_executing() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  # The listing stays complete; the normal path runs nothing. This is the attack a review used
+  # against the self-attesting design, and the shim cross-check is what rejects it.
+  python3 - "$gate_script" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+old = '  if "$@"; then :; else failures=$((failures + 1)); fi\n'
+new = '  return 0\n'
+assert old in s, "fixture shape changed; this case would be vacuous"
+p.write_text(s.replace(old, new, 1))
+PY
+}
+
+gate_executes_without_listing() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  # A command on the normal path only, invisible to the listing and therefore to every pin.
+  printf '%s\n' '[ "$MODE" = list ] || cargo clippy --workspace --all-features --locked' \
+    >> "$gate_script"
+}
+
+gate_aborts_on_first_failure() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  # Breaks failure accumulation. Invisible to an all-success trace, which is why the
+  # all-failure trace exists.
+  python3 - "$gate_script" <<'PY'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+old = '  if "$@"; then :; else failures=$((failures + 1)); fi\n'
+new = '  "$@" || exit 1\n'
+assert old in s, "fixture shape changed; this case would be vacuous"
+p.write_text(s.replace(old, new, 1))
+PY
+}
+
 gate_lints_all_features() {
   _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
   # Lints a build CI never produces, defeating the database-free default promise.
@@ -463,6 +531,15 @@ run_case gate-no-list-mode fail gate_no_list_mode \
   "does not support 'list' mode"
 run_case gate-list-emits-prose fail gate_list_emits_prose \
   "emitted non-CMD output"
+# The two mismatch guards and the failure-accumulation guard each get a case. Without these,
+# deleting the comparison blocks from the checker left this whole suite green — the branch's
+# central protection could be removed without a single test noticing.
+run_case gate-lists-without-executing fail gate_lists_without_executing \
+  "lists commands it does not execute"
+run_case gate-executes-without-listing fail gate_executes_without_listing \
+  "executes commands it does not list"
+run_case gate-aborts-on-first-failure fail gate_aborts_on_first_failure \
+  "stops after a failing step instead of accumulating"
 
 # ── One negative fixture per pinned command ─────────────────────────────────────────────────
 #
@@ -571,4 +648,52 @@ PY
   fi
 done
 
-echo "OK: workflow gate fixtures passed (${pinned_case} pinned commands individually verified)."
+# ── One negative fixture per pinned CI command ──────────────────────────────────────────────
+#
+# Same reasoning as the loop above, for the other half of the parity check. The gate-side pins
+# were fixture-covered while the CI-side pins were not, so an assertion about ci.yml could be
+# deleted without any test noticing — the identical gap, one file over.
+PINNED_CI_LINES=(
+  'cargo fmt --all --check'
+  'bash .github/scripts/check-file-size.sh'
+  'bash .github/scripts/check-no-secrets.sh'
+  'cargo clippy --workspace --all-targets --locked -- -D warnings'
+  'cargo build --workspace --locked'
+  'RUSTDOCFLAGS: "-D warnings"'
+  'cargo doc --no-deps --workspace --lib --document-private-items --locked'
+  'cargo doc --no-deps --workspace --bins --document-private-items --locked'
+  'github.event.pull_request.draft == false'
+)
+
+ci_case=0
+for ci_line in "${PINNED_CI_LINES[@]}"; do
+  ci_case=$((ci_case + 1))
+  case_root="$tmp/pinned-ci-$ci_case"
+  case_dir="$case_root/workflows"
+  mkdir -p "$case_root"
+  write_positive "$case_dir" "$case_root/deny.toml" "$case_root/Cargo.toml" \
+    "$case_root/crates" "$case_root/gate.sh"
+
+  if ! grep -Fq -- "$ci_line" "$case_dir/ci.yml"; then
+    echo "FAIL: the ci.yml fixture does not contain '$ci_line'; that case would pass vacuously"
+    exit 1
+  fi
+  grep -Fv -- "$ci_line" "$case_dir/ci.yml" > "$case_dir/ci.yml.tmp"
+  mv "$case_dir/ci.yml.tmp" "$case_dir/ci.yml"
+
+  set +e
+  ci_output="$(
+    OCE_WORKFLOW_DIR="$case_dir" OCE_DENY_TOML="$case_root/deny.toml" \
+    OCE_ROOT_CARGO_TOML="$case_root/Cargo.toml" OCE_CRATES_DIR="$case_root/crates" \
+    OCE_GATE_SCRIPT="$case_root/gate.sh" bash "$SCRIPT" 2>&1
+  )"
+  ci_status=$?
+  set -e
+  if [ "$ci_status" -eq 0 ]; then
+    echo "FAIL: removing '$ci_line' from ci.yml left check-workflow-gates.sh green;"
+    echo "      that CI command is not actually pinned."
+    exit 1
+  fi
+done
+
+echo "OK: workflow gate fixtures passed (${pinned_case} gate commands, ${ci_case} CI commands individually verified)."

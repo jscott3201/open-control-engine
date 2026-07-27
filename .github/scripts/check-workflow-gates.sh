@@ -112,6 +112,24 @@ require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --pr
 require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
 
+# CI's own lint/build/doc commands, in exact form. Without these the parity story runs one way
+# only: `gate.sh` was pinned while `ci.yml` was free to weaken underneath it. A review flipped
+# ci.yml's clippy to `-A warnings`, left gate.sh untouched, and this script still said OK.
+require_pattern "$ci" 'cargo fmt --all --check' 'fmt in exact form'
+require_pattern "$ci" 'cargo clippy --workspace --all-targets --locked -- -D warnings' \
+  'clippy denying warnings over all targets, default features'
+require_pattern "$ci" 'cargo build --workspace --locked' 'locked workspace build'
+require_pattern "$ci" 'RUSTDOCFLAGS: "-D warnings"' 'rustdoc denies warnings'
+require_pattern "$ci" 'cargo doc --no-deps --workspace --lib --document-private-items --locked' \
+  'rustdoc over libs including private items'
+require_pattern "$ci" 'cargo doc --no-deps --workspace --bins --document-private-items --locked' \
+  'rustdoc over bins including private items'
+require_pattern "$ci" 'check-file-size\.sh' 'file-size cap'
+require_pattern "$ci" 'check-no-secrets\.sh' 'no-secret scan'
+# Every job is draft-gated, so a draft PR runs nothing. Contributors are told to open non-draft;
+# pin the condition that makes that instruction matter.
+require_pattern "$ci" 'pull_request\.draft == false' 'jobs gated on non-draft pull requests'
+
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
 require_pattern "$release" 'cron:' 'cron entry'
@@ -209,6 +227,21 @@ fi
 # steps invoke; `step_env` reaches `cargo` through `env`, so the shim reads RUSTDOCFLAGS back out
 # of its own environment to reproduce the listed form. The gate script's own interpreter is given
 # as an absolute path so shimming `bash` cannot displace it.
+#
+# WHAT THIS DOES NOT PROVE, stated plainly because three successive versions of this block
+# overclaimed and were broken by the next review:
+#
+#   * A script that DETECTS the trace can behave one way while observed and another when run
+#     normally. `OCE_EXEC_LOG` is visible to it. No tracing scheme fixes this — being observed is
+#     detectable in principle — so this check is a guard against DRIFT (a command edited, dropped,
+#     or added without CI changing), not a defence against a gate script written to deceive it.
+#     A gate that deliberately lies is sabotage, and the review that would catch it is a human
+#     reading the diff, not a script.
+#   * Equality of the executed SET says nothing about order, count, or the arguments a step
+#     computes at runtime.
+#
+# Both traces below — all-success and all-failure — are about drift. Claiming more than that is
+# how this block got broken twice.
 cat > "$gate_shim/cargo" <<'SHIM'
 #!/bin/sh
 if [ -n "${RUSTDOCFLAGS:-}" ]; then
@@ -244,6 +277,35 @@ if [ -n "$executed_only" ]; then
   exit 1
 fi
 
+# Second trace, every command FAILING. The trace above makes everything succeed, so it can only
+# ever prove the happy path: a review added `return 1` to `step`'s failure branch and this check
+# stayed green, while the real gate would abort after the first red step instead of accumulating.
+# That contract is load-bearing — a partial report teaches one problem per round trip instead of
+# all of them — so it gets its own trace rather than being assumed.
+gate_fail_shim="$(mktemp -d)"
+gate_fail_log="$(mktemp)"
+gate_fail_out="$(mktemp)"
+trap 'rm -f "$gate_cmds" "$gate_stderr" "$gate_exec_log" "$gate_fail_log" "$gate_fail_out"; rm -rf "$gate_shim" "$gate_fail_shim"' EXIT
+sed 's/^exit 0$/exit 1/' "$gate_shim/cargo" > "$gate_fail_shim/cargo"
+sed 's/^exit 0$/exit 1/' "$gate_shim/bash" > "$gate_fail_shim/bash"
+chmod +x "$gate_fail_shim/cargo" "$gate_fail_shim/bash"
+
+if OCE_EXEC_LOG="$gate_fail_log" PATH="$gate_fail_shim:$PATH" \
+   /bin/bash "$GATE_SCRIPT" full > "$gate_fail_out" 2>&1; then
+  echo "FAIL: $GATE_SCRIPT full reported success while every one of its commands failed"
+  exit 1
+fi
+missed_after_failure="$(comm -23 <(sort -u "$gate_cmds") <(sort -u "$gate_fail_log"))"
+if [ -n "$missed_after_failure" ]; then
+  echo "FAIL: $GATE_SCRIPT stops after a failing step instead of accumulating; never reached:"
+  printf '%s\n' "$missed_after_failure" | sed 's/^/       /'
+  exit 1
+fi
+if ! grep -q 'GATE FAILED' "$gate_fail_out"; then
+  echo "FAIL: $GATE_SCRIPT ran with every command failing but printed no GATE FAILED report"
+  exit 1
+fi
+
 require_gate_cmd() {
   cmd="$1"
   if ! grep -Fxq "CMD $cmd" "$gate_cmds"; then
@@ -260,9 +322,11 @@ if grep -Eq '^CMD cargo clippy .*--all-features' "$gate_cmds"; then
   exit 1
 fi
 
-# Every command ci.yml runs, in CI's exact form. Pinning only the test commands left the rest
-# free to drift: a review removed the no-secret step, dropped build's --locked, flipped rustdoc
-# to -A warnings, deleted cargo machete, and cut cargo-deny's `sources` — all green.
+# Every command GATE.SH runs, in CI's exact form. This half of the parity check inspects the gate
+# script only; the CI side is pinned separately above. Saying "every command ci.yml runs" here was
+# wrong and hid a real gap for a round — pinning only the test commands left the rest free to
+# drift, and a review removed the no-secret step, dropped build's --locked, flipped rustdoc to
+# -A warnings, deleted cargo machete, and cut cargo-deny's `sources`, all green.
 require_gate_cmd 'cargo fmt --all --check'
 require_gate_cmd 'bash .github/scripts/check-file-size.sh'
 require_gate_cmd 'bash .github/scripts/check-no-secrets.sh'
