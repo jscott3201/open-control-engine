@@ -153,4 +153,40 @@ require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:spa
 require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:space:]]*"sled"[[:space:]]*\}' \
   'cargo-deny bans include representative embedded-KV crate sled'
 
+# The local gate script must not drift from CI. `.agents/gate.sh` claims to be the single source
+# of truth for gate commands, but until this block nothing read it: every assertion above pins
+# ci.yml and release-gate.yml only, so the script could quietly diverge back into the nine
+# incompatible copies it was written to replace. A contributor trusting a green local run is
+# exactly who that drift hurts.
+#
+# gate.sh splits long invocations across lines with a trailing backslash, so the raw file never
+# contains CI's single-line form. Join continuations, then collapse runs of spaces — joining
+# alone leaves a double space at every seam and every pattern below would silently never match,
+# which is a gate that cannot fail.
+GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
+require_file "$GATE_SCRIPT"
+gate_flat="$(mktemp)"
+trap 'rm -f "$gate_flat"' EXIT
+perl -0777 -pe 's/\\\n\s*/ /g' "$GATE_SCRIPT" | tr -s ' ' > "$gate_flat"
+
+require_pattern "$gate_flat" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+  'gate.sh runs the debug determinism subset in CI form'
+require_pattern "$gate_flat" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
+  'gate.sh runs the release determinism subset in CI form'
+# Checked BEFORE the exact-form pin below. Any edit to the clippy line breaks that contiguous
+# pattern too, so whichever runs first decides the message a contributor reads — and
+# "you used --all-features" is a diagnosis, where "missing required pattern" is a puzzle.
+if grep -Eq 'cargo clippy[^\n]*--all-features' "$gate_flat"; then
+  echo "FAIL: $GATE_SCRIPT lints --all-features; CI lints the default feature set (no-DB promise)"
+  exit 1
+fi
+require_pattern "$gate_flat" 'cargo clippy --workspace --all-targets --locked -- -D warnings' \
+  'gate.sh runs clippy with -D warnings over all targets'
+require_pattern "$gate_flat" 'cargo nextest run --workspace --locked --profile ci --no-tests=fail' \
+  'gate.sh full runs the workspace suite in release-gate form'
+require_pattern "$gate_flat" 'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail' \
+  'gate.sh full runs the release-codegen workspace suite in release-gate form'
+require_pattern "$gate_flat" 'cargo test --workspace --doc --locked' \
+  'gate.sh full runs doctests, which nextest cannot'
+
 echo "OK: workflow gate smoke passed."

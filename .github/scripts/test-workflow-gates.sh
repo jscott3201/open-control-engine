@@ -15,7 +15,27 @@ write_positive() {
   deny="$2"
   root_cargo="$3"
   crates_dir="$4"
+  gate_script="$5"
   mkdir -p "$dir"
+  # A stand-in for .agents/gate.sh. Two invocations are deliberately split across lines with a
+  # trailing backslash — the same way the real script writes them — so this fixture exercises the
+  # checker's continuation-joining. If that flattening ever regresses, THIS positive case goes red
+  # rather than every gate.sh assertion silently matching nothing.
+  cat > "$gate_script" <<'EOF'
+#!/usr/bin/env bash
+step 'clippy' cargo clippy --workspace --all-targets --locked -- -D warnings
+step 'determinism subset' \
+  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+step 'determinism subset (release codegen)' \
+  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci \
+  --cargo-profile release --no-tests=fail
+step 'nextest — workspace' \
+  cargo nextest run --workspace --locked --profile ci --no-tests=fail
+step 'nextest — workspace (release codegen)' \
+  cargo nextest run --workspace --locked --profile ci \
+  --cargo-profile release --no-tests=fail
+step 'doctests' cargo test --workspace --doc --locked
+EOF
   cat > "$dir/ci.yml" <<'EOF'
 jobs:
   default-no-db:
@@ -145,9 +165,11 @@ run_case() {
   deny="$tmp/$name/deny.toml"
   root_cargo="$tmp/$name/Cargo.toml"
   crates_dir="$tmp/$name/crates"
+  gate_script="$tmp/$name/gate.sh"
   mkdir -p "$tmp/$name"
-  write_positive "$dir" "$deny" "$root_cargo" "$crates_dir"
-  "$mutate" "$dir" "$deny" "$root_cargo" "$crates_dir"
+  write_positive "$dir" "$deny" "$root_cargo" "$crates_dir" "$gate_script"
+  # The 5th argument is new; mutators that predate it simply ignore it.
+  "$mutate" "$dir" "$deny" "$root_cargo" "$crates_dir" "$gate_script"
 
   set +e
   output="$(
@@ -155,6 +177,7 @@ run_case() {
     OCE_DENY_TOML="$deny" \
     OCE_ROOT_CARGO_TOML="$root_cargo" \
     OCE_CRATES_DIR="$crates_dir" \
+    OCE_GATE_SCRIPT="$gate_script" \
     bash "$SCRIPT" 2>&1
   )"
   status=$?
@@ -335,6 +358,42 @@ remove_crates_dir() {
   rm -rf "$crates_dir"
 }
 
+# --- gate.sh drift fixtures ---------------------------------------------------------------
+# The local gate script is the one place a contributor's "it passed locally" comes from, so each
+# way it can silently fall behind CI gets its own negative case.
+
+gate_drops_release_determinism() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  grep -v -- '--cargo-profile release --no-tests=fail' "$gate_script" > "$gate_script.tmp"
+  mv "$gate_script.tmp" "$gate_script"
+}
+
+gate_drops_doctests() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  grep -v -- 'cargo test --workspace --doc --locked' "$gate_script" > "$gate_script.tmp"
+  mv "$gate_script.tmp" "$gate_script"
+}
+
+gate_weakens_clippy() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  # Drops `-D warnings`, so warnings stop failing the local run while CI still rejects them.
+  sed 's/ -- -D warnings//' "$gate_script" > "$gate_script.tmp"
+  mv "$gate_script.tmp" "$gate_script"
+}
+
+gate_lints_all_features() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  # Lints a build CI never produces, defeating the database-free default promise.
+  sed 's/cargo clippy --workspace/cargo clippy --all-features --workspace/' "$gate_script" \
+    > "$gate_script.tmp"
+  mv "$gate_script.tmp" "$gate_script"
+}
+
+gate_script_missing() {
+  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
+  rm -f "$gate_script"
+}
+
 run_case positive pass noop
 run_case missing-release-nextest fail remove_release_nextest \
   "release-codegen nextest with hard-fail-on-zero-tests"
@@ -366,5 +425,15 @@ run_case missing-crate-lib-files fail remove_crate_lib_files \
   "no crate src/lib.rs files found under"
 run_case missing-crates-dir fail remove_crates_dir \
   "crates directory is missing"
+run_case gate-drops-release-determinism fail gate_drops_release_determinism \
+  "gate.sh runs the release determinism subset in CI form"
+run_case gate-drops-doctests fail gate_drops_doctests \
+  "gate.sh full runs doctests, which nextest cannot"
+run_case gate-weakens-clippy fail gate_weakens_clippy \
+  "gate.sh runs clippy with -D warnings over all targets"
+run_case gate-lints-all-features fail gate_lints_all_features \
+  "lints --all-features"
+run_case gate-script-missing fail gate_script_missing \
+  "required gate file is missing or empty"
 
 echo "OK: workflow gate fixtures passed."

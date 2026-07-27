@@ -6,10 +6,13 @@ the architecture and invariants are the design of record.
 ## How changes land
 
 - Every logical change opens a pull request into the **`development`** branch.
-- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
-  formatting, the file-size cap, the no-secret scan, `rustdoc -D warnings`,
-  `clippy -D warnings`, a workspace build, the default-no-db gate, and — for dependency changes —
-  `cargo-deny`. Releases batch `development` → `main`, and a version tag drives the gated publish.
+- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+  `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
+  in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
+  per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
+  batch `development` → `main`, and a version tag drives the gated publish.
+- **Open your PR non-draft.** Every `ci.yml` job is conditioned on
+  `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 

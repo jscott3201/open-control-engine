@@ -35,14 +35,15 @@ absent, you are a contributor and `project-facts.md` is what you need.
 ## 📂 Repository layout
 
 Everything below is local-only unless marked tracked. `.gitignore` excludes every
-top-level `_*/` directory, so a clone contains **none** of the working directories —
-if you cloned this repo, you will not find them, and that is expected.
+top-level `_*/` directory, so a clone contains none of the working directories except
+the four force-added files under `_spec/oce_g36_gap_specs_v1/reference/` — if you
+cloned this repo, you will not find the rest, and that is expected.
 
 | Path | Tracked? | Purpose |
 | --- | --- | --- |
 | `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
 | `.agents/` | partly | `gate.sh` and `project-facts.md` are tracked; other files there are local operating notes. |
-| `_spec/` | local-only | Architecture and engine specification — the design of record before code. Four conformance fixtures under `_spec/oce_g36_gap_specs_v1/reference/` are force-added and therefore tracked; nothing else is. |
+| `_spec/` | mostly local-only | Architecture and engine specification — the design of record before code. Four files under `_spec/oce_g36_gap_specs_v1/reference/` — two conformance fixtures and two reference documents — are force-added and therefore tracked; nothing else under `_spec/` is. |
 | `_research/` | local-only | Research findings that feed the spec. |
 | `_codex-briefs/`, `_review/`, `_tracker/` | local-only | Working artifacts. |
 | `*-id.json` | never committed | Machine-local agent identities. |

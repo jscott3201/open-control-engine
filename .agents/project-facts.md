@@ -28,9 +28,14 @@ only**, via the determinism matrix on x86_64 and arm64 in debug and release code
 `cargo-deny` runs only when a manifest changed.
 
 Every other crate's tests run **only** on the `development` → `main` release gate. A
-change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag` can show nine
-green checks having executed none of its own tests. Before claiming your tests pass,
-run `bash .agents/gate.sh full` and read the tail.
+change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag` can show a fully
+green PR having executed none of its own tests. Before claiming your tests pass, run
+`bash .agents/gate.sh full` and read the tail.
+
+**Open the PR non-draft.** Every job in `ci.yml` is conditioned on
+`github.event.pull_request.draft == false`, so a draft PR runs *no* gates at all — and
+a PR with no checks is easy to mistake for a PR with no failing checks. Confirm the
+checks actually ran, not merely that none are red.
 
 ## Clippy lints the default feature set
 
@@ -53,12 +58,13 @@ Keep absolute paths out of committed files, including scripts and doc examples.
 
 ## Working directories are gitignored
 
-`.gitignore` excludes every top-level `_*/` directory, so `_spec/`, `_research/`,
-`_review/`, and `_tracker/` are absent from a clone. Two consequences bite in
-practice:
+`.gitignore` excludes every top-level `_*/` directory, so `_research/`, `_review/` and
+`_tracker/` are absent from a clone, and `_spec/` is present only as the four
+force-added files under `_spec/oce_g36_gap_specs_v1/reference/`. Two consequences bite
+in practice:
 
 - **`git add -A` silently stages nothing** for a new file under those paths, and
-  exits 0. Four conformance fixtures under `_spec/oce_g36_gap_specs_v1/reference/`
+  exits 0. Those four files — two conformance fixtures and two reference documents —
   are tracked only because they were force-added. Adding another needs
   `git add -f <exact path>`.
 - A reference to `_spec/...` points at a file most clones do not have. Quote the

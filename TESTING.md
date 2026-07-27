@@ -152,9 +152,23 @@ cargo nextest run --workspace            # unit + integration tests (the whole w
 cargo nextest run --profile ci           # reproduce the release gate's profile locally
 cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
 cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
-OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-api --test public_api --locked
-OCE_PUBLIC_API_NIGHTLY=nightly-2026-05-01 cargo test -p oce-store --test public_api --locked
 ```
+
+The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
+in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
+block, so read it from there rather than copying the date:
+
+```bash
+OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
+  cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
+  --profile public-api --locked --no-tests=fail
+```
+
+`--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
+deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
+`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. Swap `-p oce-api`
+for `-p oce-store` for the other baseline — keep the package selectors in separate invocations,
+which is what preserves vanish-to-RED for the re-exported port surface.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.

@@ -138,7 +138,8 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · cargo public-api surface gates for oce-api / oce-store. They need the
     gate-only nightly toolchain and run in release-gate.yml.
   · cargo deny check advisories. Needs network and a writable advisory-db;
-    it runs in advisories.yml.
+    it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
+    job, which sweeps advisories/bans/licenses/sources on every release PR.
 COVERAGE
 
 if [ "$MODE" = light ]; then
