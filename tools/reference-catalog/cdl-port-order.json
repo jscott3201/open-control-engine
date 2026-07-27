@@ -1,0 +1,2326 @@
+{
+  "schema": "oce-cdl-port-order-v1",
+  "description": "Declaration order of CDL elementary-block interface ports, extracted from upstream Modelica source. The engine assigns port POSITIONS from CXF document array order; this table is what that order must equal.",
+  "classes": [
+    {
+      "class_path": "CDL.Conversions.BooleanToInteger",
+      "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToInteger.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Conversions.BooleanToReal",
+      "source": "Buildings/Controls/OBC/CDL/Conversions/BooleanToReal.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Conversions.IntegerToReal",
+      "source": "Buildings/Controls/OBC/CDL/Conversions/IntegerToReal.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Conversions.RealToInteger",
+      "source": "Buildings/Controls/OBC/CDL/Conversions/RealToInteger.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.FirstOrderHold",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/FirstOrderHold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.Sampler",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/Sampler.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.TriggeredMax",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredMax.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.TriggeredMovingMean",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredMovingMean.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.TriggeredSampler",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/TriggeredSampler.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.UnitDelay",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/UnitDelay.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Discrete.ZeroOrderHold",
+      "source": "Buildings/Controls/OBC/CDL/Discrete/ZeroOrderHold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Abs",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Abs.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Add",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Add.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.AddParameter",
+      "source": "Buildings/Controls/OBC/CDL/Integers/AddParameter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Change",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Change.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        },
+        {
+          "name": "up",
+          "kind": "Boolean"
+        },
+        {
+          "name": "down",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Equal",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Equal.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Greater",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Greater.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.GreaterEqual",
+      "source": "Buildings/Controls/OBC/CDL/Integers/GreaterEqual.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.GreaterEqualThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Integers/GreaterEqualThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.GreaterThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Integers/GreaterThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Less",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Less.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.LessEqual",
+      "source": "Buildings/Controls/OBC/CDL/Integers/LessEqual.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.LessEqualThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Integers/LessEqualThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.LessThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Integers/LessThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Max",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Max.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Min",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Min.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.MultiSum",
+      "source": "Buildings/Controls/OBC/CDL/Integers/MultiSum.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Multiply",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Multiply.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.OnCounter",
+      "source": "Buildings/Controls/OBC/CDL/Integers/OnCounter.mo",
+      "inputs": [
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        },
+        {
+          "name": "reset",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Sources.Constant",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Sources/Constant.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Sources.Pulse",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Sources/Pulse.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Sources.TimeTable",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Sources/TimeTable.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Stage",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Stage.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Subtract",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Subtract.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Integers.Switch",
+      "source": "Buildings/Controls/OBC/CDL/Integers/Switch.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Integer"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u3",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.And",
+      "source": "Buildings/Controls/OBC/CDL/Logical/And.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Change",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Change.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Edge",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Edge.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.FallingEdge",
+      "source": "Buildings/Controls/OBC/CDL/Logical/FallingEdge.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Latch",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        },
+        {
+          "name": "clr",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.MultiAnd",
+      "source": "Buildings/Controls/OBC/CDL/Logical/MultiAnd.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.MultiOr",
+      "source": "Buildings/Controls/OBC/CDL/Logical/MultiOr.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Nand",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Nand.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Nor",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Nor.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Not",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Not.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Or",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Or.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Pre",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Pre.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Proof",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Proof.mo",
+      "inputs": [
+        {
+          "name": "u_s",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u_m",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "yLocFal",
+          "kind": "Boolean"
+        },
+        {
+          "name": "yLocTru",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Sources.Constant",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/Constant.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Sources.Pulse",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/Pulse.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Sources.SampleTrigger",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/SampleTrigger.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Sources.TimeTable",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Sources/TimeTable.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Switch",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Switch.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u3",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Timer",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Timer.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        },
+        {
+          "name": "passed",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.TimerAccumulating",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TimerAccumulating.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        },
+        {
+          "name": "reset",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        },
+        {
+          "name": "passed",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Toggle",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Toggle.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        },
+        {
+          "name": "clr",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.TrueDelay",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueDelay.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.TrueFalseHold",
+      "source": "Buildings/Controls/OBC/CDL/Logical/TrueFalseHold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.VariablePulse",
+      "source": "Buildings/Controls/OBC/CDL/Logical/VariablePulse.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "go",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Logical.Xor",
+      "source": "Buildings/Controls/OBC/CDL/Logical/Xor.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Psychrometrics.DewPoint_TDryBulPhi",
+      "source": "Buildings/Controls/OBC/CDL/Psychrometrics/DewPoint_TDryBulPhi.mo",
+      "inputs": [
+        {
+          "name": "TDryBul",
+          "kind": "Real"
+        },
+        {
+          "name": "phi",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TDewPoi",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
+      "source": "Buildings/Controls/OBC/CDL/Psychrometrics/SpecificEnthalpy_TDryBulPhi.mo",
+      "inputs": [
+        {
+          "name": "TDryBul",
+          "kind": "Real"
+        },
+        {
+          "name": "phi",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "h",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Psychrometrics.WetBulb_TDryBulPhi",
+      "source": "Buildings/Controls/OBC/CDL/Psychrometrics/WetBulb_TDryBulPhi.mo",
+      "inputs": [
+        {
+          "name": "TDryBul",
+          "kind": "Real"
+        },
+        {
+          "name": "phi",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "TWetBul",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Abs",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Abs.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Acos",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Acos.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Add",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Add.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.AddParameter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/AddParameter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Asin",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Asin.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Atan",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Atan.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Atan2",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Atan2.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Average",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Average.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Cos",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Cos.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Derivative",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Derivative.mo",
+      "inputs": [
+        {
+          "name": "k",
+          "kind": "Real"
+        },
+        {
+          "name": "T",
+          "kind": "Real"
+        },
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Divide",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Divide.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Exp",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Exp.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Greater",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Greater.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.GreaterThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Reals/GreaterThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Hysteresis",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Hysteresis.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.IntegratorWithReset",
+      "source": "Buildings/Controls/OBC/CDL/Reals/IntegratorWithReset.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "y_reset_in",
+          "kind": "Real"
+        },
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Less",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Less.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.LessThreshold",
+      "source": "Buildings/Controls/OBC/CDL/Reals/LessThreshold.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.LimitSlewRate",
+      "source": "Buildings/Controls/OBC/CDL/Reals/LimitSlewRate.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Limiter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Limiter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Line",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Line.mo",
+      "inputs": [
+        {
+          "name": "x1",
+          "kind": "Real"
+        },
+        {
+          "name": "f1",
+          "kind": "Real"
+        },
+        {
+          "name": "x2",
+          "kind": "Real"
+        },
+        {
+          "name": "f2",
+          "kind": "Real"
+        },
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Log",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Log.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Log10",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Log10.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MatrixGain",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MatrixGain.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MatrixMax",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MatrixMax.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MatrixMin",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MatrixMin.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Max",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Max.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Min",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Min.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Modulo",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Modulo.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MovingAverage",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MovingAverage.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MultiMax",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiMax.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MultiMin",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiMin.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MultiSum",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiSum.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Multiply",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Multiply.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.MultiplyByParameter",
+      "source": "Buildings/Controls/OBC/CDL/Reals/MultiplyByParameter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.PID",
+      "source": "Buildings/Controls/OBC/CDL/Reals/PID.mo",
+      "inputs": [
+        {
+          "name": "u_s",
+          "kind": "Real"
+        },
+        {
+          "name": "u_m",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.PIDWithReset",
+      "source": "Buildings/Controls/OBC/CDL/Reals/PIDWithReset.mo",
+      "inputs": [
+        {
+          "name": "u_s",
+          "kind": "Real"
+        },
+        {
+          "name": "u_m",
+          "kind": "Real"
+        },
+        {
+          "name": "trigger",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Ramp",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Ramp.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        },
+        {
+          "name": "active",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Round",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Round.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sin",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sin.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sort",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sort.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        },
+        {
+          "name": "yIdx",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.CalendarTime",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/CalendarTime.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "year",
+          "kind": "Integer"
+        },
+        {
+          "name": "month",
+          "kind": "Integer"
+        },
+        {
+          "name": "day",
+          "kind": "Integer"
+        },
+        {
+          "name": "hour",
+          "kind": "Integer"
+        },
+        {
+          "name": "minute",
+          "kind": "Real"
+        },
+        {
+          "name": "weekDay",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.CivilTime",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/CivilTime.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.Constant",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Constant.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.Pulse",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Pulse.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.Ramp",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Ramp.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.Sin",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/Sin.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sources.TimeTable",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sources/TimeTable.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Sqrt",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Sqrt.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Subtract",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Subtract.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Switch",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Switch.mo",
+      "inputs": [
+        {
+          "name": "u1",
+          "kind": "Real"
+        },
+        {
+          "name": "u2",
+          "kind": "Boolean"
+        },
+        {
+          "name": "u3",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Reals.Tan",
+      "source": "Buildings/Controls/OBC/CDL/Reals/Tan.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.BooleanExtractSignal",
+      "source": "Buildings/Controls/OBC/CDL/Routing/BooleanExtractSignal.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.BooleanExtractor",
+      "source": "Buildings/Controls/OBC/CDL/Routing/BooleanExtractor.mo",
+      "inputs": [
+        {
+          "name": "index",
+          "kind": "Integer"
+        },
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.BooleanScalarReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/BooleanScalarReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.BooleanVectorFilter",
+      "source": "Buildings/Controls/OBC/CDL/Routing/BooleanVectorFilter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.BooleanVectorReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/BooleanVectorReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Boolean"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.IntegerExtractSignal",
+      "source": "Buildings/Controls/OBC/CDL/Routing/IntegerExtractSignal.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.IntegerExtractor",
+      "source": "Buildings/Controls/OBC/CDL/Routing/IntegerExtractor.mo",
+      "inputs": [
+        {
+          "name": "index",
+          "kind": "Integer"
+        },
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.IntegerScalarReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/IntegerScalarReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.IntegerVectorFilter",
+      "source": "Buildings/Controls/OBC/CDL/Routing/IntegerVectorFilter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.IntegerVectorReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/IntegerVectorReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Integer"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Integer"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.RealExtractSignal",
+      "source": "Buildings/Controls/OBC/CDL/Routing/RealExtractSignal.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.RealExtractor",
+      "source": "Buildings/Controls/OBC/CDL/Routing/RealExtractor.mo",
+      "inputs": [
+        {
+          "name": "index",
+          "kind": "Integer"
+        },
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.RealScalarReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/RealScalarReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.RealVectorFilter",
+      "source": "Buildings/Controls/OBC/CDL/Routing/RealVectorFilter.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Routing.RealVectorReplicator",
+      "source": "Buildings/Controls/OBC/CDL/Routing/RealVectorReplicator.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Real"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "kind": "Real"
+        }
+      ]
+    },
+    {
+      "class_path": "CDL.Utilities.Assert",
+      "source": "Buildings/Controls/OBC/CDL/Utilities/Assert.mo",
+      "inputs": [
+        {
+          "name": "u",
+          "kind": "Boolean"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "class_path": "CDL.Utilities.SunRiseSet",
+      "source": "Buildings/Controls/OBC/CDL/Utilities/SunRiseSet.mo",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "nextSunRise",
+          "kind": "Real"
+        },
+        {
+          "name": "nextSunSet",
+          "kind": "Real"
+        },
+        {
+          "name": "sunUp",
+          "kind": "Boolean"
+        }
+      ]
+    }
+  ]
+}
