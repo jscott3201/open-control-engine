@@ -4,8 +4,10 @@
 //!
 //! The contract is the RT-2 fixpoint, not source recovery: for a graph `G1` produced by
 //! [`import_cxf`](crate::import_cxf), `import(export(G1))` lowers to a graph that renders
-//! bit-identically to `G1` (floats compared by IEEE-754 bits). Cosmetic source content (labels,
-//! layout, line numbers) is not in `ModelGraph`, so none of it comes back.
+//! bit-identically (floats compared by IEEE-754 bits) to `G1` — or, when enum deferral fires, to
+//! `G1` restricted to its surviving blocks, since the deferred ones are never emitted (see
+//! Rejection surface below). Cosmetic source content (labels, layout, line numbers) is not in
+//! `ModelGraph`, so none of it comes back.
 //!
 //! ## Naming model
 //! - The original root `@id` is not recorded in `ModelGraph`; the fixed synthetic

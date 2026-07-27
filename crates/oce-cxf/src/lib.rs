@@ -11,9 +11,12 @@
 //!
 //! The lossless Layer-A DTO ([`dto`]), [`parse_document`], the §7.1 resolver ([`import_cxf`]),
 //! and the minimal RT-2 exporter ([`export()`]) are implemented. The exporter covers the flat,
-//! ground, single-root, scalar-parameter, attribute-free subset — exactly what the resolver
-//! produces for that shape of document; anything outside it is a typed [`CxfError::Validation`]
-//! carrying [`oce_diag::DiagCode::ExportUnsupported`] — never a panic.
+//! ground, single-root, scalar-parameter subset — exactly what the resolver produces for that
+//! shape of document — plus the in-subset §7.4.1 connector attributes. Content outside that
+//! subset is a typed [`CxfError::Validation`] carrying
+//! [`oce_diag::DiagCode::ExportUnsupported`], except enum-carrying blocks, which defer with a
+//! non-aborting warning rather than reject; never a panic either way. See [`export()`] for the
+//! full contract.
 
 use oce_model::ModelGraph;
 
