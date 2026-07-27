@@ -202,10 +202,14 @@ which is what preserves vanish-to-RED for the re-exported port surface.
 One gate step tests **no shipping code at all**, and it is worth understanding why it still gates.
 
 `oce-cxf::fixture_port_order` checks that the 46 G36 fixture documents list their block ports in
-upstream CDL **declaration order**, against
-[`tools/reference-catalog/cdl-port-order.json`](tools/reference-catalog/cdl-port-order.json) —
-132 classes extracted from Modelica source at the pinned reference commit, with provenance in the
-sibling `.prov.json`.
+upstream CDL **declaration order**. It derives that order at test time by parsing 132 vendored
+upstream Modelica sources in
+[`third_party/modelica-buildings-cdl/`](third_party/modelica-buildings-cdl/README.md), copied
+verbatim at the pinned reference commit. There is no catalog artifact in between, deliberately: a
+checked-in table has to be reviewed entry by entry against upstream, which nobody does reliably —
+the generator that produced the previous one shipped five defects before it was correct. Vendored
+source is checkable with a single `diff` against a fresh clone, and the derivation is code a
+reviewer reads rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
 fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and Tier-A
@@ -226,23 +230,41 @@ silent until someone edits a fixture, which is exactly when a person will not re
 cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 ```
 
-**Expect it to fail when you legitimately add a fixture.** Four volume pins
-(`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, and on the registry cross-check
-`compared == 104` / `exempt_array == 28`) are deliberate: a change that stops discovering ports
-would otherwise leave the comparison vacuously green, which is the exact failure mode the check
-exists to prevent. Re-pin only after understanding why the count moved — a *rising* skip count
-means wirings are being hidden from the audit.
+**Expect it to fail when you legitimately add a fixture.** Seven volume pins are deliberate —
+`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, `compared == 104` and
+`exempt_array == 28` on the registry cross-check, and on the vendored corpus itself
+`classes == 132` and `175 inputs / 144 outputs`. A change that stops discovering ports would
+otherwise leave the comparison vacuously green, which is the exact failure mode the check exists
+to prevent. Re-pin only after understanding why the count moved — a *rising* skip count means
+wirings are being hidden from the audit.
 
-**What the table itself rests on.** Before comparing anything the test cross-checks all 104
+**What the derived table rests on.** Before comparing anything the test cross-checks all 104
 non-array classes against the shipping block registry, which agrees on arity and per-position
 kind. It cannot agree on *names* — the registry does not store them, which is the whole reason
-this audit exists — so a **coordinated rename passes**: edit a port's name in both the table and
-every fixture instance and the suite stays green, even for a name upstream never used. The
-remaining 28 array-port classes are compared against nothing at all, since upstream's single
-`u[nin]` connector has no arity in common with our N flattened scalars. Name integrity therefore
-rests on review of the table's diff against the recorded provenance, not on a runtime check.
-Removing that dependency means vendoring the upstream `.mo` sources and deriving the table during
-the test — tracked, not done.
+this audit exists — and the remaining 28 array-port classes are compared against nothing at all,
+since upstream's single `u[nin]` connector has no arity in common with our N flattened scalars.
+
+So names still have no runtime authority. What changed is where the trust sits. Renaming a port
+to something upstream never used now requires editing vendored third-party source that `diff`s
+against a public clone at the pinned commit, instead of editing a catalog entry nobody would
+notice.
+
+**The scanner is asserted against its own silence**, because "found nothing" is how every scope
+bug in this extractor's history presented itself. A class that parses to zero ports is a hard
+failure — but that only catches *total* loss, and a class shedding one connector is the worse
+case. `Reals.Sort` is the worked example: drop `yIdx` and the class still reports ports, still
+carries an array flag from `y[nin]`, and is skipped by both the registry cross-check and the
+fixture comparison, so nothing else here can see it. The `175 / 144` port totals close that, and
+they are blind to no per-class exemption.
+
+Totals are a counting invariant, though, and a count is only as strong as the impossibility of
+forging what it counts: a phantom port offsets a real one and the pin never moves. Two ways to
+forge one are shut. Comment and string bodies are blanked before the scan, so declaration-shaped
+text inside `/* … */` or a `Documentation(info=…)` string is not read as a port. And a
+multi-component clause — `IntegerInput index, u[nin];` declares two connectors where the scanner
+can read one — is refused by name rather than read in part. A forgery written as ordinary code is
+outside what this test can distinguish; the `diff` against upstream is the control for that, and
+`third_party/modelica-buildings-cdl/README.md` gives the command.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
 Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are

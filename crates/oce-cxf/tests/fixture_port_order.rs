@@ -14,9 +14,10 @@
 //! transposed inverts the control action, and `Logical.Latch` with `u`/`clr` transposed inverts
 //! the latch. Neither is a type error, so nothing else in the workspace can see it.
 //!
-//! This audit closes that gap for the checked-in corpus by comparing each instance's port list
-//! against [`tools/reference-catalog/cdl-port-order.json`], which records the interface
-//! declaration order of upstream Modelica source at the pinned reference commit.
+//! This audit closes that gap for the checked-in corpus by deriving each class's interface
+//! declaration order from **vendored upstream Modelica source** at the pinned reference commit
+//! (`third_party/modelica-buildings-cdl/`) and comparing every fixture instance's port list
+//! against it. The derivation runs here, at test time; there is no catalog artifact in between.
 //!
 //! # What this is, and what it is not
 //!
@@ -49,6 +50,18 @@
 //! into N scalar connectors, so names cannot correspond one-to-one. Skips are asserted against an
 //! exact count rather than tolerated, so a change that silently widens the skip set fails.
 //!
+//! A class can also shed *some* connectors without shedding all of them, and that is invisible to
+//! every per-class check here — `Reals.Sort` losing `yIdx` keeps its other ports, keeps the array
+//! flag `y[nin]` gives it, and is skipped by the registry cross-check and the fixture comparison
+//! alike. The 175-input / 144-output totals in `cdl_source` are what close that case; they answer
+//! to no exemption.
+//!
+//! Totals are a *counting* invariant, so they hold only while a port cannot be forged to offset
+//! one that was lost. Two routes to forging one are shut in `cdl_source`: comment and string
+//! bodies are blanked before scanning, and a multi-component clause is refused rather than read
+//! in part. What remains is a forgery written as ordinary code, which is not something this test
+//! can distinguish — the control for that is the `diff` against upstream, not this file.
+//!
 //! The pins are 2135 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
 //! 23-side difference was vacuous array comparisons being correctly reclassified. That was wrong
 //! in the dangerous direction: the generator OR-ed the registry's `width_driven` flag into BOTH
@@ -59,35 +72,13 @@
 //! Also unchecked: parameter names and defaults, and composite wiring.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::Value;
 
-/// Ports of one class, in upstream declaration order.
-struct ClassPorts {
-    inputs: Vec<String>,
-    outputs: Vec<String>,
-    input_kinds: Vec<String>,
-    output_kinds: Vec<String>,
-    /// Upstream declares an array-valued connector (`u[nin]`) on that side. We flatten those into
-    /// N scalars, so names cannot correspond 1:1.
-    ///
-    /// Recorded **per direction and as a declared fact**. Inferring it from an arity mismatch made
-    /// every genuine arity disagreement look like an array port and hid 21 real wirings from an
-    /// earlier revision. Marking the whole class exempt instead discarded checkable coverage:
-    /// `MultiSum` has an array input but a scalar output `y`, which is verifiable.
-    inputs_are_array: bool,
-    outputs_are_array: bool,
-}
+mod cdl_source;
 
-fn repo_root() -> PathBuf {
-    // CARGO_MANIFEST_DIR is crates/oce-cxf.
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .canonicalize()
-        .expect("repo root")
-}
+use cdl_source::ClassPorts;
 
 /// Cross-check the table against the **shipping block registry** before trusting a word of it.
 ///
@@ -105,19 +96,19 @@ fn repo_root() -> PathBuf {
 /// **1. Names are never validated, in any direction.** The registry stores port **kinds** only —
 /// that absence is the very gap this audit exists to cover. So the check catches a table whose
 /// *arity or kinds* are wrong (it caught three extraction bugs: a nested-block leak, `end if`
-/// miscounted as a class close, and `model` vs `block`) and nothing else about the names. Any
-/// **coordinated rename passes**: change `Reals.PID`'s inputs to `zzz`/`aaa` in both the table and
-/// all 8 fixture instances and this suite stays green — the names need not even be plausible, let
-/// alone upstream's. Reordering two same-kind ports is just the narrowest case of that, not the
-/// boundary. Name integrity rests on review of the table's diff plus the recorded provenance.
+/// miscounted as a class close, and `model` vs `block`) and nothing else about the names.
+///
+/// What that costs is now much smaller than it was. When the table was a checked-in catalog, a
+/// **coordinated rename passed**: edit a port name in the catalog and in every fixture instance
+/// and the suite stayed green, for a name upstream never used. The table is now derived from
+/// vendored upstream source, so the same attack requires editing third-party `.mo` files that
+/// `diff` against a fresh clone at the pinned commit. It is no longer invisible; it is merely not
+/// caught *here*.
 ///
 /// **2. The 28 array-port classes get no registry check at all.** Upstream declares one array
 /// connector (`u[nin]`) where we carry N flattened scalars, so arity legitimately differs and
-/// comparison is meaningless — but that means their table rows are unverified by anything here,
-/// including on kinds.
-///
-/// Closing (1) means vendoring the ~768 KB of upstream BSD-licensed `.mo` sources and deriving the
-/// table at test time, leaving no table to bless. That is an open decision, not an oversight.
+/// comparison is meaningless — but that means their interfaces are unverified by anything here,
+/// including on kinds. The vendored source is still their authority.
 fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
     let mut disagreements = Vec::new();
     let mut compared = 0usize;
@@ -182,49 +173,10 @@ fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
     );
 }
 
+/// The derived table, checked against the shipping registry before anything trusts it.
 fn load_table() -> BTreeMap<String, ClassPorts> {
-    let path = repo_root()
-        .join("tools")
-        .join("reference-catalog")
-        .join("cdl-port-order.json");
-    let raw =
-        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-    let doc: Value = serde_json::from_str(&raw).expect("cdl-port-order.json is valid JSON");
-    assert_eq!(
-        doc["schema"], "oce-cdl-port-order-v2",
-        "unexpected port-order table schema"
-    );
-
-    let field = |v: &Value, key: &str| -> Vec<String> {
-        v.as_array()
-            .map(|a| {
-                a.iter()
-                    .map(|p| p[key].as_str().expect("port field").to_owned())
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-
-    let table: BTreeMap<String, ClassPorts> = doc["classes"]
-        .as_array()
-        .expect("classes array")
-        .iter()
-        .map(|c| {
-            (
-                c["class_path"].as_str().expect("class_path").to_owned(),
-                ClassPorts {
-                    inputs: field(&c["inputs"], "name"),
-                    outputs: field(&c["outputs"], "name"),
-                    input_kinds: field(&c["inputs"], "kind"),
-                    output_kinds: field(&c["outputs"], "kind"),
-                    inputs_are_array: c["inputs_are_array"].as_bool().unwrap_or(false),
-                    outputs_are_array: c["outputs_are_array"].as_bool().unwrap_or(false),
-                },
-            )
-        })
-        .collect();
-
-    // Never trust the table on its own word — see the function's rustdoc.
+    let table = cdl_source::derive_table();
+    // Never trust the derived table on its own word — see `cross_check_against_registry`.
     cross_check_against_registry(&table);
     table
 }
