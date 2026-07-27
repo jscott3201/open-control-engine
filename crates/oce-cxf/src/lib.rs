@@ -124,7 +124,9 @@ pub fn import_cxf(
 /// **deferred**, not rejected: the block and its transitive downstream consumers are omitted from
 /// the emitted document so the enum-free remainder can still export, and the omission is reported
 /// as an [`oce_diag::DiagCode::ExportDeferred`] **warning** (non-aborting). This function
-/// **discards deferral warnings**; use [`export_with_report`] for deferral visibility.
+/// **discards deferral warnings**; use [`export_with_report`] for deferral visibility. Deferral is
+/// non-aborting only while something survives it: a graph whose every block is deferred has no
+/// runtime composite left to emit and is an error, not an empty document.
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
@@ -134,7 +136,8 @@ pub fn import_cxf(
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. Enum-carrying blocks are deferred (a warning, not a rejection) and do NOT trigger
-///   this variant. Never panics.
+///   this variant — unless deferral is *total*, which leaves no block to emit and rejects. Never
+///   panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let (doc, _warnings) = export::document(model)?;

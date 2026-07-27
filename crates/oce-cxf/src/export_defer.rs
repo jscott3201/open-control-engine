@@ -98,17 +98,19 @@ fn connector_local_name(g: &ModelGraph, c_idx: usize) -> String {
     format!("{dir}{k}")
 }
 
-/// Whether block `bi` carries any enumeration-typed connector, returning the enum class id.
+/// Whether block `bi` carries any enumeration-typed connector, returning the class id of the
+/// FIRST one in `inputs`-then-`outputs` port-list order (the order the Phase 1b warning text
+/// pins). The `find_map` closure searches the *enum predicate*, not merely the resolution: an
+/// out-of-range connector id is skipped and the scan continues, and a block whose enum port sits
+/// at any position — not just position 0 — is detected.
 fn has_enum_connector(g: &ModelGraph, bi: usize) -> Option<EnumClassId> {
     let b = g.blocks.get(bi)?;
-    b.inputs
-        .iter()
-        .chain(b.outputs.iter())
-        .find_map(|cid| g.connectors.get(cid.0 as usize))
-        .and_then(|c| match c.value_type {
+    b.inputs.iter().chain(b.outputs.iter()).find_map(|cid| {
+        match g.connectors.get(cid.0 as usize)?.value_type {
             ValueType::Enum(id) => Some(id),
             _ => None,
-        })
+        }
+    })
 }
 
 /// Whether block `bi` carries any enumeration-valued parameter, returning the first such

@@ -55,6 +55,12 @@
 //! Everything outside the subset is a typed [`CxfError::Validation`] carrying
 //! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` is the owning
 //! block's `instance_iri` (connectors have none) — never a panic.
+//!
+//! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
+//! at all (not from its connectors' attributes, not from its boundary entries), so a partly
+//! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
+//! exception is *total* deferral — when the cascade leaves zero surviving blocks the document
+//! would be an unloadable root-only shell, so that is an error ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -85,6 +91,14 @@ const CLASS_IRI_BASE: &str = "http://example.org#";
 /// `MalformedDocument` — there is nothing warning-free to emit.
 const MSG_EMPTY: &str =
     "CXF export requires at least one block: an empty ModelGraph has no runtime composite to emit";
+/// Whole-operation rejection when the deferral cascade defers **every** block: the plan holds no
+/// surviving block, so `build()` would map `containsBlock` to `OneOrMany::None`, omit the key, and
+/// emit the same unloadable root-only document `MSG_EMPTY` names — reached from a NON-empty input
+/// graph. Deliberately a message of its own rather than a reuse of `MSG_EMPTY`: that text blames an
+/// empty `ModelGraph`, which would be a false statement about a graph that had blocks and lost them
+/// all to enumeration content, and would point a host at the wrong fix.
+const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one surviving block: every block was deferred (enumeration \
+     content plus its downstream cascade), leaving no runtime composite to emit";
 /// A block without an `instance_iri` cannot name its CXF node (hand-built graphs only; every
 /// imported block carries one).
 const MSG_NO_INSTANCE_IRI: &str = "export subset: block has no instance_iri to name its CXF node";
@@ -339,6 +353,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         });
     }
 
+    // Phase 2b — TOTAL-DEFERRAL gate. Phase 2 pushed one `PlannedBlock` per survivor, so an empty
+    // `blocks` here means the cascade swallowed every block of a non-empty graph (the `is_empty`
+    // guard at the top of `plan` sees only the INPUT graph, which is why this second check is
+    // needed). Left alone, `build()` emits a root with no `containsBlock` and the exporter returns
+    // `Ok` with bytes that fail re-import as `MalformedDocument`. An error-severity diagnostic is
+    // the only honest result: total deferral has nothing to emit. PARTIAL deferral is untouched —
+    // it still returns `Ok` with `ExportDeferred` warnings. Pushed rather than returned early so
+    // the deferral warnings (already in `diags`) and every other offender still reach the caller.
+    if blocks.is_empty() {
+        diags.push(Diagnostic::error(
+            DiagCode::ExportUnsupported,
+            MSG_TOTAL_DEFERRAL,
+        ));
+    }
+
     // Phase 3 — orphan scan. SKIP connectors whose owning block is deferred: a deferred block's
     // connectors are never claimed (Phase 2 skipped `claim_port`), so `port_iri[i]` is `None`.
     // Without this skip the orphan scan would inject `MSG_STRUCTURE` Errors for every deferred
@@ -382,12 +411,22 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 "S231:Real"
             }
         });
-        if !c.attrs.matches(c.value_type) {
-            classified.push(PortAttrs::None);
-            diags.push(reject(MSG_STRUCTURE, &subject));
+        // The attr scan obeys the same deferral rule as the datatype scan above: a deferred
+        // block's connectors contribute NO error diagnostics. The block is omitted from the
+        // document, so a tag mismatch or an out-of-subset `nominal`/`unbounded`/non-finite bound
+        // on it can never reach the wire — letting it abort the export would sink the whole
+        // document over a defect in bytes nobody emits. The slot is STILL pushed (`plan.ports`
+        // indexes `classified` positionally by connector position; shrinking it would shift a
+        // survivor's attributes onto the wrong port), as the `PortAttrs::None` placeholder Phase 7
+        // never reads.
+        classified.push(if is_deferred {
+            PortAttrs::None
+        } else if c.attrs.matches(c.value_type) {
+            classify_attrs(&c.attrs, &subject, &mut diags)
         } else {
-            classified.push(classify_attrs(&c.attrs, &subject, &mut diags));
-        }
+            diags.push(reject(MSG_STRUCTURE, &subject));
+            PortAttrs::None
+        });
     }
 
     // Phase 5 — connections. The orphan guard `port_iri[t].is_none()` drops any edge whose TARGET
@@ -427,10 +466,16 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
     }
 
-    // Phase 6 — boundary inputs. SKIP any `external_inputs` entry whose target owner is deferred:
-    // a boundary input driving a deferred block's child port would emit a boundary node whose
-    // `isConnectedTo` target is a port node Phase 7 did NOT emit → re-import `UnresolvedReference`
-    // (resolve/mod.rs:527-533). This is the third importer-inertness invariant.
+    // Phase 6 — boundary inputs. SKIP any `external_inputs` entry whose target owner is deferred.
+    // Against a DANGLING boundary node (one whose `isConnectedTo` target Phase 7 never emitted,
+    // which re-imports as `UnresolvedReference`) this skip is defense-in-depth, not the load-bearing
+    // guard: `port_iri[idx]` is `None` for every deferred connector, so the orphan `let-else` below
+    // already drops the entry. What the skip does uniquely is suppress the ERROR-severity checks
+    // between here and there — a deferred block's boundary entry with the wrong direction or no
+    // stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort an
+    // export whose only defect sits in a block the document omits. Same rule as the Phase 4 attr
+    // scan: an omitted block contributes no errors. That arm is pinned by
+    // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
     for cid in &g.external_inputs {
         let idx = cid.0 as usize;
