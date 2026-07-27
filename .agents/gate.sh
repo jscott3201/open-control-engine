@@ -8,14 +8,6 @@
 #
 #   bash .agents/gate.sh          # light  — mirrors the per-PR gate (ci.yml)
 #   bash .agents/gate.sh full     # full   — adds the suite (release-gate.yml)
-#   bash .agents/gate.sh list     # print every command, light and full, run none
-#
-# `list` exists so check-workflow-gates.sh can pin these commands against CI by
-# EXECUTING this script rather than grepping its text. Grepping the file was the
-# earlier design and it was defeated trivially: a required command sitting in a
-# comment satisfied the pattern while the real command ran without `--locked`.
-# `step` prints exactly the argv it executes, so a `list` line is proof the
-# command is reachable — a comment or an unexecuted heredoc produces nothing.
 #
 # Commands are kept in CI's exact form, flags included. `--locked`, the `ci`
 # nextest profile, `--no-tests=fail`, and `RUSTDOCFLAGS` are each load-bearing:
@@ -32,9 +24,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 MODE="${1:-light}"
 case "$MODE" in
-  light | full | list) ;;
+  light | full) ;;
   *)
-    echo "usage: bash .agents/gate.sh [light|full|list]" >&2
+    echo "usage: bash .agents/gate.sh [light|full]" >&2
     exit 2
     ;;
 esac
@@ -49,13 +41,6 @@ declare -a failed_steps=()
 step() {
   local label="$1"
   shift
-  # `list` prints the argv it would run and runs nothing. Printing "$*" here — the
-  # same expansion passed to "$@" below — is what makes the listing evidence rather
-  # than a second copy that could drift from what executes.
-  if [ "$MODE" = list ]; then
-    printf 'CMD %s\n' "$*"
-    return 0
-  fi
   printf '\n\033[1m── %s\033[0m\n$ %s\n' "$label" "$*"
   if "$@"; then
     printf '\033[32mok\033[0m — %s\n' "$label"
@@ -70,10 +55,6 @@ step() {
 step_env() {
   local label="$1" var="$2" val="$3"
   shift 3
-  if [ "$MODE" = list ]; then
-    printf 'CMD %s=%s %s\n' "$var" "$val" "$*"
-    return 0
-  fi
   printf '\n\033[1m── %s\033[0m\n$ %s=%q %s\n' "$label" "$var" "$val" "$*"
   if env "$var=$val" "$@"; then
     printf '\033[32mok\033[0m — %s\n' "$label"
@@ -84,7 +65,7 @@ step_env() {
   fi
 }
 
-[ "$MODE" = list ] || printf '\033[1mopen-control gate — mode: %s\033[0m\n' "$MODE"
+printf '\033[1mopen-control gate — mode: %s\033[0m\n' "$MODE"
 
 # ── Formatting, size, secrets ────────────────────────────────────────────────
 step 'fmt' cargo fmt --all --check
@@ -137,8 +118,7 @@ step 'determinism subset (release codegen)' \
   --cargo-profile release --no-tests=fail
 
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
-# `list` enumerates these too, so the pin covers the full command set from one run.
-if [ "$MODE" = full ] || [ "$MODE" = list ]; then
+if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
     cargo nextest run --workspace --locked --profile ci --no-tests=fail
   step 'nextest — workspace (release codegen)' \
@@ -146,12 +126,6 @@ if [ "$MODE" = full ] || [ "$MODE" = list ]; then
     --cargo-profile release --no-tests=fail
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked
-fi
-
-# Nothing below runs in `list` mode: the listing is the whole output, so a consumer
-# can pin it without filtering banner prose out first.
-if [ "$MODE" = list ]; then
-  exit 0
 fi
 
 # ── Report ───────────────────────────────────────────────────────────────────
@@ -166,6 +140,9 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · cargo deny check advisories. Needs network and a writable advisory-db;
     it runs in advisories.yml (daily) and in release-gate.yml's cargo-deny
     job, which sweeps advisories/bans/licenses/sources on every release PR.
+  · that these commands still MATCH ci.yml. Nothing verifies that mechanically
+    — see the tracked work item for why the attempt was withdrawn. Change a
+    command here only by changing CI first.
 COVERAGE
 
 if [ "$MODE" = light ]; then

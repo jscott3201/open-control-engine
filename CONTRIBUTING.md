@@ -30,14 +30,6 @@ cargo install cargo-machete --locked
 cargo install cargo-deny --locked
 ```
 
-The workflow-gate check parses `.github/workflows/*.yml` to verify the local gate has not drifted
-from CI, which needs **PyYAML**. It ships with GitHub's runner images and most system Pythons; if
-`bash .agents/gate.sh` reports it missing:
-
-```bash
-python3 -m pip install pyyaml
-```
-
 Install the git hooks once after cloning:
 
 ```bash
