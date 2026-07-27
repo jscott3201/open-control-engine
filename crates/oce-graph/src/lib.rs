@@ -6,7 +6,10 @@
 //! DAG over connector vertices, hard-reject algebraic loops (CDL §7.16), run an own Kahn
 //! topological sort with declaration-order tie-break (FRAME D6), and allocate `[S]` state
 //! seeded from parameters. **TICK** (the hot path): evaluate the frozen [`Schedule`] over flat
-//! arrays — no graph walks, no hashing, no allocation, no IO, no store. This crate is
+//! arrays — no graph walks, no hashing, no IO, no store. The scheduler itself allocates nothing
+//! per tick, but allocation-freedom is **not** a property of the whole tick: a block's
+//! `step_algebraic` may allocate, and some do (`CDL.Reals.Sort` unconditionally; `Reals.Log` /
+//! `Reals.Log10` on non-positive input). This crate is
 //! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem` or any store/database
 //! crate (D-OWNER-1; `01` §10).
 //!

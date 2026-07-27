@@ -86,11 +86,15 @@ re-derived expectation — otherwise we are grading our own homework.
   fixtures under `tests/fixtures/golden/`.
 - **The independent layer is `tools/golden-gen`.** It emits **407 Tier-A goldens — 275 CDL
   block/type references, plus 132 G36 sequence outputs spanning all 46 catalog fixtures.** The
-  sequence side is compared by the funnel suites in `crates/oce-conformance/tests/`: a shared
-  table in `g36_funnel_band/sequences.rs` (25 outputs) plus per-fixture suites such as
-  `g36_cooling_only_controller_funnel.rs` and `g36_air_economizer_high_limits_funnel.rs`. **Count
-  from the suites, not from the shared table** — reading only `sequences.rs` understates coverage
-  by a factor of five, which is a mistake that has been made twice.
+  sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
+  table in `g36_funnel_band/sequences.rs` (25 outputs), per-fixture `*_funnel.rs` suites, and four
+  `*_oracle.rs` suites whose headers state outright that there is intentionally no funnel-band
+  test. **Count from the suites, not from the shared table** — reading only `sequences.rs`
+  understates coverage by a factor of five, which is a mistake that has been made twice.
+  All 132 are compared **bit-exactly** (`compare_regime` on every golden: 102 `Value::bit_eq`
+  f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
+  layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
+  because the funnel is type-blind (`g36_funnel_band/policy.rs`).
   Most references are closed-form derivations from CDL / Buildings source semantics; some, like
   `TimeSuppression`, are explicit per-tick recurrences. The generator is deliberately kept **off
   the workspace** and **forbidden from depending on `oce-blocks`** — that firewall is what makes

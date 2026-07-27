@@ -85,10 +85,13 @@ and the determinism matrix — while claiming to mirror it. Change a command in
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
 - **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
-  The graph evaluator's arithmetic path performs no allocation, hashing, I/O, or store access —
-  keep it that way. Two existing carve-outs, neither of which should be widened: `Reals.Log` /
-  `Reals.Log10` `format!` a diagnostic string on non-positive input, and `Engine::tick` takes one
-  `store.snapshot()` per tick when the model declares store-backed inputs. Do not add a third.
+  The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
+  **not** currently zero across the block library, so do not add to the exceptions: `Reals.Sort`
+  allocates two `Vec`s every tick on the arithmetic path (`reals_matrix.rs:387`, `:403`),
+  `Reals.Log` / `Reals.Log10` `format!` on non-positive input, and `Engine::tick` takes one
+  `store.snapshot()` when the model declares store-backed inputs. Note the allocation guard in
+  `oce-api/tests/tick_purity_tests.rs` covers three fixtures and does not exercise `Sort` — a new
+  allocating block will not be caught by CI.
 
 ## Commits
 
