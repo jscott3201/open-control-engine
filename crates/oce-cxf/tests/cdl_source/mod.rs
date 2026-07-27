@@ -109,9 +109,10 @@ fn take_ident(s: &str) -> Option<(&str, &str)> {
 /// turned `Routing.IntegerExtractor`'s inputs into `[index, ghost]` with totals unmoved and the
 /// array exemption intact, so neither the registry cross-check nor the fixture comparison ran.
 ///
-/// String-awareness is not optional here. 80 of the 132 vendored files carry `https://` inside an
-/// HTML documentation string, and those strings escape their own quotes as `\"`; a stripper that
-/// mishandles the escape ends the string early and eats the rest of the line as a line comment.
+/// String-awareness is not optional here. 80 of the 132 vendored files carry a `//` inside an HTML
+/// documentation string — `https://` in 70 of them, `modelica://` resource URIs in the rest — and
+/// those strings escape their own quotes as `\"`. A stripper that mishandles the escape ends the
+/// string early and reads the rest of the line as a line comment.
 fn blank_comments_and_strings(src: &str) -> String {
     enum State {
         Code,
