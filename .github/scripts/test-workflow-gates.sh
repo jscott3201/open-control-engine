@@ -76,6 +76,8 @@ write_positive() {
   gate_script="$5"
   mkdir -p "$dir"
   write_gate_fixture "$gate_script"
+  # Every job carries the draft guard and every rustdoc step its RUSTDOCFLAGS, because the checker
+  # now requires them per-job and per-step rather than once anywhere in the file.
   cat > "$dir/ci.yml" <<'EOF'
 on:
   pull_request:
@@ -86,43 +88,54 @@ jobs:
     steps:
       - run: cargo fmt --all --check
   file-size-cap:
+    if: github.event.pull_request.draft == false
     steps:
       - run: bash .github/scripts/check-file-size.sh
   no-secret-scan:
+    if: github.event.pull_request.draft == false
     steps:
       - run: bash .github/scripts/check-no-secrets.sh
   clippy:
+    if: github.event.pull_request.draft == false
     steps:
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
   build:
+    if: github.event.pull_request.draft == false
     steps:
       - run: cargo build --workspace --locked
   rustdoc:
+    if: github.event.pull_request.draft == false
     env:
       RUSTDOCFLAGS: "-D warnings"
     steps:
       - run: cargo doc --no-deps --workspace --lib --document-private-items --locked
       - run: cargo doc --no-deps --workspace --bins --document-private-items --locked
   default-no-db:
+    if: github.event.pull_request.draft == false
     steps:
       - run: bash .github/scripts/check-default-no-db.sh
   unused-deps:
+    if: github.event.pull_request.draft == false
     steps:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-machete
       - run: cargo machete
   gate-fixtures:
+    if: github.event.pull_request.draft == false
     steps:
       - run: bash .github/scripts/test-check-default-no-db.sh
       - run: bash .github/scripts/test-check-golden-gen-anti-tautology.sh
       - run: bash .github/scripts/test-check-stale-crate-status.sh
       - run: bash .github/scripts/check-stale-crate-status.sh
+      - run: bash .github/scripts/test-workflow-gates.sh
       - run: bash .github/scripts/check-workflow-gates.sh
   golden-gen-firewall:
+    if: github.event.pull_request.draft == false
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
   determinism-matrix:
+    if: github.event.pull_request.draft == false
     strategy:
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
@@ -657,12 +670,13 @@ PINNED_CI_LINES=(
   'cargo fmt --all --check'
   'bash .github/scripts/check-file-size.sh'
   'bash .github/scripts/check-no-secrets.sh'
+  'bash .github/scripts/test-workflow-gates.sh'
+  'bash .github/scripts/check-workflow-gates.sh'
   'cargo clippy --workspace --all-targets --locked -- -D warnings'
   'cargo build --workspace --locked'
-  'RUSTDOCFLAGS: "-D warnings"'
+  'cargo machete'
   'cargo doc --no-deps --workspace --lib --document-private-items --locked'
   'cargo doc --no-deps --workspace --bins --document-private-items --locked'
-  'github.event.pull_request.draft == false'
 )
 
 ci_case=0
@@ -696,4 +710,63 @@ for ci_line in "${PINNED_CI_LINES[@]}"; do
   fi
 done
 
-echo "OK: workflow gate fixtures passed (${pinned_case} gate commands, ${ci_case} CI commands individually verified)."
+# ── Partial-loss and impostor cases ─────────────────────────────────────────────────────────
+#
+# The loops above delete a requirement outright. These three are what a whole-file grep cannot
+# see: a requirement that survives SOMEWHERE while the step or job that needed it loses it, and a
+# command that appears as text without being executed. Each was a live false green.
+ci_partial_case() {
+  name="$1"; mutate="$2"; expect="$3"
+  case_root="$tmp/ci-partial-$name"
+  case_dir="$case_root/workflows"
+  mkdir -p "$case_root"
+  write_positive "$case_dir" "$case_root/deny.toml" "$case_root/Cargo.toml" \
+    "$case_root/crates" "$case_root/gate.sh"
+  python3 - "$case_dir/ci.yml" "$mutate" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text(); which = sys.argv[2]
+if which == "one-job-ungated":
+    old = "  clippy:\n    if: github.event.pull_request.draft == false\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "  clippy:\n", 1)
+elif which == "rustdoc-env-dropped":
+    old = "    env:\n      RUSTDOCFLAGS: \"-D warnings\"\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old, "", 1)
+elif which == "run-weakened-name-kept":
+    old = "      - run: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
+    assert old in s, "fixture shape changed"
+    s = s.replace(old,
+        "      - name: cargo clippy --workspace --all-targets --locked -- -D warnings\n"
+        "        run: cargo clippy --workspace --all-targets --locked -- -A warnings\n", 1)
+else:
+    raise SystemExit(f"unknown mutation {which}")
+p.write_text(s)
+PY
+  set +e
+  out="$(
+    OCE_WORKFLOW_DIR="$case_dir" OCE_DENY_TOML="$case_root/deny.toml" \
+    OCE_ROOT_CARGO_TOML="$case_root/Cargo.toml" OCE_CRATES_DIR="$case_root/crates" \
+    OCE_GATE_SCRIPT="$case_root/gate.sh" bash "$SCRIPT" 2>&1
+  )"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    echo "FAIL: CI partial-loss case '$name' left check-workflow-gates.sh green"
+    exit 1
+  fi
+  if ! printf '%s\n' "$out" | grep -Fq -- "$expect"; then
+    echo "FAIL: CI partial-loss case '$name' failed for the wrong reason:"
+    printf '%s\n' "$out" | tail -3
+    exit 1
+  fi
+}
+
+ci_partial_case one-job-ungated one-job-ungated \
+  "jobs not gated on \`pull_request.draft == false\`: clippy"
+ci_partial_case rustdoc-env-dropped rustdoc-env-dropped \
+  "runs cargo doc without RUSTDOCFLAGS=-D warnings"
+ci_partial_case run-weakened-name-kept run-weakened-name-kept \
+  "no CI step runs: cargo clippy --workspace --all-targets --locked -- -D warnings"
+
+echo "OK: workflow gate fixtures passed (${pinned_case} gate commands, ${ci_case} CI commands, 3 partial-loss cases individually verified)."

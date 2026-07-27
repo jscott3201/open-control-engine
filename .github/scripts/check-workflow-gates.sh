@@ -28,6 +28,53 @@ require_pattern() {
   fi
 }
 
+# Facts about what a workflow ACTUALLY RUNS, parsed rather than grepped.
+#
+# `require_pattern` searches the whole file, so a pinned command matching a step's `name:` counted
+# as CI running it: a review made clippy run `-A warnings` while the required `-D warnings`
+# survived only in the step name, and this script reported OK. Same defect as grepping gate.sh's
+# text — a string being present is not the string being executed.
+#
+# Emits, tab-separated:
+#   RUN     <job> <run command, whitespace-flattened>
+#   JOBIF   <job> <the job's `if:` condition, empty when absent>
+#   DOCSTEP <job> <step index> <RUSTDOCFLAGS in scope for that step, empty when absent>
+workflow_facts() {
+  python3 - "$1" <<'PY'
+import sys
+try:
+    import yaml
+except ImportError:
+    sys.exit("FAIL: PyYAML is required to verify workflow commands and is not installed")
+with open(sys.argv[1]) as fh:
+    doc = yaml.safe_load(fh) or {}
+for name, job in (doc.get("jobs") or {}).items():
+    print(f"JOBIF\t{name}\t{job.get('if', '')}")
+    job_env = job.get("env") or {}
+    for i, step in enumerate(job.get("steps") or []):
+        run = step.get("run")
+        if not run:
+            continue
+        flat = " ".join(str(run).split())
+        print(f"RUN\t{name}\t{flat}")
+        if "cargo doc" in flat:
+            env = dict(job_env)
+            env.update(step.get("env") or {})
+            print(f"DOCSTEP\t{name}\t{i}\t{env.get('RUSTDOCFLAGS', '')}")
+PY
+}
+
+# A command CI genuinely executes, matched only against RUN lines.
+require_ci_run() {
+  facts="$1"
+  cmd="$2"
+  label="$3"
+  if ! grep '^RUN	' "$facts" | cut -f3- | grep -Fq -- "$cmd"; then
+    echo "FAIL: no CI step runs: $cmd  ($label)"
+    exit 1
+  fi
+}
+
 require_lints_workspace() {
   path="$1"
   if ! awk '
@@ -112,23 +159,60 @@ require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --pr
 require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
 
-# CI's own lint/build/doc commands, in exact form. Without these the parity story runs one way
-# only: `gate.sh` was pinned while `ci.yml` was free to weaken underneath it. A review flipped
-# ci.yml's clippy to `-A warnings`, left gate.sh untouched, and this script still said OK.
-require_pattern "$ci" 'cargo fmt --all --check' 'fmt in exact form'
-require_pattern "$ci" 'cargo clippy --workspace --all-targets --locked -- -D warnings' \
+# CI's own commands, matched against what its steps RUN. Without these the parity story ran one
+# way only: `gate.sh` was pinned while `ci.yml` was free to weaken underneath it.
+ci_facts="$(mktemp)"
+workflow_facts "$ci" > "$ci_facts" || exit 1
+
+require_ci_run "$ci_facts" 'cargo fmt --all --check' 'fmt in exact form'
+require_ci_run "$ci_facts" 'cargo clippy --workspace --all-targets --locked -- -D warnings' \
   'clippy denying warnings over all targets, default features'
-require_pattern "$ci" 'cargo build --workspace --locked' 'locked workspace build'
-require_pattern "$ci" 'RUSTDOCFLAGS: "-D warnings"' 'rustdoc denies warnings'
-require_pattern "$ci" 'cargo doc --no-deps --workspace --lib --document-private-items --locked' \
+require_ci_run "$ci_facts" 'cargo build --workspace --locked' 'locked workspace build'
+require_ci_run "$ci_facts" 'cargo doc --no-deps --workspace --lib --document-private-items --locked' \
   'rustdoc over libs including private items'
-require_pattern "$ci" 'cargo doc --no-deps --workspace --bins --document-private-items --locked' \
+require_ci_run "$ci_facts" 'cargo doc --no-deps --workspace --bins --document-private-items --locked' \
   'rustdoc over bins including private items'
-require_pattern "$ci" 'check-file-size\.sh' 'file-size cap'
-require_pattern "$ci" 'check-no-secrets\.sh' 'no-secret scan'
-# Every job is draft-gated, so a draft PR runs nothing. Contributors are told to open non-draft;
-# pin the condition that makes that instruction matter.
-require_pattern "$ci" 'pull_request\.draft == false' 'jobs gated on non-draft pull requests'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-file-size.sh' 'file-size cap'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-no-secrets.sh' 'no-secret scan'
+require_ci_run "$ci_facts" 'bash .github/scripts/test-workflow-gates.sh' 'workflow gate fixtures'
+require_ci_run "$ci_facts" 'bash .github/scripts/check-workflow-gates.sh' 'workflow gate smoke'
+require_ci_run "$ci_facts" 'cargo machete' 'unused dependency gate'
+
+# EVERY rustdoc step, not merely one of them. A review removed RUSTDOCFLAGS from the bins step
+# alone; the libs step still carried it, one occurrence remained in the file, and the old
+# whole-file grep was satisfied while half the rustdoc gate ran without -D warnings.
+doc_steps=0
+while IFS=$'\t' read -r _ job idx flags; do
+  doc_steps=$((doc_steps + 1))
+  case "$flags" in
+    *-D\ warnings*) ;;
+    *)
+      echo "FAIL: $ci job '$job' step $idx runs cargo doc without RUSTDOCFLAGS=-D warnings"
+      exit 1
+      ;;
+  esac
+done < <(grep '^DOCSTEP	' "$ci_facts")
+if [ "$doc_steps" -eq 0 ]; then
+  echo "FAIL: $ci runs no cargo doc step; the rustdoc gate has vanished"
+  exit 1
+fi
+
+# EVERY job, not merely one. A review changed clippy's condition to `false || workflow_dispatch`
+# so it skipped every PR; other jobs still carried the draft guard, so a whole-file grep passed
+# while clippy silently stopped gating anything. A draft PR already runs nothing, which is why
+# contributors are told to open non-draft — that instruction is only worth stating if the
+# condition is actually on every job.
+ungated=""
+while IFS=$'\t' read -r _ job cond; do
+  case "$cond" in
+    *pull_request.draft\ ==\ false*) ;;
+    *) ungated="$ungated $job" ;;
+  esac
+done < <(grep '^JOBIF	' "$ci_facts")
+if [ -n "$ungated" ]; then
+  echo "FAIL: $ci jobs not gated on \`pull_request.draft == false\`:$ungated"
+  exit 1
+fi
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
