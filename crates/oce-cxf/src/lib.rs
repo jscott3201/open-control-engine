@@ -129,6 +129,14 @@ pub fn import_cxf(
 /// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty
 /// `warnings` list means nothing was deferred and the round trip covers the whole input.
 ///
+/// One carve-out, and it is a real gap rather than a definition: export does **not** check a
+/// block's port ARITY against the class its `class_path` names, because it takes no registry
+/// dependency at all. A hand-built block naming a registered class while declaring fewer ports
+/// than that class requires exports `Ok`, and the bytes then fail re-import with
+/// `MalformedDocument` — the same "bytes that do not load" class the single-assignment rejection
+/// above exists to prevent, reached by a different route. Every graph the resolver produces has
+/// correct arity by construction, so this is reachable only from a hand-built graph.
+///
 /// Export deliberately takes no registry
 /// dependency, so a hand-built graph with an unregistered class path still exports; its bytes
 /// then fail re-import loudly with `ClassNotFound` — never silently. The source root `@id` is

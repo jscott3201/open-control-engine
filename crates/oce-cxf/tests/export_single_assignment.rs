@@ -437,15 +437,44 @@ fn an_accepted_export_never_re_imports_with_a_single_assignment_error() {
         ..doubly_driven.clone()
     };
 
-    for (label, g) in [
-        ("two drivers", &doubly_driven),
-        ("one edge twice", &duplicated_edge),
-        ("one driver", &single),
+    // Each case carries its EXPECTED outcome. An earlier version of this test skipped every `Err`
+    // and asserted only on the `Ok` branch, which made it blind in the one direction a
+    // too-aggressive check fails in: a mutation that rejected everything left it green while
+    // sinking its own `"one driver"` case. Asserting acceptance is half the property.
+    // The sweep spans in-degree 0, 1, 2 and well above, because the OUTCOME property has to hold
+    // at every degree, not only at the two the per-shape tests use. A threshold that happened to
+    // be right for 2 and 3 — and wrong for 4 — would emit `Ok` bytes here that do not load, and
+    // without the high-fan-in cases nothing in this sweep would see it.
+    let fan4 = fan_in(4);
+    let fan9 = fan_in(9);
+    for (label, g, expect_accept) in [
+        ("two drivers", &doubly_driven, false),
+        ("one edge twice", &duplicated_edge, false),
+        ("one driver", &single, true),
+        (
+            "two inputs, one driver each",
+            &multi_input_singly_driven(),
+            true,
+        ),
+        ("four drivers", &fan4, false),
+        ("nine drivers", &fan9, false),
     ] {
-        // Either the export rejects, or its bytes re-import without a single-assignment error.
-        // Never `Ok` bytes that fail to load — that is the whole contract.
-        let Ok(report) = export_with_report(g) else {
-            continue;
+        let report = match export_with_report(g) {
+            Ok(report) => {
+                assert!(
+                    expect_accept,
+                    "`{label}` must be rejected, but exported {} bytes",
+                    report.bytes.len()
+                );
+                report
+            }
+            Err(e) => {
+                assert!(
+                    !expect_accept,
+                    "`{label}` must export, but was rejected: {e:?}"
+                );
+                continue;
+            }
         };
         let (_, import) =
             import_cxf(&report.bytes, &ResolveOptions::default()).unwrap_or_else(|e| {
@@ -461,4 +490,112 @@ fn an_accepted_export_never_re_imports_with_a_single_assignment_error() {
             "`{label}` exported Ok with bytes that re-import as multiply driven: {offenders:?}"
         );
     }
+}
+
+/// One `CDL.Reals.Add` whose TWO inputs each carry exactly one driver — the shape a per-block
+/// count gets wrong.
+///
+/// This is not an exotic graph: every multi-input block in the G36 corpus looks like this. In-degree
+/// is a property of a *connector*, not of the block that owns it, and an implementation that
+/// counted "edges arriving at this block" would read 2 here and reject a perfectly valid graph.
+/// Every other graph in this file has at most one driven input per block, so without this case the
+/// whole suite cannot tell the two implementations apart.
+fn multi_input_singly_driven() -> ModelGraph {
+    ModelGraph {
+        blocks: vec![
+            source(0, "left", 0, 1.0),
+            source(1, "right", 1, 2.0),
+            block(2, "CDL.Reals.Add", "join", &[2, 3], &[4], vec![]),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::Out, ValueType::Real),
+            conn(2, 2, Dir::In, ValueType::Real),
+            conn(3, 2, Dir::In, ValueType::Real),
+            conn(4, 2, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![wire(0, 2), wire(1, 3)],
+        external_inputs: vec![],
+    }
+}
+
+#[test]
+fn a_block_whose_inputs_are_each_singly_driven_is_accepted() {
+    // The false-reject guard for the counter's granularity, asserted on its own so a failure says
+    // "per-block counting" rather than surfacing inside the property sweep.
+    let g = multi_input_singly_driven();
+    let report = export_ok(&g);
+    let g2 = reimport_clean(&report.bytes);
+    assert_eq!(
+        g2.connections.len(),
+        2,
+        "both singly-driven edges must round-trip"
+    );
+}
+
+/// `n` distinct sources all driving one input. Returns a graph whose post-filter in-degree is
+/// exactly `n`.
+fn fan_in(n: u32) -> ModelGraph {
+    let mut blocks: Vec<_> = (0..n)
+        .map(|i| source(i, &format!("src{i}"), i, f64::from(i)))
+        .collect();
+    let sink_in = n;
+    let sink_out = n + 1;
+    blocks.push(block(
+        n,
+        "CDL.Reals.Abs",
+        "sink",
+        &[sink_in],
+        &[sink_out],
+        vec![],
+    ));
+
+    let mut connectors: Vec<_> = (0..n)
+        .map(|i| conn(i, i, Dir::Out, ValueType::Real))
+        .collect();
+    connectors.push(conn(sink_in, n, Dir::In, ValueType::Real));
+    connectors.push(conn(sink_out, n, Dir::Out, ValueType::Real));
+
+    ModelGraph {
+        blocks,
+        connectors,
+        connections: (0..n).map(|i| wire(i, sink_in)).collect(),
+        external_inputs: vec![],
+    }
+}
+
+#[test]
+fn rejection_holds_at_every_in_degree_above_one() {
+    // The threshold is `> 1`, not a set of small values. Sweeping the boundary and well past it
+    // kills any implementation that happens to be right for the two- and three-driver cases the
+    // per-shape tests above use — an arm matching `2 | 3`, say, which those tests cannot see.
+    for n in [2u32, 3, 4, 5, 9, 17] {
+        let diags = export_rejection(&fan_in(n));
+        assert_eq!(
+            multiply_driven(&diags).len(),
+            1,
+            "in-degree {n} is one defect on one connector"
+        );
+    }
+}
+
+#[test]
+fn a_large_fan_in_rejects_without_panicking() {
+    // Totality at scale. The planner is a total function over arbitrary `ModelGraph` state, so a
+    // large edge count must produce a diagnostic, never an arithmetic panic — the counter
+    // saturates rather than overflowing. 300 exceeds a `u8` counter, which is the smallest width
+    // an implementation could plausibly have reached for.
+    let diags = export_rejection(&fan_in(300));
+    assert_eq!(multiply_driven(&diags).len(), 1);
+}
+
+#[test]
+fn repeated_exports_of_a_rejection_are_diagnostic_identical() {
+    // Determinism (TESTING.md pillar 4) applies to the rejection path too: diagnostics are ordered
+    // by connector position, so two runs over the same graph must produce the identical list. A
+    // set-based or hash-ordered implementation passes every other test in this file.
+    let g = fan_in(4);
+    let first: Vec<(String, String)> = multiply_driven(&export_rejection(&g));
+    let second: Vec<(String, String)> = multiply_driven(&export_rejection(&g));
+    assert_eq!(first, second, "the rejection list must be deterministic");
 }

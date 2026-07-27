@@ -504,7 +504,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         // Orphan guard: an unclaimed target (including any deferred-target endpoint) is dropped.
         if let Some(to_iri) = port_iri[t].as_ref() {
             targets[f].push(to_iri.clone());
-            in_deg[t] += 1;
+            // Saturating, not `+= 1`. `g.connections` is a `Vec` bounded by nothing — not by the
+            // connector count, not by `u32::MAX` — so a hand-built graph can in principle carry
+            // more than `u32::MAX` edges into one input. A plain increment would panic there in
+            // debug and, worse, WRAP in release: a count that wrapped to 0 or 1 would slip past
+            // the `> 1` test below and re-open the exact hole this phase closes. Saturating at
+            // `u32::MAX` keeps the planner total (this crate never panics on host input) and keeps
+            // the comparison monotone, so no edge count can ever read as fewer than two.
+            in_deg[t] = in_deg[t].saturating_add(1);
         }
     }
 
