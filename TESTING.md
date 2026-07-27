@@ -31,7 +31,10 @@ Enumerate the input domain and hit every boundary and degenerate case:
   `rem`, `sign(0) == 0`, division by zero, `sqrt` of a negative.
 - **Empty / degenerate structure:** empty arrays, single-element arrays, zero connections,
   in-degree 0 vs 1 vs >1, self-loops, duplicate ids, missing required fields.
-- **Malformed input must produce a typed diagnostic, never a panic.** Assert the *specific*
+- **Malformed input must produce a typed diagnostic, never a panic.** One known gap, so state it
+  rather than assume it: neither the `oce-expr` parser nor its evaluator carries a nesting-depth
+  guard, so deeply nested input can exhaust the thread stack rather than return a diagnostic.
+  Totality holds over the value domain, not over arbitrary depth. Assert the *specific*
   `DiagCode` / error variant, not merely "an error occurred." Parsers and the resolver are
   total functions over arbitrary bytes: fuzz-grade hostility is the expectation.
 
@@ -63,8 +66,10 @@ Worked examples of the bar, and where each stands:
   edge cases each asserting their `DiagCode`. **Landed**:
   `crates/oce-cxf/tests/fixtures/golden/minimal_loop.modelgraph.txt`.
 - **Engine loop** — golden converging trace for the feedback loop, bit-exact at every tick.
-  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the G36 traces
-  beside it, each with a `.prov.json` recording the oracle's provenance.
+  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the 46 G36 traces
+  beside it, each with a `.prov.json`. Read that sidecar before citing a trace as evidence of
+  correctness: all 46 record `"tier": "2"` and `depends_on_oce_blocks: true` — engine self-output,
+  a determinism snapshot and explicitly **not** a correctness oracle.
 - **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit.
   **Landed**: `crates/oce-cxf/tests/fixtures/golden/array.modelgraph.txt`,
   `array2d.modelgraph.txt` and `array_expression.modelgraph.txt`.
@@ -79,6 +84,22 @@ re-derived expectation — otherwise we are grading our own homework.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
+- **The independent layer is `tools/golden-gen`.** It emits **407 Tier-A goldens — 275 CDL
+  block/type references, plus 132 G36 sequence outputs spanning all 46 catalog fixtures.** The
+  sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
+  table in `g36_funnel_band/sequences.rs` (25 outputs), per-fixture `*_funnel.rs` suites, and four
+  `*_oracle.rs` suites whose headers state outright that there is intentionally no funnel-band
+  test. **Count from the suites, not from the shared table** — reading only `sequences.rs`
+  understates coverage by a factor of five, which is a mistake that has been made twice.
+  All 132 are compared **bit-exactly** (`compare_regime` on every golden: 102 `Value::bit_eq`
+  f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
+  layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
+  because the funnel is type-blind (`g36_funnel_band/policy.rs`).
+  Most references are closed-form derivations from CDL / Buildings source semantics; some, like
+  `TimeSuppression`, are explicit per-tick recurrences. The generator is deliberately kept **off
+  the workspace** and **forbidden from depending on `oce-blocks`** — that firewall is what makes
+  it an oracle rather than a second opinion from the same code, and CI enforces it. Extending
+  Tier-A coverage means adding to that generator, never blessing engine output.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
@@ -135,8 +156,8 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, gate-fixture smoke (+ cargo-deny on manifest change). |
-| `release-gate.yml` (heavy) | PRs `development -> main`, daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
+| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself (+ cargo-deny on manifest change). |
+| `release-gate.yml` (heavy) | **Any** non-draft PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you

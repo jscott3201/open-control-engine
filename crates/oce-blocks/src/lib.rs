@@ -262,7 +262,9 @@ impl Diagnostics for NoopDiagnostics {
 /// FRAME Block-trait resolution). A block object is an *immutable* description (class + parameters
 /// resolved at construction); all mutable per-instance `[S]` state lives in an engine-owned flat
 /// region (`RunState.words`), never in the block struct. This keeps the frozen schedule shareable
-/// and the tick zero-allocation (`01` §7 req 4, §9 req 4), so every method takes `&self`.
+/// and keeps per-instance state out of the allocator (`01` §7 req 4, §9 req 4), so every method
+/// takes `&self`. It does **not** make the tick zero-allocation: an implementation may allocate
+/// inside [`Block::step_algebraic`], and `CDL.Reals.Sort` does so on every tick.
 ///
 /// `[A]` blocks override [`Block::step_algebraic`]. `[S]` blocks set [`Block::state_len`], seed via
 /// [`Block::init_state`], and override [`Block::emit_from_state`] + [`Block::update_state`].

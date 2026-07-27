@@ -10,7 +10,9 @@ the architecture and invariants are the design of record.
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
   in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
   per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
-  batch `development` → `main`, and a version tag drives the gated publish.
+  batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
+  only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
+  never publishes.
 - **Open your PR non-draft.** Every `ci.yml` job is conditioned on
   `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
@@ -56,6 +58,11 @@ no-secret scan, the database-free and golden-gen invariant checks, the gate fixt
 `cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
 determinism subset in debug and release codegen.
 
+CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
+`release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
+its own job — but that is coverage, not proof that the script and the workflows still agree.
+Nothing verifies that mechanically; change a command in CI first, then here.
+
 If your change touches any other crate, its tests did not run. Add `full`:
 
 ```bash
@@ -77,8 +84,14 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   `selene-db`, no `tokio`, no `async-std`. The default-no-db gate enforces this.
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
-- **Keep the tick deterministic.** The hot path performs no allocation, hashing, I/O, or store
-  access; identical inputs and parameters must yield identical outputs.
+- **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
+  The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
+  **not** currently zero across the block library, so do not add to the exceptions: `Reals.Sort`
+  allocates two `Vec`s every tick on the arithmetic path (`reals_matrix.rs:387`, `:403`),
+  `Reals.Log` / `Reals.Log10` `format!` on non-positive input, and `Engine::tick` takes one
+  `store.snapshot()` when the model declares store-backed inputs. Note the allocation guard in
+  `oce-api/tests/tick_purity_tests.rs` covers three fixtures and does not exercise `Sort` — a new
+  allocating block will not be caught by CI.
 
 ## Commits
 

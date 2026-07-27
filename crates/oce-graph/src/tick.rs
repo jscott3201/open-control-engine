@@ -1,5 +1,10 @@
-//! TICK evaluation (`01` §7 state allocation + §9 the eval loop): the hot path. Allocation-free,
-//! IO-free, hashing-free, store-free, selene-free.
+//! TICK evaluation (`01` §7 state allocation + §9 the eval loop): the hot path. IO-free,
+//! hashing-free, store-free, selene-free. The loop itself allocates nothing — schedule, state and
+//! gather scratch are all preallocated at BUILD — but it calls into `Block::step_algebraic`,
+//! which is not required to be allocation-free and is not in every case: `CDL.Reals.Sort`
+//! allocates two `Vec`s per tick unconditionally, and `Reals.Log`/`Reals.Log10` allocate a
+//! diagnostic string on non-positive input. Do not read "the tick never allocates" as a
+//! whole-engine guarantee.
 //!
 //! **Two passes per tick (binding correction to the §9 sketch).** Pass 1 *emits*: every block
 //! produces all its outputs atomically (`[A]` via `step_algebraic`, `[S]` via `emit_from_state`
@@ -34,7 +39,8 @@ pub struct EvalContext<'a> {
 /// state region per `[S]` block in a flat word buffer, seeds it from the block's parameters via
 /// [`Block::init_state`] (CDL has no `start` attribute), seeds connector values (constant/source
 /// outputs hold their value before tick 0; all others the type zero), and preallocates the
-/// input-gather scratch so the tick never allocates.
+/// input-gather scratch so the eval loop itself never allocates. Individual blocks may still
+/// allocate inside `step_algebraic` — see the module header.
 #[must_use]
 pub fn allocate_state(model: &Model, blocks: &[Box<dyn Block>]) -> RunState {
     let nb = model.blocks.len();
