@@ -76,8 +76,11 @@ Reads widen to a team namespace only when the call asserts that team; writes nee
 
 ## 🛠️ Working norms
 
-- **Ultracode / workflows:** orchestrate substantive research and design via the Workflow tool;
-  cap concurrency at **5–10 agents** at a time to avoid API rate-limiting (owner directive).
+- **Ultracode / workflows:** orchestrate substantive research and design via the Workflow tool.
+  **Never fan out more than 5 agents at once** (owner directive) — a ceiling, not a target. Where a
+  stage has more than five items, batch them in chunks of five or fewer; do not hand the whole list
+  to one `parallel()` and rely on the runtime's internal queue, which is set higher than this cap.
+  The per-finding verification stage of a review counts.
 - Spec before code: land architecture decisions in `_spec/` (and Aionforge Memory) before
   scaffolding crates.
 - **Testing standard (safety-critical):** this engine controls real equipment — a wrong result
