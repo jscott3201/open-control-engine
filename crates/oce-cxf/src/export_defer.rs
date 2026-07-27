@@ -102,34 +102,6 @@ fn block_subject(g: &ModelGraph, bi: usize) -> String {
         .map_or_else(|| format!("block#{bi}"), str::to_owned)
 }
 
-/// The owning-block-relative name of connector `c` (`in{k}` / `out{k}` from the owner's port-list
-/// position) for the cascade message — the same naming `crate::export::plan` mints for port
-/// `@id`s, so a host can navigate from the warning to the deferred input.
-fn connector_local_name(g: &ModelGraph, c_idx: usize) -> String {
-    let Some(c) = g.connectors.get(c_idx) else {
-        return format!("connector#{c_idx}");
-    };
-    let bi = c.block.0 as usize;
-    let Some(b) = g.blocks.get(bi) else {
-        return format!("connector#{c_idx}");
-    };
-    let list = if c.dir == oce_model::Dir::In {
-        &b.inputs
-    } else {
-        &b.outputs
-    };
-    let k = list
-        .iter()
-        .position(|cid| cid.0 as usize == c_idx)
-        .unwrap_or(0);
-    let dir = if c.dir == oce_model::Dir::In {
-        "in"
-    } else {
-        "out"
-    };
-    format!("{dir}{k}")
-}
-
 /// Whether block `bi` carries any enumeration-typed connector, returning the class id of the
 /// FIRST one in `inputs`-then-`outputs` port-list order (the order the Phase 1b warning text
 /// pins). The `find_map` closure searches the *enum predicate*, not merely the resolution: an
@@ -212,7 +184,19 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
             if deferred.contains(&bi) {
                 continue;
             }
-            'inputs: for cid in &b.inputs {
+            // `k` is the port-list position, taken from the iteration rather than reconstructed.
+            // `crate::export::plan` mints this block's port `@id`s from exactly this enumeration
+            // (`for (k, cid) in b.inputs.iter().enumerate()`), so the name in the warning and the
+            // `@id` in the document agree by construction and cannot drift.
+            //
+            // The previous version reconstructed `k` by searching for `cin` in the port list of
+            // `g.connectors[cin].block` — a block the graph *claims* owns the connector, which for
+            // a hand-built graph need not be the `b` this loop is standing in. On a mis-owned
+            // connector that search either missed (and fell back to position 0) or, worse,
+            // succeeded at the wrong index in the wrong block's list and named a confidently wrong
+            // port. Both shipped inside an `Ok` export with no error diagnostic to warn the host
+            // the name was untrustworthy.
+            'inputs: for (k, cid) in b.inputs.iter().enumerate() {
                 let cin = cid.0 as usize;
                 let drivers = drivers_of(g, cin);
                 if drivers.is_empty() {
@@ -230,7 +214,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
                 deferred.insert(bi);
                 grew = true;
                 let subject = block_subject(g, bi);
-                let conn = connector_local_name(g, cin);
+                let conn = format!("in{k}");
                 warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
                 break 'inputs;
             }
@@ -331,8 +315,9 @@ mod tests {
     /// So each argument here carries the markers of *both* other slots, which leaves no order to
     /// be lucky in — whichever slot a chain fills first, its value carries a marker a later step
     /// would rewrite. Only the class and connector slots are exempt, and by construction rather
-    /// than by luck: `enum_class_label` and `connector_local_name` both derive their text
-    /// (`EnumClass#<digits>`, `in<k>`/`out<k>`), so neither can carry a brace to begin with.
+    /// than by luck: `enum_class_label` renders `EnumClass#<digits>` and the cascade's connector
+    /// slot is `format!("in{k}")` over a port-list index, so neither can carry a brace to begin
+    /// with. Both are derived from numbers, never from host-supplied text.
     #[test]
     fn no_slot_ordering_can_corrupt_another_slots_value() {
         let param = msg_enum_defer_param("blk{name}{class}", "{subject}{class}", "EnumClass#3");
@@ -356,10 +341,13 @@ mod tests {
             "a self-naming marker in the subject must survive too: {connector}"
         );
 
-        let cascade = msg_enum_defer_cascade("blk{conn}{subject}", "out2");
+        // `in2`, not `out2`: the cascade loop iterates `b.inputs` only, so `in{k}` is the sole
+        // shape the connector slot can ever carry. An `out{k}` literal here would pin a string
+        // the code cannot produce.
+        let cascade = msg_enum_defer_cascade("blk{conn}{subject}", "in2");
         assert!(
             cascade.contains("block `blk{conn}{subject}`")
-                && cascade.contains("input connector `out2`"),
+                && cascade.contains("input connector `in2`"),
             "the cascade subject's markers must survive both orders: {cascade}"
         );
     }

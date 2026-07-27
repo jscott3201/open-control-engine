@@ -68,7 +68,11 @@ fn id_list<T: std::fmt::Debug>(ids: &[T]) -> Vec<String> {
     ids.iter().map(|i| format!("{i:?}")).collect()
 }
 
-fn render_value(v: &Value) -> String {
+/// A bit-exact rendering of one parameter [`Value`]. `pub` because the G36 export corpus builds a
+/// per-block survivor profile from it: a deferring export renumbers ids, so the whole-graph
+/// `render` string cannot be compared, and the profile has to carry parameters by the same
+/// bit-exact key rather than a weaker one.
+pub fn render_value(v: &Value) -> String {
     match v {
         // Reals by exact bits — the determinism contract; never `==`/epsilon (TESTING.md).
         Value::Real(r) => format!("Real(0x{:016x})", r.to_bits()),
@@ -81,7 +85,11 @@ fn render_value(v: &Value) -> String {
 
 /// A bit-exact rendering of a connector's parsed [`oce_model::Attrs`]. `Real` bounds are printed by
 /// `to_bits()` (a one-ULP drift fails loudly); unit/quantity/displayUnit by their string form.
-fn render_attrs(a: &oce_model::Attrs) -> String {
+///
+/// `pub` for the same reason as [`render_value`] — without it a survivor-cone comparison would
+/// silently skip §7.4.1 attributes, and a defect that corrupted a port's `unit` or `min` while
+/// preserving class, parameters and wiring would round-trip through the check unnoticed.
+pub fn render_attrs(a: &oce_model::Attrs) -> String {
     use oce_model::Attrs;
     match a {
         Attrs::Real(r) => format!(

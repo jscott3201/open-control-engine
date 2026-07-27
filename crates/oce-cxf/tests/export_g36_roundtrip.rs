@@ -1,105 +1,431 @@
-//! R7 — the enum-free flat G36 RT-2 subset: 8 individually-named golden tests (Deliverable C).
+//! Export RT-2 over the **whole** G36 fixture corpus, not a hand-picked slice of it.
 //!
-//! Each G36 fixture is enum-free (recon-verified: zero `ValueType::Enum` connectors, zero
-//! `Value::Enum` parameters), so the R7 deferral pre-pass defers nothing and the whole graph
-//! exports. RT-2 then holds for the FULL graph (not just a survivor cone):
-//! `G1 = import(fixture); bytes = export(G1); G2 = import(bytes); render(G1) == render(G2)`
-//! bit-exact (floats by `to_bits()` via [`render::render`], the same key the resolver goldens use),
-//! plus the second-order byte fixpoint `export(G2) == bytes`. The enum-free assertion is a
-//! provenance guard: it pins that the fixture is genuinely in-subset so the RT-2 equality is
-//! meaningful (a fixture that silently grew an enum would make `render` equality vacuous).
+//! Eight of the 46 fixtures used to be covered by eight individually-named tests. The other 38
+//! were exercised by nothing on the export side, and — this is the part that made the gap
+//! self-perpetuating — nothing tied the directory to any test, so a 47th fixture would have landed
+//! uncovered with no signal. `EXPECTED_G36_FIXTURES` plus the listing assertion closes that: a new
+//! fixture is either added to the list and swept, or CI goes red naming it.
 //!
-//! The `import_ok`/`export_ok`/`render` helpers are DUPLICATED from `export_roundtrip.rs` rather
-//! than factored into a shared module: each integration test file is a separate crate/binary, and
-//! the three-line helpers are too thin to justify a `#[path]`-included support module. `render`
-//! itself IS shared — both binaries compile `tests/render/mod.rs` via `mod render;`.
+//! Two classes, distinguished at runtime by whether the export deferred anything, because the
+//! right assertion differs:
+//!
+//! * **Enum-free** — the deferral pre-pass defers nothing, so the whole graph exports and RT-2
+//!   holds for the FULL graph: `render(import(fixture)) == render(import(export(...)))` bit-exact,
+//!   plus the second-order byte fixpoint.
+//! * **Deferring** — the fixture carries `Value::Enum` *parameters*, so some blocks are omitted by
+//!   design and whole-graph render equality is false on purpose (see `export`'s rustdoc). RT-2
+//!   holds over the **survivor cone**, which is what [`assert_survivor_cone_rt2`] asserts.
+//!
+//! Note what the split is NOT. No fixture is outside the export subset: 46/46 import with zero
+//! diagnostics and 46/46 export. There are zero enum-typed *connectors* in the entire corpus —
+//! every deferral here comes from a parameter — and composites are flattened and arrays
+//! pre-flattened before export ever sees the graph.
+//!
+//! The `import_ok` / `render` helpers are duplicated from `export_roundtrip.rs` rather than
+//! factored out: each integration test file is its own binary, and the helpers are too thin to
+//! justify a shared module. `render` itself IS shared via `mod render;`.
 
 mod render;
 
-use oce_cxf::{ResolveOptions, export, import_cxf};
-use oce_model::{ModelGraph, Value, ValueType};
-use render::render;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::PathBuf;
 
-fn import_ok(bytes: &[u8]) -> ModelGraph {
-    let (g, report) =
-        import_cxf(bytes, &ResolveOptions::default()).expect("document must resolve without error");
+use oce_cxf::{ExportReport, ResolveOptions, export_with_report, import_cxf};
+use oce_model::{Dir, ModelGraph, Value, ValueType};
+use render::{render, render_attrs, render_value};
+
+/// Every `*.jsonld` under `tests/fixtures/g36/`, sorted. Checked in so that adding a fixture is a
+/// deliberate, reviewed act rather than a silent expansion — and so that adding one without
+/// touching this list fails loudly instead of going uncovered.
+const EXPECTED_G36_FIXTURES: &[&str] = &[
+    "ahu_economizer.jsonld",
+    "ahu_supply_air_temp_reset.jsonld",
+    "cooling_only_active_air_flow.jsonld",
+    "cooling_only_alarms.jsonld",
+    "cooling_only_controller.jsonld",
+    "cooling_only_dampers.jsonld",
+    "cooling_only_system_requests.jsonld",
+    "generic_air_economizer_high_limits_ashrae_differential.jsonld",
+    "generic_air_economizer_high_limits_ashrae_fixed_18.jsonld",
+    "generic_air_economizer_high_limits_ashrae_fixed_21.jsonld",
+    "generic_air_economizer_high_limits_ashrae_fixed_24.jsonld",
+    "generic_air_economizer_high_limits_title24_differential_offset_0.jsonld",
+    "generic_air_economizer_high_limits_title24_differential_offset_1.jsonld",
+    "generic_air_economizer_high_limits_title24_differential_offset_2.jsonld",
+    "generic_air_economizer_high_limits_title24_differential_offset_3.jsonld",
+    "generic_air_economizer_high_limits_title24_fixed_21.jsonld",
+    "generic_air_economizer_high_limits_title24_fixed_22.jsonld",
+    "generic_air_economizer_high_limits_title24_fixed_23.jsonld",
+    "generic_air_economizer_high_limits_title24_fixed_24.jsonld",
+    "generic_time_suppression.jsonld",
+    "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld",
+    "multizone_vav_economizer_enable.jsonld",
+    "multizone_vav_economizer_limits_common.jsonld",
+    "multizone_vav_economizer_modulations_reliefs.jsonld",
+    "multizone_vav_economizer_modulations_return_fan.jsonld",
+    "multizone_vav_economizer_modulations_return_fan_relief_damper.jsonld",
+    "multizone_vav_freeze_protection.jsonld",
+    "multizone_vav_outdoor_airflow_ahu.jsonld",
+    "multizone_vav_outdoor_airflow_sumzone.jsonld",
+    "multizone_vav_outdoor_airflow_title24_ahu.jsonld",
+    "multizone_vav_outdoor_airflow_title24_sumzone.jsonld",
+    "multizone_vav_plant_requests.jsonld",
+    "multizone_vav_relief_damper.jsonld",
+    "multizone_vav_relief_fan.jsonld",
+    "multizone_vav_relief_fan_group.jsonld",
+    "multizone_vav_return_fan_airflow_tracking.jsonld",
+    "multizone_vav_return_fan_direct_pressure.jsonld",
+    "multizone_vav_supply_fan.jsonld",
+    "multizone_vav_supply_signals.jsonld",
+    "multizone_vav_supply_temperature.jsonld",
+    "reheat_overrides.jsonld",
+    "thermal_zones_control_loops.jsonld",
+    "thermal_zones_zone_states.jsonld",
+    "trim_and_respond_have_hol_false.jsonld",
+    "vav_single_zone.jsonld",
+    "ventilation_zones_ashrae62_1_setpoints.jsonld",
+];
+
+fn g36_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
+}
+
+/// Deterministically sorted `*.jsonld` listing of the G36 fixture directory.
+fn sorted_fixture_listing() -> Vec<String> {
+    let dir = g36_dir();
+    let mut names: Vec<String> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("G36 fixture dir {} must exist: {e}", dir.display()))
+        .map(|entry| entry.expect("readable directory entry").file_name())
+        .filter_map(|name| {
+            let name = name.to_str().expect("UTF-8 fixture name").to_owned();
+            name.ends_with(".jsonld").then_some(name)
+        })
+        .collect();
+    names.sort();
+    names
+}
+
+fn import_ok(fixture: &str, bytes: &[u8]) -> ModelGraph {
+    let (g, report) = import_cxf(bytes, &ResolveOptions::default())
+        .unwrap_or_else(|e| panic!("`{fixture}` must resolve without error: {e:?}"));
     assert!(
         report.is_empty(),
-        "expected zero diagnostics, got: {:?}",
+        "`{fixture}` expected zero diagnostics, got: {:?}",
         report.diagnostics
     );
     g
 }
 
-fn export_ok(g: &ModelGraph) -> Vec<u8> {
-    export(g).expect("graph is inside the minimal export subset")
+fn export_ok(fixture: &str, g: &ModelGraph) -> ExportReport {
+    export_with_report(g)
+        .unwrap_or_else(|e| panic!("`{fixture}` must be inside the export subset: {e:?}"))
 }
 
-/// The RT-2 fixpoint for an enum-free G36 fixture: render equality (bit-exact) + the second-order
-/// byte fixpoint + the enum-free provenance guard (zero enum connectors/params in the input).
-fn g36_rt2(fixture: &str) {
-    let g1 = import_ok(fixture.as_bytes());
-    let bytes = export_ok(&g1);
-    let g2 = import_ok(&bytes);
-    assert_eq!(render(&g1), render(&g2));
-    assert_eq!(export_ok(&g2), bytes); // second-order byte fixpoint
-    assert!(
-        g1.connectors
-            .iter()
-            .all(|c| !matches!(c.value_type, ValueType::Enum(_)))
+/// The blocks a report says were deferred, read off the warning subjects.
+fn deferred_subjects(report: &ExportReport) -> BTreeSet<String> {
+    report
+        .warnings
+        .iter()
+        .map(|d| {
+            d.subject
+                .as_deref()
+                .expect("a deferral warning always names its block")
+                .to_owned()
+        })
+        .collect()
+}
+
+/// One block's identity, keyed by `instance_iri`, in a form that survives id renumbering.
+///
+/// Deliberately NOT a subset of what `render` compares: class, every parameter by bit-exact value,
+/// and every port's §7.4.1 attributes by bit-exact rendering, in port-list order. Dropping the
+/// attributes would let a defect that corrupted a port's `unit` or `min` — while preserving class,
+/// parameters and wiring — pass this check unnoticed.
+fn block_profiles(g: &ModelGraph) -> BTreeMap<String, String> {
+    g.blocks
+        .iter()
+        .filter_map(|b| {
+            let iri = b.instance_iri.as_deref()?.to_owned();
+            let params: Vec<String> = b
+                .params
+                .values
+                .iter()
+                .map(|(n, v)| format!("{n}={}", render_value(v)))
+                .collect();
+            let ports = |ids: &[oce_model::ConnectorId]| -> Vec<String> {
+                ids.iter()
+                    .map(|cid| {
+                        let c = &g.connectors[cid.0 as usize];
+                        format!("{:?}/{}", c.value_type, render_attrs(&c.attrs))
+                    })
+                    .collect()
+            };
+            Some((
+                iri,
+                format!(
+                    "class={} params=[{}] in=[{}] out=[{}]",
+                    b.class_iri,
+                    params.join(","),
+                    ports(&b.inputs).join(","),
+                    ports(&b.outputs).join(","),
+                ),
+            ))
+        })
+        .collect()
+}
+
+/// Every connection as `<owner-iri>.out<k> -> <owner-iri>.in<k>`, sorted, skipping any edge with
+/// an endpoint owned by a block in `excluded`. Naming endpoints by owner IRI plus port position is
+/// what makes the set comparable across a re-import that renumbers every `BlockId`/`ConnectorId`.
+///
+/// The exclusion is by resolved OWNER, never by substring on the rendered edge. G36 instance IRIs
+/// are hierarchical and share prefixes — `…actAirSet.intEqu`, `…intEqu1`, `…intEqu2` all coexist —
+/// so a `contains()` filter drops edges belonging to `intEqu1` whenever `intEqu` defers, and the
+/// survivor edge set comes out short. That produced a failure that looked like an exporter defect
+/// and was entirely an artifact of the check.
+fn edge_set(g: &ModelGraph, excluded: &BTreeSet<String>) -> BTreeSet<String> {
+    let endpoint = |cid: oce_model::ConnectorId| -> Option<(String, String)> {
+        let c = g.connectors.get(cid.0 as usize)?;
+        let b = g.blocks.get(c.block.0 as usize)?;
+        let list = if c.dir == Dir::In {
+            &b.inputs
+        } else {
+            &b.outputs
+        };
+        let k = list.iter().position(|x| *x == cid)?;
+        let dir = if c.dir == Dir::In { "in" } else { "out" };
+        let owner = b.instance_iri.as_deref()?.to_owned();
+        let port = format!("{owner}.{dir}{k}");
+        Some((owner, port))
+    };
+    g.connections
+        .iter()
+        .filter_map(|c| {
+            let (from_owner, from_port) = endpoint(c.from)?;
+            let (to_owner, to_port) = endpoint(c.to)?;
+            if excluded.contains(&from_owner) || excluded.contains(&to_owner) {
+                return None;
+            }
+            Some(format!("{from_port} -> {to_port}"))
+        })
+        .collect()
+}
+
+/// RT-2 for a fixture that deferred nothing: the whole graph round-trips bit-exactly.
+fn assert_full_graph_rt2(fixture: &str, g1: &ModelGraph, report: &ExportReport) {
+    let g2 = import_ok(fixture, &report.bytes);
+    assert_eq!(render(g1), render(&g2), "`{fixture}` full-graph RT-2");
+    assert_eq!(
+        export_ok(fixture, &g2).bytes,
+        report.bytes,
+        "`{fixture}` second-order byte fixpoint"
     );
-    assert!(g1.blocks.iter().all(|b| {
-        b.params
+}
+
+/// Every deferred block must be deferred for a reason the algorithm actually licenses: it carries
+/// enumeration content itself, or one of its inputs was driven and lost *every* driver to the
+/// deferred set.
+///
+/// This is the one assertion here that does NOT trust the warnings. Everything else derives the
+/// survivor cone from the warning subjects, which makes those checks self-consistent under a
+/// cascade that over-defers — a smaller cone still round-trips perfectly, so the profile, edge and
+/// no-leak assertions all pass while a third of the document silently vanishes. Verified: with the
+/// cascade widened from "every driver deferred" to "any driver deferred", the whole-corpus RT-2
+/// test stayed green and only the pinned counts noticed. This check recomputes the justification
+/// from the graph, so an unjustified deferral fails on the fixture that carries it rather than on
+/// the two whose counts happen to be pinned.
+fn assert_every_deferral_is_justified(fixture: &str, g: &ModelGraph, deferred: &BTreeSet<String>) {
+    let owner_iri = |cid: oce_model::ConnectorId| -> Option<&str> {
+        let c = g.connectors.get(cid.0 as usize)?;
+        g.blocks.get(c.block.0 as usize)?.instance_iri.as_deref()
+    };
+
+    for b in &g.blocks {
+        let Some(iri) = b.instance_iri.as_deref() else {
+            continue;
+        };
+        if !deferred.contains(iri) {
+            continue;
+        }
+
+        let carries_enum = b
+            .params
             .values
             .iter()
-            .all(|(_, v)| !matches!(v, Value::Enum { .. }))
-    }));
+            .any(|(_, v)| matches!(v, Value::Enum { .. }))
+            || b.inputs.iter().chain(b.outputs.iter()).any(|cid| {
+                g.connectors
+                    .get(cid.0 as usize)
+                    .is_some_and(|c| matches!(c.value_type, ValueType::Enum(_)))
+            });
+        if carries_enum {
+            continue; // a root cause, not a cascade
+        }
+
+        let cascaded = b.inputs.iter().any(|cid| {
+            let drivers: Vec<&oce_model::Connection> =
+                g.connections.iter().filter(|c| c.to == *cid).collect();
+            !drivers.is_empty()
+                && drivers
+                    .iter()
+                    .all(|c| owner_iri(c.from).is_some_and(|o| deferred.contains(o)))
+        });
+        assert!(
+            cascaded,
+            "`{fixture}` deferred `{iri}`, which carries no enumeration content and has no input \
+             whose drivers were all deferred — the cascade reached a block it had no licence to \
+             omit"
+        );
+    }
+}
+
+/// RT-2 for a fixture whose export deferred blocks: equality over the survivor cone.
+///
+/// Whole-graph `render` equality is false here by design, so this asserts the four properties that
+/// together say "the document is exactly the survivor cone and nothing else":
+/// no deferred block leaked in, every survivor kept its full profile, the survivor-to-survivor
+/// wiring is identical, and the bytes are a fixpoint.
+fn assert_survivor_cone_rt2(fixture: &str, g1: &ModelGraph, report: &ExportReport) {
+    let deferred = deferred_subjects(report);
+    assert_every_deferral_is_justified(fixture, g1, &deferred);
+    let g2 = import_ok(fixture, &report.bytes);
+
+    let all_iris: BTreeSet<&str> = g1
+        .blocks
+        .iter()
+        .filter_map(|b| b.instance_iri.as_deref())
+        .collect();
+    for subject in &deferred {
+        assert!(
+            all_iris.contains(subject.as_str()),
+            "`{fixture}` deferred `{subject}`, which is not a block in the input graph"
+        );
+    }
+
+    let survivors: BTreeMap<String, String> = block_profiles(g1)
+        .into_iter()
+        .filter(|(iri, _)| !deferred.contains(iri))
+        .collect();
+    assert!(
+        !survivors.is_empty(),
+        "`{fixture}` deferred everything; total deferral is a rejection, not a warning"
+    );
+    assert!(
+        !deferred.is_empty(),
+        "`{fixture}` reached the deferring branch with an empty deferred set"
+    );
+
+    let emitted = block_profiles(&g2);
+    for iri in emitted.keys() {
+        assert!(
+            !deferred.contains(iri),
+            "`{fixture}` leaked the deferred block `{iri}` into the emitted document"
+        );
+    }
+    assert_eq!(
+        emitted, survivors,
+        "`{fixture}` survivor profiles must round-trip exactly"
+    );
+
+    assert_eq!(
+        edge_set(&g2, &BTreeSet::new()),
+        edge_set(g1, &deferred),
+        "`{fixture}` survivor-to-survivor wiring must round-trip exactly"
+    );
+
+    assert_eq!(
+        export_ok(fixture, &g2).bytes,
+        report.bytes,
+        "`{fixture}` second-order byte fixpoint"
+    );
+    assert!(
+        g2.blocks.iter().all(|b| {
+            b.params
+                .values
+                .iter()
+                .all(|(_, v)| !matches!(v, Value::Enum { .. }))
+        }),
+        "`{fixture}` re-imported document still carries an enum parameter"
+    );
 }
 
 #[test]
-fn g36_ahu_economizer_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!("fixtures/g36/ahu_economizer.jsonld"));
+fn the_fixture_directory_and_the_swept_list_stay_one_to_one() {
+    let on_disk = sorted_fixture_listing();
+    let expected: Vec<String> = EXPECTED_G36_FIXTURES
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+
+    let missing: Vec<&String> = expected.iter().filter(|n| !on_disk.contains(n)).collect();
+    let unswept: Vec<&String> = on_disk.iter().filter(|n| !expected.contains(n)).collect();
+    assert!(
+        missing.is_empty() && unswept.is_empty(),
+        "the G36 corpus on disk and EXPECTED_G36_FIXTURES must stay one-to-one.\n  \
+         listed but absent from disk: {missing:?}\n  \
+         on disk but NOT swept by this file (add them to EXPECTED_G36_FIXTURES): {unswept:?}"
+    );
 }
 
 #[test]
-fn g36_ahu_supply_air_temp_reset_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!(
-        "fixtures/g36/ahu_supply_air_temp_reset.jsonld"
-    ));
+fn every_g36_fixture_reaches_its_rt2_fixpoint() {
+    let mut enum_free = 0usize;
+    let mut deferring = 0usize;
+
+    for fixture in EXPECTED_G36_FIXTURES {
+        let bytes = std::fs::read(g36_dir().join(fixture))
+            .unwrap_or_else(|e| panic!("`{fixture}` must be readable: {e}"));
+        let g1 = import_ok(fixture, &bytes);
+        let report = export_ok(fixture, &g1);
+
+        // The corpus carries no enum-typed connectors at all; every deferral is on the parameter
+        // axis. Pinned because it is what makes the two-branch split exhaustive.
+        assert!(
+            g1.connectors
+                .iter()
+                .all(|c| !matches!(c.value_type, ValueType::Enum(_))),
+            "`{fixture}` grew an enum-typed connector; the deferral split needs revisiting"
+        );
+
+        if report.warnings.is_empty() {
+            enum_free += 1;
+            assert_full_graph_rt2(fixture, &g1, &report);
+        } else {
+            deferring += 1;
+            assert_survivor_cone_rt2(fixture, &g1, &report);
+        }
+    }
+
+    assert_eq!(
+        enum_free + deferring,
+        EXPECTED_G36_FIXTURES.len(),
+        "every fixture takes exactly one branch"
+    );
+    assert!(
+        enum_free > 0 && deferring > 0,
+        "both branches must be exercised, got enum-free={enum_free} deferring={deferring}"
+    );
 }
 
 #[test]
-fn g36_cooling_only_system_requests_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!(
-        "fixtures/g36/cooling_only_system_requests.jsonld"
-    ));
-}
-
-#[test]
-fn g36_generic_time_suppression_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!("fixtures/g36/generic_time_suppression.jsonld"));
-}
-
-#[test]
-fn g36_multizone_vav_economizer_modulations_reliefs_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!(
-        "fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld"
-    ));
-}
-
-#[test]
-fn g36_multizone_vav_economizer_modulations_return_fan_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!(
-        "fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld"
-    ));
-}
-
-#[test]
-fn g36_reheat_overrides_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!("fixtures/g36/reheat_overrides.jsonld"));
-}
-
-#[test]
-fn g36_vav_single_zone_reaches_the_rt2_fixpoint() {
-    g36_rt2(include_str!("fixtures/g36/vav_single_zone.jsonld"));
+fn the_largest_deferring_fixtures_defer_exactly_the_expected_block_counts() {
+    // The survivor-cone assertions are all derived from the warning subjects, so a cascade bug
+    // that over-defers satisfies them vacuously — a smaller cone is still self-consistent. These
+    // two graphs are where that would hurt most: an over-reaching cascade could delete a third of
+    // the document while every other assertion in this file stayed green. The counts are the
+    // tripwire.
+    for (fixture, expected) in [
+        ("cooling_only_controller.jsonld", 83usize),
+        ("multizone_vav_relief_fan_group.jsonld", 63usize),
+    ] {
+        let bytes = std::fs::read(g36_dir().join(fixture)).expect("fixture is readable");
+        let g1 = import_ok(fixture, &bytes);
+        let report = export_ok(fixture, &g1);
+        assert_eq!(
+            deferred_subjects(&report).len(),
+            expected,
+            "`{fixture}` deferred-block count changed; a cascade that grew or shrank here needs \
+             an explicit review, not a re-blessed number"
+        );
+    }
 }
