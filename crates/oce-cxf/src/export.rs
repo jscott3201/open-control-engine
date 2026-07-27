@@ -58,6 +58,12 @@
 //! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` is the owning
 //! block's `instance_iri` (connectors have none) — never a panic.
 //!
+//! Two of those rejections are not about the subset at all but about bytes that would not come
+//! back: a connector listed twice in `external_inputs` (which re-imports one entry short) and an
+//! input driven by more than one surviving output (which fails §7.10 single assignment and does
+//! not re-import at all). Both are judged over the **survivor cone**, so a defect sitting entirely
+//! inside a deferred block never aborts an export whose document omits that block.
+//!
 //! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
 //! at all (not from its connectors' attributes, not from its boundary entries), so a partly
 //! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
@@ -145,6 +151,17 @@ const MSG_EXTERNAL_IRI: &str =
 /// imported graph can reach this.
 const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed more than once in external_inputs, and re-import \
      deduplicates the repeat away";
+/// A surviving input connector is driven by more than one **surviving** output. The emitted
+/// document carries every one of those `isConnectedTo` targets, so re-import counts an in-degree
+/// above 1 and fails the §7.10 single-assignment law — the export would be `Ok` with bytes that do
+/// not load at all, a strictly worse silent loss than [`MSG_DUPLICATE_EXTERNAL_INPUT`]'s one
+/// dropped entry. Deliberately not a reuse of [`MSG_STRUCTURE`]: a multiply-driven input is
+/// internally *consistent* (ids in range, owners correct, every edge output→input) and needs a
+/// different fix from the host than a cross-reference disagreement does. Hand-built graphs only —
+/// `resolve`'s single-assignment pre-check rejects in-degree ≥ 2 on the way in, so no imported
+/// graph can reach this.
+const MSG_MULTIPLY_DRIVEN: &str = "export subset: input connector is driven by more than one surviving output, and the emitted \
+     document fails re-import with a single-assignment error (§7.10)";
 /// Two emitted nodes would share one `@id` — duplicate block `instance_iri`s, a parameter named
 /// like a minted port (`out0`), a boundary IRI reusing another node's id. The document would
 /// fail re-import with `DuplicateId`; reject at plan time with the owner named instead.
@@ -446,11 +463,19 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     }
 
     // Phase 5 — connections. The orphan guard `port_iri[t].is_none()` drops any edge whose TARGET
-    // endpoint owner is deferred (a deferred block's connectors are unclaimed). The NEW
-    // source-side `continue` is defense-in-depth: it drops an edge whose SOURCE endpoint owner is
-    // deferred even if a future change re-enabled `claim_port` for deferred blocks. Either guard
-    // alone suffices for correctness with Phase 2 in place; both are required by the brief.
+    // endpoint owner is deferred (a deferred block's connectors are unclaimed). The source-side
+    // `continue` drops an edge whose SOURCE endpoint owner is deferred.
+    //
+    // For the emitted DOCUMENT either guard alone suffices with Phase 2 in place: a deferred
+    // source's port node is never emitted, so its `targets` entry could not reach the wire. For
+    // `in_deg` below both are load-bearing, and in opposite directions — the source guard is what
+    // keeps a deferred driver from counting toward a survivor's in-degree, and the target guard is
+    // what keeps a multiply-driven input on a deferred block from being counted at all. Move the
+    // increment above either one and the count stops describing the emitted document.
     let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
+    // Surviving drivers per connector, for the §7.10 single-assignment check after this loop.
+    // Counted at the `targets` push site so it counts exactly the edges the document will carry.
+    let mut in_deg: Vec<u32> = vec![0; g.connectors.len()];
     for conn in &g.connections {
         let (f, t) = (conn.from.0 as usize, conn.to.0 as usize);
         let output_to_input = g.connectors.get(f).is_some_and(|c| c.dir == Dir::Out)
@@ -479,6 +504,24 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         // Orphan guard: an unclaimed target (including any deferred-target endpoint) is dropped.
         if let Some(to_iri) = port_iri[t].as_ref() {
             targets[f].push(to_iri.clone());
+            in_deg[t] += 1;
+        }
+    }
+
+    // Phase 5b — §7.10 single assignment over the survivor cone. Every edge counted above is one
+    // the document emits, so an input carrying two of them re-imports with a `SingleAssignment`
+    // error and the bytes do not load at all. That is the outcome class this exporter refuses:
+    // `MSG_DUPLICATE_EXTERNAL_INPUT` already rejects bytes that come back one entry short, and
+    // these come back as nothing. Rejecting here also names the offender better than re-import
+    // can — the owning block's `instance_iri`, against re-import's positional `connector#N`.
+    //
+    // One diagnostic per offending connector, in connector-position order (a post-loop scan, not a
+    // reject at the push site), so a triple-driven input yields one entry rather than two and the
+    // ordering matches the Phase 3 orphan scan. No `Dir::In` test is needed: the `output_to_input`
+    // guard above is the only path to an increment, so `in_deg` is zero for every output.
+    for (i, c) in g.connectors.iter().enumerate() {
+        if in_deg[i] > 1 {
+            diags.push(reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
         }
     }
 
