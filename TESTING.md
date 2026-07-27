@@ -197,6 +197,53 @@ which is what preserves vanish-to-RED for the re-exported port surface.
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.
 
+## Input hygiene — guarding the inputs to the tests
+
+One gate step tests **no shipping code at all**, and it is worth understanding why it still gates.
+
+`oce-cxf::fixture_port_order` checks that the 46 G36 fixture documents list their block ports in
+upstream CDL **declaration order**, against
+[`tools/reference-catalog/cdl-port-order.json`](tools/reference-catalog/cdl-port-order.json) —
+132 classes extracted from Modelica source at the pinned reference commit, with provenance in the
+sibling `.prov.json`.
+
+By the four pillars above this is not coverage of anything. It matters one level up: **the
+fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and Tier-A
+oracles are all derived from them, so a transposed fixture fails nothing — it makes the entire
+suite validate the wrong sequence, silently and permanently.
+
+Nothing else can see it. The resolver assigns port positions from document array order; the arity
+guard checks counts and `oce-validate`'s `check_ports_dir` checks each position's *kind*. A
+transposition between two ports of the **same kind** passes both. `Reals.PID` with `u_s`/`u_m`
+swapped inverts the control action. **30 of 133 blocks are exposed; 282 instances live across 33
+of the 46 fixtures.**
+
+It gates because its value is entirely future-tense — the corpus is verified clean, so it stays
+silent until someone edits a fixture, which is exactly when a person will not remember to run it.
+~1.4 s inside the existing gate job.
+
+```bash
+cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
+```
+
+**Expect it to fail when you legitimately add a fixture.** Four volume pins
+(`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, and on the registry cross-check
+`compared == 104` / `exempt_array == 28`) are deliberate: a change that stops discovering ports
+would otherwise leave the comparison vacuously green, which is the exact failure mode the check
+exists to prevent. Re-pin only after understanding why the count moved — a *rising* skip count
+means wirings are being hidden from the audit.
+
+**What the table itself rests on.** Before comparing anything the test cross-checks all 104
+non-array classes against the shipping block registry, which agrees on arity and per-position
+kind. It cannot agree on *names* — the registry does not store them, which is the whole reason
+this audit exists — so a **coordinated rename passes**: edit a port's name in both the table and
+every fixture instance and the suite stays green, even for a name upstream never used. The
+remaining 28 array-port classes are compared against nothing at all, since upstream's single
+`u[nin]` connector has no arity in common with our N flattened scalars. Name integrity therefore
+rests on review of the table's diff against the recorded provenance, not on a runtime check.
+Removing that dependency means vendoring the upstream `.mo` sources and deriving the table during
+the test — tracked, not done.
+
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
 Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are
 the enforcement points.

@@ -121,6 +121,22 @@ step 'determinism subset (release codegen)' \
   cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci \
   --cargo-profile release --no-tests=fail
 
+# ── Fixture input hygiene ────────────────────────────────────────────────────
+# NOT engine coverage — it exercises no shipping code path. It checks that the 46 G36 fixture
+# documents list their block ports in upstream CDL declaration order.
+#
+# It gates because the fixtures are the INPUTS to every conformance test in the workspace: a
+# transposed port fails nothing, it makes the whole suite validate the wrong sequence. The
+# resolver assigns positions from document array order and only KINDS are checked downstream, so
+# a same-kind transposition (PID's u_s/u_m, Latch's u/clr) is invisible to everything else.
+#
+# ~1.4s: the fixture corpus is verified clean, so this stays silent until someone edits a fixture
+# — which is exactly when nobody remembers to run it by hand.
+# `--no-tests=fail` so a renamed or deleted test hard-fails instead of going green on zero tests.
+step 'fixture port order (input hygiene)' \
+  cargo nextest run -p oce-cxf --locked --profile ci \
+  -E 'binary(fixture_port_order)' --no-tests=fail
+
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
 if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
