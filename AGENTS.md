@@ -101,10 +101,9 @@ Reads widen to a team namespace only when the call asserts that team; writes nee
   (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = the release gate); it cannot
   run doctests, which is why they are a separate step. The git hooks run no tests — keep commits
   and pushes fast.
-- **Delegated work:** constants an executor needs and cannot derive from the code live in
-  `.agents/project-facts.md` — branch and merge rules, what a sandboxed lane can and cannot do,
-  and the gitignored working directories. Structure and discipline for briefs, dispatch, and
-  review come from the `agent-toolkit` skills, not from this repo.
+- **Project facts:** what this repo expects of a change, beyond what the code says, lives in
+  `.agents/project-facts.md` — the gate, the CI split, the clippy feature rule, the gitignored
+  working directories, and disk hygiene. Read it before your first PR.
 
 ### Naming, modularization & docs
 
