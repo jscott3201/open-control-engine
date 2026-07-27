@@ -53,9 +53,14 @@
 //! A class can also shed *some* connectors without shedding all of them, and that is invisible to
 //! every per-class check here — `Reals.Sort` losing `yIdx` keeps its other ports, keeps the array
 //! flag `y[nin]` gives it, and is skipped by the registry cross-check and the fixture comparison
-//! alike. The 175-input / 144-output totals over the vendored corpus are what close that case;
-//! they answer to no exemption. A connector-shaped line that does not parse is rejected outright
-//! on top of that, to name the file and line rather than leave a moved count to explain.
+//! alike. The 175-input / 144-output totals in `cdl_source` are what close that case; they answer
+//! to no exemption.
+//!
+//! Totals are a *counting* invariant, so they hold only while a port cannot be forged to offset
+//! one that was lost. Two routes to forging one are shut in `cdl_source`: comment and string
+//! bodies are blanked before scanning, and a multi-component clause is refused rather than read
+//! in part. What remains is a forgery written as ordinary code, which is not something this test
+//! can distinguish — the control for that is the `diff` against upstream, not this file.
 //!
 //! The pins are 2135 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
 //! 23-side difference was vacuous array comparisons being correctly reclassified. That was wrong
@@ -67,35 +72,13 @@
 //! Also unchecked: parameter names and defaults, and composite wiring.
 
 use std::collections::BTreeMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::Value;
 
-/// Ports of one class, in upstream declaration order.
-struct ClassPorts {
-    inputs: Vec<String>,
-    outputs: Vec<String>,
-    input_kinds: Vec<String>,
-    output_kinds: Vec<String>,
-    /// Upstream declares an array-valued connector (`u[nin]`) on that side. We flatten those into
-    /// N scalars, so names cannot correspond 1:1.
-    ///
-    /// Recorded **per direction and as a declared fact**. Inferring it from an arity mismatch made
-    /// every genuine arity disagreement look like an array port and hid 21 real wirings from an
-    /// earlier revision. Marking the whole class exempt instead discarded checkable coverage:
-    /// `MultiSum` has an array input but a scalar output `y`, which is verifiable.
-    inputs_are_array: bool,
-    outputs_are_array: bool,
-}
+mod cdl_source;
 
-fn repo_root() -> PathBuf {
-    // CARGO_MANIFEST_DIR is crates/oce-cxf.
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .canonicalize()
-        .expect("repo root")
-}
+use cdl_source::ClassPorts;
 
 /// Cross-check the table against the **shipping block registry** before trusting a word of it.
 ///
@@ -190,306 +173,10 @@ fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
     );
 }
 
-/// Directory holding the vendored upstream sources, at their upstream-relative paths.
-fn vendored_cdl_root() -> PathBuf {
-    repo_root()
-        .join("third_party")
-        .join("modelica-buildings-cdl")
-        .join("Buildings")
-        .join("Controls")
-        .join("OBC")
-        .join("CDL")
-}
-
-/// Every `.mo` under `dir`, recursively, sorted so the walk is deterministic.
-fn mo_files(dir: &Path, out: &mut Vec<PathBuf>) {
-    let mut entries: Vec<PathBuf> = std::fs::read_dir(dir)
-        .unwrap_or_else(|e| panic!("read_dir {}: {e}", dir.display()))
-        .map(|e| e.expect("dir entry").path())
-        .collect();
-    entries.sort();
-    for path in entries {
-        if path.is_dir() {
-            mo_files(&path, out);
-        } else if path.extension().is_some_and(|x| x == "mo") {
-            out.push(path);
-        }
-    }
-}
-
-/// Consume a Modelica identifier from the front of `s`, returning it and the remainder.
-///
-/// Modelica identifiers are `[A-Za-z_][A-Za-z0-9_]*`. Quoted identifiers (`'x y'`) are legal in
-/// the language but appear nowhere in CDL, and accepting them here would let a quoted string be
-/// read as a declaration.
-fn take_ident(s: &str) -> Option<(&str, &str)> {
-    let mut chars = s.char_indices();
-    let (_, first) = chars.next()?;
-    if !(first.is_ascii_alphabetic() || first == '_') {
-        return None;
-    }
-    let end = chars
-        .find(|(_, c)| !(c.is_ascii_alphanumeric() || *c == '_'))
-        .map_or(s.len(), |(i, _)| i);
-    Some((&s[..end], &s[end..]))
-}
-
-/// True if the line opens a class whose body we should descend into.
-///
-/// CDL classes are spelled `block` **or** `model` — `CalendarTime` and `CivilTime` are models, and
-/// matching only `block` leaves their depth at zero, so every declaration is skipped and the class
-/// silently reports no ports at all.
-///
-/// The class name must be followed by a description string or end-of-line. Without that check,
-/// documentation prose is read as a class opening: `Reals/Ramp.mo` line 127 begins "block has the
-/// boolean input ..." inside an `<html>` section, which pushes depth to 2 and hides every
-/// declaration below it.
-fn opens_class(line: &str) -> bool {
-    let mut rest = line.trim_start();
-    loop {
-        let stripped = ["partial ", "protected ", "encapsulated "]
-            .iter()
-            .find_map(|kw| rest.strip_prefix(kw));
-        match stripped {
-            Some(r) => rest = r.trim_start(),
-            None => break,
-        }
-    }
-    let Some(rest) = rest
-        .strip_prefix("block ")
-        .or_else(|| rest.strip_prefix("model "))
-    else {
-        return false;
-    };
-    let Some((_, tail)) = take_ident(rest.trim_start()) else {
-        return false;
-    };
-    let tail = tail.trim();
-    tail.is_empty() || tail.starts_with('"')
-}
-
-/// True if the line closes a class.
-///
-/// `end <Ident>;` closes a class, but Modelica spells `end if;` / `end when;` / `end for;` /
-/// `end while;` the same way inside algorithm and equation sections. Counting those as class
-/// closings drives depth below the class body and drops every later declaration —
-/// `CalendarTime` lost all six of its outputs that way.
-fn closes_class(line: &str) -> bool {
-    let Some(rest) = line.trim_start().strip_prefix("end ") else {
-        return false;
-    };
-    let Some((ident, tail)) = take_ident(rest.trim_start()) else {
-        return false;
-    };
-    tail.trim_start().starts_with(';') && !matches!(ident, "if" | "when" | "for" | "while")
-}
-
-/// A connector declaration: `(name, kind, is_output, is_array)`.
-///
-/// Accepts the bare `Interfaces.RealInput` spelling and the fully qualified
-/// `Buildings.Controls.OBC.CDL.Interfaces.RealInput`, with an optional `discrete` or `parameter`
-/// prefix. A side is an **array** only when the subscript sits on this very declaration, which is
-/// why array-ness is read here rather than inferred from the class.
-fn port_decl(line: &str) -> Option<(String, &'static str, bool, bool)> {
-    let mut rest = line.trim_start();
-    for kw in ["discrete ", "parameter "] {
-        if let Some(r) = rest.strip_prefix(kw) {
-            rest = r.trim_start();
-        }
-    }
-    rest = rest
-        .strip_prefix("Buildings.Controls.OBC.CDL.")
-        .unwrap_or(rest);
-    let rest = rest.strip_prefix("Interfaces.")?;
-    let (kind, rest) = ["Real", "Integer", "Boolean"]
-        .iter()
-        .find_map(|k| rest.strip_prefix(k).map(|r| (*k, r)))?;
-    let (is_output, rest) = if let Some(r) = rest.strip_prefix("Output") {
-        (true, r)
-    } else if let Some(r) = rest.strip_prefix("Input") {
-        (false, r)
-    } else {
-        return None;
-    };
-    // A space is required: `RealInputFoo` is a different type, not a declaration of `Foo`.
-    if !rest.starts_with(char::is_whitespace) {
-        return None;
-    }
-    let (name, tail) = take_ident(rest.trim_start())?;
-    let is_array = tail.trim_start().starts_with('[');
-    Some((name.to_owned(), kind, is_output, is_array))
-}
-
-/// Bare spellings of every connector type this scanner recognizes.
-const CONNECTOR_TYPES: [&str; 6] = [
-    "RealInput",
-    "RealOutput",
-    "IntegerInput",
-    "IntegerOutput",
-    "BooleanInput",
-    "BooleanOutput",
-];
-
-/// Is this line connector-shaped — does it mention the `Interfaces` package or a connector type?
-///
-/// Paired with [`port_decl`] this separates two things the `Option` cannot: a line that is not a
-/// declaration, and a declaration the scanner failed to understand. `port_decl` returning `None`
-/// on a line that is connector-shaped means the second, and that is an error rather than a line to
-/// skip. Modelica permits a declaration to span lines, so
-///
-/// ```text
-/// Buildings.Controls.OBC.CDL.Interfaces.IntegerOutput
-///   yIdx[nin]
-/// ```
-///
-/// is valid, parses to nothing, and drops `yIdx` from `Reals.Sort` while every other guard here
-/// stays green: the class keeps its other ports, its array flag survives on `y[nin]`, and both the
-/// registry cross-check and the fixture comparison skip array sides. A scanner that silently
-/// discards input it cannot read is the failure mode all five of this extractor's predecessor
-/// defects shared, so the answer is to refuse the input, not to guess at it.
-///
-/// The predicate deliberately over-approximates: it fires on the `Interfaces.` package prefix
-/// alone, which catches a split placed inside the type name itself.
-fn mentions_connector(line: &str) -> bool {
-    line.contains("Interfaces.") || CONNECTOR_TYPES.iter().any(|ty| line.contains(ty))
-}
-
-/// Derive one class's interface from vendored upstream source, in declaration order.
-///
-/// **Only depth-1 declarations count.** CDL sources define nested helper blocks that declare their
-/// own connectors: `Logical/VariablePulse.mo` opens `block Cycle` at line 69 whose `BooleanInput
-/// go` sits at line 82. A scope-blind scan leaks `go` into the parent interface, yielding inputs
-/// `[u, go]` where upstream — and our own shipping registry — carry only `[u]`.
-///
-/// Connector-shaped lines that do not parse are pushed onto `unparsed` as `<label>:<line>: <text>`
-/// rather than skipped; [`load_table`] rejects the corpus if any survive. That check runs at
-/// **every** depth on purpose. Scope tracking is the part of this scanner with the worst history —
-/// three of the five predecessor defects were miscounted depth — so a backstop that consults
-/// `depth` would depend on the subsystem it exists to backstop.
-fn parse_class(path: &Path, label: &str, unparsed: &mut Vec<String>) -> ClassPorts {
-    let src =
-        std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-    let mut ports = ClassPorts {
-        inputs: Vec::new(),
-        outputs: Vec::new(),
-        input_kinds: Vec::new(),
-        output_kinds: Vec::new(),
-        inputs_are_array: false,
-        outputs_are_array: false,
-    };
-    let mut depth = 0usize;
-    for (lineno, line) in src.lines().enumerate() {
-        if mentions_connector(line) && port_decl(line).is_none() {
-            unparsed.push(format!("{label}:{}: {}", lineno + 1, line.trim()));
-        }
-        if opens_class(line) {
-            depth += 1;
-            continue;
-        }
-        if closes_class(line) {
-            depth = depth.saturating_sub(1);
-            continue;
-        }
-        if depth != 1 {
-            continue;
-        }
-        if let Some((name, kind, is_output, is_array)) = port_decl(line) {
-            let (names, kinds, flag) = if is_output {
-                (
-                    &mut ports.outputs,
-                    &mut ports.output_kinds,
-                    &mut ports.outputs_are_array,
-                )
-            } else {
-                (
-                    &mut ports.inputs,
-                    &mut ports.input_kinds,
-                    &mut ports.inputs_are_array,
-                )
-            };
-            names.push(name);
-            kinds.push(kind.to_owned());
-            *flag |= is_array;
-        }
-    }
-    ports
-}
-
-/// Derive the whole name->position table from vendored upstream source.
-///
-/// This replaces a checked-in JSON catalog, and the difference is the point. A catalog is an
-/// artifact someone must review entry by entry, and reviewing 132 entries against upstream by hand
-/// is a task nobody performs reliably — the generator that produced it shipped five defects before
-/// it was right. Vendored source is checkable with one `diff` against a fresh clone at the pinned
-/// commit (`third_party/modelica-buildings-cdl/README.md` gives the command), and the derivation
-/// runs here in the open where a reviewer reads code rather than data.
+/// The derived table, checked against the shipping registry before anything trusts it.
 fn load_table() -> BTreeMap<String, ClassPorts> {
-    let root = vendored_cdl_root();
-    let mut paths = Vec::new();
-    mo_files(&root, &mut paths);
-
-    let mut table = BTreeMap::new();
-    let mut unparsed = Vec::new();
-    for path in &paths {
-        let rel = path.strip_prefix(&root).expect("path under CDL root");
-        // `Reals/PID.mo` -> `CDL.Reals.PID`. The directory layout mirrors upstream, so this
-        // mapping is also what makes the vendored tree diffable against a clone.
-        let mut segments = vec!["CDL".to_owned()];
-        segments.extend(
-            rel.with_extension("")
-                .components()
-                .map(|c| c.as_os_str().to_string_lossy().into_owned()),
-        );
-        let label = rel.to_string_lossy().into_owned();
-        table.insert(segments.join("."), parse_class(path, &label, &mut unparsed));
-    }
-
-    assert!(
-        unparsed.is_empty(),
-        "{} connector-shaped line(s) in vendored source did not parse as a declaration:\n  {}\n\
-         Each is a port this scanner would drop in silence. Modelica lets a declaration span \
-         lines; this scanner reads one line at a time and rejects what it cannot read rather than \
-         guessing, so a re-vendor that reformats fails here instead of quietly shrinking the \
-         table.",
-        unparsed.len(),
-        unparsed.join("\n  ")
-    );
-
-    assert_eq!(
-        table.len(),
-        132,
-        "vendored upstream corpus changed size. It is the 132 CDL classes reachable from the 46 \
-         G36 fixtures; adding or removing source files changes what this gate covers."
-    );
-    let portless: Vec<&str> = table
-        .iter()
-        .filter(|(_, p)| p.inputs.is_empty() && p.outputs.is_empty())
-        .map(|(c, _)| c.as_str())
-        .collect();
-    assert!(
-        portless.is_empty(),
-        "{} vendored class(es) parsed to zero ports: {:?}. Every CDL block has at least one \
-         connector, so this means the scanner failed to find the class body — the exact failure \
-         mode that made a scope bug look like a clean run.",
-        portless.len(),
-        portless
-    );
-
-    // A class losing SOME of its ports is the dangerous case the portless check above cannot see,
-    // and `Reals.Sort` is the worked example: drop `yIdx` and the class still has ports, still
-    // carries an array flag from `y[nin]`, and is skipped by both the registry cross-check and the
-    // fixture comparison. Totals are blind to none of that.
-    let inputs: usize = table.values().map(|p| p.inputs.len()).sum();
-    let outputs: usize = table.values().map(|p| p.outputs.len()).sum();
-    assert_eq!(
-        (inputs, outputs),
-        (175, 144),
-        "vendored corpus port totals changed. Upstream declares 175 inputs and 144 outputs across \
-         the 132 classes; a drop means the scanner stopped seeing declarations it used to see, \
-         which is invisible to every per-class check here."
-    );
-
-    // Never trust the derived table on its own word — see the function's rustdoc.
+    let table = cdl_source::derive_table();
+    // Never trust the derived table on its own word — see `cross_check_against_registry`.
     cross_check_against_registry(&table);
     table
 }

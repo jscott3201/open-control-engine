@@ -254,11 +254,17 @@ bug in this extractor's history presented itself. A class that parses to zero po
 failure — but that only catches *total* loss, and a class shedding one connector is the worse
 case. `Reals.Sort` is the worked example: drop `yIdx` and the class still reports ports, still
 carries an array flag from `y[nin]`, and is skipped by both the registry cross-check and the
-fixture comparison, so nothing else here can see it. The `175 / 144` port totals are what close
-that; they are blind to no per-class exemption. Separately, a connector-shaped line that fails to
-parse is rejected rather than skipped, which names the offending file and line instead of leaving
-a count to explain. Modelica lets a declaration span lines and this scanner reads one line at a
-time, so a re-vendor that reformats fails loudly here rather than quietly shrinking the table.
+fixture comparison, so nothing else here can see it. The `175 / 144` port totals close that, and
+they are blind to no per-class exemption.
+
+Totals are a counting invariant, though, and a count is only as strong as the impossibility of
+forging what it counts: a phantom port offsets a real one and the pin never moves. Two ways to
+forge one are shut. Comment and string bodies are blanked before the scan, so declaration-shaped
+text inside `/* … */` or a `Documentation(info=…)` string is not read as a port. And a
+multi-component clause — `IntegerInput index, u[nin];` declares two connectors where the scanner
+can read one — is refused by name rather than read in part. A forgery written as ordinary code is
+outside what this test can distinguish; the `diff` against upstream is the control for that, and
+`third_party/modelica-buildings-cdl/README.md` gives the command.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
 Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are
