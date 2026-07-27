@@ -34,3 +34,4 @@ _*/
 # This repo is public. `.agents/project-facts.md` and `.agents/gate.sh` are tracked
 # because they help anyone working on the engine; delegation process is not published.
 .agents/lane-facts.md
+.codex/
