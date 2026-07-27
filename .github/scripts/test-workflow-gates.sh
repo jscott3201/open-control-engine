@@ -37,6 +37,10 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  gate:
+    name: gate (light)
+    steps:
+      - run: bash .agents/gate.sh
   determinism-matrix:
     strategy:
       matrix:
@@ -85,6 +89,10 @@ jobs:
   golden-gen-firewall:
     steps:
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
+  gate:
+    name: gate (full)
+    steps:
+      - run: bash .agents/gate.sh full
 EOF
   cat > "$dir/advisories.yml" <<'EOF'
 on:
@@ -327,6 +335,39 @@ remove_crate_lib_files() {
   rm -f "$crates_dir"/*/src/lib.rs
 }
 
+remove_ci_gate_job() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'agents/gate\.sh' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+remove_release_gate_job() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'agents/gate\.sh' "$dir/release-gate.yml" > "$dir/release-gate.yml.tmp"
+  mv "$dir/release-gate.yml.tmp" "$dir/release-gate.yml"
+}
+
+rename_ci_gate_job() {
+  dir="$1"
+  _deny="$2"
+  sed 's/gate (light)/gate (lite)/' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+# The pin that guards the pin. Swapping ci.yml's `light` invocation for `full` leaves the string
+# `bash .agents/gate.sh` present, so a pattern without the `$` anchor would still match and the
+# per-PR mode — the default a contributor actually runs — would be executed nowhere. A withdrawn
+# earlier attempt at gate/CI parity shipped exactly this hole: both of its traces ran `full`, so
+# `light` was never covered and the gap was invisible.
+downgrade_ci_gate_to_full() {
+  dir="$1"
+  _deny="$2"
+  sed 's|run: bash .agents/gate.sh$|run: bash .agents/gate.sh full|' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 remove_crates_dir() {
   _dir="$1"
   _deny="$2"
@@ -366,5 +407,13 @@ run_case missing-crate-lib-files fail remove_crate_lib_files \
   "no crate src/lib.rs files found under"
 run_case missing-crates-dir fail remove_crates_dir \
   "crates directory is missing"
+run_case missing-ci-gate-job fail remove_ci_gate_job \
+  "ci executes the gate script in light mode"
+run_case missing-release-gate-job fail remove_release_gate_job \
+  "release gate executes the gate script in full mode"
+run_case renamed-ci-gate-job fail rename_ci_gate_job \
+  "gate job keeps the name branch protection requires"
+run_case ci-gate-downgraded-to-full fail downgrade_ci_gate_to_full \
+  "ci executes the gate script in light mode"
 
 echo "OK: workflow gate fixtures passed."

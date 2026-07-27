@@ -223,3 +223,35 @@ jobs:
         with:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources
+
+  # The gate script, EXECUTED rather than parsed.
+  #
+  # This is not a parity check and a green run here is not evidence of one. Nothing in this repo
+  # verifies mechanically that .agents/gate.sh and this file still list the same commands; that
+  # attempt was made and withdrawn (62c0845). Every design for it either compared argv strings —
+  # which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy — or
+  # reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate.
+  #
+  # What this job adds instead is coverage that survives drift. If a job above is ever weakened or
+  # deleted, the command still runs here on the same PR, so the check does not silently disappear
+  # with it. That is a weaker claim than parity and deliberately so: executing a script asserts
+  # nothing static, so it cannot be false-green about whether two files agree.
+  #
+  # It duplicates roughly a minute of compute per PR. On a public repo the runner minutes are not
+  # metered, and the duplication is the point — a backstop that shared a cause of failure with the
+  # thing it backs up would not be one.
+  gate:
+    name: gate (light)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.133,cargo-deny,cargo-machete
+      # No `--` arguments: `light` is the default mode and the one this job exists to cover.
+      - run: bash .agents/gate.sh

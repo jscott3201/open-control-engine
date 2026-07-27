@@ -14,6 +14,10 @@
 # dropping any one of them turns a real gate into a green light that proves
 # less than it appears to. Change a command here only by changing CI first.
 #
+# CI executes this script as well as mirroring it — `gate (light)` in ci.yml and
+# `gate (full)` in release-gate.yml — so an edit here changes what gates a pull
+# request, not merely what a local run does.
+#
 # Agents: this script is executable but not writable inside a Codex lane
 # sandbox. That is deliberate. A failing gate is fixed at its cause, never by
 # editing this file.
@@ -143,6 +147,11 @@ NOT COVERED BY THIS SCRIPT — a green run here does not prove these pass:
   · that these commands still MATCH ci.yml. Nothing verifies that mechanically
     — see the tracked work item for why the attempt was withdrawn. Change a
     command here only by changing CI first.
+    CI does RUN this script (`gate (light)` in ci.yml, `gate (full)` in
+    release-gate.yml), so every command listed here gates a PR whether or not
+    ci.yml still runs it separately. Read that as coverage, not as parity: a
+    green `gate (light)` says these commands ran, and says nothing at all about
+    whether the two files still agree.
 COVERAGE
 
 if [ "$MODE" = light ]; then

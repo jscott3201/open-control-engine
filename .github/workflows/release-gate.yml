@@ -294,3 +294,30 @@ jobs:
         with:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources advisories
+
+  # The gate script in `full` mode, EXECUTED rather than parsed. See the twin job in ci.yml for
+  # why this is a coverage backstop and explicitly NOT a parity check.
+  #
+  # `full` is the higher-stakes half. AGENTS.md instructs every agent to run `bash .agents/gate.sh
+  # full` before claiming a change's tests pass — the per-PR gate runs only oce-blocks/oce-expr, so
+  # for a change confined to any other crate that claim rests entirely on this script. Running it
+  # here is what keeps the commands behind that instruction under CI observation.
+  #
+  # Wall-clock cost is nil: `test-suite` above is a ~22-minute long pole and this job runs beside
+  # it, so it finishes well inside the time that job already takes.
+  gate:
+    name: gate (full)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.133,cargo-deny,cargo-machete
+      - run: bash .agents/gate.sh full
