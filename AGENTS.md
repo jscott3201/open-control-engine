@@ -25,10 +25,16 @@ covers the gate, what CI does and does not run, and the conventions this repo en
 mechanically.
 
 If you are an agent working on this project, `.agents/` also holds local operating notes
-that are not published — the memory protocol and identity handling in
+kept out of the published tree — the memory protocol and identity handling in
 `memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are
 gitignored, so they exist only in a working checkout. If you cloned this repo and they are
 absent, you are a contributor and `project-facts.md` is what you need.
+
+That arrangement governs what is published **from here on**. Earlier revisions of this
+file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
+orchestration material and remain readable in this repository's public git history. Nothing
+there is a credential or an identity value, so it is accepted rather than remediated —
+deleting a file stops publishing it, it does not unpublish it.
 
 ---
 

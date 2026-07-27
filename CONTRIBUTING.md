@@ -19,8 +19,18 @@ the architecture and invariants are the design of record.
 ## Local setup
 
 The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.95.0, edition
-2024); `rustup` installs it automatically on first build. Install the git hooks once after
-cloning:
+2024); `rustup` installs it automatically on first build.
+
+`.agents/gate.sh` also needs three cargo subcommands that do not ship with rustup. Without them
+each step fails with "no such command" on a fresh clone:
+
+```bash
+cargo install cargo-nextest --locked --version 0.9.133   # pinned; see TESTING.md
+cargo install cargo-machete --locked
+cargo install cargo-deny --locked
+```
+
+Install the git hooks once after cloning:
 
 ```bash
 bash scripts/install-hooks.sh

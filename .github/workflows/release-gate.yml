@@ -14,8 +14,8 @@
 # == ...` clauses in each `if:` document the non-PR paths and avoid relying on GitHub's null coercion.
 #
 # WHAT RUNS HERE vs. ci.yml:
-#   * NEW value — the FULL test suite. ci.yml runs NO tests, so this gate is the first and only
-#     place behavioral tests execute in CI:
+#   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-blocks`/`oce-expr`
+#     determinism subset, so this gate is the first place every OTHER crate's tests execute:
 #       - `cargo nextest run` for every unit + integration test in the workspace,
 #       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
 #       - `cargo test --doc`  for doctests (nextest cannot run doctests),

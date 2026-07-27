@@ -58,13 +58,15 @@ comparison that fails if even one bit differs.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
-Worked examples — the bar each **upcoming** PR must clear (none of these have landed yet; they
-are the targets this standard sets, not existing artifacts):
-- **PR-5 (resolver):** golden `ModelGraph` lowered from `minimal_loop.jsonld` + a `decl_order`
-  determinism golden + malformed-input edge cases each asserting their `DiagCode`.
-- **PR-6 (engine loop):** golden converging trace for the feedback loop (`2.0 → … → 4.0`),
-  bit-exact at every tick.
-- **PR-9 (arrays):** round-trip goldens — preserved vs flattened forms compared bit-for-bit.
+Worked examples of the bar, and where each stands:
+- **Resolver** — golden `ModelGraph` lowered from `minimal_loop.jsonld`, plus malformed-input
+  edge cases each asserting their `DiagCode`. **Landed**:
+  `crates/oce-cxf/tests/fixtures/golden/minimal_loop.modelgraph.txt`.
+- **Engine loop** — golden converging trace for the feedback loop, bit-exact at every tick.
+  **Landed**: `crates/oce-conformance/tests/fixtures/golden/trace.combi.csv` and the G36 traces
+  beside it, each with a `.prov.json` recording the oracle's provenance.
+- **Arrays** — round-trip goldens comparing preserved and flattened forms bit-for-bit. **Not on
+  `development` yet**; they arrive with the CXF array/deferral work.
 
 ### 3. Oracle cross-checks — agreement with the reference implementation
 
@@ -72,10 +74,10 @@ CDL has a normative reference (the Modelica *Buildings* library / OpenModelica).
 expression has a reference result, **cross-check against it** rather than against our own
 re-derived expectation — otherwise we are grading our own homework.
 
-- Oracle vectors **will live** in the `oce-conformance` crate — its planned role as the home for
-  reference traces and the CDL §7.7.2 expression-semantics vectors (R10.x). (Today that crate is
-  deferred: `compare()` is not yet implemented and it holds no vectors — this standard is what it
-  gets built out to satisfy.)
+- Oracle vectors live in the `oce-conformance` crate — the home for reference traces and the CDL
+  §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
+  (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
+  fixtures under `tests/fixtures/golden/`.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived

@@ -10,6 +10,54 @@ SCRIPT=".github/scripts/check-workflow-gates.sh"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
+# A faithful stand-in for .agents/gate.sh: real `step`/`step_env` functions, real `list` mode,
+# and every command the checker pins. Two invocations are deliberately split with a trailing
+# backslash, as the real script writes them — `list` must report the shell-joined argv, so a
+# fixture that never split a line would not prove that.
+write_gate_fixture() {
+  cat > "$1" <<'GATEEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+MODE="${1:-light}"
+step() {
+  local label="$1"; shift
+  if [ "$MODE" = list ]; then printf 'CMD %s\n' "$*"; return 0; fi
+  "$@"
+}
+step_env() {
+  local label="$1" var="$2" val="$3"; shift 3
+  if [ "$MODE" = list ]; then printf 'CMD %s=%s %s\n' "$var" "$val" "$*"; return 0; fi
+  env "$var=$val" "$@"
+}
+step 'fmt' cargo fmt --all --check
+step 'file-size' bash .github/scripts/check-file-size.sh
+step 'no-secret' bash .github/scripts/check-no-secrets.sh
+step 'no-db' bash .github/scripts/check-default-no-db.sh
+step 'golden-gen' bash .github/scripts/check-golden-gen-anti-tautology.sh
+step 'no-db fixtures' bash .github/scripts/test-check-default-no-db.sh
+step 'golden-gen fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+step 'crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
+step 'crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
+step 'machete' cargo machete
+step 'clippy' cargo clippy --workspace --all-targets --locked -- -D warnings
+step 'build' cargo build --workspace --locked
+step_env 'rustdoc libs' RUSTDOCFLAGS '-D warnings' \
+  cargo doc --no-deps --workspace --lib --document-private-items --locked
+step_env 'rustdoc bins' RUSTDOCFLAGS '-D warnings' \
+  cargo doc --no-deps --workspace --bins --document-private-items --locked
+step 'deny' cargo deny check bans licenses sources
+step 'determinism' \
+  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+step 'determinism release' \
+  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci \
+  --cargo-profile release --no-tests=fail
+step 'workspace' cargo nextest run --workspace --locked --profile ci --no-tests=fail
+step 'workspace release' \
+  cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail
+step 'doctests' cargo test --workspace --doc --locked
+GATEEOF
+}
+
 write_positive() {
   dir="$1"
   deny="$2"
@@ -17,25 +65,7 @@ write_positive() {
   crates_dir="$4"
   gate_script="$5"
   mkdir -p "$dir"
-  # A stand-in for .agents/gate.sh. Two invocations are deliberately split across lines with a
-  # trailing backslash — the same way the real script writes them — so this fixture exercises the
-  # checker's continuation-joining. If that flattening ever regresses, THIS positive case goes red
-  # rather than every gate.sh assertion silently matching nothing.
-  cat > "$gate_script" <<'EOF'
-#!/usr/bin/env bash
-step 'clippy' cargo clippy --workspace --all-targets --locked -- -D warnings
-step 'determinism subset' \
-  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-step 'determinism subset (release codegen)' \
-  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci \
-  --cargo-profile release --no-tests=fail
-step 'nextest — workspace' \
-  cargo nextest run --workspace --locked --profile ci --no-tests=fail
-step 'nextest — workspace (release codegen)' \
-  cargo nextest run --workspace --locked --profile ci \
-  --cargo-profile release --no-tests=fail
-step 'doctests' cargo test --workspace --doc --locked
-EOF
+  write_gate_fixture "$gate_script"
   cat > "$dir/ci.yml" <<'EOF'
 jobs:
   default-no-db:
@@ -362,23 +392,21 @@ remove_crates_dir() {
 # The local gate script is the one place a contributor's "it passed locally" comes from, so each
 # way it can silently fall behind CI gets its own negative case.
 
-gate_drops_release_determinism() {
+gate_no_list_mode() {
   _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
-  grep -v -- '--cargo-profile release --no-tests=fail' "$gate_script" > "$gate_script.tmp"
-  mv "$gate_script.tmp" "$gate_script"
+  # A gate script the checker cannot interrogate must fail closed, not be waved through.
+  printf '%s\n' '#!/usr/bin/env bash' 'echo "no list mode here"; exit 2' > "$gate_script"
 }
 
-gate_drops_doctests() {
+gate_list_emits_prose() {
   _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
-  grep -v -- 'cargo test --workspace --doc --locked' "$gate_script" > "$gate_script.tmp"
-  mv "$gate_script.tmp" "$gate_script"
-}
-
-gate_weakens_clippy() {
-  _dir="$1"; _deny="$2"; _root_cargo="$3"; _crates_dir="$4"; gate_script="$5"
-  # Drops `-D warnings`, so warnings stop failing the local run while CI still rejects them.
-  sed 's/ -- -D warnings//' "$gate_script" > "$gate_script.tmp"
-  mv "$gate_script.tmp" "$gate_script"
+  # Listing that mixes prose into the CMD stream: a consumer could match a pinned string
+  # against banner text rather than an executed command, which is the text-grep hole again.
+  {
+    printf '%s\n' '#!/usr/bin/env bash'
+    printf '%s\n' 'echo "open-control gate — mode: list"'
+    printf '%s\n' 'echo "CMD cargo fmt --all --check"'
+  } > "$gate_script"
 }
 
 gate_lints_all_features() {
@@ -425,15 +453,118 @@ run_case missing-crate-lib-files fail remove_crate_lib_files \
   "no crate src/lib.rs files found under"
 run_case missing-crates-dir fail remove_crates_dir \
   "crates directory is missing"
-run_case gate-drops-release-determinism fail gate_drops_release_determinism \
-  "gate.sh runs the release determinism subset in CI form"
-run_case gate-drops-doctests fail gate_drops_doctests \
-  "gate.sh full runs doctests, which nextest cannot"
-run_case gate-weakens-clippy fail gate_weakens_clippy \
-  "gate.sh runs clippy with -D warnings over all targets"
 run_case gate-lints-all-features fail gate_lints_all_features \
   "lints --all-features"
 run_case gate-script-missing fail gate_script_missing \
   "required gate file is missing or empty"
+run_case gate-no-list-mode fail gate_no_list_mode \
+  "does not support 'list' mode"
+run_case gate-list-emits-prose fail gate_list_emits_prose \
+  "emitted non-CMD output"
 
-echo "OK: workflow gate fixtures passed."
+# ── One negative fixture per pinned command ─────────────────────────────────────────────────
+#
+# The cases above pin how each assertion BEHAVES. They do not pin that it EXISTS: delete an
+# assertion from check-workflow-gates.sh and its fixture simply stops being exercised, silently.
+# A review demonstrated exactly that — removing the debug-subset, workspace-debug and
+# workspace-release assertions left this suite green.
+#
+# So the list below is the independent statement of what must be pinned. For each command it
+# strips that one command from an otherwise-complete gate fixture and requires the checker to
+# fail NAMING it. Delete an assertion from the checker and its case here stops failing, turning
+# this suite red. The duplication between this list and the checker is the mechanism, not an
+# oversight: two independent statements that must agree.
+PINNED_COMMANDS=(
+  'cargo fmt --all --check'
+  'bash .github/scripts/check-file-size.sh'
+  'bash .github/scripts/check-no-secrets.sh'
+  'bash .github/scripts/check-default-no-db.sh'
+  'bash .github/scripts/check-golden-gen-anti-tautology.sh'
+  'bash .github/scripts/test-check-default-no-db.sh'
+  'bash .github/scripts/test-check-golden-gen-anti-tautology.sh'
+  'bash .github/scripts/test-check-stale-crate-status.sh'
+  'bash .github/scripts/check-stale-crate-status.sh'
+  'cargo machete'
+  'cargo clippy --workspace --all-targets --locked -- -D warnings'
+  'cargo build --workspace --locked'
+  'RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace --lib --document-private-items --locked'
+  'RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace --bins --document-private-items --locked'
+  'cargo deny check bans licenses sources'
+  'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail'
+  'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail'
+  'cargo nextest run --workspace --locked --profile ci --no-tests=fail'
+  'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail'
+  'cargo test --workspace --doc --locked'
+)
+
+pinned_case=0
+for pinned_cmd in "${PINNED_COMMANDS[@]}"; do
+  pinned_case=$((pinned_case + 1))
+  case_dir="$tmp/pinned-$pinned_case"
+  mkdir -p "$case_dir"
+  gate_fixture="$case_dir/gate.sh"
+  write_gate_fixture "$gate_fixture"
+
+  # Drop exactly this command from the fixture's listing by neutralising the `step` line that
+  # carries it. Matching on the listed argv rather than on source text keeps this honest for the
+  # line-continued invocations, whose source never contains the joined form.
+  python3 - "$gate_fixture" "$pinned_cmd" <<'PY'
+import shlex, subprocess, sys, pathlib
+
+path, target = sys.argv[1], sys.argv[2]
+
+def listing():
+    return subprocess.run(["bash", path, "list"], capture_output=True, text=True).stdout
+
+assert f"CMD {target}" in listing(), (
+    f"fixture does not list {target!r}; this case would pass vacuously")
+
+# Join continuations, then reconstruct each step's argv the same way `step`/`step_env` render
+# it. Reconstructing via shlex rather than matching source substrings is what makes this exact:
+# `step_env 'label' RUSTDOCFLAGS '-D warnings' cargo doc ...` shares no contiguous text with the
+# `RUSTDOCFLAGS=-D warnings cargo doc ...` line it prints.
+joined, buf = [], ""
+for line in pathlib.Path(path).read_text().splitlines():
+    if line.rstrip().endswith("\\"):
+        buf += line.rstrip()[:-1] + " "
+        continue
+    joined.append(buf + line)
+    buf = ""
+
+def rendered(line):
+    if not line.lstrip().startswith(("step ", "step_env ")):
+        return None
+    try:
+        t = shlex.split(line)
+    except ValueError:
+        return None
+    if t[0] == "step":
+        return " ".join(t[2:])
+    if t[0] == "step_env":
+        return f"{t[2]}={t[3]} " + " ".join(t[4:])
+    return None
+
+out = [line for line in joined if rendered(line) != target]
+assert len(out) == len(joined) - 1, (
+    f"expected to drop exactly one step for {target!r}, dropped {len(joined) - len(out)}")
+pathlib.Path(path).write_text("\n".join(out) + "\n")
+assert f"CMD {target}" not in listing(), f"failed to remove {target!r} from the listing"
+PY
+
+  set +e
+  pinned_output="$(OCE_GATE_SCRIPT="$gate_fixture" bash "$SCRIPT" 2>&1)"
+  pinned_status=$?
+  set -e
+  if [ "$pinned_status" -eq 0 ]; then
+    echo "FAIL: removing '$pinned_cmd' from the gate left check-workflow-gates.sh green;"
+    echo "      that command is not actually pinned."
+    exit 1
+  fi
+  if ! printf '%s\n' "$pinned_output" | grep -Fq -- "does not run: $pinned_cmd"; then
+    echo "FAIL: removing '$pinned_cmd' failed for the wrong reason:"
+    printf '%s\n' "$pinned_output" | tail -3
+    exit 1
+  fi
+done
+
+echo "OK: workflow gate fixtures passed (${pinned_case} pinned commands individually verified)."

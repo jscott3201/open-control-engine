@@ -154,39 +154,81 @@ require_pattern "$DENY_TOML" '^[[:space:]]*\{[[:space:]]*name[[:space:]]*=[[:spa
   'cargo-deny bans include representative embedded-KV crate sled'
 
 # The local gate script must not drift from CI. `.agents/gate.sh` claims to be the single source
-# of truth for gate commands, but until this block nothing read it: every assertion above pins
-# ci.yml and release-gate.yml only, so the script could quietly diverge back into the nine
-# incompatible copies it was written to replace. A contributor trusting a green local run is
-# exactly who that drift hurts.
+# of truth for gate commands, and nothing enforced that: every assertion above pins ci.yml and
+# release-gate.yml only, so the script could quietly diverge back into the nine incompatible
+# copies it was written to replace. A contributor trusting a green local run is exactly who that
+# drift hurts.
 #
-# gate.sh splits long invocations across lines with a trailing backslash, so the raw file never
-# contains CI's single-line form. Join continuations, then collapse runs of spaces — joining
-# alone leaves a double space at every seam and every pattern below would silently never match,
-# which is a gate that cannot fail.
+# The pin is EXECUTION-DERIVED, not text-derived. An earlier version of this block grepped the
+# flattened file, and a review defeated it in one move: put the required command in a comment,
+# strip `--locked` from the real one, and the check passed. Moving every pinned command into an
+# unexecuted heredoc passed too, while the weakened script printed GATE PASSED having run no
+# tests at all. Grepping a script proves a string is present, never that it runs.
+#
+# `gate.sh list` routes every command through the same `step`/`step_env` that executes it and
+# prints the argv it would run, one `CMD ` line each, for light and full together. A comment
+# produces no line; neither does a heredoc. The shell also expands the line-continuations for
+# us, so no flattening is needed here at all.
 GATE_SCRIPT="${OCE_GATE_SCRIPT:-.agents/gate.sh}"
 require_file "$GATE_SCRIPT"
-gate_flat="$(mktemp)"
-trap 'rm -f "$gate_flat"' EXIT
-perl -0777 -pe 's/\\\n\s*/ /g' "$GATE_SCRIPT" | tr -s ' ' > "$gate_flat"
 
-require_pattern "$gate_flat" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
-  'gate.sh runs the debug determinism subset in CI form'
-require_pattern "$gate_flat" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
-  'gate.sh runs the release determinism subset in CI form'
-# Checked BEFORE the exact-form pin below. Any edit to the clippy line breaks that contiguous
-# pattern too, so whichever runs first decides the message a contributor reads — and
-# "you used --all-features" is a diagnosis, where "missing required pattern" is a puzzle.
-if grep -Eq 'cargo clippy[^\n]*--all-features' "$gate_flat"; then
+gate_cmds="$(mktemp)"
+trap 'rm -f "$gate_cmds"' EXIT
+if ! bash "$GATE_SCRIPT" list > "$gate_cmds" 2>/dev/null; then
+  echo "FAIL: $GATE_SCRIPT does not support 'list' mode, so its commands cannot be pinned"
+  exit 1
+fi
+# A listing that emits nothing — or emits prose instead of CMD lines — would make every
+# assertion below vacuously unsatisfiable rather than silently satisfied, but say so plainly.
+if ! grep -q '^CMD ' "$gate_cmds"; then
+  echo "FAIL: $GATE_SCRIPT list produced no CMD lines; the gate command set cannot be verified"
+  exit 1
+fi
+if grep -qv '^CMD ' "$gate_cmds"; then
+  echo "FAIL: $GATE_SCRIPT list emitted non-CMD output; listing must be machine-readable only"
+  exit 1
+fi
+
+require_gate_cmd() {
+  cmd="$1"
+  if ! grep -Fxq "CMD $cmd" "$gate_cmds"; then
+    echo "FAIL: $GATE_SCRIPT does not run: $cmd"
+    exit 1
+  fi
+}
+
+# Checked before the exact-form pins: any edit to the clippy line breaks its pin too, and
+# whichever fires first decides the message. "You used --all-features" is a diagnosis;
+# "missing required pattern" is a puzzle.
+if grep -Eq '^CMD cargo clippy .*--all-features' "$gate_cmds"; then
   echo "FAIL: $GATE_SCRIPT lints --all-features; CI lints the default feature set (no-DB promise)"
   exit 1
 fi
-require_pattern "$gate_flat" 'cargo clippy --workspace --all-targets --locked -- -D warnings' \
-  'gate.sh runs clippy with -D warnings over all targets'
-require_pattern "$gate_flat" 'cargo nextest run --workspace --locked --profile ci --no-tests=fail' \
-  'gate.sh full runs the workspace suite in release-gate form'
-require_pattern "$gate_flat" 'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail' \
-  'gate.sh full runs the release-codegen workspace suite in release-gate form'
-require_pattern "$gate_flat" 'cargo test --workspace --doc --locked' \
-  'gate.sh full runs doctests, which nextest cannot'
+
+# Every command ci.yml runs, in CI's exact form. Pinning only the test commands left the rest
+# free to drift: a review removed the no-secret step, dropped build's --locked, flipped rustdoc
+# to -A warnings, deleted cargo machete, and cut cargo-deny's `sources` — all green.
+require_gate_cmd 'cargo fmt --all --check'
+require_gate_cmd 'bash .github/scripts/check-file-size.sh'
+require_gate_cmd 'bash .github/scripts/check-no-secrets.sh'
+require_gate_cmd 'bash .github/scripts/check-default-no-db.sh'
+require_gate_cmd 'bash .github/scripts/check-golden-gen-anti-tautology.sh'
+require_gate_cmd 'bash .github/scripts/test-check-default-no-db.sh'
+require_gate_cmd 'bash .github/scripts/test-check-golden-gen-anti-tautology.sh'
+require_gate_cmd 'bash .github/scripts/test-check-stale-crate-status.sh'
+require_gate_cmd 'bash .github/scripts/check-stale-crate-status.sh'
+require_gate_cmd 'cargo machete'
+require_gate_cmd 'cargo clippy --workspace --all-targets --locked -- -D warnings'
+require_gate_cmd 'cargo build --workspace --locked'
+require_gate_cmd 'RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace --lib --document-private-items --locked'
+require_gate_cmd 'RUSTDOCFLAGS=-D warnings cargo doc --no-deps --workspace --bins --document-private-items --locked'
+require_gate_cmd 'cargo deny check bans licenses sources'
+require_gate_cmd 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail'
+require_gate_cmd 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail'
+
+# Full mode adds the release gate's own suite.
+require_gate_cmd 'cargo nextest run --workspace --locked --profile ci --no-tests=fail'
+require_gate_cmd 'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail'
+require_gate_cmd 'cargo test --workspace --doc --locked'
 
 echo "OK: workflow gate smoke passed."
