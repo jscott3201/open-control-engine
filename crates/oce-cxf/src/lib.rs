@@ -108,9 +108,21 @@ pub fn import_cxf(
 /// produces for documents like the `minimal_loop` fixture) and emits the in-subset §7.4.1
 /// connector attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`) on each port node under
 /// the Bare-Scalar Canonical wire shape. The emitted bytes are deterministic — repeated calls are
-/// byte-identical — and, for any accepted graph whose class paths name registered block classes
-/// (everything the resolver itself produces), re-import to a `ModelGraph` that renders
-/// bit-identically to the input (Reals by IEEE-754 bits). Export deliberately takes no registry
+/// byte-identical.
+///
+/// **Round-trip (RT-2).** For an accepted graph whose class paths name registered block classes
+/// (everything the resolver itself produces), the emitted bytes re-import to a `ModelGraph` that
+/// renders bit-identically (Reals by IEEE-754 bits) to the **survivor cone** of the input: the
+/// blocks that were not deferred, the connections whose endpoints are both survivors, and the
+/// `external_inputs` entries whose connector belongs to a survivor. When nothing is deferred the
+/// survivor cone *is* the whole graph, so re-import renders bit-identically to the input itself.
+/// When deferral fires, equality holds over the cone and not over the input — the omitted blocks
+/// are gone from the document by design, and no re-import can restore them. Block ids are
+/// renumbered densely on re-import, so the comparison is by `instance_iri`, never by raw
+/// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty
+/// `warnings` list means nothing was deferred and the round trip covers the whole input.
+///
+/// Export deliberately takes no registry
 /// dependency, so a hand-built graph with an unregistered class path still exports; its bytes
 /// then fail re-import loudly with `ClassNotFound` — never silently. The source root `@id` is
 /// not recorded in [`ModelGraph`], so the root composite is emitted under the fixed synthetic
@@ -124,7 +136,8 @@ pub fn import_cxf(
 /// **deferred**, not rejected: the block and its transitive downstream consumers are omitted from
 /// the emitted document so the enum-free remainder can still export, and the omission is reported
 /// as an [`oce_diag::DiagCode::ExportDeferred`] **warning** (non-aborting). This function
-/// **discards deferral warnings**; use [`export_with_report`] for deferral visibility. Deferral is
+/// **discards deferral warnings**, so a caller using it alone cannot tell a complete export from
+/// one that dropped blocks; use [`export_with_report`] for that. Deferral is
 /// non-aborting only while something survives it: a graph whose every block is deferred has no
 /// runtime composite left to emit and is an error, not an empty document.
 ///

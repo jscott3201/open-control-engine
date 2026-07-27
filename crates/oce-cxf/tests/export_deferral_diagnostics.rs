@@ -172,16 +172,15 @@ fn assert_emission(bytes: &[u8], survivors: &[&str], deferred: &[&str]) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Rendered warning goldens — every placeholder, substituted.
+// Rendered warning goldens — every slot, filled.
 //
-// These are written out in full rather than derived from the templates. Deriving them would
-// re-run the exporter's own `.replace` chain and assert nothing: a test that substitutes the
-// same wrong value passes. Each golden below fails on any single dropped or wrong substitution
-// — a missing `{subject}` ships a literal `{subject}` to a host, and a wrong one names a block
-// that does not exist in the document.
+// These are written out in full rather than assembled from the renderer's own format strings.
+// Assembling them would re-run the code under test and assert nothing: whatever the renderer
+// produced would be what the test expected. Each golden below fails on any wrong value in any
+// slot, which is what caught a warning naming a block that does not exist in the document.
 // ─────────────────────────────────────────────────────────────────────────
 
-/// `MSG_ENUM_DEFER_CONNECTOR` rendered for `sink`, whose enum input carries `Smoothness` (class
+/// The connector-shape message rendered for `sink`, whose enum input carries `Smoothness` (class
 /// id 2). The class slot is load-bearing: before this round every id of 2 or more rendered as a
 /// single literal, so this golden also pins the class label away from that fold.
 const RENDERED_CONNECTOR_WARNING: &str = "export subset: deferring block \
@@ -189,7 +188,7 @@ const RENDERED_CONNECTOR_WARNING: &str = "export subset: deferring block \
      CXF literal form; the block and its downstream consumers are omitted from the emitted \
      document so the enum-free remainder can export";
 
-/// `MSG_ENUM_DEFER_PARAM` rendered for `tuned`, whose `extrapolation` parameter carries
+/// The parameter-shape message rendered for `tuned`, whose `extrapolation` parameter carries
 /// `Extrapolation` (class id 3). Three distinct slots — subject, name, class — and no two of them
 /// hold the same text, so swapping any pair fails.
 const RENDERED_PARAM_WARNING: &str = "export subset: deferring block \
@@ -197,7 +196,7 @@ const RENDERED_PARAM_WARNING: &str = "export subset: deferring block \
      `EnumClass#3`); the block and its downstream consumers are omitted from the emitted document \
      so the enum-free remainder can export";
 
-/// `MSG_ENUM_DEFER_CASCADE` rendered for `sink`, cascade-deferred on its **second** input. `in1`
+/// The cascade-shape message rendered for `sink`, cascade-deferred on its **second** input. `in1`
 /// rather than `in0` is the point: the block's first input is undriven and skipped, so a
 /// connector-name substitution that reported the first input, or a hardcoded `in0`, fails here.
 const RENDERED_CASCADE_WARNING: &str = "export subset: deferring block \
@@ -406,9 +405,12 @@ fn the_cascade_warning_never_precedes_the_block_that_caused_it() {
 
 #[test]
 fn no_rendered_warning_ships_an_unsubstituted_placeholder() {
-    // A template slot nobody substitutes leaks its literal braces to whatever surfaces the
-    // warning. The goldens above pin the three shapes that exist today; this catches a fourth
-    // slot added to any template tomorrow without a matching `.replace`.
+    // Braces in a rendered warning are now always data — the messages are rendered by one
+    // `format!` each, so a slot with no argument is a compile error rather than a literal
+    // `{name}` shipped to an operator. What this still catches is a stray brace written into a
+    // message literal itself. None of this graph's own text contains one, so none may appear;
+    // `a_parameter_named_like_a_placeholder_survives_verbatim` covers the opposite direction,
+    // where braces in the *data* must be preserved.
     let report = export_report(&every_warning_shape_graph());
     for d in &report.warnings {
         assert!(
@@ -417,6 +419,172 @@ fn no_rendered_warning_ships_an_unsubstituted_placeholder() {
             d.message
         );
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Placeholder-shaped data — a value is never re-read as template.
+//
+// `instance_iri` and parameter names are host-supplied `ModelGraph` state, and a deferred block
+// bypasses the survivor-side parameter-name validation, so both reach the renderer unscreened.
+// While the messages were rendered by a chain of `str::replace`, each step re-scanned what the
+// previous step had inserted, and a value shaped like a placeholder was rewritten by a later
+// step. These three tests — one per message shape — carry placeholder-shaped values end to end
+// through the public API and require them to arrive verbatim.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn a_parameter_named_like_a_placeholder_survives_verbatim() {
+    // The reviewer's reproduction. A parameter literally named `{class}` used to render as its
+    // own class label — `parameter `EnumClass#3`` — so the warning named a parameter that does
+    // not exist on the block, and the operator's grep for the real name found nothing.
+    let g = ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "keep",
+                &[],
+                &[0],
+                real_param(1.0),
+            ),
+            block(
+                1,
+                "CDL.Reals.Sources.Constant",
+                "tuned",
+                &[],
+                &[1],
+                enum_param("{class}", EnumClassId::EXTRAPOLATION),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+
+    let report = export_report(&g);
+    let message = &report.warnings[0].message;
+    assert!(
+        message.contains("parameter `{class}`"),
+        "the parameter's real name must appear verbatim, got: {message}"
+    );
+    assert!(
+        message.contains("class `EnumClass#3`"),
+        "the class slot must still carry the class label, got: {message}"
+    );
+    assert!(
+        !message.contains("parameter `EnumClass#3`"),
+        "the class label must not have overwritten the parameter name, got: {message}"
+    );
+    reimport_clean(&report.bytes);
+}
+
+#[test]
+fn a_block_iri_shaped_like_a_placeholder_survives_verbatim() {
+    // The wider hole: `{subject}` is substituted first, and its value is an `instance_iri` — host
+    // -supplied rather than derived — so under the chain every later slot rewrote the text it had
+    // just inserted. `mixed` carries an enum connector (the class shape) and `tuned` an enum
+    // parameter (the name shape); each block's IRI names the slot that used to eat it.
+    let g = ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "keep",
+                &[],
+                &[0],
+                real_param(2.0),
+            ),
+            block(1, "CDL.Reals.Abs", "mixed{class}", &[1], &[2], vec![]),
+            block(
+                2,
+                "CDL.Reals.Sources.Constant",
+                "tuned{name}",
+                &[],
+                &[3],
+                enum_param("controllerType", EnumClassId::SIMPLE_CONTROLLER),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::In, ValueType::Enum(EnumClassId::SMOOTHNESS)),
+            conn(2, 1, Dir::Out, ValueType::Real),
+            conn(3, 2, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![],
+    };
+
+    let report = export_report(&g);
+    assert_eq!(
+        warning_subjects(&report),
+        vec![iri("mixed{class}"), iri("tuned{name}")],
+        "the subject field itself is unaffected either way — the defect was only ever in the text"
+    );
+
+    let connector_message = &report.warnings[0].message;
+    assert!(
+        connector_message.contains(&format!("block `{}`", iri("mixed{class}")))
+            && connector_message.contains("class `EnumClass#2`"),
+        "the IRI's braces must not have been eaten by the class slot, got: {connector_message}"
+    );
+    let param_message = &report.warnings[1].message;
+    assert!(
+        param_message.contains(&format!("block `{}`", iri("tuned{name}")))
+            && param_message.contains("parameter `controllerType`"),
+        "the IRI's braces must not have been eaten by the name slot, got: {param_message}"
+    );
+    reimport_clean(&report.bytes);
+}
+
+#[test]
+fn a_cascade_deferred_block_iri_shaped_like_a_placeholder_survives_verbatim() {
+    // The third shape. `sink{conn}` is deferred by cascade, and `{conn}` is substituted after
+    // `{subject}`, so under the chain the block's own IRI absorbed the connector name and the
+    // warning named a block nobody could find.
+    let g = ModelGraph {
+        blocks: vec![
+            block(
+                0,
+                "CDL.Reals.Sources.Constant",
+                "src",
+                &[],
+                &[0],
+                enum_param("controllerType", EnumClassId::SIMPLE_CONTROLLER),
+            ),
+            block(1, "CDL.Reals.Abs", "sink{conn}", &[1], &[2], vec![]),
+            block(
+                2,
+                "CDL.Reals.Sources.Constant",
+                "keep",
+                &[],
+                &[3],
+                real_param(3.0),
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(1, 1, Dir::In, ValueType::Real),
+            conn(2, 1, Dir::Out, ValueType::Real),
+            conn(3, 2, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![wire(0, 1)],
+        external_inputs: vec![],
+    };
+
+    let report = export_report(&g);
+    let cascade_message = &report.warnings[1].message;
+    assert!(
+        cascade_message.contains(&format!("block `{}`", iri("sink{conn}"))),
+        "the cascade subject must keep its literal braces, got: {cascade_message}"
+    );
+    assert!(
+        cascade_message.contains("input connector `in0`") && !cascade_message.contains("sinkin0"),
+        "the connector name must fill only its own slot, got: {cascade_message}"
+    );
+    reimport_clean(&report.bytes);
 }
 
 // ─────────────────────────────────────────────────────────────────────────

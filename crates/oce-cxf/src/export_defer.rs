@@ -36,13 +36,28 @@ fn defer(message: impl Into<String>, subject: &str) -> Diagnostic {
     Diagnostic::warning(DiagCode::ExportDeferred, message).with_subject(subject.to_owned())
 }
 
+// Every deferral message is rendered by ONE `format!`. That is not a style choice: these messages
+// interpolate host-supplied text — a block's `instance_iri`, a parameter's name — and a deferred
+// block bypasses the survivor-side parameter-name validation, so both arrive unscreened from
+// public `ModelGraph` state. Rendering by a chain of `str::replace` over a placeholder template
+// re-scans what the previous step inserted, so a *value* shaped like a placeholder is rewritten by
+// a later step: a parameter literally named `{class}` used to render as its own class label, and
+// an `instance_iri` containing `{name}` or `{conn}` corrupted every later slot in all three shapes.
+// `format!` interpolates its arguments without reparsing them, so no value can be read as
+// template; it also makes a missing slot a compile error rather than a literal `{name}` shipped to
+// an operator.
+
 /// Deferral message for an enumeration-typed connector. Pushed in Phase 1b over `enum_blocks` for
 /// each block whose connector list carries a `ValueType::Enum`. The connector arm in the
 /// Phase 4 scan pushes only a placeholder (never this warning — the warning is pushed here, once
 /// per offending block, in block order).
-const MSG_ENUM_DEFER_CONNECTOR: &str = "export subset: deferring block `{subject}` — enumeration-typed connector (class `{class}`) \
-     has no CXF literal form; the block and its downstream consumers are omitted from the \
-     emitted document so the enum-free remainder can export";
+fn msg_enum_defer_connector(subject: &str, class: &str) -> String {
+    format!(
+        "export subset: deferring block `{subject}` — enumeration-typed connector (class \
+         `{class}`) has no CXF literal form; the block and its downstream consumers are omitted \
+         from the emitted document so the enum-free remainder can export"
+    )
+}
 
 /// Deferral message for an enumeration-valued parameter. Pushed in Phase 1b over `enum_blocks`
 /// for each block whose `ParamTable` carries a `Value::Enum`. The `param_binding` `Value::Enum`
@@ -50,16 +65,24 @@ const MSG_ENUM_DEFER_CONNECTOR: &str = "export subset: deferring block `{subject
 /// loop), so the warning is pushed here, once per offending block, in block order — never
 /// retrofitted in place (retrofitting would defer only the param, a subset-escape the cascade
 /// cannot catch).
-const MSG_ENUM_DEFER_PARAM: &str = "export subset: deferring block `{subject}` — parameter `{name}` is enumeration-valued \
-     (class `{class}`); the block and its downstream consumers are omitted from the emitted \
-     document so the enum-free remainder can export";
+fn msg_enum_defer_param(subject: &str, name: &str, class: &str) -> String {
+    format!(
+        "export subset: deferring block `{subject}` — parameter `{name}` is enumeration-valued \
+         (class `{class}`); the block and its downstream consumers are omitted from the emitted \
+         document so the enum-free remainder can export"
+    )
+}
 
 /// Deferral message for a cascade-deferred block: every driver of one of its input connectors was
 /// itself deferred upstream. Pushed in Phase 1d over `deferred \ enum_blocks` as the cascade
 /// fixpoint grows. `conn` is the input connector's owning-block-relative name.
-const MSG_ENUM_DEFER_CASCADE: &str = "export subset: deferring block `{subject}` — all drivers of input connector `{conn}` were \
-     deferred (upstream enumeration); the block is omitted from the emitted document so the \
-     enum-free remainder can export";
+fn msg_enum_defer_cascade(subject: &str, conn: &str) -> String {
+    format!(
+        "export subset: deferring block `{subject}` — all drivers of input connector `{conn}` \
+         were deferred (upstream enumeration); the block is omitted from the emitted document so \
+         the enum-free remainder can export"
+    )
+}
 
 /// The diagnostic subject for block `bi`: its `instance_iri`, else a synthetic `block#bi` tag
 /// (mirrors the resolver's convention and `crate::export::owner_subject` for IRI-less blocks).
@@ -158,19 +181,11 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         let subject = block_subject(g, bi);
         if let Some(id) = has_enum_connector(g, bi) {
             let class = enum_class_label(id);
-            warnings.push(defer(
-                MSG_ENUM_DEFER_CONNECTOR
-                    .replace("{subject}", &subject)
-                    .replace("{class}", &class),
-                &subject,
-            ));
+            warnings.push(defer(msg_enum_defer_connector(&subject, &class), &subject));
         } else if let Some((name, id)) = has_enum_param(g, bi) {
             let class = enum_class_label(id);
             warnings.push(defer(
-                MSG_ENUM_DEFER_PARAM
-                    .replace("{subject}", &subject)
-                    .replace("{name}", name)
-                    .replace("{class}", &class),
+                msg_enum_defer_param(&subject, name, &class),
                 &subject,
             ));
         }
@@ -207,12 +222,7 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
                 grew = true;
                 let subject = block_subject(g, bi);
                 let conn = connector_local_name(g, cin);
-                warnings.push(defer(
-                    MSG_ENUM_DEFER_CASCADE
-                        .replace("{subject}", &subject)
-                        .replace("{conn}", &conn),
-                    &subject,
-                ));
+                warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
                 break 'inputs;
             }
         }
@@ -238,33 +248,65 @@ fn enum_class_label(id: EnumClassId) -> String {
 mod tests {
     use super::*;
 
-    /// The three deferral message consts are pinned verbatim — a host greps logs/exports for the
-    /// stable `export subset: deferring block` prefix and the `{subject}`/`{class}`/`{name}`/`{conn}`
-    /// placeholders are part of the contract. Removing or rewording any const breaks host pinning.
-    /// The exact-string assertions below are the per-const pins (mirroring the exact-`message`
-    /// pinning style of the rejection tests): a single character drift in any const fails loudly.
+    /// The three rendered messages are pinned verbatim — a host greps logs/exports for the stable
+    /// `export subset: deferring block` prefix and the sentence shape around it. A single
+    /// character of drift fails loudly.
+    ///
+    /// These replace the template pins that stood here while the messages were consts rendered by
+    /// a `str::replace` chain. Pinning the rendered output is the stronger property: a template
+    /// can be byte-perfect and still reach an operator wrong, which is exactly what the
+    /// substitution defect did.
     #[test]
-    fn deferral_message_consts_are_stable_and_templated() {
+    fn rendered_deferral_messages_are_byte_exact() {
         assert_eq!(
-            MSG_ENUM_DEFER_CONNECTOR,
-            "export subset: deferring block `{subject}` — enumeration-typed connector (class \
-             `{class}`) has no CXF literal form; the block and its downstream consumers are \
-             omitted from the emitted document so the enum-free remainder can export",
-            "connector deferral const must be byte-exact"
+            msg_enum_defer_connector("blk", "EnumClass#2"),
+            "export subset: deferring block `blk` — enumeration-typed connector (class \
+             `EnumClass#2`) has no CXF literal form; the block and its downstream consumers are \
+             omitted from the emitted document so the enum-free remainder can export"
         );
         assert_eq!(
-            MSG_ENUM_DEFER_PARAM,
-            "export subset: deferring block `{subject}` — parameter `{name}` is \
-             enumeration-valued (class `{class}`); the block and its downstream consumers are \
-             omitted from the emitted document so the enum-free remainder can export",
-            "param deferral const must be byte-exact"
+            msg_enum_defer_param("blk", "controllerType", "EnumClass#1"),
+            "export subset: deferring block `blk` — parameter `controllerType` is \
+             enumeration-valued (class `EnumClass#1`); the block and its downstream consumers are \
+             omitted from the emitted document so the enum-free remainder can export"
         );
         assert_eq!(
-            MSG_ENUM_DEFER_CASCADE,
-            "export subset: deferring block `{subject}` — all drivers of input connector `{conn}` \
-             were deferred (upstream enumeration); the block is omitted from the emitted document \
-             so the enum-free remainder can export",
-            "cascade deferral const must be byte-exact"
+            msg_enum_defer_cascade("blk", "in1"),
+            "export subset: deferring block `blk` — all drivers of input connector `in1` were \
+             deferred (upstream enumeration); the block is omitted from the emitted document so \
+             the enum-free remainder can export"
+        );
+    }
+
+    /// A value shaped like a placeholder is data, not template. Under the `str::replace` chain
+    /// each step re-scanned what the previous step inserted, so a parameter named `{class}` came
+    /// out as its own class label and an `instance_iri` carrying `{name}`/`{conn}`/`{class}`
+    /// rewrote every later slot. Rendering in one pass makes each argument land verbatim.
+    ///
+    /// Every argument is given a placeholder-shaped value naming a *different* slot than the one
+    /// it occupies, so a renderer that re-scanned would visibly swap them.
+    #[test]
+    fn a_placeholder_shaped_value_renders_literally() {
+        let connector = msg_enum_defer_connector("blk{class}", "EnumClass#2");
+        assert!(
+            connector.contains("block `blk{class}`") && connector.contains("class `EnumClass#2`"),
+            "the subject must keep its literal braces: {connector}"
+        );
+
+        let param = msg_enum_defer_param("blk{name}", "{class}", "EnumClass#3");
+        assert!(
+            param.contains("block `blk{name}`")
+                && param.contains("parameter `{class}`")
+                && param.contains("class `EnumClass#3`"),
+            "subject, name, and class must each land verbatim: {param}"
+        );
+
+        let cascade = msg_enum_defer_cascade("blk{conn}", "in0");
+        assert!(
+            cascade.contains("block `blk{conn}`")
+                && cascade.contains("input connector `in0`")
+                && !cascade.contains("blkin0"),
+            "the subject's braces must not be consumed by the connector slot: {cascade}"
         );
     }
 
