@@ -29,3 +29,8 @@ _*/
 
 # --- Claude Code local worktrees (agent scratch) — never commit ---
 .claude/worktrees/
+
+# --- Agent-orchestration notes — never commit ---
+# This repo is public. `.agents/project-facts.md` and `.agents/gate.sh` are tracked
+# because they help anyone working on the engine; delegation process is not published.
+.agents/lane-facts.md
