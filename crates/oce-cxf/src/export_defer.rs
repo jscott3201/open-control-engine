@@ -17,11 +17,20 @@
 //! (both ends enter `deferred`).
 //!
 //! ## Soundness
-//! By the fixpoint, every survivor's driven inputs have at least one surviving driver, so the
-//! re-imported graph has no `SingleAssignment` error. Connections among survivors are intact, the
-//! arity guard is preserved (every survivor keeps all declared ports), and the single-assignment
-//! guard is preserved (every driven survivor input has exactly one surviving driver — original G36
-//! graphs are single-assignment). RT-2 holds for the survivor cone.
+//! By the fixpoint, every survivor's driven inputs have at least one surviving driver, so no
+//! survivor input loses its driver to deferral. Connections among survivors are intact and the
+//! arity guard is preserved (every survivor keeps all declared ports). RT-2 holds for the survivor
+//! cone.
+//!
+//! The fixpoint gives *at least* one surviving driver; it does not give *at most* one, and cannot
+//! — deferral only ever removes edges, so it can lower an input's in-degree but never raise it. A
+//! graph handed to `export` already carrying two drivers on one input still carries them after
+//! deferral. That half of §7.10 is enforced in `crate::export::plan`, which counts surviving
+//! drivers per connector and rejects an in-degree above 1. Earlier revisions of this paragraph
+//! asserted single assignment as a property of the *input* ("original G36 graphs are
+//! single-assignment"), which was an assumption about the caller stated as a fact about the
+//! algorithm; nothing checked it, and a hand-built graph that broke it exported `Ok` with bytes
+//! that failed re-import.
 
 use std::collections::BTreeSet;
 

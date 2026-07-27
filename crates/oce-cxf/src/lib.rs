@@ -121,10 +121,21 @@ pub fn import_cxf(
 /// `external_inputs` entries whose connector belongs to a survivor. When nothing is deferred the
 /// survivor cone *is* the whole graph, so re-import renders bit-identically to the input itself.
 /// When deferral fires, equality holds over the cone and not over the input — the omitted blocks
-/// are gone from the document by design, and no re-import can restore them. Block ids are
+/// are gone from the document by design, and no re-import can restore them. Acceptance is what
+/// makes the promise good on the single-assignment axis: an input driven by more than one
+/// surviving output is **rejected** (§7.10) rather than emitted, because those bytes would fail
+/// re-import outright rather than round-trip imperfectly. Block ids are
 /// renumbered densely on re-import, so the comparison is by `instance_iri`, never by raw
 /// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty
 /// `warnings` list means nothing was deferred and the round trip covers the whole input.
+///
+/// One carve-out, and it is a real gap rather than a definition: export does **not** check a
+/// block's port ARITY against the class its `class_path` names, because it takes no registry
+/// dependency at all. A hand-built block naming a registered class while declaring fewer ports
+/// than that class requires exports `Ok`, and the bytes then fail re-import with
+/// `MalformedDocument` — the same "bytes that do not load" class the single-assignment rejection
+/// above exists to prevent, reached by a different route. Every graph the resolver produces has
+/// correct arity by construction, so this is reachable only from a hand-built graph.
 ///
 /// Export deliberately takes no registry
 /// dependency, so a hand-built graph with an unregistered class path still exports; its bytes
@@ -152,11 +163,14 @@ pub fn import_cxf(
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, the same connector listed more than once in
-///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip),
+///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip), an input
+///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
+///   fail re-import entirely rather than come back lossy),
 ///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a
-///   parameter defect, an external input with no boundary IRI or listed twice — reject only where
+///   parameter defect, an external input with no boundary IRI or listed twice, a multiply-driven
+///   input — reject only where
 ///   the offender sits on a **surviving** block; a deferred block is omitted from the document and
 ///   so contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
 ///   non-dense ids) and a connection that is not output→input reject either way, being
