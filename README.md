@@ -41,10 +41,15 @@ end-to-end through the frozen facade, against a registry of **133 CDL elementary
 `Reals`, 26 `Logical`, 24 `Integers`, 15 `Routing`, 7 `Discrete`, 4 `Conversions`, 3
 `Psychrometrics`, 2 `Utilities`. The workspace suite is over **1300 tests** plus doctests.
 
-Read that as breadth of the fixture corpus, not as a general G36 compiler. Those 46 documents
-reference 90 distinct `Buildings.Controls.OBC.ASHRAE.G36.*` class paths, but they are
-**pre-flattened CXF** at specific parameterizations. The engine executes the block graph CXF hands
-it; it does not parse or flatten Modelica `.mo` sources (see `oce-flatten`).
+Read that as breadth of the fixture corpus, not as general G36 support — the repo's own catalog
+(`tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json`) is explicit that the
+supported set is `selected-explicit-cxf-variants-supported` and does "not imply arbitrary ASHRAE
+G36 composite support." Concretely: **43 pre-specialized runtime variants over 31 distinct
+canonical class paths**, plus 3 hand-authored fixture-only fragments. They are **pre-flattened
+CXF** at specific parameterizations. The engine executes the block graph CXF hands it; it does not
+parse or flatten Modelica `.mo` sources (see `oce-flatten`). A canonical class path is promoted to
+supported-runtime only once a source-proven composite importer, parameter variants, fixture,
+provenance, golden trace, and oracle evidence all exist.
 
 CXF is bidirectional. `oce-cxf` imports via the §7.1 resolver and **exports** under a round-trip
 contract (RT-2): for a graph inside the export subset, re-importing the emitted bytes renders
