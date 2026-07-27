@@ -49,12 +49,12 @@
 //! into N scalar connectors, so names cannot correspond one-to-one. Skips are asserted against an
 //! exact count rather than tolerated, so a change that silently widens the skip set fails.
 //!
-//! The two pins are 2112 checked / 60 skipped, and 2112 + 60 equals the 2135 + 37 an earlier
-//! revision reported — the same sides, reclassified. That revision inferred "array port" from an
-//! arity mismatch, so 23 array-flattened sides whose lengths happened to coincide were counted as
-//! *checked* when their comparison could not fail. Marking array-ness per direction as a declared
-//! fact in the table moves those 23 into skipped, which is a correction rather than a coverage
-//! loss: the old figure was inflated by vacuous comparisons.
+//! The pins are 2135 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
+//! 23-side difference was vacuous array comparisons being correctly reclassified. That was wrong
+//! in the dangerous direction: the generator OR-ed the registry's `width_driven` flag into BOTH
+//! direction flags, so a class with an array input and a scalar output — `MultiSum` — had its
+//! scalar output side skipped. Those 23 sides are real, checkable, and can fail. Array-ness is now
+//! derived per DECLARATION, from the subscript on the connector itself.
 //!
 //! Also unchecked: parameter names and defaults, and composite wiring.
 
@@ -96,31 +96,43 @@ fn repo_root() -> PathBuf {
 /// exercised by every other test in the workspace. Agreeing with it on arity *and* kind means a
 /// hand-edit to the table has to also be a correct edit, which is the only property that matters.
 ///
-/// Array-port classes are exempt: upstream declares one array connector (`u[nin]`) where we carry
-/// N flattened scalars, so the arities legitimately differ.
+/// Coverage is asserted, not hoped for: the counts below pin how many classes actually reach the
+/// comparison, so a lookup that silently starts returning `None` — a class renamed out of the
+/// registry, say — fails here instead of quietly shrinking the check to nothing.
 ///
-/// # This does NOT make the table tamper-proof, and that limitation is load-bearing
+/// # What this does NOT check, and why the limits are load-bearing
 ///
-/// The registry stores port **kinds**, not names — that absence is the very gap this audit
-/// exists to cover. So this cross-check catches a table whose *arity or kinds* are wrong (it
-/// caught three separate extraction bugs: a nested-block leak, `end if` miscounted as a class
-/// close, and `model` vs `block`), and it is **blind to a reordering of two same-kind ports** —
-/// exactly the blind spot the audit exists to close, reproduced one level up.
+/// **1. Names are never validated, in any direction.** The registry stores port **kinds** only —
+/// that absence is the very gap this audit exists to cover. So the check catches a table whose
+/// *arity or kinds* are wrong (it caught three extraction bugs: a nested-block leak, `end if`
+/// miscounted as a class close, and `model` vs `block`) and nothing else about the names. Any
+/// **coordinated rename passes**: change `Reals.PID`'s inputs to `zzz`/`aaa` in both the table and
+/// all 8 fixture instances and this suite stays green — the names need not even be plausible, let
+/// alone upstream's. Reordering two same-kind ports is just the narrowest case of that, not the
+/// boundary. Name integrity rests on review of the table's diff plus the recorded provenance.
 ///
-/// Verified, not assumed: reversing `Reals.PID`'s inputs in the table *and* in all 8 fixture
-/// instances still passes. Name-order integrity of the table therefore rests on review of its
-/// diff plus the recorded provenance, **not** on any runtime check. Closing that would mean
-/// vendoring the ~768 KB of upstream BSD-licensed `.mo` sources and deriving the table at test
-/// time, so there is no table to bless — an open decision, not an oversight.
+/// **2. The 28 array-port classes get no registry check at all.** Upstream declares one array
+/// connector (`u[nin]`) where we carry N flattened scalars, so arity legitimately differs and
+/// comparison is meaningless — but that means their table rows are unverified by anything here,
+/// including on kinds.
+///
+/// Closing (1) means vendoring the ~768 KB of upstream BSD-licensed `.mo` sources and deriving the
+/// table at test time, leaving no table to bless. That is an open decision, not an oversight.
 fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
     let mut disagreements = Vec::new();
+    let mut compared = 0usize;
+    let mut exempt_array = 0usize;
+    let mut missing_from_registry = Vec::new();
     for (class_path, ports) in table {
         if ports.inputs_are_array || ports.outputs_are_array {
+            exempt_array += 1;
             continue;
         }
         let Some(entry) = oce_blocks::lookup(class_path) else {
+            missing_from_registry.push(class_path.as_str());
             continue;
         };
+        compared += 1;
         // Default parameters: every class compared here is non-array, so its signature is fixed
         // and does not depend on a width parameter.
         let probe = (entry.make)(&oce_model::ParamTable::default());
@@ -148,6 +160,25 @@ fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
          be meaningless.\n\n{}",
         disagreements.len(),
         disagreements.join("\n\n")
+    );
+    assert!(
+        missing_from_registry.is_empty(),
+        "{} table class(es) have no entry in the shipping block registry, so they were compared \
+         against nothing: {:?}. Either the table names a class we do not implement, or a registry \
+         `class_path` changed and this cross-check silently stopped covering it.",
+        missing_from_registry.len(),
+        missing_from_registry
+    );
+    assert_eq!(
+        compared, 104,
+        "registry cross-check coverage changed. It must stay pinned: a check that quietly \
+         compares fewer classes still passes, and this one guards the table every other \
+         assertion in this file trusts."
+    );
+    assert_eq!(
+        exempt_array, 28,
+        "array-exempt class count changed. These classes receive NO registry check — not even on \
+         kinds — so growing the set silently shrinks coverage."
     );
 }
 
@@ -312,12 +343,12 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
     // Pin the volume. Without this, a change that stops discovering ports would leave the
     // comparison vacuously green — the failure mode this whole audit exists to prevent.
     assert_eq!(
-        checked, 2112,
+        checked, 2135,
         "port-list volume changed: expected 2135 comparisons, made {checked}. \
          If the corpus legitimately changed, update this pin deliberately."
     );
     assert_eq!(
-        skipped_array, 60,
+        skipped_array, 37,
         "array-port skip count changed: expected 37, got {skipped_array}. \
          A rising skip count hides wirings from this audit — investigate before re-pinning."
     );

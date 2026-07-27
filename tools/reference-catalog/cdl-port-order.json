@@ -526,7 +526,7 @@
       "class_path": "CDL.Integers.MultiSum",
       "source": "Buildings/Controls/OBC/CDL/Integers/MultiSum.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -791,7 +791,7 @@
       "class_path": "CDL.Logical.MultiAnd",
       "source": "Buildings/Controls/OBC/CDL/Logical/MultiAnd.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -809,7 +809,7 @@
       "class_path": "CDL.Logical.MultiOr",
       "source": "Buildings/Controls/OBC/CDL/Logical/MultiOr.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1853,7 +1853,7 @@
       "class_path": "CDL.Reals.MultiMax",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiMax.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1871,7 +1871,7 @@
       "class_path": "CDL.Reals.MultiMin",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiMin.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -1889,7 +1889,7 @@
       "class_path": "CDL.Reals.MultiSum",
       "source": "Buildings/Controls/OBC/CDL/Reals/MultiSum.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "u",
@@ -2288,7 +2288,7 @@
       "class_path": "CDL.Routing.BooleanExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanExtractor.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "index",
@@ -2309,7 +2309,7 @@
     {
       "class_path": "CDL.Routing.BooleanScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/BooleanScalarReplicator.mo",
-      "inputs_are_array": true,
+      "inputs_are_array": false,
       "outputs_are_array": true,
       "inputs": [
         {
@@ -2382,7 +2382,7 @@
       "class_path": "CDL.Routing.IntegerExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerExtractor.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "index",
@@ -2403,7 +2403,7 @@
     {
       "class_path": "CDL.Routing.IntegerScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/IntegerScalarReplicator.mo",
-      "inputs_are_array": true,
+      "inputs_are_array": false,
       "outputs_are_array": true,
       "inputs": [
         {
@@ -2476,7 +2476,7 @@
       "class_path": "CDL.Routing.RealExtractor",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealExtractor.mo",
       "inputs_are_array": true,
-      "outputs_are_array": true,
+      "outputs_are_array": false,
       "inputs": [
         {
           "name": "index",
@@ -2497,7 +2497,7 @@
     {
       "class_path": "CDL.Routing.RealScalarReplicator",
       "source": "Buildings/Controls/OBC/CDL/Routing/RealScalarReplicator.mo",
-      "inputs_are_array": true,
+      "inputs_are_array": false,
       "outputs_are_array": true,
       "inputs": [
         {
