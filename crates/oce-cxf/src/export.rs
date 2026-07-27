@@ -473,9 +473,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // what keeps a multiply-driven input on a deferred block from being counted at all. Move the
     // increment above either one and the count stops describing the emitted document.
     let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
-    // Surviving drivers per connector, for the §7.10 single-assignment check after this loop.
-    // Counted at the `targets` push site so it counts exactly the edges the document will carry.
-    let mut in_deg: Vec<u32> = vec![0; g.connectors.len()];
+    // Surviving drivers per connector, for the §7.10 single-assignment check after this loop, as
+    // two flags rather than a count. Recorded at the `targets` push site so they describe exactly
+    // the edges the document will carry.
+    //
+    // Two `bool`s and no arithmetic is deliberate. The predicate is "more than one", so a third
+    // driver carries no information a counter could add — while an integer counter over
+    // `g.connections`, a `Vec` bounded by neither the connector count nor `u32::MAX`, has an
+    // overflow case: panicking in debug and, far worse, WRAPPING in release, where a count that
+    // wrapped to 0 or 1 would slip past the check and re-open the exact hole this phase closes.
+    // Saturating the add would fix that but leaves a one-token reversion no test can catch (the
+    // boundary needs tens of gigabytes of edges to reach). With no integer there is nothing to
+    // overflow: `multiply_driven` is set the second time an edge arrives and never cleared, which
+    // is the predicate itself.
+    let mut driven: Vec<bool> = vec![false; g.connectors.len()];
+    let mut multiply_driven: Vec<bool> = vec![false; g.connectors.len()];
     for conn in &g.connections {
         let (f, t) = (conn.from.0 as usize, conn.to.0 as usize);
         let output_to_input = g.connectors.get(f).is_some_and(|c| c.dir == Dir::Out)
@@ -504,14 +516,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         // Orphan guard: an unclaimed target (including any deferred-target endpoint) is dropped.
         if let Some(to_iri) = port_iri[t].as_ref() {
             targets[f].push(to_iri.clone());
-            // Saturating, not `+= 1`. `g.connections` is a `Vec` bounded by nothing — not by the
-            // connector count, not by `u32::MAX` — so a hand-built graph can in principle carry
-            // more than `u32::MAX` edges into one input. A plain increment would panic there in
-            // debug and, worse, WRAP in release: a count that wrapped to 0 or 1 would slip past
-            // the `> 1` test below and re-open the exact hole this phase closes. Saturating at
-            // `u32::MAX` keeps the planner total (this crate never panics on host input) and keeps
-            // the comparison monotone, so no edge count can ever read as fewer than two.
-            in_deg[t] = in_deg[t].saturating_add(1);
+            // Second arrival at this connector ⇒ multiply driven. Endpoint OWNERSHIP is
+            // irrelevant here: a block wired to itself twice is as multiply driven as two blocks
+            // wired to one input, and re-import counts both the same way.
+            if driven[t] {
+                multiply_driven[t] = true;
+            } else {
+                driven[t] = true;
+            }
         }
     }
 
@@ -525,9 +537,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // One diagnostic per offending connector, in connector-position order (a post-loop scan, not a
     // reject at the push site), so a triple-driven input yields one entry rather than two and the
     // ordering matches the Phase 3 orphan scan. No `Dir::In` test is needed: the `output_to_input`
-    // guard above is the only path to an increment, so `in_deg` is zero for every output.
+    // guard above is the only path that sets either flag, so both are false for every output.
     for (i, c) in g.connectors.iter().enumerate() {
-        if in_deg[i] > 1 {
+        if multiply_driven[i] {
             diags.push(reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
         }
     }

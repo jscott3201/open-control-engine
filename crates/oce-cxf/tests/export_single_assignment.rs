@@ -225,6 +225,54 @@ fn the_same_edge_listed_twice_is_rejected() {
     );
 }
 
+/// One block wired from its own output back into its own input, twice.
+///
+/// The intersection two separate tests miss: the duplicate-edge case uses two blocks, and the
+/// self-loop cases elsewhere use a single edge. Between them an implementation that only counted
+/// edges crossing a block boundary passes everything — and that implementation emits `Ok` bytes
+/// here which re-import as multiply driven.
+fn self_loop_driven_twice() -> ModelGraph {
+    ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Abs", "loop", &[0], &[1], vec![])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![wire(1, 0), wire(1, 0)],
+        external_inputs: vec![],
+    }
+}
+
+#[test]
+fn a_block_driving_its_own_input_twice_is_rejected() {
+    // In-degree is a property of the connector, not of how far the edge travelled. An edge that
+    // begins and ends on the same block counts exactly as much as one that crosses between two.
+    assert_eq!(
+        multiply_driven(&export_rejection(&self_loop_driven_twice())),
+        vec![(iri("loop"), MSG_MULTIPLY_DRIVEN.to_owned())],
+    );
+}
+
+/// The same block with ONE feedback edge — legal wiring that must still export.
+fn single_self_loop() -> ModelGraph {
+    ModelGraph {
+        connections: vec![wire(1, 0)],
+        ..self_loop_driven_twice()
+    }
+}
+
+#[test]
+fn a_block_driving_its_own_input_once_is_accepted() {
+    // The negative half, so the test above cannot be satisfied by rejecting self-loops outright.
+    // A single self-loop is legal wiring — a feedback path — and must still export.
+    let report = export_ok(&single_self_loop());
+    assert_eq!(
+        reimport_clean(&report.bytes).connections.len(),
+        1,
+        "a single feedback edge must round-trip"
+    );
+}
+
 #[test]
 fn a_triply_driven_input_yields_exactly_one_diagnostic() {
     // One diagnostic per offending CONNECTOR, not per excess edge. A reject pushed at the counting
@@ -458,6 +506,8 @@ fn an_accepted_export_never_re_imports_with_a_single_assignment_error() {
         ),
         ("four drivers", &fan4, false),
         ("nine drivers", &fan9, false),
+        ("self-loop driven twice", &self_loop_driven_twice(), false),
+        ("self-loop driven once", &single_self_loop(), true),
     ] {
         let report = match export_with_report(g) {
             Ok(report) => {
@@ -581,10 +631,16 @@ fn rejection_holds_at_every_in_degree_above_one() {
 
 #[test]
 fn a_large_fan_in_rejects_without_panicking() {
-    // Totality at scale. The planner is a total function over arbitrary `ModelGraph` state, so a
-    // large edge count must produce a diagnostic, never an arithmetic panic — the counter
-    // saturates rather than overflowing. 300 exceeds a `u8` counter, which is the smallest width
-    // an implementation could plausibly have reached for.
+    // Totality at scale: the planner is total over arbitrary `ModelGraph` state, so a large edge
+    // count must produce a diagnostic and never a panic.
+    //
+    // Honest limit, because the alternative is a test that looks stronger than it is. `plan`
+    // records multiplicity as two `bool`s, so there is no integer here to overflow and this test
+    // cannot be the thing that keeps it that way — no test can. An implementation that counted
+    // into an integer instead would only misbehave past its width, and reaching `u32::MAX` edges
+    // needs tens of gigabytes of `Vec<Connection>`. What removes that hazard is the absence of
+    // arithmetic, verifiable by reading `plan`; what this test covers is that a graph far larger
+    // than any fixture still returns a diagnostic rather than dying.
     let diags = export_rejection(&fan_in(300));
     assert_eq!(multiply_driven(&diags).len(), 1);
 }
