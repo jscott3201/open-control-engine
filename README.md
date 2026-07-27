@@ -29,16 +29,31 @@ progressing milestone by milestone, each gated by extensive tests.
 | **M0** | Deterministic execution core — workspace, types, scheduler, tick loop | ✅ done |
 | **M1** | CXF ingest, database-free, end-to-end *load → simulate* | ✅ done |
 | **M2** | CDL block-library breadth (G36) + conformance/oracle + parameter validation | ✅ done (in-repo) |
-| **M3** | Durability through the `oce-store` port (reference adapter) | ⬜ planned |
+| **M3** | Durability through the `oce-store` port (reference adapter) | 🟡 reference adapter landed (verification-only) |
 | **M4** | Docs/point-list export, model-from-semantic, hardening, and `oce-py` PyO3 bindings (MVP) | ⬜ planned |
 | **M5** | Python free-threading (`gil_used = false`) + free-threaded wheels + first PyPI publish | ⬜ planned |
 
-Today the engine loads representative **ASHRAE Guideline 36** sequences (AHU supply-air-temperature
-reset, AHU economizer, single-zone VAV) from CXF and simulates them end-to-end through the frozen
-facade, against **~70 CDL elementary blocks**, with a self-contained schedule cross-check oracle,
-whole-sequence **bit-exact determinism goldens**, an **independent closed-form conformance oracle**,
-and block-parameter validation. External Modelica/Buildings reference cross-checks are a deliberately
-deferred tail. The project is **pre-1.0** and not yet published to crates.io.
+Today the engine loads **46 ASHRAE Guideline 36 sequence fixtures** from CXF and simulates them
+end-to-end through the frozen facade, against a registry of **133 CDL elementary blocks** — 52
+`Reals`, 26 `Logical`, 24 `Integers`, 15 `Routing`, 7 `Discrete`, 4 `Conversions`, 3
+`Psychrometrics`, 2 `Utilities`. The workspace suite is over **1300 tests** plus doctests.
+
+CXF is bidirectional. `oce-cxf` imports via the §7.1 resolver and **exports** under a round-trip
+contract (RT-2): re-importing the emitted bytes renders bit-identically to what was exported, Reals
+compared by IEEE-754 bits rather than by epsilon. Export covers the flat, ground, single-root,
+scalar-parameter subset plus the §7.4.1 connector attributes. Enum-carrying blocks are deferred
+rather than fatal: they are omitted with warnings so the enum-free remainder still exports. Export
+is reached through `oce-cxf` directly; the `oce-api` facade exposes import only.
+
+**What the goldens do and do not prove.** Each G36 fixture carries a whole-sequence trace and a
+`.prov.json` recording its provenance, and all 46 are **Tier 2 — engine self-output, a determinism
+snapshot and explicitly not a correctness oracle**. They catch drift, not wrongness. Independent
+checks that do bound correctness are narrower: closed-form conformance bounds and a self-contained
+schedule cross-check. **External Modelica / Buildings reference cross-checks (Tier 4) are not
+wired** — that is the deliberately deferred tail, and until it lands no G36 sequence in this repo has
+been verified against the normative reference implementation.
+
+The project is **pre-1.0** and not yet published to crates.io.
 
 ---
 
@@ -131,7 +146,7 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | `oce-flatten` | Elaboration / CXF-path resolution (CXF arrives pre-flattened; full `.mo` flattening is deferred). |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type/attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler/executor: direct-feedthrough DAG, algebraic-loop rejection, own Kahn topological sort, the tick loop. |
-| `oce-cxf` | CXF (Control eXchange Format) JSON-LD import/export ↔ the model graph. |
+| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ the model graph, both directions. Import is the §7.1 resolver; export emits the flat/ground/scalar subset under the RT-2 round-trip contract, deferring enum-carrying blocks with warnings rather than failing. |
 | `oce-semantics` | Vendor-annotation parsing → effective (non-computational) point/trend/semantic metadata. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. |
 
@@ -141,6 +156,7 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | --- | --- |
 | `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` traits + DTOs. No database types. |
 | `oce-store-mem` | The default in-memory backend, so the engine runs with no database. |
+| `oce-reference-wal-adapter` | **Verification-only, `publish = false`.** A `std::fs` WAL + atomic snapshot adapter that exists to prove the frozen seam can carry real durability without a first-party database. Not a supported backend — durable/queryable adapters stay app-side. |
 
 **Verification, externals & host facade:**
 
@@ -175,10 +191,16 @@ bash .agents/gate.sh        # the per-PR gate
 bash .agents/gate.sh full   # adds the workspace suite and doctests
 ```
 
-CI is **dev-light / release-heavy**: per-PR gates into `development` run fmt / clippy / build /
-rustdoc / file-size / no-secret / database-free checks plus a determinism subset covering
-`oce-blocks` and `oce-expr` on two architectures; the **full test suite runs on
-`development → main` release gates**.
+CI is **dev-light / release-heavy**. The per-PR gate into `development` runs fmt, clippy
+`-D warnings`, build, rustdoc `-D warnings`, the file-size cap, the no-secret scan, the
+database-free check, `cargo-machete`, the golden-generator anti-tautology firewall, the gate-script
+behavior fixtures, and a determinism subset covering `oce-blocks` and `oce-expr` on two
+architectures in debug and release codegen. One job runs `.agents/gate.sh` itself, so the commands
+above gate a PR whether or not each is also wired as its own job.
+
+**The full test suite runs only on `development → main` release gates.** Read that in the dangerous
+direction: a change confined to `oce-cxf`, `oce-store`, `oce-api` or `oce-diag` can show every check
+green having run none of its own tests. Run `bash .agents/gate.sh full` before claiming otherwise.
 
 ---
 
