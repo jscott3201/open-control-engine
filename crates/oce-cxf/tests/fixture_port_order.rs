@@ -18,21 +18,30 @@
 //! against [`tools/reference-catalog/cdl-port-order.json`], which records the interface
 //! declaration order of upstream Modelica source at the pinned reference commit.
 //!
-//! # Deliberately not a CI gate
+//! # What this is, and what it is not
 //!
-//! `#[ignore]`d by design. It is a **validation trail** — a reproducible conformance artifact a
-//! user or auditor can run on demand — not a merge gate. Run it with:
+//! It is **input hygiene, not code coverage.** No engine, resolver, or shipping code path is
+//! exercised here — it reads the fixture documents and a lookup table and compares strings. By
+//! the four-pillar standard in `TESTING.md` this is not coverage of anything.
+//!
+//! It matters one level up: the fixtures are the *inputs to every conformance test in the
+//! workspace*. Tier-2 goldens and Tier-A oracles are all derived from them. A transposed fixture
+//! does not fail anything — it makes the whole suite validate the wrong sequence, silently and
+//! permanently. This guards the **validity of the tests that test production code**.
+//!
+//! # Why it gates
+//!
+//! Its value is entirely future-tense: the corpus is verified clean today, so it stays silent
+//! until someone adds or edits a fixture — which is exactly when a person will not remember to
+//! run it by hand. It costs ~1.4 s inside the existing gate job (`.agents/gate.sh`), so it earns
+//! that place. Run it directly with:
 //!
 //! ```text
-//! cargo nextest run -p oce-cxf --run-ignored all -E 'binary(fixture_port_order)'
-//! cargo test -p oce-cxf --test fixture_port_order -- --ignored
+//! cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 //! ```
 //!
 //! Note the nextest selector is `binary(...)`, not `test(...)`: `fixture_port_order` is the test
 //! binary; the test function is `every_fixture_lists_ports_in_upstream_declaration_order`.
-//!
-//! Consequence to be aware of: nothing re-runs this automatically, so a fixture edited after this
-//! commit is not covered until someone runs it again.
 //!
 //! # What it does NOT check
 //!
@@ -130,7 +139,6 @@ fn class_of(node: &Value) -> Option<String> {
 }
 
 #[test]
-#[ignore = "validation trail, not a gate: cargo nextest run -p oce-cxf --run-ignored all -E 'binary(fixture_port_order)'"]
 fn every_fixture_lists_ports_in_upstream_declaration_order() {
     let table = load_table();
     assert_eq!(table.len(), 132, "port-order table lost classes");
