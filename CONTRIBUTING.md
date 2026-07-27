@@ -10,7 +10,9 @@ the architecture and invariants are the design of record.
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
   in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
   per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
-  batch `development` → `main`, and a version tag drives the gated publish.
+  batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
+  only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
+  never publishes.
 - **Open your PR non-draft.** Every `ci.yml` job is conditioned on
   `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
@@ -83,10 +85,10 @@ and the determinism matrix — while claiming to mirror it. Change a command in
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
 - **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
-  The graph evaluator performs no allocation, hashing, I/O, or store access — keep it that way.
-  (`Engine::tick` itself takes one `store.snapshot()` per tick when the model declares
-  store-backed inputs; that staging step is outside the evaluator, and nothing new should be
-  added to it.)
+  The graph evaluator's arithmetic path performs no allocation, hashing, I/O, or store access —
+  keep it that way. Two existing carve-outs, neither of which should be widened: `Reals.Log` /
+  `Reals.Log10` `format!` a diagnostic string on non-positive input, and `Engine::tick` takes one
+  `store.snapshot()` per tick when the model declares store-backed inputs. Do not add a third.
 
 ## Commits
 
