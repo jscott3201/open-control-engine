@@ -433,10 +433,19 @@ const THR_PREV_T_WORD: usize = 2;
 /// `CDL.Logical.TrueHoldWithReset` — true output is held for at least `duration`; `clr` resets.
 /// `[S]`, feedthrough `y <- {u, clr}`, not a loop cut.
 ///
-/// This class is spec-authoritative here: the oracle is the CDL specification's Logical block
-/// catalog for `TrueHoldWithReset` (`obc.lbl.gov/specification`, §7.6 Elementary Blocks), not current
-/// Buildings master, where this class is absent. Its canonical min-hold behavior is equivalent to
-/// [`TrueFalseHold`] with `falseHoldDuration = 0`, plus the explicit clear input.
+/// The min-hold behaviour follows the CDL specification's Logical block catalog
+/// (`obc.lbl.gov/specification`), which still lists this class although current Buildings master
+/// does not carry the `.mo` — it is equivalent to [`TrueFalseHold`] with `falseHoldDuration = 0`.
+///
+/// **The two-input interface is ours, not the catalog's.** The catalog declares `TrueHoldWithReset`
+/// with a single `BooleanInput u`, a `BooleanOutput y`, and a `Real duration` — no clear connector.
+/// The second input here is a deliberate local extension, carried per `_spec/03-block-library.md`
+/// (`u:B,clr:B → y:B`). An earlier revision of this comment cited the catalog as the oracle for the
+/// *interface* as well as the behaviour; that was wrong, and it went unchallenged for four review
+/// passes. One consequence is worth stating rather than discovering: a conforming single-input
+/// `TrueHoldWithReset` document is rejected by the resolver's arity guard. Whether to keep the
+/// extension, alias it, or drop to the catalog interface is a tracked owner decision
+/// (`_spec/oce_gap_specs_v2/01-gap-inventory.md`) and is not settled here.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrueHoldWithReset {
     pub(crate) duration: f64,

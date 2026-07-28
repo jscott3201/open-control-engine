@@ -40,12 +40,16 @@
 //! check against — the class is absent from current Buildings master, so no vendored `.mo` exists
 //! and `fixture_port_order` skips it.
 //!
-//! **This entry records our own interface, not a conformance claim.** The class is a tracked
-//! reference-drift / project-extension candidate (`_spec/oce_gap_specs_v2/01-gap-inventory.md`),
-//! carrying an explicit hold: audit it, but do not change or remove it without source evidence and
-//! an owner decision. Its two-input shape is the engine specification of record
-//! (`_spec/03-block-library.md`: `u:B,clr:B → y:B`) and is what `logical_timing.rs` implements. A
-//! reviewer reading this table should not infer that upstream CDL declares a `clr` connector.
+//! **This entry records our own interface, and upstream's differs — verified, not assumed.** The
+//! OBC CDL Logical catalog declares `TrueHoldWithReset` with a single `BooleanInput u`, a
+//! `BooleanOutput y` and a `Real duration`; there is no clear connector. `clr` is a deliberate local
+//! extension carried per `_spec/03-block-library.md` (`u:B,clr:B → y:B`), and the class is a tracked
+//! reference-drift item (`_spec/oce_gap_specs_v2/01-gap-inventory.md`) under an explicit hold —
+//! audit it, but do not change or remove it without an owner decision.
+//!
+//! So do not read `"clr"` here as a CDL port name. It is the name of *our* second port, and it is
+//! recorded so that documents written against this engine's interface bind correctly. A conforming
+//! single-input document never reaches binding at all: the arity guard rejects it first.
 //!
 //! An earlier revision left it unnamed, on the principle that unfalsifiable data is what the
 //! port-order audit exists to eliminate. That was the wrong trade — omission is not neutral. `u`
