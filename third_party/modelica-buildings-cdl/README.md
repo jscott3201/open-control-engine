@@ -25,8 +25,8 @@ so `cargo package` does not see it.
 | Upstream | https://github.com/lbl-srg/modelica-buildings |
 | Commit | `a131864e4c4df22ebcd52bb8da439de0087ac365` |
 | Fetched | 2026-07-27 |
-| Files | 132 `.mo` class sources + `Buildings/legal.html` |
-| Size | 768 KB |
+| Files | 176 `.mo` class sources + `Buildings/legal.html` |
+| Size | 1.6 MB |
 
 Paths mirror upstream exactly, so verifying this directory is one command against a fresh clone
 rather than a reading of 132 entries:
@@ -38,8 +38,10 @@ cd third_party/modelica-buildings-cdl && \
   find . -type f | while read -r f; do diff -q "$f" "/tmp/mb/$f" || echo "DIFFERS: $f"; done
 ```
 
-The corpus is the 132 CDL classes reachable from the 46 G36 fixtures in
-`crates/oce-cxf/tests/fixtures/g36/`, not the whole library.
+The corpus contains the 132 elementary CDL classes reachable from the 46 G36 fixtures plus the
+44 G36 and type classes having a mirror-pathed document under `cxf/`. This exact criterion keeps
+the structural oracle's class resolution and conditional declarations locally reproducible
+without vendoring the whole library. The one-command pin verification above covers both sets.
 
 ## Generated CXF structural oracle
 
