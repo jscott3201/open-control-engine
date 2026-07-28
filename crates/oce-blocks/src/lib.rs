@@ -677,9 +677,6 @@ mod tests;
 mod catalog_tests;
 
 #[cfg(test)]
-mod derived_defaults_tests;
-
-#[cfg(test)]
 mod param_rules_tests;
 
 #[cfg(test)]
@@ -726,6 +723,9 @@ mod logical_proof_tests;
 
 #[cfg(test)]
 mod logical_timing_tests;
+
+#[cfg(test)]
+mod logical_timing_contract_tests;
 
 #[cfg(test)]
 mod logical_variable_pulse_tests;

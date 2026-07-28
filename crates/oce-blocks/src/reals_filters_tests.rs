@@ -3,10 +3,13 @@
 //! `reals_filters_derivative_tests` (split along the behavioral sub-topic).
 
 use std::cell::RefCell;
+use std::sync::Arc;
 
 use oce_model::{ParamTable, Value};
 
-use super::{Block, BlockKind, Ctx, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics};
+use super::{
+    Block, BlockKind, Ctx, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics, lookup,
+};
 
 #[derive(Default)]
 struct CapturingDiagnostics {
@@ -71,6 +74,61 @@ fn drive(block: &dyn Block, steps: &[(f64, f64)]) -> (Vec<Value>, Vec<u64>) {
         trace.push(tick(block, &mut region, t, u));
     }
     (trace, region)
+}
+
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn registry_trace(parameters: &ParamTable, steps: &[(f64, f64)]) -> Vec<Value> {
+    let block = (lookup("CDL.Reals.LimitSlewRate").unwrap().make)(parameters);
+    let mut region = vec![0; block.state_len()];
+    block.init_state(&mut region, parameters);
+    steps
+        .iter()
+        .map(|&(time, input)| tick(block.as_ref(), &mut region, time, input))
+        .collect()
+}
+
+fn values_bit_equal(left: &[Value], right: &[Value]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.bit_eq(right))
+}
+
+#[test]
+fn falling_slew_rate_tracks_raising_rate_and_changes_the_trace() {
+    let derived = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let explicit = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("fallingSlewRate", Value::Real(-2.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let sensitive = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("fallingSlewRate", Value::Real(-4.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let steps = [(0.0, 10.0), (1.0, -10.0), (2.0, -10.0)];
+    let derived_trace = registry_trace(&derived, &steps);
+    assert!(values_bit_equal(
+        &derived_trace,
+        &registry_trace(&explicit, &steps)
+    ));
+    assert!(!values_bit_equal(
+        &derived_trace,
+        &registry_trace(&sensitive, &steps)
+    ));
 }
 
 fn assert_trace_bits(got: &[Value], want: &[u64]) {

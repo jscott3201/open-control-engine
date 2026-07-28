@@ -1,10 +1,11 @@
 use std::cell::RefCell;
+use std::sync::Arc;
 
-use oce_model::Value;
+use oce_model::{ParamTable, Value};
 
 use super::{
     Block, Ctx, Diagnostics, NoopDiagnostics, PortKind, RealExtractSignal, RealExtractor,
-    RealScalarReplicator, RealVectorFilter, RealVectorReplicator, Time,
+    RealScalarReplicator, RealVectorFilter, RealVectorReplicator, Time, lookup,
 };
 
 #[derive(Default)]
@@ -33,6 +34,86 @@ fn outs(b: &dyn Block, inputs: &[Value]) -> Vec<Value> {
 
 fn r(value: f64) -> Value {
     Value::Real(value)
+}
+
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn values_bit_equal(left: &[Value], right: &[Value]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.bit_eq(right))
+}
+
+#[test]
+fn width_indexed_extract_and_mask_defaults_match_explicit_elements() {
+    for (class_path, inputs) in [
+        (
+            "CDL.Routing.BooleanExtractSignal",
+            vec![Value::Boolean(false), Value::Boolean(true)],
+        ),
+        (
+            "CDL.Routing.IntegerExtractSignal",
+            vec![Value::Integer(7), Value::Integer(9)],
+        ),
+        (
+            "CDL.Routing.RealExtractSignal",
+            vec![Value::Real(7.0), Value::Real(9.0)],
+        ),
+    ] {
+        let derived = (lookup(class_path).unwrap().make)(&parameter_table(&[
+            ("nin", Value::Integer(2)),
+            ("nout", Value::Integer(2)),
+        ]));
+        let explicit = (lookup(class_path).unwrap().make)(&parameter_table(&[
+            ("nin", Value::Integer(2)),
+            ("nout", Value::Integer(2)),
+            ("extract_1", Value::Integer(1)),
+            ("extract_2", Value::Integer(2)),
+        ]));
+        assert!(values_bit_equal(
+            &outs(derived.as_ref(), &inputs),
+            &outs(explicit.as_ref(), &inputs)
+        ));
+    }
+
+    for (class_path, inputs) in [
+        (
+            "CDL.Routing.BooleanVectorFilter",
+            vec![Value::Boolean(false), Value::Boolean(true)],
+        ),
+        (
+            "CDL.Routing.IntegerVectorFilter",
+            vec![Value::Integer(7), Value::Integer(9)],
+        ),
+        (
+            "CDL.Routing.RealVectorFilter",
+            vec![Value::Real(7.0), Value::Real(9.0)],
+        ),
+    ] {
+        let derived = (lookup(class_path).unwrap().make)(&parameter_table(&[
+            ("nin", Value::Integer(2)),
+            ("nout", Value::Integer(2)),
+        ]));
+        let explicit = (lookup(class_path).unwrap().make)(&parameter_table(&[
+            ("nin", Value::Integer(2)),
+            ("nout", Value::Integer(2)),
+            ("msk_1", Value::Boolean(true)),
+            ("msk_2", Value::Boolean(true)),
+        ]));
+        assert!(values_bit_equal(
+            &outs(derived.as_ref(), &inputs),
+            &outs(explicit.as_ref(), &inputs)
+        ));
+    }
 }
 
 fn i(value: i64) -> Value {

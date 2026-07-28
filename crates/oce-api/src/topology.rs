@@ -18,12 +18,18 @@ pub struct Topology {
     /// Directed output-to-input edges in graph order.
     pub connections: Vec<TopologyConnection>,
     /// Boundary input connector paths in graph order.
+    ///
+    /// A shared boundary IRI may occur more than once for a child input and a pass-through input.
+    /// Consumers must preserve this order and multiplicity rather than deduplicating paths.
     pub external_inputs: Vec<String>,
     /// Authored boundary pass-throughs represented by reserved lowering blocks internally.
     pub pass_through: Vec<PassThroughPair>,
 }
 
 /// One authored elementary block in a [`Topology`] snapshot.
+///
+/// Equality compares `Real` parameter values bit-exactly: NaNs with identical bits compare equal,
+/// while `+0.0` and `-0.0` compare unequal.
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct TopologyBlock {

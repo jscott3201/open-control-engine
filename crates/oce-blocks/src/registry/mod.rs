@@ -99,9 +99,9 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
         .find(|e| e.class_path == class_path)
 }
 
-/// Every registered entry, in catalog order. Crate-internal and test-only: the public surface is
-/// [`lookup`], and enumeration exists so in-crate audits can assert over the whole catalog rather
-/// than a sample.
+/// Every registered entry in catalog order, used to build the public [`crate::catalog()`] metadata
+/// and by in-crate closure audits. It remains `pub(crate)` so constructors and raw function
+/// pointers stay behind the stable metadata surface rather than becoming public API.
 pub(crate) fn all_entries() -> impl Iterator<Item = &'static RegistryEntry> {
     CATALOG.iter().flat_map(|entries| entries.iter())
 }

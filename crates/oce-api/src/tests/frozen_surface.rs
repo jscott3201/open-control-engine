@@ -9,6 +9,30 @@
 //! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
 
 use super::common::*;
+use crate::TopologyBlock;
+
+#[test]
+fn topology_block_equality_compares_real_parameters_by_bits() {
+    let block = |value| TopologyBlock {
+        instance_path: "block".to_string(),
+        class_iri: "CDL.Reals.Sources.Constant".to_string(),
+        inputs: Vec::new(),
+        outputs: vec!["block.y".to_string()],
+        params: vec![
+            (
+                "nan".to_string(),
+                Value::Real(f64::from_bits(0x7ff8_0000_0000_0001)),
+            ),
+            ("zero".to_string(), Value::Real(value)),
+        ],
+    };
+    assert_eq!(block(0.0), block(0.0), "equal NaN bits compare equal");
+    assert_ne!(
+        block(0.0),
+        block(-0.0),
+        "positive and negative zero compare unequal"
+    );
+}
 
 /// Load the canonical accumulator model into a fresh in-memory engine. Connector paths are
 /// `conn#<id>` (hand-built, no `iri`); param paths are `b<id>.<name>` (no `instance_iri`).

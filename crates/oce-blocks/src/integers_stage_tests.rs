@@ -1,8 +1,10 @@
 //! Scenario tests for `CDL.Integers.Stage`.
 
+use std::sync::Arc;
+
 use oce_model::{ParamTable, Value};
 
-use super::{Block, BlockKind, Ctx, IntegerStage, NoopDiagnostics, PortKind};
+use super::{Block, BlockKind, Ctx, IntegerStage, NoopDiagnostics, PortKind, lookup};
 
 fn init_region(block: &dyn Block) -> Vec<u64> {
     let mut region = vec![0u64; block.state_len()];
@@ -33,6 +35,44 @@ fn run(block: &dyn Block, steps: &[(f64, f64)]) -> (Vec<i64>, Vec<u64>) {
         .map(|&(t, u)| tick(block, &mut region, t, u))
         .collect();
     (trace, region)
+}
+
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn registry_trace(parameters: &ParamTable, steps: &[(f64, f64)]) -> Vec<i64> {
+    let block = (lookup("CDL.Integers.Stage").unwrap().make)(parameters);
+    let mut region = vec![0; block.state_len()];
+    block.init_state(&mut region, parameters);
+    steps
+        .iter()
+        .map(|&(time, input)| tick(block.as_ref(), &mut region, time, input))
+        .collect()
+}
+
+#[test]
+fn hysteresis_tracks_stage_count_and_changes_the_trace() {
+    let derived = parameter_table(&[("n", Value::Integer(4)), ("holdDuration", Value::Real(0.0))]);
+    let explicit = parameter_table(&[
+        ("n", Value::Integer(4)),
+        ("holdDuration", Value::Real(0.0)),
+        ("h", Value::Real(0.005)),
+    ]);
+    let sensitive = parameter_table(&[
+        ("n", Value::Integer(4)),
+        ("holdDuration", Value::Real(0.0)),
+        ("h", Value::Real(0.01)),
+    ]);
+    let steps = [(0.0, 0.0), (1.0, 0.007), (2.0, 0.007)];
+    let derived_trace = registry_trace(&derived, &steps);
+    assert_eq!(derived_trace, registry_trace(&explicit, &steps));
+    assert_ne!(derived_trace, registry_trace(&sensitive, &steps));
 }
 
 fn second_tick_y(block: &dyn Block, u: f64) -> i64 {

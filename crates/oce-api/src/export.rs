@@ -29,7 +29,7 @@ impl ExportReport {
     ///     hash ^= u128::from(*byte);
     ///     hash = hash.wrapping_mul(0x0000_0000_0100_0000_0000_0000_0000_013b);
     /// }
-    /// assert_eq!(format!("cxf:fnv1a128:{hash:032x}").len(), 45);
+    /// assert_eq!(hash, 0xa68d_622c_ec8b_5822_836d_bc79_77af_7f3b);
     /// ```
     ///
     /// This tag is not a security boundary. Hosts requiring a cryptographic digest must hash the

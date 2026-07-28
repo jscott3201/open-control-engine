@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 
 use crate::{
-    DefaultLiteral, DefaultSource, ParamRule, PortKind, PortNaming, catalog, port_names, registry,
+    BlockKind, DefaultLiteral, DefaultSource, ParamRule, PortKind, PortNaming, catalog, port_names,
+    registry,
 };
+use oce_model::ParamTable;
 
 fn entry(path: &str) -> &'static crate::CatalogEntry {
     catalog()
@@ -139,31 +141,48 @@ fn catalog_metadata_invariants_cross_check_independent_sources() {
                 );
             }
         }
-        let independent_width = entry.param_rules.iter().any(|rule| {
-            matches!(
-                rule,
-                ParamRule::Structural { .. } | ParamRule::StructuralArrayElements { .. }
-            )
-        });
-        assert_eq!(entry.width_driven, independent_width);
         assert_eq!(
             entry.naming == PortNaming::Named,
             port_names::port_names(entry.class_path).is_some()
         );
-        assert_eq!(
-            entry.naming == PortNaming::WidthDriven,
-            port_names::port_names(entry.class_path).is_none() && independent_width
-        );
+        // `port_names_tests::width_driven_classes_are_exactly_the_unnamed_structural_set`
+        // independently re-derives the structural predicate; do not duplicate it from catalog data.
     }
+}
+
+#[test]
+fn class_state_hints_diverge_from_default_instances_only_for_zero_hysteresis_comparators() {
+    let mut divergent: Vec<_> = catalog()
+        .iter()
+        .filter_map(|entry| {
+            let resolved =
+                (registry::lookup(entry.class_path).unwrap().make)(&ParamTable::default());
+            (entry.stateful != (resolved.kind() == BlockKind::Stateful)).then_some(entry.class_path)
+        })
+        .collect();
+    divergent.sort_unstable();
+    assert_eq!(
+        divergent,
+        [
+            "CDL.Reals.Greater",
+            "CDL.Reals.GreaterThreshold",
+            "CDL.Reals.Less",
+            "CDL.Reals.LessThreshold",
+        ]
+    );
 }
 
 #[test]
 fn manifest_data_mutations_are_observable() {
     let control = registry::manifest::render_entries(catalog());
+    assert_eq!(
+        control,
+        include_str!("../../../tools/reference-catalog/oce-blocks.registry-manifest.json")
+    );
     let mut removed = catalog().to_vec();
     removed.pop();
     assert_ne!(registry::manifest::render_entries(&removed), control);
-    assert_ne!(removed.len(), 136);
+    // The source-level 136-entry closure is pinned by `catalog_partition_and_reserved_identities`.
 
     let mut stateful = catalog().to_vec();
     stateful[0].stateful = !stateful[0].stateful;
@@ -174,9 +193,15 @@ fn manifest_data_mutations_are_observable() {
         .iter()
         .position(|entry| entry.class_path == "CDL.Reals.PID")
         .unwrap();
-    literal[index].param_defaults = &[crate::ParamDefault {
-        name: "k",
-        default: DefaultSource::Literal(DefaultLiteral::Real(2.0)),
-    }];
+    let mut defaults = literal[index].param_defaults.to_vec();
+    let default = defaults
+        .iter_mut()
+        .find(|default| default.name == "k")
+        .unwrap();
+    let DefaultSource::Literal(DefaultLiteral::Real(value)) = &mut default.default else {
+        panic!("PID.k is a Real literal");
+    };
+    *value += 1.0;
+    literal[index].param_defaults = Box::leak(defaults.into_boxed_slice());
     assert_ne!(registry::manifest::render_entries(&literal), control);
 }
