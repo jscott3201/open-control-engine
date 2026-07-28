@@ -115,6 +115,14 @@ fn minimal_loop_bytes_match_the_checked_in_golden() {
 fn pass_through_wire_shape_matches_the_checked_in_golden() {
     let bytes = export_stable(PASS_THROUGH_FIXTURE);
     assert_golden(&bytes, "pass_through_miniature.export.cxf.json");
+    let round_two = export(&import_ok(
+        std::str::from_utf8(&bytes).expect("exported UTF-8"),
+    ))
+    .expect("mixed fan-out export re-imports and re-exports");
+    assert_eq!(
+        round_two, bytes,
+        "mixed fan-out must reach the full-graph RT-2 byte fixpoint"
+    );
 
     let document: serde_json::Value = serde_json::from_slice(&bytes).expect("exported JSON");
     let graph = document["@graph"].as_array().expect("@graph array");
@@ -144,14 +152,35 @@ fn pass_through_wire_shape_matches_the_checked_in_golden() {
             "boundary output must carry no reverse edge"
         );
     }
-    let pass_through_targets = graph
+    for suffix in ["realOut", "integerOut", "booleanOut"] {
+        let expected = format!("http://example.org#PassThroughMiniature.{suffix}");
+        let occurrences = graph
+            .iter()
+            .filter_map(|node| node.get("S231:isConnectedTo"))
+            .flat_map(|targets| {
+                targets
+                    .as_array()
+                    .map_or_else(|| vec![targets], |items| items.iter().collect())
+            })
+            .filter(|target| target["@id"].as_str() == Some(expected.as_str()))
+            .count();
+        assert_eq!(occurrences, 1, "{suffix} edge must appear exactly once");
+    }
+    let real_input = graph
         .iter()
-        .filter_map(|node| node.get("S231:isConnectedTo"))
-        .filter(|targets| targets.to_string().contains("PassThroughMiniature"))
-        .count();
+        .find(|node| {
+            node["@id"]
+                .as_str()
+                .is_some_and(|iri| iri.ends_with("realIn"))
+        })
+        .expect("real boundary input");
     assert_eq!(
-        pass_through_targets, 3,
-        "each bare edge appears exactly once"
+        real_input["S231:isConnectedTo"]
+            .as_array()
+            .expect("mixed fan-out targets")
+            .len(),
+        2,
+        "mixed pass-through and child fan-out must merge into one boundary node"
     );
 }
 

@@ -53,6 +53,37 @@ fn assert_repeated_rejection(document: &Value, code: DiagCode, message: &str) {
     assert!(text.contains(message), "{text}");
 }
 
+fn add_second_real_constant(document: &mut Value) {
+    node_mut(document, "#PassThroughMiniature")["S231:containsBlock"] = json!([
+        { "@id": "http://example.org#PassThroughMiniature.keep" },
+        { "@id": "http://example.org#PassThroughMiniature.keepSecond" }
+    ]);
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph array")
+        .extend([
+            json!({
+                "@id": "http://example.org#PassThroughMiniature.keepSecond",
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": {
+                    "@id": "http://example.org#PassThroughMiniature.keepSecond.k"
+                },
+                "S231:hasOutput": {
+                    "@id": "http://example.org#PassThroughMiniature.keepSecond.y"
+                }
+            }),
+            json!({
+                "@id": "http://example.org#PassThroughMiniature.keepSecond.k",
+                "S231:value": 1
+            }),
+            json!({
+                "@id": "http://example.org#PassThroughMiniature.keepSecond.y",
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
+            }),
+        ]);
+}
+
 #[test]
 fn three_scalar_types_lower_with_boundary_iris_on_both_sides() {
     let graph = import(&document()).expect("fixture imports");
@@ -86,16 +117,15 @@ fn three_scalar_types_lower_with_boundary_iris_on_both_sides() {
 #[test]
 fn reverse_and_duplicate_spellings_collapse_to_one_synthetic_without_diagnostics() {
     let mut reverse = document();
-    node_mut(&mut reverse, "realIn")
-        .as_object_mut()
-        .unwrap()
-        .remove("S231:isConnectedTo");
+    node_mut(&mut reverse, "realIn")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#PassThroughMiniature.keep.u" });
     node_mut(&mut reverse, "realOut")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#PassThroughMiniature.realIn" });
     assert_eq!(import(&reverse).expect("reverse imports").blocks.len(), 4);
 
     let mut duplicate = document();
     node_mut(&mut duplicate, "realIn")["S231:isConnectedTo"] = json!([
+        { "@id": "http://example.org#PassThroughMiniature.keep.u" },
         { "@id": "http://example.org#PassThroughMiniature.realOut" },
         { "@id": "http://example.org#PassThroughMiniature.realOut" }
     ]);
@@ -116,11 +146,14 @@ fn reverse_and_duplicate_spellings_collapse_to_one_synthetic_without_diagnostics
 }
 
 #[test]
-fn rejection_diagnostics_are_named_and_byte_deterministic() {
+fn mismatched_boundary_types_reject_deterministically() {
     let mut mismatch = document();
     node_mut(&mut mismatch, "realOut")["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
     assert_repeated_rejection(&mismatch, DiagCode::TypeMismatch, "connected types differ");
+}
 
+#[test]
+fn target_array_endpoint_rejects_deterministically() {
     let mut array = document();
     node_mut(&mut array, "realOut")["S231:isArray"] = json!(true);
     node_mut(&mut array, "realOut")["S231:sizeOfDimensions"] = json!("(2)");
@@ -129,7 +162,24 @@ fn rejection_diagnostics_are_named_and_byte_deterministic() {
         DiagCode::NonSubsetConstruct,
         "array boundary pass-through endpoints are unsupported",
     );
+}
 
+#[test]
+fn source_array_endpoint_rejects_but_explicit_false_is_scalar() {
+    let mut array = document();
+    node_mut(&mut array, "realIn")["S231:isArray"] = json!(true);
+    assert_repeated_rejection(
+        &array,
+        DiagCode::NonSubsetConstruct,
+        "array boundary pass-through endpoints are unsupported",
+    );
+
+    node_mut(&mut array, "realIn")["S231:isArray"] = json!(false);
+    import(&array).expect("isArray false remains scalar");
+}
+
+#[test]
+fn two_boundary_inputs_reject_deterministically() {
     let mut input_pair = document();
     node_mut(&mut input_pair, "realIn")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#PassThroughMiniature.integerIn" });
@@ -138,7 +188,10 @@ fn rejection_diagnostics_are_named_and_byte_deterministic() {
         DiagCode::DirectionMismatch,
         "connection joins two boundary inputs",
     );
+}
 
+#[test]
+fn two_boundary_outputs_reject_deterministically() {
     let mut output_pair = document();
     node_mut(&mut output_pair, "realIn")
         .as_object_mut()
@@ -151,7 +204,10 @@ fn rejection_diagnostics_are_named_and_byte_deterministic() {
         DiagCode::DirectionMismatch,
         "connection joins two boundary outputs",
     );
+}
 
+#[test]
+fn two_pass_through_drivers_reject_deterministically() {
     let mut multiply = document();
     node_mut(&mut multiply, "integerIn")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#PassThroughMiniature.realOut" });
@@ -166,17 +222,73 @@ fn rejection_diagnostics_are_named_and_byte_deterministic() {
 #[test]
 fn underivable_type_does_not_add_a_spurious_type_mismatch() {
     let mut document = document();
-    node_mut(&mut document, "realOut")
+    node_mut(&mut document, "booleanOut")
         .as_object_mut()
         .expect("output object")
         .remove("S231:isOfDataType");
-    node_mut(&mut document, "realOut")["@type"] = json!("S231:Output");
+    node_mut(&mut document, "booleanOut")["@type"] = json!("S231:Output");
     let diagnostics = import(&document).expect_err("underivable datatype is diagnosed");
     assert!(
         diagnostics
             .iter()
             .all(|diagnostic| diagnostic.code != DiagCode::TypeMismatch),
         "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn two_child_outputs_driving_one_boundary_output_reject_deterministically() {
+    let mut document = document();
+    add_second_real_constant(&mut document);
+    node_mut(&mut document, "realIn")
+        .as_object_mut()
+        .expect("input object")
+        .remove("S231:isConnectedTo");
+    node_mut(&mut document, ".keep.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#PassThroughMiniature.realOut" });
+    node_mut(&mut document, ".keepSecond.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#PassThroughMiniature.realOut" });
+    assert_repeated_rejection(
+        &document,
+        DiagCode::SingleAssignment,
+        "boundary output is multiply driven",
+    );
+}
+
+#[test]
+fn mixed_child_and_pass_through_drivers_reject_deterministically() {
+    let mut document = document();
+    node_mut(&mut document, ".keep.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#PassThroughMiniature.realOut" });
+    assert_repeated_rejection(
+        &document,
+        DiagCode::SingleAssignment,
+        "boundary output is multiply driven",
+    );
+}
+
+#[test]
+fn enum_pass_through_rejects_deterministically() {
+    let mut document = document();
+    let datatype = "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard";
+    node_mut(&mut document, "realIn")["S231:isOfDataType"] = json!({ "@id": datatype });
+    node_mut(&mut document, "realOut")["S231:isOfDataType"] = json!({ "@id": datatype });
+    assert_repeated_rejection(
+        &document,
+        DiagCode::NonSubsetConstruct,
+        "non-scalar boundary pass-through type is unsupported",
+    );
+}
+
+#[test]
+fn string_pass_through_rejects_deterministically() {
+    let mut document = document();
+    node_mut(&mut document, "realIn")["S231:isOfDataType"] = json!({ "@id": "S231:String" });
+    node_mut(&mut document, "realOut")["S231:isOfDataType"] = json!({ "@id": "S231:String" });
+    assert_repeated_rejection(
+        &document,
+        DiagCode::NonSubsetConstruct,
+        "non-scalar boundary pass-through type is unsupported",
     );
 }
 
@@ -236,6 +348,7 @@ fn pass_through_target_array_order_does_not_change_graph_or_export() {
         }),
     );
     node_mut(&mut first, "realIn")["S231:isConnectedTo"] = json!([
+        { "@id": "http://example.org#PassThroughMiniature.keep.u" },
         { "@id": "http://example.org#PassThroughMiniature.realOut" },
         { "@id": "http://example.org#PassThroughMiniature.realOutSecond" }
     ]);
@@ -248,6 +361,31 @@ fn pass_through_target_array_order_does_not_change_graph_or_export() {
     let first_graph = import(&first).expect("first spelling imports");
     let second_graph = import(&second).expect("second spelling imports");
     assert_eq!(first_graph.external_inputs, second_graph.external_inputs);
+    let paired_outputs = |graph: &ModelGraph| {
+        graph
+            .external_inputs
+            .iter()
+            .filter(|input_id| {
+                let input = &graph.connectors[input_id.0 as usize];
+                graph.blocks[input.block.0 as usize]
+                    .class_iri
+                    .starts_with("urn:oce:lowering#PassThrough.")
+            })
+            .map(|input_id| {
+                let input = &graph.connectors[input_id.0 as usize];
+                let block = &graph.blocks[input.block.0 as usize];
+                (
+                    input.iri.as_deref().expect("boundary input IRI").to_owned(),
+                    graph.connectors[block.outputs[0].0 as usize]
+                        .iri
+                        .as_deref()
+                        .expect("paired boundary output IRI")
+                        .to_owned(),
+                )
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(paired_outputs(&first_graph), paired_outputs(&second_graph));
     assert_eq!(
         export(&first_graph).expect("first exports"),
         export(&second_graph).expect("second exports")
@@ -257,14 +395,18 @@ fn pass_through_target_array_order_does_not_change_graph_or_export() {
 #[test]
 fn nested_pass_through_splices_in_both_spellings() {
     let mut forward: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
-    node_mut(&mut forward, ".sub")["S231:containsBlock"] =
-        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier" });
+    node_mut(&mut forward, ".sub")["S231:containsBlock"] = json!([
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.gain" },
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier" }
+    ]);
     node_mut(&mut forward, ".sub.u")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.y" });
     node_mut(&mut forward, ".sub.gain.y")
         .as_object_mut()
         .unwrap()
         .remove("S231:isConnectedTo");
+    node_mut(&mut forward, ".sub.enumCarrier.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.gain.u" });
     let forward_graph = import(&forward).expect("forward nested pass-through imports");
 
     let mut reverse = forward.clone();
@@ -279,4 +421,43 @@ fn nested_pass_through_splices_in_both_spellings() {
     let reverse_graph = import(&reverse).expect("reverse nested pass-through imports");
     assert_eq!(forward_graph.connections, reverse_graph.connections);
     assert_eq!(forward_graph.external_inputs, reverse_graph.external_inputs);
+    assert_eq!(forward_graph.connections.len(), 1);
+    let external = &forward_graph.connectors[forward_graph.external_inputs[0].0 as usize];
+    assert_eq!(
+        external.iri.as_deref(),
+        Some("http://example.org#g36.profile.nested_composite.u")
+    );
+    let connection = forward_graph.connections[0];
+    let source = &forward_graph.connectors[connection.from.0 as usize];
+    let target = &forward_graph.connectors[connection.to.0 as usize];
+    assert!(
+        forward_graph.blocks[source.block.0 as usize]
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| iri.ends_with(".sub.enumCarrier"))
+    );
+    assert!(
+        forward_graph.blocks[target.block.0 as usize]
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| iri.ends_with(".sub.gain"))
+    );
+}
+
+#[test]
+fn authored_nested_boundary_cycle_names_the_revisited_boundary() {
+    let mut cycle: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
+    node_mut(&mut cycle, ".sub.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.y" });
+    node_mut(&mut cycle, ".sub.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.u" });
+    let diagnostics = import(&cycle).expect_err("authored boundary cycle must reject");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::UnresolvedReference
+                && diagnostic.subject.as_deref()
+                    == Some("http://example.org#g36.profile.nested_composite.sub.u")
+        }),
+        "{diagnostics:?}"
+    );
 }

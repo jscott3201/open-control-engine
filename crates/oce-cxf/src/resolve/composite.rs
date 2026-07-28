@@ -406,6 +406,12 @@ fn rewrite_connections(
             incoming.entry(target).or_default().push(node.id.as_str());
         }
     }
+    let walk = BoundaryWalk {
+        by_id,
+        incoming: &incoming,
+        specialization,
+        boundary,
+    };
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) || node.is_connected_to.is_empty() {
@@ -419,15 +425,7 @@ fn rewrite_connections(
         }
         let mut targets = Vec::new();
         for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            resolve_target(
-                target,
-                by_id,
-                &incoming,
-                specialization,
-                boundary,
-                &mut HashSet::new(),
-                &mut targets,
-            );
+            resolve_target(target, &walk, &mut HashSet::new(), false, &mut targets);
         }
         if !targets.is_empty() {
             out.entry(source.to_owned()).or_default().extend(targets);
@@ -436,28 +434,33 @@ fn rewrite_connections(
     out
 }
 
+struct BoundaryWalk<'a> {
+    by_id: &'a HashMap<&'a str, &'a Node>,
+    incoming: &'a HashMap<&'a str, Vec<&'a str>>,
+    specialization: &'a Specialization,
+    boundary: &'a BoundaryIndex,
+}
+
 fn resolve_target(
     target: &str,
-    by_id: &HashMap<&str, &Node>,
-    incoming: &HashMap<&str, Vec<&str>>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
+    used_fallback: bool,
     out: &mut Vec<String>,
 ) {
-    if specialization.is_inactive(target) {
+    if walk.specialization.is_inactive(target) {
         out.push(target.to_owned());
         return;
     }
-    if boundary.inputs.contains(target) && !boundary.top_inputs.contains(target) {
-        follow_boundary(target, by_id, incoming, specialization, boundary, seen, out);
+    if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
+        follow_boundary(target, walk, seen, used_fallback, out);
         return;
     }
-    if boundary.outputs.contains(target) {
-        if boundary.top_outputs.contains(target) {
+    if walk.boundary.outputs.contains(target) {
+        if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, by_id, incoming, specialization, boundary, seen, out);
+            follow_boundary(target, walk, seen, used_fallback, out);
         }
         return;
     }
@@ -466,17 +469,22 @@ fn resolve_target(
 
 fn follow_boundary(
     boundary_iri: &str,
-    by_id: &HashMap<&str, &Node>,
-    incoming: &HashMap<&str, Vec<&str>>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
+    used_fallback: bool,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
+        // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
+        // resolver's ordinary dangling-reference diagnostic. The incoming-edge fallback used for
+        // reverse-spelled nested pass-throughs necessarily manufactures a mirror cycle; once that
+        // fallback participates, the revisit is traversal machinery rather than an authored cycle.
+        if !used_fallback {
+            out.push(boundary_iri.to_owned());
+        }
         return;
     }
-    let Some(node) = by_id.get(boundary_iri).copied() else {
+    let Some(node) = walk.by_id.get(boundary_iri).copied() else {
         out.push(boundary_iri.to_owned());
         seen.remove(boundary_iri);
         return;
@@ -486,22 +494,23 @@ fn follow_boundary(
         .iter()
         .map(|r| r.id.as_str())
         .collect::<Vec<_>>();
-    let targets = if authored.is_empty() {
-        incoming
+    let follows_incoming = authored.is_empty();
+    let targets = if follows_incoming {
+        walk.incoming
             .get(boundary_iri)
             .into_iter()
             .flat_map(|targets| targets.iter().copied())
             .filter(|target| {
-                (boundary.inputs.contains(*target) || boundary.outputs.contains(*target))
-                    && !boundary.top_inputs.contains(*target)
-                    && !boundary.top_outputs.contains(*target)
+                (walk.boundary.inputs.contains(*target) || walk.boundary.outputs.contains(*target))
+                    && !walk.boundary.top_inputs.contains(*target)
+                    && !walk.boundary.top_outputs.contains(*target)
             })
             .collect::<Vec<_>>()
     } else {
         authored
     };
     for target in targets {
-        resolve_target(target, by_id, incoming, specialization, boundary, seen, out);
+        resolve_target(target, walk, seen, used_fallback || follows_incoming, out);
     }
     seen.remove(boundary_iri);
 }

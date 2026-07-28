@@ -21,13 +21,19 @@
     },
     {
       "@id": "http://example.org#PassThroughMiniature.keep",
-      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
       "S231:hasParameter": { "@id": "http://example.org#PassThroughMiniature.keep.k" },
+      "S231:hasInput": { "@id": "http://example.org#PassThroughMiniature.keep.u" },
       "S231:hasOutput": { "@id": "http://example.org#PassThroughMiniature.keep.y" }
     },
     {
       "@id": "http://example.org#PassThroughMiniature.keep.k",
       "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.keep.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
     },
     {
       "@id": "http://example.org#PassThroughMiniature.keep.y",
@@ -38,7 +44,10 @@
       "@id": "http://example.org#PassThroughMiniature.realIn",
       "@type": "S231:RealInput",
       "S231:isOfDataType": { "@id": "S231:Real" },
-      "S231:isConnectedTo": { "@id": "http://example.org#PassThroughMiniature.realOut" }
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#PassThroughMiniature.realOut" },
+        { "@id": "http://example.org#PassThroughMiniature.keep.u" }
+      ]
     },
     {
       "@id": "http://example.org#PassThroughMiniature.realOut",

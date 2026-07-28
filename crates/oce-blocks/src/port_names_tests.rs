@@ -15,9 +15,6 @@ use oce_model::ParamTable;
 /// count alone: a class silently joining this set loses its nominal guard, which is exactly the
 /// direction that fails open.
 const EXPECTED_UNNAMED: &[&str] = &[
-    "urn:oce:lowering#PassThrough.Boolean",
-    "urn:oce:lowering#PassThrough.Integer",
-    "urn:oce:lowering#PassThrough.Real",
     // Upstream declares an array output `y[nout]`; the registry carries a single output, so no
     // scalar name is truthful here.
     "CDL.Integers.Sources.TimeTable",
@@ -51,10 +48,10 @@ fn every_named_class_matches_its_registry_signature_arity() {
         checked += 1;
     }
     assert_eq!(
-        checked, 105,
+        checked, 108,
         "named-class count changed. 104 of these are reachable by the vendored-source audit; the \
-         105th is TrueHoldWithReset, which no `.mo` exists for. Growing the set past that adds \
-         names nothing in this repository can contradict."
+         remaining four are TrueHoldWithReset, which has no `.mo`, and the three internal lowering \
+         classes. Growing the set past that adds names nothing in this repository can contradict."
     );
 }
 

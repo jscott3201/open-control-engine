@@ -6,8 +6,15 @@ use oce_model::{Connector, ConnectorId, Dir};
 
 /// Re-anchor one `isConnectedTo` edge on its driving end.
 ///
-/// CXF permits either connector to carry the relationship, while the flat model requires a
-/// driver-to-driven ordering. Invalid same-direction pairs remain unchanged for later diagnostics.
+/// CXF §8.2 gives `connectedTo` the domain *(OutputConnector, InputConnector)* and the range
+/// *(InputConnector, OutputConnector)*, so either endpoint may carry the relationship. CDL also
+/// makes `connect` argument order immaterial; modelica-json preserves that authored order (11 of
+/// 16 edges in `Economizers.Subsequences.Modulations.Reliefs` are input-subject). The flat model,
+/// however, requires driver-to-driven ordering.
+///
+/// Invalid same-direction or unresolved pairs remain unchanged for later diagnostics. Both
+/// boundary-elision arms continue before the general edge checks, so each must validate its own
+/// counterpart; orienting a boundary output into the target slot is what routes it to that check.
 pub(super) fn orient_edge<'a>(
     source: &'a str,
     target: &'a str,

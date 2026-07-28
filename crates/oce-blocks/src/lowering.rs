@@ -3,6 +3,11 @@
 //! These classes are not authored CDL. The CXF resolver synthesizes them to preserve a composite
 //! boundary input connected directly to a boundary output. Each block is stateless, parameterless,
 //! fully feed-through, and copies its scalar `u` value to `y` without conversion.
+//!
+//! The `#` namespace is intentionally unsmuggleable through authored CXF: the bridge keeps only
+//! the fragment after the last `#`, so an authored `urn:oce:lowering#PassThrough.*` reaches lookup
+//! as `PassThrough.*`, never as one of these full reserved class paths. Only internal lowering can
+//! construct these registry identities.
 
 use oce_model::Value;
 

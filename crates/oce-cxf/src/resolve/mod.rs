@@ -55,7 +55,7 @@ use composite::lower;
 use connection_orientation::orient_edge;
 use diags::{finalize_diags, subject_of};
 use specialize::{specialize, validate_g36_parameter_value};
-use value_types::{derive_value_type, first_type, try_derive_value_type};
+use value_types::{derive_value_type, first_type, try_derive_boundary_value_type};
 
 /// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
@@ -485,7 +485,7 @@ pub(crate) fn resolve(
     for node in &doc.graph {
         let iri = node.id.as_str();
         if boundary_in.contains(iri) || boundary_out.contains(iri) {
-            boundary_types.insert(iri, try_derive_value_type(node, &mut diags));
+            boundary_types.insert(iri, try_derive_boundary_value_type(node, &mut diags));
         }
     }
     for node in &doc.graph {
@@ -548,9 +548,10 @@ pub(crate) fn resolve(
                 let source_node = by_id.get(source).copied();
                 let target_node = by_id.get(target).copied();
                 let array_endpoint = source_node
-                    .is_some_and(|node| node.is_array.is_some() || node.size_dims.is_some())
-                    || target_node
-                        .is_some_and(|node| node.is_array.is_some() || node.size_dims.is_some());
+                    .is_some_and(|node| node.is_array == Some(true) || node.size_dims.is_some())
+                    || target_node.is_some_and(|node| {
+                        node.is_array == Some(true) || node.size_dims.is_some()
+                    });
                 if array_endpoint {
                     diags.push(
                         Diagnostic::error(
@@ -576,6 +577,7 @@ pub(crate) fn resolve(
                         )
                         .with_subject(target.to_owned()),
                     );
+                    continue;
                 }
                 let pair = (source.to_owned(), target.to_owned());
                 if seen_pass_through_pairs.insert(pair.clone()) {

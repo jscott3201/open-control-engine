@@ -9,7 +9,7 @@
 //! - `oce-validate`'s `check_ports_dir` compares each position's *kind* against the signature.
 //!
 //! A transposition between two ports of the **same kind** passes both and silently computes a
-//! different answer. 30 of the 133 registered blocks are exposed, with 282 instances live across
+//! different answer. 30 of the 136 registered blocks are exposed, with 282 instances live across
 //! 33 of the 46 G36 fixtures. The severe cases are asymmetric: `Reals.PID` with `u_s`/`u_m`
 //! transposed inverts the control action, and `Logical.Latch` with `u`/`clr` transposed inverts
 //! the latch. Neither is a type error, so nothing else in the workspace can see it.

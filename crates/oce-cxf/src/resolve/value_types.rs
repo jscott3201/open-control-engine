@@ -82,3 +82,23 @@ pub(super) fn try_derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) ->
         }
     }
 }
+
+/// Derive a boundary type while retaining `String` for the pass-through-specific subset error.
+///
+/// Ordinary child connectors still reject `String` in [`try_derive_value_type`] under §7.8.
+pub(super) fn try_derive_boundary_value_type(
+    node: &Node,
+    diags: &mut Vec<Diagnostic>,
+) -> Option<ValueType> {
+    if node
+        .is_of_data_type
+        .as_ref()
+        .is_some_and(|datatype| term_of(&datatype.id) == "String")
+        || first_type(node)
+            .map(term_of)
+            .is_some_and(|term| term.starts_with("String"))
+    {
+        return Some(ValueType::String);
+    }
+    try_derive_value_type(node, diags)
+}

@@ -79,6 +79,7 @@ use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
 use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 use crate::export_defer::deferral_set;
+use crate::export_pass_through::has_valid_shape;
 use crate::{CxfError, bridge};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
@@ -414,19 +415,29 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // the only honest result: total deferral has nothing to emit. PARTIAL deferral is untouched —
     // it still returns `Ok` with `ExportDeferred` warnings. Pushed rather than returned early so
     // the deferral warnings (already in `diags`) and every other offender still reach the caller.
-    if blocks.is_empty()
-        && !g
-            .blocks
-            .iter()
-            .any(|block| is_pass_through_class(&block.class_iri))
-    {
+    if blocks.is_empty() {
         diags.push(Diagnostic::error(
             DiagCode::ExportUnsupported,
             MSG_TOTAL_DEFERRAL,
         ));
     }
 
-    // Phase 3 — orphan scan. SKIP connectors whose owning block is deferred: a deferred block's
+    // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
+    // the same single typed external In/Out pair as resolver-produced blocks.
+    for (bi, block) in g.blocks.iter().enumerate() {
+        if !is_pass_through_class(&block.class_iri) {
+            continue;
+        }
+        if !has_valid_shape(g, bi) {
+            let subject = block
+                .instance_iri
+                .as_deref()
+                .map_or_else(|| format!("block#{bi}"), str::to_owned);
+            diags.push(reject(MSG_STRUCTURE, &subject));
+        }
+    }
+
+    // SKIP connectors whose owning block is deferred: a deferred block's
     // connectors are never claimed (Phase 2 skipped `claim_port`), so `port_iri[i]` is `None`.
     // Without this skip the orphan scan would inject `MSG_STRUCTURE` Errors for every deferred
     // connector → `has_errors` true → the Defer state (warnings-only) would be unreachable. The
