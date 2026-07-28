@@ -91,8 +91,8 @@ the facade: `Engine::export_cxf()` returns the same byte-deterministic document 
 deferral warnings intact, and `ExportReport::content_id()` mints a documented
 **non-cryptographic** integrity tag (`cxf:fnv1a128:<hex>`) over exactly those bytes — a
 different identity from `LoadReport::model_id`, and one that names a *partial* document
-whenever warnings are present. A read-only `Engine::topology()` snapshot (blocks, typed
-connections, external inputs, pass-through pairs) rounds out the host-introspection surface.
+whenever warnings are present. A read-only `Engine::topology()` snapshot (blocks, connections,
+external inputs, pass-through pairs) rounds out the host-introspection surface.
 
 **What the goldens do and do not prove.** Each of the 46 G36 fixtures carries a whole-sequence
 trace and a `.prov.json` recording its provenance, and every one of them records `"tier": "2"` —
