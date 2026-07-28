@@ -408,6 +408,27 @@ fn nodeless_boundary_output_is_rejected_once_with_boundary_subject() {
 }
 
 #[test]
+fn nodeless_boundary_shared_by_input_and_output_lists_is_rejected_once() {
+    let mut doc = base();
+    let missing = json!({ "@id": "http://example.org#M.missingBoundary" });
+    node_mut(&mut doc, "#M")["S231:hasInput"] = missing.clone();
+    node_mut(&mut doc, "#M")["S231:hasOutput"] = missing;
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingBoundary")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "one IRI in both boundary lists is diagnosed once: {diags:#?}"
+    );
+}
+
+#[test]
 fn expr_referencing_unbound_param_is_grounding_failure() {
     let mut doc = base();
     // A bare-string S231:value is parsed as CxfValue::Expr; an unbound symbol fails to ground.

@@ -257,6 +257,8 @@ pub(crate) fn resolve(
         .chain(top.has_output.iter())
         .map(|r| r.id.as_str())
     {
+        // Re-apply the specialization-filtered sets so an inactive conditional boundary whose
+        // node is absent does not diagnose.
         if (boundary_in.contains(iri) || boundary_out.contains(iri))
             && !by_id.contains_key(iri)
             && missing_boundaries.insert(iri)
