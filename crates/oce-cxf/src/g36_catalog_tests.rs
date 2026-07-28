@@ -202,7 +202,7 @@ fn g36_catalog_guard_mutations_cover_required_failures() {
 
     let bad_guard = FixtureSource {
         name: "parameter_gated_connector",
-        path: "_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld",
+        path: "crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld",
         text: PARAMETER_GATED_UNKNOWN_PARAMETER,
     };
     let profile_fixtures = [PROFILE_FIXTURES[0], bad_guard];
