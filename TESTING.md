@@ -250,9 +250,17 @@ audit recorded as passing. Renaming a port to something upstream never used prev
 the reference data and the fixtures changed together; it now needs the shipping registry changed as
 well, and that is code, not test data.
 
-Names still have no *runtime* authority — the resolver binds ports by document array position and
-does not consult the table. Making it bind by name is the next change, and it is what turns these
-names from data that agrees with other data into data with consequences.
+The names also have runtime authority now. The resolver matches each block's port IRIs against its
+class's declared names and **permutes the ports into signature order**, so a document that lists
+ports in some other order is wired correctly rather than mis-wired or rejected. That distinction is
+the point: the reference toolchain `modelica-json` renders connectors sorted alphabetically by
+label, so rejecting a non-declaration order would refuse valid input. Ordering is a renderer's
+choice; identity is not.
+
+Binding applies only when every port IRI names a declared port. A document naming none of them —
+this engine's own exports mint `.in0`/`.out0` — binds positionally, exactly as before. A document
+naming *some* is reported as `port-name-mismatch`, because it follows no convention that can be
+read safely either way. The 29 classes with no declared names always bind positionally.
 
 **The scanner is asserted against its own silence**, because "found nothing" is how every scope
 bug in this extractor's history presented itself. A class that parses to zero ports is a hard
