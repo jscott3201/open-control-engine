@@ -26,7 +26,7 @@ const EXPECTED_UNNAMED: &[&str] = &[
 ///
 /// This is the load-bearing check in this file. The table and the `BlockSignature`s are authored
 /// separately — different files, different shapes — so an index-for-index arity agreement across
-/// all 104 entries is a real constraint rather than a restatement.
+/// all 108 entries is a real constraint rather than a restatement.
 #[test]
 fn every_named_class_matches_its_registry_signature_arity() {
     let mut checked = 0usize;

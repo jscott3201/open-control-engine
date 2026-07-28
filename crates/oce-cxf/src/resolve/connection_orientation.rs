@@ -12,9 +12,10 @@ use oce_model::{Connector, ConnectorId, Dir};
 /// 16 edges in `Economizers.Subsequences.Modulations.Reliefs` are input-subject). The flat model,
 /// however, requires driver-to-driven ordering.
 ///
-/// Invalid same-direction or unresolved pairs remain unchanged for later diagnostics. Both
-/// boundary-elision arms continue before the general edge checks, so each must validate its own
-/// counterpart; orienting a boundary output into the target slot is what routes it to that check.
+/// Invalid same-direction or unresolved pairs remain unchanged for later diagnostics. Step 9 has
+/// five arms that continue before the general edge checks, and Step 10 only sees edges that reach
+/// it, so each early arm must validate its own counterpart; orienting a boundary output into the
+/// target slot is what routes it to that check.
 pub(super) fn orient_edge<'a>(
     source: &'a str,
     target: &'a str,

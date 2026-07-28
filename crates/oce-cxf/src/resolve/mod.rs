@@ -28,7 +28,6 @@ use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_expr::EvalResult;
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
-    ValueType,
 };
 
 use crate::arrays::expand_array_param;
@@ -55,7 +54,7 @@ use composite::lower;
 use connection_orientation::orient_edge;
 use diags::{finalize_diags, subject_of};
 use specialize::{specialize, validate_g36_parameter_value};
-use value_types::{derive_value_type, first_type, try_derive_boundary_value_type};
+use value_types::{derive_value_type, first_type};
 
 /// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
@@ -481,13 +480,8 @@ pub(crate) fn resolve(
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
-    let mut boundary_types: HashMap<&str, Option<ValueType>> = HashMap::new();
-    for node in &doc.graph {
-        let iri = node.id.as_str();
-        if boundary_in.contains(iri) || boundary_out.contains(iri) {
-            boundary_types.insert(iri, try_derive_boundary_value_type(node, &mut diags));
-        }
-    }
+    let boundary_types =
+        pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) {

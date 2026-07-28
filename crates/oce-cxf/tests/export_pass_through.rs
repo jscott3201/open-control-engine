@@ -11,8 +11,8 @@ use oce_model::{
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
 const DUPLICATE_ID: &str = "export subset: emitted node @id collides with another emitted node @id";
-const TOTAL_DEFERRAL: &str = "CXF export requires at least one surviving block: every block was \
-     deferred (enumeration content plus its downstream cascade), leaving no runtime composite to emit";
+const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
+     were deferred or reserved lowering-only, leaving no runtime composite to emit";
 
 fn connector(id: u32, block: u32, dir: Dir, iri: Option<&'static str>) -> Connector {
     let mut connector = Connector::new(ConnectorId(id), BlockId(block), dir, ValueType::Real, id);
@@ -73,6 +73,35 @@ fn malformed_reserved_block_rejects_loudly() {
 }
 
 #[test]
+fn every_reserved_shape_conjunct_rejects_loudly() {
+    let valid = || ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+    };
+    let mut missing_external = valid();
+    missing_external.external_inputs.clear();
+    let mut wrong_direction = valid();
+    wrong_direction.connectors[0].dir = Dir::Out;
+    let mut mismatched_type = valid();
+    mismatched_type.connectors[1].value_type = ValueType::Integer;
+    for graph in [missing_external, wrong_direction, mismatched_type] {
+        let diagnostics = rejection(&graph);
+        assert!(
+            diagnostics.iter().any(|diagnostic| {
+                diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+            }),
+            "{diagnostics:?}"
+        );
+    }
+}
+
+#[test]
 fn boundary_output_iri_collision_rejects_at_plan_time() {
     let graph = ModelGraph {
         blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
@@ -118,6 +147,26 @@ fn pass_through_plus_only_deferred_blocks_rejects_total_deferral() {
             connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
             connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
             connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+    };
+    let diagnostics = rejection(&graph);
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.message == TOTAL_DEFERRAL),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn only_reserved_pass_through_blocks_reject_with_truthful_message() {
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)])],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],

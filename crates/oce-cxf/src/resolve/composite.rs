@@ -425,7 +425,7 @@ fn rewrite_connections(
         }
         let mut targets = Vec::new();
         for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            resolve_target(target, &walk, &mut HashSet::new(), false, &mut targets);
+            resolve_target(target, &walk, &mut HashSet::new(), None, &mut targets);
         }
         if !targets.is_empty() {
             out.entry(source.to_owned()).or_default().extend(targets);
@@ -445,7 +445,7 @@ fn resolve_target(
     target: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    used_fallback: bool,
+    excluded_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if walk.specialization.is_inactive(target) {
@@ -453,14 +453,14 @@ fn resolve_target(
         return;
     }
     if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
-        follow_boundary(target, walk, seen, used_fallback, out);
+        follow_boundary(target, walk, seen, excluded_predecessor, out);
         return;
     }
     if walk.boundary.outputs.contains(target) {
         if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, walk, seen, used_fallback, out);
+            follow_boundary(target, walk, seen, excluded_predecessor, out);
         }
         return;
     }
@@ -471,17 +471,13 @@ fn follow_boundary(
     boundary_iri: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    used_fallback: bool,
+    excluded_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
         // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
-        // resolver's ordinary dangling-reference diagnostic. The incoming-edge fallback used for
-        // reverse-spelled nested pass-throughs necessarily manufactures a mirror cycle; once that
-        // fallback participates, the revisit is traversal machinery rather than an authored cycle.
-        if !used_fallback {
-            out.push(boundary_iri.to_owned());
-        }
+        // resolver's ordinary dangling-reference diagnostic.
+        out.push(boundary_iri.to_owned());
         return;
     }
     let Some(node) = walk.by_id.get(boundary_iri).copied() else {
@@ -510,7 +506,18 @@ fn follow_boundary(
         authored
     };
     for target in targets {
-        resolve_target(target, walk, seen, used_fallback || follows_incoming, out);
+        // A reverse-spelled fallback follows an incoming boundary edge. At the node it reaches,
+        // exclude only the manufactured mirror edge back to that exact predecessor; any other
+        // authored target remains visible, including a downstream cycle.
+        if Some(target) != excluded_predecessor {
+            resolve_target(
+                target,
+                walk,
+                seen,
+                follows_incoming.then_some(boundary_iri),
+                out,
+            );
+        }
     }
     seen.remove(boundary_iri);
 }

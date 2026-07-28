@@ -293,6 +293,51 @@ fn string_pass_through_rejects_deterministically() {
 }
 
 #[test]
+fn unwired_string_boundaries_keep_their_ordinary_rejections() {
+    let mut document = document();
+    node_mut(&mut document, "realIn")
+        .as_object_mut()
+        .expect("real input")
+        .remove("S231:isConnectedTo");
+    node_mut(&mut document, "realIn")["S231:isOfDataType"] = json!({ "@id": "S231:String" });
+    node_mut(&mut document, "realOut")
+        .as_object_mut()
+        .expect("real output")
+        .remove("S231:isOfDataType");
+    node_mut(&mut document, "realOut")["@type"] = json!("S231:StringOutput");
+    let diagnostics = import(&document).expect_err("unwired String boundaries must reject");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::UnresolvedReference
+                && diagnostic.subject.as_deref() == Some("S231:String")
+        }),
+        "{diagnostics:?}"
+    );
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::MalformedDocument
+                && diagnostic.subject.as_deref()
+                    == Some("http://example.org#PassThroughMiniature.realOut")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn datatype_precedence_keeps_string_shaped_pass_through_real() {
+    let mut document = document();
+    node_mut(&mut document, "realIn")["@type"] = json!("S231:StringInput");
+    node_mut(&mut document, "realOut")["@type"] = json!("S231:StringOutput");
+    let graph = import(&document).expect("isOfDataType Real takes precedence");
+    assert!(
+        graph
+            .blocks
+            .iter()
+            .any(|block| block.class_iri.as_ref() == "urn:oce:lowering#PassThrough.Real")
+    );
+}
+
+#[test]
 fn reserved_iri_authored_use_remains_an_unknown_class() {
     let mut document = document();
     node_mut(&mut document, ".keep")["@type"] = json!("urn:oce:lowering#PassThrough.Real");
@@ -427,6 +472,12 @@ fn nested_pass_through_splices_in_both_spellings() {
         external.iri.as_deref(),
         Some("http://example.org#g36.profile.nested_composite.u")
     );
+    assert!(
+        forward_graph.blocks[external.block.0 as usize]
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| iri.ends_with(".post"))
+    );
     let connection = forward_graph.connections[0];
     let source = &forward_graph.connectors[connection.from.0 as usize];
     let target = &forward_graph.connectors[connection.to.0 as usize];
@@ -457,6 +508,56 @@ fn authored_nested_boundary_cycle_names_the_revisited_boundary() {
             diagnostic.code == DiagCode::UnresolvedReference
                 && diagnostic.subject.as_deref()
                     == Some("http://example.org#g36.profile.nested_composite.sub.u")
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn authored_boundary_cycle_after_reverse_fallback_names_the_revisited_boundary() {
+    let mut cycle: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
+    node_mut(&mut cycle, ".sub.u")
+        .as_object_mut()
+        .expect("sub input node")
+        .remove("S231:isConnectedTo");
+    node_mut(&mut cycle, ".sub.y")["S231:isConnectedTo"] = json!([
+        { "@id": "http://example.org#g36.profile.nested_composite.sub.u" },
+        { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" }
+    ]);
+    node_mut(&mut cycle, "nested_composite")["S231:containsBlock"]
+        .as_array_mut()
+        .expect("root containsBlock")
+        .push(json!({ "@id": "http://example.org#g36.profile.nested_composite.sub2" }));
+    cycle["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .extend([
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2",
+                "@type": "S231:Block",
+                "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" },
+                "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.y" },
+                "S231:containsBlock": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain" }
+            }),
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2.u",
+                "@type": "S231:RealInput",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub2.y" }
+            }),
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2.y",
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" }
+            }),
+        ]);
+    let diagnostics = import(&cycle).expect_err("authored cycle after fallback must reject");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::UnresolvedReference
+                && diagnostic.subject.as_deref()
+                    == Some("http://example.org#g36.profile.nested_composite.sub2.u")
         }),
         "{diagnostics:?}"
     );

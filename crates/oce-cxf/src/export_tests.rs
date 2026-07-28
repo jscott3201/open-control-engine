@@ -676,8 +676,8 @@ fn enum_typed_connector_defers_with_the_owning_block_subject() {
             && d.code == DiagCode::ExportUnsupported
             && d.subject.is_none()
             && d.message
-                .starts_with("CXF export requires at least one surviving block:")),
-        "total deferral must carry the surviving-block error: {diags:?}"
+                .starts_with("CXF export requires at least one emitted runtime block:")),
+        "total deferral must carry the no-runtime-block error: {diags:?}"
     );
 }
 

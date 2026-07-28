@@ -68,8 +68,9 @@
 //! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
 //! at all (not from its connectors' attributes, not from its boundary entries), so a partly
 //! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
-//! exception is *total* deferral — when the cascade leaves zero surviving blocks the document
-//! would be an unloadable root-only shell, so that is an error ([`MSG_TOTAL_DEFERRAL`]).
+//! exception is a non-empty graph with zero emitted runtime blocks after deferred and reserved
+//! lowering-only blocks are omitted: that would be an unloadable root-only shell, so it is an
+//! error ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -101,14 +102,11 @@ const CLASS_IRI_BASE: &str = "http://example.org#";
 /// `MalformedDocument` — there is nothing warning-free to emit.
 const MSG_EMPTY: &str =
     "CXF export requires at least one block: an empty ModelGraph has no runtime composite to emit";
-/// Whole-operation rejection when the deferral cascade defers **every** block: the plan holds no
-/// surviving block, so `build()` would map `containsBlock` to `OneOrMany::None`, omit the key, and
-/// emit the same unloadable root-only document `MSG_EMPTY` names — reached from a NON-empty input
-/// graph. Deliberately a message of its own rather than a reuse of `MSG_EMPTY`: that text blames an
-/// empty `ModelGraph`, which would be a false statement about a graph that had blocks and lost them
-/// all to enumeration content, and would point a host at the wrong fix.
-const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one surviving block: every block was deferred (enumeration \
-     content plus its downstream cascade), leaving no runtime composite to emit";
+/// Whole-operation rejection when no emitted runtime block remains after deferred and reserved
+/// lowering-only blocks are omitted. In that state `build()` would emit the same unloadable
+/// root-only document `MSG_EMPTY` names, despite receiving a non-empty input graph.
+const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
+     were deferred or reserved lowering-only, leaving no runtime composite to emit";
 /// A block without an `instance_iri` cannot name its CXF node (hand-built graphs only; every
 /// imported block carries one).
 const MSG_NO_INSTANCE_IRI: &str = "export subset: block has no instance_iri to name its CXF node";
