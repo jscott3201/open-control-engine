@@ -400,6 +400,12 @@ fn rewrite_connections(
     boundary: &BoundaryIndex,
 ) -> HashMap<String, Vec<String>> {
     let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    let mut incoming: HashMap<&str, Vec<&str>> = HashMap::new();
+    for node in &doc.graph {
+        for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
+            incoming.entry(target).or_default().push(node.id.as_str());
+        }
+    }
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) || node.is_connected_to.is_empty() {
@@ -416,6 +422,7 @@ fn rewrite_connections(
             resolve_target(
                 target,
                 by_id,
+                &incoming,
                 specialization,
                 boundary,
                 &mut HashSet::new(),
@@ -432,6 +439,7 @@ fn rewrite_connections(
 fn resolve_target(
     target: &str,
     by_id: &HashMap<&str, &Node>,
+    incoming: &HashMap<&str, Vec<&str>>,
     specialization: &Specialization,
     boundary: &BoundaryIndex,
     seen: &mut HashSet<String>,
@@ -442,14 +450,14 @@ fn resolve_target(
         return;
     }
     if boundary.inputs.contains(target) && !boundary.top_inputs.contains(target) {
-        follow_boundary(target, by_id, specialization, boundary, seen, out);
+        follow_boundary(target, by_id, incoming, specialization, boundary, seen, out);
         return;
     }
     if boundary.outputs.contains(target) {
         if boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, by_id, specialization, boundary, seen, out);
+            follow_boundary(target, by_id, incoming, specialization, boundary, seen, out);
         }
         return;
     }
@@ -459,13 +467,13 @@ fn resolve_target(
 fn follow_boundary(
     boundary_iri: &str,
     by_id: &HashMap<&str, &Node>,
+    incoming: &HashMap<&str, Vec<&str>>,
     specialization: &Specialization,
     boundary: &BoundaryIndex,
     seen: &mut HashSet<String>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
-        out.push(boundary_iri.to_owned());
         return;
     }
     let Some(node) = by_id.get(boundary_iri).copied() else {
@@ -473,8 +481,27 @@ fn follow_boundary(
         seen.remove(boundary_iri);
         return;
     };
-    for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-        resolve_target(target, by_id, specialization, boundary, seen, out);
+    let authored = node
+        .is_connected_to
+        .iter()
+        .map(|r| r.id.as_str())
+        .collect::<Vec<_>>();
+    let targets = if authored.is_empty() {
+        incoming
+            .get(boundary_iri)
+            .into_iter()
+            .flat_map(|targets| targets.iter().copied())
+            .filter(|target| {
+                (boundary.inputs.contains(*target) || boundary.outputs.contains(*target))
+                    && !boundary.top_inputs.contains(*target)
+                    && !boundary.top_outputs.contains(*target)
+            })
+            .collect::<Vec<_>>()
+    } else {
+        authored
+    };
+    for target in targets {
+        resolve_target(target, by_id, incoming, specialization, boundary, seen, out);
     }
     seen.remove(boundary_iri);
 }

@@ -164,12 +164,6 @@ fn render(rows: &SuiteRows, excluded: &ExcludedRows) -> String {
         for (x, y) in &a.ouronly {
             let _ = writeln!(out, "   ouronly: {x}  ~  {y}");
         }
-        for (src, dst, via) in &a.passthrough {
-            let _ = writeln!(
-                out,
-                "   passthrough: {src} ~ {dst}  (ours synthesizes And-gate '{via}' + const-true)"
-            );
-        }
         for p in &a.unknown_inst {
             let _ = writeln!(out, "   unknown-cond instance: {p}");
         }
@@ -453,39 +447,5 @@ fn vector_port_element_collapses_to_its_declared_stem() {
     assert_eq!(
         structural_oracle::compare::canon_endpoint(&flat, &id, "yRelFan_3"),
         "yRelFan"
-    );
-}
-
-#[test]
-fn const_false_feeder_is_not_a_passthrough() {
-    let manifest = load_manifest();
-    let path = manifest
-        .keys()
-        .find(|p| p.ends_with("multizone_vav_return_fan_airflow_tracking.jsonld"))
-        .expect("return-fan fixture in manifest")
-        .clone();
-    let entry = manifest[&path].clone();
-    let mut graph = fixture_graph(&path);
-    let control = analyse_graph(&entry, &graph);
-    assert_eq!(
-        control.passthrough.len(),
-        1,
-        "control lost its passthrough: {control:?}"
-    );
-    let i = node_index(&graph, ".tru.k");
-    assert_eq!(
-        graph[i]["S231:value"],
-        Value::Bool(true),
-        "mutation anchor drifted"
-    );
-    graph[i]["S231:value"] = Value::Bool(false);
-    let a = analyse_graph(&entry, &graph);
-    assert!(
-        a.passthrough.is_empty(),
-        "const-false gate misclassified: {a:?}"
-    );
-    assert!(
-        a.extra.len() >= 2,
-        "gate and feeder not surfaced as extra: {a:?}"
     );
 }

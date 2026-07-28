@@ -16,7 +16,8 @@ const AVERAGED_PRESSURE: &str = "conn#1";
 const RELIEF_DAMPER_COMMAND: &str = "conn#20";
 const DISCHARGE_PRESSURE_SETPOINT: &str = "conn#24";
 const RETURN_FAN_SPEED: &str = "conn#37";
-const RETURN_FAN_STATUS: &str = "conn#54";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 
 const EXPECTED_TIMES: [f64; 6] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 
@@ -220,7 +221,7 @@ fn load_return_fan_direct_pressure() -> Engine {
     let report = engine
         .load_cxf(RETURN_FAN_DIRECT_PRESSURE.as_bytes())
         .expect("source-verified G36 ReturnFanDirectPressure fixture loads");
-    assert_eq!(report.block_count, 23);
+    assert_eq!(report.block_count, 22);
     assert_eq!(report.stateful_blocks, 2);
     assert!(
         report.warnings.is_empty(),
@@ -385,7 +386,7 @@ fn multizone_vav_return_fan_direct_pressure_loads_simulates_and_is_deterministic
         .filter(|point| point.direction == PointDirection::Out)
         .count();
     assert_eq!(
-        output_count, 23,
+        output_count, 22,
         "each active block should expose one output"
     );
 

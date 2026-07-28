@@ -14,6 +14,7 @@ mod logical;
 mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
+mod lowering;
 mod pid;
 mod psychrometrics;
 mod reals;
@@ -129,6 +130,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     logical_proof::ENTRIES,
     logical_variable_pulse::ENTRIES,
     logical_timing::ENTRIES,
+    lowering::ENTRIES,
     conversions::ENTRIES,
     integers::ENTRIES,
     routing::ENTRIES,

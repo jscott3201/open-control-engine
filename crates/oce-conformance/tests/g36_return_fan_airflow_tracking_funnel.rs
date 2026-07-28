@@ -25,7 +25,8 @@ const RETURN_AIRFLOW: &str =
 const SUPPLY_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
 const RETURN_FAN_SPEED: &str = "conn#6";
-const RETURN_FAN_STATUS: &str = "conn#14";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_airflow", SUPPLY_AIRFLOW),

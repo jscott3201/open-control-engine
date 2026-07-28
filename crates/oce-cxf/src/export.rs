@@ -180,6 +180,7 @@ struct Plan {
     blocks: Vec<PlannedBlock>,
     ports: Vec<PlannedPort>,
     boundaries: Vec<PlannedBoundary>,
+    boundary_outputs: Vec<PlannedBoundaryOutput>,
 }
 
 /// One block node plus its parameter nodes, with every `@id` already minted.
@@ -206,6 +207,21 @@ struct PlannedBoundary {
     iri: String,
     datatype: &'static str,
     targets: Vec<String>,
+}
+
+/// One boundary-output node emitted only for a reserved pass-through pair.
+struct PlannedBoundaryOutput {
+    iri: String,
+    datatype: &'static str,
+}
+
+fn is_pass_through_class(class_path: &str) -> bool {
+    matches!(
+        class_path,
+        "urn:oce:lowering#PassThrough.Real"
+            | "urn:oce:lowering#PassThrough.Integer"
+            | "urn:oce:lowering#PassThrough.Boolean"
+    )
 }
 
 /// Export `model` as a CXF document plus the deferral warnings (empty for a fully-in-subset
@@ -303,6 +319,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if deferred.contains(&bi) {
             continue;
         }
+        if is_pass_through_class(&b.class_iri) {
+            continue;
+        }
         let subject: String = match b.instance_iri.as_deref() {
             Some(iri) => iri.to_owned(),
             None => {
@@ -395,7 +414,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // the only honest result: total deferral has nothing to emit. PARTIAL deferral is untouched —
     // it still returns `Ok` with `ExportDeferred` warnings. Pushed rather than returned early so
     // the deferral warnings (already in `diags`) and every other offender still reach the caller.
-    if blocks.is_empty() {
+    if blocks.is_empty()
+        && !g
+            .blocks
+            .iter()
+            .any(|block| is_pass_through_class(&block.class_iri))
+    {
         diags.push(Diagnostic::error(
             DiagCode::ExportUnsupported,
             MSG_TOTAL_DEFERRAL,
@@ -409,6 +433,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // gate flip alone is insufficient; this skip is load-bearing.
     for (i, c) in g.connectors.iter().enumerate() {
         if deferred.contains(&(c.block.0 as usize)) {
+            continue;
+        }
+        if g.blocks
+            .get(c.block.0 as usize)
+            .is_some_and(|block| is_pass_through_class(&block.class_iri))
+        {
             continue;
         }
         if port_iri[i].is_none() {
@@ -562,6 +592,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // scan: an omitted block contributes no errors. That arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
+    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -597,10 +628,44 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             diags.push(reject(MSG_EXTERNAL_IRI, &subject));
             continue;
         };
-        let Some(target) = port_iri[idx].as_ref() else {
-            continue; // orphan connector: already rejected above
-        };
         let datatype = datatypes[idx];
+        let pass_through_output = g
+            .blocks
+            .get(c.block.0 as usize)
+            .filter(|block| is_pass_through_class(&block.class_iri))
+            .and_then(|block| {
+                (block.inputs.as_slice() == [*cid] && block.outputs.len() == 1)
+                    .then_some(block.outputs[0])
+            });
+        let target = if let Some(output_id) = pass_through_output {
+            let output_idx = output_id.0 as usize;
+            let Some(output) = g.connectors.get(output_idx) else {
+                diags.push(reject(MSG_STRUCTURE, &subject));
+                continue;
+            };
+            if output.dir != Dir::Out
+                || output.block != c.block
+                || datatypes.get(output_idx).copied() != Some(datatype)
+            {
+                diags.push(reject(MSG_STRUCTURE, &subject));
+                continue;
+            }
+            let Some(output_iri) = output.iri.as_deref() else {
+                diags.push(reject(MSG_EXTERNAL_IRI, &subject));
+                continue;
+            };
+            claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
+            boundary_outputs.push(PlannedBoundaryOutput {
+                iri: output_iri.to_owned(),
+                datatype,
+            });
+            output_iri.to_owned()
+        } else {
+            let Some(target) = port_iri[idx].as_ref() else {
+                continue; // orphan connector: already rejected above
+            };
+            target.clone()
+        };
         match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
             Some(pb) if pb.datatype != datatype => {
                 diags.push(reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
@@ -613,7 +678,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 boundaries.push(PlannedBoundary {
                     iri: boundary_iri.to_owned(),
                     datatype,
-                    targets: vec![target.clone()],
+                    targets: vec![target],
                 });
             }
         }
@@ -642,6 +707,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if deferred.contains(&(c.block.0 as usize)) {
             continue;
         }
+        if g.blocks
+            .get(c.block.0 as usize)
+            .is_some_and(|block| is_pass_through_class(&block.class_iri))
+        {
+            continue;
+        }
         let Some(iri) = minted else {
             // Unreachable for a survivor after the orphan scan; kept total (never a panic).
             return Err(vec![Diagnostic::error(
@@ -662,6 +733,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             blocks,
             ports,
             boundaries,
+            boundary_outputs,
         },
         diags,
     ))
@@ -886,6 +958,12 @@ fn build(plan: Plan) -> CxfDocument {
     let mut root = blank_node(EXPORT_ROOT_IRI.to_owned());
     root.r#type = Some(OneOrMany::One("S231:Block".to_owned()));
     root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.clone()).collect());
+    root.has_output = refs(
+        plan.boundary_outputs
+            .iter()
+            .map(|output| output.iri.clone())
+            .collect(),
+    );
     root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
     graph.push(root);
 
@@ -915,6 +993,12 @@ fn build(plan: Plan) -> CxfDocument {
         let mut node = blank_node(boundary.iri);
         node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
         node.is_connected_to = refs(boundary.targets);
+        graph.push(node);
+    }
+
+    for output in plan.boundary_outputs {
+        let mut node = blank_node(output.iri);
+        node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
         graph.push(node);
     }
 

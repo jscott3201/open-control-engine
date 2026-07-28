@@ -15,6 +15,9 @@ use oce_model::ParamTable;
 /// count alone: a class silently joining this set loses its nominal guard, which is exactly the
 /// direction that fails open.
 const EXPECTED_UNNAMED: &[&str] = &[
+    "urn:oce:lowering#PassThrough.Boolean",
+    "urn:oce:lowering#PassThrough.Integer",
+    "urn:oce:lowering#PassThrough.Real",
     // Upstream declares an array output `y[nout]`; the registry carries a single output, so no
     // scalar name is truthful here.
     "CDL.Integers.Sources.TimeTable",
@@ -136,7 +139,7 @@ fn unnamed_classes_are_exactly_the_documented_exemptions() {
             unnamed.push(entry.class_path);
         }
     }
-    assert_eq!(registered, 133, "registered class count changed");
+    assert_eq!(registered, 136, "registered class count changed");
     unnamed.sort_unstable();
     let mut expected: Vec<&str> = EXPECTED_UNNAMED.to_vec();
     expected.sort_unstable();

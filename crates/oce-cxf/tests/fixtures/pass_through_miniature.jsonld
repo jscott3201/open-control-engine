@@ -1,0 +1,71 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#PassThroughMiniature",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#PassThroughMiniature.keep" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#PassThroughMiniature.realIn" },
+        { "@id": "http://example.org#PassThroughMiniature.integerIn" },
+        { "@id": "http://example.org#PassThroughMiniature.booleanIn" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#PassThroughMiniature.realOut" },
+        { "@id": "http://example.org#PassThroughMiniature.integerOut" },
+        { "@id": "http://example.org#PassThroughMiniature.booleanOut" }
+      ]
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.keep",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#PassThroughMiniature.keep.k" },
+      "S231:hasOutput": { "@id": "http://example.org#PassThroughMiniature.keep.y" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.keep.k",
+      "S231:value": 0
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.keep.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.realIn",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#PassThroughMiniature.realOut" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.realOut",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.integerIn",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#PassThroughMiniature.integerOut" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.integerOut",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.booleanIn",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#PassThroughMiniature.booleanOut" }
+    },
+    {
+      "@id": "http://example.org#PassThroughMiniature.booleanOut",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" }
+    }
+  ]
+}

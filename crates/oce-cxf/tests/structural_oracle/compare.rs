@@ -4,8 +4,7 @@
 //!
 //! Verdict tiers, from the reference implementation: EXACT (instances and undirected
 //! edges match the conditionally-resolved oracle), EXACT-XFOLD (exact outside an
-//! excluded constant-fold subtree), PASSTHRU (only the And+const-true synthesis for an
-//! upstream direct input→output connect differs), RESIDUAL (real defects), UNKNOWNS
+//! excluded constant-fold subtree), RESIDUAL (real defects), UNKNOWNS
 //! (something could not be verified). Excluded fixtures are never counted as passes.
 //!
 //! Connector-condition unknowns follow the material/immaterial rule (brief Amendment
@@ -48,7 +47,6 @@ pub struct Analysis {
     pub unknown_edges: Vec<(String, String)>,
     pub unknown_conn: Vec<String>,
     pub unknown_conn_note: Vec<String>,
-    pub passthrough: Vec<(String, String, String)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -423,7 +421,7 @@ pub fn analyse(
         .filter(|(p, s)| **s == Status::AbsentVerified && bycanon.contains_key(*p))
         .map(|(p, _)| p.clone())
         .collect();
-    let mut extra: Vec<String> = bycanon
+    let extra: Vec<String> = bycanon
         .keys()
         .filter(|p| !flat.inst.contains_key(*p) && !ev.in_fold(p))
         .cloned()
@@ -498,85 +496,17 @@ pub fn analyse(
             !o_dir.contains(&(a.clone(), b.clone())) && o_dir.contains(&(b.clone(), a.clone()))
         })
         .count();
-    let mut refonly: Vec<(String, String)> = ru
+    let refonly: Vec<(String, String)> = ru
         .difference(&ou)
         .filter(|e| !ruu.contains(*e))
         .cloned()
         .collect();
     let unknown_edges: Vec<(String, String)> = ruu.difference(&ou).cloned().collect();
-    let mut ouronly: Vec<(String, String)> = ou
+    let ouronly: Vec<(String, String)> = ou
         .iter()
         .filter(|e| !ru.contains(*e) && !ruu.contains(*e))
         .cloned()
         .collect();
-
-    // ---- pass-through synthesis recognition ----
-    let mut passthrough: Vec<(String, String, String)> = Vec::new();
-    let class_of =
-        |bycanon: &BTreeMap<String, Vec<String>>, ourinst: &BTreeMap<String, String>, p: &str| {
-            bycanon
-                .get(p)
-                .and_then(|ops| ops.first())
-                .map(|op| ourinst[op].clone())
-        };
-    for x in extra.clone() {
-        if !class_of(&bycanon, &ourinst, &x).is_some_and(|c| c.ends_with("Logical.And")) {
-            continue;
-        }
-        let xpre = format!("{x}.");
-        let touching: Vec<(String, String)> = ouronly
-            .iter()
-            .filter(|(a, b)| a.starts_with(&xpre) || b.starts_with(&xpre))
-            .cloned()
-            .collect();
-        if touching.len() != 3 {
-            continue;
-        }
-        let mut outer: Vec<String> = Vec::new();
-        let mut feeder: Vec<String> = Vec::new();
-        for (a, b) in &touching {
-            for other in [a, b].into_iter().filter(|p| !p.starts_with(&xpre)) {
-                let is_feeder = other.ends_with(".y")
-                    && other
-                        .rsplit_once('.')
-                        .map(|(c, _)| extra.contains(&canon_path(c)))
-                        .unwrap_or(false);
-                if is_feeder {
-                    feeder.push(other.clone());
-                } else {
-                    outer.push(other.clone());
-                }
-            }
-        }
-        // the feeder must be a Boolean constant TRUE, or the gate is not a pass-through
-        let true_const = |f: &str| {
-            f.rsplit_once('.').is_some_and(|(fc, _)| {
-                let fc = canon_path(fc);
-                class_of(&bycanon, &ourinst, &fc)
-                    .is_some_and(|c| c.ends_with("Logical.Sources.Constant"))
-                    && env.get(&format!("{fc}.k")) == Some(&ParamValue::Bool(true))
-            })
-        };
-        if outer.len() == 2 && feeder.len() == 1 && true_const(&feeder[0]) {
-            let pair = und(&outer[0], &outer[1]);
-            if refonly.contains(&pair) {
-                outer.sort(); // deterministic endpoint order for reporting/goldens
-                refonly.retain(|e| *e != pair);
-                ouronly.retain(|e| !touching.contains(e));
-                extra.retain(|e| *e != x);
-                let feeder_cont = canon_path(feeder[0].rsplit_once('.').expect("feeder port").0);
-                let feeder_still_used = ouronly.iter().any(|(a, b)| {
-                    [a, b]
-                        .iter()
-                        .any(|p| p.starts_with(&format!("{feeder_cont}.")))
-                });
-                if !feeder_still_used {
-                    extra.retain(|e| *e != feeder_cont);
-                }
-                passthrough.push((outer[0].clone(), outer[1].clone(), x.clone()));
-            }
-        }
-    }
 
     // ---- material vs immaterial connector unknowns (Amendment 2026-07-28-E) ----
     let unknown_eps: Vec<String> = ev
@@ -632,7 +562,6 @@ pub fn analyse(
         unknown_edges,
         unknown_conn,
         unknown_conn_note,
-        passthrough,
     }
 }
 
@@ -656,8 +585,6 @@ impl Analysis {
             "RESIDUAL"
         } else if self.unknowns() > 0 {
             "UNKNOWNS"
-        } else if !self.passthrough.is_empty() {
-            "PASSTHRU"
         } else if !self.folds.is_empty() {
             "EXACT-XFOLD"
         } else {

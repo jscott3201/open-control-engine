@@ -20,8 +20,8 @@ multizone_vav_plant_requests                     32/32      54/54       0      0
 multizone_vav_relief_damper                       6/6        8/8        0      0    0     0     0      0     0     0   0  EXACT
 multizone_vav_relief_fan                         19/19      29/29       0      0    0     0     0      0     0     0   0  EXACT
 multizone_vav_relief_fan_group                  226/90     128/128      1      0    0     0     0      0     0     0   0  EXACT
-multizone_vav_return_fan_airflow_tracking         7/5        8/9        0      0    0     0     0      0     0     0   0  PASSTHRU
-multizone_vav_return_fan_direct_pressure         23/21      35/36       3      0    0     0     0      0     0     0   0  PASSTHRU
+multizone_vav_return_fan_airflow_tracking         5/5        9/9        0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_return_fan_direct_pressure         21/21      36/36       3      0    0     0     0      0     0     0   0  EXACT
 multizone_vav_supply_fan                         65/65      89/89       2      2    0     0     0      0     0     0   0  EXACT
 multizone_vav_supply_signals                      9/9       19/19       0      0    0     0     0      0     0     0   0  EXACT
 multizone_vav_supply_temperature                 62/62      88/88       1      1    0     0     0      0     0     0   0  EXACT
@@ -31,7 +31,7 @@ thermal_zones_zone_states                        13/13      20/20       0      0
 trim_and_respond_have_hol_false                  44/44      58/58       1      1    0     0     0      0     0     0   0  EXACT
 ventilation_zones_ashrae62_1_setpoints           34/34      61/61       0     10    0     0     0      0     0     0   0  EXACT
 
-VERDICTS: EXACT=28 EXACT-XFOLD=1 PASSTHRU=2   EXCLUDED=15
+VERDICTS: EXACT=30 EXACT-XFOLD=1   EXCLUDED=15
 
 EXCLUDED (never counted as passes):
   ahu_economizer: own composition, no upstream class
@@ -53,9 +53,3 @@ EXCLUDED (never counted as passes):
 --- multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21  [EXACT-XFOLD]
    excluded-subtree: ["ecoHigLim"] (146 ref inst, 0 our nodes)
    (note: 3 unevaluable connector condition(s) immaterial — every touching edge dead via its other endpoint: ["effAbsOutAir_normalized", "effDesOutAir_normalized", "uCO2Loo_max"])
-
---- multizone_vav_return_fan_airflow_tracking  [PASSTHRU]
-   passthrough: u1SupFan ~ y1RetFan  (ours synthesizes And-gate 'y1RetFanPas' + const-true)
-
---- multizone_vav_return_fan_direct_pressure  [PASSTHRU]
-   passthrough: u1SupFan ~ y1RetFan  (ours synthesizes And-gate 'y1RetFanPas' + const-true)

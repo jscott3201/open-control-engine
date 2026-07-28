@@ -392,6 +392,26 @@
       }
     ]
   },
+  "internal_lowering": [
+    {
+      "class_path": "urn:oce:lowering#PassThrough.Real",
+      "status": "engine_internal",
+      "kind": "runtime",
+      "rationale": "Reserved identity synthesized only while lowering a Real boundary-input-to-boundary-output connection."
+    },
+    {
+      "class_path": "urn:oce:lowering#PassThrough.Integer",
+      "status": "engine_internal",
+      "kind": "runtime",
+      "rationale": "Reserved identity synthesized only while lowering an Integer boundary-input-to-boundary-output connection."
+    },
+    {
+      "class_path": "urn:oce:lowering#PassThrough.Boolean",
+      "status": "engine_internal",
+      "kind": "runtime",
+      "rationale": "Reserved identity synthesized only while lowering a Boolean boundary-input-to-boundary-output connection."
+    }
+  ],
   "extensions": [
     {
       "class_path": "CDL.Logical.TrueHoldWithReset",

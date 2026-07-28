@@ -1155,7 +1155,7 @@
       "oracle_test": "crates/oce-conformance/tests/g36_return_fan_airflow_tracking_funnel.rs",
       "notes": [
         "Runtime support is the checked-in explicit-CXF scalar ReturnFanAirflowTracking composite, not arbitrary Modelica parsing.",
-        "The supported variant covers the PI airflow-difference controller, supply-fan Boolean switch to zero speed, and source boundary alias y1RetFan = u1SupFan through an explicit Boolean identity bridge in the fixture.",
+        "The supported variant covers the PI airflow-difference controller, supply-fan Boolean switch to zero speed, and native source boundary alias y1RetFan = u1SupFan.",
         "The oracle covers fan-disabled switching, PI integral carryover while disabled, speed clamps, and direct return-fan proof status."
       ]
     },
@@ -1173,7 +1173,7 @@
       "oracle_test": "crates/oce-conformance/tests/g36_return_fan_direct_pressure_funnel.rs",
       "notes": [
         "Runtime support is the checked-in explicit-CXF scalar ReturnFanDirectPressure composite, not arbitrary Modelica parsing.",
-        "The supported variant covers MovingAverage(delta=300), default PI PID semantics with reverseActing=true, relief-damper modulation gated by u1MinOutAirDam AND u1SupFan, discharge pressure setpoint switching, return-fan speed mapping from the pressure setpoint, and source boundary alias y1RetFan = u1SupFan through an explicit Boolean identity bridge in the fixture.",
+        "The supported variant covers MovingAverage(delta=300), default PI PID semantics with reverseActing=true, relief-damper modulation gated by u1MinOutAirDam AND u1SupFan, discharge pressure setpoint switching, return-fan speed mapping from the pressure setpoint, and native source boundary alias y1RetFan = u1SupFan.",
         "The oracle covers fan-off switching, minimum-outdoor-air damper disabling only yRelDam, damper modulation, lower/interior/upper pressure and speed line clamps, and direct return-fan proof status."
       ]
     },
@@ -2231,10 +2231,10 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking",
-      "fixture_top_child_count": 7,
+      "fixture_top_child_count": 5,
       "source_declared_child_count": 5,
-      "bridge_block_count": 2,
-      "active_block_count": 7,
+      "bridge_block_count": 0,
+      "active_block_count": 6,
       "input_count": 3,
       "output_count": 2,
       "supported_variant": "explicit CXF source transcription for scalar ReturnFanAirflowTracking with difFloSet=1 m3/s, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, minSpe=0, maxSpe=1, and supply-fan proof switching",
@@ -2244,8 +2244,8 @@
       "oracle_status": "complete",
       "supported_runtime_sequence": true,
       "notes": [
-        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including a Boolean identity bridge for y1RetFan = u1SupFan, independent oracle matching, and determinism golden coverage.",
-        "The fixture has five source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias as an executable output point.",
+        "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including native y1RetFan = u1SupFan pass-through lowering, independent oracle matching, and determinism golden coverage.",
+        "The fixture has five active source-declared children; import adds one reserved internal lowering block for its native boundary pass-through.",
         "Evidence does not claim arbitrary .mo parsing, relief-fan-group staging through ReturnFanAirflowTracking, alternate controller types, or non-default ReturnFanAirflowTracking parameterizations."
       ]
     },
@@ -2256,10 +2256,10 @@
       "source": "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo",
       "fixture": "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld",
       "top_id": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure",
-      "fixture_top_child_count": 23,
+      "fixture_top_child_count": 21,
       "source_declared_child_count": 21,
-      "bridge_block_count": 2,
-      "active_block_count": 23,
+      "bridge_block_count": 0,
+      "active_block_count": 22,
       "input_count": 3,
       "output_count": 5,
       "supported_variant": "explicit CXF source transcription for scalar ReturnFanDirectPressure with dpBuiSet=12 Pa, p_rel_RetFan_min=2.4 Pa, p_rel_RetFan_max=40 Pa, conTyp=PI, k=1, Ti=0.5 s, Td=0.1 s, parent-default disSpe_min=0.1, disSpe_max=1, and supply-fan/minimum-outdoor-air-damper switching",
@@ -2270,7 +2270,7 @@
       "supported_runtime_sequence": true,
       "notes": [
         "Evidence proves restricted explicit-CXF composite import, facade load/simulation support including logical boundary-input fanout, independent oracle matching, and determinism golden coverage.",
-        "The fixture has 21 source-declared child components plus two OCE bridge blocks required to expose the source boundary-input-to-boundary-output alias y1RetFan = u1SupFan as an executable output point.",
+        "The fixture has 21 active source-declared children; import adds one reserved internal lowering block for the native boundary pass-through y1RetFan = u1SupFan.",
         "Evidence does not claim arbitrary .mo parsing, relief-fan-group staging through ReturnFanDirectPressure, alternate controller types, or non-default ReturnFanDirectPressure parameterizations."
       ]
     },
