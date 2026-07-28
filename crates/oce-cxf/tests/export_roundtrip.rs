@@ -204,8 +204,17 @@ fn boundary_input_reconstruction_reelides_to_the_original_iri() {
     );
     let boundary = node("http://example.org#MinLoop.uSet");
     assert_eq!(
+        boundary["S231:isOfDataType"]["@id"], "S231:Real",
+        "the exported boundary carries the driven child input's value type"
+    );
+    assert_eq!(
         boundary["S231:isConnectedTo"]["@id"], "http://example.org#MinLoop.gt.in1",
         "the boundary drives the minted child port"
+    );
+    assert_eq!(
+        g2.connectors[g2.external_inputs[0].0 as usize].value_type,
+        ValueType::Real,
+        "export → re-import preserves the boundary-fed connector type"
     );
 }
 

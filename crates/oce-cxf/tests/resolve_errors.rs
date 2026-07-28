@@ -56,6 +56,29 @@ fn node_mut<'a>(doc: &'a mut Value, suffix: &str) -> &'a mut Value {
         .unwrap_or_else(|| panic!("no @graph node ending in {suffix:?}"))
 }
 
+/// Add a composite boundary input that drives `M.c2.u`.
+fn add_boundary_input(doc: &mut Value, datatype: &str) {
+    node_mut(doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.boundaryInput" });
+    doc["@graph"].as_array_mut().unwrap().push(json!({
+        "@id": "http://example.org#M.boundaryInput",
+        "@type": "S231:Input",
+        "S231:isOfDataType": { "@id": datatype },
+        "S231:isConnectedTo": { "@id": "http://example.org#M.c2.u" }
+    }));
+}
+
+/// Add a composite boundary output driven by `M.c2.y2`.
+fn add_boundary_output(doc: &mut Value, datatype: &str) {
+    node_mut(doc, "#M")["S231:hasOutput"] = json!({ "@id": "http://example.org#M.boundaryOutput" });
+    doc["@graph"].as_array_mut().unwrap().push(json!({
+        "@id": "http://example.org#M.boundaryOutput",
+        "@type": "S231:Output",
+        "S231:isOfDataType": { "@id": datatype }
+    }));
+    node_mut(doc, "M.c2.y2")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.boundaryOutput" });
+}
+
 fn import(doc: &Value) -> Result<(oce_model::ModelGraph, oce_cxf::ValidationReport), CxfError> {
     let bytes = serde_json::to_vec(doc).expect("serialize doc");
     import_cxf(&bytes, &ResolveOptions::default())
@@ -195,6 +218,84 @@ fn type_mismatched_connection_is_rejected() {
     u["@type"] = json!("S231:BooleanInput");
     u["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
     assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn real_boundary_input_driving_boolean_child_input_is_rejected() {
+    let mut doc = base();
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:BooleanInput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+    add_boundary_input(&mut doc, "S231:Real");
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn integer_boundary_input_driving_real_child_input_is_rejected() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Integer");
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn boolean_child_output_driving_real_boundary_output_is_rejected() {
+    let mut doc = base();
+    let child = node_mut(&mut doc, "M.c2.y2");
+    child["@type"] = json!("S231:BooleanOutput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+    add_boundary_output(&mut doc, "S231:Real");
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn real_child_output_driving_integer_boundary_output_is_rejected() {
+    let mut doc = base();
+    add_boundary_output(&mut doc, "S231:Integer");
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn enum_boundary_input_driving_integer_child_input_is_rejected() {
+    let mut doc = base();
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:IntegerInput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
+    add_boundary_input(
+        &mut doc,
+        "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+    );
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn different_enum_classes_across_boundary_elision_are_rejected() {
+    let mut doc = base();
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:Input");
+    child["S231:isOfDataType"] =
+        json!({ "@id": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil" });
+    add_boundary_input(
+        &mut doc,
+        "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+    );
+    assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn matched_types_across_both_boundary_elision_arms_resolve() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Real");
+    add_boundary_output(&mut doc, "S231:Real");
+    let (graph, report) = import(&doc).expect("matching boundary types must resolve");
+    assert!(report.is_empty(), "unexpected diagnostics: {report:?}");
+    assert_eq!(graph.external_inputs.len(), 1);
+}
+
+#[test]
+fn unresolvable_boundary_datatype_is_diagnosed() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Frobnicate");
+    assert_error_code(&doc, DiagCode::UnresolvedReference);
 }
 
 #[test]
