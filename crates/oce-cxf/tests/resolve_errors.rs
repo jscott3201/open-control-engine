@@ -156,10 +156,24 @@ fn doubly_driven_input_is_single_assignment() {
 }
 
 #[test]
-fn input_driving_output_is_direction_mismatch() {
+fn an_input_subject_is_an_orientation_and_is_judged_on_the_model_it_denotes() {
     let mut doc = base();
-    // Make the input c2.u a connection SOURCE to the output c2.y2 → In→Out, a direction violation.
+    // Anchoring an edge on the input is legal authoring, not a violation: CXF §8.2 admits either
+    // endpoint as the subject and CDL states `connect` argument order does not matter. So this
+    // denotes `c2.y2 → c2.u`. The document is still REJECTED — `c1.y` already drives `c2.u`, making
+    // this a second driver — and the code is now the one that names what is actually wrong.
     node_mut(&mut doc, "M.c2.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.c2.y2" });
+    assert_error_code(&doc, DiagCode::SingleAssignment);
+}
+
+#[test]
+fn a_direction_violation_survives_reorientation() {
+    let mut doc = base();
+    // Out→Out is invalid in BOTH orientations, so no re-anchoring can rescue it. This is the
+    // property `input_driving_output_is_direction_mismatch` was really guarding: a pair that names
+    // two drivers, or two driven ends, is a direction error however the document phrases it.
+    node_mut(&mut doc, "M.c1.y")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#M.c2.y2" });
     assert_error_code(&doc, DiagCode::DirectionMismatch);
 }

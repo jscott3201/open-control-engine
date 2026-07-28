@@ -142,6 +142,46 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
     }
 }
 
+/// Re-anchor one `isConnectedTo` edge on its driving end, returning `(driver, driven)`.
+///
+/// Orientation is not a property of the document. CXF §8.2 gives `connectedTo` the domain
+/// *(OutputConnector, InputConnector)* and the range *(InputConnector, OutputConnector)* — either
+/// end may be the subject — and CDL states that the order of the arguments in a `connect` statement
+/// does not matter. Producers preserve Modelica source order verbatim, so a class authored
+/// `connect(dst, src)` yields an input-subject edge: `modelica-json` emits 11 of the 16 edges in
+/// `Economizers.Subsequences.Modulations.Reliefs` that way. Anchoring here lets the boundary
+/// dispatch and Step 10 reason about a single canonical orientation.
+///
+/// Returning a pair does **not** mean it is valid. A pair invalid in both orientations
+/// (output→output, input→input, or an endpoint resolving to no connector) is returned unchanged so
+/// that Step 10 reports it — but Step 10 only sees edges that reach it. Both boundary elision arms
+/// in Step 9 `continue` before Step 10, so each is responsible for checking its own counterpart;
+/// swapping a boundary **output** into the target slot here is what routes an edge into the arm at
+/// the `boundary_out` check, and that arm must therefore validate the driving end itself.
+fn orient_edge<'a>(
+    source: &'a str,
+    target: &'a str,
+    boundary_in: &HashSet<&str>,
+    boundary_out: &HashSet<&str>,
+    conn_of_iri: &HashMap<&str, ConnectorId>,
+    connectors: &[Connector],
+) -> (&'a str, &'a str) {
+    // A composite boundary port settles the orientation on its own — an input drives, an output is
+    // driven. Boundary ports are excluded from `conn_of_iri` by Step 5a, so they cannot be resolved
+    // to a `Dir` and MUST be decided first.
+    if boundary_in.contains(source) || boundary_out.contains(target) {
+        return (source, target);
+    }
+    if boundary_in.contains(target) || boundary_out.contains(source) {
+        return (target, source);
+    }
+    let dir = |iri: &str| conn_of_iri.get(iri).map(|c| connectors[c.0 as usize].dir);
+    match (dir(source), dir(target)) {
+        (Some(Dir::In), Some(Dir::Out)) => (target, source),
+        _ => (source, target),
+    }
+}
+
 /// Resolve a CXF document into the flat [`ModelGraph`] (doc 04 §7.1). See the module docs for the
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
@@ -491,7 +531,6 @@ pub(crate) fn resolve(
             }
             continue;
         }
-        let src_is_boundary_in = boundary_in.contains(source);
         for tref in node.is_connected_to.iter() {
             let target = tref.id.as_str();
             if specialization.is_inactive(target) {
@@ -504,7 +543,17 @@ pub(crate) fn resolve(
                 );
                 continue;
             }
-            if src_is_boundary_in {
+            // Both endpoints have now been screened for inactivity in their authored roles; the
+            // orientation swap below only relabels which is the driver.
+            let (source, target) = orient_edge(
+                source,
+                target,
+                &boundary_in,
+                &boundary_out,
+                &conn_of_iri,
+                &connectors,
+            );
+            if boundary_in.contains(source) {
                 // boundary input → child input: elide; record external + attach boundary IRI (AD-2).
                 match conn_of_iri.get(target).copied() {
                     Some(to) if connectors[to.0 as usize].dir != Dir::In => {
@@ -537,6 +586,27 @@ pub(crate) fn resolve(
             }
             if boundary_out.contains(target) {
                 // child output → boundary output: elide (the child output IS the model output).
+                // The driving end MUST be checked here for the same reason the boundary-input arm
+                // checks its target: this path `continue`s past Step 10, so nothing downstream ever
+                // looks at `source`. Without it, `<boundary output> isConnectedTo <anything>` — a
+                // child input, a parameter node, or an `@id` in no node at all — elides to silence.
+                match conn_of_iri.get(source).copied() {
+                    Some(from) if connectors[from.0 as usize].dir != Dir::Out => diags.push(
+                        Diagnostic::error(
+                            DiagCode::DirectionMismatch,
+                            "boundary output is driven by a non-output connector",
+                        )
+                        .with_subject(source.to_owned()),
+                    ),
+                    Some(_) => {}
+                    None => diags.push(
+                        Diagnostic::error(
+                            DiagCode::UnresolvedReference,
+                            "boundary-output source not found",
+                        )
+                        .with_subject(source.to_owned()),
+                    ),
+                }
                 continue;
             }
             match (
@@ -640,6 +710,11 @@ pub(crate) fn resolve(
         if conn.dir != Dir::In {
             continue;
         }
+        // A boundary input is elided into `external_inputs` rather than counted here, so a
+        // connector that is both an external entry and the target of one wire scores in-degree 1
+        // and is accepted. That is deliberate, not an oversight: it is the shape export/re-import
+        // produces, and folding boundary targets into this count would false-reject a graph that
+        // round-trips. `export_single_assignment.rs` pins it as the false-reject guard.
         let deg = in_degree.get(&conn.id).copied().unwrap_or(0);
         if deg == 1 {
             continue;
