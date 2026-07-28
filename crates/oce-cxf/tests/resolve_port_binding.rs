@@ -188,3 +188,54 @@ fn name_binding_is_deterministic_across_imports() {
     };
     assert_eq!(render(&a), render(&b));
 }
+
+/// A real G36 fixture, with one block's port array permuted: the resolved model must be identical.
+///
+/// The synthetic documents above prove the mechanism. This proves the property on production input.
+/// `ahu_economizer.jsonld` instantiates `CDL.Logical.Latch` as `enableLatch`; both its inputs are
+/// `Boolean`, and exchanging `u` with `clr` inverts the latch — set becomes clear. Reordering the
+/// `hasInput` array leaves `@graph` order untouched, so every `ConnectorId` is unchanged and the
+/// only thing that could differ is which connector sits at which port index. Comparing the whole
+/// graph, rather than that one block, is what makes this an assertion about the model instead of
+/// about a vector.
+///
+/// The corpus cannot cover this on its own: all 46 fixtures already list ports in declaration
+/// order, so the permutation is the identity on all 1206 of their block instances. Permuting one
+/// here is the only way the reorder path meets a real document.
+#[test]
+fn permuting_a_real_fixtures_port_array_resolves_to_the_same_model() {
+    const FIXTURE: &str = include_str!("fixtures/g36/ahu_economizer.jsonld");
+    let original: Value = serde_json::from_str(FIXTURE).expect("fixture is valid JSON");
+
+    let mut permuted = original.clone();
+    let node = permuted["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .iter_mut()
+        .find(|n| {
+            n["@id"]
+                .as_str()
+                .is_some_and(|s| s.ends_with("enableLatch"))
+        })
+        .expect("ahu_economizer declares enableLatch");
+    let ports = node["S231:hasInput"].as_array_mut().expect("two inputs");
+    assert_eq!(ports.len(), 2, "Latch has exactly two inputs");
+    ports.swap(0, 1);
+
+    let render = |doc: &Value| {
+        let g = import(doc).expect("resolves");
+        let mut out = String::new();
+        for b in &g.blocks {
+            out.push_str(&format!("{} {:?} {:?}\n", b.class_iri, b.inputs, b.outputs));
+        }
+        for c in &g.connections {
+            out.push_str(&format!("{:?}->{:?}\n", c.from, c.to));
+        }
+        out
+    };
+    assert_eq!(
+        render(&original),
+        render(&permuted),
+        "a fixture rendered with its Latch inputs in the other order must resolve to the same model"
+    );
+}
