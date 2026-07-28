@@ -448,6 +448,11 @@ struct BoundaryWalk<'a> {
     boundary: &'a BoundaryIndex,
 }
 
+/// Resolve one rewritten target.
+///
+/// `arrived_from` is the immediate predecessor excluded only from an incoming-fallback candidate
+/// list. `fallback_predecessor` exists only when the arriving hop used that fallback and excludes
+/// its manufactured mirror from the reached node's authored targets.
 fn resolve_target(
     target: &str,
     walk: &BoundaryWalk<'_>,
@@ -475,6 +480,11 @@ fn resolve_target(
     out.push(target.to_owned());
 }
 
+/// Walk through a non-top composite boundary node.
+///
+/// `arrived_from` filters the exact predecessor when an empty authored target list falls back to
+/// incoming edges. `fallback_predecessor` filters the exact reverse edge manufactured by the
+/// preceding fallback, without hiding other authored targets or later authored cycles.
 fn follow_boundary(
     boundary_iri: &str,
     walk: &BoundaryWalk<'_>,

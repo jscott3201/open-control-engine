@@ -516,20 +516,23 @@ fn nested_pass_through_splices_in_both_spellings() {
 #[test]
 fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
     let mut forward: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
-    node_mut(&mut forward, "nested_composite")["S231:containsBlock"] =
-        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub" });
-    node_mut(&mut forward, "nested_composite")
-        .as_object_mut()
-        .expect("root node")
-        .remove("S231:hasOutput");
-    node_mut(&mut forward, ".sub")["S231:containsBlock"] =
-        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier" });
-    for suffix in [".sub.gain.y", ".post.y"] {
-        node_mut(&mut forward, suffix)
-            .as_object_mut()
-            .expect("unused output node")
-            .remove("S231:isConnectedTo");
-    }
+    node_mut(&mut forward, "nested_composite")["S231:hasInput"] = json!([
+        { "@id": "http://example.org#g36.profile.nested_composite.u" },
+        { "@id": "http://example.org#g36.profile.nested_composite.aux" }
+    ]);
+    forward["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .push(json!({
+            "@id": "http://example.org#g36.profile.nested_composite.aux",
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:isConnectedTo": {
+                "@id": "http://example.org#g36.profile.nested_composite.post.u"
+            }
+        }));
+    node_mut(&mut forward, ".sub.enumCarrier.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.gain.u" });
     node_mut(&mut forward, ".sub.u")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.y" });
     node_mut(&mut forward, ".sub.y")
@@ -546,6 +549,38 @@ fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
     node_mut(&mut reverse, ".sub.y")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.u" });
     let reverse_graph = import(&reverse).expect("reverse unconsumed pass-through imports");
+    for graph in [&forward_graph, &reverse_graph] {
+        assert_eq!(graph.external_inputs.len(), 1);
+        let external = &graph.connectors[graph.external_inputs[0].0 as usize];
+        assert!(
+            external
+                .iri
+                .as_deref()
+                .is_some_and(|iri| iri.ends_with(".aux"))
+        );
+        assert!(
+            graph.blocks[external.block.0 as usize]
+                .instance_iri
+                .as_deref()
+                .is_some_and(|iri| iri.ends_with(".post"))
+        );
+        assert_eq!(graph.connections.len(), 1);
+        let connection = graph.connections[0];
+        let source = &graph.connectors[connection.from.0 as usize];
+        let target = &graph.connectors[connection.to.0 as usize];
+        assert!(
+            graph.blocks[source.block.0 as usize]
+                .instance_iri
+                .as_deref()
+                .is_some_and(|iri| iri.ends_with(".sub.enumCarrier"))
+        );
+        assert!(
+            graph.blocks[target.block.0 as usize]
+                .instance_iri
+                .as_deref()
+                .is_some_and(|iri| iri.ends_with(".sub.gain"))
+        );
+    }
     assert_eq!(format!("{forward_graph:?}"), format!("{reverse_graph:?}"));
 }
 

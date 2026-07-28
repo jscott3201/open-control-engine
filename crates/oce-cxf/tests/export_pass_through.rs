@@ -96,6 +96,38 @@ fn missing_reserved_external_input_membership_rejects_loudly() {
 }
 
 #[test]
+fn reserved_input_owned_by_another_block_rejects_loudly() {
+    let keep = BlockInstance {
+        id: BlockId(1),
+        class_iri: Arc::from("CDL.Reals.MultiplyByParameter"),
+        inputs: vec![ConnectorId(0)],
+        outputs: vec![ConnectorId(2)],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(2.0))],
+        },
+        decl_order: 1,
+        instance_iri: Some(Arc::from("http://example.org#PassExport.keep")),
+    };
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), keep],
+        connectors: vec![
+            connector(0, 1, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+    };
+    let diagnostics = rejection(&graph);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+        }),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn boundary_output_iri_collision_rejects_at_plan_time() {
     let graph = ModelGraph {
         blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
