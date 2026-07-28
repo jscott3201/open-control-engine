@@ -148,13 +148,16 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
 /// *(OutputConnector, InputConnector)* and the range *(InputConnector, OutputConnector)* — either
 /// end may be the subject — and CDL states that the order of the arguments in a `connect` statement
 /// does not matter. Producers preserve Modelica source order verbatim, so a class authored
-/// `connect(dst, src)` yields an input-subject edge: `modelica-json` emits 11 of the 13 edges in
+/// `connect(dst, src)` yields an input-subject edge: `modelica-json` emits 11 of the 16 edges in
 /// `Economizers.Subsequences.Modulations.Reliefs` that way. Anchoring here lets the boundary
 /// dispatch and Step 10 reason about a single canonical orientation.
 ///
-/// A pair that is invalid in **both** orientations (output→output, input→input, or an endpoint that
-/// resolves to no connector) is returned unchanged, so Step 10 still reports it. This widens what
-/// the resolver accepts to what the standard permits; it relaxes no check.
+/// Returning a pair does **not** mean it is valid. A pair invalid in both orientations
+/// (output→output, input→input, or an endpoint resolving to no connector) is returned unchanged so
+/// that Step 10 reports it — but Step 10 only sees edges that reach it. Both boundary elision arms
+/// in Step 9 `continue` before Step 10, so each is responsible for checking its own counterpart;
+/// swapping a boundary **output** into the target slot here is what routes an edge into the arm at
+/// the `boundary_out` check, and that arm must therefore validate the driving end itself.
 fn orient_edge<'a>(
     source: &'a str,
     target: &'a str,
@@ -583,6 +586,27 @@ pub(crate) fn resolve(
             }
             if boundary_out.contains(target) {
                 // child output → boundary output: elide (the child output IS the model output).
+                // The driving end MUST be checked here for the same reason the boundary-input arm
+                // checks its target: this path `continue`s past Step 10, so nothing downstream ever
+                // looks at `source`. Without it, `<boundary output> isConnectedTo <anything>` — a
+                // child input, a parameter node, or an `@id` in no node at all — elides to silence.
+                match conn_of_iri.get(source).copied() {
+                    Some(from) if connectors[from.0 as usize].dir != Dir::Out => diags.push(
+                        Diagnostic::error(
+                            DiagCode::DirectionMismatch,
+                            "boundary output is driven by a non-output connector",
+                        )
+                        .with_subject(source.to_owned()),
+                    ),
+                    Some(_) => {}
+                    None => diags.push(
+                        Diagnostic::error(
+                            DiagCode::UnresolvedReference,
+                            "boundary-output source not found",
+                        )
+                        .with_subject(source.to_owned()),
+                    ),
+                }
                 continue;
             }
             match (
@@ -686,6 +710,11 @@ pub(crate) fn resolve(
         if conn.dir != Dir::In {
             continue;
         }
+        // A boundary input is elided into `external_inputs` rather than counted here, so a
+        // connector that is both an external entry and the target of one wire scores in-degree 1
+        // and is accepted. That is deliberate, not an oversight: it is the shape export/re-import
+        // produces, and folding boundary targets into this count would false-reject a graph that
+        // round-trips. `export_single_assignment.rs` pins it as the false-reject guard.
         let deg = in_degree.get(&conn.id).copied().unwrap_or(0);
         if deg == 1 {
             continue;

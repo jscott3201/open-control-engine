@@ -4,12 +4,20 @@
 //! *(InputConnector, OutputConnector)*, so either end may be the subject, and CDL states that the
 //! order of the arguments in a `connect` statement does not matter. A producer that preserves
 //! Modelica source order therefore emits input-subject edges for any class written
-//! `connect(dst, src)` — `modelica-json` renders 11 of the 13 edges in
+//! `connect(dst, src)` — `modelica-json` renders 11 of the 16 edges in
 //! `Economizers.Subsequences.Modulations.Reliefs` that way.
 //!
 //! Every test here compares two *renderings of one model*, never two models. The resolver may not
 //! see a difference between them. What it must still reject is a pair invalid in **both**
 //! orientations: output→output, input→input, and an input driven more than once.
+//!
+//! Two shapes are deliberately NOT rejected, and are recorded here so they are not "fixed" later.
+//! An input that is both an `external_inputs` entry and the target of one wire resolves — that is
+//! the false-reject guard pinned by `export_single_assignment.rs`, because it is the shape
+//! export/re-import produces. And symmetric closure — the same edge asserted from *both* ends, as
+//! an OWL reasoner materialising a symmetric property would emit — is out of scope: it yields two
+//! identical connections and is reported as multiply driven, since a duplicated target genuinely
+//! is in-degree 2 (`resolve_errors::doubly_driven_input_is_single_assignment` pins that reading).
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::DiagCode;
@@ -66,6 +74,25 @@ fn import(doc: &Value) -> Result<ModelGraph, CxfError> {
 fn codes(e: &CxfError) -> Vec<DiagCode> {
     match e {
         CxfError::Validation(diags) => diags.iter().map(|d| d.code).collect(),
+        other => panic!("expected a validation error, got {other:?}"),
+    }
+}
+
+/// The `(code, subject)` pairs of a rejection.
+///
+/// Asserting the code alone is too weak to pin orientation: a mutant that re-anchors an already
+/// invalid pair the wrong way still reports the same code, and only the connector it *blames*
+/// moves. Reviewing this suite by mutation found four such survivors, including
+/// `(Some(Dir::In), _) => (target, source)`, which is why every rejection below names its subject.
+fn faults(e: &CxfError) -> Vec<(DiagCode, String)> {
+    match e {
+        CxfError::Validation(diags) => diags
+            .iter()
+            .map(|d| {
+                let s = d.subject.as_deref().unwrap_or("<none>").to_owned();
+                (d.code, s)
+            })
+            .collect(),
         other => panic!("expected a validation error, got {other:?}"),
     }
 }
@@ -360,6 +387,9 @@ fn two_drivers_on_one_input_are_rejected_in_either_authoring() {
 
 /// An endpoint naming nothing is still an unresolved reference — the swap must not silently drop it
 /// by treating the unknown end as the driven one.
+///
+/// The subject matters as much as the code: the unresolvable end is `src.y`'s target, so that is
+/// what must be blamed. A mutant that swaps here reports the same code against the *other* endpoint.
 #[test]
 fn an_endpoint_naming_no_connector_is_still_reported() {
     let mut doc = document([false, false, false]);
@@ -371,8 +401,98 @@ fn an_endpoint_naming_no_connector_is_still_reported() {
     }
     let err = import(&doc).expect_err("a dangling endpoint must not resolve");
     assert!(
-        codes(&err).contains(&DiagCode::UnresolvedReference),
+        faults(&err).contains(&(DiagCode::UnresolvedReference, iri("nowhere.u"))),
+        "the dangling target must be the subject, got {:?}",
+        faults(&err)
+    );
+}
+
+/// Anchoring an edge on a **composite boundary output** — the reversed spelling of
+/// `child output → composite output`.
+///
+/// This is the authoring the swap exists to support, and it is the one the first version of this
+/// change got wrong. Re-anchoring parks the boundary output in the target slot, which routes the
+/// edge into Step 9's boundary-output elision. That arm `continue`s past Step 10, so if it does not
+/// validate the driving end itself, *every* edge subjected on a boundary output vanishes silently —
+/// whatever the other end names.
+#[test]
+fn a_boundary_output_subject_resolves_to_the_same_graph_as_the_forward_spelling() {
+    let forward = import(&document([false, false, false])).expect("forward spelling imports");
+    let reversed =
+        import(&document([false, false, true])).expect("boundary-output subject imports");
+    assert_eq!(
+        render(&reversed),
+        render(&forward),
+        "the two spellings of `sum.y → yOut` must denote one model"
+    );
+}
+
+/// The same arm, fed pairs that are wrong — each must be reported, not elided into silence.
+#[test]
+fn a_boundary_output_subject_does_not_swallow_an_invalid_counterpart() {
+    // A composite output "driven by" a child INPUT: two driven ends, invalid in both orientations.
+    let mut doc = document([false, false, false]);
+    for n in doc["@graph"].as_array_mut().expect("@graph").iter_mut() {
+        if n["@id"].as_str() == Some(iri("yOut").as_str()) {
+            n["S231:isConnectedTo"] = json!([{ "@id": iri("sum.u1") }]);
+        }
+    }
+    let err = import(&doc).expect_err("boundary output ← child input must not resolve");
+    assert!(
+        faults(&err).contains(&(DiagCode::DirectionMismatch, iri("sum.u1"))),
         "got {:?}",
-        codes(&err)
+        faults(&err)
+    );
+
+    // A composite output wired to an `@id` that appears in no node at all.
+    let mut doc = document([false, false, false]);
+    for n in doc["@graph"].as_array_mut().expect("@graph").iter_mut() {
+        if n["@id"].as_str() == Some(iri("yOut").as_str()) {
+            n["S231:isConnectedTo"] = json!([{ "@id": iri("nowhere.u") }]);
+        }
+    }
+    let err = import(&doc).expect_err("boundary output ← dangling id must not resolve");
+    assert!(
+        faults(&err).contains(&(DiagCode::UnresolvedReference, iri("nowhere.u"))),
+        "got {:?}",
+        faults(&err)
+    );
+
+    // And a node that exists but is not a connector at all — a parameter.
+    let mut doc = document([false, false, false]);
+    for n in doc["@graph"].as_array_mut().expect("@graph").iter_mut() {
+        if n["@id"].as_str() == Some(iri("yOut").as_str()) {
+            n["S231:isConnectedTo"] = json!([{ "@id": iri("src.k") }]);
+        }
+    }
+    let err = import(&doc).expect_err("boundary output ← parameter node must not resolve");
+    assert!(
+        faults(&err).contains(&(DiagCode::UnresolvedReference, iri("src.k"))),
+        "got {:?}",
+        faults(&err)
+    );
+}
+
+/// A rejected pair must blame the **driving** end, and that pins the swap itself.
+///
+/// `sum.u1 → sum.u2` is input→input: `orient_edge` must NOT swap it, so `sum.u1` stays the driver
+/// and is what Step 10 blames. This is the mutation-killer for widening the swap arm to
+/// `(Some(Dir::In), _) => (target, source)` — under that mutant the pair is swapped anyway, the
+/// code stays `DirectionMismatch`, and only the named connector moves. Asserting the code alone
+/// leaves that mutant alive; asserting the subject kills it.
+#[test]
+fn a_rejected_pair_blames_the_driving_end() {
+    let mut doc = document([false, false, false]);
+    for n in doc["@graph"].as_array_mut().expect("@graph").iter_mut() {
+        if n["@id"].as_str() == Some(iri("sum.u1").as_str()) {
+            n["S231:isConnectedTo"] = json!([{ "@id": iri("sum.u2") }]);
+        }
+    }
+    let err = import(&doc).expect_err("input → input must not resolve");
+    assert_eq!(
+        faults(&err),
+        vec![(DiagCode::DirectionMismatch, "connector#1".to_owned())],
+        "sum.u1 is connector#1 and is the authored driver; blaming anything else means the pair \
+         was swapped when it should not have been"
     );
 }
