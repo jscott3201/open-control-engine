@@ -1,0 +1,29 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration to configure the ventilation standard",
+      "S231:label": "VentilationStandard",
+      "S231:value": "VentilationStandard"
+    },
+    {
+      "@id": "ex:VentilationStandard.ASHRAE62_1",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+      "S231:description": "ASHRAE 62.1",
+      "S231:label": "ASHRAE62_1",
+      "S231:value": "ASHRAE62_1"
+    },
+    {
+      "@id": "ex:VentilationStandard.California_Title_24",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+      "S231:description": "California Title 24",
+      "S231:label": "California_Title_24",
+      "S231:value": "California_Title_24"
+    }
+  ]
+}

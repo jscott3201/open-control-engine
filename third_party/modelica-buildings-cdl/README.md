@@ -41,6 +41,34 @@ cd third_party/modelica-buildings-cdl && \
 The corpus is the 132 CDL classes reachable from the 46 G36 fixtures in
 `crates/oce-cxf/tests/fixtures/g36/`, not the whole library.
 
+## Generated CXF structural oracle
+
+`cxf/` contains 44 machine translations of the vendored Modelica sources. They were generated
+with `modelica-json` commit `85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb` (master, cloned
+2026-07-28) under Node v26.5.0, from the Buildings commit recorded above. The translations are
+derived copies under the same upstream license; they are test data and are not compiled or
+packaged in an `oce-*` crate.
+
+For each of the 31 upstream classes named by
+`crates/oce-cxf/tests/fixtures/g36/structural_oracle_manifest.json`, generation used:
+
+```bash
+MODELICAPATH=<directory-containing-Buildings> node app.js \
+  -f <absolute-path-to-class.mo> -o cxf -m cdl -d <output-directory> -p -l error
+```
+
+To verify the checked-in translations, check out the two recorded pins, regenerate all manifest
+classes into a temporary directory with that command, and compare the trees:
+
+```bash
+git -C /tmp/modelica-buildings checkout a131864e4c4df22ebcd52bb8da439de0087ac365
+git -C /tmp/modelica-json checkout 85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb
+diff -r third_party/modelica-buildings-cdl/cxf /tmp/regenerated-cxf
+```
+
+The 44 checked-in documents were byte-compared with a fresh regeneration at exactly those pins
+on 2026-07-28.
+
 ## Why the files are unmodified
 
 They are deliberately **not** stripped down to interface declarations, even though the consuming

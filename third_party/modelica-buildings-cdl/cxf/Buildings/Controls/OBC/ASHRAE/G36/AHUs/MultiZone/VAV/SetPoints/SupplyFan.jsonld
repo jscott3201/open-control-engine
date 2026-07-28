@@ -1,0 +1,1262 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-160,-140},{140,160}},preserveAspectRatio=false),graphics={Rectangle(extent={{-156,-22},{134,-128}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Rectangle(extent={{-158,158},{132,2}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Text(textString=\"Check current operation mode\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{42,156},{124,134}}),Text(textString=\"Reset pressure setpoint\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{54,-26},{124,-38}}),Text(textString=\"Control fan speed\",textColor={0,0,255},extent={{-34,-106},{20,-136}}),Text(textString=\"Check fan on or off\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{42,142},{96,126}})}",
+      "S231:documentation": "info=<html>\n<p>\nSupply fan control for a multi zone VAV AHU according to Section 5.16.1 of \nASHRAE Guideline G36, May 2020.\n</p>\n<h4>Supply fan start/stop</h4>\n<ul>\n<li>Supply fan shall run when system is in the Cool-down, Setup, or Occupied mode</li>\n<li>If there are any VAV-reheat boxes on perimeter zones, supply fan shall also\nrun when system is in Setback or Warmup mode</li>\n</ul>\n<h4>Static pressure setpoint reset</h4>\n<p>\nStatic pressure setpoint shall be reset using trim-respond logic using following\nparameters as a starting point:\n</p>\n<table summary=\\summary\\ border=\\1\\>\n<tr><th> Variable </th> <th> Value </th> <th> Definition </th> </tr>\n<tr><td>Device</td><td>AHU Supply Fan</td> <td>Associated device</td></tr>\n<tr><td>SP0</td><td><code>iniSet</code></td><td>Initial setpoint</td></tr>\n<tr><td>SPmin</td><td><code>minSet</code></td><td>Minimum setpoint</td></tr>\n<tr><td>SPmax</td><td><code>maxSet</code></td><td>Maximum setpoint</td></tr>\n<tr><td>Td</td><td><code>delTim</code></td><td>Delay timer</td></tr>\n<tr><td>T</td><td><code>samplePeriod</code></td><td>Time step</td></tr>\n<tr><td>I</td><td><code>numIgnReq</code></td><td>Number of ignored requests</td></tr>\n<tr><td>R</td><td><code>uZonPreResReq</code></td><td>Number of requests</td></tr>\n<tr><td>SPtrim</td><td><code>triAmo</code></td><td>Trim amount</td></tr>\n<tr><td>SPres</td><td><code>resAmo</code></td><td>Respond amount</td></tr>\n<tr><td>SPres_max</td><td><code>maxRes</code></td><td>Maximum response per time interval</td></tr>\n</table>\n<br/>\n<h4>Static pressure control</h4>\n<p>\nSupply fan speed is controlled with a PI controller to maintain duct static pressure at setpoint\nwhen the fan is proven on. The setpoint for the PI controller and the measured\nduct static pressure are normalized with the maximum design static presssure\n<code>maxSet</code>.\nWhere the zone groups served by the system are small,\nprovide multiple sets of gains that are used in the control loop as a function\nof a load indicator (such as supply fan airflow rate, the area of the zone groups\nthat are occupied, etc.).\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nAugust 23, 2023, by Jianjun Hu:<br/>\nAdded parameter to set the initial fan speed.\n</li>\n<li>\nAugust 1, 2020, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.dpDuc"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.uOpeMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.uZonPreResReq"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.y1SupFan"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.ySupFan"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.controllerType"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.delTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.have_perZonRehBox"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.iniSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.iniSpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxRes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxSpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.minSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.minSpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.numIgnReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.resAmo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.Td"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.Ti"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.triAmo"
+        }
+      ],
+      "S231:icon": "graphics={Text(textString=\"%name\",textColor={0,0,255},extent={{-102,140},{96,118}}),Rectangle(extent={{-100,100},{100,-100}},lineColor={0,0,0},fillColor={223,211,169},fillPattern=FillPattern.Solid),Text(textString=\"uOpeMod\",textColor={0,0,127},extent={{-96,90},{-54,70}}),Text(textString=\"uZonPreResReq\",textColor={0,0,127},extent={{-96,-16},{-44,-44}}),Text(textString=\"dpDuc\",textColor={0,0,127},extent={{-96,-70},{-60,-90}}),Text(textString=\"ySupFan\",textColor={0,0,127},extent={{52,10},{94,-10}}),Text(textString=\"y1SupFan\",textColor={0,0,127},extent={{52,80},{94,60}})}",
+      "S231:label": "SupplyFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Constant true",
+      "S231:graphics": "Placement(transformation(extent={{20,0},{40,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "con"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con.k",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.con.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Cool down mode",
+      "S231:graphics": "Placement(transformation(extent={{-120,120},{-100,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt.y"
+        }
+      ],
+      "S231:label": "conInt"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt.k",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.coolDown"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Set up mode",
+      "S231:graphics": "Placement(transformation(extent={{-120,90},{-100,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1.y"
+        }
+      ],
+      "S231:label": "conInt1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1.k",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.setUp"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-120,60},{-100,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2.y"
+        }
+      ],
+      "S231:label": "conInt2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2.k",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Set back mode",
+      "S231:graphics": "Placement(transformation(extent={{-120,30},{-100,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3.y"
+        }
+      ],
+      "S231:label": "conInt3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3.k",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.setBack"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Warm-up mode",
+      "S231:graphics": "Placement(transformation(extent={{-120,0},{-100,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4.y"
+        }
+      ],
+      "S231:label": "conInt4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4.k",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.warmUp"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conInt4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply fan speed control",
+      "S231:graphics": "Placement(transformation(extent={{-40,-80},{-20,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.controllerType"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.Td"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.Ti"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.trigger"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.u_m"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.u_s"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.y"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.y_reset"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.yMax"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.yMin"
+        }
+      ],
+      "S231:label": "conSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.controllerType",
+      "S231:isFinal": true,
+      "S231:value": "controllerType"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.k",
+      "S231:isFinal": true,
+      "S231:value": "k"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.Td",
+      "S231:isFinal": true,
+      "S231:value": "Td"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.Ti",
+      "S231:isFinal": true,
+      "S231:value": "Ti"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.trigger",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.y"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.y_reset",
+      "S231:isFinal": true,
+      "S231:value": "iniSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.yMax",
+      "S231:isFinal": true,
+      "S231:value": "maxSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.yMin",
+      "S231:isFinal": true,
+      "S231:value": "minSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.controllerType",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Type of controller",
+      "S231:label": "controllerType",
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.delTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Delay time after which trim and respond is activated",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "delTim",
+      "S231:value": 600,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.dpDuc",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured duct static pressure",
+      "S231:graphics": "Placement(transformation(extent={{-200,-130},{-160,-90}})),iconTransformation(extent={{-140,-100},{-100,-60}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.u1"
+      },
+      "S231:label": "dpDuc",
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Discrete.FirstOrderHold",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Extrapolation through the values of the last two sampled input signals",
+      "S231:graphics": "Placement(transformation(extent={{-100,-60},{-80,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.y"
+        }
+      ],
+      "S231:label": "firOrdHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.samplePeriod",
+      "S231:isFinal": true,
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Gain for normalization of controller input",
+      "S231:graphics": "Placement(transformation(extent={{-130,-100},{-110,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor.y"
+        }
+      ],
+      "S231:label": "gaiNor"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor.k",
+      "S231:isFinal": true,
+      "S231:value": "maxSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.gaiNor.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.have_perZonRehBox",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if there is any VAV-reheat boxes on perimeter zones",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_perZonRehBox",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.iniSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Initial setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "iniSet",
+      "S231:value": 120,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.iniSpe",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Initial speed when fan is enabled. It has to be greater than the lowest allowed speed",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "iniSpe",
+      "S231:max": 1,
+      "S231:min": "minSpe",
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if current operation mode is cool-down mode",
+      "S231:graphics": "Placement(transformation(extent={{-60,120},{-40,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.y"
+        }
+      ],
+      "S231:label": "intEqu"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if current operation mode is setup mode",
+      "S231:graphics": "Placement(transformation(extent={{-60,90},{-40,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.y"
+        }
+      ],
+      "S231:label": "intEqu1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if current operation mode is occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-60,60},{-40,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.y"
+        }
+      ],
+      "S231:label": "intEqu2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if current operation mode is setback mode",
+      "S231:graphics": "Placement(transformation(extent={{-60,30},{-40,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.y"
+        }
+      ],
+      "S231:label": "intEqu3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if current operation mode is warmup mode",
+      "S231:graphics": "Placement(transformation(extent={{-60,0},{-40,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.y"
+        }
+      ],
+      "S231:label": "intEqu4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Gain of controller, normalized using maxSet",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "k",
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxRes",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Maximum response per time interval (same sign as resAmo)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "maxRes",
+      "S231:value": 32,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Duct design maximum static pressure. It is the Max_DSP shown in Section 3.2.1.1 of Guideline 36",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "maxSet",
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.maxSpe",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Maximum allowed fan speed",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "maxSpe",
+      "S231:max": 1,
+      "S231:min": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "S231:value": 1,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.minSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "minSet",
+      "S231:value": 25,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.minSpe",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Lowest allowed fan speed if fan is on",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "minSpe",
+      "S231:max": 1,
+      "S231:min": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Normalization of pressure measurement",
+      "S231:graphics": "Placement(transformation(extent={{-70,-120},{-50,-100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.y"
+        }
+      ],
+      "S231:label": "norPMea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPMea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.u_m"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Normalization for pressure set point",
+      "S231:graphics": "Placement(transformation(extent={{-70,-80},{-50,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.y"
+        }
+      ],
+      "S231:label": "norPSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.norPSet.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.conSpe.u_s"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.numIgnReq",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Number of ignored requests",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:label": "numIgnReq",
+      "S231:value": 2
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check whether supply fan should be ON",
+      "S231:graphics": "Placement(transformation(extent={{80,60},{100,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.y"
+        }
+      ],
+      "S231:label": "or1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.uDevSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.y1SupFan"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_perZonRehBox",
+      "S231:description": "Setback or warmup mode",
+      "S231:graphics": "Placement(transformation(extent={{20,30},{40,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "or2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Cool-down or setup or occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-20,90},{0,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.y"
+        }
+      ],
+      "S231:label": "or3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Cool-down or setup or occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{20,60},{40,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.y"
+        }
+      ],
+      "S231:label": "or4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.or1.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.resAmo",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Respond amount (must be opposite in to triAmo)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "resAmo",
+      "S231:value": 15,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sample period",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "samplePeriod",
+      "S231:value": 120,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Static pressure setpoint reset using trim and respond logic",
+      "S231:graphics": "Placement(transformation(extent={{-130,-60},{-110,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.delTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.iniSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.maxRes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.maxSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.minSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.numIgnReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.numOfReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.resAmo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.triAmo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.uDevSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.y"
+        }
+      ],
+      "S231:label": "staPreSetRes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.delTim",
+      "S231:isFinal": true,
+      "S231:value": "delTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.iniSet",
+      "S231:isFinal": true,
+      "S231:value": "iniSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.maxRes",
+      "S231:isFinal": true,
+      "S231:value": "maxRes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.maxSet",
+      "S231:isFinal": true,
+      "S231:value": "maxSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.minSet",
+      "S231:isFinal": true,
+      "S231:value": "minSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.numIgnReq",
+      "S231:isFinal": true,
+      "S231:value": "numIgnReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.resAmo",
+      "S231:isFinal": true,
+      "S231:value": "resAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.samplePeriod",
+      "S231:isFinal": true,
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.triAmo",
+      "S231:isFinal": true,
+      "S231:value": "triAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.firOrdHol.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "If fan is OFF, fan speed outputs to zero",
+      "S231:graphics": "Placement(transformation(extent={{80,-90},{100,-110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.y"
+        }
+      ],
+      "S231:label": "swi"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.ySupFan"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.Td",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Time constant of derivative block",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "Td",
+      "S231:min": 0,
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.Ti",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Time constant of integrator block",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "Ti",
+      "S231:min": 0,
+      "S231:value": 60,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.triAmo",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Trim amount",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "triAmo",
+      "S231:value": -12,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "System operation mode",
+      "S231:graphics": "Placement(transformation(extent={{-200,100},{-160,140}})),iconTransformation(extent={{-140,60},{-100,100}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.intEqu4.u1"
+        }
+      ],
+      "S231:label": "uOpeMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.uZonPreResReq",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone static pressure reset requests",
+      "S231:graphics": "Placement(transformation(extent={{-200,-80},{-160,-40}})),iconTransformation(extent={{-140,-50},{-100,-10}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.staPreSetRes.numOfReq"
+      },
+      "S231:label": "uZonPreResReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.y1SupFan",
+      "@type": "S231:BooleanOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply fan command on",
+      "S231:graphics": "Placement(transformation(extent={{140,50},{180,90}})),iconTransformation(extent={{100,50},{140,90}})))",
+      "S231:label": "y1SupFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.ySupFan",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply fan commanded speed",
+      "S231:graphics": "Placement(transformation(extent={{140,-120},{180,-80}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "ySupFan",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Zero fan speed when it becomes OFF",
+      "S231:graphics": "Placement(transformation(extent={{20,-90},{40,-70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe.y"
+        }
+      ],
+      "S231:label": "zerSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe.k",
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.zerSpe.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan.swi.u3"
+      }
+    }
+  ]
+}

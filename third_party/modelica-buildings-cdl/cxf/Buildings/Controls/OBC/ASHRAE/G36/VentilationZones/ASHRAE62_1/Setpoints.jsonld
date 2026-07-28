@@ -1,0 +1,2009 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-300,-360},{300,360}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nThis sequence sets the zone minimum outdoor air and minimum airflow setpoints, for\ncompliance with the ventilation rate procedure of ASHRAE Standard 62.1. The\nimplementation is according to ASHRAE Guideline36, Section 5.2.1.3. The calculation\nis done following the steps below.\n</p>\n<p>\n1. For every zone that requires mechanical ventilation, the zone minimum outdoor airflows\nand set points shall be calculated depending on the governing standard or code for\noutdoor air requirements.\n</p>\n<p>\n2. According to section 3.1.2 of Guideline 36, the zone minimum airflow setpoint\n<code>VMin_flow</code> should be provided by designer.\n</p>\n<h4>Zone ventilation set points</h4>\n<p>\nAccording to Section 3.1.1.2 of Guideline 36, \n</p>\n<ul>\n<li>\nThe area component of the breathing zone outdoor airflow\n<code>VAreBreZon_flow</code>..\n</li>\n<li>\nThe population component of the breathing zone outdoor airflow\n<code>VPopBreZon_flow</code>.\n</li>\n</ul>\n<h4>Zone air distribution effectiveness</h4>\n<ul>\n<li>\nIf the discharge air temperature <code>TDis</code> at the terminal unit is less than\nor equal to zone space temperature <code>TZon</code>, the effectiveness should be\nthe zone cooling air distribution effectiveness <code>zonDisEff_cool</code> and defaults\nit to 1.0 if no value is scheduled.\n</li>\n<li>\nIf the discharge air temperature <code>TDis</code> at the terminal unit is greater than\nzone space temperature <code>TZon</code>, the effectiveness should be\nthe zone heating air distribution effectiveness <code>zonDisEff_heat</code> and defaults\nit to 0.8 if no value is scheduled.\n</li>\n</ul>\n<h4>Population component of the breathing zone outdoor airflow</h4>\n<p>\nThe population component of the breathing zone outdoor airflow should normally equal\nto the value calculated above. However, it would be modified as noted in below.\n</p>\n<h4>Occupied minimum airflow</h4>\n<p>\nThe occupied minimum airflow shall be equal to <code>VMin_flow</code> except as\nnoted in below.\n</p>\n<h4>Set points modification</h4>\n<p>\nThe required zone outdoor airflow shall be calculated as the sum of area and population\ncomponents of breathing zone outdoor airflow divided by air distribution effectiveness.\nThe normal value of the area and population components are modified if any of the\nfollowing conditions are met, in order from higher to lower priority:\n</p>\n<ol>\n<li>\nIf the zone is any mode other than occupied mode, and for zones that have window\nswitches and the window is open: the area and population components of breathing\nzone outdoor airflow, and the occupied minimum airflow rate should be zero.\n</li>\n<li>\nIf the zone has an occupancy sensor, is unpopulated, and occupied-standby mode is\npermitted: the area and population components of breathing zone outdoor airflow,\nand the occupied minimum airflow rate should be zero.\n</li>\n<li>\nElse, if the zone has an occupancy sensor, is unpopulated, but occupied-standby mode\nis not permitted: the population components of breathing zone outdoor airflow\nshould be zero and the occupied minimum airflow rate should be <code>VMin_flow</code>.\n</li>\n<li>\nIf the zone has a CO2 sensor:\n<ol type=\\i\\>\n<li>\nSpecify CO2 setpoint <code>ppmCO2Set</code> according to Section 3.1.1.3 of Guideline 36.\n</li>\n<li>\nDuring occupied mode, a P-only loop shall maintain CO2 concentration at setpoint;\nreset from 0% at set point minus 200 PPM and to 100% at setpoint.\n</li>\n<li>\nLoop is disabled and output set to zero when the zone is not in occupied mode.\n</li>\n<li>\nFor cooling-only VAV terminal units, reheat VAV terminal units, constant-volume series\nfan-powered terminal units, dual-duct VAV terminal units with mixing control and inlet\nairflow sensors, dual-duct VAV terminal units with mixing control and a discharge\nairflow sensor, or dual-duct VAV terminal units with cold-duct minimum control:\n<ul>\n<li>\nThe CO2 control loop output shall reset both the occupied minimum airflow setpoint\nand the population component of the required breathing zone outdoor airflow in parallel.\nThe occupied minimum airflow setpoint shall be reset from the zone minimum airflow\nsetpoint <code>VMin_flow</code> at 0% loop output up to maximum cooling airflow\nsetpoint <code>VCooMax_flow</code> at 100% loop output. The population component\nof breathing zone outdoor airflow shall be reset from 0 L/s at 0% loop output up to\nthe designed population component airflow setpoint at 100% loop output.\n</li>\n</ul>\n<p align=\\center\\>\n<img alt=\\Image of airflow setpoint for VAV reheat terminal unit\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE61_1/setpoints_reheat.png\\/>\n</p>\n</li>\n<li>\nFor parallel fan-powered terminal units:\n<ul>\n<li>\nDetermin the maximum flow rate for control CO2 level: when the zone state is cooling,\nthe maximum flow rate is equal to the maximum cooling airflow setpoint\n<code>VCooMax_flow</code>; when the zone state is heating or deadband, the maximum\nflow rate is equal to <code>VCooMax_flow</code> minus the parallel fan airflow\n<code>VParFan_flow</code>.\n</li>\n<li>\nThe occupied minimum airflow setpoint shall be reset from the zone minimum airflow\nsetpoint <code>VMin_flow</code> at 0% loop output up to maximum cooling airflow\nsetpoint determined by CO2 control level at 100% loop output. The population component\nof breathing zone outdoor airflow shall be reset from 0 L/s at 0% loop output up to\nthe designed population component airflow setpoint at 100% loop output.\n</li>\n</ul>\n<p align=\\center\\>\n<img alt=\\Image of airflow setpoint for VAV parallel-fan terminal unit\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE61_1/setpoints_parallelFan.png\\/>\n</p>\n</li>\n</ol>\n</li>\n<li>\nFor single zoneVAV air handler unit: the minimum outdoor air setpoint is equal to\nthe breathing zone outdoor airflow setpoint.\n<ul>\n<li>\nIf the zone has CO2 sensor, the CO2 control loop output shall reset\nthe population component of the required breathing zone outdoor airflow from 0 L/s\nat 0% loop output up to the designed population component airflow setpoint at\n100% loop output.\n<p align=\\center\\>\n<img alt=\\Image of airflow setpoint for single zone VAV AHU\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE61_1/setpoints_SZVAV.png\\/>\n</p>\n</li>\n<li>\nIf the zone dose not have CO2 sensor, the minimum outdoor air setpoint is equal to\nthe design breathing zone outdoor airflow setpoint.\n</li>\n</ul>\n\n</li>\n</ol>\n</html>,revisions=<html>\n<ul>\n<li>\nAugust 12, 2020, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.ppmCO2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.ppmCO2Set"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.TDis"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.TZon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.u1Occ"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.u1Win"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.uOpeMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.uZonSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VParFan_flow"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjAreBreZon_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjPopBreZon_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VMinOA_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VOccZonMin_flow"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.dTHys"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_CO2Sen"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_occSen"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_parFanPowUni"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_SZVAV"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_typTerUni"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_winSen"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.permit_occStandby"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAreBreZon_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VCooMax_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VMin_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VPopBreZon_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonDisEff_cool"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonDisEff_heat"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}},preserveAspectRatio=false),graphics={Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Line(color={95,95,95},points={{-60,62},{-60,-50},{60,-50}}),Line(color={95,95,95},points={{-36,-62},{26,-62}}),Polygon(points={{28,-62},{6,-56},{6,-68},{28,-62}},lineColor={95,95,95},fillColor={95,95,95},fillPattern=FillPattern.Solid),Line(color={95,95,95},points={{60,-50},{60,62}}),Line(color={28,108,200},points={{-60,-50},{60,40}},pattern=LinePattern.Dash),Line(color={28,108,200},thickness=0.5,points={{-60,-30},{60,60}}),Text(textString=\"uWin\",textColor={255,0,255},extent={{-98,96},{-78,84}},visible=have_winSen),Text(textString=\"uOcc\",textColor={255,0,255},extent={{-100,76},{-74,66}},visible=have_occSen),Text(textString=\"uOpeMod\",textColor={255,127,0},extent={{-98,56},{-62,44}}),Text(textString=\"ppmCO2\",textColor={0,0,127},extent={{-100,16},{-62,6}},visible=have_CO2Sen),Text(textString=\"uZonSta\",textColor={255,127,0},extent={{-98,-4},{-64,-16}},visible=have_CO2Sen and have_parFanPowUni),Text(textString=\"VParFan_flow\",textColor={0,0,127},extent={{-98,-32},{-48,-48}},visible=have_CO2Sen and have_parFanPowUni),Text(textString=\"TZon\",textColor={0,0,127},extent={{-100,-64},{-76,-74}}),Text(textString=\"TDis\",textColor={0,0,127},extent={{-100,-82},{-80,-92}}),Text(textString=\"VOccZonMin_flow\",textColor={0,0,127},extent={{48,48},{98,32}},visible=not have_SZVAV),Text(textString=\"VMinOA_flow\",textColor={0,0,127},extent={{54,-32},{98,-46}}),Text(textString=\"ppmCO2\",textColor={0,0,127},extent={{-98,16},{-70,6}},visible=have_CO2Sen),Text(textString=\"ppmCO2Set\",textColor={0,0,127},extent={{-98,38},{-62,24}},visible=have_CO2Sen),Text(textString=\"VAdjPopBreZon_flow\",textColor={0,0,127},extent={{52,90},{96,76}}),Text(textString=\"VAdjAreBreZon_flow\",textColor={0,0,127},extent={{54,8},{98,-6}})}",
+      "S231:label": "Setpoints"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.AddParameter",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Lower threshold of CO2 setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-220,-50},{-200,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.p"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "addPar"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.p",
+      "S231:isFinal": true,
+      "S231:value": -200
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.x1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Air distribution effectiveness",
+      "S231:graphics": "Placement(transformation(extent={{-180,-320},{-160,-300}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.realFalse"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.realTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.y"
+        }
+      ],
+      "S231:label": "airDisEff"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.realFalse",
+      "S231:isFinal": true,
+      "S231:value": "zonDisEff_heat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.realTrue",
+      "S231:isFinal": true,
+      "S231:value": "zonDisEff_cool"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Convert boolean to real",
+      "S231:graphics": "Placement(transformation(extent={{-160,20},{-140,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "booToRea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_occSen",
+      "S231:description": "Convert boolean to real",
+      "S231:graphics": "Placement(transformation(extent={{-220,120},{-200,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.realFalse"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.realTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "booToRea1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.realFalse",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.realTrue",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Corrected CO2 control loop output",
+      "S231:graphics": "Placement(transformation(extent={{-80,-50},{-60,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "co2Con"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Constant false",
+      "S231:graphics": "Placement(transformation(extent={{-80,240},{-60,260}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "con"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con.k",
+      "S231:isFinal": true,
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Constant false",
+      "S231:graphics": "Placement(transformation(extent={{-40,180},{-20,200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "con1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1.k",
+      "S231:isFinal": true,
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.con1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Cooling state",
+      "S231:graphics": "Placement(transformation(extent={{-280,-250},{-260,-230}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "cooSta"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta.k",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSta.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if it is supplying cooling",
+      "S231:graphics": "Placement(transformation(extent={{-220,-320},{-200,-300}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.y"
+        }
+      ],
+      "S231:label": "cooSup"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.h",
+      "S231:isFinal": true,
+      "S231:value": "dTHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.airDisEff.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Design area component of the breathing zone outdoor airflow",
+      "S231:graphics": "Placement(transformation(extent={{-180,250},{-160,270}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir.y"
+        }
+      ],
+      "S231:label": "desAreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir.k",
+      "S231:isFinal": true,
+      "S231:value": "VAreBreZon_flow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desAreAir.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Design population component of the breathing zone outdoor airflow",
+      "S231:graphics": "Placement(transformation(extent={{-180,290},{-160,310}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir.y"
+        }
+      ],
+      "S231:label": "desPopAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir.k",
+      "S231:isFinal": true,
+      "S231:value": "VPopBreZon_flow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.desPopAir.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.f2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Maximum cooling airflw set point minus parallel fan airflow",
+      "S231:graphics": "Placement(transformation(extent={{-220,-270},{-200,-250}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "difCooMax"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.dTHys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Temperature difference hysteresis below which the temperature difference will be seen as zero",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "dTHys",
+      "S231:value": {
+        "@value": "0.25",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:TemperatureDifference"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined and not undefined",
+      "S231:description": "Dummy gain for conditional input",
+      "S231:graphics": "Placement(transformation(extent={{-40,-20},{-20,0}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "gai"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Dummy gain for conditional input",
+      "S231:graphics": "Placement(transformation(extent={{80,80},{100,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "gai1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and not undefined and not undefined",
+      "S231:description": "Dummy gain for conditional input",
+      "S231:graphics": "Placement(transformation(extent={{-160,-160},{-140,-140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "gai2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.f2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_CO2Sen",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: the zone has CO2 sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_CO2Sen",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_occSen",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: the zone has occupancy sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_occSen",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_parFanPowUni",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: the zone has parallel fan-powered terminal unit and CO2 sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_parFanPowUni",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_SZVAV",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: it is single zone VAV AHU system with CO2 sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_SZVAV",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_typTerUni",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: the zone has typical terminal units and CO2 sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_typTerUni",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.have_winSen",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: the zone has window sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_winSen",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Check if it is in cooling state",
+      "S231:graphics": "Placement(transformation(extent={{-220,-230},{-200,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "inCooSta"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if it is in occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-220,20},{-200,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.y"
+        }
+      ],
+      "S231:label": "inOccMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "CO2 control loop",
+      "S231:graphics": "Placement(transformation(extent={{-160,-70},{-140,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lin"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.co2Con.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Maximum airflow set point for CO2",
+      "S231:graphics": "Placement(transformation(extent={{-160,-230},{-140,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "maxFloCO2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.f2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{260,0},{280,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.y"
+        }
+      ],
+      "S231:label": "minOA"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VMinOA_flow"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Modified area component of the breathing zone airflow",
+      "S231:graphics": "Placement(transformation(extent={{140,250},{160,270}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.y"
+        }
+      ],
+      "S231:label": "modAreBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjAreBreZon_flow"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Modified popuplation component of the breathing zone airflow",
+      "S231:graphics": "Placement(transformation(extent={{180,280},{200,300}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.y"
+        }
+      ],
+      "S231:label": "modPopBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjPopBreZon_flow"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_occSen",
+      "S231:description": "Not occupied",
+      "S231:graphics": "Placement(transformation(extent={{-280,160},{-260,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "notOcc"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Not in occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-80,200},{-60,220}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod.y"
+        }
+      ],
+      "S231:label": "notOccMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOccMod.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Occupied minimum airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{80,220},{100,240}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "occMinAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VOccZonMin_flow"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and not undefined",
+      "S231:description": "Modified occupied minimum airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-20,-130},{0,-110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "occMinAirSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-280,-10},{-260,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod.y"
+        }
+      ],
+      "S231:label": "occMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod.k",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMod.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Constant one",
+      "S231:graphics": "Placement(transformation(extent={{-220,-100},{-200,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "one"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.one.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.x2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if it is not in occupied mode or the window is open",
+      "S231:graphics": "Placement(transformation(extent={{-20,220},{0,240}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.y"
+        }
+      ],
+      "S231:label": "or2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.permit_occStandby",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: occupied-standby mode is permitted",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "permit_occStandby",
+      "S231:value": true
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_occSen",
+      "S231:description": "Permit occupied-standby mode",
+      "S231:graphics": "Placement(transformation(extent={{-260,120},{-240,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "perOccSta"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta.k",
+      "S231:isFinal": true,
+      "S231:value": "permit_occStandby"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.perOccSta.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.booToRea1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Modified population componenet of the required breathing zone outdoor airflow",
+      "S231:graphics": "Placement(transformation(extent={{-20,-190},{0,-170}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "popBreOutAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.ppmCO2",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Detected CO2 concentration",
+      "S231:graphics": "Placement(transformation(extent={{-340,-80},{-300,-40}})),iconTransformation(extent={{-140,-10},{-100,30}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.u"
+      },
+      "S231:label": "ppmCO2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.ppmCO2Set",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "CO2 concentration setpoint, in PPM",
+      "S231:graphics": "Placement(transformation(extent={{-340,-40},{-300,0}})),iconTransformation(extent={{-140,10},{-100,50}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.addPar.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.x2"
+        }
+      ],
+      "S231:label": "ppmCO2Set"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Required breathing zone outdoor airflow",
+      "S231:graphics": "Placement(transformation(extent={{220,260},{240,280}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.y"
+        }
+      ],
+      "S231:label": "reqBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.reqBreAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.minOA.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.TDis",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured discharge air temperature",
+      "S231:graphics": "Placement(transformation(extent={{-340,-360},{-300,-320}})),iconTransformation(extent={{-140,-110},{-100,-70}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.u2"
+      },
+      "S231:label": "TDis",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.TZon",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured room temperature",
+      "S231:graphics": "Placement(transformation(extent={{-340,-330},{-300,-290}})),iconTransformation(extent={{-140,-90},{-100,-50}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.cooSup.u1"
+      },
+      "S231:label": "TZon",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.u1Occ",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_occSen",
+      "S231:description": "True: the zone is populated",
+      "S231:graphics": "Placement(transformation(extent={{-340,150},{-300,190}})),iconTransformation(extent={{-140,50},{-100,90}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.notOcc.u"
+      },
+      "S231:label": "u1Occ"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.u1Win",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_winSen",
+      "S231:description": "Window status, normally closed (true), when windows open, it becomes false",
+      "S231:graphics": "Placement(transformation(extent={{-340,210},{-300,250}})),iconTransformation(extent={{-140,70},{-100,110}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe.u"
+      },
+      "S231:label": "u1Win"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Area component of the required breathing zone outdoor airflow when it is unpopulated",
+      "S231:graphics": "Placement(transformation(extent={{80,130},{100,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.y"
+        }
+      ],
+      "S231:label": "unpAreBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Minimum zone airflow when it is unpopulated",
+      "S231:graphics": "Placement(transformation(extent={{20,100},{40,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "unpMinZonAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and not undefined",
+      "S231:description": "Minimum zone airflow when it is unpopulated",
+      "S231:graphics": "Placement(transformation(extent={{-80,60},{-60,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "unpMinZonFlo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_occSen",
+      "S231:description": "Area component of the required breathing zone outdoor airflow when it is unpopulated",
+      "S231:graphics": "Placement(transformation(extent={{-80,100},{-60,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "unPopAreBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unPopAreBreAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Population component of the required breathing zone outdoor airflow when it is unpopulated",
+      "S231:graphics": "Placement(transformation(extent={{140,160},{160,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.y"
+        }
+      ],
+      "S231:label": "unpPopBreAir"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone operation mode",
+      "S231:graphics": "Placement(transformation(extent={{-340,10},{-300,50}})),iconTransformation(extent={{-140,30},{-100,70}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inOccMod.u1"
+      },
+      "S231:label": "uOpeMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.uZonSta",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Zone state",
+      "S231:graphics": "Placement(transformation(extent={{-340,-240},{-300,-200}})),iconTransformation(extent={{-140,-30},{-100,10}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.inCooSta.u1"
+      },
+      "S231:label": "uZonSta"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjAreBreZon_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Adjusted area component breathing zone flow rate",
+      "S231:graphics": "Placement(transformation(extent={{300,120},{340,160}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "VAdjAreBreZon_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAdjPopBreZon_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Adjusted population component breathing zone flow rate",
+      "S231:graphics": "Placement(transformation(extent={{300,270},{340,310}})),iconTransformation(extent={{100,60},{140,100}})))",
+      "S231:label": "VAdjPopBreZon_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VAreBreZon_flow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Design area component of the breathing zone outdoor airflow",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "VAreBreZon_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VCooMax_flow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Design zone cooling maximum airflow rate",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "VCooMax_flow",
+      "S231:value": {
+        "@value": "0.025",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VMin_flow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Design zone minimum airflow setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "VMin_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VMinOA_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{300,-10},{340,30}})),iconTransformation(extent={{100,-60},{140,-20}})))",
+      "S231:label": "VMinOA_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VOccZonMin_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Occupied minimum airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{300,210},{340,250}})),iconTransformation(extent={{100,20},{140,60}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "VOccZonMin_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VParFan_flow",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined and undefined",
+      "S231:description": "Parallel fan airflow rate",
+      "S231:graphics": "Placement(transformation(extent={{-340,-300},{-300,-260}})),iconTransformation(extent={{-140,-60},{-100,-20}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.u2"
+      },
+      "S231:label": "VParFan_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.VPopBreZon_flow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Design population component of the breathing zone outdoor airflow",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "VPopBreZon_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe",
+      "@type": "ex:CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_winSen",
+      "S231:description": "Window is open",
+      "S231:graphics": "Placement(transformation(extent={{-240,220},{-220,240}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "winOpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.winOpe.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.or2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Constant zero",
+      "S231:graphics": "Placement(transformation(extent={{-280,-100},{-260,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "zer"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.lin.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.popBreOutAir.x1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant zero",
+      "S231:graphics": "Placement(transformation(extent={{-20,270},{0,290}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1.y"
+        }
+      ],
+      "S231:label": "zer1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modAreBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.modPopBreAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAir.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpPopBreAir.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Constant zero",
+      "S231:graphics": "Placement(transformation(extent={{-80,140},{-60,160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "zer2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpAreBreAir.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined or undefined",
+      "S231:description": "Constant zero",
+      "S231:graphics": "Placement(transformation(extent={{-80,20},{-60,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "zer3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zer3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonAir.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined and not undefined",
+      "S231:description": "Maximum cooling airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-280,-160},{-260,-140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "zonCooMaxFlo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo.k",
+      "S231:isFinal": true,
+      "S231:value": "VCooMax_flow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonCooMaxFlo.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.difCooMax.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.maxFloCO2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonDisEff_cool",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone cooling air distribution effectiveness",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "zonDisEff_cool",
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonDisEff_heat",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone heating air distribution effectiveness",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "zonDisEff_heat",
+      "S231:value": {
+        "@value": "0.8",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Zone minimum airflow setpoint Vmin",
+      "S231:graphics": "Placement(transformation(extent={{-280,60},{-260,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "zonMinFlo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo.k",
+      "S231:isFinal": true,
+      "S231:value": "VMin_flow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.zonMinFlo.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.occMinAirSet.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints.unpMinZonFlo.u2"
+        }
+      ]
+    }
+  ]
+}

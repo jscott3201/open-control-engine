@@ -1,0 +1,36 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration to configure the heating coil",
+      "S231:label": "HeatingCoil",
+      "S231:value": "HeatingCoil"
+    },
+    {
+      "@id": "ex:HeatingCoil.Electric",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+      "S231:description": "Modulating electric heating coil",
+      "S231:label": "Electric",
+      "S231:value": "Electric"
+    },
+    {
+      "@id": "ex:HeatingCoil.None",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+      "S231:description": "No coil",
+      "S231:label": "None",
+      "S231:value": "None"
+    },
+    {
+      "@id": "ex:HeatingCoil.WaterBased",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+      "S231:description": "Hot water coil",
+      "S231:label": "WaterBased",
+      "S231:value": "WaterBased"
+    }
+  ]
+}

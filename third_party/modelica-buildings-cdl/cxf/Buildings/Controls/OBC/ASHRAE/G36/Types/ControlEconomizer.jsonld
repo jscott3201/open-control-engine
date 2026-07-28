@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration to configure the economizer enable and disable control",
+      "S231:label": "ControlEconomizer",
+      "S231:value": "ControlEconomizer"
+    },
+    {
+      "@id": "ex:ControlEconomizer.DifferentialDryBulb",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "S231:description": "Differential dry bulb",
+      "S231:label": "DifferentialDryBulb",
+      "S231:value": "DifferentialDryBulb"
+    },
+    {
+      "@id": "ex:ControlEconomizer.DifferentialEnthalpyWithFixedDryBulb",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "S231:description": "Differential enthalpy with fixed dry bulb",
+      "S231:label": "DifferentialEnthalpyWithFixedDryBulb",
+      "S231:value": "DifferentialEnthalpyWithFixedDryBulb"
+    },
+    {
+      "@id": "ex:ControlEconomizer.FixedDryBulb",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "S231:description": "Fixed dry bulb",
+      "S231:label": "FixedDryBulb",
+      "S231:value": "FixedDryBulb"
+    },
+    {
+      "@id": "ex:ControlEconomizer.FixedDryBulbWithDifferentialDryBulb",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "S231:description": "Fixed dry bulb with differential dry bulb",
+      "S231:label": "FixedDryBulbWithDifferentialDryBulb",
+      "S231:value": "FixedDryBulbWithDifferentialDryBulb"
+    },
+    {
+      "@id": "ex:ControlEconomizer.FixedEnthalpyWithFixedDryBulb",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+      "S231:description": "Fixed enthalpy with fixed dry bulb",
+      "S231:label": "FixedEnthalpyWithFixedDryBulb",
+      "S231:value": "FixedEnthalpyWithFixedDryBulb"
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:ASHRAEClimateZone.Not_Specified",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Not specified",
+      "S231:label": "Not_Specified",
+      "S231:value": "Not_Specified"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_1A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 1A, Very Hot and Humid",
+      "S231:label": "Zone_1A",
+      "S231:value": "Zone_1A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_1B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 1B, Very Hot and Dry",
+      "S231:label": "Zone_1B",
+      "S231:value": "Zone_1B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_2A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 2A, Hot and Humid",
+      "S231:label": "Zone_2A",
+      "S231:value": "Zone_2A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_2B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 2B, Hot and Dry",
+      "S231:label": "Zone_2B",
+      "S231:value": "Zone_2B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_3A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 3A, Warm and Humid",
+      "S231:label": "Zone_3A",
+      "S231:value": "Zone_3A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_3B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 3B, Warm and Dry",
+      "S231:label": "Zone_3B",
+      "S231:value": "Zone_3B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_3C",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 3C, Warm and Marine",
+      "S231:label": "Zone_3C",
+      "S231:value": "Zone_3C"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_4A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 4A, Mixed and Humid",
+      "S231:label": "Zone_4A",
+      "S231:value": "Zone_4A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_4B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 4B, Mixed and Dry",
+      "S231:label": "Zone_4B",
+      "S231:value": "Zone_4B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_4C",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 4C, Mixed and Marine",
+      "S231:label": "Zone_4C",
+      "S231:value": "Zone_4C"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_5A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 5A, Cool and Humid",
+      "S231:label": "Zone_5A",
+      "S231:value": "Zone_5A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_5B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 5B, Cool and Dry",
+      "S231:label": "Zone_5B",
+      "S231:value": "Zone_5B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_5C",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 5C, Cool and Marine",
+      "S231:label": "Zone_5C",
+      "S231:value": "Zone_5C"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_6A",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 6A, Cold and Humid",
+      "S231:label": "Zone_6A",
+      "S231:value": "Zone_6A"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_6B",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 6B, Cold and Dry",
+      "S231:label": "Zone_6B",
+      "S231:value": "Zone_6B"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_7",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 7, Very Cold",
+      "S231:label": "Zone_7",
+      "S231:value": "Zone_7"
+    },
+    {
+      "@id": "ex:ASHRAEClimateZone.Zone_8",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "S231:description": "Zone 8, Subarctic",
+      "S231:label": "Zone_8",
+      "S231:value": "Zone_8"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration of ASHRAE climate zone",
+      "S231:label": "ASHRAEClimateZone",
+      "S231:value": "ASHRAEClimateZone"
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld": {
+    "upstream_class": null,
+    "root": "http://example.org#g36.ahu_economizer",
+    "own_composition": true
+  },
+  "crates/oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld": {
+    "upstream_class": null,
+    "root": "http://example.org#g36.ahu_supply_air_temp_reset",
+    "own_composition": true
+  },
+  "crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.ActiveAirFlow",
+    "root": "http://example.org#g36.source.cooling_only_active_air_flow",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms",
+    "root": "http://example.org#g36.source.cooling_only_alarms",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Controller",
+    "root": "http://example.org#g36.source.cooling_only_controller",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/cooling_only_dampers.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers",
+    "root": "http://example.org#g36.source.cooling_only_dampers",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/cooling_only_system_requests.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.SystemRequests",
+    "root": "http://example.org#g36.source.cooling_only_system_requests",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_differential.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_18.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_21.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_0.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_1.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_2.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_21.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_22.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_23.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_fixed_24.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.AirEconomizerHighLimits",
+    "root": "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TimeSuppression",
+    "root": "http://example.org#g36.source.generic_time_suppression",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Controller",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Enable",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_enable",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Limits.Common",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_limits_common",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.Reliefs",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan_relief_damper.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.Economizers.Subsequences.Modulations.ReturnFan",
+    "root": "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_freeze_protection.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.FreezeProtection",
+    "root": "http://example.org#g36.source.multizone_vav_freeze_protection",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.AHU",
+    "root": "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.ASHRAE62_1.SumZone",
+    "root": "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.AHU",
+    "root": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone",
+    "root": "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+    "root": "http://example.org#g36.source.multizone_vav_plant_requests",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefDamper",
+    "root": "http://example.org#g36.source.multizone_vav_relief_damper",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
+    "root": "http://example.org#g36.source.multizone_vav_relief_fan",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFanGroup",
+    "root": "http://example.org#g36.source.multizone_vav_relief_fan_group",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanAirflowTracking",
+    "root": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+    "root": "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyFan",
+    "root": "http://example.org#g36.source.multizone_vav_supply_fan",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplySignals",
+    "root": "http://example.org#g36.source.multizone_vav_supply_signals",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/multizone_vav_supply_temperature.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.SupplyTemperature",
+    "root": "http://example.org#g36.source.multizone_vav_supply_temperature",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/reheat_overrides.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.Reheat.Subsequences.Overrides",
+    "root": "http://example.org#g36.source.reheat_overrides",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ControlLoops",
+    "root": "http://example.org#g36.source.thermal_zones_control_loops",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates",
+    "root": "http://example.org#g36.source.thermal_zones_zone_states",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+    "root": "http://example.org#g36.source.trim_and_respond_have_hol_false",
+    "own_composition": false
+  },
+  "crates/oce-cxf/tests/fixtures/g36/vav_single_zone.jsonld": {
+    "upstream_class": null,
+    "root": "http://example.org#g36.vav_single_zone",
+    "own_composition": true
+  },
+  "crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld": {
+    "upstream_class": "Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.ASHRAE62_1.Setpoints",
+    "root": "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints",
+    "own_composition": false
+  }
+}
