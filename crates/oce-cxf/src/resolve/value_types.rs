@@ -14,7 +14,7 @@ pub(super) fn first_type(node: &Node) -> Option<&str> {
 }
 
 /// The trailing term of a compact or absolute IRI.
-fn term_of(iri: &str) -> &str {
+pub(super) fn term_of(iri: &str) -> &str {
     iri.rsplit([':', '#', '/']).next().unwrap_or(iri)
 }
 

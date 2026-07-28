@@ -425,7 +425,14 @@ fn rewrite_connections(
         }
         let mut targets = Vec::new();
         for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            resolve_target(target, &walk, &mut HashSet::new(), None, &mut targets);
+            resolve_target(
+                target,
+                &walk,
+                &mut HashSet::new(),
+                Some(source),
+                None,
+                &mut targets,
+            );
         }
         if !targets.is_empty() {
             out.entry(source.to_owned()).or_default().extend(targets);
@@ -445,7 +452,8 @@ fn resolve_target(
     target: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    excluded_predecessor: Option<&str>,
+    arrived_from: Option<&str>,
+    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if walk.specialization.is_inactive(target) {
@@ -453,14 +461,14 @@ fn resolve_target(
         return;
     }
     if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
-        follow_boundary(target, walk, seen, excluded_predecessor, out);
+        follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
         return;
     }
     if walk.boundary.outputs.contains(target) {
         if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, walk, seen, excluded_predecessor, out);
+            follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
         }
         return;
     }
@@ -471,7 +479,8 @@ fn follow_boundary(
     boundary_iri: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    excluded_predecessor: Option<&str>,
+    arrived_from: Option<&str>,
+    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
@@ -500,6 +509,7 @@ fn follow_boundary(
                 (walk.boundary.inputs.contains(*target) || walk.boundary.outputs.contains(*target))
                     && !walk.boundary.top_inputs.contains(*target)
                     && !walk.boundary.top_outputs.contains(*target)
+                    && Some(*target) != arrived_from
             })
             .collect::<Vec<_>>()
     } else {
@@ -509,11 +519,12 @@ fn follow_boundary(
         // A reverse-spelled fallback follows an incoming boundary edge. At the node it reaches,
         // exclude only the manufactured mirror edge back to that exact predecessor; any other
         // authored target remains visible, including a downstream cycle.
-        if Some(target) != excluded_predecessor {
+        if Some(target) != fallback_predecessor {
             resolve_target(
                 target,
                 walk,
                 seen,
+                Some(boundary_iri),
                 follows_incoming.then_some(boundary_iri),
                 out,
             );

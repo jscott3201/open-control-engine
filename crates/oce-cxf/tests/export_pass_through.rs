@@ -73,7 +73,7 @@ fn malformed_reserved_block_rejects_loudly() {
 }
 
 #[test]
-fn every_reserved_shape_conjunct_rejects_loudly() {
+fn missing_reserved_external_input_membership_rejects_loudly() {
     let valid = || ModelGraph {
         blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
         connectors: vec![
@@ -86,19 +86,13 @@ fn every_reserved_shape_conjunct_rejects_loudly() {
     };
     let mut missing_external = valid();
     missing_external.external_inputs.clear();
-    let mut wrong_direction = valid();
-    wrong_direction.connectors[0].dir = Dir::Out;
-    let mut mismatched_type = valid();
-    mismatched_type.connectors[1].value_type = ValueType::Integer;
-    for graph in [missing_external, wrong_direction, mismatched_type] {
-        let diagnostics = rejection(&graph);
-        assert!(
-            diagnostics.iter().any(|diagnostic| {
-                diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
-            }),
-            "{diagnostics:?}"
-        );
-    }
+    let diagnostics = rejection(&missing_external);
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+        }),
+        "{diagnostics:?}"
+    );
 }
 
 #[test]

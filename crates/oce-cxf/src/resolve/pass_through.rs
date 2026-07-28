@@ -1,4 +1,4 @@
-//! Materialization of native scalar boundary pass-through blocks.
+//! Boundary type derivation and materialization for native scalar pass-through blocks.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable,
 
 use crate::dto::{CxfDocument, Node};
 
-use super::value_types::try_derive_value_type;
+use super::value_types::{first_type, term_of, try_derive_value_type};
 
 /// Derive boundary types, retaining `String` only for endpoints of a native pass-through edge.
 pub(super) fn derive_boundary_types<'a>(
@@ -54,16 +54,13 @@ fn try_derive_pass_through_value_type(
     diags: &mut Vec<Diagnostic>,
 ) -> Option<ValueType> {
     if let Some(datatype) = &node.is_of_data_type {
-        if datatype.id.rsplit([':', '#', '/']).next() == Some("String") {
+        if term_of(&datatype.id) == "String" {
             return Some(ValueType::String);
         }
         return try_derive_value_type(node, diags);
     }
-    if node
-        .r#type
-        .as_ref()
-        .and_then(|types| types.as_slice().first())
-        .and_then(|iri| iri.rsplit([':', '#', '/']).next())
+    if first_type(node)
+        .map(term_of)
         .is_some_and(|term| term.starts_with("String"))
     {
         return Some(ValueType::String);

@@ -293,6 +293,24 @@ fn string_pass_through_rejects_deterministically() {
 }
 
 #[test]
+fn type_only_string_pass_through_uses_the_subset_rejection() {
+    let mut document = document();
+    for suffix in ["realIn", "realOut"] {
+        node_mut(&mut document, suffix)
+            .as_object_mut()
+            .expect("pass-through endpoint")
+            .remove("S231:isOfDataType");
+    }
+    node_mut(&mut document, "realIn")["@type"] = json!("S231:StringInput");
+    node_mut(&mut document, "realOut")["@type"] = json!("S231:StringOutput");
+    assert_repeated_rejection(
+        &document,
+        DiagCode::NonSubsetConstruct,
+        "non-scalar boundary pass-through type is unsupported",
+    );
+}
+
+#[test]
 fn unwired_string_boundaries_keep_their_ordinary_rejections() {
     let mut document = document();
     node_mut(&mut document, "realIn")
@@ -496,6 +514,42 @@ fn nested_pass_through_splices_in_both_spellings() {
 }
 
 #[test]
+fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
+    let mut forward: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
+    node_mut(&mut forward, "nested_composite")["S231:containsBlock"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub" });
+    node_mut(&mut forward, "nested_composite")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    node_mut(&mut forward, ".sub")["S231:containsBlock"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.enumCarrier" });
+    for suffix in [".sub.gain.y", ".post.y"] {
+        node_mut(&mut forward, suffix)
+            .as_object_mut()
+            .expect("unused output node")
+            .remove("S231:isConnectedTo");
+    }
+    node_mut(&mut forward, ".sub.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.y" });
+    node_mut(&mut forward, ".sub.y")
+        .as_object_mut()
+        .expect("sub output node")
+        .remove("S231:isConnectedTo");
+    let forward_graph = import(&forward).expect("forward unconsumed pass-through imports");
+
+    let mut reverse = forward.clone();
+    node_mut(&mut reverse, ".sub.u")
+        .as_object_mut()
+        .expect("sub input node")
+        .remove("S231:isConnectedTo");
+    node_mut(&mut reverse, ".sub.y")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.u" });
+    let reverse_graph = import(&reverse).expect("reverse unconsumed pass-through imports");
+    assert_eq!(format!("{forward_graph:?}"), format!("{reverse_graph:?}"));
+}
+
+#[test]
 fn authored_nested_boundary_cycle_names_the_revisited_boundary() {
     let mut cycle: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
     node_mut(&mut cycle, ".sub.u")["S231:isConnectedTo"] =
@@ -537,7 +591,7 @@ fn authored_boundary_cycle_after_reverse_fallback_names_the_revisited_boundary()
                 "@type": "S231:Block",
                 "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" },
                 "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.y" },
-                "S231:containsBlock": { "@id": "http://example.org#g36.profile.nested_composite.sub.gain" }
+                "S231:containsBlock": { "@id": "http://example.org#g36.profile.nested_composite.sub2.keep" }
             }),
             json!({
                 "@id": "http://example.org#g36.profile.nested_composite.sub2.u",
@@ -550,6 +604,27 @@ fn authored_boundary_cycle_after_reverse_fallback_names_the_revisited_boundary()
                 "@type": "S231:RealOutput",
                 "S231:isOfDataType": { "@id": "S231:Real" },
                 "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" }
+            }),
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep",
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": {
+                    "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.k"
+                },
+                "S231:hasOutput": {
+                    "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.y"
+                }
+            }),
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.k",
+                "@type": "S231:Parameter",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:value": 1
+            }),
+            json!({
+                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.y",
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
             }),
         ]);
     let diagnostics = import(&cycle).expect_err("authored cycle after fallback must reject");
