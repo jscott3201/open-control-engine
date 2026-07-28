@@ -14,10 +14,15 @@
 //! Two shapes are deliberately NOT rejected, and are recorded here so they are not "fixed" later.
 //! An input that is both an `external_inputs` entry and the target of one wire resolves — that is
 //! the false-reject guard pinned by `export_single_assignment.rs`, because it is the shape
-//! export/re-import produces. And symmetric closure — the same edge asserted from *both* ends, as
-//! an OWL reasoner materialising a symmetric property would emit — is out of scope: it yields two
-//! identical connections and is reported as multiply driven, since a duplicated target genuinely
-//! is in-degree 2 (`resolve_errors::doubly_driven_input_is_single_assignment` pins that reading).
+//! export/re-import produces.
+//!
+//! Symmetric closure — the same edge asserted from *both* ends, as an OWL reasoner materialising a
+//! symmetric property would emit — is out of scope, and its outcome depends on the edge. Between two
+//! child connectors it yields two identical connections and is reported as multiply driven, because
+//! a duplicated target genuinely is in-degree 2
+//! (`resolve_errors::doubly_driven_input_is_single_assignment` pins that reading). Closure of a
+//! **boundary** edge instead resolves cleanly, because both boundary arms elide before the in-degree
+//! count and `external_inputs` is de-duplicated. That asymmetry is recorded, not defended.
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::DiagCode;
@@ -33,8 +38,12 @@ fn iri(suffix: &str) -> String {
 /// A canonical rendering of everything the resolver decided.
 ///
 /// Connections are sorted because their *order* legitimately follows which node carried the edge —
-/// that is document shape, not model content. Every other field is positional and must match
-/// exactly, so a reordered connector or a re-bound port would still show up as a difference.
+/// that is document shape, not model content. **`external_inputs` is deliberately NOT sorted.** An
+/// earlier version of this file sorted it, which silently hid the one real divergence between the
+/// two spellings: the resolver filled that vector in subject order, so re-anchoring transposed it,
+/// and `export` emits the composite's `hasInput` in that order — a same-kind port transposition,
+/// the hazard `port_binding` exists to prevent. Sorting here would make this suite unable to see
+/// the very bug the change could introduce.
 fn render(g: &ModelGraph) -> String {
     let mut out: Vec<String> = Vec::new();
     for b in &g.blocks {
@@ -56,13 +65,7 @@ fn render(g: &ModelGraph) -> String {
         .collect();
     edges.sort();
     out.extend(edges);
-    let mut ext: Vec<String> = g
-        .external_inputs
-        .iter()
-        .map(|c| format!("X {}", c.0))
-        .collect();
-    ext.sort();
-    out.extend(ext);
+    out.extend(g.external_inputs.iter().map(|c| format!("X {}", c.0)));
     out.join("\n")
 }
 
