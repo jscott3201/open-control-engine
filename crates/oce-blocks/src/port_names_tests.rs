@@ -26,7 +26,7 @@ const EXPECTED_UNNAMED: &[&str] = &[
 ///
 /// This is the load-bearing check in this file. The table and the `BlockSignature`s are authored
 /// separately — different files, different shapes — so an index-for-index arity agreement across
-/// all 104 entries is a real constraint rather than a restatement.
+/// all 108 entries is a real constraint rather than a restatement.
 #[test]
 fn every_named_class_matches_its_registry_signature_arity() {
     let mut checked = 0usize;
@@ -48,10 +48,10 @@ fn every_named_class_matches_its_registry_signature_arity() {
         checked += 1;
     }
     assert_eq!(
-        checked, 105,
+        checked, 108,
         "named-class count changed. 104 of these are reachable by the vendored-source audit; the \
-         105th is TrueHoldWithReset, which no `.mo` exists for. Growing the set past that adds \
-         names nothing in this repository can contradict."
+         remaining four are TrueHoldWithReset, which has no `.mo`, and the three internal lowering \
+         classes. Growing the set past that adds names nothing in this repository can contradict."
     );
 }
 
@@ -136,7 +136,7 @@ fn unnamed_classes_are_exactly_the_documented_exemptions() {
             unnamed.push(entry.class_path);
         }
     }
-    assert_eq!(registered, 133, "registered class count changed");
+    assert_eq!(registered, 136, "registered class count changed");
     unnamed.sort_unstable();
     let mut expected: Vec<&str> = EXPECTED_UNNAMED.to_vec();
     expected.sort_unstable();

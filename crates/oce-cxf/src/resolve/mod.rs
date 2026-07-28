@@ -28,7 +28,6 @@ use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_expr::EvalResult;
 use oce_model::{
     BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
-    ValueType, enum_class_id, is_g36_integer_constant_package,
 };
 
 use crate::arrays::expand_array_param;
@@ -41,16 +40,21 @@ mod composite;
 mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
+mod connection_orientation;
 mod diags;
+mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
 mod specialize;
+mod value_types;
 
 use attrs::connector_attrs;
 use composite::lower;
+use connection_orientation::orient_edge;
 use diags::{finalize_diags, subject_of};
 use specialize::{specialize, validate_g36_parameter_value};
+use value_types::{derive_value_type, first_type};
 
 /// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
 /// variant, so a `Symbolic` mode would have no representable output. `#[non_exhaustive]` reserves
@@ -109,20 +113,6 @@ impl ValidationReport {
     }
 }
 
-/// First `@type` term of a node, if any (defensive against an empty/multi `@type` array — never
-/// indexes `[0]`).
-fn first_type(node: &Node) -> Option<&str> {
-    node.r#type
-        .as_ref()
-        .and_then(|t| t.as_slice().first())
-        .map(String::as_str)
-}
-
-/// The trailing term of a `prefix:Local` / `…#Local` / `…/Local` IRI (for datatype/term matching).
-fn term_of(iri: &str) -> &str {
-    iri.rsplit([':', '#', '/']).next().unwrap_or(iri)
-}
-
 /// The local member name of a dotted instance-member `@id` — the segment after the **last `.`**,
 /// e.g. `http://example.org#MinLoop.con.k` → `k`. This is the parameter key the block registry
 /// looks up (`oce_blocks` reads `real_param(p, "k", …)`), so it MUST be the bare member name, not
@@ -130,58 +120,6 @@ fn term_of(iri: &str) -> &str {
 pub(crate) fn local_name(iri: &str) -> &str {
     iri.rsplit('.').next().unwrap_or(iri)
 }
-/// Map an `isOfDataType` term (`S231:Real` → [`ValueType::Real`], etc.). `None` if unrecognized.
-fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
-    match term_of(iri) {
-        "Real" => Some(ValueType::Real),
-        "Integer" => Some(ValueType::Integer),
-        "Boolean" => Some(ValueType::Boolean),
-        _ => enum_class_id(iri)
-            .map(ValueType::Enum)
-            .or_else(|| is_g36_integer_constant_package(iri).then_some(ValueType::Integer)),
-    }
-}
-
-/// Re-anchor one `isConnectedTo` edge on its driving end, returning `(driver, driven)`.
-///
-/// Orientation is not a property of the document. CXF §8.2 gives `connectedTo` the domain
-/// *(OutputConnector, InputConnector)* and the range *(InputConnector, OutputConnector)* — either
-/// end may be the subject — and CDL states that the order of the arguments in a `connect` statement
-/// does not matter. Producers preserve Modelica source order verbatim, so a class authored
-/// `connect(dst, src)` yields an input-subject edge: `modelica-json` emits 11 of the 16 edges in
-/// `Economizers.Subsequences.Modulations.Reliefs` that way. Anchoring here lets the boundary
-/// dispatch and Step 10 reason about a single canonical orientation.
-///
-/// Returning a pair does **not** mean it is valid. A pair invalid in both orientations
-/// (output→output, input→input, or an endpoint resolving to no connector) is returned unchanged so
-/// that Step 10 reports it — but Step 10 only sees edges that reach it. Both boundary elision arms
-/// in Step 9 `continue` before Step 10, so each is responsible for checking its own counterpart;
-/// swapping a boundary **output** into the target slot here is what routes an edge into the arm at
-/// the `boundary_out` check, and that arm must therefore validate the driving end itself.
-fn orient_edge<'a>(
-    source: &'a str,
-    target: &'a str,
-    boundary_in: &HashSet<&str>,
-    boundary_out: &HashSet<&str>,
-    conn_of_iri: &HashMap<&str, ConnectorId>,
-    connectors: &[Connector],
-) -> (&'a str, &'a str) {
-    // A composite boundary port settles the orientation on its own — an input drives, an output is
-    // driven. Boundary ports are excluded from `conn_of_iri` by Step 5a, so they cannot be resolved
-    // to a `Dir` and MUST be decided first.
-    if boundary_in.contains(source) || boundary_out.contains(target) {
-        return (source, target);
-    }
-    if boundary_in.contains(target) || boundary_out.contains(source) {
-        return (target, source);
-    }
-    let dir = |iri: &str| conn_of_iri.get(iri).map(|c| connectors[c.0 as usize].dir);
-    match (dir(source), dir(target)) {
-        (Some(Dir::In), Some(Dir::Out)) => (target, source),
-        _ => (source, target),
-    }
-}
-
 /// Resolve a CXF document into the flat [`ModelGraph`] (doc 04 §7.1). See the module docs for the
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
@@ -536,16 +474,14 @@ pub(crate) fn resolve(
     // array order). Mutates connectors[].iri for the elided boundary-input child.
     let mut connections: Vec<Connection> = Vec::new();
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
+    let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
+    let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
+    let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
-    let mut boundary_types: HashMap<&str, Option<ValueType>> = HashMap::new();
-    for node in &doc.graph {
-        let iri = node.id.as_str();
-        if boundary_in.contains(iri) || boundary_out.contains(iri) {
-            boundary_types.insert(iri, try_derive_value_type(node, &mut diags));
-        }
-    }
+    let boundary_types =
+        pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) {
@@ -582,6 +518,71 @@ pub(crate) fn resolve(
                 &conn_of_iri,
                 &connectors,
             );
+            if boundary_in.contains(source) && boundary_in.contains(target) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::DirectionMismatch,
+                        "connection joins two boundary inputs",
+                    )
+                    .with_subject(target.to_owned()),
+                );
+                continue;
+            }
+            if boundary_out.contains(source) && boundary_out.contains(target) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::DirectionMismatch,
+                        "connection joins two boundary outputs",
+                    )
+                    .with_subject(target.to_owned()),
+                );
+                continue;
+            }
+            if boundary_in.contains(source) && boundary_out.contains(target) {
+                let source_node = by_id.get(source).copied();
+                let target_node = by_id.get(target).copied();
+                let array_endpoint = source_node
+                    .is_some_and(|node| node.is_array == Some(true) || node.size_dims.is_some())
+                    || target_node.is_some_and(|node| {
+                        node.is_array == Some(true) || node.size_dims.is_some()
+                    });
+                if array_endpoint {
+                    diags.push(
+                        Diagnostic::error(
+                            DiagCode::NonSubsetConstruct,
+                            "array boundary pass-through endpoints are unsupported",
+                        )
+                        .with_subject(target.to_owned()),
+                    );
+                    continue;
+                }
+                if let (Some(source_type), Some(target_type)) = (
+                    boundary_types.get(source).copied().flatten(),
+                    boundary_types.get(target).copied().flatten(),
+                ) && source_type != target_type
+                {
+                    diags.push(
+                        Diagnostic::error(
+                            DiagCode::TypeMismatch,
+                            format!(
+                                "connected types differ: {:?} → {:?}",
+                                source_type, target_type
+                            ),
+                        )
+                        .with_subject(target.to_owned()),
+                    );
+                    continue;
+                }
+                let pair = (source.to_owned(), target.to_owned());
+                if seen_pass_through_pairs.insert(pair.clone()) {
+                    boundary_output_drivers
+                        .entry(target.to_owned())
+                        .or_default()
+                        .insert(format!("boundary-input:{source}"));
+                    pass_through_pairs.push(pair);
+                }
+                continue;
+            }
             if boundary_in.contains(source) {
                 // boundary input → child input: elide; record external + attach boundary IRI (AD-2).
                 match conn_of_iri.get(target).copied() {
@@ -660,6 +661,10 @@ pub(crate) fn resolve(
                                 );
                             }
                         }
+                        boundary_output_drivers
+                            .entry(target.to_owned())
+                            .or_default()
+                            .insert(format!("connector:{}", from.0));
                     }
                     None => diags.push(
                         Diagnostic::error(
@@ -700,6 +705,21 @@ pub(crate) fn resolve(
         }
     }
 
+    for (output, drivers) in &boundary_output_drivers {
+        if drivers.len() > 1 {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::SingleAssignment,
+                    format!(
+                        "boundary output is multiply driven (distinct drivers {})",
+                        drivers.len()
+                    ),
+                )
+                .with_subject(output.clone()),
+            );
+        }
+    }
+
     // `external_inputs` was filled by walking `@graph`, appending each boundary target as it was
     // met — so within one boundary port the vector inherited the order of that port's
     // `isConnectedTo` ARRAY. Two documents that list one port's fan-out targets in different orders
@@ -721,6 +741,23 @@ pub(crate) fn resolve(
         .enumerate()
         .map(|(i, n)| (n.id.as_str(), i))
         .collect();
+    pass_through_pairs.sort_by_key(|(input, output)| {
+        (
+            graph_pos.get(input.as_str()).copied().unwrap_or(usize::MAX),
+            graph_pos
+                .get(output.as_str())
+                .copied()
+                .unwrap_or(usize::MAX),
+        )
+    });
+    pass_through::materialize(
+        pass_through_pairs,
+        &boundary_types,
+        &mut blocks,
+        &mut connectors,
+        &mut external_inputs,
+        &mut diags,
+    );
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
     // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
     // that port's node position, so the first key component only orders port GROUPS relative to
@@ -821,62 +858,4 @@ pub(crate) fn resolve(
             diagnostics: diags,
         },
     ))
-}
-
-/// Derive a connector's [`ValueType`], preferring `isOfDataType`, falling back to the `@type` port
-/// term. Pushes a diagnostic (and returns a `Real` placeholder) on an unrecognized/absent type — so
-/// the connectors vector stays dense and the load still fails via the diagnostic.
-fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
-    try_derive_value_type(node, diags).unwrap_or(ValueType::Real)
-}
-
-/// Derive a connector's [`ValueType`], returning `None` after diagnosing an invalid declaration.
-///
-/// Boundary elision uses the optional result to avoid cascading a placeholder-based type mismatch;
-/// ordinary child connectors use [`derive_value_type`] to preserve dense connector storage.
-fn try_derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> Option<ValueType> {
-    if let Some(dt) = &node.is_of_data_type {
-        return value_type_of_datatype(&dt.id).or_else(|| {
-            diags.push(
-                Diagnostic::error(DiagCode::UnresolvedReference, "unresolved isOfDataType")
-                    .with_subject(dt.id.clone()),
-            );
-            None
-        });
-    }
-    match first_type(node).map(term_of) {
-        Some(t) if t.starts_with("Real") => Some(ValueType::Real),
-        Some(t) if t.starts_with("Integer") => Some(ValueType::Integer),
-        Some(t) if t.starts_with("Boolean") => Some(ValueType::Boolean),
-        Some(t) if t.starts_with("Analog") => {
-            diags.push(
-                Diagnostic::warning(
-                    DiagCode::AnalogCoercedToReal,
-                    "Analog connector coerced to Real",
-                )
-                .with_subject(node.id.clone()),
-            );
-            Some(ValueType::Real)
-        }
-        Some(t) if t.starts_with("String") => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    "String connector not permitted (§7.8)",
-                )
-                .with_subject(node.id.clone()),
-            );
-            None
-        }
-        _ => {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    "connector lacks a recognized data type",
-                )
-                .with_subject(node.id.clone()),
-            );
-            None
-        }
-    }
 }

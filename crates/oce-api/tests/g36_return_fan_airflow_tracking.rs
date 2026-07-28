@@ -13,7 +13,8 @@ const RETURN_AIRFLOW: &str =
 const SUPPLY_FAN_ON: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
 const RETURN_FAN_SPEED: &str = "conn#6";
-const RETURN_FAN_STATUS: &str = "conn#14";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 
 const EXPECTED_TIMES: [f64; 8] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
 
@@ -81,7 +82,7 @@ fn load_return_fan_airflow() -> Engine {
     let report = engine
         .load_cxf(RETURN_FAN_AIRFLOW.as_bytes())
         .expect("source-verified G36 ReturnFanAirflowTracking fixture loads");
-    assert_eq!(report.block_count, 7);
+    assert_eq!(report.block_count, 6);
     assert_eq!(report.stateful_blocks, 1);
     assert!(
         report.warnings.is_empty(),
@@ -226,7 +227,7 @@ fn multizone_vav_return_fan_airflow_tracking_loads_simulates_and_is_deterministi
         .filter(|point| point.direction == PointDirection::Out)
         .count();
     assert_eq!(
-        output_count, 7,
+        output_count, 6,
         "each active block should expose one output"
     );
 

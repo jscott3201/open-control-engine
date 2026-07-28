@@ -68,8 +68,9 @@
 //! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
 //! at all (not from its connectors' attributes, not from its boundary entries), so a partly
 //! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
-//! exception is *total* deferral — when the cascade leaves zero surviving blocks the document
-//! would be an unloadable root-only shell, so that is an error ([`MSG_TOTAL_DEFERRAL`]).
+//! exception is a non-empty graph with zero emitted runtime blocks after deferred and reserved
+//! lowering-only blocks are omitted: that would be an unloadable root-only shell, so it is an
+//! error ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -79,6 +80,7 @@ use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
 use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 use crate::export_defer::deferral_set;
+use crate::export_pass_through::has_valid_shape;
 use crate::{CxfError, bridge};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
@@ -100,14 +102,11 @@ const CLASS_IRI_BASE: &str = "http://example.org#";
 /// `MalformedDocument` — there is nothing warning-free to emit.
 const MSG_EMPTY: &str =
     "CXF export requires at least one block: an empty ModelGraph has no runtime composite to emit";
-/// Whole-operation rejection when the deferral cascade defers **every** block: the plan holds no
-/// surviving block, so `build()` would map `containsBlock` to `OneOrMany::None`, omit the key, and
-/// emit the same unloadable root-only document `MSG_EMPTY` names — reached from a NON-empty input
-/// graph. Deliberately a message of its own rather than a reuse of `MSG_EMPTY`: that text blames an
-/// empty `ModelGraph`, which would be a false statement about a graph that had blocks and lost them
-/// all to enumeration content, and would point a host at the wrong fix.
-const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one surviving block: every block was deferred (enumeration \
-     content plus its downstream cascade), leaving no runtime composite to emit";
+/// Whole-operation rejection when no emitted runtime block remains after deferred and reserved
+/// lowering-only blocks are omitted. In that state `build()` would emit the same unloadable
+/// root-only document `MSG_EMPTY` names, despite receiving a non-empty input graph.
+const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
+     were deferred or reserved lowering-only, leaving no runtime composite to emit";
 /// A block without an `instance_iri` cannot name its CXF node (hand-built graphs only; every
 /// imported block carries one).
 const MSG_NO_INSTANCE_IRI: &str = "export subset: block has no instance_iri to name its CXF node";
@@ -180,6 +179,7 @@ struct Plan {
     blocks: Vec<PlannedBlock>,
     ports: Vec<PlannedPort>,
     boundaries: Vec<PlannedBoundary>,
+    boundary_outputs: Vec<PlannedBoundaryOutput>,
 }
 
 /// One block node plus its parameter nodes, with every `@id` already minted.
@@ -206,6 +206,21 @@ struct PlannedBoundary {
     iri: String,
     datatype: &'static str,
     targets: Vec<String>,
+}
+
+/// One boundary-output node emitted only for a reserved pass-through pair.
+struct PlannedBoundaryOutput {
+    iri: String,
+    datatype: &'static str,
+}
+
+fn is_pass_through_class(class_path: &str) -> bool {
+    matches!(
+        class_path,
+        "urn:oce:lowering#PassThrough.Real"
+            | "urn:oce:lowering#PassThrough.Integer"
+            | "urn:oce:lowering#PassThrough.Boolean"
+    )
 }
 
 /// Export `model` as a CXF document plus the deferral warnings (empty for a fully-in-subset
@@ -301,6 +316,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // for any deferred block (the whole param loop is skipped).
     for (bi, b) in g.blocks.iter().enumerate() {
         if deferred.contains(&bi) {
+            continue;
+        }
+        if is_pass_through_class(&b.class_iri) {
             continue;
         }
         let subject: String = match b.instance_iri.as_deref() {
@@ -402,13 +420,34 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         ));
     }
 
-    // Phase 3 — orphan scan. SKIP connectors whose owning block is deferred: a deferred block's
+    // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
+    // the same single typed external In/Out pair as resolver-produced blocks.
+    for (bi, block) in g.blocks.iter().enumerate() {
+        if !is_pass_through_class(&block.class_iri) {
+            continue;
+        }
+        if !has_valid_shape(g, bi) {
+            let subject = block
+                .instance_iri
+                .as_deref()
+                .map_or_else(|| format!("block#{bi}"), str::to_owned);
+            diags.push(reject(MSG_STRUCTURE, &subject));
+        }
+    }
+
+    // SKIP connectors whose owning block is deferred: a deferred block's
     // connectors are never claimed (Phase 2 skipped `claim_port`), so `port_iri[i]` is `None`.
     // Without this skip the orphan scan would inject `MSG_STRUCTURE` Errors for every deferred
     // connector → `has_errors` true → the Defer state (warnings-only) would be unreachable. The
     // gate flip alone is insufficient; this skip is load-bearing.
     for (i, c) in g.connectors.iter().enumerate() {
         if deferred.contains(&(c.block.0 as usize)) {
+            continue;
+        }
+        if g.blocks
+            .get(c.block.0 as usize)
+            .is_some_and(|block| is_pass_through_class(&block.class_iri))
+        {
             continue;
         }
         if port_iri[i].is_none() {
@@ -562,6 +601,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // scan: an omitted block contributes no errors. That arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
+    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -597,10 +637,44 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             diags.push(reject(MSG_EXTERNAL_IRI, &subject));
             continue;
         };
-        let Some(target) = port_iri[idx].as_ref() else {
-            continue; // orphan connector: already rejected above
-        };
         let datatype = datatypes[idx];
+        let pass_through_output = g
+            .blocks
+            .get(c.block.0 as usize)
+            .filter(|block| is_pass_through_class(&block.class_iri))
+            .and_then(|block| {
+                (block.inputs.as_slice() == [*cid] && block.outputs.len() == 1)
+                    .then_some(block.outputs[0])
+            });
+        let target = if let Some(output_id) = pass_through_output {
+            let output_idx = output_id.0 as usize;
+            let Some(output) = g.connectors.get(output_idx) else {
+                diags.push(reject(MSG_STRUCTURE, &subject));
+                continue;
+            };
+            if output.dir != Dir::Out
+                || output.block != c.block
+                || datatypes.get(output_idx).copied() != Some(datatype)
+            {
+                diags.push(reject(MSG_STRUCTURE, &subject));
+                continue;
+            }
+            let Some(output_iri) = output.iri.as_deref() else {
+                diags.push(reject(MSG_EXTERNAL_IRI, &subject));
+                continue;
+            };
+            claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
+            boundary_outputs.push(PlannedBoundaryOutput {
+                iri: output_iri.to_owned(),
+                datatype,
+            });
+            output_iri.to_owned()
+        } else {
+            let Some(target) = port_iri[idx].as_ref() else {
+                continue; // orphan connector: already rejected above
+            };
+            target.clone()
+        };
         match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
             Some(pb) if pb.datatype != datatype => {
                 diags.push(reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
@@ -613,7 +687,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 boundaries.push(PlannedBoundary {
                     iri: boundary_iri.to_owned(),
                     datatype,
-                    targets: vec![target.clone()],
+                    targets: vec![target],
                 });
             }
         }
@@ -642,6 +716,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if deferred.contains(&(c.block.0 as usize)) {
             continue;
         }
+        if g.blocks
+            .get(c.block.0 as usize)
+            .is_some_and(|block| is_pass_through_class(&block.class_iri))
+        {
+            continue;
+        }
         let Some(iri) = minted else {
             // Unreachable for a survivor after the orphan scan; kept total (never a panic).
             return Err(vec![Diagnostic::error(
@@ -662,6 +742,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             blocks,
             ports,
             boundaries,
+            boundary_outputs,
         },
         diags,
     ))
@@ -886,6 +967,12 @@ fn build(plan: Plan) -> CxfDocument {
     let mut root = blank_node(EXPORT_ROOT_IRI.to_owned());
     root.r#type = Some(OneOrMany::One("S231:Block".to_owned()));
     root.has_input = refs(plan.boundaries.iter().map(|b| b.iri.clone()).collect());
+    root.has_output = refs(
+        plan.boundary_outputs
+            .iter()
+            .map(|output| output.iri.clone())
+            .collect(),
+    );
     root.contains_block = refs(plan.blocks.iter().map(|b| b.iri.clone()).collect());
     graph.push(root);
 
@@ -915,6 +1002,12 @@ fn build(plan: Plan) -> CxfDocument {
         let mut node = blank_node(boundary.iri);
         node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
         node.is_connected_to = refs(boundary.targets);
+        graph.push(node);
+    }
+
+    for output in plan.boundary_outputs {
+        let mut node = blank_node(output.iri);
+        node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
         graph.push(node);
     }
 

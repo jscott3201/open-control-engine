@@ -34,6 +34,7 @@ mod logical_latch;
 mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
+mod lowering;
 mod pid;
 pub mod port_names;
 mod psychrometrics;
@@ -73,6 +74,7 @@ pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_proof::Proof;
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use logical_variable_pulse::LogicalVariablePulse;
+pub use lowering::{BooleanPassThrough, IntegerPassThrough, RealPassThrough};
 pub use pid::{Pid, PidWithReset};
 pub use psychrometrics::{DewPointTDryBulPhi, SpecificEnthalpyTDryBulPhi, WetBulbTDryBulPhi};
 pub use reals_arithmetic::{

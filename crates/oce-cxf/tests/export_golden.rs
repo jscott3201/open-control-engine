@@ -19,6 +19,7 @@
 //! | `array2d_flattened.export.cxf.json`      | 2-D flattened array params (multi-underscore `k_1_1`) |
 //! | `g36_vav_single_zone.export.cxf.json`    | an enum-free G36-scale topology at full node count |
 //! | `enum_deferral_miniature.export.cxf.json`| the deferral survivor cone — what is emitted *and* what is absent |
+//! | `pass_through_miniature.export.cxf.json` | native boundary pass-through inputs, outputs, and bare edges |
 //!
 //! To regenerate a golden after an **intentional** format change:
 //!
@@ -46,6 +47,7 @@ const ARRAY_2D_FIXTURE: &str = include_str!("fixtures/array2d_flattened.jsonld")
 const G36_FIXTURE: &str = include_str!("fixtures/g36/vav_single_zone.jsonld");
 /// The enum-deferral miniature — exported down to its survivor cone.
 const DEFERRAL_FIXTURE: &str = include_str!("fixtures/enum_deferral_miniature.jsonld");
+const PASS_THROUGH_FIXTURE: &str = include_str!("fixtures/pass_through_miniature.jsonld");
 
 /// The synthesized root `@id` (`ModelGraph` does not record the source root IRI). Pinned here
 /// against the exporter's constant: changing it is a byte-format break.
@@ -107,6 +109,79 @@ fn export_stable(src: &str) -> Vec<u8> {
 #[test]
 fn minimal_loop_bytes_match_the_checked_in_golden() {
     assert_golden(&export_stable(FIXTURE), "minimal_loop.export.cxf.json");
+}
+
+#[test]
+fn pass_through_wire_shape_matches_the_checked_in_golden() {
+    let bytes = export_stable(PASS_THROUGH_FIXTURE);
+    assert_golden(&bytes, "pass_through_miniature.export.cxf.json");
+    let round_two = export(&import_ok(
+        std::str::from_utf8(&bytes).expect("exported UTF-8"),
+    ))
+    .expect("mixed fan-out export re-imports and re-exports");
+    assert_eq!(
+        round_two, bytes,
+        "mixed fan-out must reach the full-graph RT-2 byte fixpoint"
+    );
+
+    let document: serde_json::Value = serde_json::from_slice(&bytes).expect("exported JSON");
+    let graph = document["@graph"].as_array().expect("@graph array");
+    let root = &graph[0];
+    assert_eq!(
+        root["S231:hasOutput"]
+            .as_array()
+            .expect("root outputs")
+            .len(),
+        3
+    );
+    for suffix in ["realOut", "integerOut", "booleanOut"] {
+        let output = graph
+            .iter()
+            .find(|node| {
+                node["@id"]
+                    .as_str()
+                    .is_some_and(|iri| iri.ends_with(suffix))
+            })
+            .expect("typed boundary output");
+        assert!(
+            output.get("S231:isOfDataType").is_some(),
+            "boundary output must be typed"
+        );
+        assert!(
+            output.get("S231:isConnectedTo").is_none(),
+            "boundary output must carry no reverse edge"
+        );
+    }
+    for suffix in ["realOut", "integerOut", "booleanOut"] {
+        let expected = format!("http://example.org#PassThroughMiniature.{suffix}");
+        let occurrences = graph
+            .iter()
+            .filter_map(|node| node.get("S231:isConnectedTo"))
+            .flat_map(|targets| {
+                targets
+                    .as_array()
+                    .map_or_else(|| vec![targets], |items| items.iter().collect())
+            })
+            .filter(|target| target["@id"].as_str() == Some(expected.as_str()))
+            .count();
+        assert_eq!(occurrences, 1, "{suffix} edge must appear exactly once");
+    }
+    let real_input = graph
+        .iter()
+        .find(|node| {
+            node["@id"]
+                .as_str()
+                .is_some_and(|iri| iri.ends_with("realIn"))
+        })
+        .expect("real boundary input");
+    assert_eq!(
+        real_input["S231:isConnectedTo"]
+            .as_array()
+            .expect("mixed fan-out targets")
+            .len(),
+        2,
+        "mixed pass-through and child fan-out must merge into one boundary node"
+    );
 }
 
 #[test]

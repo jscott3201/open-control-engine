@@ -80,6 +80,19 @@ fn catalog_guard_mutations_cover_required_failures() {
     let prov = parse(PROV_JSON);
     let registry = registry_class_paths();
 
+    let mut missing_internal_lowering = catalog.clone();
+    missing_internal_lowering["internal_lowering"]
+        .as_array_mut()
+        .expect("internal_lowering array")
+        .pop();
+    assert_validation_error(
+        &missing_internal_lowering,
+        &prov,
+        GOLDEN_MANIFEST,
+        &registry,
+        "stale-internal-lowering-classification",
+    );
+
     let mut unclassified = catalog.clone();
     let package = runtime_package_mut(&mut unclassified, "CDL.Reals");
     let removed = remove_string(

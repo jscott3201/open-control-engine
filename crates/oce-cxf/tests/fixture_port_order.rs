@@ -9,7 +9,7 @@
 //! - `oce-validate`'s `check_ports_dir` compares each position's *kind* against the signature.
 //!
 //! A transposition between two ports of the **same kind** passes both and silently computes a
-//! different answer. 30 of the 133 registered blocks are exposed, with 282 instances live across
+//! different answer. 30 of the 136 registered blocks are exposed, with 282 instances live across
 //! 33 of the 46 G36 fixtures. The severe cases are asymmetric: `Reals.PID` with `u_s`/`u_m`
 //! transposed inverts the control action, and `Logical.Latch` with `u`/`clr` transposed inverts
 //! the latch. Neither is a type error, so nothing else in the workspace can see it.
@@ -62,7 +62,7 @@
 //! in part. What remains is a forgery written as ordinary code, which is not something this test
 //! can distinguish — the control for that is the `diff` against upstream, not this file.
 //!
-//! The pins are 2135 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
+//! The pins are 2129 checked / 37 skipped. A revision in between reported 2112/60 and claimed the
 //! 23-side difference was vacuous array comparisons being correctly reclassified. That was wrong
 //! in the dangerous direction: the generator OR-ed the registry's `width_driven` flag into BOTH
 //! direction flags, so a class with an array input and a scalar output — `MultiSum` — had its
@@ -332,8 +332,8 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
     // Pin the volume. Without this, a change that stops discovering ports would leave the
     // comparison vacuously green — the failure mode this whole audit exists to prevent.
     assert_eq!(
-        checked, 2135,
-        "port-list volume changed: expected 2135 comparisons, made {checked}. \
+        checked, 2129,
+        "port-list volume changed: expected 2129 comparisons, made {checked}. \
          If the corpus legitimately changed, update this pin deliberately."
     );
     assert_eq!(

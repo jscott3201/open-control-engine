@@ -400,6 +400,18 @@ fn rewrite_connections(
     boundary: &BoundaryIndex,
 ) -> HashMap<String, Vec<String>> {
     let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    let mut incoming: HashMap<&str, Vec<&str>> = HashMap::new();
+    for node in &doc.graph {
+        for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
+            incoming.entry(target).or_default().push(node.id.as_str());
+        }
+    }
+    let walk = BoundaryWalk {
+        by_id,
+        incoming: &incoming,
+        specialization,
+        boundary,
+    };
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) || node.is_connected_to.is_empty() {
@@ -415,10 +427,10 @@ fn rewrite_connections(
         for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
             resolve_target(
                 target,
-                by_id,
-                specialization,
-                boundary,
+                &walk,
                 &mut HashSet::new(),
+                Some(source),
+                None,
                 &mut targets,
             );
         }
@@ -429,52 +441,104 @@ fn rewrite_connections(
     out
 }
 
+struct BoundaryWalk<'a> {
+    by_id: &'a HashMap<&'a str, &'a Node>,
+    incoming: &'a HashMap<&'a str, Vec<&'a str>>,
+    specialization: &'a Specialization,
+    boundary: &'a BoundaryIndex,
+}
+
+/// Resolve one rewritten target.
+///
+/// `arrived_from` is the immediate predecessor excluded only from an incoming-fallback candidate
+/// list. `fallback_predecessor` exists only when the arriving hop used that fallback and excludes
+/// its manufactured mirror from the reached node's authored targets.
 fn resolve_target(
     target: &str,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
+    arrived_from: Option<&str>,
+    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
-    if specialization.is_inactive(target) {
+    if walk.specialization.is_inactive(target) {
         out.push(target.to_owned());
         return;
     }
-    if boundary.inputs.contains(target) && !boundary.top_inputs.contains(target) {
-        follow_boundary(target, by_id, specialization, boundary, seen, out);
+    if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
+        follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
         return;
     }
-    if boundary.outputs.contains(target) {
-        if boundary.top_outputs.contains(target) {
+    if walk.boundary.outputs.contains(target) {
+        if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, by_id, specialization, boundary, seen, out);
+            follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
         }
         return;
     }
     out.push(target.to_owned());
 }
 
+/// Walk through a non-top composite boundary node.
+///
+/// `arrived_from` filters the exact predecessor when an empty authored target list falls back to
+/// incoming edges. `fallback_predecessor` filters the exact reverse edge manufactured by the
+/// preceding fallback, without hiding other authored targets or later authored cycles.
 fn follow_boundary(
     boundary_iri: &str,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
+    arrived_from: Option<&str>,
+    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
+        // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
+        // resolver's ordinary dangling-reference diagnostic.
         out.push(boundary_iri.to_owned());
         return;
     }
-    let Some(node) = by_id.get(boundary_iri).copied() else {
+    let Some(node) = walk.by_id.get(boundary_iri).copied() else {
         out.push(boundary_iri.to_owned());
         seen.remove(boundary_iri);
         return;
     };
-    for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-        resolve_target(target, by_id, specialization, boundary, seen, out);
+    let authored = node
+        .is_connected_to
+        .iter()
+        .map(|r| r.id.as_str())
+        .collect::<Vec<_>>();
+    let follows_incoming = authored.is_empty();
+    let targets = if follows_incoming {
+        walk.incoming
+            .get(boundary_iri)
+            .into_iter()
+            .flat_map(|targets| targets.iter().copied())
+            .filter(|target| {
+                (walk.boundary.inputs.contains(*target) || walk.boundary.outputs.contains(*target))
+                    && !walk.boundary.top_inputs.contains(*target)
+                    && !walk.boundary.top_outputs.contains(*target)
+                    && Some(*target) != arrived_from
+            })
+            .collect::<Vec<_>>()
+    } else {
+        authored
+    };
+    for target in targets {
+        // A reverse-spelled fallback follows an incoming boundary edge. At the node it reaches,
+        // exclude only the manufactured mirror edge back to that exact predecessor; any other
+        // authored target remains visible, including a downstream cycle.
+        if Some(target) != fallback_predecessor {
+            resolve_target(
+                target,
+                walk,
+                seen,
+                Some(boundary_iri),
+                follows_incoming.then_some(boundary_iri),
+                out,
+            );
+        }
     }
     seen.remove(boundary_iri);
 }

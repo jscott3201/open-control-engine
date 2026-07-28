@@ -291,9 +291,8 @@ fn the_reported_enum_class_is_the_first_one_in_port_list_order() {
 
 /// The whole-operation message for a graph the cascade emptied. Pinned verbatim: a host greps for
 /// it to tell "your graph is too enum-heavy to export" apart from "your graph was empty".
-const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one surviving block: every block \
-     was deferred (enumeration content plus its downstream cascade), leaving no runtime composite \
-     to emit";
+const MSG_TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all \
+     blocks were deferred or reserved lowering-only, leaving no runtime composite to emit";
 
 #[test]
 fn a_graph_whose_every_block_defers_is_rejected_not_emitted_as_a_root_only_document() {
@@ -384,7 +383,7 @@ fn a_lone_enum_bearing_block_is_rejected_rather_than_emitting_an_empty_composite
         diags
             .iter()
             .any(|d| d.severity == Severity::Error && d.message == MSG_TOTAL_DEFERRAL),
-        "total deferral must reject with the surviving-block message: {diags:?}"
+        "total deferral must reject with the no-runtime-block message: {diags:?}"
     );
 }
 

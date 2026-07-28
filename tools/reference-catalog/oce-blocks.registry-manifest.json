@@ -732,6 +732,27 @@
     "param_rules": []
   },
   {
+    "class_path": "urn:oce:lowering#PassThrough.Real",
+    "inputs": ["Real"],
+    "outputs": ["Real"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "urn:oce:lowering#PassThrough.Integer",
+    "inputs": ["Integer"],
+    "outputs": ["Integer"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
+    "class_path": "urn:oce:lowering#PassThrough.Boolean",
+    "inputs": ["Boolean"],
+    "outputs": ["Boolean"],
+    "width_driven": false,
+    "param_rules": []
+  },
+  {
     "class_path": "CDL.Conversions.BooleanToInteger",
     "inputs": ["Boolean"],
     "outputs": ["Integer"],

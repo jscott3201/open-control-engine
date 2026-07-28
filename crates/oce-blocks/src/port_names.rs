@@ -27,7 +27,7 @@
 //!
 //! # What is deliberately absent
 //!
-//! [`port_names`] returns `None` for 28 of the 133 registered classes, and absence means "bind
+//! [`port_names`] returns `None` for 28 of the 136 registered classes, and absence means "bind
 //! positionally, as before" — never "this class has no ports":
 //!
 //! - **25 width-driven classes.** Upstream declares one array connector (`u[nin]`) where this
@@ -61,10 +61,11 @@
 //! # What checks these names, and what does not
 //!
 //! `crates/oce-cxf/tests/fixture_port_order.rs` compares this table against port names derived from
-//! vendored upstream Modelica source. It reaches 104 of the 105 entries here; the exception is
-//! `TrueHoldWithReset`, above. Be precise about what that buys: these names were transcribed from CDL, so the
-//! comparison detects **drift** between the two artifacts — it is not an independent oracle, and it
-//! would not catch a name that was wrong in both places from the start.
+//! vendored upstream Modelica source. It reaches 104 of the 108 entries here; the exceptions are
+//! `TrueHoldWithReset`, above, and the three internal lowering classes. Be precise about what that
+//! buys: these names were transcribed from CDL, so the comparison detects **drift** between the two
+//! artifacts — it is not an independent oracle, and it would not catch a name that was wrong in
+//! both places from the start.
 //!
 //! The names earn their keep operationally instead. Once the resolver binds by name, every fixture
 //! and every conformance golden exercises them: a wrong name stops matching the document that uses
@@ -617,11 +618,26 @@ static PORT_NAMES: &[ClassPortNames] = &[
         inputs: &[],
         outputs: &["nextSunRise", "nextSunSet", "sunUp"],
     },
+    ClassPortNames {
+        class_path: "urn:oce:lowering#PassThrough.Boolean",
+        inputs: &["u"],
+        outputs: &["y"],
+    },
+    ClassPortNames {
+        class_path: "urn:oce:lowering#PassThrough.Integer",
+        inputs: &["u"],
+        outputs: &["y"],
+    },
+    ClassPortNames {
+        class_path: "urn:oce:lowering#PassThrough.Real",
+        inputs: &["u"],
+        outputs: &["y"],
+    },
 ];
 
 /// Declared port names for `class_path`, or `None` when the class binds positionally.
 ///
-/// `None` is a routine answer, not an error — see the module header for the 29 classes that return
+/// `None` is a routine answer, not an error — see the module header for the 28 classes that return
 /// it and why. Linear scan, matching [`crate::lookup`]; it runs once per block instance at BUILD,
 /// never on the tick.
 pub fn port_names(class_path: &str) -> Option<&'static ClassPortNames> {

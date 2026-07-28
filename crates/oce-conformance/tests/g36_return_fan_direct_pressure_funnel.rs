@@ -28,7 +28,8 @@ const AVERAGED_PRESSURE: &str = "conn#1";
 const RELIEF_DAMPER_COMMAND: &str = "conn#20";
 const DISCHARGE_PRESSURE_SETPOINT: &str = "conn#24";
 const RETURN_FAN_SPEED: &str = "conn#37";
-const RETURN_FAN_STATUS: &str = "conn#54";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("building_pressure", BUILDING_PRESSURE),

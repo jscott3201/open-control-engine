@@ -17,7 +17,7 @@ use super::{CATALOG, lookup};
 use crate::{ParamRule, PortKind};
 
 /// Entry count pinned so registry growth is a conscious re-bless, not a silent drift.
-const PINNED_ENTRY_COUNT: usize = 133;
+const PINNED_ENTRY_COUNT: usize = 136;
 
 #[test]
 fn checked_in_manifest_matches_regenerated_bytes() {

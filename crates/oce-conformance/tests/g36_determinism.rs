@@ -184,7 +184,8 @@ const RETURN_FAN_AIRFLOW_SPEED: &str =
 const RETURN_FAN_AIRFLOW_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 const RETURN_FAN_AIRFLOW_SPEED_RUNTIME: &str = "conn#6";
-const RETURN_FAN_AIRFLOW_STATUS_RUNTIME: &str = "conn#14";
+const RETURN_FAN_AIRFLOW_STATUS_RUNTIME: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 const RETURN_FAN_DIRECT_PRESSURE_BUILDING_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui";
 const RETURN_FAN_DIRECT_PRESSURE_MIN_OUTDOOR_AIR_DAMPER: &str =
@@ -205,7 +206,8 @@ const RETURN_FAN_DIRECT_PRESSURE_AVERAGED_PRESSURE_RUNTIME: &str = "conn#1";
 const RETURN_FAN_DIRECT_PRESSURE_RELIEF_DAMPER_RUNTIME: &str = "conn#20";
 const RETURN_FAN_DIRECT_PRESSURE_DISCHARGE_PRESSURE_RUNTIME: &str = "conn#24";
 const RETURN_FAN_DIRECT_PRESSURE_SPEED_RUNTIME: &str = "conn#37";
-const RETURN_FAN_DIRECT_PRESSURE_STATUS_RUNTIME: &str = "conn#54";
+const RETURN_FAN_DIRECT_PRESSURE_STATUS_RUNTIME: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
