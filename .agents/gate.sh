@@ -137,6 +137,17 @@ step 'fixture port order (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_port_order)' --no-tests=fail
 
+# Same register as the port-order audit, one level deeper: every G36 fixture is
+# structurally verified against the vendored modelica-json oracle (hierarchy flattened,
+# conditionals resolved against the fixture's own parameters, instances + undirected
+# edges compared), or excluded with a recorded reason. A structurally wrong fixture
+# fails nothing downstream — it makes the whole suite validate the wrong sequence.
+# ~0.1s measured; the verdict table is a bit-exact golden, so this stays silent until a
+# fixture or the oracle changes — exactly when nobody would re-run it by hand.
+step 'structural oracle (input hygiene)' \
+  cargo nextest run -p oce-cxf --locked --profile ci \
+  -E 'binary(fixture_structural_oracle)' --no-tests=fail
+
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
 if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
