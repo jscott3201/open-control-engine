@@ -101,6 +101,11 @@ pub enum DiagCode {
     UnresolvedPolymorphism,
     /// A construct outside the CDL elementary subset appeared (rejected pre-build; exit #2).
     NonSubsetConstruct,
+    /// A block's port list named some of its class's declared ports and not the rest, so it can be
+    /// read neither by name nor by position. Ordering is a renderer's choice — a document that
+    /// consistently uses declared port names binds by name, and one that uses none binds by
+    /// position; only the mixture is unreadable.
+    PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
 
@@ -173,6 +178,7 @@ impl DiagCode {
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
+            DiagCode::PortNameMismatch => "port-name-mismatch",
             DiagCode::PortKindMismatch => "port-kind-mismatch",
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
@@ -318,6 +324,7 @@ mod tests {
         MissingActiveConditionalNode => "missing-active-conditional-node",
         UnresolvedPolymorphism => "unresolved-polymorphism",
         NonSubsetConstruct => "non-subset-construct",
+        PortNameMismatch => "port-name-mismatch",
         MalformedDocument => "malformed-document",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",

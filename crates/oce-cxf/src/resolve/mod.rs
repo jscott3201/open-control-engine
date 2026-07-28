@@ -42,6 +42,9 @@ mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
 mod diags;
+mod port_binding;
+#[cfg(test)]
+mod port_binding_tests;
 mod specialize;
 
 use attrs::connector_attrs;
@@ -440,36 +443,34 @@ pub(crate) fn resolve(
         blocks[inst.id.0 as usize].params = ParamTable { values: table };
     }
 
-    // --- Step 8: resolved class arity guard. The document's declared interface must match the
-    // parameter-resolved class signature, or the engine's emit-by-port-index would later index past
-    // `outputs`/`inputs` and PANIC on the tick. Connector value_type ↔ PortKind agreement is the
-    // deeper §7.10 validation check.
+    // --- Step 8: interface agreement — arity, then port identity. Arity must match or the
+    // engine's emit-by-port-index would later index past `inputs`/`outputs` and PANIC on the tick.
+    // Identity is the separate question of WHICH connector belongs at each index: a document that
+    // names its ports after the class's declared ports is permuted into signature order rather than
+    // read positionally, because the reference toolchain orders connectors alphabetically and a
+    // same-kind transposition is invisible to every other guard. See `port_binding`.
     for inst in &insts {
-        let block = &blocks[inst.id.0 as usize];
-        let class_path = block.class_iri.as_ref();
+        let idx = inst.id.0 as usize;
+        let class_path = blocks[idx].class_iri.clone();
         if class_path.is_empty() {
             continue;
         }
-        let Some(entry) = oce_blocks::lookup(class_path) else {
+        let Some(entry) = oce_blocks::lookup(&class_path) else {
             continue;
         };
-        let probe = (entry.make)(&block.params);
-        let sig = probe.resolved_signature();
-        let (got_in, got_out) = (block.inputs.len(), block.outputs.len());
-        let (want_in, want_out) = (sig.inputs.len(), sig.outputs.len());
-        if got_in != want_in || got_out != want_out {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    format!(
-                        "block interface mismatch for `{class_path}`: declared \
-                         {got_in} input(s)/{got_out} output(s), class requires \
-                         {want_in}/{want_out}"
-                    ),
-                )
-                .with_subject(inst.node.id.clone()),
-            );
-        }
+        let want = {
+            let probe = (entry.make)(&blocks[idx].params);
+            let sig = probe.resolved_signature();
+            (sig.inputs.len(), sig.outputs.len())
+        };
+        port_binding::check_and_bind(
+            &mut blocks[idx],
+            &class_path,
+            &inst.node.id,
+            want,
+            (&inst.input_iris, &inst.output_iris),
+            &mut diags,
+        );
     }
 
     // --- Step 9: collect connections with boundary elision (source @graph order, isConnectedTo

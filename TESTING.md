@@ -239,15 +239,28 @@ to prevent. Re-pin only after understanding why the count moved — a *rising* s
 wirings are being hidden from the audit.
 
 **What the derived table rests on.** Before comparing anything the test cross-checks all 104
-non-array classes against the shipping block registry, which agrees on arity and per-position
-kind. It cannot agree on *names* — the registry does not store them, which is the whole reason
-this audit exists — and the remaining 28 array-port classes are compared against nothing at all,
+non-array classes against the shipping block registry on arity, per-position kind, **and names**.
+Names were the gap that motivated this audit: the registry stored kinds only, so a **coordinated
+rename** passed — two earlier revisions of this file recorded it as passing — because changing the
+reference data and the fixtures together left nothing to disagree. The registry now declares port
+names (`oce_blocks::port_names`), so the same edit has to change shipping code as well.
+
+The remaining 28 array-port classes are still compared against nothing at all, on any of the three,
 since upstream's single `u[nin]` connector has no arity in common with our N flattened scalars.
 
-So names still have no runtime authority. What changed is where the trust sits. Renaming a port
-to something upstream never used now requires editing vendored third-party source that `diff`s
-against a public clone at the pinned commit, instead of editing a catalog entry nobody would
-notice.
+The names also have runtime authority now. The resolver matches each block's port IRIs against its
+class's declared names and **permutes the ports into signature order**, so a document that lists
+ports in some other order is wired correctly rather than mis-wired or rejected. That distinction is
+the point: the reference toolchain `modelica-json` renders connectors sorted alphabetically by
+label, so rejecting a non-declaration order would refuse valid input. Ordering is a renderer's
+choice; identity is not.
+
+Binding applies only when every port IRI names a declared port. A document naming none of them —
+this engine's own exports mint `.in0`/`.out0` — binds positionally, exactly as before. A document
+naming *some* is reported as `port-name-mismatch`, because it follows no convention that can be
+read safely either way. The 28 classes with no declared names always bind positionally; they are
+the width-driven ones plus the three `Sources.TimeTable` classes, where a flattened array connector
+has no 1:1 name correspondence to record.
 
 **The scanner is asserted against its own silence**, because "found nothing" is how every scope
 bug in this extractor's history presented itself. A class that parses to zero ports is a hard
