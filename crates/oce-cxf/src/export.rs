@@ -22,10 +22,11 @@
 //!   Re-import rebuilds wiring from `isConnectedTo`, so port names never need to round-trip.
 //! - Each `external_inputs` connector's stored boundary IRI is emitted verbatim as a boundary
 //!   node listed under the root's `hasInput` and wired `isConnectedTo` → the **minted** child
-//!   port. Re-import then re-elides the boundary (AD-2), restoring both the `external_inputs`
-//!   entry and the child connector's boundary IRI. The boundary `@id` never appears in the
-//!   owning block's own `hasInput` list — sharing one `@id` between the root's and a child's
-//!   port list re-imports as a rejection.
+//!   port. The boundary node carries the driven child connector's `isOfDataType`; fan-out is
+//!   rejected if the driven connector types disagree. Re-import then re-elides the boundary
+//!   (AD-2), restoring both the `external_inputs` entry and the child connector's boundary IRI.
+//!   The boundary `@id` never appears in the owning block's own `hasInput` list — sharing one
+//!   `@id` between the root's and a child's port list re-imports as a rejection.
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
 //! The five in-subset §7.4.1 attrs live on the **minted child port node** (never the shared
@@ -151,6 +152,11 @@ const MSG_EXTERNAL_IRI: &str =
 /// imported graph can reach this.
 const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed more than once in external_inputs, and re-import \
      deduplicates the repeat away";
+/// One boundary IRI groups multiple driven child inputs whose value types differ. A single
+/// boundary node can carry only one datatype, and any choice would fail the importer's boundary
+/// elision type check for at least one target.
+const MSG_BOUNDARY_TYPE_MISMATCH: &str =
+    "export subset: one boundary input drives child inputs with different value types";
 /// A surviving input connector is driven by more than one **surviving** output. The emitted
 /// document carries every one of those `isConnectedTo` targets, so re-import counts an in-degree
 /// above 1 and fails the §7.10 single-assignment law — the export would be `Ok` with bytes that do
@@ -195,9 +201,10 @@ struct PlannedPort {
     attrs: PortAttrs,
 }
 
-/// One boundary-input node: the stored boundary IRI and the minted child ports it drives.
+/// One boundary-input node: stored boundary IRI, datatype, and minted child ports it drives.
 struct PlannedBoundary {
     iri: String,
+    datatype: &'static str,
     targets: Vec<String>,
 }
 
@@ -593,7 +600,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         let Some(target) = port_iri[idx].as_ref() else {
             continue; // orphan connector: already rejected above
         };
+        let datatype = datatypes[idx];
         match boundaries.iter_mut().find(|pb| pb.iri == boundary_iri) {
+            Some(pb) if pb.datatype != datatype => {
+                diags.push(reject(MSG_BOUNDARY_TYPE_MISMATCH, &subject));
+            }
             Some(pb) => pb.targets.push(target.clone()),
             None => {
                 // First occurrence mints the boundary node, so its @id joins the emitted set;
@@ -601,6 +612,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 claim_emitted_id(&mut seen, boundary_iri, &subject, &mut diags);
                 boundaries.push(PlannedBoundary {
                     iri: boundary_iri.to_owned(),
+                    datatype,
                     targets: vec![target.clone()],
                 });
             }
@@ -901,6 +913,7 @@ fn build(plan: Plan) -> CxfDocument {
 
     for boundary in plan.boundaries {
         let mut node = blank_node(boundary.iri);
+        node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
         node.is_connected_to = refs(boundary.targets);
         graph.push(node);
     }

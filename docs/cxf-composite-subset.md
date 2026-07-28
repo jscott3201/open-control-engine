@@ -28,7 +28,7 @@ of the message is human prose and may change. The tag-to-code mapping is publish
 `tools/reference-catalog/oce-cxf.composite-rules.json` — and a drift-guard test holds this
 document, the artifact, and the emitting code to the same five identities.
 
-Rules 1, 3, and 6 are *non-rejecting* classification, ordering, and transform rules. They carry
+Rules 1 and 3 are *non-rejecting* classification and ordering rules. They carry
 **no DiagCode, no message tag, and no catalog entry** — there is nothing to match, because they
 never fail. They are stated here because an emitter that misunderstands them produces a model
 that imports cleanly but means something else.
@@ -169,7 +169,7 @@ grounds the sibling reference `kTop` to `0.5`; the child composite's constant `k
 leaf parameter `"S231:value": "kInner"` grounds the chain's end — the
 `kBase → kTop → kInner → gain.k` chain of corpus fixture `accepted/minimal_nested.jsonld`.
 
-## Rule 6 — Boundary elision (non-rejecting)
+## Rule 6 — Boundary elision (rejects: generic diagnostics)
 
 > Composite boundary connectors are lowered away. A boundary **input** rewires to the child
 > connectors it drives; the **top** composite's boundary inputs surface as the imported model's
@@ -177,7 +177,10 @@ leaf parameter `"S231:value": "kInner"` grounds the chain's end — the
 > targets. A boundary output of the **top** composite is elided outright: its `@id` appears on
 > no connector in the flat model, and a leaf output whose only target is a top boundary output
 > ends with no connection at all — the driving leaf connector remains, carrying no source
-> `@id`. The composite node itself never becomes a runtime block. Non-rejecting; no DiagCode.
+> `@id`. The composite node itself never becomes a runtime block. Boundary elision rejects
+> invalid direction (`DirectionMismatch`), mismatched value types (`TypeMismatch`), unresolved
+> endpoints or missing boundary nodes (`UnresolvedReference`), and boundary datatype declarations
+> that cannot be derived (`MalformedDocument`).
 
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:
@@ -218,8 +221,9 @@ rejects twice: once under `composite/banned-modelica-key` naming `` `redeclare` 
 ## Rule catalog
 
 The five contract identities, mirroring
-`tools/reference-catalog/oce-cxf.composite-rules.json` (catalog order). Rules 1, 3, and 6 do not
-appear here — non-rejecting rules have no identity to publish.
+`tools/reference-catalog/oce-cxf.composite-rules.json` (catalog order). Rules 1 and 3 do not
+appear here because they are non-rejecting. Rule 6 has no `composite/` rule identity; its
+rejections are generic diagnostics.
 
 | Rule | Rule id | DiagCode | Message prefix |
 | --- | --- | --- | --- |

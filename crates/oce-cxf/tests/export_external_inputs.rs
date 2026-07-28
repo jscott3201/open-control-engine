@@ -26,6 +26,9 @@ const PREFIX: &str = "http://example.org#Bound.";
 /// The exact rejection a repeated `external_inputs` entry earns.
 const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed more than once \
      in external_inputs, and re-import deduplicates the repeat away";
+/// The exact rejection for a fan-out boundary whose driven connector types disagree.
+const MSG_BOUNDARY_TYPE_MISMATCH: &str =
+    "export subset: one boundary input drives child inputs with different value types";
 
 fn iri(name: &str) -> String {
     format!("{PREFIX}{name}")
@@ -180,6 +183,34 @@ fn one_boundary_driving_several_distinct_inputs_still_exports() {
         "both distinct boundary-fed inputs must come back: {:?}",
         g2.external_inputs
     );
+}
+
+#[test]
+fn one_boundary_driving_different_value_types_is_rejected() {
+    let g = ModelGraph {
+        blocks: vec![
+            block(0, "CDL.Reals.Abs", "left", &[0], &[1], vec![]),
+            block(1, "CDL.Reals.Abs", "right", &[2], &[3], vec![]),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real).with_iri("http://example.org#Bound.uSet"),
+            conn(1, 0, Dir::Out, ValueType::Real),
+            conn(2, 1, Dir::In, ValueType::Boolean).with_iri("http://example.org#Bound.uSet"),
+            conn(3, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+    };
+
+    let diags = export_rejection(&g);
+    let errors: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| d.severity == Severity::Error)
+        .collect();
+    assert_eq!(errors.len(), 1, "exactly one rejection: {diags:?}");
+    assert_eq!(errors[0].code, DiagCode::ExportUnsupported);
+    assert_eq!(errors[0].message, MSG_BOUNDARY_TYPE_MISMATCH);
+    assert_eq!(errors[0].subject.as_deref(), Some(iri("right").as_str()));
 }
 
 #[test]

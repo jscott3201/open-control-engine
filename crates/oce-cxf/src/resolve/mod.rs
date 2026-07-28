@@ -250,6 +250,25 @@ pub(crate) fn resolve(
         .map(|r| r.id.as_str())
         .filter(|iri| !specialization.is_inactive(iri))
         .collect();
+    let mut missing_boundaries: HashSet<&str> = HashSet::new();
+    for iri in top
+        .has_input
+        .iter()
+        .chain(top.has_output.iter())
+        .map(|r| r.id.as_str())
+    {
+        // Re-apply the specialization-filtered sets so an inactive conditional boundary whose
+        // node is absent does not diagnose.
+        if (boundary_in.contains(iri) || boundary_out.contains(iri))
+            && !by_id.contains_key(iri)
+            && missing_boundaries.insert(iri)
+        {
+            diags.push(
+                Diagnostic::error(DiagCode::UnresolvedReference, "boundary node not found")
+                    .with_subject(iri.to_owned()),
+            );
+        }
+    }
 
     // --- Step 3: assign BlockId in containsBlock array order; bridge @type → class_path and check
     // the registry (Step 4 folded in). block_of_iri is lookup-only.
@@ -517,6 +536,16 @@ pub(crate) fn resolve(
     // array order). Mutates connectors[].iri for the elided boundary-input child.
     let mut connections: Vec<Connection> = Vec::new();
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
+    // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
+    // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
+    // and the elision arms must not add a placeholder-based TypeMismatch.
+    let mut boundary_types: HashMap<&str, Option<ValueType>> = HashMap::new();
+    for node in &doc.graph {
+        let iri = node.id.as_str();
+        if boundary_in.contains(iri) || boundary_out.contains(iri) {
+            boundary_types.insert(iri, try_derive_value_type(node, &mut diags));
+        }
+    }
     for node in &doc.graph {
         let source = node.id.as_str();
         if specialization.is_inactive(source) {
@@ -569,6 +598,23 @@ pub(crate) fn resolve(
                         );
                     }
                     Some(to) => {
+                        // This elision path bypasses Step 10, so it must also compare the boundary
+                        // input's type with the child input's type here.
+                        if let Some(boundary_type) = boundary_types.get(source).copied().flatten() {
+                            let child = &connectors[to.0 as usize];
+                            if boundary_type != child.value_type {
+                                diags.push(
+                                    Diagnostic::error(
+                                        DiagCode::TypeMismatch,
+                                        format!(
+                                            "connected types differ: {:?} → {:?}",
+                                            boundary_type, child.value_type
+                                        ),
+                                    )
+                                    .with_subject(target.to_owned()),
+                                );
+                            }
+                        }
                         if !external_inputs.contains(&to) {
                             external_inputs.push(to);
                         }
@@ -598,7 +644,23 @@ pub(crate) fn resolve(
                         )
                         .with_subject(source.to_owned()),
                     ),
-                    Some(_) => {}
+                    Some(from) => {
+                        if let Some(boundary_type) = boundary_types.get(target).copied().flatten() {
+                            let child = &connectors[from.0 as usize];
+                            if child.value_type != boundary_type {
+                                diags.push(
+                                    Diagnostic::error(
+                                        DiagCode::TypeMismatch,
+                                        format!(
+                                            "connected types differ: {:?} → {:?}",
+                                            child.value_type, boundary_type
+                                        ),
+                                    )
+                                    .with_subject(source.to_owned()),
+                                );
+                            }
+                        }
+                    }
                     None => diags.push(
                         Diagnostic::error(
                             DiagCode::UnresolvedReference,
@@ -765,19 +827,27 @@ pub(crate) fn resolve(
 /// term. Pushes a diagnostic (and returns a `Real` placeholder) on an unrecognized/absent type — so
 /// the connectors vector stays dense and the load still fails via the diagnostic.
 fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
+    try_derive_value_type(node, diags).unwrap_or(ValueType::Real)
+}
+
+/// Derive a connector's [`ValueType`], returning `None` after diagnosing an invalid declaration.
+///
+/// Boundary elision uses the optional result to avoid cascading a placeholder-based type mismatch;
+/// ordinary child connectors use [`derive_value_type`] to preserve dense connector storage.
+fn try_derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> Option<ValueType> {
     if let Some(dt) = &node.is_of_data_type {
-        return value_type_of_datatype(&dt.id).unwrap_or_else(|| {
+        return value_type_of_datatype(&dt.id).or_else(|| {
             diags.push(
                 Diagnostic::error(DiagCode::UnresolvedReference, "unresolved isOfDataType")
                     .with_subject(dt.id.clone()),
             );
-            ValueType::Real
+            None
         });
     }
     match first_type(node).map(term_of) {
-        Some(t) if t.starts_with("Real") => ValueType::Real,
-        Some(t) if t.starts_with("Integer") => ValueType::Integer,
-        Some(t) if t.starts_with("Boolean") => ValueType::Boolean,
+        Some(t) if t.starts_with("Real") => Some(ValueType::Real),
+        Some(t) if t.starts_with("Integer") => Some(ValueType::Integer),
+        Some(t) if t.starts_with("Boolean") => Some(ValueType::Boolean),
         Some(t) if t.starts_with("Analog") => {
             diags.push(
                 Diagnostic::warning(
@@ -786,7 +856,7 @@ fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
                 )
                 .with_subject(node.id.clone()),
             );
-            ValueType::Real
+            Some(ValueType::Real)
         }
         Some(t) if t.starts_with("String") => {
             diags.push(
@@ -796,7 +866,7 @@ fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
                 )
                 .with_subject(node.id.clone()),
             );
-            ValueType::Real
+            None
         }
         _ => {
             diags.push(
@@ -806,7 +876,7 @@ fn derive_value_type(node: &Node, diags: &mut Vec<Diagnostic>) -> ValueType {
                 )
                 .with_subject(node.id.clone()),
             );
-            ValueType::Real
+            None
         }
     }
 }
