@@ -7,6 +7,60 @@ use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
 
+macro_rules! param_default_real {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Real($value)),
+        }
+    };
+}
+
+macro_rules! param_default_integer {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Integer($value)),
+        }
+    };
+}
+
+macro_rules! param_default_boolean {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Boolean($value)),
+        }
+    };
+}
+
+macro_rules! param_default_enum {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::EnumMember($value)),
+        }
+    };
+}
+
+macro_rules! param_default_derived {
+    ($name:literal, $formula:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Derived { formula: $formula },
+        }
+    };
+}
+
+macro_rules! param_default_required {
+    ($name:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Required,
+        }
+    };
+}
+
 mod conversions;
 mod discrete;
 mod integers;
@@ -19,6 +73,7 @@ mod param_defaults;
 mod pid;
 mod psychrometrics;
 mod reals;
+mod reals_defaults;
 mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;

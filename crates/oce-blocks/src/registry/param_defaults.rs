@@ -1,255 +1,98 @@
 //! Per-class dispatch for authored parameter defaults.
 
-use crate::{DefaultLiteral as L, DefaultSource as S, ParamDefault};
+use crate::ParamDefault;
 
-macro_rules! p {
-    ($name:literal, real $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Literal(L::Real($value)),
-        }
-    };
-    ($name:literal, int $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Literal(L::Integer($value)),
-        }
-    };
-    ($name:literal, bool $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Literal(L::Boolean($value)),
-        }
-    };
-    ($name:literal, str $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Literal(L::Str($value)),
-        }
-    };
-    ($name:literal, enum $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Literal(L::EnumMember($value)),
-        }
-    };
-    ($name:literal, derived $value:expr) => {
-        ParamDefault {
-            name: $name,
-            default: S::Derived { formula: $value },
-        }
-    };
-    ($name:literal, required) => {
-        ParamDefault {
-            name: $name,
-            default: S::Required,
-        }
-    };
-}
+use super::{
+    conversions, discrete, integers, logical, logical_proof, logical_timing,
+    logical_variable_pulse, pid, psychrometrics, reals_defaults, reals_filters, reals_integrator,
+    reals_ramp, routing, utilities,
+};
 
 pub(crate) fn param_defaults(class_path: &str) -> &'static [ParamDefault] {
     match class_path {
-        "CDL.Conversions.BooleanToInteger" => {
-            &[p!("integerTrue", int 1), p!("integerFalse", int 0)]
-        }
-        "CDL.Conversions.BooleanToReal" => &[p!("realTrue", real 1.0), p!("realFalse", real 0.0)],
+        "CDL.Conversions.BooleanToInteger" => conversions::BOOLEAN_TO_INTEGER_PARAM_DEFAULTS,
+        "CDL.Conversions.BooleanToReal" => conversions::BOOLEAN_TO_REAL_PARAM_DEFAULTS,
         "CDL.Discrete.FirstOrderHold" | "CDL.Discrete.Sampler" | "CDL.Discrete.ZeroOrderHold" => {
-            &[p!("samplePeriod", required)]
+            discrete::SAMPLED_PARAM_DEFAULTS
         }
-        "CDL.Discrete.TriggeredMovingMean" => &[p!("n", required)],
-        "CDL.Discrete.TriggeredSampler" => &[p!("y_start", real 0.0)],
-        "CDL.Discrete.UnitDelay" => &[p!("samplePeriod", required), p!("y_start", real 0.0)],
-        "CDL.Integers.Sources.Constant" => &[p!("k", required)],
-        "CDL.Integers.Sources.Pulse" => &[
-            p!("amplitude", int 1),
-            p!("width", real 0.5),
-            p!("period", required),
-            p!("shift", real 0.0),
-            p!("offset", int 0),
-        ],
-        "CDL.Integers.Sources.TimeTable" => &[p!("period", required)],
-        "CDL.Integers.AddParameter" => &[p!("p", required)],
-        "CDL.Integers.MultiSum" => &[p!("nin", int 0), p!("k_<i>", int 1)],
+        "CDL.Discrete.TriggeredMovingMean" => discrete::TRIGGERED_MOVING_MEAN_PARAM_DEFAULTS,
+        "CDL.Discrete.TriggeredSampler" => discrete::TRIGGERED_SAMPLER_PARAM_DEFAULTS,
+        "CDL.Discrete.UnitDelay" => discrete::UNIT_DELAY_PARAM_DEFAULTS,
+        "CDL.Integers.Sources.Constant" => integers::INTEGER_CONSTANT_PARAM_DEFAULTS,
+        "CDL.Integers.Sources.Pulse" => integers::INTEGER_PULSE_PARAM_DEFAULTS,
+        "CDL.Integers.Sources.TimeTable" => integers::INTEGER_TIME_TABLE_PARAM_DEFAULTS,
+        "CDL.Integers.AddParameter" => integers::INTEGER_ADD_PARAMETER_PARAM_DEFAULTS,
+        "CDL.Integers.MultiSum" => integers::INTEGER_MULTI_SUM_PARAM_DEFAULTS,
         "CDL.Integers.GreaterThreshold"
         | "CDL.Integers.GreaterEqualThreshold"
         | "CDL.Integers.LessThreshold"
-        | "CDL.Integers.LessEqualThreshold" => &[p!("t", int 0)],
-        "CDL.Integers.OnCounter" => &[p!("y_start", int 0)],
-        "CDL.Integers.Change" => &[p!("pre_u_start", int 0)],
-        "CDL.Integers.Stage" => &[
-            p!("n", required),
-            p!("holdDuration", required),
-            p!("h", derived "0.02 / n"),
-            p!("pre_y_start", int 0),
-        ],
-        "CDL.Logical.Sources.Constant" => &[p!("k", required)],
-        "CDL.Logical.Sources.Pulse" => &[
-            p!("width", real 0.5),
-            p!("period", required),
-            p!("shift", real 0.0),
-        ],
-        "CDL.Logical.Sources.TimeTable" => &[p!("period", required)],
-        "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => &[p!("nin", int 0)],
-        "CDL.Logical.Pre" | "CDL.Logical.Edge" => &[p!("pre_u_start", bool false)],
-        "CDL.Logical.Sources.SampleTrigger" => &[p!("period", required), p!("shift", real 0.0)],
-        "CDL.Logical.Proof" => &[p!("debounce", required), p!("feedbackDelay", required)],
-        "CDL.Logical.VariablePulse" => &[
-            p!("period", required),
-            p!("deltaU", real 0.01),
-            p!("minTruFalHol", derived "0.01 * period"),
-        ],
-        "CDL.Logical.FallingEdge" | "CDL.Logical.Change" => &[p!("pre_u_start", bool false)],
-        "CDL.Logical.Timer" | "CDL.Logical.TimerAccumulating" => &[p!("t", real 0.0)],
-        "CDL.Logical.TrueDelay" => &[p!("delayTime", required), p!("delayOnInit", bool false)],
-        "CDL.Logical.TrueFalseHold" => &[
-            p!("trueHoldDuration", required),
-            p!("falseHoldDuration", derived "trueHoldDuration"),
-        ],
-        "CDL.Logical.TrueHoldWithReset" => &[p!("duration", real 0.0)],
-        "CDL.Reals.PID" => pid_defaults(false),
-        "CDL.Reals.PIDWithReset" => pid_defaults(true),
-        "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => &[p!("pAtm", real 101_325.0)],
-        "CDL.Reals.Sources.Constant" => &[p!("k", required)],
-        "CDL.Reals.Sources.Pulse" => &[
-            p!("amplitude", real 1.0),
-            p!("width", real 0.5),
-            p!("period", required),
-            p!("shift", real 0.0),
-            p!("offset", real 0.0),
-        ],
-        "CDL.Reals.Sources.Ramp" => &[
-            p!("height", real 1.0),
-            p!("duration", required),
-            p!("offset", real 0.0),
-            p!("startTime", real 0.0),
-        ],
-        "CDL.Reals.Sources.Sin" => &[
-            p!("amplitude", real 1.0),
-            p!("freqHz", required),
-            p!("phase", real 0.0),
-            p!("offset", real 0.0),
-            p!("startTime", real 0.0),
-        ],
-        "CDL.Reals.Sources.CalendarTime" => &[
-            p!("zerTim", required),
-            p!("yearRef", int 2016),
-            p!("offset", real 0.0),
-        ],
-        "CDL.Reals.Round" => &[p!("n", required)],
-        "CDL.Reals.AddParameter" => &[p!("p", required)],
-        "CDL.Reals.MultiplyByParameter" => &[p!("k", required)],
-        "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => &[p!("nin", int 0)],
-        "CDL.Reals.MultiSum" => &[p!("nin", int 0), p!("k_<i>", real 1.0)],
-        "CDL.Reals.MatrixGain" => &[
-            p!("nout", int 2),
-            p!("nin", int 2),
-            p!("K_<row>_<col>", derived "1.0 if row == col else 0.0"),
-        ],
-        "CDL.Reals.MatrixMax" => &[
-            p!("nRow", required),
-            p!("nCol", required),
-            p!("rowMax", bool true),
-        ],
-        "CDL.Reals.MatrixMin" => &[
-            p!("nRow", required),
-            p!("nCol", required),
-            p!("rowMin", bool true),
-        ],
-        "CDL.Reals.Sort" => &[p!("nin", int 0), p!("ascending", bool true)],
-        "CDL.Reals.Limiter" => &[p!("uMin", required), p!("uMax", required)],
-        "CDL.Reals.Line" => &[p!("limitBelow", bool true), p!("limitAbove", bool true)],
-        "CDL.Reals.Greater" | "CDL.Reals.Less" => {
-            &[p!("h", real 0.0), p!("pre_y_start", bool false)]
+        | "CDL.Integers.LessEqualThreshold" => integers::INTEGER_THRESHOLD_PARAM_DEFAULTS,
+        "CDL.Integers.OnCounter" => integers::INTEGER_ON_COUNTER_PARAM_DEFAULTS,
+        "CDL.Integers.Change" => integers::INTEGER_CHANGE_PARAM_DEFAULTS,
+        "CDL.Integers.Stage" => integers::INTEGER_STAGE_PARAM_DEFAULTS,
+        "CDL.Logical.Sources.Constant" => logical::LOGICAL_CONSTANT_PARAM_DEFAULTS,
+        "CDL.Logical.Sources.Pulse" => logical::LOGICAL_PULSE_PARAM_DEFAULTS,
+        "CDL.Logical.Sources.TimeTable" => logical::LOGICAL_TIME_TABLE_PARAM_DEFAULTS,
+        "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => logical::MULTI_LOGICAL_PARAM_DEFAULTS,
+        "CDL.Logical.Pre" | "CDL.Logical.Edge" => logical::PRE_PARAM_DEFAULTS,
+        "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_DEFAULTS,
+        "CDL.Logical.Proof" => logical_proof::PROOF_PARAM_DEFAULTS,
+        "CDL.Logical.VariablePulse" => logical_variable_pulse::VARIABLE_PULSE_PARAM_DEFAULTS,
+        "CDL.Logical.FallingEdge" | "CDL.Logical.Change" => logical_timing::EDGE_PARAM_DEFAULTS,
+        "CDL.Logical.Timer" | "CDL.Logical.TimerAccumulating" => {
+            logical_timing::TIMER_PARAM_DEFAULTS
         }
-        "CDL.Reals.GreaterThreshold" | "CDL.Reals.LessThreshold" => &[
-            p!("t", real 0.0),
-            p!("h", real 0.0),
-            p!("pre_y_start", bool false),
-        ],
-        "CDL.Reals.Hysteresis" => &[
-            p!("uLow", required),
-            p!("uHigh", required),
-            p!("pre_y_start", bool false),
-        ],
-        "CDL.Reals.Derivative" => &[p!("y_start", real 0.0)],
-        "CDL.Reals.LimitSlewRate" => &[
-            p!("raisingSlewRate", required),
-            p!("fallingSlewRate", derived "-raisingSlewRate"),
-            p!("Td", derived "raisingSlewRate * 10.0"),
-            p!("enable", bool true),
-        ],
-        "CDL.Reals.MovingAverage" => &[p!("delta", required)],
-        "CDL.Reals.IntegratorWithReset" => &[p!("k", real 1.0), p!("y_start", real 0.0)],
-        "CDL.Reals.Ramp" => &[
-            p!("raisingSlewRate", required),
-            p!("fallingSlewRate", derived "-raisingSlewRate"),
-            p!("Td", derived "raisingSlewRate * 0.001"),
-        ],
-        "CDL.Utilities.Assert" => &[p!("message", required)],
-        "CDL.Utilities.SunRiseSet" => &[
-            p!("lat", required),
-            p!("lon", required),
-            p!("timZon", required),
-        ],
-        path if path.starts_with("CDL.Routing.") => routing_defaults(path),
+        "CDL.Logical.TrueDelay" => logical_timing::TRUE_DELAY_PARAM_DEFAULTS,
+        "CDL.Logical.TrueFalseHold" => logical_timing::TRUE_FALSE_HOLD_PARAM_DEFAULTS,
+        "CDL.Logical.TrueHoldWithReset" => logical_timing::TRUE_HOLD_WITH_RESET_PARAM_DEFAULTS,
+        "CDL.Reals.PID" => pid::PID_PARAM_DEFAULTS,
+        "CDL.Reals.PIDWithReset" => pid::PID_WITH_RESET_PARAM_DEFAULTS,
+        "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
+            psychrometrics::SPECIFIC_ENTHALPY_PARAM_DEFAULTS
+        }
+        "CDL.Reals.Sources.Constant" => reals_defaults::CONSTANT_PARAM_DEFAULTS,
+        "CDL.Reals.Sources.Pulse" => reals_defaults::PULSE_PARAM_DEFAULTS,
+        "CDL.Reals.Sources.Ramp" => reals_defaults::SOURCE_RAMP_PARAM_DEFAULTS,
+        "CDL.Reals.Sources.Sin" => reals_defaults::SOURCE_SIN_PARAM_DEFAULTS,
+        "CDL.Reals.Sources.CalendarTime" => reals_defaults::CALENDAR_TIME_PARAM_DEFAULTS,
+        "CDL.Reals.Round" => reals_defaults::ROUND_PARAM_DEFAULTS,
+        "CDL.Reals.AddParameter" => reals_defaults::ADD_PARAMETER_PARAM_DEFAULTS,
+        "CDL.Reals.MultiplyByParameter" => reals_defaults::MULTIPLY_BY_PARAMETER_PARAM_DEFAULTS,
+        "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => reals_defaults::MULTI_REAL_PARAM_DEFAULTS,
+        "CDL.Reals.MultiSum" => reals_defaults::MULTI_SUM_PARAM_DEFAULTS,
+        "CDL.Reals.MatrixGain" => reals_defaults::MATRIX_GAIN_PARAM_DEFAULTS,
+        "CDL.Reals.MatrixMax" => reals_defaults::MATRIX_MAX_PARAM_DEFAULTS,
+        "CDL.Reals.MatrixMin" => reals_defaults::MATRIX_MIN_PARAM_DEFAULTS,
+        "CDL.Reals.Sort" => reals_defaults::SORT_PARAM_DEFAULTS,
+        "CDL.Reals.Limiter" => reals_defaults::LIMITER_PARAM_DEFAULTS,
+        "CDL.Reals.Line" => reals_defaults::LINE_PARAM_DEFAULTS,
+        "CDL.Reals.Greater" | "CDL.Reals.Less" => reals_defaults::COMPARATOR_PARAM_DEFAULTS,
+        "CDL.Reals.GreaterThreshold" | "CDL.Reals.LessThreshold" => {
+            reals_defaults::THRESHOLD_COMPARATOR_PARAM_DEFAULTS
+        }
+        "CDL.Reals.Hysteresis" => reals_defaults::HYSTERESIS_PARAM_DEFAULTS,
+        "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_DEFAULTS,
+        "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_DEFAULTS,
+        "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_DEFAULTS,
+        "CDL.Reals.IntegratorWithReset" => reals_integrator::INTEGRATOR_WITH_RESET_PARAM_DEFAULTS,
+        "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_DEFAULTS,
+        "CDL.Routing.BooleanExtractSignal"
+        | "CDL.Routing.IntegerExtractSignal"
+        | "CDL.Routing.RealExtractSignal" => routing::EXTRACT_SIGNAL_PARAM_DEFAULTS,
+        "CDL.Routing.BooleanExtractor"
+        | "CDL.Routing.IntegerExtractor"
+        | "CDL.Routing.RealExtractor" => routing::EXTRACTOR_PARAM_DEFAULTS,
+        "CDL.Routing.BooleanScalarReplicator"
+        | "CDL.Routing.IntegerScalarReplicator"
+        | "CDL.Routing.RealScalarReplicator" => routing::SCALAR_REPLICATOR_PARAM_DEFAULTS,
+        "CDL.Routing.BooleanVectorFilter"
+        | "CDL.Routing.IntegerVectorFilter"
+        | "CDL.Routing.RealVectorFilter" => routing::VECTOR_FILTER_PARAM_DEFAULTS,
+        "CDL.Routing.BooleanVectorReplicator"
+        | "CDL.Routing.IntegerVectorReplicator"
+        | "CDL.Routing.RealVectorReplicator" => routing::VECTOR_REPLICATOR_PARAM_DEFAULTS,
+        "CDL.Utilities.Assert" => utilities::ASSERT_PARAM_DEFAULTS,
+        "CDL.Utilities.SunRiseSet" => utilities::SUN_RISE_SET_PARAM_DEFAULTS,
         _ => &[],
-    }
-}
-
-const PID: &[ParamDefault] = &[
-    p!("controllerType", enum "PI"),
-    p!("k", real 1.0),
-    p!("Ti", real 0.5),
-    p!("Td", real 0.1),
-    p!("r", real 1.0),
-    p!("yMax", real 1.0),
-    p!("yMin", real 0.0),
-    p!("Ni", real 0.9),
-    p!("Nd", real 10.0),
-    p!("xi_start", real 0.0),
-    p!("yd_start", real 0.0),
-    p!("reverseActing", bool true),
-];
-const PID_WITH_RESET: &[ParamDefault] = &[
-    p!("controllerType", enum "PI"),
-    p!("k", real 1.0),
-    p!("Ti", real 0.5),
-    p!("Td", real 0.1),
-    p!("r", real 1.0),
-    p!("yMax", real 1.0),
-    p!("yMin", real 0.0),
-    p!("Ni", real 0.9),
-    p!("Nd", real 10.0),
-    p!("xi_start", real 0.0),
-    p!("yd_start", real 0.0),
-    p!("reverseActing", bool true),
-    p!("y_reset", derived "xi_start"),
-];
-
-const fn pid_defaults(with_reset: bool) -> &'static [ParamDefault] {
-    if with_reset { PID_WITH_RESET } else { PID }
-}
-
-fn routing_defaults(path: &str) -> &'static [ParamDefault] {
-    if path.ends_with("ExtractSignal") {
-        &[
-            p!("nin", int 1),
-            p!("nout", int 1),
-            p!("extract_<i>", derived "i"),
-        ]
-    } else if path.ends_with("Extractor") {
-        &[p!("nin", int 1)]
-    } else if path.ends_with("ScalarReplicator") {
-        &[p!("nout", int 1)]
-    } else if path.ends_with("VectorFilter") {
-        &[
-            p!("nin", required),
-            p!("nout", required),
-            p!("msk_<i>", bool true),
-        ]
-    } else if path.ends_with("VectorReplicator") {
-        &[p!("nin", int 1), p!("nout", int 1)]
-    } else {
-        &[]
     }
 }
