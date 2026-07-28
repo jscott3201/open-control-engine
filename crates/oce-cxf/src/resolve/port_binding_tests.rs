@@ -172,3 +172,27 @@ fn a_wide_permutation_maps_every_position() {
 fn an_empty_side_binds_trivially() {
     assert!(matches!(match_names(&[], &[]), Binding::Positional));
 }
+
+/// The reference generator's real output, verbatim.
+///
+/// These two IRIs are copied from `_research/cxf-structural-diff/reference/CDL.Reals.PID.jsonld`,
+/// which `modelica-json` produced: its `S231:hasInput` array lists `u_m` before `u_s`, while
+/// `Reals/PID.mo` declares `u_s` at line 48 and `u_m` at line 51. Both ports are `Real`, so nothing
+/// else in the workspace could tell the two orders apart. The IRI shape differs from this repo's
+/// fixtures — a different host, and a dotted class path rather than an instance path — so this also
+/// pins that local-name extraction survives a foreign generator's naming.
+#[test]
+fn the_reference_generators_own_port_order_binds_correctly() {
+    let order = order_of(
+        &[
+            "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Reals.PID.u_m",
+            "http://data.ashrae.org/S231#Buildings.Controls.OBC.CDL.Reals.PID.u_s",
+        ],
+        &["u_s", "u_m"],
+    );
+    assert_eq!(
+        order,
+        vec![1, 0],
+        "signature position 0 is u_s, which modelica-json lists second"
+    );
+}
