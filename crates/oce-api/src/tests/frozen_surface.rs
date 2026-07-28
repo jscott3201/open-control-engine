@@ -125,6 +125,8 @@ fn empty_engine_surface_is_inert_not_panicking() {
     assert!(matches!(eng.get_output("x"), Err(OcError::UnknownPoint(_))));
     assert!(matches!(eng.get_param("x"), Err(OcError::UnknownPoint(_))));
     assert_eq!(eng.mode(), RunMode::Running);
+    assert!(eng.export_cxf().is_err());
+    assert!(eng.topology().blocks.is_empty());
 }
 
 #[test]

@@ -15,6 +15,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
+mod param_defaults;
 mod pid;
 mod psychrometrics;
 mod reals;
@@ -29,7 +30,7 @@ mod catalog_guard_support;
 #[cfg(test)]
 mod catalog_tests;
 #[cfg(test)]
-mod manifest;
+pub(crate) mod manifest;
 #[cfg(test)]
 mod manifest_tests;
 
@@ -46,10 +47,11 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
 /// Every registered entry, in catalog order. Crate-internal and test-only: the public surface is
 /// [`lookup`], and enumeration exists so in-crate audits can assert over the whole catalog rather
 /// than a sample.
-#[cfg(test)]
 pub(crate) fn all_entries() -> impl Iterator<Item = &'static RegistryEntry> {
     CATALOG.iter().flat_map(|entries| entries.iter())
 }
+
+pub(crate) use param_defaults::param_defaults;
 
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {

@@ -130,6 +130,12 @@ pub fn import_cxf(
 /// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty
 /// `warnings` list means nothing was deferred and the round trip covers the whole input.
 ///
+/// Reserved `urn:oce:lowering#PassThrough.*` blocks are emitted as bare boundary edges rather
+/// than `containsBlock` nodes; boundary-output nodes are re-emitted and import synthesizes the
+/// lowering blocks again. Thus RT-2 holds by render identity with zero warnings even though a
+/// pass-through document's `containsBlock` count is less than `ModelGraph::blocks.len()`. An empty
+/// warning list does not mean the emitted document explicitly lists every internal lowering block.
+///
 /// One carve-out, and it is a real gap rather than a definition: export does **not** check a
 /// block's port ARITY against the class its `class_path` names, because it takes no registry
 /// dependency at all. A hand-built block naming a registered class while declaring fewer ports

@@ -219,7 +219,7 @@ suite validate the wrong sequence, silently and permanently.
 Nothing else can see it. The resolver assigns port positions from document array order; the arity
 guard checks counts and `oce-validate`'s `check_ports_dir` checks each position's *kind*. A
 transposition between two ports of the **same kind** passes both. `Reals.PID` with `u_s`/`u_m`
-swapped inverts the control action. **30 of 133 blocks are exposed; 282 instances live across 33
+swapped inverts the control action. **30 of 136 blocks are exposed; 282 instances live across 33
 of the 46 fixtures.**
 
 It gates because its value is entirely future-tense — the corpus is verified clean, so it stays
@@ -231,7 +231,7 @@ cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 ```
 
 **Expect it to fail when you legitimately add a fixture.** Seven volume pins are deliberate —
-`fixtures == 46`, `checked == 2135`, `skipped_array == 37`, `compared == 104` and
+`fixtures == 46`, `checked == 2129`, `skipped_array == 37`, `compared == 104` and
 `exempt_array == 28` on the registry cross-check, and on the vendored corpus itself
 `classes == 132` and `175 inputs / 144 outputs`. A change that stops discovering ports would
 otherwise leave the comparison vacuously green, which is the exact failure mode the check exists

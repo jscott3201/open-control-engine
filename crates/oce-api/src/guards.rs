@@ -153,6 +153,9 @@ fn _assert_frozen_signatures() {
     let _: fn(&Engine<MemStore>) -> IoSummary = Engine::<MemStore>::io_summary;
     let _: fn(&Engine<MemStore>, Option<&str>) -> Result<Vec<PointInfo>, OcError> =
         Engine::<MemStore>::point_list;
+    let _: fn(&Engine<MemStore>) -> Result<crate::ExportReport, OcError> =
+        Engine::<MemStore>::export_cxf;
+    let _: fn(&Engine<MemStore>) -> crate::Topology = Engine::<MemStore>::topology;
     // R-PUB-6 owned-snapshot accessors (also asserted by `_assert_outputs_enumerable`).
     let _: fn(&Outputs) -> Vec<(String, Value)> = Outputs::to_map;
     let _: fn(&IoInventory) -> Vec<PointInfo> = IoInventory::to_vec;

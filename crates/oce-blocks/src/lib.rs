@@ -22,6 +22,7 @@ use std::borrow::Cow;
 
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
+mod catalog;
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -48,6 +49,10 @@ mod reals_sources;
 mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
+
+pub use catalog::{
+    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming, catalog,
+};
 mod routing;
 mod routing_boolean;
 mod routing_integer;
@@ -667,6 +672,9 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod catalog_tests;
 
 #[cfg(test)]
 mod param_rules_tests;

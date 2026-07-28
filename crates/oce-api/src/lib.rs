@@ -33,6 +33,7 @@
 
 mod engine;
 mod error;
+mod export;
 /// Compile-time PyO3 binding-shape guards (R-API-PY-1..8). A non-test module so a frozen surface
 /// drift fails the normal `cargo build`, not only the release-gate test run.
 mod guards;
@@ -41,9 +42,12 @@ mod loading;
 mod params;
 mod projection;
 mod sim;
+mod stable_hash;
+mod topology;
 
 pub use engine::Engine;
 pub use error::{OcError, OcResult};
+pub use export::ExportReport;
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,
     TrendCfg, TrendInterval,
@@ -54,6 +58,7 @@ pub use sim::{
     AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
     StepReport,
 };
+pub use topology::{PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
 /// binder owns it as `oce_api::Diagnostic`.
