@@ -91,29 +91,32 @@ use cdl_source::ClassPorts;
 /// comparison, so a lookup that silently starts returning `None` — a class renamed out of the
 /// registry, say — fails here instead of quietly shrinking the check to nothing.
 ///
+/// Names are checked too, for the 104 classes that declare them
+/// (`oce_blocks::port_names`). That closes the **coordinated rename**, which two earlier revisions
+/// of this file documented as passing: renaming a port in the reference data *and* in every fixture
+/// instance used to leave the suite green, for a name upstream never used. It cannot now — the
+/// registry is a third artifact that has to be renamed as well, and it is shipping code rather than
+/// test data.
+///
 /// # What this does NOT check, and why the limits are load-bearing
 ///
-/// **1. Names are never validated, in any direction.** The registry stores port **kinds** only —
-/// that absence is the very gap this audit exists to cover. So the check catches a table whose
-/// *arity or kinds* are wrong (it caught three extraction bugs: a nested-block leak, `end if`
-/// miscounted as a class close, and `model` vs `block`) and nothing else about the names.
-///
-/// What that costs is now much smaller than it was. When the table was a checked-in catalog, a
-/// **coordinated rename passed**: edit a port name in the catalog and in every fixture instance
-/// and the suite stayed green, for a name upstream never used. The table is now derived from
-/// vendored upstream source, so the same attack requires editing third-party `.mo` files that
-/// `diff` against a fresh clone at the pinned commit. It is no longer invisible; it is merely not
-/// caught *here*.
+/// **1. Agreement is not independence.** The registry's names were transcribed from CDL, the same
+/// place the vendored source comes from, so this comparison detects **drift** between two
+/// artifacts — it is not an oracle and would not catch a name that was wrong in both from the
+/// start. What gives the names teeth is the resolver binding against them, where a wrong name stops
+/// matching real documents.
 ///
 /// **2. The 28 array-port classes get no registry check at all.** Upstream declares one array
 /// connector (`u[nin]`) where we carry N flattened scalars, so arity legitimately differs and
 /// comparison is meaningless — but that means their interfaces are unverified by anything here,
-/// including on kinds. The vendored source is still their authority.
+/// including on kinds and including on names. The vendored source is still their authority.
 fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
     let mut disagreements = Vec::new();
     let mut compared = 0usize;
     let mut exempt_array = 0usize;
     let mut missing_from_registry = Vec::new();
+    let mut named_compared = 0usize;
+    let mut unnamed_in_registry = Vec::new();
     for (class_path, ports) in table {
         if ports.inputs_are_array || ports.outputs_are_array {
             exempt_array += 1;
@@ -143,6 +146,26 @@ fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
                  registry : in {reg_in:?} out {reg_out:?}"
             ));
         }
+        // Names, which the registry could not supply until it carried them. This is the direction
+        // that used to be uncheckable: with kinds alone a coordinated rename passed, because
+        // nothing in the workspace knew what upstream calls a port.
+        match oce_blocks::port_names::port_names(class_path) {
+            Some(named) => {
+                named_compared += 1;
+                let tab_in_names: Vec<&str> = ports.inputs.iter().map(String::as_str).collect();
+                let tab_out_names: Vec<&str> = ports.outputs.iter().map(String::as_str).collect();
+                if named.inputs != tab_in_names.as_slice()
+                    || named.outputs != tab_out_names.as_slice()
+                {
+                    disagreements.push(format!(
+                        "{class_path} (names)\n      upstream : in {tab_in_names:?} out \
+                         {tab_out_names:?}\n      registry : in {:?} out {:?}",
+                        named.inputs, named.outputs
+                    ));
+                }
+            }
+            None => unnamed_in_registry.push(class_path.as_str()),
+        }
     }
     assert!(
         disagreements.is_empty(),
@@ -165,6 +188,20 @@ fn cross_check_against_registry(table: &BTreeMap<String, ClassPorts>) {
         "registry cross-check coverage changed. It must stay pinned: a check that quietly \
          compares fewer classes still passes, and this one guards the table every other \
          assertion in this file trusts."
+    );
+    assert_eq!(
+        named_compared, 104,
+        "port-name cross-check coverage changed. All 104 registry-comparable classes carry \
+         declared names; a class dropping out of `oce_blocks::port_names` stops being checked on \
+         names AND silently reverts to positional binding in the resolver."
+    );
+    assert!(
+        unnamed_in_registry.is_empty(),
+        "{} class(es) reach this cross-check but declare no port names in the registry, so their \
+         names were compared against nothing: {:?}. The named set is meant to be exactly the set \
+         this audit can reach.",
+        unnamed_in_registry.len(),
+        unnamed_in_registry
     );
     assert_eq!(
         exempt_array, 28,

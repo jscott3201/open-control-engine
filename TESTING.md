@@ -244,10 +244,15 @@ kind. It cannot agree on *names* — the registry does not store them, which is 
 this audit exists — and the remaining 28 array-port classes are compared against nothing at all,
 since upstream's single `u[nin]` connector has no arity in common with our N flattened scalars.
 
-So names still have no runtime authority. What changed is where the trust sits. Renaming a port
-to something upstream never used now requires editing vendored third-party source that `diff`s
-against a public clone at the pinned commit, instead of editing a catalog entry nobody would
-notice.
+Names are now checked in both directions for the 104 classes that declare them in
+`oce_blocks::port_names`, which closes the **coordinated rename** two earlier revisions of this
+audit recorded as passing. Renaming a port to something upstream never used previously needed only
+the reference data and the fixtures changed together; it now needs the shipping registry changed as
+well, and that is code, not test data.
+
+Names still have no *runtime* authority — the resolver binds ports by document array position and
+does not consult the table. Making it bind by name is the next change, and it is what turns these
+names from data that agrees with other data into data with consequences.
 
 **The scanner is asserted against its own silence**, because "found nothing" is how every scope
 bug in this extractor's history presented itself. A class that parses to zero ports is a hard

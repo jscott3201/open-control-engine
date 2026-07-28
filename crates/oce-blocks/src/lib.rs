@@ -35,6 +35,7 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod pid;
+pub mod port_names;
 mod psychrometrics;
 mod reals_arithmetic;
 mod reals_comparators;
@@ -667,6 +668,9 @@ mod tests;
 
 #[cfg(test)]
 mod param_rules_tests;
+
+#[cfg(test)]
+mod port_names_tests;
 
 #[cfg(test)]
 mod reals_arithmetic_tests;

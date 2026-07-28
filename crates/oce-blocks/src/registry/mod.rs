@@ -42,6 +42,14 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
         .find(|e| e.class_path == class_path)
 }
 
+/// Every registered entry, in catalog order. Crate-internal and test-only: the public surface is
+/// [`lookup`], and enumeration exists so in-crate audits can assert over the whole catalog rather
+/// than a sample.
+#[cfg(test)]
+pub(crate) fn all_entries() -> impl Iterator<Item = &'static RegistryEntry> {
+    CATALOG.iter().flat_map(|entries| entries.iter())
+}
+
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
