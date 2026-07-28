@@ -32,25 +32,26 @@ absent, you are a contributor and `project-facts.md` is what you need.
 
 That arrangement governs what is published **from here on**. Earlier revisions of this
 file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
-orchestration material and remain readable in this repository's public git history. Nothing
-there is a credential or an identity value, so it is accepted rather than remediated —
-deleting a file stops publishing it, it does not unpublish it.
+orchestration material and remain readable in this repository's public git history — as do
+four `_spec/oce_g36_gap_specs_v1/reference/` files that were force-added until 2026-07-28
+and are now local-only. Nothing there is a credential or an identity value, so it is
+accepted rather than remediated — deleting a file stops publishing it, it does not
+unpublish it.
 
 ---
 
 ## 📂 Repository layout
 
 Everything below is local-only unless marked tracked. `.gitignore` excludes every
-top-level `_*/` directory, so a clone contains none of the working directories except
-the four force-added files under `_spec/oce_g36_gap_specs_v1/reference/` — if you
-cloned this repo, you will not find the rest, and that is expected.
+top-level `_*/` directory, so a clone contains none of the working directories — if
+you cloned this repo, you will not find them, and that is expected.
 
 | Path | Tracked? | Purpose |
 | --- | --- | --- |
 | `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
 | `third_party/` | tracked | Vendored third-party source, verbatim and uncompiled. Today: 176 Modelica Buildings `.mo` classes plus 44 modelica-json CXF translations, read as data by two conformance audits. Sits outside every crate root, so `cargo package` never ships it. Its own license applies — see the directory README. |
 | `.agents/` | partly | `gate.sh` and `project-facts.md` are tracked; other files there are local operating notes. |
-| `_spec/` | mostly local-only | Architecture and engine specification — the design of record before code. Four files under `_spec/oce_g36_gap_specs_v1/reference/` — two conformance fixtures and two reference documents — are force-added and therefore tracked; nothing else under `_spec/` is. |
+| `_spec/` | local-only | Architecture and engine specification — the design of record before code. |
 | `_research/` | local-only | Research findings that feed the spec. |
 | `_codex-briefs/`, `_review/`, `_tracker/` | local-only | Working artifacts. |
 | `*-id.json` | never committed | Machine-local agent identities. |

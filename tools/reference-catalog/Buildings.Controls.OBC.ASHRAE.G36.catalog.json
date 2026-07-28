@@ -2863,13 +2863,13 @@
   "profile_fixtures": [
     {
       "name": "small_composite",
-      "path": "_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld",
+      "path": "crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld",
       "purpose": "Profile example for a flat CXF composite with supported CDL child blocks.",
       "runtime_expected": false
     },
     {
       "name": "parameter_gated_connector",
-      "path": "_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld",
+      "path": "crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld",
       "purpose": "Profile-only example for a G36 enum parameter and load-time conditional connector.",
       "runtime_expected": false
     }

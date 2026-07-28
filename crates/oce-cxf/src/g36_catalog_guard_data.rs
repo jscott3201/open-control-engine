@@ -111,17 +111,13 @@ pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld");
-pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld"
-));
-pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld"
-));
+pub(super) const PROFILE_SMALL_COMPOSITE: &str =
+    include_str!("../tests/fixtures/profile/small-composite.jsonld");
+pub(super) const PROFILE_PARAMETER_GATED: &str =
+    include_str!("../tests/fixtures/profile/parameter-gated-connector.jsonld");
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "0e0eeb77bf9a9826";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "dfda6eaab178c812";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -451,12 +447,12 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
 pub(super) const PROFILE_FIXTURES: &[FixtureSource] = &[
     FixtureSource {
         name: "small_composite",
-        path: "_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld",
+        path: "crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld",
         text: PROFILE_SMALL_COMPOSITE,
     },
     FixtureSource {
         name: "parameter_gated_connector",
-        path: "_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld",
+        path: "crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld",
         text: PROFILE_PARAMETER_GATED,
     },
 ];

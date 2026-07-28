@@ -58,17 +58,17 @@ Keep absolute paths out of committed files, including scripts and doc examples.
 
 ## Working directories are gitignored
 
-`.gitignore` excludes every top-level `_*/` directory, so `_research/`, `_review/` and
-`_tracker/` are absent from a clone, and `_spec/` is present only as the four
-force-added files under `_spec/oce_g36_gap_specs_v1/reference/`. Two consequences bite
-in practice:
+`.gitignore` excludes every top-level `_*/` directory, so `_spec/`, `_research/`,
+`_review/` and `_tracker/` are entirely absent from a clone. (Four
+`_spec/oce_g36_gap_specs_v1/reference/` files were force-added exceptions until
+2026-07-28; the two conformance fixtures among them now live at
+`crates/oce-cxf/tests/fixtures/profile/`.) Two consequences bite in practice:
 
 - **`git add -A` silently stages nothing** for a new file under those paths, and
-  exits 0. Those four files — two conformance fixtures and two reference documents —
-  are tracked only because they were force-added. Adding another needs
-  `git add -f <exact path>`.
-- A reference to `_spec/...` points at a file most clones do not have. Quote the
-  excerpt you depend on rather than citing the path alone.
+  exits 0. Tracking a file there anyway needs a deliberate `git add -f <exact path>`
+  — and a written reason.
+- A reference to `_spec/...` points at a file no clone has. Quote the excerpt you
+  depend on rather than citing the path alone.
 
 ## Run `cargo clean` between PRs
 
