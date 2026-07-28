@@ -250,6 +250,23 @@ pub(crate) fn resolve(
         .map(|r| r.id.as_str())
         .filter(|iri| !specialization.is_inactive(iri))
         .collect();
+    let mut missing_boundaries: HashSet<&str> = HashSet::new();
+    for iri in top
+        .has_input
+        .iter()
+        .chain(top.has_output.iter())
+        .map(|r| r.id.as_str())
+    {
+        if (boundary_in.contains(iri) || boundary_out.contains(iri))
+            && !by_id.contains_key(iri)
+            && missing_boundaries.insert(iri)
+        {
+            diags.push(
+                Diagnostic::error(DiagCode::UnresolvedReference, "boundary node not found")
+                    .with_subject(iri.to_owned()),
+            );
+        }
+    }
 
     // --- Step 3: assign BlockId in containsBlock array order; bridge @type → class_path and check
     // the registry (Step 4 folded in). block_of_iri is lookup-only.
@@ -626,8 +643,6 @@ pub(crate) fn resolve(
                         .with_subject(source.to_owned()),
                     ),
                     Some(from) => {
-                        // This elision path bypasses Step 10, so it must also compare the child
-                        // output's type with the boundary output's type here.
                         if let Some(boundary_type) = boundary_types.get(target).copied().flatten() {
                             let child = &connectors[from.0 as usize];
                             if child.value_type != boundary_type {

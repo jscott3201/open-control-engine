@@ -8,6 +8,7 @@
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
+use oce_model::{EnumClassId, ValueType};
 use serde_json::{Value, json};
 
 /// A minimal valid single-composite model: `c1 = Constant(k=1.0)` whose output drives
@@ -79,6 +80,14 @@ fn add_boundary_output(doc: &mut Value, datatype: &str) {
         json!({ "@id": "http://example.org#M.boundaryOutput" });
 }
 
+/// Remove the BASE output-to-input edge so a boundary input is `M.c2.u`'s only driver.
+fn remove_internal_input_drive(doc: &mut Value) {
+    node_mut(doc, "M.c1.y")
+        .as_object_mut()
+        .unwrap()
+        .remove("S231:isConnectedTo");
+}
+
 fn import(doc: &Value) -> Result<(oce_model::ModelGraph, oce_cxf::ValidationReport), CxfError> {
     let bytes = serde_json::to_vec(doc).expect("serialize doc");
     import_cxf(&bytes, &ResolveOptions::default())
@@ -99,6 +108,21 @@ fn assert_error_code(doc: &Value, code: DiagCode) -> Vec<Diagnostic> {
         Ok((_g, r)) => panic!("expected Validation({code:?}), but import succeeded: {r:?}"),
         Err(other) => panic!("expected Validation({code:?}), got {other:?}"),
     }
+}
+
+/// Assert one error pins its code, complete message, and subject.
+#[track_caller]
+fn assert_error_detail(doc: &Value, code: DiagCode, message: &str, subject: &str) {
+    let diags = assert_error_code(doc, code);
+    assert!(
+        diags.iter().any(|d| {
+            d.is_error()
+                && d.code == code
+                && d.message == message
+                && d.subject.as_deref() == Some(subject)
+        }),
+        "expected {code:?} with message {message:?} and subject {subject:?}, got {diags:#?}"
+    );
 }
 
 #[test]
@@ -223,18 +247,29 @@ fn type_mismatched_connection_is_rejected() {
 #[test]
 fn real_boundary_input_driving_boolean_child_input_is_rejected() {
     let mut doc = base();
+    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:BooleanInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
     add_boundary_input(&mut doc, "S231:Real");
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Real → Boolean",
+        "http://example.org#M.c2.u",
+    );
 }
 
 #[test]
 fn integer_boundary_input_driving_real_child_input_is_rejected() {
     let mut doc = base();
     add_boundary_input(&mut doc, "S231:Integer");
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Integer → Real",
+        "http://example.org#M.c2.u",
+    );
 }
 
 #[test]
@@ -244,19 +279,30 @@ fn boolean_child_output_driving_real_boundary_output_is_rejected() {
     child["@type"] = json!("S231:BooleanOutput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
     add_boundary_output(&mut doc, "S231:Real");
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Boolean → Real",
+        "http://example.org#M.c2.y2",
+    );
 }
 
 #[test]
 fn real_child_output_driving_integer_boundary_output_is_rejected() {
     let mut doc = base();
     add_boundary_output(&mut doc, "S231:Integer");
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Real → Integer",
+        "http://example.org#M.c2.y2",
+    );
 }
 
 #[test]
 fn enum_boundary_input_driving_integer_child_input_is_rejected() {
     let mut doc = base();
+    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:IntegerInput");
     child["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
@@ -264,12 +310,21 @@ fn enum_boundary_input_driving_integer_child_input_is_rejected() {
         &mut doc,
         "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
     );
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        &format!(
+            "connected types differ: {:?} → Integer",
+            ValueType::Enum(EnumClassId::G36_VENTILATION_STANDARD)
+        ),
+        "http://example.org#M.c2.u",
+    );
 }
 
 #[test]
 fn different_enum_classes_across_boundary_elision_are_rejected() {
     let mut doc = base();
+    remove_internal_input_drive(&mut doc);
     let child = node_mut(&mut doc, "M.c2.u");
     child["@type"] = json!("S231:Input");
     child["S231:isOfDataType"] =
@@ -278,7 +333,16 @@ fn different_enum_classes_across_boundary_elision_are_rejected() {
         &mut doc,
         "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
     );
-    assert_error_code(&doc, DiagCode::TypeMismatch);
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        &format!(
+            "connected types differ: {:?} → {:?}",
+            ValueType::Enum(EnumClassId::G36_VENTILATION_STANDARD),
+            ValueType::Enum(EnumClassId::G36_HEATING_COIL)
+        ),
+        "http://example.org#M.c2.u",
+    );
 }
 
 #[test]
@@ -296,6 +360,51 @@ fn unresolvable_boundary_datatype_is_diagnosed() {
     let mut doc = base();
     add_boundary_input(&mut doc, "S231:Frobnicate");
     assert_error_code(&doc, DiagCode::UnresolvedReference);
+}
+
+#[test]
+fn nodeless_boundary_input_is_rejected_once_with_boundary_subject() {
+    let mut doc = base();
+    remove_internal_input_drive(&mut doc);
+    node_mut(&mut doc, "#M")["S231:hasInput"] =
+        json!({ "@id": "http://example.org#M.missingInput" });
+    node_mut(&mut doc, "M.c2.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.missingInput" });
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingInput")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "missing boundary is diagnosed once: {diags:#?}"
+    );
+}
+
+#[test]
+fn nodeless_boundary_output_is_rejected_once_with_boundary_subject() {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasOutput"] =
+        json!({ "@id": "http://example.org#M.missingOutput" });
+    node_mut(&mut doc, "M.c2.y2")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.missingOutput" });
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingOutput")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "missing boundary is diagnosed once: {diags:#?}"
+    );
 }
 
 #[test]
