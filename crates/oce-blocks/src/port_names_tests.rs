@@ -229,3 +229,64 @@ fn every_silently_exposed_side_carries_names() {
         "the set of sides that reorder silently under the reference generator's sort changed"
     );
 }
+
+/// `TrueHoldWithReset`'s declared names are checked against its *behaviour*, since nothing else can.
+///
+/// It is the one entry in the table with no vendored `.mo` — the class is absent from Buildings
+/// master, and `logical_timing.rs` records the CDL specification's §7.6 catalog as its oracle — so
+/// `fixture_port_order` skips it and a transcription check is impossible. That matters more than it
+/// would for another class: `u` and `clr` are both `Boolean` and `clr` sorts first, so the class is
+/// one of the twelve silently exposed sides, and a WRONG name here would not fall back safely. It
+/// would match one port and not the other, and a valid document would be rejected outright.
+///
+/// So the name is pinned to what the block does rather than to a source listing: driving the port
+/// declared `clr` must clear the held output. If the two names were ever transposed, the port
+/// asserted to clear would be the one that sets, and this fails.
+#[test]
+fn true_hold_with_reset_names_match_its_behaviour() {
+    use crate::{Block, Ctx, NoopDiagnostics, TrueHoldWithReset};
+    use oce_model::Value;
+
+    let named = port_names("CDL.Logical.TrueHoldWithReset").expect("named");
+    assert_eq!(named.inputs, ["u", "clr"]);
+    let clr_idx = named
+        .inputs
+        .iter()
+        .position(|n| *n == "clr")
+        .expect("a clear input is declared");
+
+    let block = TrueHoldWithReset { duration: 10.0 };
+    let mut region = vec![0u64; block.state_len()];
+    block.init_state(&mut region, &ParamTable::default());
+    let diag = NoopDiagnostics;
+    let emit = |region: &[u64], t: f64, inputs: &[Value]| -> Vec<Value> {
+        let cx = Ctx::new(t, &diag);
+        let mut out = Vec::new();
+        block.emit_from_state(&cx, inputs, region, &mut |_, val| out.push(val));
+        out
+    };
+
+    // Raise the set input and hold it: the output latches true.
+    let mut inputs = vec![Value::Boolean(false); named.inputs.len()];
+    inputs[1 - clr_idx] = Value::Boolean(true);
+    let held = emit(&region, 0.0, &inputs);
+    {
+        let cx = Ctx::new(0.0, &diag);
+        block.update_state(&cx, &inputs, &mut region);
+    }
+    assert!(
+        matches!(held[0], Value::Boolean(true)),
+        "the port declared `u` must set the held output, got {:?}",
+        held[0]
+    );
+
+    // Now raise the port declared `clr`. If the declared names were transposed, this would be the
+    // set input and the output would stay true.
+    inputs[clr_idx] = Value::Boolean(true);
+    let cleared = emit(&region, 1.0, &inputs);
+    assert!(
+        matches!(cleared[0], Value::Boolean(false)),
+        "the port declared `clr` must clear the held output well inside the 10 s hold, got {:?}",
+        cleared[0]
+    );
+}
