@@ -1,7 +1,7 @@
 # Vendored: Modelica Buildings Library — CDL block sources
 
 Third-party source, copied verbatim. **Nothing here is open-control code, and nothing here is
-compiled.** These files are read as *data* by one test.
+compiled.** These files are read as *data* by two conformance audits (see "Who reads it").
 
 ## License
 
@@ -86,6 +86,13 @@ broken the `diff` above that makes this directory checkable at all.
 
 ## Who reads it
 
-`crates/oce-cxf/tests/fixture_port_order.rs`, and nothing else. It derives each class's port
-declaration order from these sources at test time and checks that every fixture lists its ports in
-that order. See `TESTING.md` for what that gate does and does not prove.
+Two conformance audits, and nothing else:
+
+- `crates/oce-cxf/tests/fixture_port_order.rs` derives each class's port declaration
+  order from these sources at test time and checks that every fixture lists its ports in
+  that order.
+- `crates/oce-cxf/tests/fixture_structural_oracle.rs` reads the `cxf/` documents as the
+  structural oracle and these `.mo` sources for class existence and conditional-component
+  declarations when resolving each fixture's specialization.
+
+See `TESTING.md` for what those gates do and do not prove.

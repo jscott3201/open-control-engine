@@ -388,6 +388,74 @@ fn swapped_class_is_reported_as_mismatch() {
     );
 }
 
+// ---- vector-port canonicalization hazard, pinned directly (review finding 1):
+// ---- a numeric suffix collapses to its stem ONLY when the oracle inventory declares
+// ---- the stem. The 46-fixture corpus cannot distinguish a blind-stripping regression,
+// ---- so these unit cases are the coverage, not the golden.
+
+fn canon_test_flat() -> structural_oracle::flatten::Flat {
+    let mut flat = structural_oracle::flatten::Flat::default();
+    // an And-like instance: u1/u2/y are real scalar ports, no vector stem 'u' exists
+    flat.inst.insert(
+        "logSwi".into(),
+        "Buildings.Controls.OBC.CDL.Logical.Or".into(),
+    );
+    flat.inv.insert(
+        "logSwi".into(),
+        ["u1", "u2", "y"].into_iter().map(str::to_owned).collect(),
+    );
+    // a replicator-like instance: 'y' is a declared vector port
+    flat.inst.insert(
+        "booRep".into(),
+        "Buildings.Controls.OBC.CDL.Routing.BooleanScalarReplicator".into(),
+    );
+    flat.inv.insert(
+        "booRep".into(),
+        ["u", "y"].into_iter().map(str::to_owned).collect(),
+    );
+    // root array port
+    flat.topports.insert("yRelFan".into());
+    flat
+}
+
+#[test]
+fn declared_digit_ported_name_is_never_collapsed() {
+    let flat = canon_test_flat();
+    let id = |p: &str| p.to_owned();
+    // logSwi.u2 is a genuine distinct port: it must survive canonicalization verbatim
+    assert_eq!(
+        structural_oracle::compare::canon_endpoint(&flat, &id, "logSwi.u2"),
+        "logSwi.u2"
+    );
+}
+
+#[test]
+fn undeclared_digit_ported_name_must_not_alias_its_stem() {
+    let flat = canon_test_flat();
+    let id = |p: &str| p.to_owned();
+    // u3 is not declared and neither is a vector stem 'u': blind stripping would
+    // silently alias it onto a port that does not exist — it must stay visible as-is
+    assert_eq!(
+        structural_oracle::compare::canon_endpoint(&flat, &id, "logSwi.u3"),
+        "logSwi.u3"
+    );
+}
+
+#[test]
+fn vector_port_element_collapses_to_its_declared_stem() {
+    let flat = canon_test_flat();
+    let id = |p: &str| p.to_owned();
+    assert_eq!(
+        structural_oracle::compare::canon_endpoint(&flat, &id, "booRep.y3"),
+        "booRep.y"
+    );
+    // root-level array ports use the underscore spelling
+    assert_eq!(
+        structural_oracle::compare::canon_endpoint(&flat, &id, "yRelFan_3"),
+        "yRelFan"
+    );
+}
+
 #[test]
 fn const_false_feeder_is_not_a_passthrough() {
     let manifest = load_manifest();

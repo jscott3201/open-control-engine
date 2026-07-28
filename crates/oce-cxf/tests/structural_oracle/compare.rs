@@ -217,6 +217,37 @@ fn scope_of(loc: &str) -> String {
     }
 }
 
+/// Canonicalize one edge endpoint against the flattened oracle. Public so the port-name
+/// hazard is directly pinned by unit tests: a numeric-suffixed port collapses to its
+/// stem ONLY when the oracle's own inventory declares the stem — `logSwi.u2` is a real
+/// port and an undeclared `u3` must stay visible as-is, never silently alias `u`.
+pub fn canon_endpoint(flat: &Flat, canon_path: &dyn Fn(&str) -> String, ep: &str) -> String {
+    if !ep.contains('.') {
+        if flat.topports.contains(ep) {
+            return ep.to_owned();
+        }
+        return match array_stem(ep).filter(|s| flat.topports.contains(s)) {
+            Some(s) => s,
+            None => ep.to_owned(),
+        };
+    }
+    let (cont, port) = ep.rsplit_once('.').expect("dotted endpoint");
+    let ccont = canon_path(cont);
+    match flat.inv.get(&ccont) {
+        Some(ports) if !ports.contains(port) => {
+            // vector-port element: strip trailing digits only when the oracle's own
+            // inventory declares the stem (never strip blindly)
+            let stem = port.trim_end_matches(|c: char| c.is_ascii_digit());
+            if !stem.is_empty() && stem != port && ports.contains(stem) {
+                format!("{ccont}.{stem}")
+            } else {
+                format!("{ccont}.{port}")
+            }
+        }
+        _ => format!("{ccont}.{port}"),
+    }
+}
+
 /// `abs1_3` → `abs1`; `yRelFan_3` → `yRelFan`; `abs1` → None (no `_N` suffix).
 fn array_stem(seg: &str) -> Option<String> {
     let trimmed = seg.trim_end_matches(|c: char| c.is_ascii_digit());
@@ -331,32 +362,7 @@ pub fn analyse(
         }
         out.join(".")
     };
-    let canon = |ep: &str| -> String {
-        if !ep.contains('.') {
-            if flat.topports.contains(ep) {
-                return ep.to_owned();
-            }
-            return match array_stem(ep).filter(|s| flat.topports.contains(s)) {
-                Some(s) => s,
-                None => ep.to_owned(),
-            };
-        }
-        let (cont, port) = ep.rsplit_once('.').expect("dotted endpoint");
-        let ccont = canon_path(cont);
-        match flat.inv.get(&ccont) {
-            Some(ports) if !ports.contains(port) => {
-                // vector-port element: strip trailing digits only when the oracle's own
-                // inventory declares the stem (logSwi.u2 is a real port and never folds)
-                let stem = port.trim_end_matches(|c: char| c.is_ascii_digit());
-                if !stem.is_empty() && stem != port && ports.contains(stem) {
-                    format!("{ccont}.{stem}")
-                } else {
-                    format!("{ccont}.{port}")
-                }
-            }
-            _ => format!("{ccont}.{port}"),
-        }
-    };
+    let canon = |ep: &str| -> String { canon_endpoint(&flat, &canon_path, ep) };
 
     // ---- conditional resolution of the flattened oracle ----
     let folds: Vec<String> = flat
