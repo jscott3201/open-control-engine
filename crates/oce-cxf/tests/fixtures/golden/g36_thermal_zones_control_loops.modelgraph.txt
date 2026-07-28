@@ -117,4 +117,4 @@ connections: 18
   C35 -> C25
   C38 -> C18
   C41 -> C27
-external_inputs: [11, 0, 8, 12, 1, 5, 9, 4]
+external_inputs: [0, 11, 1, 5, 8, 12, 4, 9]

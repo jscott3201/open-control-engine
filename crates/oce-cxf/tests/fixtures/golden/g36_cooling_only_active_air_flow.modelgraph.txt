@@ -63,4 +63,4 @@ connections: 10
   C18 -> C23
   C21 -> C3
   C24 -> C0
-external_inputs: [12, 20, 17, 8]
+external_inputs: [12, 17, 20, 8]

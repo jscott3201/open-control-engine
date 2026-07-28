@@ -156,4 +156,4 @@ connections: 27
   C50 -> C31
   C51 -> C36
   C55 -> C53
-external_inputs: [0, 46, 22, 47, 35, 52]
+external_inputs: [0, 46, 22, 35, 47, 52]

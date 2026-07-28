@@ -262,4 +262,4 @@ connections: 54
   C97 -> C93
   C98 -> C92
   C98 -> C96
-external_inputs: [52, 72, 0]
+external_inputs: [52, 0, 72]

@@ -568,6 +568,42 @@ pub(crate) fn resolve(
         }
     }
 
+    // `external_inputs` was filled by walking `@graph`, appending each boundary target as it was
+    // met — so within one boundary port the vector inherited the order of that port's
+    // `isConnectedTo` ARRAY. Two documents that list one port's fan-out targets in different orders
+    // describe the same model and produced transposed vectors.
+    //
+    // The order is observable, which is what makes this worth fixing rather than tidying: `export`
+    // emits the composite's boundary nodes in `external_inputs` first-occurrence order AND fills
+    // each boundary node's own `isConnectedTo` array from the same vector, so a transposition here
+    // is a same-kind port swap — the hazard `port_binding` exists to prevent, and one no arity or
+    // kind check can see, because the count and the kinds are unchanged.
+    //
+    // Re-key on the boundary port's own node position. Note the scope of the claim: `@graph` is an
+    // unordered set in JSON-LD, so this makes the order independent of the *array* spelling, not of
+    // node order — node order remains load-bearing here exactly as `resolve_golden` already records
+    // for the rest of the resolver.
+    let graph_pos: HashMap<&str, usize> = doc
+        .graph
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (n.id.as_str(), i))
+        .collect();
+    // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
+    // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
+    // that port's node position, so the first key component only orders port GROUPS relative to
+    // each other, and `ConnectorId` alone orders within a group. That second component is what
+    // moved all fifteen goldens. It is assigned in Step 5a from `@graph` order over instance port
+    // nodes, so it does not follow the boundary port's array spelling.
+    external_inputs.sort_by_key(|id| {
+        let pos = connectors[id.0 as usize]
+            .iri
+            .as_deref()
+            .and_then(|iri| graph_pos.get(iri).copied())
+            .unwrap_or(usize::MAX);
+        (pos, id.0)
+    });
+
     // --- Step 10: gross direction/type fail-fast on emitted edges (AD-8; deep §7.10 is oce-validate).
     for c in &connections {
         let (f, t) = (&connectors[c.from.0 as usize], &connectors[c.to.0 as usize]);
