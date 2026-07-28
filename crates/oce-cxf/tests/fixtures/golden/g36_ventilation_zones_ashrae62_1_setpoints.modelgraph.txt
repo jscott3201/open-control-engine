@@ -231,4 +231,4 @@ connections: 49
   C87 -> C61
   C88 -> C31
   C90 -> C34
-external_inputs: [89, 53, 12, 10, 4, 6, 82, 83]
+external_inputs: [89, 53, 12, 4, 10, 6, 82, 83]
