@@ -6,6 +6,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "k" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "k", "kind": "required" }
     ]
   },
   {
@@ -13,7 +21,13 @@
     "inputs": [],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Sources.Pulse",
@@ -25,6 +39,18 @@
       { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
       { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
       { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "amplitude", "kind": "literal", "real": 1.0 },
+      { "name": "width", "kind": "literal", "real": 0.5 },
+      { "name": "period", "kind": "required" },
+      { "name": "shift", "kind": "literal", "real": 0.0 },
+      { "name": "offset", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -35,6 +61,17 @@
     "param_rules": [
       { "rule": "Required", "name": "duration" },
       { "rule": "RealGreaterOrEqual", "name": "duration", "min": 1e-37 }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "height", "kind": "literal", "real": 1.0 },
+      { "name": "duration", "kind": "required" },
+      { "name": "offset", "kind": "literal", "real": 0.0 },
+      { "name": "startTime", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -49,6 +86,18 @@
       { "rule": "Real", "name": "phase" },
       { "rule": "Real", "name": "offset" },
       { "rule": "Real", "name": "startTime" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "amplitude", "kind": "literal", "real": 1.0 },
+      { "name": "freqHz", "kind": "required" },
+      { "name": "phase", "kind": "literal", "real": 0.0 },
+      { "name": "offset", "kind": "literal", "real": 0.0 },
+      { "name": "startTime", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -62,6 +111,16 @@
       { "rule": "IntegerGreaterOrEqual", "name": "yearRef", "min": 2010 },
       { "rule": "IntegerLessOrEqualConstant", "name": "yearRef", "max": 2031 },
       { "rule": "RealFinite", "name": "offset" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["year", "month", "day", "hour", "minute", "weekDay"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "zerTim", "kind": "required" },
+      { "name": "yearRef", "kind": "literal", "integer": 2016 },
+      { "name": "offset", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -75,126 +134,232 @@
       { "rule": "EnumMembers", "name": "smoothness", "members": ["LinearSegments", "ConstantSegments"] },
       { "rule": "EnumMembers", "name": "extrapolation", "members": ["HoldLastPoint", "LastTwoPoints", "Periodic"] },
       { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 }
-    ]
+    ],
+    "port_naming": "positional",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Add",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Subtract",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Multiply",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Divide",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Sqrt",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Sin",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Cos",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Tan",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Asin",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Acos",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Atan",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Atan2",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Exp",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Log",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Log10",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Average",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Modulo",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Round",
@@ -203,6 +368,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "n" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "n", "kind": "required" }
     ]
   },
   {
@@ -212,6 +385,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "p" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "p", "kind": "required" }
     ]
   },
   {
@@ -221,6 +402,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "k" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "k", "kind": "required" }
     ]
   },
   {
@@ -228,21 +417,39 @@
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Min",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.Max",
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.MultiMax",
@@ -253,6 +460,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -264,6 +477,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -276,6 +495,13 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
       { "rule": "RealArrayElements", "base": "k", "len": "nin" }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 },
+      { "name": "k_<i>", "kind": "literal", "real": 1.0 }
     ]
   },
   {
@@ -292,6 +518,14 @@
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nout", "right": "nin", "max": 1048576 },
       { "rule": "RealMatrixElements", "base": "K", "rows": "nout", "default_rows": 2, "cols": "nin", "default_cols": 2 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nout", "kind": "literal", "integer": 2 },
+      { "name": "nin", "kind": "literal", "integer": 2 },
+      { "name": "K_<row>_<col>", "kind": "derived", "formula": "1.0 if row == col else 0.0" }
     ]
   },
   {
@@ -311,6 +545,14 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nCol", "min": 1 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nCol", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nRow", "right": "nCol", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nRow", "kind": "required" },
+      { "name": "nCol", "kind": "required" },
+      { "name": "rowMax", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -330,6 +572,14 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nCol", "min": 1 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nCol", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nRow", "right": "nCol", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nRow", "kind": "required" },
+      { "name": "nCol", "kind": "required" },
+      { "name": "rowMin", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -342,6 +592,13 @@
       { "rule": "Boolean", "name": "ascending" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 },
+      { "name": "ascending", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -354,6 +611,15 @@
       { "rule": "Required", "name": "uMin" },
       { "rule": "RealLessOrEqual", "lower": "uMin", "upper": "uMax" },
       { "rule": "RealEqualWarning", "left": "uMin", "right": "uMax" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "uMin", "kind": "required" },
+      { "name": "uMax", "kind": "required" }
     ]
   },
   {
@@ -361,21 +627,49 @@
     "inputs": ["Real", "Real", "Real", "Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["x1", "f1", "x2", "f2", "u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "limitBelow", "kind": "literal", "boolean": true },
+      { "name": "limitAbove", "kind": "literal", "boolean": true }
+    ]
   },
   {
     "class_path": "CDL.Reals.Greater",
     "inputs": ["Real", "Real"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "h", "kind": "literal", "real": 0.0 },
+      { "name": "pre_y_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Reals.GreaterThreshold",
     "inputs": ["Real"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "real": 0.0 },
+      { "name": "h", "kind": "literal", "real": 0.0 },
+      { "name": "pre_y_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Reals.Hysteresis",
@@ -387,6 +681,16 @@
       { "rule": "Required", "name": "uHigh" },
       { "rule": "RealLessOrEqual", "lower": "uLow", "upper": "uHigh" },
       { "rule": "RealEqualWarning", "left": "uLow", "right": "uHigh" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "uLow", "kind": "required" },
+      { "name": "uHigh", "kind": "required" },
+      { "name": "pre_y_start", "kind": "literal", "boolean": false }
     ]
   },
   {
@@ -394,35 +698,77 @@
     "inputs": ["Real", "Real"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "h", "kind": "literal", "real": 0.0 },
+      { "name": "pre_y_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Reals.LessThreshold",
     "inputs": ["Real"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "real": 0.0 },
+      { "name": "h", "kind": "literal", "real": 0.0 },
+      { "name": "pre_y_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Reals.Switch",
     "inputs": ["Real", "Boolean", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2", "u3"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Reals.IntegratorWithReset",
     "inputs": ["Real", "Real", "Boolean"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "y_reset_in", "trigger"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "k", "kind": "literal", "real": 1.0 },
+      { "name": "y_start", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Reals.Derivative",
     "inputs": ["Real", "Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["k", "T", "u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "y_start", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Reals.LimitSlewRate",
@@ -432,6 +778,17 @@
     "param_rules": [
       { "rule": "Required", "name": "raisingSlewRate" },
       { "rule": "RealGreaterThan", "name": "Td", "min": 0.0 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "raisingSlewRate", "kind": "required" },
+      { "name": "fallingSlewRate", "kind": "derived", "formula": "-raisingSlewRate" },
+      { "name": "Td", "kind": "derived", "formula": "raisingSlewRate * 10.0" },
+      { "name": "enable", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -442,6 +799,14 @@
     "param_rules": [
       { "rule": "Required", "name": "delta" },
       { "rule": "RealGreaterThan", "name": "delta", "min": 0.0 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "delta", "kind": "required" }
     ]
   },
   {
@@ -454,6 +819,16 @@
       { "rule": "RealGreaterOrEqual", "name": "raisingSlewRate", "min": 1e-37 },
       { "rule": "RealLessOrEqualConstant", "name": "fallingSlewRate", "max": -1e-37 },
       { "rule": "RealGreaterOrEqual", "name": "Td", "min": 1e-15 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u", "active"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "raisingSlewRate", "kind": "required" },
+      { "name": "fallingSlewRate", "kind": "derived", "formula": "-raisingSlewRate" },
+      { "name": "Td", "kind": "derived", "formula": "raisingSlewRate * 0.001" }
     ]
   },
   {
@@ -470,6 +845,25 @@
       { "rule": "RealGreaterOrEqual", "name": "Nd", "min": 1e-13 },
       { "rule": "RealLessOrEqual", "lower": "yMin", "upper": "yMax" },
       { "rule": "RealEqualWarning", "left": "yMin", "right": "yMax" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u_s", "u_m"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "controllerType", "kind": "literal", "enum": "PI" },
+      { "name": "k", "kind": "literal", "real": 1.0 },
+      { "name": "Ti", "kind": "literal", "real": 0.5 },
+      { "name": "Td", "kind": "literal", "real": 0.1 },
+      { "name": "r", "kind": "literal", "real": 1.0 },
+      { "name": "yMax", "kind": "literal", "real": 1.0 },
+      { "name": "yMin", "kind": "literal", "real": 0.0 },
+      { "name": "Ni", "kind": "literal", "real": 0.9 },
+      { "name": "Nd", "kind": "literal", "real": 10.0 },
+      { "name": "xi_start", "kind": "literal", "real": 0.0 },
+      { "name": "yd_start", "kind": "literal", "real": 0.0 },
+      { "name": "reverseActing", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -486,6 +880,26 @@
       { "rule": "RealGreaterOrEqual", "name": "Nd", "min": 1e-13 },
       { "rule": "RealLessOrEqual", "lower": "yMin", "upper": "yMax" },
       { "rule": "RealEqualWarning", "left": "yMin", "right": "yMax" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u_s", "u_m", "trigger"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "controllerType", "kind": "literal", "enum": "PI" },
+      { "name": "k", "kind": "literal", "real": 1.0 },
+      { "name": "Ti", "kind": "literal", "real": 0.5 },
+      { "name": "Td", "kind": "literal", "real": 0.1 },
+      { "name": "r", "kind": "literal", "real": 1.0 },
+      { "name": "yMax", "kind": "literal", "real": 1.0 },
+      { "name": "yMin", "kind": "literal", "real": 0.0 },
+      { "name": "Ni", "kind": "literal", "real": 0.9 },
+      { "name": "Nd", "kind": "literal", "real": 10.0 },
+      { "name": "xi_start", "kind": "literal", "real": 0.0 },
+      { "name": "yd_start", "kind": "literal", "real": 0.0 },
+      { "name": "reverseActing", "kind": "literal", "boolean": true },
+      { "name": "y_reset", "kind": "derived", "formula": "xi_start" }
     ]
   },
   {
@@ -493,7 +907,13 @@
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["TDryBul", "phi"],
+    "output_names": ["TDewPoi"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
@@ -502,6 +922,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "RealFiniteGreaterThan", "name": "pAtm", "min": 0.0 }
+    ],
+    "port_naming": "named",
+    "input_names": ["TDryBul", "phi"],
+    "output_names": ["h"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pAtm", "kind": "literal", "real": 101325.0 }
     ]
   },
   {
@@ -509,7 +937,13 @@
     "inputs": ["Real", "Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["TDryBul", "phi"],
+    "output_names": ["TWetBul"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Sources.Constant",
@@ -518,6 +952,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "k" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "k", "kind": "required" }
     ]
   },
   {
@@ -530,6 +972,16 @@
       { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
       { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
       { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "width", "kind": "literal", "real": 0.5 },
+      { "name": "period", "kind": "required" },
+      { "name": "shift", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -543,6 +995,12 @@
       { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 },
       { "rule": "RealFiniteGreaterThan", "name": "period", "min": 0.0 },
       { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-6 }
+    ],
+    "port_naming": "positional",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "period", "kind": "required" }
     ]
   },
   {
@@ -550,14 +1008,26 @@
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Or",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.MultiAnd",
@@ -568,6 +1038,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -579,6 +1055,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -586,49 +1068,95 @@
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Nand",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Nor",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Xor",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Switch",
     "inputs": ["Boolean", "Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2", "u3"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Pre",
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pre_u_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Logical.Edge",
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pre_u_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Logical.Sources.SampleTrigger",
@@ -638,6 +1166,15 @@
     "param_rules": [
       { "rule": "Required", "name": "period" },
       { "rule": "RealGreaterThan", "name": "period", "min": 0.0 }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "period", "kind": "required" },
+      { "name": "shift", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -649,6 +1186,15 @@
       { "rule": "Required", "name": "debounce" },
       { "rule": "Required", "name": "feedbackDelay" },
       { "rule": "RealLessOrEqualWarning", "lower": "debounce", "upper": "feedbackDelay" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u_s", "u_m"],
+    "output_names": ["yLocFal", "yLocTru"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "debounce", "kind": "required" },
+      { "name": "feedbackDelay", "kind": "required" }
     ]
   },
   {
@@ -662,6 +1208,16 @@
       { "rule": "RealLessOrEqualConstant", "name": "deltaU", "max": 0.5 },
       { "rule": "RealGreaterOrEqual", "name": "minTruFalHol", "min": 1e-37 },
       { "rule": "RealGreaterOrEqualScaledWarning", "left": "period", "right": "minTruFalHol", "factor": 2.0 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "period", "kind": "required" },
+      { "name": "deltaU", "kind": "literal", "real": 0.01 },
+      { "name": "minTruFalHol", "kind": "derived", "formula": "0.01 * period" }
     ]
   },
   {
@@ -669,42 +1225,86 @@
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pre_u_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Logical.Change",
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pre_u_start", "kind": "literal", "boolean": false }
+    ]
   },
   {
     "class_path": "CDL.Logical.Latch",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "clr"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Toggle",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "clr"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Logical.Timer",
     "inputs": ["Boolean"],
     "outputs": ["Real", "Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y", "passed"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Logical.TimerAccumulating",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Real", "Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "reset"],
+    "output_names": ["y", "passed"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Logical.TrueDelay",
@@ -713,6 +1313,15 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "delayTime" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "delayTime", "kind": "required" },
+      { "name": "delayOnInit", "kind": "literal", "boolean": false }
     ]
   },
   {
@@ -722,6 +1331,15 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "trueHoldDuration" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "trueHoldDuration", "kind": "required" },
+      { "name": "falseHoldDuration", "kind": "derived", "formula": "trueHoldDuration" }
     ]
   },
   {
@@ -729,56 +1347,112 @@
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "clr"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "duration", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "urn:oce:lowering#PassThrough.Real",
     "inputs": ["Real"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": true,
+    "param_defaults": []
   },
   {
     "class_path": "urn:oce:lowering#PassThrough.Integer",
     "inputs": ["Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": true,
+    "param_defaults": []
   },
   {
     "class_path": "urn:oce:lowering#PassThrough.Boolean",
     "inputs": ["Boolean"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": true,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Conversions.BooleanToInteger",
     "inputs": ["Boolean"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "integerTrue", "kind": "literal", "integer": 1 },
+      { "name": "integerFalse", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Conversions.BooleanToReal",
     "inputs": ["Boolean"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "realTrue", "kind": "literal", "real": 1.0 },
+      { "name": "realFalse", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Conversions.IntegerToReal",
     "inputs": ["Integer"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Conversions.RealToInteger",
     "inputs": ["Real"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Sources.Constant",
@@ -787,6 +1461,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "k" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "k", "kind": "required" }
     ]
   },
   {
@@ -799,6 +1481,18 @@
       { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-37 },
       { "rule": "RealGreaterOrEqual", "name": "width", "min": 1e-37 },
       { "rule": "RealLessOrEqualConstant", "name": "width", "max": 1.0 }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "amplitude", "kind": "literal", "integer": 1 },
+      { "name": "width", "kind": "literal", "real": 0.5 },
+      { "name": "period", "kind": "required" },
+      { "name": "shift", "kind": "literal", "real": 0.0 },
+      { "name": "offset", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -812,6 +1506,12 @@
       { "rule": "RealFiniteGreaterThan", "name": "timeScale", "min": 0.0 },
       { "rule": "RealFiniteGreaterThan", "name": "period", "min": 0.0 },
       { "rule": "RealGreaterOrEqual", "name": "period", "min": 1e-6 }
+    ],
+    "port_naming": "positional",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "period", "kind": "required" }
     ]
   },
   {
@@ -819,28 +1519,52 @@
     "inputs": ["Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Add",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Subtract",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Multiply",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.AddParameter",
@@ -849,6 +1573,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "p" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "p", "kind": "required" }
     ]
   },
   {
@@ -856,14 +1588,26 @@
     "inputs": ["Integer", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Min",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.MultiSum",
@@ -875,6 +1619,13 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 },
       { "rule": "IntegerArrayElements", "base": "k", "len": "nin" }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 0 },
+      { "name": "k_<i>", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -882,84 +1633,168 @@
     "inputs": ["Integer", "Boolean", "Integer"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2", "u3"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Equal",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.Greater",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.GreaterThreshold",
     "inputs": ["Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.GreaterEqual",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.GreaterEqualThreshold",
     "inputs": ["Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.Less",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.LessThreshold",
     "inputs": ["Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.LessEqual",
     "inputs": ["Integer", "Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u1", "u2"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Integers.LessEqualThreshold",
     "inputs": ["Integer"],
     "outputs": ["Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "t", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.OnCounter",
     "inputs": ["Boolean", "Boolean"],
     "outputs": ["Integer"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["trigger", "reset"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "y_start", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.Change",
     "inputs": ["Integer"],
     "outputs": ["Boolean", "Boolean", "Boolean"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y", "up", "down"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "pre_u_start", "kind": "literal", "integer": 0 }
+    ]
   },
   {
     "class_path": "CDL.Integers.Stage",
@@ -972,6 +1807,17 @@
       { "rule": "IntegerGreaterOrEqual", "name": "n", "min": 1 },
       { "rule": "RealGreaterOrEqual", "name": "holdDuration", "min": 0.0 },
       { "rule": "RealTimesIntegerInclusiveRange", "real": "h", "integer": "n", "min": 0.001, "max": 0.5 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "n", "kind": "required" },
+      { "name": "holdDuration", "kind": "required" },
+      { "name": "h", "kind": "derived", "formula": "0.02 / n" },
+      { "name": "pre_y_start", "kind": "literal", "integer": 0 }
     ]
   },
   {
@@ -988,6 +1834,14 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 },
+      { "name": "extract_<i>", "kind": "derived", "formula": "i" }
     ]
   },
   {
@@ -999,6 +1853,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1010,6 +1870,12 @@
       { "rule": "Structural", "name": "nout" },
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1029,6 +1895,14 @@
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
       { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "required" },
+      { "name": "nout", "kind": "required" },
+      { "name": "msk_<i>", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -1044,6 +1918,13 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1060,6 +1941,14 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 },
+      { "name": "extract_<i>", "kind": "derived", "formula": "i" }
     ]
   },
   {
@@ -1071,6 +1960,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1082,6 +1977,12 @@
       { "rule": "Structural", "name": "nout" },
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1101,6 +2002,14 @@
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
       { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "required" },
+      { "name": "nout", "kind": "required" },
+      { "name": "msk_<i>", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -1116,6 +2025,13 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1132,6 +2048,14 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerArrayElementsInRange", "base": "extract", "len": "nout", "len_default": 1, "min": 1, "max": "nin", "max_default": 1, "default_to_index": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 },
+      { "name": "extract_<i>", "kind": "derived", "formula": "i" }
     ]
   },
   {
@@ -1143,6 +2067,12 @@
       { "rule": "Structural", "name": "nin" },
       { "rule": "IntegerGreaterOrEqual", "name": "nin", "min": 1 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nin", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1154,6 +2084,12 @@
       { "rule": "Structural", "name": "nout" },
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1173,6 +2109,14 @@
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "BooleanArrayElements", "base": "msk", "len": "nin" },
       { "rule": "BooleanArrayTrueCountEquals", "base": "msk", "len": "nin", "count": "nout", "default": true }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "required" },
+      { "name": "nout", "kind": "required" },
+      { "name": "msk_<i>", "kind": "literal", "boolean": true }
     ]
   },
   {
@@ -1188,6 +2132,13 @@
       { "rule": "IntegerGreaterOrEqual", "name": "nout", "min": 0 },
       { "rule": "IntegerLessOrEqualConstant", "name": "nout", "max": 1048576 },
       { "rule": "IntegerProductLessOrEqualConstant", "left": "nin", "right": "nout", "max": 1048576 }
+    ],
+    "port_naming": "width_driven",
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "nin", "kind": "literal", "integer": 1 },
+      { "name": "nout", "kind": "literal", "integer": 1 }
     ]
   },
   {
@@ -1198,6 +2149,14 @@
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "samplePeriod", "kind": "required" }
     ]
   },
   {
@@ -1208,6 +2167,14 @@
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "samplePeriod", "kind": "required" }
     ]
   },
   {
@@ -1215,7 +2182,13 @@
     "inputs": ["Real", "Boolean"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "trigger"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": []
   },
   {
     "class_path": "CDL.Discrete.TriggeredMovingMean",
@@ -1225,6 +2198,14 @@
     "param_rules": [
       { "rule": "Required", "name": "n" },
       { "rule": "IntegerGreaterOrEqual", "name": "n", "min": 1 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u", "trigger"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "n", "kind": "required" }
     ]
   },
   {
@@ -1232,7 +2213,15 @@
     "inputs": ["Real", "Boolean"],
     "outputs": ["Real"],
     "width_driven": false,
-    "param_rules": []
+    "param_rules": [],
+    "port_naming": "named",
+    "input_names": ["u", "trigger"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "y_start", "kind": "literal", "real": 0.0 }
+    ]
   },
   {
     "class_path": "CDL.Discrete.UnitDelay",
@@ -1242,6 +2231,15 @@
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "samplePeriod", "kind": "required" },
+      { "name": "y_start", "kind": "literal", "real": 0.0 }
     ]
   },
   {
@@ -1252,6 +2250,14 @@
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": ["y"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "samplePeriod", "kind": "required" }
     ]
   },
   {
@@ -1261,6 +2267,14 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "message" }
+    ],
+    "port_naming": "named",
+    "input_names": ["u"],
+    "output_names": [],
+    "stateful": false,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "message", "kind": "required" }
     ]
   },
   {
@@ -1277,6 +2291,16 @@
       { "rule": "RealGreaterOrEqual", "name": "lon", "min": -3.141592653589793 },
       { "rule": "RealLessOrEqualConstant", "name": "lon", "max": 3.141592653589793 },
       { "rule": "RealFinite", "name": "timZon" }
+    ],
+    "port_naming": "named",
+    "input_names": [],
+    "output_names": ["nextSunRise", "nextSunSet", "sunUp"],
+    "stateful": true,
+    "reserved": false,
+    "param_defaults": [
+      { "name": "lat", "kind": "required" },
+      { "name": "lon", "kind": "required" },
+      { "name": "timZon", "kind": "required" }
     ]
   }
 ]

@@ -3,7 +3,15 @@
 use oce_model::ParamTable;
 
 use super::real_param;
-use crate::{Block, ParamRule, Proof, RegistryEntry};
+use crate::{Block, ParamDefault, ParamRule, Proof, RegistryEntry};
+
+const DEBOUNCE_FALLBACK: f64 = 0.0;
+const FEEDBACK_DELAY_FALLBACK: f64 = 0.0;
+
+pub(super) const PROOF_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("debounce"),
+    param_default_required!("feedbackDelay"),
+];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[RegistryEntry {
     class_path: "CDL.Logical.Proof",
@@ -23,7 +31,7 @@ pub(super) const PROOF_PARAM_RULES: &[ParamRule] = &[
 
 fn make_proof(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Proof {
-        debounce: real_param(p, "debounce", 0.0),
-        feedback_delay: real_param(p, "feedbackDelay", 0.0),
+        debounce: real_param(p, "debounce", DEBOUNCE_FALLBACK),
+        feedback_delay: real_param(p, "feedbackDelay", FEEDBACK_DELAY_FALLBACK),
     })
 }

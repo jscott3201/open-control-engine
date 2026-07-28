@@ -4,9 +4,35 @@ use super::{bool_param, int_param, real_param};
 use crate::source_timetable::MIN_TIMETABLE_PERIOD;
 use crate::{
     And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, LogicalTimeTable,
-    MAX_RESOLVED_PORT_WIDTH, MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamRule, Pre, RegistryEntry,
-    SampleTrigger, TimeTableValues, Xor,
+    MAX_RESOLVED_PORT_WIDTH, MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamDefault, ParamRule, Pre,
+    RegistryEntry, SampleTrigger, TimeTableValues, Xor,
 };
+
+const LOGICAL_CONSTANT_K_FALLBACK: bool = false;
+const PULSE_WIDTH_DEFAULT: f64 = 0.5;
+const PULSE_PERIOD_FALLBACK: f64 = 1.0;
+const PULSE_SHIFT_DEFAULT: f64 = 0.0;
+const MULTI_LOGICAL_NIN_DEFAULT: i64 = 0;
+const PRE_U_START_DEFAULT: bool = false;
+const SAMPLE_TRIGGER_PERIOD_FALLBACK: f64 = 1.0;
+const SAMPLE_TRIGGER_SHIFT_DEFAULT: f64 = 0.0;
+
+pub(super) const LOGICAL_CONSTANT_PARAM_DEFAULTS: &[ParamDefault] = &[param_default_required!("k")];
+pub(super) const LOGICAL_PULSE_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_real!("width", PULSE_WIDTH_DEFAULT),
+    param_default_required!("period"),
+    param_default_real!("shift", PULSE_SHIFT_DEFAULT),
+];
+pub(super) const LOGICAL_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_required!("period")];
+pub(super) const MULTI_LOGICAL_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_integer!("nin", MULTI_LOGICAL_NIN_DEFAULT)];
+pub(super) const PRE_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_boolean!("pre_u_start", PRE_U_START_DEFAULT)];
+pub(super) const SAMPLE_TRIGGER_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("period"),
+    param_default_real!("shift", SAMPLE_TRIGGER_SHIFT_DEFAULT),
+];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -123,15 +149,15 @@ pub(super) const LOGICAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Requi
 
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {
-        k: bool_param(p, "k", false),
+        k: bool_param(p, "k", LOGICAL_CONSTANT_K_FALLBACK),
     })
 }
 
 fn make_logical_pulse(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalPulse {
-        width: real_param(p, "width", 0.5),
-        period: real_param(p, "period", 1.0),
-        shift: real_param(p, "shift", 0.0),
+        width: real_param(p, "width", PULSE_WIDTH_DEFAULT),
+        period: real_param(p, "period", PULSE_PERIOD_FALLBACK),
+        shift: real_param(p, "shift", PULSE_SHIFT_DEFAULT),
     })
 }
 
@@ -177,13 +203,13 @@ fn make_logical_switch(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_pre(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Pre {
-        y_start: bool_param(p, "pre_u_start", false),
+        y_start: bool_param(p, "pre_u_start", PRE_U_START_DEFAULT),
     })
 }
 
 fn make_edge(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Edge {
-        pre_u_start: bool_param(p, "pre_u_start", false),
+        pre_u_start: bool_param(p, "pre_u_start", PRE_U_START_DEFAULT),
     })
 }
 
@@ -192,13 +218,13 @@ fn make_sample_trigger(p: &ParamTable) -> Box<dyn Block> {
     // author's required `period > 0` value, enforced by SAMPLE_TRIGGER_PARAM_RULES. `shift`
     // defaults to 0.0.
     Box::new(SampleTrigger {
-        period: real_param(p, "period", 1.0),
-        shift: real_param(p, "shift", 0.0),
+        period: real_param(p, "period", SAMPLE_TRIGGER_PERIOD_FALLBACK),
+        shift: real_param(p, "shift", SAMPLE_TRIGGER_SHIFT_DEFAULT),
     })
 }
 
 fn bounded_nin(p: &ParamTable) -> usize {
-    usize::try_from(int_param(p, "nin", 0).max(0))
+    usize::try_from(int_param(p, "nin", MULTI_LOGICAL_NIN_DEFAULT).max(0))
         .unwrap_or(MAX_RESOLVED_PORT_WIDTH)
         .min(MAX_RESOLVED_PORT_WIDTH)
 }

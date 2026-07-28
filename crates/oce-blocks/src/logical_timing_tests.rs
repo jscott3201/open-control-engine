@@ -1,10 +1,9 @@
-use oce_model::{ParamTable, Value};
-
 use super::{
-    Block, BlockKind, Ctx, FallingEdge, IntegerChange, Latch, LogicalChange, NoopDiagnostics,
-    OnCounter, Timer, TimerAccumulating, Toggle, TrueDelay, TrueFalseHold, TrueHoldWithReset,
-    lookup,
+    Block, Ctx, FallingEdge, IntegerChange, Latch, LogicalChange, NoopDiagnostics, OnCounter,
+    Timer, TimerAccumulating, Toggle, TrueDelay, TrueFalseHold, TrueHoldWithReset, lookup,
 };
+use oce_model::{ParamTable, Value};
+use std::sync::Arc;
 
 fn init_region(block: &dyn Block) -> Vec<u64> {
     let mut region = vec![0u64; block.state_len()];
@@ -42,6 +41,68 @@ fn run(block: &dyn Block, steps: &[(f64, Vec<Value>)]) -> (Vec<Vec<Value>>, Vec<
         .map(|(t, inputs)| tick_at(block, &mut region, *t, inputs.clone()))
         .collect();
     (trace, region)
+}
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn registry_trace(
+    class_path: &str,
+    parameters: &ParamTable,
+    steps: &[(f64, Vec<Value>)],
+) -> Vec<Vec<Value>> {
+    let block = (lookup(class_path).unwrap().make)(parameters);
+    let mut region = vec![0; block.state_len()];
+    block.init_state(&mut region, parameters);
+    steps
+        .iter()
+        .map(|(time, inputs)| tick_at(block.as_ref(), &mut region, *time, inputs.clone()))
+        .collect()
+}
+
+fn traces_bit_equal(left: &[Vec<Value>], right: &[Vec<Value>]) -> bool {
+    left.len() == right.len()
+        && left.iter().zip(right).all(|(left, right)| {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| left.bit_eq(right))
+        })
+}
+
+#[test]
+fn false_hold_duration_tracks_true_hold_duration_and_changes_the_trace() {
+    let derived = parameter_table(&[("trueHoldDuration", Value::Real(0.5))]);
+    let explicit = parameter_table(&[
+        ("trueHoldDuration", Value::Real(0.5)),
+        ("falseHoldDuration", Value::Real(0.5)),
+    ]);
+    let sensitive = parameter_table(&[
+        ("trueHoldDuration", Value::Real(0.5)),
+        ("falseHoldDuration", Value::Real(1.0)),
+    ]);
+    let steps = [
+        (0.0, vec![Value::Boolean(false)]),
+        (0.1, vec![Value::Boolean(true)]),
+        (0.7, vec![Value::Boolean(true)]),
+        (1.3, vec![Value::Boolean(false)]),
+        (1.8, vec![Value::Boolean(true)]),
+    ];
+    let derived_trace = registry_trace("CDL.Logical.TrueFalseHold", &derived, &steps);
+    assert!(traces_bit_equal(
+        &derived_trace,
+        &registry_trace("CDL.Logical.TrueFalseHold", &explicit, &steps)
+    ));
+    assert!(!traces_bit_equal(
+        &derived_trace,
+        &registry_trace("CDL.Logical.TrueFalseHold", &sensitive, &steps)
+    ));
 }
 
 fn assert_bool(value: &Value, want: bool) {
@@ -634,53 +695,4 @@ fn timing_latch_and_counter_blocks_are_deterministic_over_output_and_full_state_
             }
         }
     }
-}
-
-#[test]
-fn registry_paths_and_feedthrough_classification_are_complete() {
-    let paths = [
-        "CDL.Logical.FallingEdge",
-        "CDL.Logical.Change",
-        "CDL.Logical.Latch",
-        "CDL.Logical.Toggle",
-        "CDL.Logical.Timer",
-        "CDL.Logical.TimerAccumulating",
-        "CDL.Logical.TrueDelay",
-        "CDL.Logical.TrueFalseHold",
-        "CDL.Logical.TrueHoldWithReset",
-        "CDL.Integers.OnCounter",
-        "CDL.Integers.Change",
-    ];
-    for path in paths {
-        let block = (lookup(path)
-            .unwrap_or_else(|| panic!("missing {path}"))
-            .make)(&ParamTable::default());
-        assert_eq!(block.signature().class_path, path);
-        assert_eq!(block.kind(), BlockKind::Stateful, "{path}");
-    }
-
-    assert!(FallingEdge::default().feeds_through(0, 0));
-    assert!(LogicalChange::default().feeds_through(0, 0));
-    assert!(Latch.feeds_through(0, 0) && Latch.feeds_through(1, 0));
-    assert!(Toggle.feeds_through(0, 0) && Toggle.feeds_through(1, 0));
-    assert!(Timer::default().feeds_through(0, 0) && Timer::default().feeds_through(0, 1));
-    assert!(
-        TimerAccumulating::default().feeds_through(0, 0)
-            && TimerAccumulating::default().feeds_through(1, 0)
-            && TimerAccumulating::default().feeds_through(0, 1)
-            && TimerAccumulating::default().feeds_through(1, 1)
-    );
-    assert!(TrueDelay::default().feeds_through(0, 0));
-    assert!(TrueFalseHold::default().feeds_through(0, 0));
-    assert!(
-        TrueHoldWithReset::default().feeds_through(0, 0)
-            && TrueHoldWithReset::default().feeds_through(1, 0)
-    );
-    assert!(
-        IntegerChange::default().feeds_through(0, 0)
-            && IntegerChange::default().feeds_through(0, 1)
-            && IntegerChange::default().feeds_through(0, 2)
-    );
-    assert!(!OnCounter::default().feeds_through(0, 0));
-    assert!(!OnCounter::default().feeds_through(1, 0));
 }

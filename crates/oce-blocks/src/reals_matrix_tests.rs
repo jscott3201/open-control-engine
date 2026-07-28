@@ -1,5 +1,7 @@
 //! Matrix and sorting `CDL.Reals` tests.
 
+use std::sync::Arc;
+
 use oce_model::{ParamTable, Value};
 
 use super::{
@@ -30,6 +32,36 @@ fn real_bits(values: &[Value]) -> Vec<u64> {
             other => panic!("expected Real output, got {other:?}"),
         })
         .collect()
+}
+
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+#[test]
+fn matrix_gain_defaults_form_the_identity_matrix() {
+    let inputs = [Value::Real(7.0), Value::Real(9.0)];
+    let derived = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&parameter_table(&[
+        ("nin", Value::Integer(2)),
+        ("nout", Value::Integer(2)),
+    ]));
+    let explicit = (lookup("CDL.Reals.MatrixGain").unwrap().make)(&parameter_table(&[
+        ("nin", Value::Integer(2)),
+        ("nout", Value::Integer(2)),
+        ("K_1_1", Value::Real(1.0)),
+        ("K_1_2", Value::Real(0.0)),
+        ("K_2_1", Value::Real(0.0)),
+        ("K_2_2", Value::Real(1.0)),
+    ]));
+    assert_eq!(
+        real_bits(&outs(derived.as_ref(), &inputs)),
+        real_bits(&outs(explicit.as_ref(), &inputs))
+    );
 }
 
 fn integers(values: &[Value]) -> Vec<i64> {

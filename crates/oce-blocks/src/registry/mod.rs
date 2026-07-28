@@ -7,6 +7,60 @@ use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
 
+macro_rules! param_default_real {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Real($value)),
+        }
+    };
+}
+
+macro_rules! param_default_integer {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Integer($value)),
+        }
+    };
+}
+
+macro_rules! param_default_boolean {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Boolean($value)),
+        }
+    };
+}
+
+macro_rules! param_default_enum {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::EnumMember($value)),
+        }
+    };
+}
+
+macro_rules! param_default_derived {
+    ($name:literal, $formula:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Derived { formula: $formula },
+        }
+    };
+}
+
+macro_rules! param_default_required {
+    ($name:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Required,
+        }
+    };
+}
+
 mod conversions;
 mod discrete;
 mod integers;
@@ -15,9 +69,11 @@ mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
 mod lowering;
+mod param_defaults;
 mod pid;
 mod psychrometrics;
 mod reals;
+mod reals_defaults;
 mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;
@@ -29,7 +85,7 @@ mod catalog_guard_support;
 #[cfg(test)]
 mod catalog_tests;
 #[cfg(test)]
-mod manifest;
+pub(crate) mod manifest;
 #[cfg(test)]
 mod manifest_tests;
 
@@ -43,13 +99,14 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
         .find(|e| e.class_path == class_path)
 }
 
-/// Every registered entry, in catalog order. Crate-internal and test-only: the public surface is
-/// [`lookup`], and enumeration exists so in-crate audits can assert over the whole catalog rather
-/// than a sample.
-#[cfg(test)]
+/// Every registered entry in catalog order, used to build the public [`crate::catalog()`] metadata
+/// and by in-crate closure audits. It remains `pub(crate)` so constructors and raw function
+/// pointers stay behind the stable metadata surface rather than becoming public API.
 pub(crate) fn all_entries() -> impl Iterator<Item = &'static RegistryEntry> {
     CATALOG.iter().flat_map(|entries| entries.iter())
 }
+
+pub(crate) use param_defaults::param_defaults;
 
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {

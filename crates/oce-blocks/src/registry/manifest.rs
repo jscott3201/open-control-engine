@@ -20,10 +20,10 @@
 //! `serde_json` (Ryu shortest round-trip), never `format!`/`Debug`. Repeated generation is
 //! byte-identical, and the checked-in artifact is the byte golden.
 
-use oce_model::ParamTable;
-
-use super::CATALOG;
-use crate::{ParamRule, PortKind, RegistryEntry, TimeTableValues};
+use crate::{
+    CatalogEntry, DefaultLiteral, DefaultSource, ParamRule, PortKind, PortNaming, TimeTableValues,
+    catalog,
+};
 
 /// Filesystem path of the checked-in manifest artifact, used by `UPDATE_EXPECT` re-blessing.
 pub(super) const MANIFEST_PATH: &str = concat!(
@@ -41,9 +41,13 @@ pub(super) const MANIFEST_JSON: &str = include_str!(concat!(
 /// newline. Panics only on a registry defect the tests exist to catch (a constructor panic at
 /// default parameters or a non-finite `f64` guard field).
 pub(super) fn render_manifest() -> String {
+    render_entries(catalog())
+}
+
+pub(crate) fn render_entries(entries: &[CatalogEntry]) -> String {
     let mut out = String::from("[\n");
     let mut first = true;
-    for entry in CATALOG.iter().flat_map(|entries| entries.iter()) {
+    for entry in entries {
         if !first {
             out.push_str(",\n");
         }
@@ -57,41 +61,87 @@ pub(super) fn render_manifest() -> String {
 /// Append one manifest entry object. Ports come from `resolved_signature()` on the
 /// `ParamTable::default()`-constructed instance — NOT the static class `signature()` — so
 /// variadic blocks record their true default arity (empty for `nin`-defaulted vectors).
-fn push_entry(out: &mut String, entry: &RegistryEntry) {
-    let block = (entry.make)(&ParamTable::default());
-    let signature = block.resolved_signature();
-    let rules = entry.param_rules();
-    let width_driven = rules.iter().any(|rule| {
-        matches!(
-            rule,
-            ParamRule::Structural { .. } | ParamRule::StructuralArrayElements { .. }
-        )
-    });
-
+fn push_entry(out: &mut String, entry: &CatalogEntry) {
+    let input_kinds: Vec<_> = entry.inputs.iter().map(|port| port.kind).collect();
+    let output_kinds: Vec<_> = entry.outputs.iter().map(|port| port.kind).collect();
     out.push_str("  {\n    \"class_path\": ");
     out.push_str(&json_str(entry.class_path));
     out.push_str(",\n    \"inputs\": ");
-    out.push_str(&port_kind_list(&signature.inputs));
+    out.push_str(&port_kind_list(&input_kinds));
     out.push_str(",\n    \"outputs\": ");
-    out.push_str(&port_kind_list(&signature.outputs));
+    out.push_str(&port_kind_list(&output_kinds));
     out.push_str(",\n    \"width_driven\": ");
-    out.push_str(if width_driven { "true" } else { "false" });
-    if rules.is_empty() {
-        out.push_str(",\n    \"param_rules\": []\n");
+    out.push_str(if entry.width_driven { "true" } else { "false" });
+    if entry.param_rules.is_empty() {
+        out.push_str(",\n    \"param_rules\": []");
     } else {
         out.push_str(",\n    \"param_rules\": [\n");
-        for (index, rule) in rules.iter().enumerate() {
+        for (index, rule) in entry.param_rules.iter().enumerate() {
             out.push_str("      ");
             out.push_str(&param_rule_json(rule));
-            out.push_str(if index + 1 == rules.len() {
+            out.push_str(if index + 1 == entry.param_rules.len() {
                 "\n"
             } else {
                 ",\n"
             });
         }
-        out.push_str("    ]\n");
+        out.push_str("    ]");
     }
+    out.push_str(",\n    \"port_naming\": ");
+    out.push_str(&json_str(match entry.naming {
+        PortNaming::Named => "named",
+        PortNaming::Positional => "positional",
+        PortNaming::WidthDriven => "width_driven",
+    }));
+    if entry.naming == PortNaming::Named {
+        let inputs: Vec<_> = entry.inputs.iter().filter_map(|port| port.name).collect();
+        let outputs: Vec<_> = entry.outputs.iter().filter_map(|port| port.name).collect();
+        out.push_str(",\n    \"input_names\": ");
+        out.push_str(&json_str_list(&inputs));
+        out.push_str(",\n    \"output_names\": ");
+        out.push_str(&json_str_list(&outputs));
+    }
+    out.push_str(",\n    \"stateful\": ");
+    out.push_str(if entry.stateful { "true" } else { "false" });
+    out.push_str(",\n    \"reserved\": ");
+    out.push_str(if entry.reserved { "true" } else { "false" });
+    out.push_str(",\n    \"param_defaults\": [");
+    if !entry.param_defaults.is_empty() {
+        out.push('\n');
+        for (index, default) in entry.param_defaults.iter().enumerate() {
+            out.push_str("      ");
+            out.push_str(&param_default_json(default));
+            out.push_str(if index + 1 == entry.param_defaults.len() {
+                "\n"
+            } else {
+                ",\n"
+            });
+        }
+        out.push_str("    ");
+    }
+    out.push_str("]\n");
     out.push_str("  }");
+}
+
+fn param_default_json(default: &crate::ParamDefault) -> String {
+    let name = json_str(default.name);
+    match default.default {
+        DefaultSource::Literal(literal) => {
+            let (kind, key, value) = match literal {
+                DefaultLiteral::Real(value) => ("literal", "real", json_f64(value)),
+                DefaultLiteral::Integer(value) => ("literal", "integer", value.to_string()),
+                DefaultLiteral::Boolean(value) => ("literal", "boolean", value.to_string()),
+                DefaultLiteral::Str(value) => ("literal", "string", json_str(value)),
+                DefaultLiteral::EnumMember(value) => ("literal", "enum", json_str(value)),
+            };
+            format!("{{ \"name\": {name}, \"kind\": \"{kind}\", \"{key}\": {value} }}")
+        }
+        DefaultSource::Derived { formula } => format!(
+            "{{ \"name\": {name}, \"kind\": \"derived\", \"formula\": {} }}",
+            json_str(formula)
+        ),
+        DefaultSource::Required => format!("{{ \"name\": {name}, \"kind\": \"required\" }}"),
+    }
 }
 
 /// Serialize one [`ParamRule`] as a single-line JSON object: the variant name under `"rule"`,

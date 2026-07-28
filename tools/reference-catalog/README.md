@@ -21,7 +21,11 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   — variadic blocks whose width parameters default to 0 record empty port lists), `width_driven`
   (true when a `Structural`/`StructuralArrayElements` rule makes port arity parameter-driven), and
   the complete `param_rules` list (each rule object names its variant under `"rule"` plus every
-  embedded guard field in declaration order). The regenerate-and-diff test
+  embedded guard field in declaration order). Appended metadata records `port_naming`, named
+  `input_names`/`output_names` where applicable, the conservative `stateful` class hint,
+  `reserved` lowering identities, and `param_defaults`. Defaults distinguish literal, derived,
+  and required sources; width-indexed names use the published `<i>`, `<row>`, and `<col>`
+  templates. The regenerate-and-diff test
   `registry::manifest_tests::checked_in_manifest_matches_regenerated_bytes` in `oce-blocks` keeps
   this file byte-identical to the live registry; re-bless a deliberate registry change with
   `UPDATE_EXPECT=1 cargo nextest run -p oce-blocks checked_in_manifest_matches_regenerated_bytes`

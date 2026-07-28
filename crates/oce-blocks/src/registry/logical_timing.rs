@@ -2,9 +2,33 @@ use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
 use crate::{
-    Block, FallingEdge, Latch, LogicalChange, ParamRule, RegistryEntry, Timer, TimerAccumulating,
-    Toggle, TrueDelay, TrueFalseHold, TrueHoldWithReset,
+    Block, FallingEdge, Latch, LogicalChange, ParamDefault, ParamRule, RegistryEntry, Timer,
+    TimerAccumulating, Toggle, TrueDelay, TrueFalseHold, TrueHoldWithReset,
 };
+
+const PRE_U_START_DEFAULT: bool = false;
+const TIMER_T_DEFAULT: f64 = 0.0;
+const TRUE_DELAY_TIME_FALLBACK: f64 = 0.0;
+const TRUE_DELAY_ON_INIT_DEFAULT: bool = false;
+const TRUE_HOLD_DURATION_FALLBACK: f64 = 0.0;
+const TRUE_HOLD_WITH_RESET_DURATION_DEFAULT: f64 = 0.0;
+
+pub(super) const EDGE_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_boolean!("pre_u_start", PRE_U_START_DEFAULT)];
+pub(super) const TIMER_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_real!("t", TIMER_T_DEFAULT)];
+pub(super) const TRUE_DELAY_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("delayTime"),
+    param_default_boolean!("delayOnInit", TRUE_DELAY_ON_INIT_DEFAULT),
+];
+pub(super) const TRUE_FALSE_HOLD_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("trueHoldDuration"),
+    param_default_derived!("falseHoldDuration", "trueHoldDuration"),
+];
+pub(super) const TRUE_HOLD_WITH_RESET_PARAM_DEFAULTS: &[ParamDefault] = &[param_default_real!(
+    "duration",
+    TRUE_HOLD_WITH_RESET_DURATION_DEFAULT
+)];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -64,13 +88,13 @@ pub(super) const TRUE_FALSE_HOLD_PARAM_RULES: &[ParamRule] = &[ParamRule::Requir
 
 fn make_falling_edge(p: &ParamTable) -> Box<dyn Block> {
     Box::new(FallingEdge {
-        pre_u_start: bool_param(p, "pre_u_start", false),
+        pre_u_start: bool_param(p, "pre_u_start", PRE_U_START_DEFAULT),
     })
 }
 
 fn make_logical_change(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalChange {
-        pre_u_start: bool_param(p, "pre_u_start", false),
+        pre_u_start: bool_param(p, "pre_u_start", PRE_U_START_DEFAULT),
     })
 }
 
@@ -84,25 +108,25 @@ fn make_toggle(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_timer(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Timer {
-        t: real_param(p, "t", 0.0),
+        t: real_param(p, "t", TIMER_T_DEFAULT),
     })
 }
 
 fn make_timer_accumulating(p: &ParamTable) -> Box<dyn Block> {
     Box::new(TimerAccumulating {
-        t: real_param(p, "t", 0.0),
+        t: real_param(p, "t", TIMER_T_DEFAULT),
     })
 }
 
 fn make_true_delay(p: &ParamTable) -> Box<dyn Block> {
     Box::new(TrueDelay {
-        delay_time: real_param(p, "delayTime", 0.0),
-        delay_on_init: bool_param(p, "delayOnInit", false),
+        delay_time: real_param(p, "delayTime", TRUE_DELAY_TIME_FALLBACK),
+        delay_on_init: bool_param(p, "delayOnInit", TRUE_DELAY_ON_INIT_DEFAULT),
     })
 }
 
 fn make_true_false_hold(p: &ParamTable) -> Box<dyn Block> {
-    let true_hold_duration = real_param(p, "trueHoldDuration", 0.0);
+    let true_hold_duration = real_param(p, "trueHoldDuration", TRUE_HOLD_DURATION_FALLBACK);
     Box::new(TrueFalseHold {
         true_hold_duration,
         false_hold_duration: real_param(p, "falseHoldDuration", true_hold_duration),
@@ -111,6 +135,6 @@ fn make_true_false_hold(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_true_hold_with_reset(p: &ParamTable) -> Box<dyn Block> {
     Box::new(TrueHoldWithReset {
-        duration: real_param(p, "duration", 0.0),
+        duration: real_param(p, "duration", TRUE_HOLD_WITH_RESET_DURATION_DEFAULT),
     })
 }

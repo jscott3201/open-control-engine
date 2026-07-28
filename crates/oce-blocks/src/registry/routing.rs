@@ -4,10 +4,41 @@ use super::{bool_param, int_param};
 use crate::{
     Block, BooleanExtractSignal, BooleanExtractor, BooleanScalarReplicator, BooleanVectorFilter,
     BooleanVectorReplicator, IntegerExtractSignal, IntegerExtractor, IntegerScalarReplicator,
-    IntegerVectorFilter, IntegerVectorReplicator, MAX_RESOLVED_PORT_WIDTH, ParamRule,
+    IntegerVectorFilter, IntegerVectorReplicator, MAX_RESOLVED_PORT_WIDTH, ParamDefault, ParamRule,
     RealExtractSignal, RealExtractor, RealScalarReplicator, RealVectorFilter, RealVectorReplicator,
     RegistryEntry,
 };
+
+const EXTRACT_SIGNAL_NIN_DEFAULT: i64 = 1;
+const EXTRACT_SIGNAL_NOUT_DEFAULT: i64 = 1;
+const EXTRACTOR_NIN_DEFAULT: i64 = 1;
+const SCALAR_REPLICATOR_NOUT_DEFAULT: i64 = 1;
+const VECTOR_FILTER_NIN_FALLBACK: i64 = 0;
+const VECTOR_FILTER_NOUT_FALLBACK: i64 = 0;
+const VECTOR_FILTER_MASK_DEFAULT: bool = true;
+const VECTOR_REPLICATOR_NIN_DEFAULT: i64 = 1;
+const VECTOR_REPLICATOR_NOUT_DEFAULT: i64 = 1;
+
+pub(super) const EXTRACT_SIGNAL_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_integer!("nin", EXTRACT_SIGNAL_NIN_DEFAULT),
+    param_default_integer!("nout", EXTRACT_SIGNAL_NOUT_DEFAULT),
+    param_default_derived!("extract_<i>", "i"),
+];
+pub(super) const EXTRACTOR_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_integer!("nin", EXTRACTOR_NIN_DEFAULT)];
+pub(super) const SCALAR_REPLICATOR_PARAM_DEFAULTS: &[ParamDefault] = &[param_default_integer!(
+    "nout",
+    SCALAR_REPLICATOR_NOUT_DEFAULT
+)];
+pub(super) const VECTOR_FILTER_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("nin"),
+    param_default_required!("nout"),
+    param_default_boolean!("msk_<i>", VECTOR_FILTER_MASK_DEFAULT),
+];
+pub(super) const VECTOR_REPLICATOR_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_integer!("nin", VECTOR_REPLICATOR_NIN_DEFAULT),
+    param_default_integer!("nout", VECTOR_REPLICATOR_NOUT_DEFAULT),
+];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -188,19 +219,25 @@ pub(super) const VECTOR_REPLICATOR_PARAM_RULES: &[ParamRule] = &[
 ];
 
 fn make_boolean_extract_signal(p: &ParamTable) -> Box<dyn Block> {
-    let nin = bounded_usize_param(p, "nin", 1);
-    let nout = bounded_usize_param(p, "nout", 1);
+    let nin = bounded_usize_param(p, "nin", EXTRACT_SIGNAL_NIN_DEFAULT);
+    let nout = bounded_usize_param(p, "nout", EXTRACT_SIGNAL_NOUT_DEFAULT);
     let extract = extract_param_vector(p, nout);
     Box::new(BooleanExtractSignal::new(nin, nout, extract))
 }
 
 fn make_boolean_extractor(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(BooleanExtractor::new(bounded_usize_param(p, "nin", 1)))
+    Box::new(BooleanExtractor::new(bounded_usize_param(
+        p,
+        "nin",
+        EXTRACTOR_NIN_DEFAULT,
+    )))
 }
 
 fn make_boolean_scalar_replicator(p: &ParamTable) -> Box<dyn Block> {
     Box::new(BooleanScalarReplicator::new(bounded_usize_param(
-        p, "nout", 1,
+        p,
+        "nout",
+        SCALAR_REPLICATOR_NOUT_DEFAULT,
     )))
 }
 
@@ -215,19 +252,25 @@ fn make_boolean_vector_replicator(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn make_integer_extract_signal(p: &ParamTable) -> Box<dyn Block> {
-    let nin = bounded_usize_param(p, "nin", 1);
-    let nout = bounded_usize_param(p, "nout", 1);
+    let nin = bounded_usize_param(p, "nin", EXTRACT_SIGNAL_NIN_DEFAULT);
+    let nout = bounded_usize_param(p, "nout", EXTRACT_SIGNAL_NOUT_DEFAULT);
     let extract = extract_param_vector(p, nout);
     Box::new(IntegerExtractSignal::new(nin, nout, extract))
 }
 
 fn make_integer_extractor(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(IntegerExtractor::new(bounded_usize_param(p, "nin", 1)))
+    Box::new(IntegerExtractor::new(bounded_usize_param(
+        p,
+        "nin",
+        EXTRACTOR_NIN_DEFAULT,
+    )))
 }
 
 fn make_integer_scalar_replicator(p: &ParamTable) -> Box<dyn Block> {
     Box::new(IntegerScalarReplicator::new(bounded_usize_param(
-        p, "nout", 1,
+        p,
+        "nout",
+        SCALAR_REPLICATOR_NOUT_DEFAULT,
     )))
 }
 
@@ -242,18 +285,26 @@ fn make_integer_vector_replicator(p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn make_real_extract_signal(p: &ParamTable) -> Box<dyn Block> {
-    let nin = bounded_usize_param(p, "nin", 1);
-    let nout = bounded_usize_param(p, "nout", 1);
+    let nin = bounded_usize_param(p, "nin", EXTRACT_SIGNAL_NIN_DEFAULT);
+    let nout = bounded_usize_param(p, "nout", EXTRACT_SIGNAL_NOUT_DEFAULT);
     let extract = extract_param_vector(p, nout);
     Box::new(RealExtractSignal::new(nin, nout, extract))
 }
 
 fn make_real_extractor(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(RealExtractor::new(bounded_usize_param(p, "nin", 1)))
+    Box::new(RealExtractor::new(bounded_usize_param(
+        p,
+        "nin",
+        EXTRACTOR_NIN_DEFAULT,
+    )))
 }
 
 fn make_real_scalar_replicator(p: &ParamTable) -> Box<dyn Block> {
-    Box::new(RealScalarReplicator::new(bounded_usize_param(p, "nout", 1)))
+    Box::new(RealScalarReplicator::new(bounded_usize_param(
+        p,
+        "nout",
+        SCALAR_REPLICATOR_NOUT_DEFAULT,
+    )))
 }
 
 fn make_real_vector_filter(p: &ParamTable) -> Box<dyn Block> {
@@ -273,18 +324,18 @@ fn extract_param_vector(p: &ParamTable, nout: usize) -> Vec<usize> {
 }
 
 fn vector_filter_params(p: &ParamTable) -> (usize, usize, Vec<bool>) {
-    let nin = bounded_usize_param(p, "nin", 0);
-    let nout = bounded_usize_param(p, "nout", 0);
+    let nin = bounded_usize_param(p, "nin", VECTOR_FILTER_NIN_FALLBACK);
+    let nout = bounded_usize_param(p, "nout", VECTOR_FILTER_NOUT_FALLBACK);
     let mask = (1..=nin)
-        .map(|idx| bool_param(p, &format!("msk_{idx}"), true))
+        .map(|idx| bool_param(p, &format!("msk_{idx}"), VECTOR_FILTER_MASK_DEFAULT))
         .collect();
     (nin, nout, mask)
 }
 
 fn vector_replicator_params(p: &ParamTable) -> (usize, usize) {
     (
-        bounded_usize_param(p, "nin", 1),
-        bounded_usize_param(p, "nout", 1),
+        bounded_usize_param(p, "nin", VECTOR_REPLICATOR_NIN_DEFAULT),
+        bounded_usize_param(p, "nout", VECTOR_REPLICATOR_NOUT_DEFAULT),
     )
 }
 
