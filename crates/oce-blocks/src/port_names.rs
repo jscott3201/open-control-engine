@@ -36,14 +36,23 @@
 //!   the registry carries a single output, so naming that port `y` would assert a scalar interface
 //!   upstream does not have.
 //!
-//! `CDL.Logical.TrueHoldWithReset` is named but is the one entry nothing here can check: it is
-//! absent from Buildings master, so no vendored `.mo` exists and `fixture_port_order` skips it. An
-//! earlier revision left it unnamed on the principle that unfalsifiable data is what that audit
-//! exists to eliminate. That was the wrong trade — omission is not neutral. Its `u` and `clr` are
-//! both `Boolean` and `clr` sorts first, so leaving it unnamed *guarantees* the silent inversion
-//! this module exists to stop. Its names come from the CDL specification's §7.6 catalog, the oracle
-//! `logical_timing.rs` already records for its behaviour, and from `Latch` and `Toggle`, which have
-//! the identical shape and which upstream spells `u`, `clr`.
+//! `CDL.Logical.TrueHoldWithReset` is named, and it is the one entry with no upstream source to
+//! check against — the class is absent from current Buildings master, so no vendored `.mo` exists
+//! and `fixture_port_order` skips it.
+//!
+//! **This entry records our own interface, not a conformance claim.** The class is a tracked
+//! reference-drift / project-extension candidate (`_spec/oce_gap_specs_v2/01-gap-inventory.md`),
+//! carrying an explicit hold: audit it, but do not change or remove it without source evidence and
+//! an owner decision. Its two-input shape is the engine specification of record
+//! (`_spec/03-block-library.md`: `u:B,clr:B → y:B`) and is what `logical_timing.rs` implements. A
+//! reviewer reading this table should not infer that upstream CDL declares a `clr` connector.
+//!
+//! An earlier revision left it unnamed, on the principle that unfalsifiable data is what the
+//! port-order audit exists to eliminate. That was the wrong trade — omission is not neutral. `u`
+//! and `clr` are both `Boolean` and `clr` sorts first, so leaving it unnamed *guarantees* the
+//! silent inversion this module exists to stop. And the data is not unfalsifiable after all: the
+//! name is pinned to behaviour by `true_hold_with_reset_names_match_its_behaviour`, which drives
+//! the port declared `clr` and requires the held output to clear.
 //!
 //! # What checks these names, and what does not
 //!

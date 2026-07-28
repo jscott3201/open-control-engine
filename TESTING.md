@@ -239,16 +239,14 @@ to prevent. Re-pin only after understanding why the count moved — a *rising* s
 wirings are being hidden from the audit.
 
 **What the derived table rests on.** Before comparing anything the test cross-checks all 104
-non-array classes against the shipping block registry, which agrees on arity and per-position
-kind. It cannot agree on *names* — the registry does not store them, which is the whole reason
-this audit exists — and the remaining 28 array-port classes are compared against nothing at all,
-since upstream's single `u[nin]` connector has no arity in common with our N flattened scalars.
+non-array classes against the shipping block registry on arity, per-position kind, **and names**.
+Names were the gap that motivated this audit: the registry stored kinds only, so a **coordinated
+rename** passed — two earlier revisions of this file recorded it as passing — because changing the
+reference data and the fixtures together left nothing to disagree. The registry now declares port
+names (`oce_blocks::port_names`), so the same edit has to change shipping code as well.
 
-Names are now checked in both directions for the 104 classes that declare them in
-`oce_blocks::port_names`, which closes the **coordinated rename** two earlier revisions of this
-audit recorded as passing. Renaming a port to something upstream never used previously needed only
-the reference data and the fixtures changed together; it now needs the shipping registry changed as
-well, and that is code, not test data.
+The remaining 28 array-port classes are still compared against nothing at all, on any of the three,
+since upstream's single `u[nin]` connector has no arity in common with our N flattened scalars.
 
 The names also have runtime authority now. The resolver matches each block's port IRIs against its
 class's declared names and **permutes the ports into signature order**, so a document that lists
