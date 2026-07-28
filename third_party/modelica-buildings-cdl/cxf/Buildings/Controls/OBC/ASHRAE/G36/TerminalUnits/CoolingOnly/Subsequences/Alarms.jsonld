@@ -1,0 +1,1779 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-240,-240},{240,240}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nThis block outputs alarms of cooling only terminal unit. The implementation is according\nto the Section 5.5.6 of ASHRAE Guideline 36, May 2020.\n</p>\n<h4>Low airflow alarm</h4>\n<ol>\n<li>\nIf the zone is in occupied mode and after the AHU supply fan has been enabled for <code>staTim</code>,\nif the measured airflow <code>VDis_flow</code> is less than 70% of setpoint\n<code>VActSet_flow</code> for 5 minutes (<code>lowFloTim</code>) while the setpoint\nis greater than zero, generate a Level 3 alarm.\n</li>\n<li>\nIf the zone is in occupied mode and after the AHU supply fan has been enabled for <code>staTim</code>,\nif the measured airflow <code>VDis_flow</code> is less than 50% of setpoint\n<code>VActSet_flow</code> for 5 minutes (<code>lowFloTim</code>) while the setpoint\nis greater than zero, generate a Level 2 alarm.\n</li>\n<li>\nIf a zone has an importance multiplier (<code>staPreMul</code>) of 0 for its\nstatic pressure reset Trim-Respond control loop, low airflow alarms shall be\nsuppressed for that zone.\n</li>\n</ol>\n<h4>Airflow sensor calibration</h4>\n<p>\nIf the fan serving the zone has been OFF (<code>uFan=false</code>) for 10 minutes\n(<code>fanOffTim</code>), and airflow sensor reading <code>VDis_flow</code>\nis above 10% of the cooling maximum airflow setpoint <code>VCooMax_flow</code>,\ngenerate a Level 3 alarm.\n</p>\n<h4>Leaking damper</h4>\n<p>\nIf the damper position (<code>uDam</code>) is 0% and airflow sensor reading\n<code>VDis_flow</code> is above 10% of the cooling maximum airflow setpoint\n<code>VCooMax_flow</code> for 10 minutes (<code>leaFloTim</code>) while the\nfan serving the zone is proven on (<code>uFan=true</code>), generate a Level\n4 alarm.\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nAugust 29, 2023, by Hongxiang Fu:<br/>\nBecause of the removal of <code>Logical.And3</code> based on ASHRAE 231P,\nreplaced it with a stack of two <code>Logical.And</code> blocks.\nThis is for\n<a href=\\https://github.com/lbl-srg/modelica-buildings/issues/2465\\>#2465</a>.\n</li>\n<li>\nAugust 23, 2023, by Jianjun Hu:<br/>\nAdded delay <code>staTim</code> to allow the system becoming stabilized.\nThis is for <a href=\\https://github.com/lbl-srg/modelica-buildings/issues/3257\\>issue 3257</a>.\n</li>\n<li>\nAugust 1, 2020, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.u1Fan"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.uDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.uOpeMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VActSet_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VDis_flow"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yFloSenAla"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLeaDamAla"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLowFloAla"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.damPosHys"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanOffTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.floHys"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaFloTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.staPreMul"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.staTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VCooMax_flow"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}},preserveAspectRatio=false),graphics={Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Text(textString=\"VActSet_flow\",textColor={0,0,127},extent={{-98,46},{-48,32}}),Text(textString=\"VDis_flow\",textColor={0,0,127},extent={{-98,84},{-58,74}}),Text(textString=\"uDam\",textColor={0,0,127},extent={{-100,-74},{-72,-84}}),Text(textString=\"uFan\",textColor={255,0,255},extent={{-100,6},{-74,-4}}),Text(textString=\"yLowFloAla\",textColor={255,127,0},extent={{46,68},{96,54}}),Text(textString=\"yFloSenAla\",textColor={255,127,0},extent={{48,8},{98,-6}}),Text(textString=\"yLeaDamAla\",textColor={255,127,0},extent={{48,-50},{98,-64}}),Text(textString=\"uOpeMod\",textColor={255,127,0},extent={{-100,-32},{-50,-46}})}",
+      "S231:label": "Alarms"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured airflow has been less than threshold value for sufficient time",
+      "S231:graphics": "Placement(transformation(extent={{-40,80},{-20,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.y"
+        }
+      ],
+      "S231:label": "and1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: AHU fan is enabled and the discharge flow is lower than the threshold",
+      "S231:graphics": "Placement(transformation(extent={{-120,160},{-100,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.y"
+        }
+      ],
+      "S231:label": "and10"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: AHU fan is enabled and the discharge flow is lower than the threshold",
+      "S231:graphics": "Placement(transformation(extent={{-120,30},{-100,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.y"
+        }
+      ],
+      "S231:label": "and11"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured airflow has been less than threshold value for sufficient time",
+      "S231:graphics": "Placement(transformation(extent={{-40,160},{-20,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.y"
+        }
+      ],
+      "S231:label": "and2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured airflow has been less than threshold value for sufficient time",
+      "S231:graphics": "Placement(transformation(extent={{40,80},{60,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.y"
+        }
+      ],
+      "S231:label": "and3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical and",
+      "S231:graphics": "Placement(transformation(extent={{0,80},{20,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.y"
+        }
+      ],
+      "S231:label": "and4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the measured airflow is greater than the threshold and the supply fan is OFF",
+      "S231:graphics": "Placement(transformation(extent={{-40,-50},{-20,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.y"
+        }
+      ],
+      "S231:label": "and5"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the measured airflow is greater than the threshold and the supply fan is OFF",
+      "S231:graphics": "Placement(transformation(extent={{60,-50},{80,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.y"
+        }
+      ],
+      "S231:label": "and6"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured airflow has been less than threshold value for sufficient time",
+      "S231:graphics": "Placement(transformation(extent={{40,160},{60,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.y"
+        }
+      ],
+      "S231:label": "and7"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical and",
+      "S231:graphics": "Placement(transformation(extent={{0,160},{20,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.y"
+        }
+      ],
+      "S231:label": "and8"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Level 2 low airflow alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,120},{160,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes.u"
+        }
+      ],
+      "S231:label": "assMes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes.message",
+      "S231:isFinal": true,
+      "S231:value": "Warning: airflow is less than 50% of the setpoint."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Level 3 low airflow alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,40},{160,60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1.u"
+        }
+      ],
+      "S231:label": "assMes1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1.message",
+      "S231:isFinal": true,
+      "S231:value": "Warning: airflow is less than 70% of the setpoint."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Level 3 airflow sensor alarm",
+      "S231:graphics": "Placement(transformation(extent={{180,-80},{200,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2.u"
+        }
+      ],
+      "S231:label": "assMes2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2.message",
+      "S231:isFinal": true,
+      "S231:value": "Warning: airflow sensor should be calibrated."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Level 4 leaking damper alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,-220},{160,-200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3.u"
+        }
+      ],
+      "S231:label": "assMes3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3.message",
+      "S231:isFinal": true,
+      "S231:value": "Warning: the damper is leaking."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert boolean true to level 3 alarm",
+      "S231:graphics": "Placement(transformation(extent={{80,80},{100,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.y"
+        }
+      ],
+      "S231:label": "booToInt"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": 3
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Suppress the alarm when multiplier is zero",
+      "S231:graphics": "Placement(transformation(extent={{140,-10},{160,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1.y"
+        }
+      ],
+      "S231:label": "booToInt1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert boolean true to level 3 alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,-50},{160,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.y"
+        }
+      ],
+      "S231:label": "booToInt2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": 3
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yFloSenAla"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert boolean true to level 4 alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,-180},{160,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.y"
+        }
+      ],
+      "S231:label": "booToInt3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": 4
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLeaDamAla"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if damper position is near zero",
+      "S231:graphics": "Placement(transformation(extent={{-200,-230},{-180,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.y"
+        }
+      ],
+      "S231:label": "cloDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.h",
+      "S231:isFinal": true,
+      "S231:value": "0.5*damPosHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.t",
+      "S231:isFinal": true,
+      "S231:value": "damPosHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Level 2 alarm",
+      "S231:graphics": "Placement(transformation(extent={{80,200},{100,220}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt.y"
+        }
+      ],
+      "S231:label": "conInt"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt.k",
+      "S231:isFinal": true,
+      "S231:value": 2
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Importance multiplier for zone static pressure reset",
+      "S231:graphics": "Placement(transformation(extent={{-120,-10},{-100,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1.y"
+        }
+      ],
+      "S231:label": "conInt1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1.k",
+      "S231:isFinal": true,
+      "S231:value": "staPreMul"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.conInt1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Cooling maximum airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-200,-70},{-180,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo.y"
+        }
+      ],
+      "S231:label": "cooMaxFlo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo.k",
+      "S231:isFinal": true,
+      "S231:value": "VCooMax_flow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cooMaxFlo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.damPosHys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Near zero damper position, below which the damper will be seen as closed",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "damPosHys",
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the AHU supply fan has been enabled for threshold time",
+      "S231:graphics": "Placement(transformation(extent={{-200,-10},{-180,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.y"
+        }
+      ],
+      "S231:label": "fanIni"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "staTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanOffTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Threshold time to check fan off",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "fanOffTim",
+      "S231:value": 600,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.floHys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Near zero flow rate, below which the flow rate or difference will be seen as zero",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "floHys",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Percentage of the setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-200,130},{-180,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.y"
+        }
+      ],
+      "S231:label": "gai"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.k",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Percentage of the setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-200,50},{-180,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.y"
+        }
+      ],
+      "S231:label": "gai1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.k",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.7",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Percentage of the setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-160,-70},{-140,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.y"
+        }
+      ],
+      "S231:label": "gai2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.k",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if measured airflow is less than threshold",
+      "S231:graphics": "Placement(transformation(extent={{-160,30},{-140,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.y"
+        }
+      ],
+      "S231:label": "gre"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.h",
+      "S231:isFinal": true,
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and11.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if measured airflow is greater than threshold",
+      "S231:graphics": "Placement(transformation(extent={{-100,-50},{-80,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.y"
+        }
+      ],
+      "S231:label": "gre1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.h",
+      "S231:isFinal": true,
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if setpoint airflow is greater than zero",
+      "S231:graphics": "Placement(transformation(extent={{-180,80},{-160,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.y"
+        }
+      ],
+      "S231:label": "greThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.h",
+      "S231:isFinal": true,
+      "S231:value": "0.5*floHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.t",
+      "S231:isFinal": true,
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the multiplier is greater than zero",
+      "S231:graphics": "Placement(transformation(extent={{-80,-10},{-60,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1.y"
+        }
+      ],
+      "S231:label": "greThr1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and4.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and8.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt1.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if current operation mode is occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-100,-150},{-80,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.y"
+        }
+      ],
+      "S231:label": "isOcc"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and7.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if generating leak damper alarms, one of two stacked And blocks",
+      "S231:graphics": "Placement(transformation(extent={{-100,-180},{-80,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.y"
+        }
+      ],
+      "S231:label": "leaDamAla1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if generating leak damper alarms, one of two stacked And blocks",
+      "S231:graphics": "Placement(transformation(extent={{-40,-180},{-20,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.y"
+        }
+      ],
+      "S231:label": "leaDamAla2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaFloTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Threshold time to check leaking flow",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "leaFloTim",
+      "S231:value": 600,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Less",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if measured airflow is less than threshold",
+      "S231:graphics": "Placement(transformation(extent={{-160,160},{-140,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.y"
+        }
+      ],
+      "S231:label": "les"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.h",
+      "S231:isFinal": true,
+      "S231:value": "floHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and10.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Low airflow alarm",
+      "S231:graphics": "Placement(transformation(extent={{140,160},{160,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.y"
+        }
+      ],
+      "S231:label": "lowFloAla"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloAla.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.lowFloTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Threshold time to check low flow rate",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "lowFloTim",
+      "S231:value": 300,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical not",
+      "S231:graphics": "Placement(transformation(extent={{80,120},{100,140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1.y"
+        }
+      ],
+      "S231:label": "not1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical not",
+      "S231:graphics": "Placement(transformation(extent={{80,40},{100,60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2.y"
+        }
+      ],
+      "S231:label": "not2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical not",
+      "S231:graphics": "Placement(transformation(extent={{-200,-110},{-180,-90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3.y"
+        }
+      ],
+      "S231:label": "not3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and5.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical not",
+      "S231:graphics": "Placement(transformation(extent={{140,-80},{160,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4.y"
+        }
+      ],
+      "S231:label": "not4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical not",
+      "S231:graphics": "Placement(transformation(extent={{100,-220},{120,-200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5.y"
+        }
+      ],
+      "S231:label": "not5"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.assMes3.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Occupied mode",
+      "S231:graphics": "Placement(transformation(extent={{-160,-210},{-140,-190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod.y"
+        }
+      ],
+      "S231:label": "occMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod.k",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.occMod.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Low flow alarms",
+      "S231:graphics": "Placement(transformation(extent={{200,140},{220,160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.y"
+        }
+      ],
+      "S231:label": "proInt"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.proInt.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLowFloAla"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.staPreMul",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Importance multiplier for the zone static pressure reset control loop",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "staPreMul"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.staTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Delay triggering alarms after enabling AHU supply fan",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "staTim",
+      "S231:value": 1800,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the measured airflow has been less than threshold value for threshold time",
+      "S231:graphics": "Placement(transformation(extent={{-80,160},{-60,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.y"
+        }
+      ],
+      "S231:label": "truDel"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the measured airflow has been less than threshold value for threshold time",
+      "S231:graphics": "Placement(transformation(extent={{-80,30},{-60,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.y"
+        }
+      ],
+      "S231:label": "truDel1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the input has been true for more than threshold time",
+      "S231:graphics": "Placement(transformation(extent={{0,-50},{20,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.y"
+        }
+      ],
+      "S231:label": "truDel2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "fanOffTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and6.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the input has been true for more than threshold time",
+      "S231:graphics": "Placement(transformation(extent={{20,-180},{40,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.y"
+        }
+      ],
+      "S231:label": "truDel3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "leaFloTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel3.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.booToInt3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not5.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the active flow setpoint has been greater than zero for the threshold time",
+      "S231:graphics": "Placement(transformation(extent={{-120,80},{-100,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.y"
+        }
+      ],
+      "S231:label": "truDel4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "lowFloTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.truDel4.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.and2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.u1Fan",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "AHU supply fan status",
+      "S231:graphics": "Placement(transformation(extent={{-280,-120},{-240,-80}})),iconTransformation(extent={{-140,-20},{-100,20}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.fanIni.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.leaDamAla1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.not3.u"
+        }
+      ],
+      "S231:label": "u1Fan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.uDam",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Damper position setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-280,-240},{-240,-200}})),iconTransformation(extent={{-140,-100},{-100,-60}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.cloDam.u"
+      },
+      "S231:label": "uDam",
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone operation mode",
+      "S231:graphics": "Placement(transformation(extent={{-280,-160},{-240,-120}})),iconTransformation(extent={{-140,-60},{-100,-20}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.isOcc.u1"
+      },
+      "S231:label": "uOpeMod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VActSet_flow",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Active airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-280,70},{-240,110}})),iconTransformation(extent={{-140,20},{-100,60}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gai1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.greThr.u"
+        }
+      ],
+      "S231:label": "VActSet_flow",
+      "S231:min": 0,
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VCooMax_flow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Design zone cooling maximum airflow rate",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "VCooMax_flow",
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.VDis_flow",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured discharge airflow rate",
+      "S231:graphics": "Placement(transformation(extent={{-280,150},{-240,190}})),iconTransformation(extent={{-140,60},{-100,100}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.gre1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.les.u1"
+        }
+      ],
+      "S231:label": "VDis_flow",
+      "S231:min": 0,
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yFloSenAla",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Airflow sensor calibration alarm",
+      "S231:graphics": "Placement(transformation(extent={{240,-60},{280,-20}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "yFloSenAla"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLeaDamAla",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Leaking damper alarm",
+      "S231:graphics": "Placement(transformation(extent={{240,-190},{280,-150}})),iconTransformation(extent={{100,-80},{140,-40}})))",
+      "S231:label": "yLeaDamAla"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Alarms.yLowFloAla",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Low airflow alarms",
+      "S231:graphics": "Placement(transformation(extent={{240,130},{280,170}})),iconTransformation(extent={{100,40},{140,80}})))",
+      "S231:label": "yLowFloAla"
+    }
+  ]
+}

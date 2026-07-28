@@ -1,0 +1,565 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-140,-100},{140,100}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nBlock that outputs the zone state. It first checks if the zone is in heating state;\nif not, it checks if the zone is in cooling state; otherwise it is in deadband state.\n</p>\n<p>\nThese states are defined in\n<a href=\\modelica://Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates\\>\nBuildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates</a>.\n</p>\n<p>\nThe logic of the block is as follows.\n</p>\n<ol>\n<li>\nThe zone state is heating when both of the following two conditions are satisfied:\n(i) The heating control signal satisfies <code>uHea &gt; uHigh</code>, where\n<code>uHigh</code> is a parameter,\nand (ii) the following condition is satisfied <code>uHea - uCoo > uLow</code>,\nwhere <code>uCoo</code> is the cooling control signal and <code>uLow</code> is a parameter.\nThe second condition is\nused to avoid errors when <code>uHea > 0</code> and <code>uCoo > 0</code> at the same time.\n</li>\n<li>\nThe zone state is cooling when the zone state is not heating and the cooling control signal satisfies\n<code>uCoo > uHigh</code>, where <code>uHigh</code> is a parameter.\nIf <code>uCoo &lt; uLow</code>, then the zone state is not cooling.\n</li>\n<li>\nThe zone state is deadband when it is neither in heating state nor in cooling state.\n</li>\n</ol>\n</html>,revisions=<html>\n<ul>\n<li>\nMarch 13, 2020, by Jianjun Hu:<br/>\nReplaced <code>multiSum</code> block with two addition blocks to avoid vector related implementation.<br/>\nThis is for <a href=\\https://github.com/lbl-srg/modelica-buildings/issues/1709\\>#1709</a>.\n</li>\n<li>\nSeptember 11, 2019, by Kun Zhang:<br/>\nImproved the implementation to avoid issues when heating and cooling controls occur at the same time.\n</li>\n<li>\nOctober 24, 2018, by David Blum:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uCoo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHea"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.yZonSta"
+      },
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uLow"
+        }
+      ],
+      "S231:icon": "coordinateSystem(preserveAspectRatio=false),graphics={Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"%name\",textColor={0,0,255},extent={{-150,150},{150,110}})}",
+      "S231:label": "ZoneStates"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Add",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Add two integer inputs",
+      "S231:graphics": "Placement(transformation(extent={{70,20},{90,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.y"
+        }
+      ],
+      "S231:label": "addInt"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Add",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Add two integer inputs",
+      "S231:graphics": "Placement(transformation(extent={{110,-10},{130,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.y"
+        }
+      ],
+      "S231:label": "addInt1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.yZonSta"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Convert Boolean to Integer number",
+      "S231:graphics": "Placement(transformation(extent={{28,-30},{48,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.integerFalse"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.y"
+        }
+      ],
+      "S231:label": "booToIntCoo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.integerFalse",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Convert Boolean to Integer number",
+      "S231:graphics": "Placement(transformation(extent={{70,-80},{90,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.integerFalse"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.y"
+        }
+      ],
+      "S231:label": "booToIntDea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.integerFalse",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.deadband"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Convert Boolean to Integer number",
+      "S231:graphics": "Placement(transformation(extent={{0,30},{20,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.integerFalse"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.integerTrue"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.y"
+        }
+      ],
+      "S231:label": "booToIntHea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.integerFalse",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.integerTrue",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.heating"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.addInt.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if heating control signal is bigger than cooling control signal",
+      "S231:graphics": "Placement(transformation(extent={{-100,0},{-80,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.uLow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.y"
+        }
+      ],
+      "S231:label": "hysU"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.uHigh",
+      "S231:isFinal": true,
+      "S231:value": "uLow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.uLow",
+      "S231:isFinal": true,
+      "S231:value": "-uLow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if it is in cooling state",
+      "S231:graphics": "Placement(transformation(extent={{-100,-50},{-80,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.uLow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.y"
+        }
+      ],
+      "S231:label": "hysUCoo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.uHigh",
+      "S231:isFinal": true,
+      "S231:value": "uHigh"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.uLow",
+      "S231:isFinal": true,
+      "S231:value": "uLow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Hysteresis",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if it is in heating state",
+      "S231:graphics": "Placement(transformation(extent={{-120,60},{-100,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.uHigh"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.uLow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.y"
+        }
+      ],
+      "S231:label": "hysUHea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.uHigh",
+      "S231:isFinal": true,
+      "S231:value": "uHigh"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.uLow",
+      "S231:isFinal": true,
+      "S231:value": "uLow"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "In cooling state if both inputs are true",
+      "S231:graphics": "Placement(transformation(extent={{-10,-30},{10,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.y"
+        }
+      ],
+      "S231:label": "isCoo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntCoo.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Nor",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "In deadband state",
+      "S231:graphics": "Placement(transformation(extent={{30,-80},{50,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.y"
+        }
+      ],
+      "S231:label": "isDea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntDea.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "In heating state if both conditions are true",
+      "S231:graphics": "Placement(transformation(extent={{-72,30},{-52,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.y"
+        }
+      ],
+      "S231:label": "isHea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isHea.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.booToIntHea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isDea.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Not in heating state",
+      "S231:graphics": "Placement(transformation(extent={{-44,0},{-24,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea.y"
+        }
+      ],
+      "S231:label": "notHea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.notHea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.isCoo.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uCoo",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Cooling control signal",
+      "S231:graphics": "Placement(transformation(extent={{-180,-60},{-140,-20}})),iconTransformation(extent={{-140,-60},{-100,-20}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUCoo.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.u2"
+        }
+      ],
+      "S231:label": "uCoo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHea",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Heating control signal",
+      "S231:graphics": "Placement(transformation(extent={{-180,20},{-140,60}})),iconTransformation(extent={{-140,20},{-100,60}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysUHea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.u1"
+        }
+      ],
+      "S231:label": "uHea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Difference between uHea and uCoo",
+      "S231:graphics": "Placement(transformation(extent={{-130,0},{-110,20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.y"
+        }
+      ],
+      "S231:label": "uHeaMinUCoo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHeaMinUCoo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.hysU.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uHigh",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Hysteresis parameter uHigh for heating and cooling control signals to avoid chattering",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "uHigh",
+      "S231:value": {
+        "@value": "0.05",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.uLow",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Hysteresis parameter uLow for heating and cooling control signals to avoid chattering",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "uLow",
+      "S231:value": {
+        "@value": "0.01",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.ThermalZones.ZoneStates.yZonSta",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone state",
+      "S231:graphics": "Placement(transformation(extent={{140,-20},{180,20}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "yZonSta"
+    }
+  ]
+}

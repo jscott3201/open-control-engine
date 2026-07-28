@@ -1,0 +1,862 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-240,-220},{220,220}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nSequence for controling relief fan that is part of AHU. It is developed based on\nSection 5.16.9 of ASHRAE Guideline 36, May 2020, with the modification to accommodate\nthe single relief fan control.\n</p>\n<ol>\n<li>\nThe relief fan shall be enabled when the AHU supply fan is proven ON\n(<code>u1SupFan=true</code>), and shall be disabled otherwise.\n</li>\n<li>\nBuilding static pressure (<code>dpBui</code>) shall be time averaged with a sliding\n5-minute window and 15 second sampling rate (to dampen fluctuations). The average\nvalue shall be that displayed and used for control.\n</li>\n<li>\nA P-only control loop maintains the building pressure at a set point (<code>dpBuiSet</code>)\nof 12 Pa (0.05 in. of water) with an output ranging from 0% to 100%. The loop is disabled\nand output set to zero when the relief fan is disabled.\n</li>\n<li>\nFan speed shall be equal to the PID signal but no less than the minimum speed.\n<ol type=\\a\\>\n<li>\nWhen relief system is enabled, and the control loop\noutput is above 5%, open the motorized dampers to the relief fans;\nclose the dampers when the loop output drops to 0% for 5 minutes.\n</li>\n<li>\nWhen the control loop output is above minimum speed (<code>relFanSpe_min</code>) plus 15%\nby 7 minutes, start the relief fan.\n</li>\n<li>\nWhen the control loop output is below minimum speed (<code>relFanSpe_min</code>)\nby 5 minutes, shut off the relief fan.\n</li>\n</ol>\n</li>\n</ol>\n</html>,revisions=<html>\n<ul>\n<li>\nMarch 5, 2024, by Michael Wetter:<br/>\nCorrected wrong use of <code>displayUnit</code>.\n</li>\n<li>\nSeptember 18, 2023, by Jianjun Hu:<br/>\nChanged damper position output from the real to boolean.<br/>\nThis is for\n<a href=\\https://github.com/lbl-srg/modelica-buildings/issues/3526\\>issue 3526</a>.\n</li>\n<li>\nSeptember 20, 2022, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBui"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.u1SupFan"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelFan"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yDpBui"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yRelFan"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.hys"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFanSpe_min"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}},preserveAspectRatio=false),graphics={Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"u1SupFan\",textColor={255,0,255},extent={{-98,-18},{-56,-38}}),Text(textString=\"dpBui\",textColor={0,0,127},extent={{-100,40},{-58,20}}),Text(textString=\"yRelFan\",textColor={0,0,127},extent={{48,-20},{98,-38}}),Text(textString=\"yDpBui\",textColor={0,0,127},extent={{56,88},{96,72}}),Text(textString=\"y1RelFan\",textColor={255,0,255},extent={{56,-70},{98,-90}}),Text(textString=\"y1RelDam\",textColor={255,0,255},extent={{56,42},{98,22}})}",
+      "S231:label": "ReliefFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output is greater than threshold and the relief system has been enabled",
+      "S231:graphics": "Placement(transformation(extent={{-20,30},{0,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.y"
+        }
+      ],
+      "S231:label": "and2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert boolean to real",
+      "S231:graphics": "Placement(transformation(extent={{100,-70},{120,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2.y"
+        }
+      ],
+      "S231:label": "booToRea2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Constant one",
+      "S231:graphics": "Placement(transformation(extent={{-180,160},{-160,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne.y"
+        }
+      ],
+      "S231:label": "conOne"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conOne.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.u_s"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure controller",
+      "S231:graphics": "Placement(transformation(extent={{-140,160},{-120,180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.controllerType"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.reverseActing"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.u_m"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.u_s"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.y"
+        }
+      ],
+      "S231:label": "conP"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.controllerType",
+      "S231:isFinal": true,
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.P"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.k",
+      "S231:isFinal": true,
+      "S231:value": "k"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.reverseActing",
+      "S231:isFinal": true,
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Normalized the control error",
+      "S231:graphics": "Placement(transformation(extent={{-180,100},{-160,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.y"
+        }
+      ],
+      "S231:label": "div1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.conP.u_m"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output has been less than threshold for sufficient long time",
+      "S231:graphics": "Placement(transformation(extent={{-40,-170},{-20,-150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.passed"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.u"
+        }
+      ],
+      "S231:label": "dowTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.passed",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.t",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBui",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure difference, relative to ambient (positive if pressurized)",
+      "S231:graphics": "Placement(transformation(extent={{-280,120},{-240,160}})),iconTransformation(extent={{-140,10},{-100,50}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:PA"
+      },
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.u"
+      },
+      "S231:label": "dpBui",
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure difference relative to ambient (positive to pressurize the building)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "dpBuiSet",
+      "S231:max": 30,
+      "S231:value": 12,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building pressure setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-220,70},{-200,90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi.y"
+        }
+      ],
+      "S231:label": "dpBuiSetPoi"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi.k",
+      "S231:isFinal": true,
+      "S231:value": "dpBuiSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dpBuiSetPoi.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output is greater than threshold",
+      "S231:graphics": "Placement(transformation(extent={{-80,50},{-60,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.y"
+        }
+      ],
+      "S231:label": "greThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.h",
+      "S231:isFinal": true,
+      "S231:value": "hys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.05",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output is greater than minimum speed plus threshold",
+      "S231:graphics": "Placement(transformation(extent={{-80,-110},{-60,-90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.y"
+        }
+      ],
+      "S231:label": "greThr2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.h",
+      "S231:isFinal": true,
+      "S231:value": "hys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.t",
+      "S231:isFinal": true,
+      "S231:value": "relFanSpe_min +0.15"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.greThr2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.hys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Hysteresis for checking the controller output value",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "hys",
+      "S231:value": {
+        "@value": "0.005",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Gain, normalized using dpBuiSet",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "k",
+      "S231:value": 1,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Enable damper",
+      "S231:graphics": "Placement(transformation(extent={{40,30},{60,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.y"
+        }
+      ],
+      "S231:label": "lat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Stage down lag fan",
+      "S231:graphics": "Placement(transformation(extent={{0,-118},{20,-98}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.y"
+        }
+      ],
+      "S231:label": "lat1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output is near zero",
+      "S231:graphics": "Placement(transformation(extent={{-80,-10},{-60,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.y"
+        }
+      ],
+      "S231:label": "lesThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.h",
+      "S231:isFinal": true,
+      "S231:value": "hys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.005",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output is less than minimum speed",
+      "S231:graphics": "Placement(transformation(extent={{-80,-170},{-60,-150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.y"
+        }
+      ],
+      "S231:label": "lesThr3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.h",
+      "S231:isFinal": true,
+      "S231:value": "hys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.t",
+      "S231:isFinal": true,
+      "S231:value": "relFanSpe_min"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lesThr3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.dowTim.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MovingAverage",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Average building static pressure measurement",
+      "S231:graphics": "Placement(transformation(extent={{-220,130},{-200,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.delta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.y"
+        }
+      ],
+      "S231:label": "movMea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.delta",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.movMea.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.div1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yDpBui"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief fan speed",
+      "S231:graphics": "Placement(transformation(extent={{160,-50},{180,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.y"
+        }
+      ],
+      "S231:label": "pro1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.pro1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yRelFan"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Open relief damper",
+      "S231:graphics": "Placement(transformation(extent={{100,30},{120,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.y"
+        }
+      ],
+      "S231:label": "relDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelDam"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Turn on relief fan",
+      "S231:graphics": "Placement(transformation(extent={{40,-70},{60,-50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.y"
+        }
+      ],
+      "S231:label": "relFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.booToRea2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relDam.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelFan"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFanSpe_min",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief fan minimum speed",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "relFanSpe_min",
+      "S231:max": 1,
+      "S231:min": 0,
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output has been near zero for threshold time",
+      "S231:graphics": "Placement(transformation(extent={{-20,-10},{0,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.passed"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.u"
+        }
+      ],
+      "S231:label": "tim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.passed",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.tim.t",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "AHU supply fan proven on status",
+      "S231:graphics": "Placement(transformation(extent={{-280,12},{-240,52}})),iconTransformation(extent={{-140,-50},{-100,-10}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.and2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.relFan.u1"
+        }
+      ],
+      "S231:label": "u1SupFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Timer",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the controller output has been greater than threshold for sufficient long time",
+      "S231:graphics": "Placement(transformation(extent={{-40,-110},{-20,-90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.passed"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.u"
+        }
+      ],
+      "S231:label": "upTim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.passed",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.lat1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.upTim.t",
+      "S231:isFinal": true,
+      "S231:value": 420
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelDam",
+      "@type": "S231:BooleanOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: 2-position relief damper commanded open",
+      "S231:graphics": "Placement(transformation(extent={{220,20},{260,60}})),iconTransformation(extent={{100,10},{140,50}})))",
+      "S231:label": "y1RelDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.y1RelFan",
+      "@type": "S231:BooleanOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief fan commanded on",
+      "S231:graphics": "Placement(transformation(extent={{220,-120},{260,-80}})),iconTransformation(extent={{100,-100},{140,-60}})))",
+      "S231:label": "y1RelFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yDpBui",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure difference, relative to ambient (positive if pressurized)",
+      "S231:graphics": "Placement(transformation(extent={{220,120},{260,160}})),iconTransformation(extent={{100,60},{140,100}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:PA"
+      },
+      "S231:label": "yDpBui",
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReliefFan.yRelFan",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief fan commanded speed",
+      "S231:graphics": "Placement(transformation(extent={{220,-60},{260,-20}})),iconTransformation(extent={{100,-50},{140,-10}})))",
+      "S231:label": "yRelFan",
+      "S231:max": 1,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    }
+  ]
+}

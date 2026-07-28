@@ -1,0 +1,1441 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-200,-260},{200,260}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nThis sequence outputs the system reset requests for multiple zone air handling unit. The\nimplementation is according to the Section 5.16.16 of ASHRAE Guideline 36, May 2020. \n</p>\n<h4>Chilled water reset request <code>yChiWatResReq</code></h4>\n<ol>\n<li>\nIf the supply air temperature <code>TAirSup</code> exceeds the supply air temperature\nset point <code>TAirSupSet</code> by 3 &deg;C (5 &deg;F) for 2 minutes, send 3 requests.\n</li>\n<li>\nIf the supply air temperature <code>TAirSup</code> exceeds the supply air temperature\nset point <code>TAirSupSet</code> by 2 &deg;C (3 &deg;F) for 2 minutes, send 2 requests.\n</li>\n<li>\nElse if the chilled water valve position <code>uCooCoiSet</code> is greater than\n95%, send 1 request until the <code>uCooCoiSet</code> is less than 85%.\n</li>\n<li>\nElse if the chilled water valve position <code>uCooCoiSet</code> is less than 95%,\nsend 0 request.\n</li>\n</ol>\n<h4>Chiller plant request <code>yChiPlaReq</code></h4>\n<p>\nSend the chiller plant that serves the system a chiller plant request as follows:\n</p>\n<ol>\n<li>\nIf the chilled water valve position <code>uCooCoiSet</code> is greater than\n95%, send 1 request until the <code>uCooCoiSet</code> is less than 10%.\n</li>\n<li>\nElse if the chilled water valve position <code>uCooCoiSet</code> is less than 95%,\nsend 0 request.\n</li>\n</ol>\n<h4>If there is a hot-water coil, hot-water\nreset requests <code>yHotWatResReq</code></h4>\n<ol>\n<li>\nIf the supply air temperature <code>TAirSup</code> is 17 &deg;C (30 &deg;F) less than\nthe supply air temperature set point <code>TAirSupSet</code> for 5 minutes, send 3\nrequests.\n</li>\n<li>\nElse if the supply air temperature <code>TAirSup</code> is 8 &deg;C (15 &deg;F) less than\nthe supply air temperature set point <code>TAirSupSet</code> for 5 minutes, send 2\nrequests.\n</li>\n<li>\nElse if the hot water valve position <code>uHeaCoiSet</code> is greater than\n95%, send 1 request until the <code>uHeaCoiSet</code> is less than 85%.\n</li>\n<li>\nElse if the hot water valve position <code>uHeaCoiSet</code> is less than 95%,\nsend 0 request.\n</li>\n</ol>\n<h4>If there is a hot-water coil and heating hot-water plant, heating hot-water\nplant reqeusts <code>yHotWatPlaReq</code></h4>\n<p>\nSend the heating hot-water plant that serves the air handling unit a heating hot-water\nplant request as follows:\n</p>\n<ol>\n<li>\nIf the hot water valve position <code>uHeaCoiSet</code> is greater than 95%, send 1\nrequest until the hot water valve position is less than 10%.\n</li>\n<li>\nIf the hot water valve position <code>uHeaCoiSet</code> is less than 95%, send 0 requests.\n</li>\n</ol>\n</html>,revisions=<html>\n<ul>\n<li>\nSeptember 26, 2025, by Jianjun Hu:<br/>\nRenamed the parameter <code>Thys</code> to <code>THys</code>.<br/>\nThis is for\n<a href=\\https://github.com/lbl-srg/modelica-buildings/issues/4374\\>issue 4374</a>.\n</li>\n<li>\nSeptember 18, 2023, by Jianjun Hu:<br/>\nRenamed the connectors <code>uCooCoi_actual</code> and <code>uHeaCoi_actual</code> to <code>uCooCoiSet</code> and <code>uHeaCoiSet</code>.<br/>\nThis is for\n<a href=\\https://github.com/lbl-srg/modelica-buildings/issues/3526\\>issue 3526</a>.\n</li>\n<li>\nDecember 1, 2021, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.TAirSup"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.TAirSupSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.uCooCoiSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.uHeaCoiSet"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiPlaReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiWatResReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatPlaReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatResReq"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooCoi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaCoi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.posHys"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.THys"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}},preserveAspectRatio=false),graphics={Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"TAirSup\",textColor={0,0,127},extent={{-98,88},{-70,72}}),Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Text(textString=\"TAirSupSet\",textColor={0,0,127},extent={{-98,40},{-52,20}}),Text(textString=\"uCooCoiSet\",textColor={0,0,127},extent={{-98,-22},{-38,-38}},visible=cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased),Text(textString=\"uHeaCoiSet\",textColor={0,0,127},extent={{-98,-72},{-36,-88}},visible=heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased),Text(textString=\"yChiWatResReq\",textColor={255,127,0},extent={{34,92},{98,70}},visible=cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased),Text(textString=\"yChiPlaReq\",textColor={255,127,0},extent={{52,42},{98,20}},visible=cooCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased),Text(textString=\"yHotWatResReq\",textColor={255,127,0},extent={{34,-18},{98,-40}},visible=heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased),Text(textString=\"yHotWatPlaReq\",textColor={255,127,0},extent={{38,-66},{98,-88}},visible=heaCoi == Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased)}",
+      "S231:label": "PlantRequests"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 1 chilled water reset request",
+      "S231:graphics": "Placement(transformation(extent={{80,90},{100,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "chiWatRes1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 2 chilled water reset request",
+      "S231:graphics": "Placement(transformation(extent={{120,140},{140,160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "chiWatRes2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 3 chilled water reset request",
+      "S231:graphics": "Placement(transformation(extent={{160,190},{180,210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "chiWatRes3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiWatResReq"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooCoi",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Cooling coil type",
+      "S231:label": "cooCoi",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil.WaterBased"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Find the cooling supply temperature difference to the setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-170,190},{-150,210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.y"
+        }
+      ],
+      "S231:label": "cooSupTemDif"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if the supply temperature is greater than the setpoint by a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-80,190},{-60,210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.y"
+        }
+      ],
+      "S231:label": "greThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.h",
+      "S231:isFinal": true,
+      "S231:value": "THys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.t",
+      "S231:isFinal": true,
+      "S231:value": 3
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if the supply temperature is greater than the setpoint by a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-80,140},{-60,160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.y"
+        }
+      ],
+      "S231:label": "greThr1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.h",
+      "S231:isFinal": true,
+      "S231:value": "THys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.t",
+      "S231:isFinal": true,
+      "S231:value": 2
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the chilled water valve position is greater than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,90},{-100,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "greThr2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.95",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the supply temperature is less than the setpoint by a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-80,-50},{-60,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "greThr3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.h",
+      "S231:isFinal": true,
+      "S231:value": "THys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.t",
+      "S231:isFinal": true,
+      "S231:value": 17
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the supply temperature is less than the setpoint by a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-80,-100},{-60,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "greThr4"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.h",
+      "S231:isFinal": true,
+      "S231:value": "THys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.t",
+      "S231:isFinal": true,
+      "S231:value": 8
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the hot water valve position is greater than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,-150},{-100,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "greThr5"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.95",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaCoi",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Heating coil type",
+      "S231:label": "heaCoi",
+      "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil.WaterBased"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Find the heating supply temperature difference to the setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-150,-50},{-130,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "heaSupTemDif"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr4.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 1 hot water reset request",
+      "S231:graphics": "Placement(transformation(extent={{80,-150},{100,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "hotWatRes1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 2 hot water reset request",
+      "S231:graphics": "Placement(transformation(extent={{120,-100},{140,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "hotWatRes2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 3 hot water reset request",
+      "S231:graphics": "Placement(transformation(extent={{160,-50},{180,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "hotWatRes3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatResReq"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 1 hot water plant request",
+      "S231:graphics": "Placement(transformation(extent={{80,-230},{100,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "intSwi1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatPlaReq"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Send 1 chiller plant request",
+      "S231:graphics": "Placement(transformation(extent={{80,10},{100,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "intSwi3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiPlaReq"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Keep true signal until other condition becomes true",
+      "S231:graphics": "Placement(transformation(extent={{-40,90},{-20,110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Keep true signal until other condition becomes true",
+      "S231:graphics": "Placement(transformation(extent={{-40,10},{-20,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lat1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Keep true signal until other condition becomes true",
+      "S231:graphics": "Placement(transformation(extent={{-40,-150},{-20,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lat2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Keep true signal until other condition becomes true",
+      "S231:graphics": "Placement(transformation(extent={{-40,-230},{-20,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lat3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the chilled water valve position is less than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,50},{-100,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lesThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.85",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the chilled water valve position is less than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,4},{-100,24}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lesThr1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat1.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the hot water valve position is less than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,-190},{-100,-170}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lesThr2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.85",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat2.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the hot water valve position is less than a threshold value",
+      "S231:graphics": "Placement(transformation(extent={{-120,-236},{-100,-216}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.h"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.t"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "lesThr3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.h",
+      "S231:isFinal": true,
+      "S231:value": "posHys"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.t",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lat3.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant 1",
+      "S231:graphics": "Placement(transformation(extent={{0,110},{20,130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one.y"
+        }
+      ],
+      "S231:label": "one"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.one.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.posHys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Hysteresis for checking valve position difference",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "posHys",
+      "S231:value": {
+        "@value": "0.05",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.TAirSup",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Measured supply air temperature",
+      "S231:graphics": "Placement(transformation(extent={{-240,180},{-200,220}})),iconTransformation(extent={{-140,60},{-100,100}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.u2"
+        }
+      ],
+      "S231:label": "TAirSup",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.TAirSupSet",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Setpoint for supply air temperature",
+      "S231:graphics": "Placement(transformation(extent={{-240,140},{-200,180}})),iconTransformation(extent={{-140,10},{-100,50}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:DEG_C"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.cooSupTemDif.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.heaSupTemDif.u1"
+        }
+      ],
+      "S231:label": "TAirSupSet",
+      "qudt:hasQuantityKind": {
+        "@id": "q:ThermodynamicTemperature"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:K"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant 3",
+      "S231:graphics": "Placement(transformation(extent={{0,222},{20,242}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr.y"
+        }
+      ],
+      "S231:label": "thr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr.k",
+      "S231:isFinal": true,
+      "S231:value": 3
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.thr.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.THys",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Hysteresis for checking temperature difference",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "THys",
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if the input has been true for a certain time",
+      "S231:graphics": "Placement(transformation(extent={{-40,190},{-20,210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.y"
+        }
+      ],
+      "S231:label": "truDel"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.delayTime",
+      "S231:isFinal": true,
+      "S231:value": 120
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if the input has been true for a certain time",
+      "S231:graphics": "Placement(transformation(extent={{-40,140},{-20,160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.y"
+        }
+      ],
+      "S231:label": "truDel1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.delayTime",
+      "S231:isFinal": true,
+      "S231:value": 120
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the input has been true for a certain time",
+      "S231:graphics": "Placement(transformation(extent={{-40,-50},{-20,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "truDel2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.delayTime",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Check if the input has been true for a certain time",
+      "S231:graphics": "Placement(transformation(extent={{-40,-100},{-20,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "truDel3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.delayTime",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.truDel3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant 2",
+      "S231:graphics": "Placement(transformation(extent={{0,170},{20,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two.y"
+        }
+      ],
+      "S231:label": "two"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two.k",
+      "S231:isFinal": true,
+      "S231:value": 2
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.two.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.uCooCoiSet",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Commanded ooling coil valve position",
+      "S231:graphics": "Placement(transformation(extent={{-240,80},{-200,120}})),iconTransformation(extent={{-140,-50},{-100,-10}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr1.u"
+        }
+      ],
+      "S231:label": "uCooCoiSet",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.uHeaCoiSet",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Commanded heating coil valve position",
+      "S231:graphics": "Placement(transformation(extent={{-240,-160},{-200,-120}})),iconTransformation(extent={{-140,-100},{-100,-60}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.greThr5.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.lesThr3.u"
+        }
+      ],
+      "S231:label": "uHeaCoiSet",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiPlaReq",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Chiller plant request",
+      "S231:graphics": "Placement(transformation(extent={{200,0},{240,40}})),iconTransformation(extent={{100,10},{140,50}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "yChiPlaReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yChiWatResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Chilled water reset request",
+      "S231:graphics": "Placement(transformation(extent={{200,180},{240,220}})),iconTransformation(extent={{100,60},{140,100}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "yChiWatResReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatPlaReq",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Hot water plant request",
+      "S231:graphics": "Placement(transformation(extent={{200,-240},{240,-200}})),iconTransformation(extent={{100,-100},{140,-60}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "yHotWatPlaReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.yHotWatResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "undefined == undefined",
+      "S231:description": "Hot water reset request",
+      "S231:graphics": "Placement(transformation(extent={{200,-60},{240,-20}})),iconTransformation(extent={{100,-50},{140,-10}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "yHotWatResReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant 0",
+      "S231:graphics": "Placement(transformation(extent={{0,50},{20,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer.y"
+        }
+      ],
+      "S231:label": "zer"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.zer.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.chiWatRes1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.hotWatRes1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.PlantRequests.intSwi3.u3"
+        }
+      ]
+    }
+  ]
+}

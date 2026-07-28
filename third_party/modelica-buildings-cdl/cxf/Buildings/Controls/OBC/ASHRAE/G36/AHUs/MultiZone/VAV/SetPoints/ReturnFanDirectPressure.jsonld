@@ -1,0 +1,1076 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-140,-220},{120,220}},preserveAspectRatio=false),graphics={Rectangle(extent={{-138,218},{118,84}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Rectangle(extent={{-138,58},{118,-58}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Text(textString=\"Exhaust air damper control\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{-138,210},{-62,192}}),Text(textString=\"Return fan discharge static pressure setpoint\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{-136,-28},{-12,-50}}),Rectangle(extent={{-138,-84},{118,-218}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Text(textString=\"Return fan speed\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{-136,-176},{-60,-194}})}",
+      "S231:documentation": "info=<html>\n<p>\nSetpoint for return fan discharge pressure and relief air damper\nfor a multi zone VAV AHU according to Section 5.16.10 of ASHRAE Guideline G36, May 2020.\n</p>\n<p>\nNote that this sequence assumes that the AHU units with return fan having the\nreturn fan with direct building pressure control have the minimum outdoor air damper.\n</p>\n<ol>\n<li>\n<p>Return fan operates whenever associated supply fan is proven on and is\noff otherwise.</p>\n</li>\n<li>\n<p>Return fan is controlled to maintain return fan discharge static pressure\nat setpoint <code>dpBuiSet</code>.</p>\n</li>\n<li>\n<p>Relief damper is only enabled when the associated supply and return\nfans are proven on (<code>u1SupFan=true</code>) and the minimum outdoor air damper is open\n(to be controlled in a separate sequence).\nThe relief dampers is closed when the fan is disabled.</p>\n</li>\n<li>\n<p>The building static pressure is time averaged with a sliding 5-minute window\nto dampen fluctuations. The averaged value shall be displayed and is used\nfor control.</p>\n</li>\n<li>\n<p>When the relief damper is enabled, a control loop modulates the relief damper\nin sequence with the return fan static pressure setpoint as shown in the figure\nbelow to maintain the building pressure equal to <code>dpBuiSet</code>,\nwhich is by default <i>12</i> Pa (<i>0.05</i> inches).\n</p>\n</li>\n</ol>\n<p>\nThe output signal of the building pressure control is as follows:\n</p>\n<ol>\n<li>\nFrom <i>0</i> to <i>0.5</i>, the building pressure control loop modulates the exhaust\ndampers from <code>yRelDam = 0</code> (closed) to <code>yRelDam = 1</code> (open).\n</li>\n<li>\nFrom <i>0.5</i> to <i>1</i>, the building pressure control loop resets the return fan\ndischarge static pressure setpoint from <code>p_rel_RetFan_min</code>\nto <code>p_rel_RetFan_max</code>. The <code>p_rel_RetFan_min</code> and\n<code>p_rel_RetFan_max</code> are specified in Section 3.2.1.4.\n</li>\n</ol>\n<p align=\\center\\>\n<img alt=\\Image of return fan control for multi zone AHU\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanControlWithPressure.png\\/>\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nOctober 16, 2017, by Michael Wetter:<br/>\nRevised implementation, normalized control input\nand updated documentation.\n</li>\n<li>\nOctober 16, 2017, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBui"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.u1MinOutAirDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.u1SupFan"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpDisSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.y1RetFan"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yDpBui"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRelDam"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRetFan"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conTyp"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.disSpe_max"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.disSpe_min"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.p_rel_RetFan_max"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.p_rel_RetFan_min"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.Td"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.Ti"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}}),graphics={Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Rectangle(extent={{-100,-100},{100,100}},lineColor={0,0,127},fillColor={255,255,255},fillPattern=FillPattern.Solid),Line(color={28,108,200},points={{-78,52},{-78,-32},{78,-32},{78,52},{78,52}}),Line(color={0,0,0},thickness=0.5,points={{-78,-32},{4,52}}),Line(color={0,0,0},thickness=0.5,points={{4,-32},{78,52}},pattern=LinePattern.Dash),Text(textString=\"Building pressure control loop signal\",textColor={28,108,200},extent={{-50,-36},{60,-62}})}",
+      "S231:label": "ReturnFanDirectPressure"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant 0.5",
+      "S231:graphics": "Placement(transformation(extent={{0,150},{20,170}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con.y"
+        }
+      ],
+      "S231:label": "con"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con.k",
+      "S231:isFinal": true,
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.con.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.x1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant one",
+      "S231:graphics": "Placement(transformation(extent={{-100,170},{-80,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne.y"
+        }
+      ],
+      "S231:label": "conOne"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conOne.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.u_s"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.PID",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure controller",
+      "S231:graphics": "Placement(transformation(extent={{-60,170},{-40,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.controllerType"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.Td"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.Ti"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.u_m"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.u_s"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.y"
+        }
+      ],
+      "S231:label": "conP"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.controllerType",
+      "S231:isFinal": true,
+      "S231:value": "conTyp"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.k",
+      "S231:isFinal": true,
+      "S231:value": "k"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.Td",
+      "S231:isFinal": true,
+      "S231:value": "Td"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.Ti",
+      "S231:isFinal": true,
+      "S231:value": "Ti"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conTyp",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Type of controller",
+      "S231:label": "conTyp",
+      "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.disSpe_max",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan speed when providing the maximum return fan discharge static pressure difference",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "disSpe_max",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.disSpe_min",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan speed when providing the minimum return fan discharge static pressure difference",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "disSpe_min",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Normalized the control error",
+      "S231:graphics": "Placement(transformation(extent={{-80,110},{-60,130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.y"
+        }
+      ],
+      "S231:label": "div"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.conP.u_m"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBui",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure difference, relative to ambient (positive if pressurized)",
+      "S231:graphics": "Placement(transformation(extent={{-180,120},{-140,160}})),iconTransformation(extent={{-140,40},{-100,80}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:PA"
+      },
+      "S231:label": "dpBui",
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Building static pressure difference relative to ambient (positive to pressurize the building)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "dpBuiSet",
+      "S231:max": 30,
+      "S231:value": 12,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Building pressure setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-130,100},{-110,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi.y"
+        }
+      ],
+      "S231:label": "dpBuiSetPoi"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi.k",
+      "S231:isFinal": true,
+      "S231:value": "dpBuiSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBuiSetPoi.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpDisSet",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan discharge static pressure setpoint",
+      "S231:graphics": "Placement(transformation(extent={{120,-40},{160,0}})),iconTransformation(extent={{100,-40},{140,0}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:PA"
+      },
+      "S231:label": "dpDisSet",
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Check if the relief damper should be enabled",
+      "S231:graphics": "Placement(transformation(extent={{-40,80},{-20,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.y"
+        }
+      ],
+      "S231:label": "enaDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.k",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Gain, normalized using dpBuiSet",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "k",
+      "S231:value": 1,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Exhaust air damper position",
+      "S231:graphics": "Placement(transformation(extent={{60,170},{80,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.y"
+        }
+      ],
+      "S231:label": "linExhAirDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan speed",
+      "S231:graphics": "Placement(transformation(extent={{60,-110},{80,-90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.y"
+        }
+      ],
+      "S231:label": "linRetFanSpe"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan static pressure setpoint",
+      "S231:graphics": "Placement(transformation(extent={{60,20},{80,40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.y"
+        }
+      ],
+      "S231:label": "linRetFanStaPre"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MovingAverage",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Average building static pressure measurement",
+      "S231:graphics": "Placement(transformation(extent={{-130,130},{-110,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.delta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.y"
+        }
+      ],
+      "S231:label": "movMea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.delta",
+      "S231:isFinal": true,
+      "S231:value": 300
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.u",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpBui"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.movMea.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.div.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yDpBui"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant one",
+      "S231:graphics": "Placement(transformation(extent={{0,96},{20,116}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one.y"
+        }
+      ],
+      "S231:label": "one"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one.k",
+      "S231:isFinal": true,
+      "S231:value": 1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.one.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.f2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.x2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.p_rel_RetFan_max",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan discharge static pressure maximum setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "p_rel_RetFan_max",
+      "S231:max": 1000,
+      "S231:min": 0,
+      "S231:value": 40,
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.p_rel_RetFan_min",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan discharge static pressure difference minimum setpoint,no less than 2.4 Pa",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "p_rel_RetFan_min",
+      "S231:max": 1000,
+      "S231:min": 0,
+      "S231:value": {
+        "@value": "2.4",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:Pressure"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return fan discharge static pressure maximum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-40,-10},{-20,10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax.y"
+        }
+      ],
+      "S231:label": "retFanDisPreMax"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax.k",
+      "S231:isFinal": true,
+      "S231:value": "p_rel_RetFan_max"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMax.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.x2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.f2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return fan discharge static pressure minimum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{0,40},{20,60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin.y"
+        }
+      ],
+      "S231:label": "retFanDisPreMin"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin.k",
+      "S231:isFinal": true,
+      "S231:value": "p_rel_RetFan_min"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanDisPreMin.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanStaPre.f1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return fan speed when discharge static pressure maximum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-40,-130},{-20,-110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax.y"
+        }
+      ],
+      "S231:label": "retFanSpeMax"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax.k",
+      "S231:isFinal": true,
+      "S231:value": "disSpe_max"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMax.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.f2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return fan speed when discharge static pressure minimum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-40,-90},{-20,-70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin.y"
+        }
+      ],
+      "S231:label": "retFanSpeMin"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin.k",
+      "S231:isFinal": true,
+      "S231:value": "disSpe_min"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.retFanSpeMin.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linRetFanSpe.f1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan discharge static pressure setpoint",
+      "S231:graphics": "Placement(transformation(extent={{80,-30},{100,-10}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.y"
+        }
+      ],
+      "S231:label": "swi"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u2",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.u1SupFan"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.u3",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer.y"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.dpDisSet"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief air damper position",
+      "S231:graphics": "Placement(transformation(extent={{80,80},{100,100}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.y"
+        }
+      ],
+      "S231:label": "swi1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRelDam"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan speed setpoint",
+      "S231:graphics": "Placement(transformation(extent={{80,-160},{100,-140}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.y"
+        }
+      ],
+      "S231:label": "swi2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRetFan"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.Td",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Time constant of derivative block",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "Td",
+      "S231:value": {
+        "@value": "0.1",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.Ti",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Time constant of integrator block",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "Ti",
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasQuantityKind": {
+        "@id": "q:Time"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.u1MinOutAirDam",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum outdoor air damper status, true when it is open",
+      "S231:graphics": "Placement(transformation(extent={{-180,70},{-140,110}})),iconTransformation(extent={{-140,-20},{-100,20}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.u1"
+      },
+      "S231:label": "u1MinOutAirDam"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.u1SupFan",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply fan status",
+      "S231:graphics": "Placement(transformation(extent={{-180,-40},{-140,0}})),iconTransformation(extent={{-140,-80},{-100,-40}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.enaDam.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.y1RetFan"
+        }
+      ],
+      "S231:label": "u1SupFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.y1RetFan",
+      "@type": "S231:BooleanOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan commanded on",
+      "S231:graphics": "Placement(transformation(extent={{120,-220},{160,-180}})),iconTransformation(extent={{100,-110},{140,-70}})))",
+      "S231:label": "y1RetFan"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yDpBui",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Averaged building static pressure",
+      "S231:graphics": "Placement(transformation(extent={{120,120},{160,160}})),iconTransformation(extent={{100,60},{140,100}})))",
+      "S231:hasDisplayUnit": {
+        "@id": "unit:PA"
+      },
+      "S231:label": "yDpBui",
+      "qudt:hasUnit": {
+        "@id": "unit:PA"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRelDam",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Relief damper commanded position",
+      "S231:graphics": "Placement(transformation(extent={{120,70},{160,110}})),iconTransformation(extent={{100,0},{140,40}})))",
+      "S231:label": "yRelDam",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.yRetFan",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Return fan commanded speed",
+      "S231:graphics": "Placement(transformation(extent={{120,-170},{160,-130}})),iconTransformation(extent={{100,-90},{140,-50}})))",
+      "S231:label": "yRetFan",
+      "S231:max": 1,
+      "S231:min": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Zero fan control signal",
+      "S231:graphics": "Placement(transformation(extent={{0,-50},{20,-30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer.y"
+        }
+      ],
+      "S231:label": "zer"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Zero constant",
+      "S231:graphics": "Placement(transformation(extent={{-40,112},{-20,132}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1.y"
+        }
+      ],
+      "S231:label": "zer1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer1.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.f1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.linExhAirDam.x1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi1.u3"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Zero fan control signal",
+      "S231:graphics": "Placement(transformation(extent={{0,-180},{20,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2.y"
+        }
+      ],
+      "S231:label": "zer2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.zer2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.ReturnFanDirectPressure.swi2.u3"
+      }
+    }
+  ]
+}

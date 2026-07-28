@@ -1,7 +1,7 @@
 # Vendored: Modelica Buildings Library — CDL block sources
 
 Third-party source, copied verbatim. **Nothing here is open-control code, and nothing here is
-compiled.** These files are read as *data* by one test.
+compiled.** These files are read as *data* by two conformance audits (see "Who reads it").
 
 ## License
 
@@ -25,8 +25,8 @@ so `cargo package` does not see it.
 | Upstream | https://github.com/lbl-srg/modelica-buildings |
 | Commit | `a131864e4c4df22ebcd52bb8da439de0087ac365` |
 | Fetched | 2026-07-27 |
-| Files | 132 `.mo` class sources + `Buildings/legal.html` |
-| Size | 768 KB |
+| Files | 176 `.mo` class sources + `Buildings/legal.html` |
+| Size | 1.6 MB |
 
 Paths mirror upstream exactly, so verifying this directory is one command against a fresh clone
 rather than a reading of 132 entries:
@@ -38,8 +38,38 @@ cd third_party/modelica-buildings-cdl && \
   find . -type f | while read -r f; do diff -q "$f" "/tmp/mb/$f" || echo "DIFFERS: $f"; done
 ```
 
-The corpus is the 132 CDL classes reachable from the 46 G36 fixtures in
-`crates/oce-cxf/tests/fixtures/g36/`, not the whole library.
+The corpus contains the 132 elementary CDL classes reachable from the 46 G36 fixtures plus the
+44 G36 and type classes having a mirror-pathed document under `cxf/`. This exact criterion keeps
+the structural oracle's class resolution and conditional declarations locally reproducible
+without vendoring the whole library. The one-command pin verification above covers both sets.
+
+## Generated CXF structural oracle
+
+`cxf/` contains 44 machine translations of the vendored Modelica sources. They were generated
+with `modelica-json` commit `85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb` (master, cloned
+2026-07-28) under Node v26.5.0, from the Buildings commit recorded above. The translations are
+derived copies under the same upstream license; they are test data and are not compiled or
+packaged in an `oce-*` crate.
+
+For each of the 31 upstream classes named by
+`crates/oce-cxf/tests/fixtures/g36/structural_oracle_manifest.json`, generation used:
+
+```bash
+MODELICAPATH=<directory-containing-Buildings> node app.js \
+  -f <absolute-path-to-class.mo> -o cxf -m cdl -d <output-directory> -p -l error
+```
+
+To verify the checked-in translations, check out the two recorded pins, regenerate all manifest
+classes into a temporary directory with that command, and compare the trees:
+
+```bash
+git -C /tmp/modelica-buildings checkout a131864e4c4df22ebcd52bb8da439de0087ac365
+git -C /tmp/modelica-json checkout 85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb
+diff -r third_party/modelica-buildings-cdl/cxf /tmp/regenerated-cxf
+```
+
+The 44 checked-in documents were byte-compared with a fresh regeneration at exactly those pins
+on 2026-07-28.
 
 ## Why the files are unmodified
 
@@ -56,6 +86,13 @@ broken the `diff` above that makes this directory checkable at all.
 
 ## Who reads it
 
-`crates/oce-cxf/tests/fixture_port_order.rs`, and nothing else. It derives each class's port
-declaration order from these sources at test time and checks that every fixture lists its ports in
-that order. See `TESTING.md` for what that gate does and does not prove.
+Two conformance audits, and nothing else:
+
+- `crates/oce-cxf/tests/fixture_port_order.rs` derives each class's port declaration
+  order from these sources at test time and checks that every fixture lists its ports in
+  that order.
+- `crates/oce-cxf/tests/fixture_structural_oracle.rs` reads the `cxf/` documents as the
+  structural oracle and these `.mo` sources for class existence and conditional-component
+  declarations when resolving each fixture's specialization.
+
+See `TESTING.md` for what those gates do and do not prove.
