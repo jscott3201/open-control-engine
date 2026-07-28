@@ -13,11 +13,13 @@
 //! That is not a hypothetical about malformed input. The reference CDL toolchain, `modelica-json`,
 //! renders a class's connectors sorted **alphabetically by label** rather than in declaration
 //! order. Its `S231:hasInput` array for `CDL.Reals.PID` — the very key this resolver reads — lists
-//! `u_m` before `u_s`, while `Reals/PID.mo` declares `u_s` first. Nine registered class sides
-//! reorder under an alphabetical sort without changing their kind sequence, so the kind guard is
-//! blind to exactly the documents a conforming generator produces: eight on the input side, and
-//! `Integers.Change` on the output side, whose `y, up, down` are all `Boolean` and render as
-//! `down, up, y` — a rising edge reported on the falling-edge wire.
+//! `u_m` before `u_s`, while `Reals/PID.mo` declares `u_s` first. That sort is case-insensitive,
+//! measured from the reference output rather than assumed. Twelve registered class sides reorder
+//! under it without changing their kind sequence, so the kind guard is blind to exactly the
+//! documents a conforming generator produces: eleven input sides, and `Integers.Change` on the
+//! output side, whose `y, up, down` are all `Boolean` and render as `down, up, y` — a rising edge
+//! reported on the falling-edge wire. `oce_blocks::port_names` names all twelve, and its
+//! `every_silently_exposed_side_carries_names` test recomputes the set rather than listing it.
 //!
 //! So the answer is to **bind**, not to reject. Ordering is a renderer's choice; identity is not.
 //! When a document names its ports the way the class does, the ports are permuted into signature
@@ -29,8 +31,9 @@
 //! that is the common, correct case rather than a failure:
 //!
 //! - this engine's own exporter mints `…​.in0` / `…​.out0`, which name positions, not ports;
-//! - 29 registered classes declare no names at all (`oce_blocks::port_names`), width-driven classes
-//!   among them, because a flattened `u[nin]` has no 1:1 correspondence to record;
+//! - 28 registered classes declare no names at all (`oce_blocks::port_names`) — width-driven ones,
+//!   because a flattened `u[nin]` has no 1:1 correspondence to record, plus the three
+//!   `Sources.TimeTable` classes;
 //! - hand-built models never went through a document.
 //!
 //! A *partial* match is the one shape that is neither: a document that names most of a class's

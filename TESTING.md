@@ -260,7 +260,9 @@ choice; identity is not.
 Binding applies only when every port IRI names a declared port. A document naming none of them —
 this engine's own exports mint `.in0`/`.out0` — binds positionally, exactly as before. A document
 naming *some* is reported as `port-name-mismatch`, because it follows no convention that can be
-read safely either way. The 29 classes with no declared names always bind positionally.
+read safely either way. The 28 classes with no declared names always bind positionally; they are
+the width-driven ones plus the three `Sources.TimeTable` classes, where a flattened array connector
+has no 1:1 name correspondence to record.
 
 **The scanner is asserted against its own silence**, because "found nothing" is how every scope
 bug in this extractor's history presented itself. A class that parses to zero ports is a hard

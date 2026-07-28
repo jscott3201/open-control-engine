@@ -15,8 +15,6 @@ use oce_model::ParamTable;
 /// count alone: a class silently joining this set loses its nominal guard, which is exactly the
 /// direction that fails open.
 const EXPECTED_UNNAMED: &[&str] = &[
-    // No vendored upstream source and present in no fixture, so no name for it could be falsified.
-    "CDL.Logical.TrueHoldWithReset",
     // Upstream declares an array output `y[nout]`; the registry carries a single output, so no
     // scalar name is truthful here.
     "CDL.Integers.Sources.TimeTable",
@@ -50,9 +48,10 @@ fn every_named_class_matches_its_registry_signature_arity() {
         checked += 1;
     }
     assert_eq!(
-        checked, 104,
-        "named-class count changed. It is exactly the set the vendored-source audit can reach; \
-         growing it adds names nothing in this repository can contradict."
+        checked, 105,
+        "named-class count changed. 104 of these are reachable by the vendored-source audit; the \
+         105th is TrueHoldWithReset, which no `.mo` exists for. Growing the set past that adds \
+         names nothing in this repository can contradict."
     );
 }
 
@@ -172,37 +171,61 @@ fn lookup_finds_named_classes_and_rejects_unknown_ones() {
     );
 }
 
-/// The named table agrees with the signature on port KIND ordering for a spot-checked severe case.
+/// Every class side that reorders under the reference generator's sort without changing its kind
+/// sequence carries names — computed, not listed.
 ///
-/// `Reals.PID` is the reason this table exists: both inputs are Real, so the kind guard cannot see
-/// a swap, and a swap inverts the control action.
+/// The reference toolchain sorts port labels **case-insensitively**; that is measured from its own
+/// output, where all 50 multi-input classes agree with a case-insensitive ordering and only 46 with
+/// a case-sensitive one. The distinction is not academic: an earlier revision of this analysis used
+/// a case-sensitive sort and got the exposed set wrong in both directions, dropping the three
+/// `Psychrometrics.*_TDryBulPhi` classes and wrongly including `Reals.Derivative`.
+///
+/// Deriving the set here rather than pinning a hand-written list means a class that *becomes*
+/// exposed — by a rename, or by joining the registry — is caught instead of quietly omitted.
 #[test]
-fn severe_same_kind_classes_are_named() {
-    for (class_path, inputs) in [
-        ("CDL.Reals.PID", &["u_s", "u_m"][..]),
-        ("CDL.Logical.Latch", &["u", "clr"][..]),
-        ("CDL.Logical.Toggle", &["u", "clr"][..]),
-        ("CDL.Reals.Derivative", &["k", "T", "u"][..]),
-        ("CDL.Reals.Line", &["x1", "f1", "x2", "f2", "u"][..]),
-        ("CDL.Logical.Proof", &["u_s", "u_m"][..]),
-        ("CDL.Logical.TimerAccumulating", &["u", "reset"][..]),
-        ("CDL.Integers.OnCounter", &["trigger", "reset"][..]),
-    ] {
-        let named = port_names(class_path).unwrap_or_else(|| {
-            panic!(
-                "{class_path} reorders under an alphabetical sort without \
-                                       changing its kind sequence and must carry names"
-            )
-        });
-        assert_eq!(named.inputs, inputs, "{class_path} input names");
-        let reg = lookup(class_path).expect("registered");
+fn every_silently_exposed_side_carries_names() {
+    let reorders_silently = |names: &[&str], kinds: &[PortKind]| -> bool {
+        if names.len() < 2 {
+            return false;
+        }
+        let mut sorted: Vec<(&str, PortKind)> =
+            names.iter().copied().zip(kinds.iter().copied()).collect();
+        sorted.sort_by_key(|(n, _)| n.to_ascii_lowercase());
+        let reordered = sorted.iter().map(|(n, _)| *n).ne(names.iter().copied());
+        let kinds_unchanged = sorted.iter().map(|(_, k)| *k).eq(kinds.iter().copied());
+        reordered && kinds_unchanged
+    };
+
+    let mut exposed: Vec<String> = Vec::new();
+    for entry in all_port_names() {
+        let reg = lookup(entry.class_path).expect("registered");
         let probe = (reg.make)(&ParamTable::default());
-        let kinds = probe.resolved_signature();
-        let first = kinds.inputs.first().copied();
-        assert!(
-            kinds.inputs.iter().all(|k| Some(*k) == first),
-            "{class_path} was recorded as same-kind but its signature kinds differ: {:?}",
-            kinds.inputs.iter().collect::<Vec<&PortKind>>()
-        );
+        let sig = probe.resolved_signature();
+        if reorders_silently(entry.inputs, &sig.inputs) {
+            exposed.push(format!("{} inputs", entry.class_path));
+        }
+        if reorders_silently(entry.outputs, &sig.outputs) {
+            exposed.push(format!("{} outputs", entry.class_path));
+        }
     }
+    exposed.sort();
+
+    let expected = [
+        "CDL.Integers.Change outputs",
+        "CDL.Integers.OnCounter inputs",
+        "CDL.Logical.Latch inputs",
+        "CDL.Logical.Proof inputs",
+        "CDL.Logical.TimerAccumulating inputs",
+        "CDL.Logical.Toggle inputs",
+        "CDL.Logical.TrueHoldWithReset inputs",
+        "CDL.Psychrometrics.DewPoint_TDryBulPhi inputs",
+        "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi inputs",
+        "CDL.Psychrometrics.WetBulb_TDryBulPhi inputs",
+        "CDL.Reals.Line inputs",
+        "CDL.Reals.PID inputs",
+    ];
+    assert_eq!(
+        exposed, expected,
+        "the set of sides that reorder silently under the reference generator's sort changed"
+    );
 }

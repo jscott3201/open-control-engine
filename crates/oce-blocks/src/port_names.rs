@@ -10,12 +10,16 @@
 //!
 //! That is not a hypothetical. The reference CDL toolchain, `modelica-json`, renders a class's
 //! connectors sorted **alphabetically by label** rather than in declaration order: its own
-//! `CDL.Reals.PID` lists `u_m` before `u_s`, where the Modelica source declares `u_s` first. Nine
-//! class sides reorder under an alphabetical sort without changing their kind sequence, so the kind
-//! check cannot see them. Eight are input sides — `Reals.PID`, `Reals.Derivative`, `Reals.Line`,
-//! `Logical.Latch`, `Logical.Toggle`, `Logical.Proof`, `Logical.TimerAccumulating`, and
-//! `Integers.OnCounter` — and one is an output side, `Integers.Change`, whose `y, up, down` are all
-//! `Boolean`.
+//! `CDL.Reals.PID` lists `u_m` before `u_s`, where the Modelica source declares `u_s` first.
+//!
+//! That sort is **case-insensitive** — measured, not assumed: of the 50 multi-input classes in the
+//! reference output, 50 are consistent with a case-insensitive ordering and only 46 with a
+//! case-sensitive one, and the four that distinguish them settle it. Twelve class sides reorder
+//! under it without changing their kind sequence, so the kind check cannot see any of them. Eleven
+//! are input sides — `Reals.PID`, `Reals.Line`, `Logical.Latch`, `Logical.Toggle`, `Logical.Proof`,
+//! `Logical.TimerAccumulating`, `Logical.TrueHoldWithReset`, `Integers.OnCounter`, and the three
+//! `Psychrometrics.*_TDryBulPhi` classes — and one is an output side, `Integers.Change`, whose
+//! `y, up, down` are all `Boolean`. Every one of the twelve carries names here.
 //!
 //! Names give the resolver something to bind against, so a document that orders its ports
 //! differently can be **wired correctly** rather than rejected. Ordering is a renderer's choice;
@@ -23,7 +27,7 @@
 //!
 //! # What is deliberately absent
 //!
-//! [`port_names`] returns `None` for 29 of the 133 registered classes, and absence means "bind
+//! [`port_names`] returns `None` for 28 of the 133 registered classes, and absence means "bind
 //! positionally, as before" — never "this class has no ports":
 //!
 //! - **25 width-driven classes.** Upstream declares one array connector (`u[nin]`) where this
@@ -31,16 +35,21 @@
 //! - **The three `Sources.TimeTable` classes.** Upstream declares an array output `y[nout]` while
 //!   the registry carries a single output, so naming that port `y` would assert a scalar interface
 //!   upstream does not have.
-//! - **`CDL.Logical.TrueHoldWithReset`.** It is the one registered class with no vendored upstream
-//!   source and it appears in no fixture, so nothing in this repository could contradict a name
-//!   written for it. Unfalsifiable data is what the port-order audit exists to eliminate, so it
-//!   gets none.
+//!
+//! `CDL.Logical.TrueHoldWithReset` is named but is the one entry nothing here can check: it is
+//! absent from Buildings master, so no vendored `.mo` exists and `fixture_port_order` skips it. An
+//! earlier revision left it unnamed on the principle that unfalsifiable data is what that audit
+//! exists to eliminate. That was the wrong trade — omission is not neutral. Its `u` and `clr` are
+//! both `Boolean` and `clr` sorts first, so leaving it unnamed *guarantees* the silent inversion
+//! this module exists to stop. Its names come from the CDL specification's §7.6 catalog, the oracle
+//! `logical_timing.rs` already records for its behaviour, and from `Latch` and `Toggle`, which have
+//! the identical shape and which upstream spells `u`, `clr`.
 //!
 //! # What checks these names, and what does not
 //!
 //! `crates/oce-cxf/tests/fixture_port_order.rs` compares this table against port names derived from
-//! vendored upstream Modelica source, and the 104 entries here are exactly the classes that audit
-//! can reach. Be precise about what that buys: these names were transcribed from CDL, so the
+//! vendored upstream Modelica source. It reaches 104 of the 105 entries here; the exception is
+//! `TrueHoldWithReset`, above. Be precise about what that buys: these names were transcribed from CDL, so the
 //! comparison detects **drift** between the two artifacts — it is not an independent oracle, and it
 //! would not catch a name that was wrong in both places from the start.
 //!
@@ -327,6 +336,17 @@ static PORT_NAMES: &[ClassPortNames] = &[
     ClassPortNames {
         class_path: "CDL.Logical.TrueFalseHold",
         inputs: &["u"],
+        outputs: &["y"],
+    },
+    // The one entry the vendored-source audit cannot reach: this class is absent from Buildings
+    // master, so there is no `.mo` to compare against (see `logical_timing.rs`, which records the
+    // CDL specification's §7.6 catalog as its oracle). Named anyway, because leaving it out is not
+    // neutral — `u`/`clr` are both Boolean and `clr` sorts first, so an unnamed
+    // `TrueHoldWithReset` is exactly the silent inversion this module exists to stop, and it is
+    // the same shape as `Latch` and `Toggle`, which upstream spells `u`, `clr`.
+    ClassPortNames {
+        class_path: "CDL.Logical.TrueHoldWithReset",
+        inputs: &["u", "clr"],
         outputs: &["y"],
     },
     ClassPortNames {
