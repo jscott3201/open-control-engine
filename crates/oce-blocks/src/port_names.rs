@@ -10,10 +10,12 @@
 //!
 //! That is not a hypothetical. The reference CDL toolchain, `modelica-json`, renders a class's
 //! connectors sorted **alphabetically by label** rather than in declaration order: its own
-//! `CDL.Reals.PID` lists `u_m` before `u_s`, where the Modelica source declares `u_s` first. Eight
-//! classes reorder under an alphabetical sort without changing their kind sequence, so the kind
-//! check cannot see them — `Reals.PID`, `Reals.Derivative`, `Reals.Line`, `Logical.Latch`,
-//! `Logical.Toggle`, `Logical.Proof`, `Logical.TimerAccumulating`, and `Integers.OnCounter`.
+//! `CDL.Reals.PID` lists `u_m` before `u_s`, where the Modelica source declares `u_s` first. Nine
+//! class sides reorder under an alphabetical sort without changing their kind sequence, so the kind
+//! check cannot see them. Eight are input sides — `Reals.PID`, `Reals.Derivative`, `Reals.Line`,
+//! `Logical.Latch`, `Logical.Toggle`, `Logical.Proof`, `Logical.TimerAccumulating`, and
+//! `Integers.OnCounter` — and one is an output side, `Integers.Change`, whose `y, up, down` are all
+//! `Boolean`.
 //!
 //! Names give the resolver something to bind against, so a document that orders its ports
 //! differently can be **wired correctly** rather than rejected. Ordering is a renderer's choice;

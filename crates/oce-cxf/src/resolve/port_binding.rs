@@ -13,9 +13,11 @@
 //! That is not a hypothetical about malformed input. The reference CDL toolchain, `modelica-json`,
 //! renders a class's connectors sorted **alphabetically by label** rather than in declaration
 //! order. Its `S231:hasInput` array for `CDL.Reals.PID` — the very key this resolver reads — lists
-//! `u_m` before `u_s`, while `Reals/PID.mo` declares `u_s` first. Eight registered classes reorder
-//! under an alphabetical sort without changing their kind sequence, so the kind guard is blind to
-//! exactly the documents a conforming generator produces.
+//! `u_m` before `u_s`, while `Reals/PID.mo` declares `u_s` first. Nine registered class sides
+//! reorder under an alphabetical sort without changing their kind sequence, so the kind guard is
+//! blind to exactly the documents a conforming generator produces: eight on the input side, and
+//! `Integers.Change` on the output side, whose `y, up, down` are all `Boolean` and render as
+//! `down, up, y` — a rising edge reported on the falling-edge wire.
 //!
 //! So the answer is to **bind**, not to reject. Ordering is a renderer's choice; identity is not.
 //! When a document names its ports the way the class does, the ports are permuted into signature

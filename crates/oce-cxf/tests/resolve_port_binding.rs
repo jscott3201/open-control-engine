@@ -79,6 +79,26 @@ fn import(doc: &Value) -> Result<ModelGraph, CxfError> {
     import_cxf(&bytes, &ResolveOptions::default()).map(|(g, _)| g)
 }
 
+/// Every field of the resolved graph, via `Debug`.
+///
+/// Deliberately exhaustive rather than a summary of the parts under test: blocks carry parameters
+/// and connectors carry value types, attributes, declaration order and source IRIs, and a binding
+/// bug that moved any of those would go unseen by a render that printed only port vectors.
+fn render_full(g: &ModelGraph) -> String {
+    let mut out = String::new();
+    for b in &g.blocks {
+        out.push_str(&format!("B {:?}\n", b));
+    }
+    for c in &g.connectors {
+        out.push_str(&format!("C {:?}\n", c));
+    }
+    for c in &g.connections {
+        out.push_str(&format!("W {:?}\n", c));
+    }
+    out.push_str(&format!("E {:?}\n", g.external_inputs));
+    out
+}
+
 /// The parameter value of the `Constant` feeding PID input `port_idx`.
 ///
 /// Following the wire back to its source constant is what makes this a wiring assertion rather
@@ -180,13 +200,11 @@ fn name_binding_is_deterministic_across_imports() {
     let doc = document(CDL, ALPHABETICAL);
     let a = import(&doc).expect("resolves");
     let b = import(&doc).expect("resolves");
-    let render = |g: &ModelGraph| {
-        g.blocks
-            .iter()
-            .map(|blk| format!("{}:{:?}/{:?}", blk.class_iri, blk.inputs, blk.outputs))
-            .collect::<Vec<String>>()
-    };
-    assert_eq!(render(&a), render(&b));
+    assert_eq!(
+        render_full(&a),
+        render_full(&b),
+        "re-importing identical bytes must yield an identical graph in every field"
+    );
 }
 
 /// A real G36 fixture, with one block's port array permuted: the resolved model must be identical.
@@ -222,20 +240,104 @@ fn permuting_a_real_fixtures_port_array_resolves_to_the_same_model() {
     assert_eq!(ports.len(), 2, "Latch has exactly two inputs");
     ports.swap(0, 1);
 
-    let render = |doc: &Value| {
-        let g = import(doc).expect("resolves");
-        let mut out = String::new();
-        for b in &g.blocks {
-            out.push_str(&format!("{} {:?} {:?}\n", b.class_iri, b.inputs, b.outputs));
-        }
-        for c in &g.connections {
-            out.push_str(&format!("{:?}->{:?}\n", c.from, c.to));
-        }
-        out
-    };
+    let render = |doc: &Value| render_full(&import(doc).expect("resolves"));
     assert_eq!(
         render(&original),
         render(&permuted),
         "a fixture rendered with its Latch inputs in the other order must resolve to the same model"
     );
+}
+
+/// `CDL.Integers.Change` with its OUTPUT array permuted resolves to the same model.
+///
+/// Output binding had no end-to-end coverage before this test: the whole output side could be
+/// disabled and 660 tests still passed, because every case above exercises PID inputs and all 46
+/// fixtures list ports in declaration order.
+///
+/// `Integers.Change` is the output-side counterpart of `Reals.PID`. It declares `y, up, down`, all
+/// three `Boolean`, so an alphabetical render — `down, up, y` — permutes them without changing the
+/// kind sequence and `check_ports_dir` cannot see it. Read positionally, a rising edge is reported
+/// on the falling-edge wire. It is the only registered class whose *outputs* reorder silently;
+/// `Logical.Timer`, `Logical.TimerAccumulating` and `Reals.Sources.CalendarTime` also reorder but
+/// change kind sequence, so those are already rejected.
+#[test]
+fn permuting_an_output_array_resolves_to_the_same_model() {
+    let doc = |order: [&str; 3]| {
+        let port = |n: &str| format!("http://example.org#M.chg.{n}");
+        json!({
+          "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+          "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": [
+                { "@id": "http://example.org#M.src" }, { "@id": "http://example.org#M.chg" },
+                { "@id": "http://example.org#M.onY" }, { "@id": "http://example.org#M.onUp" },
+                { "@id": "http://example.org#M.onDown" } ] },
+
+            { "@id": "http://example.org#M.src",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+              "S231:hasParameter": { "@id": "http://example.org#M.src.k" },
+              "S231:hasOutput": { "@id": "http://example.org#M.src.y" } },
+            { "@id": "http://example.org#M.src.k",
+              "S231:value": { "@value": "3", "@type": "http://www.w3.org/2001/XMLSchema#integer" } },
+            { "@id": "http://example.org#M.src.y", "@type": "S231:IntegerOutput",
+              "S231:isOfDataType": { "@id": "S231:Integer" },
+              "S231:isConnectedTo": { "@id": "http://example.org#M.chg.u" } },
+
+            { "@id": "http://example.org#M.chg",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Change",
+              "S231:hasInput": { "@id": "http://example.org#M.chg.u" },
+              "S231:hasOutput": [
+                { "@id": port(order[0]) }, { "@id": port(order[1]) }, { "@id": port(order[2]) } ] },
+            { "@id": "http://example.org#M.chg.u", "@type": "S231:IntegerInput",
+              "S231:isOfDataType": { "@id": "S231:Integer" } },
+            // Each output drives a distinct sink, so a permutation that reached the model would
+            // change which sink each edge lands on, not merely the order of a vector.
+            { "@id": port("y"), "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" },
+              "S231:isConnectedTo": { "@id": "http://example.org#M.onY.u" } },
+            { "@id": port("up"), "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" },
+              "S231:isConnectedTo": { "@id": "http://example.org#M.onUp.u" } },
+            { "@id": port("down"), "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" },
+              "S231:isConnectedTo": { "@id": "http://example.org#M.onDown.u" } },
+
+            { "@id": "http://example.org#M.onY",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInput": { "@id": "http://example.org#M.onY.u" },
+              "S231:hasOutput": { "@id": "http://example.org#M.onY.y" } },
+            { "@id": "http://example.org#M.onY.u", "@type": "S231:BooleanInput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } },
+            { "@id": "http://example.org#M.onY.y", "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } },
+
+            { "@id": "http://example.org#M.onUp",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInput": { "@id": "http://example.org#M.onUp.u" },
+              "S231:hasOutput": { "@id": "http://example.org#M.onUp.y" } },
+            { "@id": "http://example.org#M.onUp.u", "@type": "S231:BooleanInput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } },
+            { "@id": "http://example.org#M.onUp.y", "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } },
+
+            { "@id": "http://example.org#M.onDown",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInput": { "@id": "http://example.org#M.onDown.u" },
+              "S231:hasOutput": { "@id": "http://example.org#M.onDown.y" } },
+            { "@id": "http://example.org#M.onDown.u", "@type": "S231:BooleanInput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } },
+            { "@id": "http://example.org#M.onDown.y", "@type": "S231:BooleanOutput",
+              "S231:isOfDataType": { "@id": "S231:Boolean" } }
+          ]
+        })
+    };
+    let declared = import(&doc(["y", "up", "down"])).expect("resolves");
+    let alphabetical = import(&doc(["down", "up", "y"])).expect("resolves");
+    assert_eq!(
+        render_full(&declared),
+        render_full(&alphabetical),
+        "an alphabetically rendered Integers.Change output list must resolve to the same model"
+    );
+    // Not vacuous: the permutation really is non-trivial on this class.
+    assert_ne!(["y", "up", "down"], ["down", "up", "y"]);
 }
