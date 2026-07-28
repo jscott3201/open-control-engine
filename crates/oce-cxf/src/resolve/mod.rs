@@ -142,6 +142,43 @@ fn value_type_of_datatype(iri: &str) -> Option<ValueType> {
     }
 }
 
+/// Re-anchor one `isConnectedTo` edge on its driving end, returning `(driver, driven)`.
+///
+/// Orientation is not a property of the document. CXF §8.2 gives `connectedTo` the domain
+/// *(OutputConnector, InputConnector)* and the range *(InputConnector, OutputConnector)* — either
+/// end may be the subject — and CDL states that the order of the arguments in a `connect` statement
+/// does not matter. Producers preserve Modelica source order verbatim, so a class authored
+/// `connect(dst, src)` yields an input-subject edge: `modelica-json` emits 11 of the 13 edges in
+/// `Economizers.Subsequences.Modulations.Reliefs` that way. Anchoring here lets the boundary
+/// dispatch and Step 10 reason about a single canonical orientation.
+///
+/// A pair that is invalid in **both** orientations (output→output, input→input, or an endpoint that
+/// resolves to no connector) is returned unchanged, so Step 10 still reports it. This widens what
+/// the resolver accepts to what the standard permits; it relaxes no check.
+fn orient_edge<'a>(
+    source: &'a str,
+    target: &'a str,
+    boundary_in: &HashSet<&str>,
+    boundary_out: &HashSet<&str>,
+    conn_of_iri: &HashMap<&str, ConnectorId>,
+    connectors: &[Connector],
+) -> (&'a str, &'a str) {
+    // A composite boundary port settles the orientation on its own — an input drives, an output is
+    // driven. Boundary ports are excluded from `conn_of_iri` by Step 5a, so they cannot be resolved
+    // to a `Dir` and MUST be decided first.
+    if boundary_in.contains(source) || boundary_out.contains(target) {
+        return (source, target);
+    }
+    if boundary_in.contains(target) || boundary_out.contains(source) {
+        return (target, source);
+    }
+    let dir = |iri: &str| conn_of_iri.get(iri).map(|c| connectors[c.0 as usize].dir);
+    match (dir(source), dir(target)) {
+        (Some(Dir::In), Some(Dir::Out)) => (target, source),
+        _ => (source, target),
+    }
+}
+
 /// Resolve a CXF document into the flat [`ModelGraph`] (doc 04 §7.1). See the module docs for the
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
@@ -491,7 +528,6 @@ pub(crate) fn resolve(
             }
             continue;
         }
-        let src_is_boundary_in = boundary_in.contains(source);
         for tref in node.is_connected_to.iter() {
             let target = tref.id.as_str();
             if specialization.is_inactive(target) {
@@ -504,7 +540,17 @@ pub(crate) fn resolve(
                 );
                 continue;
             }
-            if src_is_boundary_in {
+            // Both endpoints have now been screened for inactivity in their authored roles; the
+            // orientation swap below only relabels which is the driver.
+            let (source, target) = orient_edge(
+                source,
+                target,
+                &boundary_in,
+                &boundary_out,
+                &conn_of_iri,
+                &connectors,
+            );
+            if boundary_in.contains(source) {
                 // boundary input → child input: elide; record external + attach boundary IRI (AD-2).
                 match conn_of_iri.get(target).copied() {
                     Some(to) if connectors[to.0 as usize].dir != Dir::In => {
