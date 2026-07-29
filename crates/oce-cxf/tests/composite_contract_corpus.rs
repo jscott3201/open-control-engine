@@ -234,6 +234,24 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )],
         ),
         (
+            "rejected/array_connector.jsonld",
+            vec![error_with_subject(
+                DiagCode::NonSubsetConstruct,
+                "http://example.org#M.c2.u",
+                "composite/array-connector: array-valued connector nodes are not supported; use \
+                 per-element connectors named `name_1` through `name_n`",
+            )],
+        ),
+        (
+            "rejected/array_instance.jsonld",
+            vec![error_with_subject(
+                DiagCode::NonSubsetConstruct,
+                "http://example.org#M.c2",
+                "composite/array-instance: array-valued block-instance nodes are not supported; \
+                 use per-element instances named `name_1` through `name_n`",
+            )],
+        ),
+        (
             "rejected/replaceable.jsonld",
             vec![error_with_subject(
                 DiagCode::UnresolvedPolymorphism,

@@ -1,4 +1,4 @@
-//! Composite-subset contract-rule identities and the published rule-catalog generator.
+//! CXF-lowering-subset contract-rule identities and the published rule-catalog generator.
 //!
 //! Every composite-subset CONTRACT rejection emitted by `composite.rs` carries a stable,
 //! machine-readable rule identity by convention, without extending the shared
@@ -81,14 +81,30 @@ pub(super) const ARRAY_PARAMETER: CompositeRule = CompositeRule {
     summary: "array-valued composite parameters are outside the CXF lowering subset",
 };
 
-/// Every composite-subset contract rule, in catalog publication order.
+/// `composite/array-connector`: active array-valued connectors are outside the subset.
+pub(super) const ARRAY_CONNECTOR: CompositeRule = CompositeRule {
+    id: "array-connector",
+    code: DiagCode::NonSubsetConstruct,
+    summary: "active array-valued connector nodes require per-element encoding",
+};
+
+/// `composite/array-instance`: active array-valued block instances are outside the subset.
+pub(super) const ARRAY_INSTANCE: CompositeRule = CompositeRule {
+    id: "array-instance",
+    code: DiagCode::NonSubsetConstruct,
+    summary: "active array-valued block-instance nodes require per-element encoding",
+};
+
+/// Every CXF-lowering-subset contract rule, in catalog publication order.
 #[cfg(test)]
-pub(super) const COMPOSITE_RULES: [CompositeRule; 5] = [
+pub(super) const COMPOSITE_RULES: [CompositeRule; 7] = [
     ROOT_COUNT,
     CONTAINS_CYCLE,
     REPLACEABLE,
     BANNED_MODELICA_KEY,
     ARRAY_PARAMETER,
+    ARRAY_CONNECTOR,
+    ARRAY_INSTANCE,
 ];
 
 /// Filesystem path of the checked-in catalog artifact, used by `UPDATE_EXPECT` re-blessing.

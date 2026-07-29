@@ -35,6 +35,7 @@ use crate::dto::{CxfDocument, Node};
 use crate::ground::{ParamScope, ground_value};
 use crate::{CxfError, bridge};
 
+mod array_nodes;
 mod attrs;
 mod composite;
 mod composite_rules;
@@ -150,6 +151,7 @@ pub(crate) fn resolve(
     }
 
     let specialization = specialize(doc, &by_id, &mut diags);
+    array_nodes::reject_unsupported(doc, &specialization, &mut diags);
     let lowered = lower(doc, &by_id, &specialization, &mut diags);
     let doc = &lowered.doc;
     let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());

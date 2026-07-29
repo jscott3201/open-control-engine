@@ -23,5 +23,15 @@
     "diag_code": "non-subset-construct",
     "message_prefix": "composite/array-parameter: ",
     "summary": "array-valued composite parameters are outside the CXF lowering subset"
+  },
+  "array-connector": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/array-connector: ",
+    "summary": "active array-valued connector nodes require per-element encoding"
+  },
+  "array-instance": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/array-instance: ",
+    "summary": "active array-valued block-instance nodes require per-element encoding"
   }
 }
