@@ -31,12 +31,17 @@ Enumerate the input domain and hit every boundary and degenerate case:
   `rem`, `sign(0) == 0`, division by zero, `sqrt` of a negative.
 - **Empty / degenerate structure:** empty arrays, single-element arrays, zero connections,
   in-degree 0 vs 1 vs >1, self-loops, duplicate ids, missing required fields.
-- **Malformed input must produce a typed diagnostic, never a panic.** One known gap, so state it
-  rather than assume it: neither the `oce-expr` parser nor its evaluator carries a nesting-depth
-  guard, so deeply nested input can exhaust the thread stack rather than return a diagnostic.
-  Totality holds over the value domain, not over arbitrary depth. Assert the *specific*
-  `DiagCode` / error variant, not merely "an error occurred." Parsers and the resolver are
-  total functions over arbitrary bytes: fuzz-grade hostility is the expectation.
+- **Malformed input must produce a typed diagnostic, never a panic.** Expression nesting and
+  construction are bounded by `MAX_NESTING_DEPTH` / `MAX_EXPR_NODES`, returning the specific
+  `NestingTooDeep` / `ExpressionTooLarge` variant. Composite lowering is bounded by
+  `MAX_COMPOSITE_NESTING_DEPTH`, returning `MalformedDocument`. These limits intentionally
+  narrow acceptance: expressions whose parse nesting exceeds 64 guarded entries (measured at 31
+  nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
+  larger than 4096 AST nodes, and composites deeper than 64 are rejected even if a
+  shallower/smaller input of the same shape is accepted. One known gap, so state it rather than
+  assume it: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
+  depth-bounded. Assert the *specific* `DiagCode` / error variant, not merely "an error occurred."
+  Fuzz-grade hostility is the expectation within the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational
@@ -128,8 +133,10 @@ A PR is **not done** until, for every unit of behavior it adds or changes:
 2. At least one golden where there is a meaningful output artifact (graph, trace, diagnostics).
 3. An oracle cross-check where a reference result exists.
 4. A determinism check where the code ingests, orders, or executes.
-5. Every error path asserts a **specific** typed variant / `DiagCode`, and **no input causes a
-   panic** (parsers/resolvers are total over arbitrary bytes).
+5. Every error path asserts a **specific** typed variant / `DiagCode`. Expression parsing,
+   evaluation, and composite lowering reject over-limit depth/size with typed outcomes. One known
+   gap remains: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
+   depth-bounded.
 
 Reviewers reject PRs that add behavior with only happy-path tests. "I couldn't think of an edge
 case" is itself a finding to resolve, not a pass.

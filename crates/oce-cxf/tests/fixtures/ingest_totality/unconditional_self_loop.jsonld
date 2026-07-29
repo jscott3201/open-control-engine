@@ -1,0 +1,9 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@graph": [
+    { "@id": "http://example.org#top", "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#top.n0" } },
+    { "@id": "http://example.org#top.n0", "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#top.n0" } }
+  ]
+}

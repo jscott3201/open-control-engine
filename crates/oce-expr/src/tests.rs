@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
-use super::{EvalResult, ExprAst, ExprError, Scope, eval, eval_str, parse};
+use super::{
+    BinOp, EvalResult, ExprAst, ExprError, MAX_NESTING_DEPTH, Scope, eval, eval_str, parse,
+};
 
 /// A tiny linear-scan scope for tests.
 struct TestScope {
@@ -535,4 +537,18 @@ fn public_signatures_are_stable() {
     let _p: fn(&str) -> Result<ExprAst, ExprError> = parse;
     let _e: fn(&ExprAst, &dyn Scope) -> Result<EvalResult, ExprError> = eval;
     let _es: fn(&str, &dyn Scope) -> Result<EvalResult, ExprError> = eval_str;
+}
+
+#[test]
+fn hand_built_deep_ast_is_rejected_before_evaluation() {
+    let mut ast = ExprAst::Int(1);
+    for _ in 0..100 {
+        ast = ExprAst::Binary(BinOp::Add, Box::new(ast), Box::new(ExprAst::Int(1)));
+    }
+    assert_eq!(
+        eval(&ast, &TestScope::new(&[])).unwrap_err(),
+        ExprError::NestingTooDeep {
+            limit: MAX_NESTING_DEPTH
+        }
+    );
 }

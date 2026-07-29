@@ -1,7 +1,8 @@
 //! Tree-walking evaluator for the scalar CDL binding subset (`02` §7).
 //!
-//! Pure and total: every path returns `Ok` or a typed [`ExprError`] — never a panic, never an
-//! `unwrap` on a value. Integer arithmetic is checked (overflow → [`ExprError::DomainError`]
+//! Pure and total within the public AST-depth contract: every path returns `Ok` or a typed
+//! [`ExprError`] — never a panic, never an `unwrap` on a value. Integer arithmetic is checked
+//! (overflow → [`ExprError::DomainError`]
 //! rather than a debug-mode panic or a release-mode silent wrap). CDL numeric promotion (§7.1):
 //! `Integer op Integer → Integer` for `+ - *`; `/` is always `Real`; any `Real` operand promotes.
 //!

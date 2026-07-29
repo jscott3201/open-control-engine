@@ -70,20 +70,27 @@ pub(super) fn specialize(
 }
 
 fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashSet<String>) {
-    inactive.insert(node.id.clone());
-    for child in node
-        .has_input
-        .iter()
-        .chain(node.has_output.iter())
-        .chain(node.has_parameter.iter())
-        .chain(node.has_constant.iter())
-    {
-        inactive.insert(child.id.clone());
-    }
-    for child in node.contains_block.iter().map(|r| r.id.as_str()) {
-        inactive.insert(child.to_owned());
-        if let Some(child_node) = by_id.get(child).copied() {
-            mark_inactive(child_node, by_id, inactive);
+    let mut work = vec![node];
+    let mut visited = HashSet::new();
+    while let Some(node) = work.pop() {
+        if !visited.insert(node.id.clone()) {
+            continue;
+        }
+        inactive.insert(node.id.clone());
+        for child in node
+            .has_input
+            .iter()
+            .chain(node.has_output.iter())
+            .chain(node.has_parameter.iter())
+            .chain(node.has_constant.iter())
+        {
+            inactive.insert(child.id.clone());
+        }
+        for child in node.contains_block.iter().map(|r| r.id.as_str()) {
+            inactive.insert(child.to_owned());
+            if let Some(child_node) = by_id.get(child).copied() {
+                work.push(child_node);
+            }
         }
     }
 }

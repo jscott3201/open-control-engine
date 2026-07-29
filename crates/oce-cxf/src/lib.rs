@@ -51,8 +51,10 @@ mod tests;
 pub use dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
 pub use resolve::{ImportMode, ResolveOptions, ValidationReport};
 
-/// A CXF import/export error (typed; never a panic). Variants follow doc 04 §5; kept
-/// `#[non_exhaustive]` so resolver/exporter error variants can be added without breaking callers.
+/// A CXF import/export error. Ingest failures in bounded parser and composite-lowering paths are
+/// typed; composite boundary resolution still recurses per `isConnectedTo` hop without a depth
+/// bound. Variants follow doc 04 §5; kept `#[non_exhaustive]` so resolver/exporter error variants
+/// can be added without breaking callers.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum CxfError {

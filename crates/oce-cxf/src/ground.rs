@@ -9,8 +9,8 @@
 //! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`ParamScope`] of the instance's
 //!   already-ground parameters (so a later binding may reference an earlier one).
 //!
-//! Every failure path is a typed [`GroundErr`] — **never a panic, never an `unwrap`** on
-//! input-derived text. The resolver maps a `GroundErr` to a
+//! Every failure path, including over-limit expression depth or size, is a typed [`GroundErr`] —
+//! **never a panic, never an `unwrap`** on input-derived text. The resolver maps a `GroundErr` to a
 //! [`oce_diag::DiagCode::GroundingFailed`] diagnostic.
 
 use std::fmt;

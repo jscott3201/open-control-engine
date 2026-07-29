@@ -7,8 +7,8 @@
 //! built-in function set, and 1-D array literals/ranges/indexing/comprehensions).
 //! `oce-expr` parses
 //! opaque CDL binding text into an [`ExprAst`] and evaluates it against a [`Scope`] to a ground
-//! value. It is **Group A** (no store, no database), pure, total, and never reads the clock,
-//! connectors, or computation-affecting attributes (R11).
+//! value. It is **Group A** (no store, no database), pure, total through typed depth/size
+//! rejections, and never reads the clock, connectors, or computation-affecting attributes (R11).
 //!
 //! # Scalar subset
 //!
@@ -110,11 +110,35 @@ mod eval_comprehension_tests;
 mod lex;
 mod parse;
 #[cfg(test)]
+mod parse_tests;
+#[cfg(test)]
 mod tests;
 
-/// A parsed binding expression. Unknown functions are **not representable** — they are
+/// Maximum supported parser-entry and AST nesting depth.
+///
+/// The parser metric counts simultaneously live guarded parse entries; the AST metric counts a
+/// leaf at depth one. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is
+/// rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
+/// admits 31 nested parenthesis/brace/call levels or 62 unary signs, leaving roughly 6× stack
+/// headroom for the parenthesis case and about 16× headroom over the deepest measured real binding
+/// (AST depth four).
+pub const MAX_NESTING_DEPTH: usize = 64;
+
+/// Maximum number of AST nodes an expression parser may construct.
+///
+/// Construction is rejected before node 4097 is created. The resulting maximum drop depth is at
+/// most 4096, about 3.7× below the tightest measured safe recursive-drop size of 15,000 nodes on a
+/// 2 MiB debug thread.
+pub const MAX_EXPR_NODES: usize = 4096;
+
+/// A parsed binding expression. Parse-produced trees contain at most [`MAX_EXPR_NODES`] nodes and
+/// have nesting depth at most [`MAX_NESTING_DEPTH`]. Unknown functions are **not representable** —
 /// rejected during parse/resolve (R9). The still-deferred `02` §7.4 constructs (slicing,
 /// matrices) remain reserved via `#[non_exhaustive]`.
+///
+/// A host may hand-build a deeper tree, but then owns the consequences: `Drop`, `Clone`, and
+/// `Debug` recurse over that tree. [`eval()`] rejects trees deeper than the supported nesting
+/// limit before walking them.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum ExprAst {
@@ -422,6 +446,18 @@ pub trait Scope {
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum ExprError {
+    /// Parser-entry or AST nesting exceeded [`MAX_NESTING_DEPTH`].
+    #[error("expression nesting exceeds the supported depth ({limit})")]
+    NestingTooDeep {
+        /// The supported nesting limit.
+        limit: usize,
+    },
+    /// AST construction would exceed [`MAX_EXPR_NODES`].
+    #[error("expression exceeds the supported node count ({limit})")]
+    ExpressionTooLarge {
+        /// The supported AST node limit.
+        limit: usize,
+    },
     /// A parse failure with a human-readable detail.
     #[error("expression parse error: {0}")]
     Parse(String),
@@ -496,7 +532,9 @@ pub enum ExprError {
 /// # Errors
 /// Returns [`ExprError::Parse`] on malformed input and [`ExprError::UnsupportedFunction`] for a
 /// function outside the §7.7.2 set (the still-deferred constructs — array slicing, matrix
-/// syntax — are reported as parse errors).
+/// syntax — are reported as parse errors). Returns [`ExprError::NestingTooDeep`] when guarded
+/// parser entries or the completed AST exceed [`MAX_NESTING_DEPTH`], and
+/// [`ExprError::ExpressionTooLarge`] before constructing more than [`MAX_EXPR_NODES`] nodes.
 pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
     parse::parse(text)
 }
@@ -506,15 +544,68 @@ pub fn parse(text: &str) -> Result<ExprAst, ExprError> {
 ///
 /// # Errors
 /// Returns a typed [`ExprError`] on any evaluation failure (unknown identifier, type mismatch,
-/// domain violation, or division by zero).
+/// domain violation, or division by zero), including [`ExprError::NestingTooDeep`] when a
+/// hand-built AST exceeds [`MAX_NESTING_DEPTH`]. Parse-produced ASTs are already within both
+/// expression caps.
 pub fn eval(ast: &ExprAst, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
+    if nesting_depth(ast) > MAX_NESTING_DEPTH {
+        return Err(ExprError::NestingTooDeep {
+            limit: MAX_NESTING_DEPTH,
+        });
+    }
     eval::eval(ast, scope)
 }
 
 /// Convenience for the flattener: [`parse()`] then [`eval()`] in one shot.
 ///
 /// # Errors
-/// Returns a typed [`ExprError`] on parse or evaluation failure.
+/// Returns a typed [`ExprError`] on parse or evaluation failure, including the depth and node
+/// limits documented by [`parse()`] and [`eval()`].
 pub fn eval_str(text: &str, scope: &dyn Scope) -> Result<EvalResult, ExprError> {
     eval(&parse(text)?, scope)
+}
+
+/// Return the maximum node depth of an expression tree, with a leaf at depth one.
+///
+/// This walk is iterative so checking an untrusted hand-built tree does not itself recurse.
+#[must_use]
+pub fn nesting_depth(ast: &ExprAst) -> usize {
+    let mut maximum = 0;
+    let mut work = vec![(ast, 1)];
+    while let Some((node, depth)) = work.pop() {
+        maximum = maximum.max(depth);
+        match node {
+            ExprAst::Unary(_, child) => work.push((child, depth + 1)),
+            ExprAst::Binary(_, left, right) => {
+                work.push((left, depth + 1));
+                work.push((right, depth + 1));
+            }
+            ExprAst::Call(_, args) | ExprAst::ArrayLit(args) => {
+                work.extend(args.iter().map(|child| (child, depth + 1)));
+            }
+            ExprAst::Range { start, step, stop } => {
+                work.push((start, depth + 1));
+                if let Some(step) = step {
+                    work.push((step, depth + 1));
+                }
+                work.push((stop, depth + 1));
+            }
+            ExprAst::Index { base, indices } => {
+                work.push((base, depth + 1));
+                work.extend(indices.iter().map(|child| (child, depth + 1)));
+            }
+            ExprAst::Comprehension { body, iters } => {
+                work.push((body, depth + 1));
+                work.extend(iters.iter().map(|(_, child)| (child, depth + 1)));
+            }
+            ExprAst::Real(_)
+            | ExprAst::Int(_)
+            | ExprAst::Bool(_)
+            | ExprAst::Str(_)
+            | ExprAst::Ident(_)
+            | ExprAst::Const(_)
+            | ExprAst::EnumRef(_) => {}
+        }
+    }
+    maximum
 }

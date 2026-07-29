@@ -14,6 +14,12 @@ use super::composite_rules::{
 };
 use super::specialize::{Specialization, validate_g36_parameter_value};
 
+/// Maximum supported composite depth during `containsBlock` lowering.
+///
+/// The outermost composite is depth one. Real inputs measured at depth three or less; this cap
+/// bounds the recursive lowering walk well below the measured stack-exhaustion threshold.
+const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
+
 /// A CXF document lowered to the existing single-root, flat-child resolver shape.
 #[derive(Clone, Debug)]
 pub(super) struct LoweredCxf {
@@ -49,6 +55,7 @@ pub(super) fn lower(
     let mut path = Vec::new();
     collect_leaves(
         root,
+        1,
         Vec::new(),
         by_id,
         specialization,
@@ -210,6 +217,7 @@ fn unsupported_modelica_key(key: &str) -> bool {
 #[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     composite_id: &str,
+    depth: usize,
     parent_scope: Vec<(Arc<str>, EvalResult)>,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
@@ -219,6 +227,19 @@ fn collect_leaves(
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
 ) {
+    if depth > MAX_COMPOSITE_NESTING_DEPTH {
+        diags.push(
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite/nesting-too-deep: containsBlock nesting exceeds the supported \
+                     depth ({MAX_COMPOSITE_NESTING_DEPTH})"
+                ),
+            )
+            .with_subject(composite_id.to_owned()),
+        );
+        return;
+    }
     if !stack.insert(composite_id.to_owned()) {
         // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
         // closing with the re-entered id itself. Traversal follows `containsBlock` document
@@ -270,6 +291,7 @@ fn collect_leaves(
         if is_runtime_composite(node) {
             collect_leaves(
                 child,
+                depth + 1,
                 scope.clone(),
                 by_id,
                 specialization,
