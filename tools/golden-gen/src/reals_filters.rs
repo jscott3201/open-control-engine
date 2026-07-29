@@ -81,7 +81,7 @@ fn derivative_outputs(
     out
 }
 
-/// Build the Derivative recurrence goldens.
+/// Build the Derivative and LimitSlewRate recurrence goldens.
 pub fn goldens() -> Vec<Golden> {
     vec![
         constant_gain_filter(),

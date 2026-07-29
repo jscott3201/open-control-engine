@@ -3,7 +3,7 @@
   "scenario": "source_year_anomaly",
   "signal": "weekDay",
   "tier": "A",
-  "source": "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
+  "source": "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
   "value_kind": "Integer",
   "compare_regime": "exact (atoly=0)",
   "n_samples": 2,

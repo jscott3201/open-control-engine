@@ -2,7 +2,7 @@
   "class_path": "CDL.Reals.Sources.Sin",
   "signal": "y",
   "tier": "A",
-  "source": "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
+  "source": "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
   "value_kind": "Real",
   "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
   "n_samples": 6,

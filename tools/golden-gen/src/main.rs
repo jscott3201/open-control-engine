@@ -401,6 +401,14 @@ fn provenance_source(g: &Golden) -> &'static str {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
     } else if g.class_path == "CDL.Reals.LimitSlewRate" {
         "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path == "CDL.Reals.Ramp" {
+        "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path == "CDL.Reals.Sources.Sin" {
+        "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path == "CDL.Reals.Sources.CalendarTime" {
+        "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path.starts_with("CDL.Psychrometrics.") {
+        "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
     } else if matches!(
         g.class_path,
         "CDL.Reals.Sin"
@@ -418,9 +426,6 @@ fn provenance_source(g: &Golden) -> &'static str {
             | "CDL.Reals.Round"
             | "CDL.Reals.Line"
             | "CDL.Reals.Derivative"
-            | "CDL.Reals.Ramp"
-            | "CDL.Reals.Sources.Sin"
-            | "CDL.Reals.Sources.CalendarTime"
             | "CDL.Reals.Sources.Pulse"
             | "CDL.Logical.Sources.Pulse"
             | "CDL.Integers.Sources.Pulse"
@@ -429,8 +434,7 @@ fn provenance_source(g: &Golden) -> &'static str {
             | "CDL.Discrete.Sampler"
             | "CDL.Discrete.ZeroOrderHold"
             | "CDL.Discrete.FirstOrderHold"
-    ) || g.class_path.starts_with("CDL.Psychrometrics.")
-    {
+    ) {
         SHARED_KERNEL
     } else if g.class_path.ends_with(".Sources.TimeTable") {
         "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation"

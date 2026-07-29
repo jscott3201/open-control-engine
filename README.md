@@ -278,7 +278,8 @@ The dependency direction is intentional and acyclic, organized around the seam a
 This engine controls real equipment, so **a wrong result is a physical hazard** — testing is a
 first-class deliverable, not an afterthought. Every change ships extensive edge-case tests, **golden
 tests** (checked-in expected outputs compared bit-exactly), **oracle cross-checks** (results compared
-against independently-derived references), and **determinism goldens**. See
+against references derived from CDL / Buildings source semantics behind the code-dependency
+firewall), and **determinism goldens**. See
 [`TESTING.md`](TESTING.md) for the full standard.
 
 [cargo-nextest](https://nexte.st/) is the test runner:

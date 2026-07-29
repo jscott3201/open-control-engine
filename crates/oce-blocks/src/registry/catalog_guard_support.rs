@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "7dbf5fb95476db6c";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "9edead4415592f28";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
