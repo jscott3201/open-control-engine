@@ -1,6 +1,6 @@
-//! CXF-lowering-subset contract-rule identities and the published rule-catalog generator.
+//! Composite-subset contract-rule identities and the published rule-catalog generator.
 //!
-//! Every composite-subset CONTRACT rejection emitted by `composite.rs` carries a stable,
+//! Every composite-subset CONTRACT rejection emitted by the resolve pipeline carries a stable,
 //! machine-readable rule identity by convention, without extending the shared
 //! [`oce_diag::Diagnostic`] struct: the rejection message begins with the `composite/<rule-id>: `
 //! prefix rendered by [`CompositeRule::message`], and the checked-in catalog

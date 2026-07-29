@@ -358,8 +358,8 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2.u"),
-            "composite/array-connector: array-valued connector nodes are not supported; use \
-             per-element connectors named `name_1` through `name_n`",
+            "composite/array-connector: array-valued connector nodes are not supported; flatten \
+             the array to one connector per element",
         )],
     ),
     (
@@ -368,8 +368,8 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
-            "composite/array-instance: array-valued block-instance nodes are not supported; use \
-             per-element instances named `name_1` through `name_n`",
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
         )],
     ),
     (

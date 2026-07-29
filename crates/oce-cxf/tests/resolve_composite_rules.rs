@@ -279,8 +279,8 @@ fn array_valued_connector_rejection_is_tagged_with_the_connector_subject() {
         vec![error_with_subject(
             DiagCode::NonSubsetConstruct,
             "http://example.org#M.c2.u",
-            "composite/array-connector: array-valued connector nodes are not supported; use \
-             per-element connectors named `name_1` through `name_n`",
+            "composite/array-connector: array-valued connector nodes are not supported; flatten \
+             the array to one connector per element",
         )]
     );
 }
@@ -292,8 +292,8 @@ fn array_valued_instance_rejection_is_tagged_with_the_instance_subject() {
         vec![error_with_subject(
             DiagCode::NonSubsetConstruct,
             "http://example.org#M.c2",
-            "composite/array-instance: array-valued block-instance nodes are not supported; use \
-             per-element instances named `name_1` through `name_n`",
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
         )]
     );
 }

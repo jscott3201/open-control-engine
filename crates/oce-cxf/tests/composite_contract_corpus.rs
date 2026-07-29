@@ -238,8 +238,8 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             vec![error_with_subject(
                 DiagCode::NonSubsetConstruct,
                 "http://example.org#M.c2.u",
-                "composite/array-connector: array-valued connector nodes are not supported; use \
-                 per-element connectors named `name_1` through `name_n`",
+                "composite/array-connector: array-valued connector nodes are not supported; \
+                 flatten the array to one connector per element",
             )],
         ),
         (
@@ -248,7 +248,7 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                 DiagCode::NonSubsetConstruct,
                 "http://example.org#M.c2",
                 "composite/array-instance: array-valued block-instance nodes are not supported; \
-                 use per-element instances named `name_1` through `name_n`",
+                 flatten the array to one instance per element",
             )],
         ),
         (

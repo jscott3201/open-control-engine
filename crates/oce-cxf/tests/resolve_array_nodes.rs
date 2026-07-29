@@ -70,18 +70,22 @@ fn import_clean(src: &[u8]) {
     );
 }
 
+fn array_connector_rejection(subject: &str) -> Diagnostic {
+    tagged(
+        DiagCode::NonSubsetConstruct,
+        subject,
+        "composite/array-connector: array-valued connector nodes are not supported; flatten the \
+         array to one connector per element",
+    )
+}
+
 #[test]
 fn active_array_connector_is_rejected_with_stable_rule_identity() {
     let mut doc = document();
     node_mut(&mut doc, "M.c2.u")["S231:isArray"] = json!(true);
     assert_eq!(
         reject(&doc),
-        vec![tagged(
-            DiagCode::NonSubsetConstruct,
-            "http://example.org#M.c2.u",
-            "composite/array-connector: array-valued connector nodes are not supported; use \
-             per-element connectors named `name_1` through `name_n`",
-        )]
+        vec![array_connector_rejection("http://example.org#M.c2.u")]
     );
 }
 
@@ -94,9 +98,87 @@ fn active_array_instance_is_rejected_with_stable_rule_identity() {
         vec![tagged(
             DiagCode::NonSubsetConstruct,
             "http://example.org#M.c2",
-            "composite/array-instance: array-valued block-instance nodes are not supported; use \
-             per-element instances named `name_1` through `name_n`",
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
         )]
+    );
+}
+
+#[test]
+fn array_connector_also_listed_as_a_parameter_still_rejects() {
+    let mut doc = document();
+    node_mut(&mut doc, "M.c2")["S231:hasParameter"] = json!([
+        { "@id": "http://example.org#M.c2.k" },
+        { "@id": "http://example.org#M.c2.u" }
+    ]);
+    let connector = node_mut(&mut doc, "M.c2.u");
+    connector["S231:isArray"] = json!(true);
+    connector["S231:sizeOfDimensions"] = json!("(2)");
+    connector["S231:value"] = json!([
+        { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+        { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    ]);
+    assert_eq!(
+        reject(&doc),
+        vec![array_connector_rejection("http://example.org#M.c2.u")]
+    );
+}
+
+#[test]
+fn array_connector_typed_as_parameter_still_rejects() {
+    let mut doc = document();
+    let connector = node_mut(&mut doc, "M.c2.u");
+    connector["@type"] = json!("S231:Parameter");
+    connector["S231:isArray"] = json!(true);
+    assert_eq!(
+        reject(&doc),
+        vec![array_connector_rejection("http://example.org#M.c2.u")]
+    );
+}
+
+#[test]
+fn absolute_iri_is_array_marker_on_a_connector_rejects() {
+    let mut doc = document();
+    node_mut(&mut doc, "M.c2.u")["http://data.ashrae.org/S231P#isArray"] = json!(true);
+    assert_eq!(
+        reject(&doc),
+        vec![array_connector_rejection("http://example.org#M.c2.u")]
+    );
+}
+
+#[test]
+fn absolute_iri_size_of_dimensions_marker_on_an_instance_rejects() {
+    let mut doc = document();
+    node_mut(&mut doc, "M.c2")["http://data.ashrae.org/S231P#sizeOfDimensions"] = json!("(2)");
+    assert_eq!(
+        reject(&doc),
+        vec![tagged(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c2",
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
+        )]
+    );
+}
+
+#[test]
+fn array_marker_on_a_node_unreachable_from_the_root_still_rejects() {
+    let mut doc = document();
+    doc["@graph"].as_array_mut().expect("@graph array").extend([
+        json!({ "@id": "http://example.org#Lib.MultiSum", "@type": "S231:Block",
+                "S231:hasInput": { "@id": "http://example.org#Lib.MultiSum.u" },
+                "S231:hasOutput": { "@id": "http://example.org#Lib.MultiSum.y" } }),
+        json!({ "@id": "http://example.org#Lib.MultiSum.u", "@type": "S231:RealInput",
+                "S231:isArray": true, "S231:sizeOfDimensions": "(nin)" }),
+        json!({ "@id": "http://example.org#Lib.MultiSum.y", "@type": "S231:RealOutput" }),
+    ]);
+    let diagnostics = reject(&doc);
+    assert!(
+        diagnostics.iter().any(
+            |diag| diag.message.starts_with("composite/array-connector: ")
+                && diag.subject.as_deref() == Some("http://example.org#Lib.MultiSum.u")
+        ),
+        "document-wide scope must cover nodes unreachable from the root: {diagnostics:?}"
     );
 }
 
@@ -128,7 +210,7 @@ fn inactive_array_instance_and_its_connector_are_ignored_after_specialization() 
 }
 
 #[test]
-fn new_guard_and_boundary_pass_through_defense_both_report() {
+fn array_boundary_output_reports_both_document_wide_and_pass_through_rejections() {
     let mut doc: JsonValue =
         serde_json::from_str(include_str!("fixtures/pass_through_miniature.jsonld"))
             .expect("pass-through fixture JSON");
@@ -139,7 +221,7 @@ fn new_guard_and_boundary_pass_through_defense_both_report() {
         diagnostics
             .iter()
             .any(|diag| diag.message.starts_with("composite/array-connector: ")),
-        "new document-wide guard must remain live: {diagnostics:?}"
+        "document-wide array-connector rule must fire on a boundary output: {diagnostics:?}"
     );
     assert!(
         diagnostics
@@ -183,22 +265,30 @@ fn preserved_array_parameter_fixtures_remain_warning_free() {
 }
 
 #[test]
-fn existing_array_failure_fixtures_do_not_gain_new_rule_diagnostics() {
-    for (name, src) in [
+fn array_failure_fixtures_keep_their_original_diagnostics() {
+    for (name, src, original_cause) in [
         (
             "invalid/array_flatten_collision.jsonld",
             include_bytes!("fixtures/invalid/array_flatten_collision.jsonld").as_slice(),
+            "collides with an existing sibling parameter",
         ),
         (
             "composite_contract/rejected/array_parameter.jsonld",
             include_bytes!("fixtures/composite_contract/rejected/array_parameter.jsonld")
                 .as_slice(),
+            "composite/array-parameter: ",
         ),
     ] {
         let diagnostics = match import_cxf(src, &ResolveOptions::default()) {
             Err(CxfError::Validation(diags)) => diags,
             other => panic!("{name} must retain its existing failure, got {other:?}"),
         };
+        assert!(
+            diagnostics
+                .iter()
+                .any(|diag| diag.message.contains(original_cause)),
+            "{name} lost its original diagnostic ({original_cause:?}): {diagnostics:?}"
+        );
         assert!(
             diagnostics.iter().all(|diag| {
                 !diag.message.starts_with("composite/array-connector: ")
