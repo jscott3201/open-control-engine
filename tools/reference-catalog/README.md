@@ -14,6 +14,15 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   runtime-sequence support.
 - `Buildings.Controls.OBC.ASHRAE.G36.prov.json` pins the upstream G36 package/type files and local
   evidence files used by that sequence/profile snapshot.
+- `modelica-buildings-cdl.hash-manifest.json` pins every whitelisted byte in the vendored
+  Modelica Buildings CDL tree, including per-file Git blob OIDs, SHA-256 digests, sizes,
+  provenance buckets, and a `subtree_tree_sha` field recomputed from the on-disk bytes. The
+  independent pin is the hand-edited `SUBTREE_TREE_SHA` Rust constant. The
+  `third_party_manifest::checked_in_manifest_bytes_equal_fresh_render` test in the structural
+  oracle input-hygiene binary keeps it byte-identical to the tree. Re-bless a deliberate vendor
+  update with `OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle
+  checked_in_manifest_bytes_equal_fresh_render`, hand-update the Rust tree-SHA constant from the
+  documented Git command, and review both diffs.
 - `oce-blocks.registry-manifest.json` is the machine-readable manifest of the `oce-blocks` native
   block registry, generated from the registry itself rather than fetched upstream. It is a
   top-level ordered JSON array in registry catalog order; each element carries `class_path`, typed

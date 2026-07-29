@@ -14,8 +14,9 @@
 //! Source is blanked of comments and string bodies, then scanned as `;`-terminated statements.
 //! Both steps are load-bearing and the order matters: statement scanning is only sound once every
 //! remaining `;` is real code, and blanking is what guarantees that. A hand-rolled scanner is
-//! justified here because the corpus is pinned, 132 files wide, and diffable against upstream; a
-//! full parser is not, and a dependency would have to be audited against the same standard.
+//! justified here because the corpus is pinned, 132 files wide, locally byte-pinned by the hash
+//! manifest, and spot-checkable against upstream; a full parser is not, and a dependency would
+//! have to be audited against the same standard.
 //!
 //! This scanner's predecessor shipped **five** defects before it was correct, and every one of
 //! them presented as *finding less than reality*, never as finding something wrong. That is why
@@ -424,9 +425,10 @@ fn parse_class(path: &Path, label: &str, unparsed: &mut Vec<String>) -> ClassPor
 /// This replaces a checked-in JSON catalog, and the difference is the point. A catalog is an
 /// artifact someone must review entry by entry, and reviewing 132 entries against upstream by hand
 /// is a task nobody performs reliably — the generator that produced it shipped five defects before
-/// it was right. Vendored source is checkable with one `diff` against a fresh clone at the pinned
-/// commit (`third_party/modelica-buildings-cdl/README.md` gives the command), and the derivation
-/// runs here in the open where a reviewer reads code rather than data.
+/// it was right. The hash-manifest gate checks local byte integrity, while the bucket-scoped
+/// upstream spot-check in `third_party/modelica-buildings-cdl/README.md` checks fidelity at the
+/// pinned commit; the derivation runs here in the open where a reviewer reads code rather than
+/// data.
 ///
 /// # Panics
 ///

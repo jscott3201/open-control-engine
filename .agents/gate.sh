@@ -142,8 +142,9 @@ step 'fixture port order (input hygiene)' \
 # conditionals resolved against the fixture's own parameters, instances + undirected
 # edges compared), or excluded with a recorded reason. A structurally wrong fixture
 # fails nothing downstream — it makes the whole suite validate the wrong sequence.
-# ~0.1s measured; the verdict table is a bit-exact golden, so this stays silent until a
-# fixture or the oracle changes — exactly when nobody would re-run it by hand.
+# ~0.8s measured; the binary also carries the third_party hash-manifest gate, so this
+# stays silent until a fixture, the oracle, or a vendored byte changes — exactly when
+# nobody would re-run it by hand.
 step 'structural oracle (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_structural_oracle)' --no-tests=fail
