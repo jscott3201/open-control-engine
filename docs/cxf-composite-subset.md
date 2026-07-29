@@ -184,6 +184,15 @@ leaf parameter `"S231:value": "kInner"` grounds the chain's end — the
 > endpoints or missing boundary nodes (`UnresolvedReference`), and boundary datatype declarations
 > that cannot be derived (`MalformedDocument`).
 
+CXF §8.2 permits either endpoint of a connection to carry `S231:isConnectedTo`; subject position
+does not encode signal direction. Before boundary elision, the importer therefore derives each
+endpoint's source/sink role from its owning block, port direction, and position inside or outside
+the nested composite, then re-anchors reverse-spelled edges on their canonical driver. This is an
+orientation rule over the existing connector and containment data, not a new runtime model.
+Authoring the same relation from both endpoints collapses when either spelling required
+re-anchoring. In particular, both directions between one composite's input and output denote one
+pass-through relation, not a boundary cycle.
+
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:
 re-importing an exported document reproduces the flat `ModelGraph` — never the original

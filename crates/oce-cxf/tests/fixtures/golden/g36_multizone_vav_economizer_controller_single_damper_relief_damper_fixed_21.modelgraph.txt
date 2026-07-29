@@ -245,8 +245,8 @@ connections: 60
   C4 -> C12
   C5 -> C29
   C6 -> C25
-  C7 -> C23
   C7 -> C18
+  C7 -> C23
   C7 -> C58
   C7 -> C62
   C8 -> C11

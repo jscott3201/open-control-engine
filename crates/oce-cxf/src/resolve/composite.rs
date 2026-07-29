@@ -9,6 +9,7 @@ use crate::{bridge, resolve::local_name};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 
+use super::composite_orientation::CompositeOrientation;
 use super::composite_rules::{
     ARRAY_PARAMETER, BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT,
 };
@@ -49,7 +50,7 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let boundary = BoundaryIndex::new(doc, by_id, root, specialization);
+    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
     let mut leaf_order = Vec::new();
     let mut stack = HashSet::new();
     let mut path = Vec::new();
@@ -66,7 +67,7 @@ pub(super) fn lower(
         &mut inherited_scope,
     );
 
-    let rewritten = rewrite_connections(doc, by_id, specialization, &boundary);
+    let rewritten = rewrite_connections(doc, by_id, root, specialization, &boundary);
     for node in &mut lowered.graph {
         let id = node.id.as_str();
         if id == root {
@@ -150,7 +151,7 @@ fn root_composite<'a>(
     }
 }
 
-fn is_runtime_composite(node: &Node) -> bool {
+pub(super) fn is_runtime_composite(node: &Node) -> bool {
     !node.contains_block.is_empty() && !is_registered_leaf(node)
 }
 
@@ -368,75 +369,28 @@ fn composite_scope(
     scope
 }
 
-#[derive(Clone, Debug, Default)]
-struct BoundaryIndex {
-    composites: HashSet<String>,
-    inputs: HashSet<String>,
-    outputs: HashSet<String>,
-    top_inputs: HashSet<String>,
-    top_outputs: HashSet<String>,
-}
-
-impl BoundaryIndex {
-    fn new(
-        doc: &CxfDocument,
-        by_id: &HashMap<&str, &Node>,
-        root: &str,
-        specialization: &Specialization,
-    ) -> Self {
-        let mut index = BoundaryIndex::default();
-        for node in &doc.graph {
-            if !is_runtime_composite(node) || specialization.is_inactive(&node.id) {
-                continue;
-            }
-            index.composites.insert(node.id.clone());
-            for input in node.has_input.iter().map(|r| r.id.clone()) {
-                index.inputs.insert(input.clone());
-                if node.id == root {
-                    index.top_inputs.insert(input);
-                }
-            }
-            for output in node.has_output.iter().map(|r| r.id.clone()) {
-                index.outputs.insert(output.clone());
-                if node.id == root {
-                    index.top_outputs.insert(output);
-                }
-            }
-            for child in node.contains_block.iter().map(|r| r.id.as_str()) {
-                if by_id
-                    .get(child)
-                    .is_some_and(|node| is_runtime_composite(node))
-                {
-                    index.composites.insert(child.to_owned());
-                }
-            }
-        }
-        index
-    }
-}
-
 fn rewrite_connections(
     doc: &CxfDocument,
     by_id: &HashMap<&str, &Node>,
+    root: &str,
     specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    boundary: &CompositeOrientation,
 ) -> HashMap<String, Vec<String>> {
+    let (canonical, crossed_drivers) =
+        boundary.canonical_connections(doc, by_id, root, specialization);
     let mut out: HashMap<String, Vec<String>> = HashMap::new();
-    let mut incoming: HashMap<&str, Vec<&str>> = HashMap::new();
-    for node in &doc.graph {
-        for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            incoming.entry(target).or_default().push(node.id.as_str());
-        }
-    }
     let walk = BoundaryWalk {
         by_id,
-        incoming: &incoming,
+        canonical: &canonical,
         specialization,
         boundary,
     };
     for node in &doc.graph {
         let source = node.id.as_str();
-        if specialization.is_inactive(source) || node.is_connected_to.is_empty() {
+        let Some(authored_targets) = canonical.get(source) else {
+            continue;
+        };
+        if specialization.is_inactive(source) {
             continue;
         }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
@@ -446,15 +400,19 @@ fn rewrite_connections(
             continue;
         }
         let mut targets = Vec::new();
-        for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            resolve_target(
-                target,
-                &walk,
-                &mut HashSet::new(),
-                Some(source),
-                None,
-                &mut targets,
-            );
+        let crosses_boundary = crossed_drivers.contains(source)
+            || authored_targets
+                .iter()
+                .any(|target| boundary.crosses_non_top_boundary(source, target, root));
+        for target in authored_targets {
+            resolve_target(target, &walk, &mut HashSet::new(), &mut targets);
+        }
+        if boundary.has_non_top_composite(root) {
+            let mut deduplicated = HashSet::new();
+            targets.retain(|target| deduplicated.insert(target.clone()));
+        }
+        if crosses_boundary {
+            targets.sort_by_key(|target| boundary.position(target));
         }
         if !targets.is_empty() {
             out.entry(source.to_owned()).or_default().extend(targets);
@@ -465,22 +423,16 @@ fn rewrite_connections(
 
 struct BoundaryWalk<'a> {
     by_id: &'a HashMap<&'a str, &'a Node>,
-    incoming: &'a HashMap<&'a str, Vec<&'a str>>,
+    canonical: &'a HashMap<String, Vec<String>>,
     specialization: &'a Specialization,
-    boundary: &'a BoundaryIndex,
+    boundary: &'a CompositeOrientation,
 }
 
 /// Resolve one rewritten target.
-///
-/// `arrived_from` is the immediate predecessor excluded only from an incoming-fallback candidate
-/// list. `fallback_predecessor` exists only when the arriving hop used that fallback and excludes
-/// its manufactured mirror from the reached node's authored targets.
 fn resolve_target(
     target: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    arrived_from: Option<&str>,
-    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if walk.specialization.is_inactive(target) {
@@ -488,14 +440,14 @@ fn resolve_target(
         return;
     }
     if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
-        follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
+        follow_boundary(target, walk, seen, out);
         return;
     }
     if walk.boundary.outputs.contains(target) {
         if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, walk, seen, arrived_from, fallback_predecessor, out);
+            follow_boundary(target, walk, seen, out);
         }
         return;
     }
@@ -503,16 +455,10 @@ fn resolve_target(
 }
 
 /// Walk through a non-top composite boundary node.
-///
-/// `arrived_from` filters the exact predecessor when an empty authored target list falls back to
-/// incoming edges. `fallback_predecessor` filters the exact reverse edge manufactured by the
-/// preceding fallback, without hiding other authored targets or later authored cycles.
 fn follow_boundary(
     boundary_iri: &str,
     walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
-    arrived_from: Option<&str>,
-    fallback_predecessor: Option<&str>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
@@ -521,46 +467,13 @@ fn follow_boundary(
         out.push(boundary_iri.to_owned());
         return;
     }
-    let Some(node) = walk.by_id.get(boundary_iri).copied() else {
+    if !walk.by_id.contains_key(boundary_iri) {
         out.push(boundary_iri.to_owned());
         seen.remove(boundary_iri);
         return;
-    };
-    let authored = node
-        .is_connected_to
-        .iter()
-        .map(|r| r.id.as_str())
-        .collect::<Vec<_>>();
-    let follows_incoming = authored.is_empty();
-    let targets = if follows_incoming {
-        walk.incoming
-            .get(boundary_iri)
-            .into_iter()
-            .flat_map(|targets| targets.iter().copied())
-            .filter(|target| {
-                (walk.boundary.inputs.contains(*target) || walk.boundary.outputs.contains(*target))
-                    && !walk.boundary.top_inputs.contains(*target)
-                    && !walk.boundary.top_outputs.contains(*target)
-                    && Some(*target) != arrived_from
-            })
-            .collect::<Vec<_>>()
-    } else {
-        authored
-    };
-    for target in targets {
-        // A reverse-spelled fallback follows an incoming boundary edge. At the node it reaches,
-        // exclude only the manufactured mirror edge back to that exact predecessor; any other
-        // authored target remains visible, including a downstream cycle.
-        if Some(target) != fallback_predecessor {
-            resolve_target(
-                target,
-                walk,
-                seen,
-                Some(boundary_iri),
-                follows_incoming.then_some(boundary_iri),
-                out,
-            );
-        }
+    }
+    for target in walk.canonical.get(boundary_iri).into_iter().flatten() {
+        resolve_target(target, walk, seen, out);
     }
     seen.remove(boundary_iri);
 }
