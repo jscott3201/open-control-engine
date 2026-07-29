@@ -146,6 +146,7 @@ dependencies = [
  "libm",
  "oce-model",
  "serde_json",
+ "stats_alloc",
 ]
 
 [[package]]

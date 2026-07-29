@@ -336,6 +336,9 @@ pub struct Sort {
     ascending: bool,
 }
 
+/// Maximum Sort width held on the stack: two 64-element, 8-byte arrays use 1 KiB.
+const SORT_STACK_WIDTH: usize = 64;
+
 impl Sort {
     pub(crate) fn new(nin: usize, ascending: bool) -> Self {
         if nin > MAX_RESOLVED_PORT_WIDTH {
@@ -381,26 +384,41 @@ impl Block for Sort {
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        let (sorted, indices) = modelica_vectors_sort(
-            (0..self.inputs.len())
+        let nin = self.inputs.len();
+        if nin <= SORT_STACK_WIDTH {
+            let mut sorted = [0.0; SORT_STACK_WIDTH];
+            let mut indices = [0; SORT_STACK_WIDTH];
+            for idx in 0..nin {
+                sorted[idx] = read_real(inputs, idx);
+                indices[idx] = i64::try_from(idx + 1).unwrap_or(i64::MAX);
+            }
+            modelica_vectors_sort(&mut sorted[..nin], &mut indices[..nin], self.ascending);
+            emit_sort_outputs(&sorted[..nin], &indices[..nin], emit);
+        } else {
+            let mut sorted = (0..nin)
                 .map(|idx| read_real(inputs, idx))
-                .collect(),
-            self.ascending,
-        );
-        for (idx, value) in sorted.into_iter().enumerate() {
-            emit_real(idx, value, emit);
-        }
-        let offset = indices.len();
-        for (idx, source_idx) in indices.into_iter().enumerate() {
-            emit(offset + idx, Value::Integer(source_idx));
+                .collect::<Vec<_>>();
+            let mut indices = (1..=nin)
+                .map(|idx| i64::try_from(idx).unwrap_or(i64::MAX))
+                .collect::<Vec<_>>();
+            modelica_vectors_sort(&mut sorted, &mut indices, self.ascending);
+            emit_sort_outputs(&sorted, &indices, emit);
         }
     }
 }
 
-fn modelica_vectors_sort(mut sorted: Vec<f64>, ascending: bool) -> (Vec<f64>, Vec<i64>) {
-    let mut indices = (1..=sorted.len())
-        .map(|idx| i64::try_from(idx).unwrap_or(i64::MAX))
-        .collect::<Vec<_>>();
+fn emit_sort_outputs(sorted: &[f64], indices: &[i64], emit: &mut dyn FnMut(usize, Value)) {
+    for (idx, value) in sorted.iter().copied().enumerate() {
+        emit_real(idx, value, emit);
+    }
+    let offset = indices.len();
+    for (idx, source_idx) in indices.iter().copied().enumerate() {
+        emit(offset + idx, Value::Integer(source_idx));
+    }
+}
+
+fn modelica_vectors_sort(sorted: &mut [f64], indices: &mut [i64], ascending: bool) {
+    debug_assert_eq!(sorted.len(), indices.len());
     let n = sorted.len();
     let mut gap = n / 2;
     while gap > 0 {
@@ -420,7 +438,6 @@ fn modelica_vectors_sort(mut sorted: Vec<f64>, ascending: bool) -> (Vec<f64>, Ve
         }
         gap /= 2;
     }
-    (sorted, indices)
 }
 
 fn should_swap(left: f64, right: f64, ascending: bool) -> bool {

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 250" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-labelledby="ptitle pdesc">
   <title id="ptitle">Open Control Engine execution pipeline</title>
-  <desc id="pdesc">A model is loaded from CXF, elaborated, validated, and compiled into a frozen topological schedule once per load (the BUILD phase, off the hot path). The frozen schedule is then evaluated tick by tick to simulate, on a deterministic hot path with no allocation, no I/O, and no store access.</desc>
+  <desc id="pdesc">A model is loaded from CXF, elaborated, validated, and compiled into a frozen topological schedule once per load (the BUILD phase, off the hot path). The frozen schedule is then evaluated tick by tick on a deterministic hot path; the scheduler uses preallocated schedule and state and performs no I/O.</desc>
 
   <rect width="880" height="250" fill="#ffffff"/>
   <text x="440" y="34" text-anchor="middle" font-size="16" font-weight="700" fill="#202124">From CXF to simulated control signals</text>
@@ -56,5 +56,5 @@
 
   <path d="M582 150 L582 162 L838 162 L838 150" fill="none" stroke="#137333" stroke-width="1.5"/>
   <text x="710" y="184" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0d652d">TICK — the hot path</text>
-  <text x="710" y="202" text-anchor="middle" font-size="11" fill="#5f6368">no alloc · no I/O · no store access</text>
+  <text x="710" y="202" text-anchor="middle" font-size="11" fill="#5f6368">no I/O · preallocated schedule and state</text>
 </svg>

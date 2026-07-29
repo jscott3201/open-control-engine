@@ -272,7 +272,8 @@ impl Diagnostics for NoopDiagnostics {
 /// region (`RunState.words`), never in the block struct. This keeps the frozen schedule shareable
 /// and keeps per-instance state out of the allocator (`01` §7 req 4, §9 req 4), so every method
 /// takes `&self`. It does **not** make the tick zero-allocation: an implementation may allocate
-/// inside [`Block::step_algebraic`], and `CDL.Reals.Sort` does so on every tick.
+/// inside [`Block::step_algebraic`]; `CDL.Reals.Sort` uses stack buffers through width 64 and a
+/// heap-backed fallback above that width.
 ///
 /// `[A]` blocks override [`Block::step_algebraic`]. `[S]` blocks set [`Block::state_len`], seed via
 /// [`Block::init_state`], and override [`Block::emit_from_state`] + [`Block::update_state`].

@@ -8,8 +8,9 @@
 //! seeded from parameters. **TICK** (the hot path): evaluate the frozen [`Schedule`] over flat
 //! arrays — no graph walks, no hashing, no IO, no store. The scheduler itself allocates nothing
 //! per tick, but allocation-freedom is **not** a property of the whole tick: a block's
-//! `step_algebraic` may allocate, and some do (`CDL.Reals.Sort` unconditionally; `Reals.Log` /
-//! `Reals.Log10` on non-positive input). This crate is
+//! `step_algebraic` may allocate. `CDL.Reals.Sort` uses stack buffers through width 64 and
+//! heap-backed vectors above that width. `CDL.Reals.Log` and `CDL.Reals.Log10` warning messages
+//! allocate nothing block-side, though the installed diagnostics sink may allocate. This crate is
 //! **Group A**: it has zero dependency on `oce-store`/`oce-store-mem` or any store/database
 //! crate (D-OWNER-1; `01` §10).
 //!

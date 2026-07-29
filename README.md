@@ -176,11 +176,13 @@ The engine is, by design:
   arrays: no graph walks, no hashing, and no store access in the graph evaluator. Two carve-outs,
   both real:
   - **The evaluator is not allocation-free for every block.** The schedule and state arrays are
-    preallocated and the gather scratch is reused, so most blocks tick without allocating. Two
-    exceptions, both measured: `Reals.Sort` heap-allocates **two `Vec`s on every tick,
-    unconditionally, with valid inputs** (`reals_matrix.rs:387`, `:401`), and `Reals.Log` /
-    `Reals.Log10` `format!` a diagnostic string when handed a non-positive input. Size a real-time
-    loop against the blocks your sequence actually uses, not against a blanket guarantee.
+    preallocated and the gather scratch is reused, so most blocks tick without allocating.
+    `CDL.Reals.Sort::step_algebraic` uses fixed stack buffers through `nin = 64`, then falls back
+    to two heap-allocated vectors for wider inputs. `CDL.Reals.Log` and `CDL.Reals.Log10` use
+    static warning messages, so warning emission itself allocates nothing block-side; a diagnostic
+    sink may still allocate when recording an event (including the `step_realtime` collector).
+    Size a real-time loop against the blocks and diagnostic sink your sequence actually uses, not
+    against a blanket guarantee.
   - **`Engine::tick` is store-free only when the model declares no store-backed inputs.**
     Otherwise it takes one `store.snapshot()` per tick plus one read per staged input. With the
     default `MemStore` that is exactly one boxed allocation; the `PointStore` trait places **no**

@@ -74,6 +74,29 @@ fn integers(values: &[Value]) -> Vec<i64> {
         .collect()
 }
 
+fn special_value_sort_inputs(width: usize) -> Vec<f64> {
+    assert!(
+        width >= 41,
+        "special-value fixture requires at least 41 inputs"
+    );
+    // The base vector is a descending run.
+    let mut values = (1..=width)
+        .rev()
+        .map(|value| value as f64)
+        .collect::<Vec<_>>();
+    // Adjacent duplicate tie.
+    values[5] = 7.0;
+    values[6] = 7.0;
+    // Adjacent `-0.0` pair.
+    values[15] = -0.0;
+    values[16] = -0.0;
+    // Lone `-0.0`.
+    values[30] = -0.0;
+    // NaN within the descending base run.
+    values[40] = f64::NAN;
+    values
+}
+
 #[test]
 fn matrix_gain_uses_default_identity_and_row_major_custom_matrix() {
     let default = MatrixGain::default();
@@ -242,4 +265,64 @@ fn sort_matches_modelica_shellsort_values_and_one_based_indices() {
     let singleton = outs(&Sort::new(1, false), &real_inputs(&[-0.0]));
     assert_eq!(real_bits(&singleton[..1]), vec![(-0.0f64).to_bits()]);
     assert_eq!(integers(&singleton[1..]), vec![1]);
+}
+
+#[test]
+fn sort_special_value_provenance_matches_modelica_at_stack_boundary() {
+    let inputs = special_value_sort_inputs(64);
+    let got = outs(&Sort::new(inputs.len(), true), &real_inputs(&inputs));
+    let expected_indices = [
+        17, 16, 31, 64, 63, 62, 61, 60, 59, 58, 7, 6, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47,
+        46, 45, 44, 43, 42, 40, 39, 38, 37, 36, 35, 34, 33, 32, 30, 29, 9, 41, 28, 27, 26, 25, 24,
+        23, 22, 21, 20, 19, 18, 15, 14, 13, 12, 11, 10, 8, 5, 4, 3, 2, 1,
+    ];
+    let expected_bits = expected_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&got[inputs.len()..]), expected_indices);
+    assert_eq!(real_bits(&got[..inputs.len()]), expected_bits);
+
+    let descending = outs(&Sort::new(inputs.len(), false), &real_inputs(&inputs));
+    let descending_indices = [
+        1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+        29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 47, 49, 41, 45, 46, 48, 50, 51, 52,
+        53, 54, 55, 56, 57, 7, 6, 58, 59, 60, 61, 62, 63, 64, 17, 31, 16,
+    ];
+    let descending_bits = descending_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&descending[inputs.len()..]), descending_indices);
+    assert_eq!(real_bits(&descending[..inputs.len()]), descending_bits);
+}
+
+#[test]
+fn sort_special_value_provenance_matches_modelica_beyond_stack_boundary() {
+    let inputs = special_value_sort_inputs(65);
+    let got = outs(&Sort::new(inputs.len(), true), &real_inputs(&inputs));
+    let expected_indices = [
+        17, 16, 31, 65, 64, 63, 62, 61, 60, 6, 59, 7, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48,
+        47, 46, 45, 44, 43, 42, 40, 39, 38, 37, 36, 35, 34, 32, 30, 29, 9, 41, 33, 28, 27, 26, 25,
+        24, 23, 22, 21, 20, 19, 18, 15, 14, 13, 12, 11, 10, 8, 5, 4, 3, 2, 1,
+    ];
+    let expected_bits = expected_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&got[inputs.len()..]), expected_indices);
+    assert_eq!(real_bits(&got[..inputs.len()]), expected_bits);
+
+    let descending = outs(&Sort::new(inputs.len(), false), &real_inputs(&inputs));
+    let descending_indices = [
+        1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+        29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 47, 49, 41, 45, 46, 48, 50, 51, 52,
+        53, 54, 55, 56, 57, 58, 7, 59, 6, 60, 61, 62, 63, 64, 65, 31, 16, 17,
+    ];
+    let descending_bits = descending_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&descending[inputs.len()..]), descending_indices);
+    assert_eq!(real_bits(&descending[..inputs.len()]), descending_bits);
 }
