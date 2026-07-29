@@ -400,18 +400,13 @@ fn rewrite_connections(
             continue;
         }
         let mut targets = Vec::new();
-        let crosses_boundary = crossed_drivers.contains(source)
-            || authored_targets
-                .iter()
-                .any(|target| boundary.crosses_non_top_boundary(source, target, root));
         for target in authored_targets {
             resolve_target(target, &walk, &mut HashSet::new(), &mut targets);
         }
-        if boundary.has_non_top_composite(root) {
-            let mut deduplicated = HashSet::new();
-            targets.retain(|target| deduplicated.insert(target.clone()));
-        }
-        if crosses_boundary {
+        // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
+        // already collapsed in the canonical map, so any surviving duplicate is a genuine
+        // double-drive that must stay visible to the single-assignment check.
+        if crossed_drivers.contains(source) {
             targets.sort_by_key(|target| boundary.position(target));
         }
         if !targets.is_empty() {

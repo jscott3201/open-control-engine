@@ -1,4 +1,23 @@
 //! Canonical connection orientation at nested-composite boundaries.
+//!
+//! CXF §8.2 permits either endpoint of a connection to carry `isConnectedTo`, so subject
+//! position does not encode signal direction. Before the boundary walk, every authored edge with
+//! at least one non-root boundary-port endpoint is classified by port role and strict transitive
+//! containment, then kept, re-anchored, or left authored:
+//!
+//! - Polarity: a leaf output is a SOURCE and a leaf input a SINK; root boundary polarities are
+//!   fixed (input SOURCE, output SINK); a non-root boundary input is a SOURCE toward its own
+//!   composite interior (peer located in, or strictly inside, the owner) and a SINK outside it;
+//!   a non-root boundary output is the mirror image.
+//! - Verdicts: (SOURCE, SINK) keeps the authored direction; (SINK, SOURCE) swaps — unless the
+//!   canonical source has no `@graph` node (swap-blocked, left authored so `UnresolvedReference`
+//!   survives); same-polarity pairs are contradictory and left authored; edges with an
+//!   underivable endpoint (dangling or non-connector peer, conflicted ownership, non-tree
+//!   containment) or an inactive endpoint are left authored. Left-authored edges reject under
+//!   the existing generic diagnostics — this pass never invents or removes a relation.
+//! - Duplicate suppression: forward+reverse restatements of ONE relation collapse (a canonical
+//!   pair repeats and either sighting swapped); two authored copies of the same edge are NOT
+//!   collapsed — a genuine double-drive stays visible to the single-assignment check.
 
 use std::collections::{HashMap, HashSet};
 
@@ -31,6 +50,9 @@ enum Verdict {
     Untouched,
 }
 
+/// Port-role and containment index for one document: composite membership, boundary-port sets,
+/// per-port ownership claims, `@graph` positions, and the transitive `containsBlock` closure the
+/// polarity test reads. Built once per import, before lowering.
 #[derive(Clone, Debug, Default)]
 pub(super) struct CompositeOrientation {
     pub(super) composites: HashSet<String>,
@@ -148,7 +170,11 @@ impl CompositeOrientation {
         })
     }
 
-    /// Produce adjacency in authored graph order with boundary-facing edges canonicalized.
+    /// Produce adjacency in authored `@graph` order with boundary-facing edges canonicalized,
+    /// suppressing forward+reverse restatements of one relation (a repeated canonical pair where
+    /// either sighting swapped) while keeping authored duplicate copies. Also returns the set of
+    /// canonical drivers whose edges touch a non-root boundary — the drivers whose lowered lists
+    /// rule Gx orders by target `@graph` position.
     pub(super) fn canonical_connections(
         &self,
         doc: &CxfDocument,
@@ -271,19 +297,9 @@ impl CompositeOrientation {
         })
     }
 
-    /// Whether a canonical pre-walk edge traverses a non-root boundary.
-    pub(super) fn crosses_non_top_boundary(&self, source: &str, target: &str, root: &str) -> bool {
-        self.is_non_root_boundary(source, root) || self.is_non_root_boundary(target, root)
-    }
-
     /// Original `@graph` position of a node, with unknown targets ordered last.
     pub(super) fn position(&self, iri: &str) -> usize {
         self.positions.get(iri).copied().unwrap_or(usize::MAX)
-    }
-
-    /// Whether lowering contains a composite boundary below the top root.
-    pub(super) fn has_non_top_composite(&self, root: &str) -> bool {
-        self.composites.iter().any(|composite| composite != root)
     }
 }
 

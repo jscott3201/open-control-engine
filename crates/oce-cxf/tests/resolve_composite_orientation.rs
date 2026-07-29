@@ -65,7 +65,7 @@ fn rendered_edges(graph: &ModelGraph) -> Vec<(String, String)> {
             connector.decl_order,
         )
     };
-    let mut edges = graph
+    graph
         .connections
         .iter()
         .map(|edge| {
@@ -76,9 +76,7 @@ fn rendered_edges(graph: &ModelGraph) -> Vec<(String, String)> {
                 format!("{target}:{target_port}"),
             )
         })
-        .collect::<Vec<_>>();
-    edges.sort();
-    edges
+        .collect::<Vec<_>>()
 }
 
 fn assert_forward_identical(candidate: &Value) {
@@ -119,10 +117,11 @@ fn reversed_nested_output_exterior_edge_is_forward_identical() {
 }
 
 /// Base: with `post` removed, `TOP.y→sub.y` imported clean while silently leaving the output
-/// undriven. Head: the edge re-anchors to `sub.y→TOP.y` and matches the corresponding forward
-/// model.
+/// undriven — and this shape also lowers to the same flat graph at base, because a leaf output
+/// driving only a top output elides to no connection. The pin is therefore spelling-equivalence:
+/// the reverse spelling lowers identically to the forward one.
 #[test]
-fn reversed_top_output_edge_cannot_silently_disappear() {
+fn reversed_top_output_edge_lowers_identically_to_the_forward_spelling() {
     let mut forward = document();
     let root = node_mut(&mut forward, "nested_composite");
     root["S231:containsBlock"] = json!({ "@id": iri(".sub") });
@@ -565,6 +564,126 @@ fn unwired_sibling_boundary_cannot_fabricate_a_leaf_connection() {
     );
     set_absolute_targets(&mut document, ".subD.y", &[&format!("{model}.y")]);
     let diagnostics = import(&document).expect_err("fabrication route must reject");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::SingleAssignment
+                && diagnostic.subject.as_deref() == Some("connector#3")
+        }),
+        "undriven subject must be subD's leaf input (lowered connector#3): {diagnostics:?}"
+    );
+}
+
+/// A duplicated top-level leaf-to-leaf edge is a genuine double-drive and must keep rejecting
+/// even though the document also contains a nested composite: acceptance must never depend on
+/// unrelated document content.
+#[test]
+fn duplicated_top_level_edge_still_rejects_when_a_nested_composite_is_present() {
+    let model = "http://example.org#duplicate";
+    let document = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": model, "@type": "S231:Block",
+              "S231:containsBlock": [
+                { "@id": format!("{model}.c1") },
+                { "@id": format!("{model}.c2") },
+                { "@id": format!("{model}.subZ") }
+              ] },
+            { "@id": format!("{model}.c1"),
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:hasParameter": { "@id": format!("{model}.c1.k") },
+              "S231:hasOutput": { "@id": format!("{model}.c1.y") } },
+            { "@id": format!("{model}.c1.k"), "S231:value": 1 },
+            { "@id": format!("{model}.c1.y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" },
+              "S231:isConnectedTo": [
+                { "@id": format!("{model}.c2.u") },
+                { "@id": format!("{model}.c2.u") }
+              ] },
+            { "@id": format!("{model}.c2"),
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+              "S231:hasParameter": { "@id": format!("{model}.c2.k") },
+              "S231:hasInput": { "@id": format!("{model}.c2.u") },
+              "S231:hasOutput": { "@id": format!("{model}.c2.y") } },
+            { "@id": format!("{model}.c2.k"), "S231:value": 2 },
+            { "@id": format!("{model}.c2.u"), "@type": "S231:RealInput",
+              "S231:isOfDataType": { "@id": "S231:Real" } },
+            { "@id": format!("{model}.c2.y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } },
+            { "@id": format!("{model}.subZ"), "@type": "S231:Block",
+              "S231:containsBlock": { "@id": format!("{model}.subZ.src") },
+              "S231:hasOutput": { "@id": format!("{model}.subZ.y") } },
+            { "@id": format!("{model}.subZ.src"),
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:hasParameter": { "@id": format!("{model}.subZ.src.k") },
+              "S231:hasOutput": { "@id": format!("{model}.subZ.src.y") } },
+            { "@id": format!("{model}.subZ.src.k"), "S231:value": 3 },
+            { "@id": format!("{model}.subZ.src.y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" },
+              "S231:isConnectedTo": { "@id": format!("{model}.subZ.y") } },
+            { "@id": format!("{model}.subZ.y"), "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } }
+        ]
+    });
+    let diagnostics = import(&document).expect_err("duplicated edge must stay multiply driven");
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == DiagCode::SingleAssignment),
+        "{diagnostics:?}"
+    );
+}
+
+/// A duplicated boundary-crossing continuation (`sub.y → [post.u, post.u]`) double-drives the
+/// exterior leaf input and rejects at base with in-degree 2; the canonical-map spelling
+/// suppression collapses forward+reverse restatements of ONE relation, never two authored copies
+/// of the same edge, so the rejection must survive canonicalization.
+#[test]
+fn duplicated_boundary_crossing_edge_rejects_as_multiply_driven() {
+    let mut duplicated = document();
+    set_targets(&mut duplicated, ".sub.y", &[".post.u", ".post.u"]);
+    let diagnostics = import(&duplicated).expect_err("duplicated edge must stay multiply driven");
+    assert!(
+        diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.code == DiagCode::SingleAssignment),
+        "{diagnostics:?}"
+    );
+}
+
+/// A reverse-spelled edge whose canonical driver has no `@graph` node is swap-blocked: it stays
+/// authored so the ordinary dangling-reference diagnostic survives and names the missing port.
+#[test]
+fn swap_blocked_edge_without_a_canonical_source_node_keeps_the_dangling_diagnostic() {
+    let mut blocked = document();
+    clear_targets(&mut blocked, "nested_composite.u");
+    set_targets(&mut blocked, ".sub.gain.u", &[".sub.u"]);
+    let missing = iri(".sub.u");
+    blocked["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .retain(|node| node["@id"].as_str() != Some(missing.as_str()));
+    let diagnostics = import(&blocked).expect_err("swap-blocked edge must stay loud");
+    assert!(
+        diagnostics.iter().any(|diagnostic| {
+            diagnostic.code == DiagCode::UnresolvedReference
+                && diagnostic.subject.as_deref() == Some(missing.as_str())
+        }),
+        "dangling reference must name the missing canonical driver: {diagnostics:?}"
+    );
+}
+
+/// A port claimed by two owners with opposite directions has no derivable role; the edge stays
+/// authored (no silent reorientation) and the document keeps its loud undriven rejection.
+#[test]
+fn conflicting_ownership_claims_leave_the_edge_authored_and_loud() {
+    let mut conflicted = document();
+    clear_targets(&mut conflicted, ".sub.u");
+    set_targets(&mut conflicted, ".sub.gain.u", &[".sub.u"]);
+    node_mut(&mut conflicted, ".post")["S231:hasOutput"] = json!([
+        { "@id": iri(".post.y") },
+        { "@id": iri(".sub.gain.u") }
+    ]);
+    let diagnostics = import(&conflicted).expect_err("conflicted ownership must stay loud");
     assert!(
         diagnostics
             .iter()
