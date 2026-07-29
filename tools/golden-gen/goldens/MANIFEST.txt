@@ -115,6 +115,8 @@ CDL.Logical.MultiAnd reference -> goldens/CDL/Logical/MultiAnd/reference.csv
 CDL.Logical.MultiAnd y -> goldens/CDL/Logical/MultiAnd/y.csv
 CDL.Logical.MultiOr reference -> goldens/CDL/Logical/MultiOr/reference.csv
 CDL.Logical.MultiOr y -> goldens/CDL/Logical/MultiOr/y.csv
+CDL.Logical.Nand reference -> goldens/CDL/Logical/Nand/reference.csv
+CDL.Logical.Nand y -> goldens/CDL/Logical/Nand/y.csv
 CDL.Logical.Not reference -> goldens/CDL/Logical/Not/reference.csv
 CDL.Logical.Not y -> goldens/CDL/Logical/Not/y.csv
 CDL.Logical.Or reference -> goldens/CDL/Logical/Or/reference.csv
@@ -250,6 +252,14 @@ CDL.Reals.LessThreshold/hysteretic reference -> goldens/CDL/Reals/LessThreshold/
 CDL.Reals.LessThreshold/hysteretic y -> goldens/CDL/Reals/LessThreshold/hysteretic/y.csv
 CDL.Reals.LessThreshold/hysteretic_preset reference -> goldens/CDL/Reals/LessThreshold/hysteretic_preset/reference.csv
 CDL.Reals.LessThreshold/hysteretic_preset y -> goldens/CDL/Reals/LessThreshold/hysteretic_preset/y.csv
+CDL.Reals.LimitSlewRate/disabled_passthrough reference -> goldens/CDL/Reals/LimitSlewRate/disabled_passthrough/reference.csv
+CDL.Reals.LimitSlewRate/disabled_passthrough y -> goldens/CDL/Reals/LimitSlewRate/disabled_passthrough/y.csv
+CDL.Reals.LimitSlewRate/falling_saturation reference -> goldens/CDL/Reals/LimitSlewRate/falling_saturation/reference.csv
+CDL.Reals.LimitSlewRate/falling_saturation y -> goldens/CDL/Reals/LimitSlewRate/falling_saturation/y.csv
+CDL.Reals.LimitSlewRate/lag_non_uniform_grid reference -> goldens/CDL/Reals/LimitSlewRate/lag_non_uniform_grid/reference.csv
+CDL.Reals.LimitSlewRate/lag_non_uniform_grid y -> goldens/CDL/Reals/LimitSlewRate/lag_non_uniform_grid/y.csv
+CDL.Reals.LimitSlewRate/rising_saturation reference -> goldens/CDL/Reals/LimitSlewRate/rising_saturation/reference.csv
+CDL.Reals.LimitSlewRate/rising_saturation y -> goldens/CDL/Reals/LimitSlewRate/rising_saturation/y.csv
 CDL.Reals.Limiter reference -> goldens/CDL/Reals/Limiter/reference.csv
 CDL.Reals.Limiter y -> goldens/CDL/Reals/Limiter/y.csv
 CDL.Reals.Limiter/non_finite_and_boundary reference -> goldens/CDL/Reals/Limiter/non_finite_and_boundary/reference.csv

@@ -86,6 +86,7 @@
           "Latch",
           "MultiAnd",
           "MultiOr",
+          "Nand",
           "Not",
           "Or",
           "Proof",
@@ -99,7 +100,6 @@
           "Xor"
         ],
         "legacy_evidence_exemption": [
-          "Nand",
           "Nor",
           "Pre"
         ]
@@ -147,13 +147,16 @@
           "Atan2",
           "Average",
           "Cos",
+          "Derivative",
           "Divide",
           "Exp",
           "Greater",
           "GreaterThreshold",
           "Hysteresis",
+          "IntegratorWithReset",
           "Less",
           "LessThreshold",
+          "LimitSlewRate",
           "Limiter",
           "Line",
           "Log",
@@ -181,9 +184,6 @@
           "Tan"
         ],
         "legacy_evidence_exemption": [
-          "Derivative",
-          "IntegratorWithReset",
-          "LimitSlewRate",
           "MovingAverage"
         ]
       },

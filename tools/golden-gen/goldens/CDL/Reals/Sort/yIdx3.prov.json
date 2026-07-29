@@ -2,7 +2,7 @@
   "class_path": "CDL.Reals.Sort",
   "signal": "yIdx3",
   "tier": "A",
-  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "source": "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
   "value_kind": "Integer",
   "compare_regime": "exact (atoly=0)",
   "n_samples": 4,

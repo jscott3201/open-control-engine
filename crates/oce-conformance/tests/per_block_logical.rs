@@ -275,6 +275,14 @@ const VARIABLE_PULSE_ADJUSTED_PERIOD_PARAMS: &[Param] = &[
 
 const CASES: &[BlockCase] = &[
     case("logical_and", "CDL.Logical.And", "And", U1_U2, &[], BOOL_Y),
+    case(
+        "logical_nand",
+        "CDL.Logical.Nand",
+        "Nand",
+        U1_U2,
+        &[],
+        BOOL_Y,
+    ),
     case("logical_or", "CDL.Logical.Or", "Or", U1_U2, &[], BOOL_Y),
     case(
         "logical_multi_and",

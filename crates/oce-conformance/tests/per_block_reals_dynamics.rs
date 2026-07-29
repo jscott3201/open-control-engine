@@ -51,6 +51,7 @@ const DERIVATIVE_INPUTS: &[Port] = &[
     Port { name: "T", kind: R },
     Port { name: "u", kind: R },
 ];
+const LIMIT_SLEW_RATE_INPUTS: &[Port] = &[Port { name: "u", kind: R }];
 
 const REAL_Y: &[Port] = &[Port { name: "y", kind: R }];
 
@@ -116,6 +117,78 @@ const INTEGRATOR_WITH_RESET_GAIN_PARAMS: &[Param] = &[
         value: ParamValue::Real("1.0"),
     },
 ];
+const LIMIT_SLEW_RATE_RISING_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-0.5"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("0.2"),
+    },
+    Param {
+        name: "enable",
+        value: ParamValue::Boolean("true"),
+    },
+];
+const LIMIT_SLEW_RATE_FALLING_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-1.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("0.2"),
+    },
+    Param {
+        name: "enable",
+        value: ParamValue::Boolean("true"),
+    },
+];
+const LIMIT_SLEW_RATE_LAG_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("100.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-100.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "enable",
+        value: ParamValue::Boolean("true"),
+    },
+];
+const LIMIT_SLEW_RATE_DISABLED_PARAMS: &[Param] = &[
+    Param {
+        name: "raisingSlewRate",
+        value: ParamValue::Real("1.0"),
+    },
+    Param {
+        name: "fallingSlewRate",
+        value: ParamValue::Real("-1.0"),
+    },
+    Param {
+        name: "Td",
+        value: ParamValue::Real("0.5"),
+    },
+    Param {
+        name: "enable",
+        value: ParamValue::Boolean("false"),
+    },
+];
 
 const CASES: &[BlockCase] = &[
     case(
@@ -170,6 +243,38 @@ const CASES: &[BlockCase] = &[
         DERIVATIVE_TIME_VARYING_PARAMS,
         REAL_Y,
     ),
+    case(
+        "reals_limit_slew_rate_rising_saturation",
+        "CDL.Reals.LimitSlewRate",
+        "LimitSlewRate/rising_saturation",
+        LIMIT_SLEW_RATE_INPUTS,
+        LIMIT_SLEW_RATE_RISING_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_limit_slew_rate_falling_saturation",
+        "CDL.Reals.LimitSlewRate",
+        "LimitSlewRate/falling_saturation",
+        LIMIT_SLEW_RATE_INPUTS,
+        LIMIT_SLEW_RATE_FALLING_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_limit_slew_rate_lag_non_uniform_grid",
+        "CDL.Reals.LimitSlewRate",
+        "LimitSlewRate/lag_non_uniform_grid",
+        LIMIT_SLEW_RATE_INPUTS,
+        LIMIT_SLEW_RATE_LAG_PARAMS,
+        REAL_Y,
+    ),
+    case(
+        "reals_limit_slew_rate_disabled_passthrough",
+        "CDL.Reals.LimitSlewRate",
+        "LimitSlewRate/disabled_passthrough",
+        LIMIT_SLEW_RATE_INPUTS,
+        LIMIT_SLEW_RATE_DISABLED_PARAMS,
+        REAL_Y,
+    ),
 ];
 
 const DERIVATIVE_PARAMS: &[Param] = &[Param {
@@ -188,6 +293,10 @@ const DYNAMICS_SLUGS: &[&str] = &[
     "reals_integrator_with_reset_gain",
     "reals_derivative_constant_gain",
     "reals_derivative_time_varying_gain",
+    "reals_limit_slew_rate_rising_saturation",
+    "reals_limit_slew_rate_falling_saturation",
+    "reals_limit_slew_rate_lag_non_uniform_grid",
+    "reals_limit_slew_rate_disabled_passthrough",
 ];
 
 #[test]

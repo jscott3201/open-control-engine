@@ -3,9 +3,9 @@
 # This crate is intentionally placed under `tools/` rather than `crates/` so it is NOT a member
 # of the workspace (`members = ["crates/*"]`) and therefore never runs on the cargo-test gate.
 #
-# ANTI-TAUTOLOGY: this generator derives every reference output from the CDL spec math directly
-# (closed-form, independently re-derived). It MUST NOT depend on `oce-blocks` (the implementation
-# under test). It is fully self-contained: it ships its own byte-stable CombiTimeTable CSV writer
+# ANTI-TAUTOLOGY: this generator derives reference outputs from CDL/spec semantics without an
+# `oce-blocks` dependency. Some exact oracles share a pinned math kernel or restate the engine's
+# documented recurrence. It is fully self-contained and ships a byte-stable CombiTimeTable writer
 # (mirroring `_spec/07` §9 and the `ryu` shortest-round-trip formatting that `oce-conformance`
 # uses) so the goldens are byte-identical for finite values. A self-contained writer is required
 # because the `oce-conformance` writer rejects non-finite cells, yet the IEEE Divide oracle must

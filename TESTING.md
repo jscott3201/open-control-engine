@@ -89,8 +89,9 @@ re-derived expectation — otherwise we are grading our own homework.
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
   (`crates/oce-conformance/src/funnel.rs`), and the crate carries golden traces and tolerance
   fixtures under `tests/fixtures/golden/`.
-- **The independent layer is `tools/golden-gen`.** It emits **407 Tier-A goldens — 275 CDL
-  block/type references, plus 132 G36 sequence outputs spanning all 46 catalog fixtures.** The
+- **The Tier-A layer is `tools/golden-gen`.** It emits **412 Tier-A provenance records — 280 CDL
+  records (278 signal goldens plus two fold-time provenance-only records), plus 132 G36 sequence
+  signal goldens spanning all 46 catalog fixtures.** The
   sequence side is compared by per-fixture suites in `crates/oce-conformance/tests/`: a shared
   table in `g36_funnel_band/sequences.rs` (25 outputs), per-fixture `*_funnel.rs` suites, and four
   `*_oracle.rs` suites whose headers state outright that there is intentionally no funnel-band
@@ -102,9 +103,15 @@ re-derived expectation — otherwise we are grading our own homework.
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
   Most references are closed-form derivations from CDL / Buildings source semantics; some, like
   `TimeSuppression`, are explicit per-tick recurrences. The generator is deliberately kept **off
-  the workspace** and **forbidden from depending on `oce-blocks`** — that firewall is what makes
-  it an oracle rather than a second opinion from the same code, and CI enforces it. Extending
-  Tier-A coverage means adding to that generator, never blessing engine output.
+  the workspace** and **forbidden from depending on `oce-blocks`**; CI enforces that
+  code-dependency firewall. For classes whose oracle shares a pinned math kernel or restates the
+  same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
+  shared formula, not an independent check of the formula; a mechanical shared-kernel detector
+  is filed as follow-up. Extending Tier-A coverage means adding to that generator, never blessing
+  engine output. Per-block Tier-A goldens cover **128 of 133 CDL classes**:
+  `CDL.Logical.Nor`, `CDL.Logical.Pre`, `CDL.Logical.Sources.Constant`, and
+  `CDL.Reals.MovingAverage` carry indirect G36-sequence evidence only; `CDL.Utilities.Assert` has
+  no output port, and its diagnostics-channel golden is filed.
 - Record the oracle's provenance (which tool, which version) alongside the vector so a future
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived

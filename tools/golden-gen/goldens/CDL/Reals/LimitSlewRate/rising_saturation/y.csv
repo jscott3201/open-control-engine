@@ -1,0 +1,8 @@
+#1
+# columns: time y
+double CDL_Reals_LimitSlewRate_rising_saturation_y(5,2)
+0.0 0.0
+1.0 1.0
+2.0 2.0
+3.0 2.8333333333333335
+4.0 2.972222222222222

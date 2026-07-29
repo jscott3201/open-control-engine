@@ -105,6 +105,24 @@ fn combinational() -> Vec<Golden> {
             .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
         );
     }
+    // Nand.
+    {
+        let u1 = [false, false, true, true];
+        let u2 = [false, true, false, true];
+        let y: Vec<Sample> = u1.iter().zip(u2).map(|(&a, c)| b(!(a && c))).collect();
+        out.push(
+            Golden::new(
+                "CDL.Logical.Nand",
+                "y",
+                ValueKind::Boolean,
+                ticks60(4),
+                y,
+                "u1=[F,F,T,T], u2=[F,T,F,T]",
+                "y = NOT (u1 AND u2); Buildings CDL/Logical/Nand.mo",
+            )
+            .with_inputs(vec![input_b("u1", u1), input_b("u2", u2)]),
+        );
+    }
     // Or.
     {
         let u1 = [false, true, false, false];
@@ -128,9 +146,7 @@ fn combinational() -> Vec<Golden> {
         let u1 = [false, true, true, true];
         let u2 = [true, true, false, true];
         let u3 = [true, true, true, false];
-        let y: Vec<Sample> = (0..u1.len())
-            .map(|k| b(u1[k] && u2[k] && u3[k]))
-            .collect();
+        let y: Vec<Sample> = (0..u1.len()).map(|k| b(u1[k] && u2[k] && u3[k])).collect();
         out.push(
             Golden::new(
                 "CDL.Logical.MultiAnd",
@@ -149,9 +165,7 @@ fn combinational() -> Vec<Golden> {
         let u1 = [false, true, false, false];
         let u2 = [false, false, true, false];
         let u3 = [false, false, false, true];
-        let y: Vec<Sample> = (0..u1.len())
-            .map(|k| b(u1[k] || u2[k] || u3[k]))
-            .collect();
+        let y: Vec<Sample> = (0..u1.len()).map(|k| b(u1[k] || u2[k] || u3[k])).collect();
         out.push(
             Golden::new(
                 "CDL.Logical.MultiOr",
@@ -494,12 +508,12 @@ fn timing() -> Vec<Golden> {
         let mut passed_latch = threshold <= 0.0;
         let mut y = Vec::new();
         let mut passed = Vec::new();
-        for k in 0..t.len() {
+        for &u_now in &u {
             let yk = 0.0;
-            passed_latch = timer_passed_latch(passed_latch, u[k], pre_u, yk, threshold);
+            passed_latch = timer_passed_latch(passed_latch, u_now, pre_u, yk, threshold);
             y.push(r(yk));
             passed.push(b(passed_latch));
-            pre_u = u[k];
+            pre_u = u_now;
         }
         out.push(
             Golden::new(

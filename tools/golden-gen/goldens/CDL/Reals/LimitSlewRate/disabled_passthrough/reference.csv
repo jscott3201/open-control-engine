@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Reals_LimitSlewRate_disabled_passthrough_reference(4,3)
+0.0 0.0 0.0
+1.0 5.0 5.0
+2.0 -3.0 -3.0
+3.0 7.0 7.0
