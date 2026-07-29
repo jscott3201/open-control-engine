@@ -221,9 +221,11 @@ upstream Modelica sources in
 [`third_party/modelica-buildings-cdl/`](third_party/modelica-buildings-cdl/README.md), copied
 verbatim at the pinned reference commit. There is no catalog artifact in between, deliberately: a
 checked-in table has to be reviewed entry by entry against upstream, which nobody does reliably —
-the generator that produced the previous one shipped five defects before it was correct. Vendored
-source is checkable with a single `diff` against a fresh clone, and the derivation is code a
-reviewer reads rather than data a reviewer spot-checks.
+the generator that produced the previous one shipped five defects before it was correct. The
+always-on manifest gate checks the vendored tree's local integrity in both directions; the
+bucket-scoped comparison in `third_party/modelica-buildings-cdl/README.md` separately spot-checks
+the upstream fidelity of the `upstream-buildings` files. The derivation is code a reviewer reads
+rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
 fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and Tier-A
@@ -290,8 +292,9 @@ forge one are shut. Comment and string bodies are blanked before the scan, so de
 text inside `/* … */` or a `Documentation(info=…)` string is not read as a port. And a
 multi-component clause — `IntegerInput index, u[nin];` declares two connectors where the scanner
 can read one — is refused by name rather than read in part. A forgery written as ordinary code is
-outside what this test can distinguish; the `diff` against upstream is the control for that, and
-`third_party/modelica-buildings-cdl/README.md` gives the command.
+outside what this test can distinguish; the always-on manifest gate detects local byte drift, and
+the `upstream-buildings` bucket spot-check in
+`third_party/modelica-buildings-cdl/README.md` is the upstream-fidelity control.
 
 The git hooks (`pre-commit`, `pre-push`) deliberately **do not** run tests — they stay fast.
 Run the suite on demand when you touch behavior; the release gate and daily development-tip gate are
