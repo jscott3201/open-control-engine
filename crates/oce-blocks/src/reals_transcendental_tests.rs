@@ -192,8 +192,16 @@ fn documented_domain_violations_warn_and_return_deterministic_values() {
     assert!(events[0].1.contains("shall not both be zero"));
     assert!(events[4].0 == "CDL.Reals.Log");
     assert!(events[4].1.contains("must be greater than zero"));
+    assert_eq!(
+        events[4].1,
+        "Log: input u must be greater than zero; returning deterministic libm value"
+    );
     assert!(events[6].0 == "CDL.Reals.Log10");
     assert!(events[6].1.contains("must be greater than zero"));
+    assert_eq!(
+        events[6].1,
+        "Log10: input u must be greater than zero; returning deterministic libm value"
+    );
     assert!(
         events
             .iter()
