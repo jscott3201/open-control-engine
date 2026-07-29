@@ -2,7 +2,7 @@
   "class_path": "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi",
   "signal": "h",
   "tier": "A",
-  "source": "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation",
+  "source": "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
   "value_kind": "Real",
   "compare_regime": "aligned finite-Real tolerance for transcendental outputs; Inf/NaN by IEEE class",
   "n_samples": 13,

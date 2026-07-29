@@ -1,0 +1,7 @@
+#1
+# columns: time u y
+double CDL_Reals_LimitSlewRate_lag_non_uniform_grid_reference(4,3)
+0.0 0.2 0.2
+0.1 0.9 0.3166666666666667
+0.3 -0.4 0.11190476190476195
+0.7 0.6 0.32883597883597887

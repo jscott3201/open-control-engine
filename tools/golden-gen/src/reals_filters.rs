@@ -1,11 +1,16 @@
-//! Independent Tier-A recurrence oracle for `CDL.Reals.Derivative`.
+//! Tier-A recurrence oracles for `CDL.Reals.Derivative` and `CDL.Reals.LimitSlewRate`.
 //!
-//! Derives the emit-before-update implicit/backward-Euler recurrence from `_spec/03` R-DYN-1 and
+//! The Derivative oracle derives the emit-before-update implicit/backward-Euler recurrence from
+//! `_spec/03` R-DYN-1 and
 //! the Buildings `Reals/Derivative.mo` equations at the pin: `T_nonZero = max(T, 100*eps)`,
 //! `der(x) = (u-x)/T_nonZero`, `y = (k/T_nonZero)*(u-x)`, with the gain `k` and time constant `T`
 //! as **RealInput connectors** (declaration order `k, T, u`) and the initial equation
 //! `x = if |k| < eps then u else u - T*y_start/k` (raw `T`). It intentionally does not import or
-//! call any `oce-*` code.
+//! call any `oce-*` code. The LimitSlewRate oracle independently derives the project's documented
+//! discrete convention from R-DYN-1 plus Buildings `Reals/LimitSlewRate.mo`: implicit lag first,
+//! then a post-filter increment clamp. Exact IEEE-754 comparison makes that expression
+//! operation-for-operation coincident with the engine's documented recurrence; no engine source
+//! is imported or called.
 //!
 //! The `time_varying_gain_and_time_constant` scenario is the oracle-diff golden for the
 //! 2026-07-06 closeout divergence fix: the engine previously froze `k`/`T` as build-time
@@ -33,7 +38,11 @@ fn t_non_zero(t: f64) -> f64 {
 }
 
 fn x_for_start(u: f64, k: f64, t: f64, y_start: f64) -> f64 {
-    if k.abs() < EPS { u } else { u - t * y_start / k }
+    if k.abs() < EPS {
+        u
+    } else {
+        u - t * y_start / k
+    }
 }
 
 /// Emit-before-update walk: each tick emits `y = (k/T_nonZero)*(u - x)` from the prior state
@@ -74,7 +83,118 @@ fn derivative_outputs(
 
 /// Build the Derivative recurrence goldens.
 pub fn goldens() -> Vec<Golden> {
-    vec![constant_gain_filter(), time_varying_gain_and_time_constant()]
+    vec![
+        constant_gain_filter(),
+        time_varying_gain_and_time_constant(),
+        rising_saturation(),
+        falling_saturation(),
+        lag_non_uniform_grid(),
+        disabled_passthrough(),
+    ]
+}
+
+/// Derive LimitSlewRate outputs using implicit lag followed by the finite-domain increment clamp.
+fn limit_slew_rate_outputs(
+    time: &[f64],
+    u: &[f64],
+    rising: f64,
+    falling: f64,
+    td: f64,
+    enable: bool,
+) -> Vec<Sample> {
+    assert_eq!(time.len(), u.len());
+    let mut y = u[0];
+    let mut previous_time: Option<f64> = None;
+    let mut out = Vec::with_capacity(time.len());
+
+    for idx in 0..time.len() {
+        if let (Some(previous), true) = (previous_time, enable) {
+            let dt = time[idx] - previous;
+            let alpha = dt / td;
+            let filtered = (y + alpha * u[idx]) / (1.0 + alpha);
+            // All pinned stimuli are finite and cannot produce signed-zero or NaN clamp bounds.
+            let dy = (filtered - y).max(falling * dt).min(rising * dt);
+            y += dy;
+        } else {
+            y = u[idx];
+        }
+        out.push(r(y));
+        previous_time = Some(time[idx]);
+    }
+
+    out
+}
+
+/// Rising clamp followed by release into the implicit lag.
+fn rising_saturation() -> Golden {
+    let time = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+    let u = [0.0, 10.0, 10.0, 3.0, 3.0];
+    let y = limit_slew_rate_outputs(&time, &u, 1.0, -0.5, 0.2, true);
+    Golden::new(
+        "CDL.Reals.LimitSlewRate",
+        "y",
+        ValueKind::Real,
+        time,
+        y,
+        "raisingSlewRate=1.0, fallingSlewRate=-0.5, Td=0.2, enable=true; u=[0,10,10,3,3]",
+        "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); t=0 first-tick y=u; t=1,2 rising-clamped at +1.0*dt; t=3,4 unsaturated lag",
+    )
+    .with_scenario("rising_saturation")
+    .with_inputs(vec![input_r("u", u)])
+}
+
+/// Falling clamp under asymmetric slew-rate bounds.
+fn falling_saturation() -> Golden {
+    let time = vec![0.0, 1.0, 2.0, 3.0, 4.0];
+    let u = [5.0, -5.0, -5.0, -5.0, -5.0];
+    let y = limit_slew_rate_outputs(&time, &u, 0.5, -1.0, 0.2, true);
+    Golden::new(
+        "CDL.Reals.LimitSlewRate",
+        "y",
+        ValueKind::Real,
+        time,
+        y,
+        "raisingSlewRate=0.5, fallingSlewRate=-1.0, Td=0.2, enable=true; u=[5,-5,-5,-5,-5]",
+        "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); t=0 first-tick y=u; t=1..4 falling-clamped at -1.0*dt",
+    )
+    .with_scenario("falling_saturation")
+    .with_inputs(vec![input_r("u", u)])
+}
+
+/// Pure implicit lag on a non-uniform, non-dyadic time grid.
+fn lag_non_uniform_grid() -> Golden {
+    let time = vec![0.0, 0.1, 0.3, 0.7];
+    let u = [0.2, 0.9, -0.4, 0.6];
+    let y = limit_slew_rate_outputs(&time, &u, 100.0, -100.0, 0.5, true);
+    Golden::new(
+        "CDL.Reals.LimitSlewRate",
+        "y",
+        ValueKind::Real,
+        time,
+        y,
+        "raisingSlewRate=100.0, fallingSlewRate=-100.0, Td=0.5, enable=true; non-uniform t=[0,0.1,0.3,0.7]; u=[0.2,0.9,-0.4,0.6]",
+        "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); never clamped, so the varying-dt implicit lag determines every update",
+    )
+    .with_scenario("lag_non_uniform_grid")
+    .with_inputs(vec![input_r("u", u)])
+}
+
+/// Disabled mode passthrough at every tick.
+fn disabled_passthrough() -> Golden {
+    let time = vec![0.0, 1.0, 2.0, 3.0];
+    let u = [0.0, 5.0, -3.0, 7.0];
+    let y = limit_slew_rate_outputs(&time, &u, 1.0, -1.0, 0.5, false);
+    Golden::new(
+        "CDL.Reals.LimitSlewRate",
+        "y",
+        ValueKind::Real,
+        time,
+        y,
+        "raisingSlewRate=1.0, fallingSlewRate=-1.0, Td=0.5, enable=false; u=[0,5,-3,7]",
+        "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); disabled mode gives y=u every tick",
+    )
+    .with_scenario("disabled_passthrough")
+    .with_inputs(vec![input_r("u", u)])
 }
 
 fn constant_gain_filter() -> Golden {

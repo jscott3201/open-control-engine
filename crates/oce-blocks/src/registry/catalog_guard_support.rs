@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "c1a7b2dc1a50945c";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "7dbf5fb95476db6c";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -127,7 +127,11 @@ pub(super) fn validate_catalog(
                     errors.push(format!("stale-generated-manifest: {}", entry.class_path));
                 }
             }
-            "legacy_evidence_exemption" => {}
+            "legacy_evidence_exemption" => {
+                if manifest_mentions(manifest, &entry.class_path) {
+                    errors.push(format!("exempt-class-has-golden: {}", entry.class_path));
+                }
+            }
             _ => errors.push(format!(
                 "implemented-class-without-golden-or-exemption: {}",
                 entry.class_path
