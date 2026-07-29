@@ -1,0 +1,28 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@graph": [
+    { "@id": "http://example.org#top", "@type": "S231:Block",
+      "S231:hasParameter": { "@id": "http://example.org#top.have" },
+      "S231:containsBlock": [
+        { "@id": "http://example.org#top.n0" },
+        { "@id": "http://example.org#top.n2" }
+      ] },
+    { "@id": "http://example.org#top.have", "S231:value": false },
+    { "@id": "http://example.org#top.n0", "@type": "S231:Block",
+      "S231:isConditionalComponent": true, "S231:conditionalExpression": "have",
+      "S231:containsBlock": { "@id": "http://example.org#top.n1" } },
+    { "@id": "http://example.org#top.n1", "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#top.n2" } },
+    { "@id": "http://example.org#top.n2", "@type": "S231:Block",
+      "S231:hasInput": { "@id": "http://example.org#top.n2.u" },
+      "S231:containsBlock": { "@id": "http://example.org#top.con" } },
+    { "@id": "http://example.org#top.n2.u", "@type": "S231:RealInput" },
+    { "@id": "http://example.org#top.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#top.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#top.con.y" } },
+    { "@id": "http://example.org#top.con.k", "@type": "S231:Parameter", "S231:value": 1.0 },
+    { "@id": "http://example.org#top.con.y", "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" } }
+  ]
+}

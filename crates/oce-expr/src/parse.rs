@@ -16,20 +16,51 @@
 //! recognized only after a brace element or a `sum` argument — so an identifier named `for`
 //! anywhere else keeps parsing as an [`ExprAst::Ident`]. `[a,b;c,d]` matrix constructors are
 //! deferred and array slicing (`A[a:b]`) is out of subset — each produces a typed
-//! [`ExprError::Parse`], never a panic.
+//! [`ExprError::Parse`]. Recursively shaped or oversized inputs return the crate's typed
+//! depth/size errors, never a panic.
 
 use std::sync::Arc;
 
 use crate::lex::{Tok, lex, parse_err};
-use crate::{BinOp, Builtin, BuiltinConst, ExprAst, ExprError, UnOp};
+use crate::{
+    BinOp, Builtin, BuiltinConst, ExprAst, ExprError, MAX_EXPR_NODES, MAX_NESTING_DEPTH, UnOp,
+    nesting_depth,
+};
 
 /// A recursive-descent parser over the lexed token stream.
 struct Parser {
     toks: Vec<Tok>,
     pos: usize,
+    depth: usize,
+    nodes: usize,
 }
 
 impl Parser {
+    fn guarded<T>(
+        &mut self,
+        parse: impl FnOnce(&mut Self) -> Result<T, ExprError>,
+    ) -> Result<T, ExprError> {
+        if self.depth == MAX_NESTING_DEPTH {
+            return Err(ExprError::NestingTooDeep {
+                limit: MAX_NESTING_DEPTH,
+            });
+        }
+        self.depth += 1;
+        let result = parse(self);
+        self.depth -= 1;
+        result
+    }
+
+    fn count_node(&mut self) -> Result<(), ExprError> {
+        if self.nodes == MAX_EXPR_NODES {
+            return Err(ExprError::ExpressionTooLarge {
+                limit: MAX_EXPR_NODES,
+            });
+        }
+        self.nodes += 1;
+        Ok(())
+    }
+
     fn peek(&self) -> Option<&Tok> {
         self.toks.get(self.pos)
     }
@@ -57,6 +88,10 @@ impl Parser {
     /// operand is a full `parse_or` expression and `-1:2` parses as `(-1):2`. Non-nesting:
     /// after `a:b:c` a further `:` is left unconsumed and rejected by the caller.
     fn parse_range(&mut self) -> Result<ExprAst, ExprError> {
+        self.guarded(Self::parse_range_inner)
+    }
+
+    fn parse_range_inner(&mut self) -> Result<ExprAst, ExprError> {
         let first = self.parse_or()?;
         if self.peek() != Some(&Tok::Colon) {
             return Ok(first);
@@ -64,6 +99,7 @@ impl Parser {
         self.pos += 1;
         let second = self.parse_or()?;
         if self.peek() != Some(&Tok::Colon) {
+            self.count_node()?;
             return Ok(ExprAst::Range {
                 start: Box::new(first),
                 step: None,
@@ -72,6 +108,7 @@ impl Parser {
         }
         self.pos += 1;
         let third = self.parse_or()?;
+        self.count_node()?;
         Ok(ExprAst::Range {
             start: Box::new(first),
             step: Some(Box::new(second)),
@@ -85,6 +122,7 @@ impl Parser {
         while self.peek_keyword("or") {
             self.pos += 1;
             let rhs = self.parse_and()?;
+            self.count_node()?;
             lhs = ExprAst::Binary(BinOp::Or, Box::new(lhs), Box::new(rhs));
         }
         Ok(lhs)
@@ -96,6 +134,7 @@ impl Parser {
         while self.peek_keyword("and") {
             self.pos += 1;
             let rhs = self.parse_not()?;
+            self.count_node()?;
             lhs = ExprAst::Binary(BinOp::And, Box::new(lhs), Box::new(rhs));
         }
         Ok(lhs)
@@ -106,6 +145,7 @@ impl Parser {
         if self.peek_keyword("not") {
             self.pos += 1;
             let operand = self.parse_relation()?;
+            self.count_node()?;
             Ok(ExprAst::Unary(UnOp::Not, Box::new(operand)))
         } else {
             self.parse_relation()
@@ -126,6 +166,7 @@ impl Parser {
         };
         self.pos += 1;
         let rhs = self.parse_add()?;
+        self.count_node()?;
         Ok(ExprAst::Binary(op, Box::new(lhs), Box::new(rhs)))
     }
 
@@ -142,6 +183,7 @@ impl Parser {
             };
             self.pos += 1;
             let rhs = self.parse_term()?;
+            self.count_node()?;
             lhs = ExprAst::Binary(op, Box::new(lhs), Box::new(rhs));
         }
         Ok(lhs)
@@ -158,6 +200,7 @@ impl Parser {
             };
             self.pos += 1;
             let rhs = self.parse_unary()?;
+            self.count_node()?;
             lhs = ExprAst::Binary(op, Box::new(lhs), Box::new(rhs));
         }
         Ok(lhs)
@@ -168,10 +211,16 @@ impl Parser {
     /// since `(-a)*b == -(a*b)`. The operand is a [`Parser::parse_postfix`] production, so a
     /// subscript binds tighter than the sign: `-A[i]` is `-(A[i])`.
     fn parse_unary(&mut self) -> Result<ExprAst, ExprError> {
+        self.guarded(Self::parse_unary_inner)
+    }
+
+    fn parse_unary_inner(&mut self) -> Result<ExprAst, ExprError> {
         match self.peek() {
             Some(Tok::Minus) => {
                 self.pos += 1;
-                Ok(ExprAst::Unary(UnOp::Neg, Box::new(self.parse_unary()?)))
+                let operand = self.parse_unary()?;
+                self.count_node()?;
+                Ok(ExprAst::Unary(UnOp::Neg, Box::new(operand)))
             }
             Some(Tok::Plus) => {
                 self.pos += 1;
@@ -216,6 +265,7 @@ impl Parser {
                 }
             }
             self.expect(&Tok::RBracket, "']' to close an array subscript")?;
+            self.count_node()?;
             base = ExprAst::Index {
                 base: Box::new(base),
                 indices,
@@ -230,9 +280,18 @@ impl Parser {
     /// explicit typed rejection rather than a stray-token fall-through.
     fn parse_primary(&mut self) -> Result<ExprAst, ExprError> {
         match self.bump() {
-            Some(Tok::Int(v)) => Ok(ExprAst::Int(v)),
-            Some(Tok::Real(v)) => Ok(ExprAst::Real(v)),
-            Some(Tok::Str(s)) => Ok(ExprAst::Str(s)),
+            Some(Tok::Int(v)) => {
+                self.count_node()?;
+                Ok(ExprAst::Int(v))
+            }
+            Some(Tok::Real(v)) => {
+                self.count_node()?;
+                Ok(ExprAst::Real(v))
+            }
+            Some(Tok::Str(s)) => {
+                self.count_node()?;
+                Ok(ExprAst::Str(s))
+            }
             Some(Tok::LParen) => {
                 let inner = self.parse_range()?;
                 self.expect(&Tok::RParen, "')' to close a parenthesized expression")?;
@@ -262,6 +321,7 @@ impl Parser {
     fn parse_array_literal(&mut self) -> Result<ExprAst, ExprError> {
         if self.peek() == Some(&Tok::RBrace) {
             self.pos += 1;
+            self.count_node()?;
             return Ok(ExprAst::ArrayLit(Vec::new()));
         }
         let first = self.parse_range()?;
@@ -269,6 +329,7 @@ impl Parser {
             self.pos += 1; // consume the contextual 'for'
             let iters = self.parse_comprehension_iterators()?;
             self.expect(&Tok::RBrace, "'}' to close an array comprehension")?;
+            self.count_node()?;
             return Ok(ExprAst::Comprehension {
                 body: Box::new(first),
                 iters,
@@ -286,6 +347,7 @@ impl Parser {
             }
         }
         self.expect(&Tok::RBrace, "'}' to close an array literal")?;
+        self.count_node()?;
         Ok(ExprAst::ArrayLit(elems))
     }
 
@@ -354,8 +416,14 @@ impl Parser {
     /// constant, plain identifier, or a deferred/illegal qualified name.
     fn parse_name(&mut self, n: String) -> Result<ExprAst, ExprError> {
         match n.as_str() {
-            "true" => return Ok(ExprAst::Bool(true)),
-            "false" => return Ok(ExprAst::Bool(false)),
+            "true" => {
+                self.count_node()?;
+                return Ok(ExprAst::Bool(true));
+            }
+            "false" => {
+                self.count_node()?;
+                return Ok(ExprAst::Bool(false));
+            }
             "and" | "or" | "not" => {
                 return Err(parse_err(format!("operator '{n}' has no left operand")));
             }
@@ -366,11 +434,14 @@ impl Parser {
             return self.parse_call(&n);
         }
         if let Some(c) = recognize_const(&n) {
+            self.count_node()?;
             return Ok(ExprAst::Const(c));
         }
         if n.contains('.') {
+            self.count_node()?;
             return Ok(ExprAst::EnumRef(Arc::from(n.as_str())));
         }
+        self.count_node()?;
         Ok(ExprAst::Ident(Arc::from(n.as_str())))
     }
 
@@ -403,6 +474,7 @@ impl Parser {
                     }
                     self.pos += 1; // consume the contextual 'for'
                     let iters = self.parse_comprehension_iterators()?;
+                    self.count_node()?;
                     arg = ExprAst::Comprehension {
                         body: Box::new(arg),
                         iters,
@@ -417,6 +489,7 @@ impl Parser {
         }
         self.expect(&Tok::RParen, "')' to close an argument list")?;
         let builtin = resolve_builtin(name, args.len())?;
+        self.count_node()?;
         Ok(ExprAst::Call(builtin, args))
     }
 
@@ -523,13 +596,23 @@ pub(crate) fn parse(text: &str) -> Result<ExprAst, ExprError> {
     if toks.is_empty() {
         return Err(parse_err("empty expression"));
     }
-    let mut parser = Parser { toks, pos: 0 };
+    let mut parser = Parser {
+        toks,
+        pos: 0,
+        depth: 0,
+        nodes: 0,
+    };
     let ast = parser.parse_range()?;
     if parser.pos != parser.toks.len() {
         return Err(parse_err(format!(
             "unexpected trailing input after a complete expression: {:?}",
             parser.toks[parser.pos]
         )));
+    }
+    if nesting_depth(&ast) > MAX_NESTING_DEPTH {
+        return Err(ExprError::NestingTooDeep {
+            limit: MAX_NESTING_DEPTH,
+        });
     }
     Ok(ast)
 }
