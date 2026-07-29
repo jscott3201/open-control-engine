@@ -7,10 +7,11 @@ therefore `Engine::load_cxf` in the published `open-control-engine` facade — e
 is pinned by tests against the checked-in conformance corpus (see
 [Testing your emitter](#testing-your-emitter)).
 
-Scope: this contract covers the nested-composite lowering only — how `S231:containsBlock`
-hierarchies flatten and which hierarchy shapes reject. Leaf-block semantics, connector typing,
-and post-lowering validation (unit checks, single-assignment) have their own diagnostics and are
-out of scope here.
+Scope: this contract covers the composite subset of CXF lowering — how `S231:containsBlock` hierarchies
+flatten, which hierarchy shapes reject, and the document-wide rejection of active array-valued
+connector and block-instance nodes. Other leaf-block semantics, connector typing, and
+post-lowering validation (unit checks, single-assignment) have their own diagnostics and are out
+of scope here.
 
 ## How rejections are reported
 
@@ -20,13 +21,14 @@ Every rejection is a diagnostic with three parts:
 - an optional **subject** (the `@id` of the offending node, where one exists),
 - a **message**.
 
-The four *rejecting* rules below (2, 4, 5, 7) are contract rules: their messages begin with a
+The *rejecting* rules below — except Rule 6, whose rejections are generic diagnostics with no
+tag — are contract rules: their messages begin with a
 stable machine-readable tag of the form `composite/<rule-id>: ` (note the single trailing space
 after the colon). Match rejections with `message.starts_with("composite/<rule-id>: ")`; the rest
 of the message is human prose and may change. The tag-to-code mapping is published twice — in the
 [rule catalog](#rule-catalog) table below and as the machine-readable artifact
 `tools/reference-catalog/oce-cxf.composite-rules.json` — and a drift-guard test holds this
-document, the artifact, and the emitting code to the same five identities.
+document, the artifact, and the emitting code to the same catalog identities.
 
 Rules 1 and 3 are *non-rejecting* classification and ordering rules. They carry
 **no DiagCode, no message tag, and no catalog entry** — there is nothing to match, because they
@@ -196,7 +198,7 @@ will always "fail"; compare imported models instead.
 ```
 imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u` is gone.
 
-## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`)
+## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`, `composite/array-connector`, `composite/array-instance`)
 
 > Six Modelica construct keys are banned on any active node: `redeclare`, `constrainedby`,
 > `extends`, `extendsFrom`, `moSource`, `modelicaSource`. Matching is on the term after the last
@@ -208,6 +210,23 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 > `S231:isReplaceable: true` on any active node rejects with `composite/replaceable` (DiagCode
 > `unresolved-polymorphism`). The subject is the replaceable node. Replaceable components must be
 > resolved to concrete classes before export.
+>
+> An active connector — any node referenced by an active node's `S231:hasInput` or
+> `S231:hasOutput` list, anywhere in the document, whether or not the referencing node is
+> reachable from the top-level root — rejects when it carries an array marker:
+> `S231:isArray: true` or any `S231:sizeOfDimensions`. Marker keys match on the term after the
+> last `:`, `#`, or `/`, like the banned-key matching above, so absolute-IRI spellings reject
+> too. The rejection is `composite/array-connector` (DiagCode `non-subset-construct`) with the
+> connector node as subject. Flatten connector arrays to one connector per element.
+>
+> An active block instance — any node referenced by an active node's `S231:containsBlock` —
+> rejects under the same array markers as `composite/array-instance` (DiagCode
+> `non-subset-construct`) with the instance node as subject. Flatten block arrays to one
+> instance per element. A node referenced as both connector and instance receives both
+> rejections, and a `S231:hasParameter` listing does not exempt it. Array-valued parameters
+> **on a composite** are governed by Rule 5; an array-valued parameter on a leaf block is
+> preserved and expanded, not rejected. Inactive conditional subtrees are invisible to these
+> checks.
 
 ```json
 { "@id": "…#M.c2", "@type": "…MultiplyByParameter",
@@ -220,7 +239,7 @@ rejects twice: once under `composite/banned-modelica-key` naming `` `redeclare` 
 
 ## Rule catalog
 
-The five contract identities, mirroring
+The contract identities, mirroring
 `tools/reference-catalog/oce-cxf.composite-rules.json` (catalog order). Rules 1 and 3 do not
 appear here because they are non-rejecting. Rule 6 has no `composite/` rule identity; its
 rejections are generic diagnostics.
@@ -232,6 +251,8 @@ rejections are generic diagnostics.
 | 7 | `replaceable` | `unresolved-polymorphism` | `composite/replaceable: ` |
 | 7 | `banned-modelica-key` | `non-subset-construct` | `composite/banned-modelica-key: ` |
 | 5 | `array-parameter` | `non-subset-construct` | `composite/array-parameter: ` |
+| 7 | `array-connector` | `non-subset-construct` | `composite/array-connector: ` |
+| 7 | `array-instance` | `non-subset-construct` | `composite/array-instance: ` |
 
 Every message prefix is `composite/<rule-id>: ` — colon, then **one trailing space** (U+0020),
 which markdown table cells cannot render unambiguously. Match with

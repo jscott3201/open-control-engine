@@ -153,6 +153,20 @@ fn array_parameter_doc() -> JsonValue {
     doc
 }
 
+/// BASE with an array-valued connector on the second leaf.
+fn array_connector_doc() -> JsonValue {
+    let mut doc = base();
+    node_mut(&mut doc, ".c2.u")["S231:isArray"] = json!(true);
+    doc
+}
+
+/// BASE with an array-valued second leaf instance.
+fn array_instance_doc() -> JsonValue {
+    let mut doc = base();
+    node_mut(&mut doc, ".c2")["S231:isArray"] = json!(true);
+    doc
+}
+
 #[test]
 fn multi_root_rejection_enumerates_candidates_in_document_order_with_first_as_subject() {
     assert_eq!(
@@ -259,6 +273,32 @@ fn array_valued_composite_parameter_rejection_is_tagged_with_the_parameter_subje
 }
 
 #[test]
+fn array_valued_connector_rejection_is_tagged_with_the_connector_subject() {
+    assert_eq!(
+        reject(&array_connector_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c2.u",
+            "composite/array-connector: array-valued connector nodes are not supported; flatten \
+             the array to one connector per element",
+        )]
+    );
+}
+
+#[test]
+fn array_valued_instance_rejection_is_tagged_with_the_instance_subject() {
+    assert_eq!(
+        reject(&array_instance_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c2",
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
+        )]
+    );
+}
+
+#[test]
 fn contract_rejection_enumerations_are_byte_identical_across_repeated_imports() {
     // The two multi-offender enumerations (candidate roots, cycle participants) must not leak
     // any map-iteration order: repeated imports yield identical full messages.
@@ -275,12 +315,14 @@ fn contract_rejection_enumerations_are_byte_identical_across_repeated_imports() 
 fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
     let catalog: JsonValue = serde_json::from_str(CATALOG_JSON).expect("catalog parses as JSON");
     let catalog = catalog.as_object().expect("catalog top-level object");
-    let fixtures: [(&str, JsonValue); 5] = [
+    let fixtures: [(&str, JsonValue); 7] = [
         ("root-count", multi_root_doc()),
         ("contains-cycle", reachable_cycle_doc()),
         ("replaceable", replaceable_doc()),
         ("banned-modelica-key", banned_key_doc("redeclare")),
         ("array-parameter", array_parameter_doc()),
+        ("array-connector", array_connector_doc()),
+        ("array-instance", array_instance_doc()),
     ];
     assert_eq!(
         catalog.len(),

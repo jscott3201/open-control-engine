@@ -58,7 +58,7 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   `oce-cxf` keeps this file byte-identical to the live rule table; re-bless a deliberate rule
   change with `UPDATE_EXPECT=1 cargo nextest run -p oce-cxf
   checked_in_catalog_matches_regenerated_bytes` and review the diff. Scope limit by design: only
-  the five composite-subset contract rules are cataloged — the resolver's generic lookup-miss
+  the composite-subset contract rules are cataloged — the resolver's generic lookup-miss
   (`unresolved-reference`) and grounding (`grounding-failed`) diagnostics are shared machinery,
   not contract rules, and carry no tag. The normative statement of the rules behind these
   identities — including the non-rejecting classification/ordering/transform rules that have no

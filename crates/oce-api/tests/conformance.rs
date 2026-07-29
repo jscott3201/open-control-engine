@@ -248,7 +248,7 @@ type CompositeRejection = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 10] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     (
         "multi_root.jsonld",
         "root-count",
@@ -350,6 +350,26 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 10] = [
             Some("http://example.org#M.p"),
             "composite/array-parameter: array-valued composite parameters are not supported \
              by this CXF lowering subset",
+        )],
+    ),
+    (
+        "array_connector.jsonld",
+        "array-connector",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.c2.u"),
+            "composite/array-connector: array-valued connector nodes are not supported; flatten \
+             the array to one connector per element",
+        )],
+    ),
+    (
+        "array_instance.jsonld",
+        "array-instance",
+        &[(
+            DiagCode::NonSubsetConstruct,
+            Some("http://example.org#M.c2"),
+            "composite/array-instance: array-valued block-instance nodes are not supported; \
+             flatten the array to one instance per element",
         )],
     ),
     (
