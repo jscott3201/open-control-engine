@@ -16,7 +16,8 @@ native CDL coverage aligned with `lbl-srg/modelica-buildings`.
   evidence files used by that sequence/profile snapshot.
 - `modelica-buildings-cdl.hash-manifest.json` pins every whitelisted byte in the vendored
   Modelica Buildings CDL tree, including per-file Git blob OIDs, SHA-256 digests, sizes,
-  provenance buckets, and the independently pinned subtree SHA. The
+  provenance buckets, and a `subtree_tree_sha` field recomputed from the on-disk bytes. The
+  independent pin is the hand-edited `SUBTREE_TREE_SHA` Rust constant. The
   `third_party_manifest::checked_in_manifest_bytes_equal_fresh_render` test in the structural
   oracle input-hygiene binary keeps it byte-identical to the tree. Re-bless a deliberate vendor
   update with `OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle

@@ -49,7 +49,7 @@ you cloned this repo, you will not find them, and that is expected.
 | Path | Tracked? | Purpose |
 | --- | --- | --- |
 | `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
-| `third_party/` | tracked | Vendored third-party source, verbatim and uncompiled. Today: 176 Modelica Buildings `.mo` classes plus 44 modelica-json CXF translations, read as data by two conformance audits. Sits outside every crate root, so `cargo package` never ships it. Its own license applies — see the directory README. |
+| `third_party/` | tracked | Vendored third-party source, verbatim and uncompiled. Today: 176 Modelica Buildings `.mo` classes plus 44 modelica-json CXF translations, read as data by three input-hygiene audits. Sits outside every crate root, so `cargo package` never ships it. Its own license applies — see the directory README. |
 | `.agents/` | partly | `gate.sh` and `project-facts.md` are tracked; other files there are local operating notes. |
 | `_spec/` | local-only | Architecture and engine specification — the design of record before code. |
 | `_research/` | local-only | Research findings that feed the spec. |

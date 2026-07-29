@@ -1,4 +1,10 @@
 //! Byte-integrity manifest for the vendored Modelica Buildings CDL corpus.
+//!
+//! The whitelist is a fail-closed stand-in for Git's tracked set: every walked file must belong
+//! to one of the upstream-Buildings, generated-CXF, or repo-authored provenance buckets. Git blob
+//! and tree objects are recomputed byte-for-byte, including Git's trailing-slash ordering rule
+//! for subtrees. The checked-in manifest can be regenerated, but the tree-SHA Rust constant is a
+//! deliberate hand edit so tampering plus re-blessing cannot silently move the independent pin.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -13,9 +19,9 @@ const BUILDINGS_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 const MODELICA_JSON_COMMIT: &str = "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb";
 // Derived after the README commit with:
 // git rev-parse HEAD:third_party/modelica-buildings-cdl
-const SUBTREE_TREE_SHA: &str = "3384c6cd22baf79d33845afc7c7d30049d0b1957";
+const SUBTREE_TREE_SHA: &str = "365a48106e8cdba6e9cf15914e8ba977c735ffc6";
 const SCHEMA: &str = "open-control/modelica-buildings-cdl-hash-manifest/v1";
-const MANIFEST_REL: &str =
+const MANIFEST_PATH: &str =
     "../../tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json";
 const MANIFEST_BYTES: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -101,6 +107,7 @@ fn walk(root: &Path) -> Result<Vec<FileData>, String> {
                     .ok_or_else(|| format!("non-UTF-8 vendored path: {}", path.display()))?
                     .replace('\\', "/");
                 validate_path(&relative)?;
+                reject_executable(&path, &relative)?;
                 let bytes = fs::read(&path)
                     .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
                 out.push(FileData {
@@ -121,6 +128,28 @@ fn walk(root: &Path) -> Result<Vec<FileData>, String> {
     visit(root, root, &mut files)?;
     files.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(files)
+}
+
+#[cfg(unix)]
+fn reject_executable(path: &Path, relative: &str) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let mode = fs::metadata(path)
+        .map_err(|error| format!("cannot read mode for {}: {error}", path.display()))?
+        .permissions()
+        .mode();
+    if mode & 0o111 != 0 {
+        return Err(format!(
+            "executable vendored file `{relative}`: vendored files must use Git mode 100644 — \
+             remove the executable bit deliberately"
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn reject_executable(_path: &Path, _relative: &str) -> Result<(), String> {
+    Ok(())
 }
 
 fn validate_path(path: &str) -> Result<&'static str, String> {
@@ -264,6 +293,22 @@ fn parse_manifest(bytes: &str) -> Result<Manifest, String> {
 }
 
 fn structured_diff(checked: &Manifest, disk: &Manifest) -> Result<(), String> {
+    let mut findings = Vec::new();
+    if checked.schema != disk.schema {
+        findings.push("header differs: schema".to_owned());
+    }
+    if checked.buildings_commit != disk.buildings_commit {
+        findings.push("header differs: buildings_commit".to_owned());
+    }
+    if checked.modelica_json_commit != disk.modelica_json_commit {
+        findings.push("header differs: modelica_json_commit".to_owned());
+    }
+    if checked.subtree_tree_sha != disk.subtree_tree_sha {
+        findings.push("header differs: subtree_tree_sha".to_owned());
+    }
+    if checked.bucket_counts != disk.bucket_counts {
+        findings.push("header differs: bucket_counts".to_owned());
+    }
     let checked_by_path: BTreeMap<_, _> = checked
         .entries
         .iter()
@@ -274,7 +319,6 @@ fn structured_diff(checked: &Manifest, disk: &Manifest) -> Result<(), String> {
         .iter()
         .map(|entry| (entry.path.as_str(), entry))
         .collect();
-    let mut findings = Vec::new();
     for (path, expected) in &checked_by_path {
         let Some(actual) = disk_by_path.get(path) else {
             findings.push(format!("manifest-only path `{path}`"));
@@ -318,11 +362,16 @@ fn structured_diff(checked: &Manifest, disk: &Manifest) -> Result<(), String> {
 fn checked_in_manifest_bytes_equal_fresh_render() {
     let fresh = &corpus().expect("vendored corpus must be readable").manifest;
     let first = render(fresh);
-    let second = render(fresh);
-    assert_eq!(first, second, "manifest rendering is nondeterministic");
+    let independent_listing = walk(&vendor_root()).expect("independent vendor walk must succeed");
+    let independent =
+        build_manifest(&independent_listing).expect("independent manifest build must succeed");
+    assert_eq!(
+        fresh, &independent,
+        "independent vendor walks produced different manifests"
+    );
     if std::env::var_os("OCE_BLESS").is_some() {
         fs::write(
-            Path::new(env!("CARGO_MANIFEST_DIR")).join(MANIFEST_REL),
+            Path::new(env!("CARGO_MANIFEST_DIR")).join(MANIFEST_PATH),
             first,
         )
         .expect("write blessed manifest");
@@ -343,21 +392,59 @@ fn recomputed_subtree_sha_matches_independent_git_pin() {
         .expect("vendored corpus must be readable")
         .manifest
         .subtree_tree_sha;
-    assert_eq!(actual, SUBTREE_TREE_SHA);
+    assert_eq!(
+        actual, SUBTREE_TREE_SHA,
+        "re-derive with `git rev-parse HEAD:third_party/modelica-buildings-cdl` after \
+         committing, then deliberately hand-edit SUBTREE_TREE_SHA"
+    );
 }
 
 #[test]
 fn manifest_headers_match_source_pins() {
-    let manifest = &corpus().expect("vendored corpus must be readable").manifest;
+    let manifest = parse_manifest(MANIFEST_BYTES).expect("checked-in manifest must parse");
+    assert_eq!(manifest.schema, SCHEMA);
     assert_eq!(manifest.buildings_commit, BUILDINGS_COMMIT);
     assert_eq!(manifest.modelica_json_commit, MODELICA_JSON_COMMIT);
-    assert_eq!(manifest.subtree_tree_sha, SUBTREE_TREE_SHA);
+    assert_eq!(
+        manifest.subtree_tree_sha, SUBTREE_TREE_SHA,
+        "re-derive with `git rev-parse HEAD:third_party/modelica-buildings-cdl` after \
+         committing, then deliberately hand-edit SUBTREE_TREE_SHA"
+    );
     let provenance: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tools/reference-catalog/Buildings.Controls.OBC.CDL.prov.json"
     )))
     .expect("CDL provenance is JSON");
     assert_eq!(provenance["commit"].as_str(), Some(BUILDINGS_COMMIT));
+
+    let readme = corpus()
+        .expect("vendored corpus must be readable")
+        .listing
+        .iter()
+        .find(|file| file.path == "README.md")
+        .expect("vendored README must be listed");
+    let tokens = modelica_json_tokens(&readme.bytes);
+    assert_eq!(
+        tokens.len(),
+        2,
+        "vendored README must carry exactly two modelica-json commit tokens"
+    );
+    assert!(
+        tokens.iter().all(|token| token == MODELICA_JSON_COMMIT),
+        "vendored README modelica-json tokens must equal MODELICA_JSON_COMMIT: {tokens:?}"
+    );
+}
+
+fn modelica_json_tokens(bytes: &[u8]) -> Vec<String> {
+    String::from_utf8_lossy(bytes)
+        .lines()
+        .filter(|line| line.contains("modelica-json"))
+        .flat_map(|line| {
+            line.split(|character: char| !character.is_ascii_hexdigit())
+                .filter(|token| token.len() == 40)
+                .map(str::to_owned)
+        })
+        .collect()
 }
 
 #[test]
@@ -387,9 +474,14 @@ fn git_tree_order_uses_trailing_slash_for_subtrees() {
             bytes: b"synthetic blob\n".to_vec(),
         },
     ];
-    // In a temporary Git repository, create Foo's README blob and tree with
-    // git hash-object -w / git mktree, then:
-    // printf the Foo-tree and synthetic-blob rows | git mktree
+    // kat_repo=$(mktemp -d /tmp/oce-tree-kat.XXXXXX)
+    // git -C "$kat_repo" init -q
+    // empty_blob=$(printf '' | git -C "$kat_repo" hash-object -w --stdin)
+    // foo_tree=$(printf '100644 blob %s\tREADME.md\n' "$empty_blob" |
+    //   git -C "$kat_repo" mktree)
+    // root_blob=$(printf 'synthetic blob\n' | git -C "$kat_repo" hash-object -w --stdin)
+    // printf '040000 tree %s\tFoo\n100644 blob %s\tFoo.mo\n' "$foo_tree" "$root_blob" |
+    //   git -C "$kat_repo" mktree
     assert_eq!(
         tree_oid(&listing).expect("synthetic tree is valid"),
         "1ce8076992b366b4f40ea620aede0aaf6641b3ca"
@@ -437,6 +529,7 @@ fn additions_deletions_and_junk_are_distinct_failures() {
         bytes: Vec::new(),
     });
     let error = build_manifest(&junk).expect_err("junk must fail");
+    assert!(error.contains("cxf/.DS_Store"), "{error}");
     assert!(error.contains("untracked junk"), "{error}");
     assert!(error.contains("new vendored file type"), "{error}");
 }
@@ -467,10 +560,11 @@ fn listing_mutations_trip_hash_and_tree_controls() {
 #[test]
 fn manifest_field_mutations_name_the_path_and_field() {
     let base = corpus().expect("vendored corpus must be readable");
-    structured_diff(&base.manifest, &base.manifest).expect("unmutated control is green");
-    let path = base.manifest.entries[0].path.clone();
+    let checked = parse_manifest(MANIFEST_BYTES).expect("checked-in manifest must parse");
+    structured_diff(&checked, &base.manifest).expect("unmutated control is green");
+    let path = checked.entries[0].path.clone();
 
-    let mut wrong_origin = base.manifest.clone();
+    let mut wrong_origin = checked.clone();
     wrong_origin.entries[0].origin = "wrong-origin".to_owned();
     let error = structured_diff(&wrong_origin, &base.manifest).expect_err("wrong origin must fail");
     assert!(
@@ -478,7 +572,7 @@ fn manifest_field_mutations_name_the_path_and_field() {
         "{error}"
     );
 
-    let mut wrong_size = base.manifest.clone();
+    let mut wrong_size = checked;
     wrong_size.entries[0].size_bytes += 1;
     let error = structured_diff(&wrong_size, &base.manifest).expect_err("wrong size must fail");
     assert!(

@@ -222,7 +222,8 @@ upstream Modelica sources in
 verbatim at the pinned reference commit. There is no catalog artifact in between, deliberately: a
 checked-in table has to be reviewed entry by entry against upstream, which nobody does reliably —
 the generator that produced the previous one shipped five defects before it was correct. The
-always-on manifest gate checks the vendored tree's local integrity in both directions; the
+always-on manifest gate in the `structural oracle (input hygiene)` step checks the vendored tree's
+local integrity in both directions; the
 bucket-scoped comparison in `third_party/modelica-buildings-cdl/README.md` separately spot-checks
 the upstream fidelity of the `upstream-buildings` files. The derivation is code a reviewer reads
 rather than data a reviewer spot-checks.

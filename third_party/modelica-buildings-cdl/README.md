@@ -25,23 +25,32 @@ so `cargo package` does not see it.
 | Upstream | https://github.com/lbl-srg/modelica-buildings |
 | Commit | `a131864e4c4df22ebcd52bb8da439de0087ac365` |
 | Files | 176 `.mo` class sources + `Buildings/legal.html` |
-| Vendored tree size | About 3.7 MB (`Buildings/` 1.6 MB; generated `cxf/` 2.1 MB) |
+| Vendored tree size | About 3.46 MB (`Buildings/` 1.34 MB; generated `cxf/` 2.11 MB) |
 
 The always-on local integrity check is the `structural oracle (input hygiene)` step of
 `bash .agents/gate.sh`. Its hash manifest checks every expected path and byte in both directions,
 including the repo-authored README and generated CXF documents.
 
-For a separate upstream-fidelity spot-check, compare only the manifest's
-`upstream-buildings` bucket against a clone at the pinned commit:
+For a separate upstream-fidelity spot-check, derive the `Buildings/**` comparison set from the
+Git index. Its count must agree with the hash manifest's `upstream-buildings` bucket:
 
 ```bash
-git clone https://github.com/lbl-srg/modelica-buildings /tmp/modelica-buildings
+repo_root=$(git rev-parse --show-toplevel)
+[ -d /tmp/modelica-buildings/.git ] ||
+  git clone https://github.com/lbl-srg/modelica-buildings /tmp/modelica-buildings
 git -C /tmp/modelica-buildings checkout a131864e4c4df22ebcd52bb8da439de0087ac365
-git ls-files -- 'third_party/modelica-buildings-cdl/Buildings/**' |
-  while read -r path; do
-    relative=${path#third_party/modelica-buildings-cdl/}
-    cmp -- "$path" "/tmp/modelica-buildings/$relative" || exit 1
-  done
+compared=0
+drifted=0
+while IFS= read -r tracked_path; do
+  relative=${tracked_path#third_party/modelica-buildings-cdl/}
+  compared=$((compared + 1))
+  if ! cmp -- "$repo_root/$tracked_path" "/tmp/modelica-buildings/$relative"; then
+    drifted=$((drifted + 1))
+  fi
+done < <(git -C "$repo_root" ls-files -- 'third_party/modelica-buildings-cdl/Buildings/**')
+printf 'compared=%s (must equal upstream-buildings count 177) drifted=%s (must be 0)\n' \
+  "$compared" "$drifted"
+test "$compared" -eq 177 && test "$drifted" -eq 0
 ```
 
 This spot-check deliberately verifies fidelity rather than completeness: the upstream tree is a
@@ -61,7 +70,7 @@ with `modelica-json` commit `85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb` (master, 
 derived copies under the same upstream license; they are test data and are not compiled or
 packaged in an `oce-*` crate.
 
-For each of the 31 upstream classes named by
+For each of the 31 upstream classes named by the structural-oracle class manifest
 `crates/oce-cxf/tests/fixtures/g36/structural_oracle_manifest.json`, generation used:
 
 ```bash
@@ -73,15 +82,19 @@ To verify the checked-in translations, check out the two recorded pins, regenera
 classes into a temporary directory with that command, and compare the trees:
 
 ```bash
-git clone https://github.com/lbl-srg/modelica-buildings /tmp/modelica-buildings
+repo_root=$(git rev-parse --show-toplevel)
+[ -d /tmp/modelica-buildings/.git ] ||
+  git clone https://github.com/lbl-srg/modelica-buildings /tmp/modelica-buildings
 git -C /tmp/modelica-buildings checkout a131864e4c4df22ebcd52bb8da439de0087ac365
-git clone https://github.com/lbl-srg/modelica-json /tmp/modelica-json
+[ -d /tmp/modelica-json/.git ] ||
+  git clone https://github.com/lbl-srg/modelica-json /tmp/modelica-json
 git -C /tmp/modelica-json checkout 85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb
 rm -rf /tmp/regenerated-cxf
 mkdir /tmp/regenerated-cxf
-# From /tmp/modelica-json, run the command above for every manifest class,
-# writing each translated document under /tmp/regenerated-cxf.
-diff -r third_party/modelica-buildings-cdl/cxf /tmp/regenerated-cxf
+cd /tmp/modelica-json
+# From this directory, run the command above for every structural-oracle class-manifest entry,
+# with MODELICAPATH=/tmp/modelica-buildings and output under /tmp/regenerated-cxf.
+diff -r "$repo_root/third_party/modelica-buildings-cdl/cxf" /tmp/regenerated-cxf
 ```
 
 The 44 checked-in documents were byte-compared with a fresh regeneration at exactly those pins
@@ -125,3 +138,6 @@ diverges, or a CDL specification revision is one we intend to conform to. A pin-
 run `bash .agents/gate.sh full` and re-bless the hash manifest, its independently pinned tree-SHA
 constant, and affected catalog fingerprints. A read-only re-vendor reporter is planned as a
 follow-up; this README will point to it when it lands.
+
+Any byte change anywhere under this vendored tree — including to this README — requires both
+re-blessing the hash manifest and re-deriving and deliberately hand-editing the tree-SHA constant.
