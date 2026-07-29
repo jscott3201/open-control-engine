@@ -40,7 +40,7 @@ impl Parser {
         &mut self,
         parse: impl FnOnce(&mut Self) -> Result<T, ExprError>,
     ) -> Result<T, ExprError> {
-        if self.depth == MAX_NESTING_DEPTH {
+        if self.depth >= MAX_NESTING_DEPTH {
             return Err(ExprError::NestingTooDeep {
                 limit: MAX_NESTING_DEPTH,
             });
@@ -52,7 +52,7 @@ impl Parser {
     }
 
     fn count_node(&mut self) -> Result<(), ExprError> {
-        if self.nodes == MAX_EXPR_NODES {
+        if self.nodes >= MAX_EXPR_NODES {
             return Err(ExprError::ExpressionTooLarge {
                 limit: MAX_EXPR_NODES,
             });

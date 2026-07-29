@@ -1,19 +1,23 @@
 //! End-to-end totality pins for recursively shaped CXF input.
 
-use oce_cxf::{CxfError, ResolveOptions, import_cxf};
+use oce_cxf::{CxfError, ResolveOptions, ValidationReport, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
 const ROOT: &str = "http://example.org#top";
 const COMPOSITE_DEPTH_LIMIT: usize = 64;
+const CONDITIONAL_GUARD_TERMS: usize = 2000;
+const _: () = assert!(2 * CONDITIONAL_GUARD_TERMS - 1 < oce_expr::MAX_EXPR_NODES);
 
-fn import(value: &Value) -> Result<ModelGraph, CxfError> {
+type ImportResult = Result<(ModelGraph, ValidationReport), CxfError>;
+
+fn import(value: &Value) -> ImportResult {
     let bytes = serde_json::to_vec(value).unwrap();
-    import_cxf(&bytes, &ResolveOptions::default()).map(|(graph, _)| graph)
+    import_cxf(&bytes, &ResolveOptions::default())
 }
 
-fn on_small_stack(value: Value) -> Result<ModelGraph, CxfError> {
+fn on_small_stack(value: Value) -> ImportResult {
     std::thread::Builder::new()
         .stack_size(2 * 1024 * 1024)
         .spawn(move || import(&value))
@@ -22,7 +26,7 @@ fn on_small_stack(value: Value) -> Result<ModelGraph, CxfError> {
         .unwrap()
 }
 
-fn diagnostics(result: Result<ModelGraph, CxfError>) -> Vec<Diagnostic> {
+fn diagnostics(result: ImportResult) -> Vec<Diagnostic> {
     match result {
         Err(CxfError::Validation(diags)) => diags,
         other => panic!("expected validation diagnostics, got {other:?}"),
@@ -129,17 +133,35 @@ fn constant_document(value: String) -> Value {
 #[test]
 fn false_guarded_self_loop_returns_normally() {
     let bytes = include_bytes!("fixtures/ingest_totality/false_guard_self_loop.jsonld");
-    let result = import_cxf(bytes, &ResolveOptions::default()).map(|(graph, _)| graph);
+    let result = import_cxf(bytes, &ResolveOptions::default());
+    let (graph, report) = result.unwrap_or_else(|error| panic!("import failed: {error:?}"));
+    assert!(report.is_empty(), "{report:?}");
     assert!(
-        result.is_ok(),
-        "false-guarded self-loop should be pruned: {result:?}"
+        graph.blocks.iter().all(|block| {
+            block
+                .instance_iri
+                .as_deref()
+                .is_none_or(|iri| !iri.contains("#top.n"))
+        }),
+        "{graph:?}"
     );
 }
 
 #[test]
 fn false_guarded_two_node_cycle_returns_normally() {
     let bytes = include_bytes!("fixtures/ingest_totality/false_guard_two_node_cycle.jsonld");
-    assert!(import_cxf(bytes, &ResolveOptions::default()).is_ok());
+    let result = import_cxf(bytes, &ResolveOptions::default());
+    let (graph, report) = result.unwrap_or_else(|error| panic!("import failed: {error:?}"));
+    assert!(report.is_empty(), "{report:?}");
+    assert!(
+        graph.blocks.iter().all(|block| {
+            block
+                .instance_iri
+                .as_deref()
+                .is_none_or(|iri| !iri.contains("#top.n"))
+        }),
+        "{graph:?}"
+    );
 }
 
 #[test]
@@ -148,8 +170,7 @@ fn active_self_loop_preserves_the_existing_cycle_diagnostic() {
         include_bytes!("fixtures/ingest_totality/active_self_loop.jsonld").as_slice(),
         include_bytes!("fixtures/ingest_totality/unconditional_self_loop.jsonld").as_slice(),
     ] {
-        let result = import_cxf(bytes, &ResolveOptions::default()).map(|(graph, _)| graph);
-        let diags = diagnostics(result);
+        let diags = diagnostics(import_cxf(bytes, &ResolveOptions::default()));
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0].code, DiagCode::MalformedDocument);
         assert_eq!(
@@ -169,24 +190,35 @@ fn active_self_loop_preserves_the_existing_cycle_diagnostic() {
 #[test]
 fn false_guard_prunes_deep_descendants_and_their_ports() {
     let bytes = include_bytes!("fixtures/ingest_totality/false_guard_deep_pruning.jsonld");
-    let graph = import_cxf(bytes, &ResolveOptions::default()).unwrap().0;
-    for suffix in ["n0", "n1", "n2"] {
-        assert!(graph.blocks.iter().all(
-            |block| block.instance_iri.as_deref() != Some(format!("{ROOT}.{suffix}").as_str())
-        ));
-    }
-    assert!(
-        graph
-            .blocks
-            .iter()
-            .all(|block| block.instance_iri.as_deref() != Some(format!("{ROOT}.con").as_str()))
-    );
-    assert!(graph.connectors.is_empty());
+    let (graph, report) = import_cxf(bytes, &ResolveOptions::default()).unwrap();
+    assert!(report.is_empty(), "{report:?}");
+    let block_iris: Vec<_> = graph
+        .blocks
+        .iter()
+        .map(|block| block.instance_iri.as_deref())
+        .collect();
+    assert_eq!(block_iris, [Some("http://example.org#top.survivor")]);
+    // The survivor has one output. Exact connector ownership/count proves n2's boundary input and
+    // the false-guarded descendant constant contributed no connectors.
+    assert_eq!(graph.connectors.len(), 1);
+    assert_eq!(graph.connectors[0].block, graph.blocks[0].id);
 }
 
 #[test]
 fn deep_false_guarded_chain_returns_normally_on_a_small_stack() {
-    assert!(on_small_stack(inactive_chain(5000)).is_ok());
+    let result = on_small_stack(inactive_chain(5000));
+    let (graph, report) =
+        result.unwrap_or_else(|error| panic!("deep inactive import failed: {error:?}"));
+    assert!(report.is_empty(), "{report:?}");
+    assert!(
+        graph.blocks.iter().all(|block| {
+            block
+                .instance_iri
+                .as_deref()
+                .is_none_or(|iri| !iri.contains("#top.n"))
+        }),
+        "{graph:?}"
+    );
 }
 
 #[test]
@@ -243,7 +275,7 @@ fn oversized_left_leaning_binding_returns_grounding_failed() {
 fn deep_conditional_guard_is_rejected_during_parse() {
     let mut document = inactive_chain(1);
     document["@graph"][2]["S231:conditionalExpression"] = json!(
-        std::iter::repeat_n("p", 2000)
+        std::iter::repeat_n("p", CONDITIONAL_GUARD_TERMS)
             .collect::<Vec<_>>()
             .join(" and ")
     );
@@ -251,5 +283,8 @@ fn deep_conditional_guard_is_rejected_during_parse() {
     assert!(diags.iter().any(|diag| {
         diag.code == DiagCode::ConditionalGuardUnsupported
             && diag.message.starts_with("conditional guard did not parse:")
+            && diag
+                .message
+                .contains("nesting exceeds the supported depth (64)")
     }));
 }

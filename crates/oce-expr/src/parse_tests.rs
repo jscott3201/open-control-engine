@@ -6,6 +6,7 @@ const MAX_PAREN_DELIMITERS: usize = 31;
 const MAX_BRACE_DELIMITERS: usize = 31;
 const MAX_CALL_DELIMITERS: usize = 31;
 const MAX_UNARY_SIGNS: usize = 62;
+const MAX_INDEX_DELIMITERS: usize = 63;
 
 struct EmptyScope;
 
@@ -57,6 +58,14 @@ fn unary_parse_entries_accept_the_boundary_and_reject_one_past() {
     // while producing AST depth 63.
     parse(&format!("{}1", "- ".repeat(MAX_UNARY_SIGNS))).unwrap();
     assert_depth_rejection(&format!("{}1", "- ".repeat(MAX_UNARY_SIGNS + 1)));
+}
+
+#[test]
+fn postfix_index_depth_accepts_the_boundary_and_rejects_one_past() {
+    // Postfix parsing is iterative and adds no guarded entries per subscript. The post-parse AST
+    // depth check owns this boundary: identifier depth 1 plus 63 Index nodes reaches depth 64.
+    parse(&format!("A{}", "[1]".repeat(MAX_INDEX_DELIMITERS))).unwrap();
+    assert_depth_rejection(&format!("A{}", "[1]".repeat(MAX_INDEX_DELIMITERS + 1)));
 }
 
 #[test]

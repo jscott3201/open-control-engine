@@ -119,8 +119,9 @@ mod tests;
 /// The parser metric counts simultaneously live guarded parse entries; the AST metric counts a
 /// leaf at depth one. Both reject only when the metric exceeds 64, so 64 is accepted and 65 is
 /// rejected. A 2 MiB debug thread exhausted its stack at 196 nested parentheses; the parser cap
-/// admits about 31, leaving roughly 6× stack headroom and about 16× headroom over the deepest
-/// measured real binding (AST depth four).
+/// admits 31 nested parenthesis/brace/call levels or 62 unary signs, leaving roughly 6× stack
+/// headroom for the parenthesis case and about 16× headroom over the deepest measured real binding
+/// (AST depth four).
 pub const MAX_NESTING_DEPTH: usize = 64;
 
 /// Maximum number of AST nodes an expression parser may construct.
