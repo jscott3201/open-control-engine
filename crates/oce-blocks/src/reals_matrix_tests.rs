@@ -75,15 +75,24 @@ fn integers(values: &[Value]) -> Vec<i64> {
 }
 
 fn special_value_sort_inputs(width: usize) -> Vec<f64> {
+    assert!(
+        width >= 41,
+        "special-value fixture requires at least 41 inputs"
+    );
+    // The base vector is a descending run.
     let mut values = (1..=width)
         .rev()
         .map(|value| value as f64)
         .collect::<Vec<_>>();
+    // Adjacent duplicate tie.
     values[5] = 7.0;
     values[6] = 7.0;
+    // Adjacent `-0.0` pair.
     values[15] = -0.0;
     values[16] = -0.0;
+    // Lone `-0.0`.
     values[30] = -0.0;
+    // NaN within the descending base run.
     values[40] = f64::NAN;
     values
 }
@@ -273,6 +282,19 @@ fn sort_special_value_provenance_matches_modelica_at_stack_boundary() {
         .collect::<Vec<_>>();
     assert_eq!(integers(&got[inputs.len()..]), expected_indices);
     assert_eq!(real_bits(&got[..inputs.len()]), expected_bits);
+
+    let descending = outs(&Sort::new(inputs.len(), false), &real_inputs(&inputs));
+    let descending_indices = [
+        1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+        29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 47, 49, 41, 45, 46, 48, 50, 51, 52,
+        53, 54, 55, 56, 57, 7, 6, 58, 59, 60, 61, 62, 63, 64, 17, 31, 16,
+    ];
+    let descending_bits = descending_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&descending[inputs.len()..]), descending_indices);
+    assert_eq!(real_bits(&descending[..inputs.len()]), descending_bits);
 }
 
 #[test]
@@ -290,4 +312,17 @@ fn sort_special_value_provenance_matches_modelica_beyond_stack_boundary() {
         .collect::<Vec<_>>();
     assert_eq!(integers(&got[inputs.len()..]), expected_indices);
     assert_eq!(real_bits(&got[..inputs.len()]), expected_bits);
+
+    let descending = outs(&Sort::new(inputs.len(), false), &real_inputs(&inputs));
+    let descending_indices = [
+        1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+        29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 47, 49, 41, 45, 46, 48, 50, 51, 52,
+        53, 54, 55, 56, 57, 58, 7, 59, 6, 60, 61, 62, 63, 64, 65, 31, 16, 17,
+    ];
+    let descending_bits = descending_indices
+        .iter()
+        .map(|source| inputs[usize::try_from(*source - 1).unwrap()].to_bits())
+        .collect::<Vec<_>>();
+    assert_eq!(integers(&descending[inputs.len()..]), descending_indices);
+    assert_eq!(real_bits(&descending[..inputs.len()]), descending_bits);
 }

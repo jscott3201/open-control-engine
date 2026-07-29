@@ -6,7 +6,10 @@
 //!
 //! Scope limits: the three `Sources.TimeTable` classes exercise their 1x1 fallback tables because
 //! they have no Structural rule, and PID exercises its default controller type. Both paths were
-//! verified free of allocation sites when this census was introduced.
+//! verified free of allocation sites when this census was introduced. Boolean-typed structural
+//! parameters are forced to `true`, matching every affected catalog default (`rowMax`, `rowMin`,
+//! and `msk_i`); column-wise reductions and non-all-true masks are outside this census, and their
+//! branches were verified free of allocation sites.
 
 #![allow(clippy::print_stdout)] // The work-order capture command requires passing-test evidence.
 
@@ -24,7 +27,10 @@ static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
 const SWEEP: [f64; 5] = [1.0, 0.0, -1.0, f64::NAN, 1e300];
 const EXPECTED_ALLOCATING: [&str; 0] = [];
 const EXPECTED_POSITIVE_CONTROL: [&str; 1] = ["CDL.Reals.Sort"];
-const MAX_OUTPUT_ARITY: usize = 65 * 65;
+const NARROW_WIDTH: usize = 3;
+const WIDE_WIDTH: usize = 65;
+// Tracks the `nin * nout` maximum of `CDL.Routing.*VectorReplicator` at the wide width.
+const MAX_OUTPUT_ARITY: usize = WIDE_WIDTH * WIDE_WIDTH;
 
 fn force_params(rules: &[ParamRule], width: usize) -> ParamTable {
     #[derive(Clone, Copy)]
@@ -74,16 +80,20 @@ fn force_params(rules: &[ParamRule], width: usize) -> ParamTable {
     ParamTable { values }
 }
 
+fn drive_value(kind: PortKind, value: f64) -> Value {
+    match kind {
+        PortKind::Real => Value::Real(value),
+        PortKind::Integer => Value::Integer(value as i64),
+        PortKind::Boolean => Value::Boolean(value > 0.0),
+    }
+}
+
 fn typed_inputs(block: &dyn Block, value: f64) -> Vec<Value> {
     block
         .resolved_signature()
         .inputs
         .iter()
-        .map(|kind| match kind {
-            PortKind::Real => Value::Real(value),
-            PortKind::Integer => Value::Integer(value as i64),
-            PortKind::Boolean => Value::Boolean(value > 0.0),
-        })
+        .map(|kind| drive_value(*kind, value))
         .collect()
 }
 
@@ -130,33 +140,6 @@ fn add_stats(total: &mut Stats, measured: Stats) {
     total.bytes_reallocated += measured.bytes_reallocated;
 }
 
-fn assert_no_heap_traffic(stats: Stats, class_path: &str, width: usize, value: f64) {
-    assert_eq!(
-        stats.allocations, 0,
-        "{class_path} width {width} value {value:?} allocations: {stats:?}"
-    );
-    assert_eq!(
-        stats.reallocations, 0,
-        "{class_path} width {width} value {value:?} reallocations: {stats:?}"
-    );
-    assert_eq!(
-        stats.deallocations, 0,
-        "{class_path} width {width} value {value:?} deallocations: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_allocated, 0,
-        "{class_path} width {width} value {value:?} allocated bytes: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_reallocated, 0,
-        "{class_path} width {width} value {value:?} reallocated bytes: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_deallocated, 0,
-        "{class_path} width {width} value {value:?} deallocated bytes: {stats:?}"
-    );
-}
-
 fn run_arm(width: usize, expected: &[&str], output: &mut [Value]) -> BTreeMap<&'static str, Stats> {
     let expected = expected.iter().copied().collect::<BTreeSet<_>>();
     let mut allocating = BTreeMap::new();
@@ -165,17 +148,28 @@ fn run_arm(width: usize, expected: &[&str], output: &mut [Value]) -> BTreeMap<&'
         for value in SWEEP {
             let block = (lookup(entry.class_path).unwrap().make)(&params);
             let stats = tick(block.as_ref(), &params, value, output);
+            // `Stats == default` is the six-field purity check: the type derives both over 6 fields.
             if stats == Stats::default() {
-                assert_no_heap_traffic(stats, entry.class_path, width, value);
-            } else {
-                add_stats(allocating.entry(entry.class_path).or_default(), stats);
+                continue;
             }
+            add_stats(allocating.entry(entry.class_path).or_default(), stats);
         }
     }
     let measured = allocating.keys().copied().collect::<BTreeSet<_>>();
-    assert_eq!(
-        measured, expected,
-        "width {width} allocating-set mismatch; measured={measured:?}, expected={expected:?}"
+    let differences = measured
+        .symmetric_difference(&expected)
+        .map(|class_path| match allocating.get(class_path) {
+            Some(stats) => format!(
+                "{class_path}: allocs={} bytes={}",
+                stats.allocations, stats.bytes_allocated
+            ),
+            None => format!("{class_path}: expected but absent"),
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        differences.is_empty(),
+        "width {width} allocating-set mismatch; measured={measured:?}, expected={expected:?}; \
+         differences={differences:?}"
     );
     allocating
 }
@@ -187,10 +181,21 @@ fn tick_allocation_census() {
     assert_eq!(entries.len(), 136);
     assert!(SWEEP.iter().any(|value| *value <= 0.0));
     assert!(SWEEP.iter().any(|value| value.is_nan()));
-    let booleans = SWEEP.map(|value| value > 0.0);
-    assert!(booleans.contains(&true) && booleans.contains(&false));
-    let integers = SWEEP.map(|value| value as i64);
-    assert!(integers.iter().any(|value| *value <= 0));
+    let booleans = SWEEP.map(|value| drive_value(PortKind::Boolean, value));
+    assert!(
+        booleans
+            .iter()
+            .any(|value| matches!(value, Value::Boolean(true)))
+            && booleans
+                .iter()
+                .any(|value| matches!(value, Value::Boolean(false)))
+    );
+    let integers = SWEEP.map(|value| drive_value(PortKind::Integer, value));
+    assert!(
+        integers
+            .iter()
+            .any(|value| matches!(value, Value::Integer(integer) if *integer <= 0))
+    );
 
     for entry in entries {
         if entry
@@ -198,8 +203,8 @@ fn tick_allocation_census() {
             .iter()
             .any(|rule| matches!(rule, ParamRule::Structural { .. }))
         {
-            let narrow_params = force_params(entry.param_rules, 3);
-            let wide_params = force_params(entry.param_rules, 65);
+            let narrow_params = force_params(entry.param_rules, NARROW_WIDTH);
+            let wide_params = force_params(entry.param_rules, WIDE_WIDTH);
             let narrow = (lookup(entry.class_path).unwrap().make)(&narrow_params);
             let wide = (lookup(entry.class_path).unwrap().make)(&wide_params);
             let narrow_signature = narrow.resolved_signature();
@@ -215,10 +220,10 @@ fn tick_allocation_census() {
     }
 
     let mut output = vec![Value::Real(0.0); MAX_OUTPUT_ARITY];
-    let narrow = run_arm(3, &EXPECTED_ALLOCATING, &mut output);
-    let wide = run_arm(65, &EXPECTED_POSITIVE_CONTROL, &mut output);
+    let narrow = run_arm(NARROW_WIDTH, &EXPECTED_ALLOCATING, &mut output);
+    let wide = run_arm(WIDE_WIDTH, &EXPECTED_POSITIVE_CONTROL, &mut output);
 
-    println!("arm width=3");
+    println!("arm width={NARROW_WIDTH}");
     if narrow.is_empty() {
         println!("(none)");
     }
@@ -228,7 +233,7 @@ fn tick_allocation_census() {
             stats.allocations, stats.bytes_allocated
         );
     }
-    println!("arm width=65");
+    println!("arm width={WIDE_WIDTH}");
     if wide.is_empty() {
         println!("(none)");
     }
