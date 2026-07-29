@@ -584,90 +584,29 @@ fn unconsumed_nested_pass_through_is_symmetric_and_clean() {
     assert_eq!(format!("{forward_graph:?}"), format!("{reverse_graph:?}"));
 }
 
+/// A same-composite pair authored in both directions is one pass-through relation, not a cycle.
 #[test]
-fn authored_nested_boundary_cycle_names_the_revisited_boundary() {
+fn same_composite_both_ways_rejects_for_the_two_undriven_leaf_inputs() {
     let mut cycle: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
     node_mut(&mut cycle, ".sub.u")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.y" });
     node_mut(&mut cycle, ".sub.y")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#g36.profile.nested_composite.sub.u" });
-    let diagnostics = import(&cycle).expect_err("authored boundary cycle must reject");
-    assert!(
-        diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == DiagCode::UnresolvedReference
-                && diagnostic.subject.as_deref()
-                    == Some("http://example.org#g36.profile.nested_composite.sub.u")
-        }),
+    let diagnostics = import(&cycle).expect_err("undriven leaf inputs must reject");
+    let undriven_subjects = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.code == DiagCode::SingleAssignment)
+        .map(|diagnostic| diagnostic.subject.as_deref())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        undriven_subjects,
+        [Some("connector#0"), Some("connector#3")],
         "{diagnostics:?}"
     );
-}
-
-#[test]
-fn authored_boundary_cycle_after_reverse_fallback_names_the_revisited_boundary() {
-    let mut cycle: Value = serde_json::from_str(NESTED_FIXTURE).expect("nested fixture JSON");
-    node_mut(&mut cycle, ".sub.u")
-        .as_object_mut()
-        .expect("sub input node")
-        .remove("S231:isConnectedTo");
-    node_mut(&mut cycle, ".sub.y")["S231:isConnectedTo"] = json!([
-        { "@id": "http://example.org#g36.profile.nested_composite.sub.u" },
-        { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" }
-    ]);
-    node_mut(&mut cycle, "nested_composite")["S231:containsBlock"]
-        .as_array_mut()
-        .expect("root containsBlock")
-        .push(json!({ "@id": "http://example.org#g36.profile.nested_composite.sub2" }));
-    cycle["@graph"]
-        .as_array_mut()
-        .expect("@graph")
-        .extend([
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2",
-                "@type": "S231:Block",
-                "S231:hasInput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" },
-                "S231:hasOutput": { "@id": "http://example.org#g36.profile.nested_composite.sub2.y" },
-                "S231:containsBlock": { "@id": "http://example.org#g36.profile.nested_composite.sub2.keep" }
-            }),
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2.u",
-                "@type": "S231:RealInput",
-                "S231:isOfDataType": { "@id": "S231:Real" },
-                "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub2.y" }
-            }),
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2.y",
-                "@type": "S231:RealOutput",
-                "S231:isOfDataType": { "@id": "S231:Real" },
-                "S231:isConnectedTo": { "@id": "http://example.org#g36.profile.nested_composite.sub2.u" }
-            }),
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep",
-                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-                "S231:hasParameter": {
-                    "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.k"
-                },
-                "S231:hasOutput": {
-                    "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.y"
-                }
-            }),
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.k",
-                "@type": "S231:Parameter",
-                "S231:isOfDataType": { "@id": "S231:Real" },
-                "S231:value": 1
-            }),
-            json!({
-                "@id": "http://example.org#g36.profile.nested_composite.sub2.keep.y",
-                "@type": "S231:RealOutput",
-                "S231:isOfDataType": { "@id": "S231:Real" }
-            }),
-        ]);
-    let diagnostics = import(&cycle).expect_err("authored cycle after fallback must reject");
     assert!(
-        diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == DiagCode::UnresolvedReference
-                && diagnostic.subject.as_deref()
-                    == Some("http://example.org#g36.profile.nested_composite.sub2.u")
+        diagnostics.iter().all(|diagnostic| {
+            diagnostic.code != DiagCode::UnresolvedReference
+                && !diagnostic.message.contains("boundary cycle")
         }),
         "{diagnostics:?}"
     );

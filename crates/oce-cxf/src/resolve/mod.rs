@@ -38,6 +38,7 @@ use crate::{CxfError, bridge};
 mod array_nodes;
 mod attrs;
 mod composite;
+mod composite_orientation;
 mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
