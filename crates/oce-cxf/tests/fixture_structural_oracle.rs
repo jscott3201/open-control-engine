@@ -9,8 +9,9 @@
 //! audit closes the "a wrong fixture produces a self-consistent wrong golden" gap by
 //! comparing each fixture against an independent translation of the same upstream
 //! class: modelica-json's CXF output, vendored under
-//! `third_party/modelica-buildings-cdl/cxf/` at a pinned (Buildings, modelica-json)
-//! commit pair, with the matching `.mo` sources beside it for conditional resolution.
+//! `third_party/modelica-buildings-cdl/cxf/` at the Buildings and modelica-json commits
+//! pinned and verified by `third_party_manifest`, with the matching `.mo` sources beside
+//! it for conditional resolution.
 //!
 //! The comparison (see `structural_oracle/`) flattens the oracle's composite hierarchy,
 //! resolves every conditional — instance, ancestor-composite, and connector — against
@@ -31,12 +32,16 @@
 //!
 //! ```text
 //! OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle verdict_table
+//! # Regenerates tests/fixtures/golden/structural_oracle_verdicts.txt.
+//! OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle checked_in_manifest_bytes_equal_fresh_render
+//! # Regenerates tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json.
 //! ```
 //!
 //! Bless only after reading the diff: a verdict change is a finding about a fixture or
 //! about this audit, never routine churn.
 
 mod structural_oracle;
+mod third_party_manifest;
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
