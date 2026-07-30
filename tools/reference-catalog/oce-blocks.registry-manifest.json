@@ -138,7 +138,12 @@
     "port_naming": "positional",
     "stateful": false,
     "reserved": false,
-    "param_defaults": []
+    "param_defaults": [
+      { "name": "smoothness", "kind": "literal", "enum": "LinearSegments" },
+      { "name": "extrapolation", "kind": "literal", "enum": "Periodic" },
+      { "name": "offset_<i>", "kind": "literal", "real": 0.0 },
+      { "name": "timeScale", "kind": "literal", "real": 1.0 }
+    ]
   },
   {
     "class_path": "CDL.Reals.Add",
@@ -1000,6 +1005,7 @@
     "stateful": false,
     "reserved": false,
     "param_defaults": [
+      { "name": "timeScale", "kind": "literal", "real": 1.0 },
       { "name": "period", "kind": "required" }
     ]
   },
@@ -1511,6 +1517,7 @@
     "stateful": false,
     "reserved": false,
     "param_defaults": [
+      { "name": "timeScale", "kind": "literal", "real": 1.0 },
       { "name": "period", "kind": "required" }
     ]
   },

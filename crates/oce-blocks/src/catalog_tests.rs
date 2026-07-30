@@ -111,6 +111,53 @@ fn consumer_palette_metadata_reports_authored_defaults() {
 }
 
 #[test]
+fn time_table_classes_publish_the_upstream_authored_defaults() {
+    for (class_path, published) in [
+        ("CDL.Reals.Sources.TimeTable", 4),
+        ("CDL.Integers.Sources.TimeTable", 2),
+        ("CDL.Logical.Sources.TimeTable", 2),
+    ] {
+        assert_eq!(
+            entry(class_path).param_defaults.len(),
+            published,
+            "{class_path}"
+        );
+    }
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "smoothness"),
+        DefaultSource::Literal(DefaultLiteral::EnumMember("LinearSegments"))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "extrapolation"),
+        DefaultSource::Literal(DefaultLiteral::EnumMember("Periodic"))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "offset_<i>"),
+        DefaultSource::Literal(DefaultLiteral::Real(0.0))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Integers.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Integers.Sources.TimeTable", "period"),
+        DefaultSource::Required
+    );
+    assert_eq!(
+        default("CDL.Logical.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Logical.Sources.TimeTable", "period"),
+        DefaultSource::Required
+    );
+}
+
+#[test]
 fn catalog_metadata_invariants_cross_check_independent_sources() {
     for entry in catalog() {
         assert!(

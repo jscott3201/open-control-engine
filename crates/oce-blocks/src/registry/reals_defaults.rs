@@ -3,6 +3,10 @@
 use oce_model::ZeroTime;
 
 use crate::ParamDefault;
+use crate::source_timetable::{
+    TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER, TIMETABLE_OFFSET_DEFAULT,
+    TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER, TIMETABLE_TIME_SCALE_DEFAULT,
+};
 
 pub(super) const CONSTANT_K_FALLBACK: f64 = 0.0;
 pub(super) const PULSE_AMPLITUDE_DEFAULT: f64 = 1.0;
@@ -66,6 +70,12 @@ pub(super) const SOURCE_SIN_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_real!("phase", SOURCE_SIN_PHASE_DEFAULT),
     param_default_real!("offset", SOURCE_SIN_OFFSET_DEFAULT),
     param_default_real!("startTime", SOURCE_SIN_START_TIME_DEFAULT),
+];
+pub(super) const REAL_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_enum!("smoothness", TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER),
+    param_default_enum!("extrapolation", TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER),
+    param_default_real!("offset_<i>", TIMETABLE_OFFSET_DEFAULT),
+    param_default_real!("timeScale", TIMETABLE_TIME_SCALE_DEFAULT),
 ];
 pub(super) const CALENDAR_TIME_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_required!("zerTim"),
