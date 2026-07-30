@@ -145,8 +145,8 @@ step 'fixture port order (input hygiene)' \
 # ~0.8s measured; the binary also carries the third_party hash-manifest gate and the
 # G36 golden-provenance digest gate, so this stays silent until a fixture, the oracle,
 # a vendored byte, or a provenance record changes — exactly when nobody would re-run it
-# by hand. That binary also refuses to run when OCE_BLESS arms regeneration: two of its
-# tests rewrite their own golden and return green when blessing is enabled.
+# by hand. That binary also fails the run when OCE_BLESS arms regeneration, after two
+# of its tests have already had an opportunity to rewrite their own goldens.
 step 'structural oracle (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_structural_oracle)' --no-tests=fail
