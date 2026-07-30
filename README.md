@@ -314,6 +314,20 @@ none.
 
 ---
 
+## Benchmarks
+
+Measured `Engine::tick()` throughput lives in [`BENCHMARKS.md`](BENCHMARKS.md), recorded per run
+with the commit, host and method that produced it. Figures are kept there rather than here on
+purpose: **nothing re-measures them in CI**, so they describe the commit they were taken on and
+would go stale in a README without anyone noticing.
+
+What *is* enforced per-PR is the property that governs tail latency rather than mean throughput —
+whether a tick allocates at all. That is gated registry-wide with a positive control by
+`crates/oce-blocks/tests/tick_allocation_census.rs` and, for the facade's tick path, by
+`crates/oce-api/tests/tick_purity_tests.rs`.
+
+---
+
 ## Build & develop
 
 ```bash
