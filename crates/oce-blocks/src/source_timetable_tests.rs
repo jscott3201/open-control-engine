@@ -1,8 +1,8 @@
 use oce_model::{EnumClassId, ParamTable, Value};
 
 use crate::source_timetable::{
-    TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER, TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER,
-    extrapolation_from_member, smoothness_from_member,
+    EXTRAPOLATION_MEMBERS, SMOOTHNESS_MEMBERS, TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER,
+    TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER, extrapolation_from_member, smoothness_from_member,
 };
 
 use super::{
@@ -49,11 +49,14 @@ fn assert_values(got: &[Value], want: &[Value]) {
 }
 
 fn values_bit_eq(left: &[Value], right: &[Value]) -> bool {
-    left.len() == right.len()
-        && left
-            .iter()
-            .zip(right)
-            .all(|(left, right)| left.bit_eq(right))
+    assert_eq!(
+        left.len(),
+        right.len(),
+        "discrimination controls compare equal-arity outputs"
+    );
+    left.iter()
+        .zip(right)
+        .all(|(left, right)| left.bit_eq(right))
 }
 
 fn real_default_fixture(extra: Option<(&str, Value)>) -> RealTimeTable {
@@ -371,4 +374,34 @@ fn source_time_table_registry_constructors_resolve_parameters() {
         values: logical_values,
     });
     assert_values(&outs_at(logical.as_ref(), 0.0), &[Value::Boolean(true)]);
+}
+
+#[test]
+fn member_token_mappings_agree_with_from_value_for_every_member() {
+    for member in SMOOTHNESS_MEMBERS {
+        assert_eq!(
+            Some(smoothness_from_member(member)),
+            TimeTableSmoothness::from_value(&Value::String((*member).into())),
+            "{member}"
+        );
+    }
+    for member in EXTRAPOLATION_MEMBERS {
+        assert_eq!(
+            Some(extrapolation_from_member(member)),
+            TimeTableExtrapolation::from_value(&Value::String((*member).into())),
+            "{member}"
+        );
+    }
+}
+
+#[test]
+fn absent_period_wraps_on_the_unit_modulus() {
+    // Times [0, 1] with period absent: the defensive fallback modulus keeps every probe
+    // time inside [0, 1), so row 0 is held. A different fallback value would surface
+    // row 1 at t >= 1.
+    let table = table_params(&[(1, 1, 0.0), (1, 2, 10.0), (2, 1, 1.0), (2, 2, 20.0)]);
+    let block = IntegerTimeTable::from_params(&ParamTable { values: table });
+    for t in [0.5, 1.5, 2.5] {
+        assert_values(&outs_at(&block, t), &[Value::Integer(10)]);
+    }
 }

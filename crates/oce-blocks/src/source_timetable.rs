@@ -24,6 +24,10 @@ pub(crate) const SMOOTHNESS_MEMBERS: &[&str] = &["LinearSegments", "ConstantSegm
 pub(crate) const EXTRAPOLATION_MEMBERS: &[&str] = &["HoldLastPoint", "LastTwoPoints", "Periodic"];
 
 /// Published catalog default for the `timeScale` parameter of every TimeTable class.
+///
+/// Also the coercion target for explicit non-finite or non-positive `timeScale` values:
+/// the resolver-side filter keeps table construction total for hand-built parameter
+/// tables that the published `RealFiniteGreaterThan` rule never validated.
 pub(crate) const TIMETABLE_TIME_SCALE_DEFAULT: f64 = 1.0;
 /// Published catalog default member for `CDL.Reals.Sources.TimeTable.smoothness`.
 pub(crate) const TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER: &str = SMOOTHNESS_MEMBERS[0]; // LinearSegments
@@ -66,11 +70,14 @@ impl TimeTableSmoothness {
     }
 }
 
+/// Maps a `CDL.Types.Smoothness` member token from [`SMOOTHNESS_MEMBERS`] to its variant.
+///
+/// Panics on any other token; callers pass only member consts defined in this module.
 pub(crate) fn smoothness_from_member(member: &str) -> TimeTableSmoothness {
     match member {
         "LinearSegments" => TimeTableSmoothness::LinearSegments,
         "ConstantSegments" => TimeTableSmoothness::ConstantSegments,
-        _ => unreachable!("registry-owned smoothness default uses valid CDL member tokens"),
+        _ => unreachable!("smoothness member tokens come from SMOOTHNESS_MEMBERS in this module"),
     }
 }
 
@@ -114,12 +121,18 @@ impl TimeTableExtrapolation {
     }
 }
 
+/// Maps a `CDL.Types.Extrapolation` member token from [`EXTRAPOLATION_MEMBERS`] to its
+/// variant.
+///
+/// Panics on any other token; callers pass only member consts defined in this module.
 pub(crate) fn extrapolation_from_member(member: &str) -> TimeTableExtrapolation {
     match member {
         "HoldLastPoint" => TimeTableExtrapolation::HoldLastPoint,
         "LastTwoPoints" => TimeTableExtrapolation::LastTwoPoints,
         "Periodic" => TimeTableExtrapolation::Periodic,
-        _ => unreachable!("registry-owned extrapolation default uses valid CDL member tokens"),
+        _ => unreachable!(
+            "extrapolation member tokens come from EXTRAPOLATION_MEMBERS in this module"
+        ),
     }
 }
 
