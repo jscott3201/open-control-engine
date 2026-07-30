@@ -52,18 +52,48 @@ conclusion would come from.
 
 Warmup 20,000 ticks · 2.0 s measurement window · `dt` = 1.0 simulated second per tick.
 
-| fixture | CDL class refs | load (ms) | ns/tick | ticks/sec |
-| --- | ---: | ---: | ---: | ---: |
-| `cooling_only_controller` | 222 | 11.0 | 2,508 | 398,801 |
-| `multizone_vav_relief_fan_group` | 228 | 2.8 | 2,706 | 369,558 |
-| `multizone_vav_supply_fan` | 71 | 1.1 | 755 | 1,325,349 |
-| `ahu_economizer` | 12 | 0.2 | 141 | 7,095,155 |
-| `vav_single_zone` | 8 | 0.2 | 144 | 6,932,518 |
+| fixture | CDL class refs | ns/tick | ticks/sec |
+| --- | ---: | ---: | ---: |
+| `cooling_only_controller` | 222 | 2,508 | 398,801 |
+| `multizone_vav_relief_fan_group` | 228 | 2,706 | 369,558 |
+| `multizone_vav_supply_fan` | 71 | 755 | 1,325,349 |
+| `ahu_economizer` | 12 | 141 | 7,095,155 |
+| `vav_single_zone` | 8 | 144 | 6,932,518 |
 
 Repeated back to back; the two runs agreed within ~2% on the large fixtures and ~6% on the
 smallest. Measured on an otherwise idle machine — an earlier attempt taken while a parallel build
 was running produced numbers that were not reproducible, which is why the method above insists on
 it.
+
+### Load, same commit and host — 60 iterations per fixture
+
+Reported as first / median / min in one process, because a single first-call figure carries
+process-start and page-cache cost.
+
+| fixture | KiB | first ms | **median ms** | min ms | first÷med | MiB/s at median |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `cooling_only_controller` | 409 | 7.84 | **2.62** | 2.48 | 3.0× | 154 |
+| `multizone_vav_relief_fan_group` | 366 | 2.55 | **2.12** | 2.02 | 1.2× | 169 |
+| `multizone_vav_supply_fan` | 112 | 0.89 | **0.68** | 0.66 | 1.3× | 159 |
+| `ahu_economizer` | 16 | 0.14 | **0.11** | 0.10 | 1.3× | 144 |
+| `vav_single_zone` | 14 | 0.11 | **0.09** | 0.08 | 1.3× | 150 |
+
+**Correction to an earlier revision of this file.** It reported `11.0 ms` for
+`cooling_only_controller` and placed the "runs agreed within ~2%" sentence where it read as
+covering that column too. Both were wrong. That figure was a **single first call in a cold
+process** — it is the first fixture measured, so it absorbed process start and page-cache misses.
+Measured properly it is **2.62 ms**, a 4.2× overstatement. A second process invocation shows the
+same fixture's first/median ratio collapse from 3.0× to 1.3× once the page cache is warm, while
+every other fixture sat at 1.1–1.5× in both runs. The tick figures above were unaffected: they were
+always taken after a 20,000-tick warmup, which is exactly the discipline the load column lacked.
+
+**Observation — load throughput is flat.** 144–169 MiB/s across a 29× size range, through the whole
+`load_cxf` pipeline: `import_cxf` (JSON-LD parse **and** resolve to a flat ground ModelGraph),
+`flatten`, `unify_and_validate` (§7.10 unification, which mutates the graph), then the build tail
+(registry, schedule, state, outputs, io, params, store recovery). That is not a JSON parse, so a
+plain parser MB/s intuition does not apply. Note the build tail deliberately re-runs pure
+`validate` — see `crates/oce-api/src/engine.rs:190-192` for why — so validation happens twice per
+load.
 
 **Observation — cost is linear in block count.** Across a 28× size range the per-block cost holds
 at roughly 11 ns (11.3 / 11.9 / 10.6 / 11.8 ns for the four largest). `vav_single_zone` is the
@@ -167,6 +197,14 @@ cargo build --release && ./target/release/tickbench
 
 Run it on an **idle** machine, and run it at least twice — a figure that does not reproduce is not
 a measurement.
+
+**To measure load rather than ticks**, loop the `Engine::in_memory()` + `load_cxf` pair on its own
+(60 iterations is plenty) and report **first / median / min**, not a single call. The first call in
+a cold process absorbs process start and page-cache misses; on the largest fixture that inflated the
+figure by 3× and produced the erroneous `11.0 ms` corrected above. Reporting only a median hides the
+cold cost from anyone who cares about startup, and reporting only a first call is simply wrong —
+report both. Time `Engine::in_memory()` inside the measured region and let the engine drop outside
+it, since teardown is not part of load.
 
 ## Adding a run
 
