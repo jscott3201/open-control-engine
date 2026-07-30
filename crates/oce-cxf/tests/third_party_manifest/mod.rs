@@ -19,7 +19,7 @@ const BUILDINGS_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 const MODELICA_JSON_COMMIT: &str = "85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb";
 // Derived after the README commit with:
 // git rev-parse HEAD:third_party/modelica-buildings-cdl
-const SUBTREE_TREE_SHA: &str = "365a48106e8cdba6e9cf15914e8ba977c735ffc6";
+const SUBTREE_TREE_SHA: &str = "3f04e42cdf3f2edcb78aa3817f48bcd680a71ac8";
 const SCHEMA: &str = "open-control/modelica-buildings-cdl-hash-manifest/v1";
 const MANIFEST_PATH: &str =
     "../../tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json";
