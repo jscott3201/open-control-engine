@@ -1,11 +1,29 @@
 //! Key-selected output read behavior, determinism, and independent oracle checks.
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::common::*;
 
 const AHU_SAT_RESET: &str =
     include_str!("../../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
+const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
+const SAT_COOLING_SETPOINT: &str =
+    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
+
+/// Per-tick varying boundary inputs for the SAT-reset fixture; an unstaged run leaves every
+/// selected output at `Real(0.0)`, which turns the cross-check into `0.0 == 0.0`.
+fn sat_reset_inputs(t: f64) -> [(&'static str, Value); 2] {
+    let zone_temp = match t as u32 {
+        0 => 22.0,
+        1 => 24.0,
+        _ => 24.5,
+    };
+    [
+        (SAT_ZONE_TEMP, Value::Real(zone_temp)),
+        (SAT_COOLING_SETPOINT, Value::Real(24.0)),
+    ]
+}
 
 #[test]
 fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
@@ -20,22 +38,30 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
         .map(|connection| connection.from)
         .collect();
     let paths = crate::engine::out_connector_paths(&engine.model);
+    // Pair every Out connector with its own path first (the identical filter
+    // `out_connector_paths` applies), THEN filter on internality, so the predicate is asserted
+    // about the exact connectors whose keys are watched — pairing by identity, not position.
     let selected: Vec<&str> = engine
         .model
         .connectors
         .iter()
-        .filter(|connector| connector.dir == Dir::Out && internal_ids.contains(&connector.id))
+        .filter(|connector| connector.dir == Dir::Out)
         .zip(paths.iter())
-        .take(3)
+        .filter(|(connector, _)| internal_ids.contains(&connector.id))
         .map(|(_, path)| path.as_str())
         .collect();
-    assert_eq!(
-        selected.len(),
-        3,
-        "fixture must expose three internal outputs"
+    assert!(
+        selected.len() >= 3,
+        "fixture must expose at least three internal outputs"
     );
 
+    let mut saw_nonzero = false;
     for step in 0..=2 {
+        for (path, value) in sat_reset_inputs(step as f64) {
+            engine
+                .set_input(path, value)
+                .expect("boundary input stages");
+        }
         engine.tick(step as f64).expect("G36 fixture ticks");
         let all_outputs = engine.outputs().to_map();
         let distinct_paths: HashSet<&str> =
@@ -49,6 +75,7 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
         let watched = engine
             .watch(&selected)
             .expect("valid output keys are watchable");
+        assert_eq!(watched.len(), selected.len());
         for ((watched_path, watched_value), selected_path) in watched.iter().zip(&selected) {
             assert_eq!(watched_path, selected_path);
             let snapshot_value = all_outputs
@@ -57,8 +84,15 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
                 .map(|(_, value)| value)
                 .expect("selected path exists in all-output snapshot");
             assert!(watched_value.bit_eq(snapshot_value));
+            if !watched_value.bit_eq(&Value::Real(0.0)) {
+                saw_nonzero = true;
+            }
         }
     }
+    assert!(
+        saw_nonzero,
+        "staged inputs must drive at least one selected output off zero"
+    );
 }
 
 fn chain_model() -> (ModelGraph, [ConnectorId; 3]) {
@@ -159,9 +193,32 @@ fn caller_order_duplicates_and_first_error_are_preserved() {
         engine.watch(&["bogus-a", "bogus-b"]),
         Err(OcError::UnknownPoint(path)) if path == "bogus-a"
     ));
+    // Reverse-sorted pair: distinguishes caller order from alphabetical order (a resolver
+    // erroring over a sorted copy of the keys passes the pair above but names bogus-a here).
+    assert!(matches!(
+        engine.watch(&["bogus-b", "bogus-a"]),
+        Err(OcError::UnknownPoint(path)) if path == "bogus-b"
+    ));
+    assert_eq!(
+        engine.model.connectors[1].dir,
+        Dir::In,
+        "conn#1 must be an input connector for the rejection below to pin outputs-only"
+    );
     assert!(matches!(
         engine.watch(&["conn#1"]),
         Err(OcError::UnknownPoint(path)) if path == "conn#1"
+    ));
+    assert!(
+        engine
+            .watch(&[])
+            .expect("an empty selection is a no-op")
+            .is_empty()
+    );
+
+    let unloaded = Engine::in_memory();
+    assert!(matches!(
+        unloaded.watch(&["conn#0"]),
+        Err(OcError::UnknownPoint(path)) if path == "conn#0"
     ));
 }
 
@@ -210,14 +267,27 @@ fn named_simulation_trace_matches_manual_watch_loop() {
 
 #[test]
 fn identical_engines_produce_bit_identical_selected_snapshots() {
-    let mut left = loaded_chain();
-    let mut right = loaded_chain();
-    let points = ["conn#4", "conn#0", "conn#2"];
+    let mut left = Engine::in_memory();
+    left.load_cxf(AHU_SAT_RESET.as_bytes())
+        .expect("left engine loads");
+    let mut right = Engine::in_memory();
+    right
+        .load_cxf(AHU_SAT_RESET.as_bytes())
+        .expect("right engine loads");
+    let paths = crate::engine::out_connector_paths(&left.model);
+    let points: Vec<&str> = paths.iter().map(String::as_str).collect();
     for step in 0..=4 {
+        for (path, value) in sat_reset_inputs(step as f64) {
+            left.set_input(path, value.clone())
+                .expect("left input stages");
+            right.set_input(path, value).expect("right input stages");
+        }
         left.tick(step as f64).expect("left engine ticks");
         right.tick(step as f64).expect("right engine ticks");
         let left_values = left.watch(&points).expect("left snapshot resolves");
         let right_values = right.watch(&points).expect("right snapshot resolves");
+        assert_eq!(left_values.len(), points.len());
+        assert_eq!(right_values.len(), points.len());
         assert!(left_values.iter().zip(&right_values).all(
             |((left_path, left_value), (right_path, right_value))| {
                 left_path == right_path && left_value.bit_eq(right_value)
@@ -236,4 +306,35 @@ fn selected_reads_are_available_after_realtime_step() {
         .watch(&["conn#4"])
         .expect("watch remains available after realtime step");
     assert!(watched[0].1.bit_eq(&Value::Real(30.0)));
+}
+
+#[test]
+fn boolean_and_integer_outputs_are_watchable_with_exact_literals() {
+    let mut mb = Mb::new();
+    let (_, _, flag) = mb.block(
+        "CDL.Logical.Sources.Constant",
+        &[],
+        &[ValueType::Boolean],
+        vec![(Arc::from("k"), Value::Boolean(true))],
+    );
+    let (_, _, count) = mb.block(
+        "CDL.Integers.Sources.Constant",
+        &[],
+        &[ValueType::Integer],
+        vec![(Arc::from("k"), Value::Integer(3))],
+    );
+    let model = mb.finish();
+    assert_eq!([flag[0], count[0]], [ConnectorId(0), ConnectorId(1)]);
+
+    let mut engine = Engine::in_memory();
+    engine
+        .build_model_in_memory(model, None)
+        .expect("typed source pair builds");
+    engine.tick(0.0).expect("typed source pair ticks");
+    let watched = engine
+        .watch(&["conn#0", "conn#1"])
+        .expect("non-Real outputs are addressable");
+    assert_eq!(watched.len(), 2);
+    assert!(watched[0].1.bit_eq(&Value::Boolean(true)));
+    assert!(watched[1].1.bit_eq(&Value::Integer(3)));
 }

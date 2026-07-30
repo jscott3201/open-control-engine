@@ -19,13 +19,16 @@ impl<S: Store> Engine<S> {
     /// IRIs; essentially every output path is synthetic (`conn#<id>`), so path form does not tell a
     /// host whether a point is internal. Hosts wanting stable labels map
     /// [`crate::TopologyBlock::instance_path`] to that block's ordered
-    /// [`crate::TopologyBlock::outputs`] entries and use those connector paths as keys. An instance
-    /// path itself identifies a block and is never a valid key.
+    /// [`crate::TopologyBlock::outputs`] entries and use those connector paths as keys; lowered
+    /// pass-through ports are reported in [`crate::Topology::pass_through`] rather than in
+    /// `blocks`, so that recipe does not reach them. An instance path itself identifies a block
+    /// and is never a valid key.
     ///
-    /// Returned pairs echo the supplied keys, including duplicates. If duplicate output paths
-    /// exist in the model, the first connector wins, matching [`Engine::get_output`]. This
-    /// deliberately differs from [`crate::Outputs::to_map`], which returns one row per connector.
-    /// Callers with owned `String` paths can create a key slice with
+    /// Returned pairs echo the supplied keys, including duplicates; an empty `points` slice
+    /// returns `Ok` with an empty vector. If duplicate output paths exist in the model, the
+    /// first connector wins, matching [`Engine::get_output`]. This deliberately differs from
+    /// [`crate::Outputs::to_map`], which returns one row per connector. Callers with owned
+    /// `String` paths can create a key slice with
     /// `paths.iter().map(String::as_str).collect::<Vec<_>>()`.
     ///
     /// ```
@@ -41,7 +44,10 @@ impl<S: Store> Engine<S> {
     ///       "@id": "http://example.org#Example",
     ///       "@type": "S231:Block",
     ///       "S231:label": "Example",
-    ///       "S231:containsBlock": { "@id": "http://example.org#Example.con" },
+    ///       "S231:containsBlock": [
+    ///         { "@id": "http://example.org#Example.con" },
+    ///         { "@id": "http://example.org#Example.gain" }
+    ///       ],
     ///       "S231:hasOutput": { "@id": "http://example.org#Example.y" }
     ///     },
     ///     {
@@ -62,6 +68,32 @@ impl<S: Store> Engine<S> {
     ///       "@id": "http://example.org#Example.con.y",
     ///       "@type": "S231:RealOutput",
     ///       "S231:isOfDataType": { "@id": "S231:Real" },
+    ///       "S231:isConnectedTo": { "@id": "http://example.org#Example.gain.u" }
+    ///     },
+    ///     {
+    ///       "@id": "http://example.org#Example.gain",
+    ///       "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+    ///       "S231:label": "gain",
+    ///       "S231:hasParameter": { "@id": "http://example.org#Example.gain.k" },
+    ///       "S231:hasInput": { "@id": "http://example.org#Example.gain.u" },
+    ///       "S231:hasOutput": { "@id": "http://example.org#Example.gain.y" }
+    ///     },
+    ///     {
+    ///       "@id": "http://example.org#Example.gain.k",
+    ///       "S231:value": {
+    ///         "@value": "3.0",
+    ///         "@type": "http://www.w3.org/2001/XMLSchema#double"
+    ///       }
+    ///     },
+    ///     {
+    ///       "@id": "http://example.org#Example.gain.u",
+    ///       "@type": "S231:RealInput",
+    ///       "S231:isOfDataType": { "@id": "S231:Real" }
+    ///     },
+    ///     {
+    ///       "@id": "http://example.org#Example.gain.y",
+    ///       "@type": "S231:RealOutput",
+    ///       "S231:isOfDataType": { "@id": "S231:Real" },
     ///       "S231:isConnectedTo": { "@id": "http://example.org#Example.y" }
     ///     },
     ///     {
@@ -73,9 +105,13 @@ impl<S: Store> Engine<S> {
     /// }"##;
     /// let mut engine = Engine::in_memory();
     /// engine.load_cxf(cxf)?;
+    /// // The multiply's output has an upstream input, so its slot is 0.0 until a tick runs —
+    /// // reading it before and after pins that watch returns exactly tick t's values.
+    /// let before = engine.watch(&["conn#2"])?;
+    /// assert!(before[0].1.bit_eq(&Value::Real(0.0)));
     /// engine.tick(0.0)?;
-    /// let watched = engine.watch(&["conn#0"])?;
-    /// assert!(watched[0].1.bit_eq(&Value::Real(2.0)));
+    /// let after = engine.watch(&["conn#2"])?;
+    /// assert!(after[0].1.bit_eq(&Value::Real(6.0)));
     /// # Ok::<(), oce_api::OcError>(())
     /// ```
     ///

@@ -131,15 +131,18 @@ fn watch_read_allocates_and_is_visible_to_the_meter() {
         .map(|(path, _)| path)
         .expect("fixture has at least one output");
 
+    // Meter-liveness control ONLY — proves the allocator meter observes watch's owned result.
+    // Tick-path neutrality comes from construction (`watch` takes `&self`) and the guards.rs
+    // signature pin, not from this arm. The key slice is built before the region opens so the
+    // measured traffic is attributable to `watch` itself.
+    let paths = vec![output_path.as_str()];
     let region = Region::new(GLOBAL);
     {
-        let paths = vec![output_path.as_str()];
         let watched = engine
             .watch(paths.as_slice())
             .unwrap_or_else(|e| panic!("{} output is watchable: {e:?}", fixture.name));
         assert_eq!(watched.len(), 1);
         drop(watched);
-        drop(paths);
     }
     let stats = region.change();
     assert!(
