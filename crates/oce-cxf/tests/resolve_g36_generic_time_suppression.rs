@@ -4,6 +4,8 @@
 //! pre-grounds that expression to `0.125` from the source-default `dTHys=0.25` binding while
 //! retaining references for every direct parameter binding.
 
+mod bless;
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -246,7 +248,7 @@ fn source_verified_generic_time_suppression_preserves_topology_and_grounded_bind
 fn generic_time_suppression_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_GENERIC_TIME_SUPPRESSION));
     let path = golden_path(G36_GENERIC_TIME_SUPPRESSION_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

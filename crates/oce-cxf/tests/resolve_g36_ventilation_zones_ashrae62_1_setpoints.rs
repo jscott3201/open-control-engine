@@ -5,6 +5,8 @@
 //! the 34 active source blocks and 61 active source connections. Whole-number Real bindings stay
 //! explicitly typed so resolver grounding cannot silently turn them into Integers.
 
+mod bless;
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -386,7 +388,7 @@ fn capstone_configuration_preserves_source_topology_grounding_and_output_fanout(
 fn ventilation_zones_ashrae62_1_setpoints_modelgraph_is_stable() {
     let actual = render(&import_ok(FIXTURE));
     let path = golden_path();
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().expect("golden parent")).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

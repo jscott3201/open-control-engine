@@ -11,6 +11,7 @@
 //!
 //! and review the diff.
 
+mod bless;
 mod render;
 
 use std::path::PathBuf;
@@ -44,10 +45,9 @@ fn golden_minimal_loop_modelgraph() {
     let g = import_ok(FIXTURE);
     let actual = render(&g);
 
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(golden_path().parent().unwrap()).unwrap();
         std::fs::write(golden_path(), &actual).unwrap();
-        // (No print: `clippy::print_stderr` is denied workspace-wide. The file write is the effect.)
         return;
     }
     let expected = std::fs::read_to_string(golden_path())
@@ -245,7 +245,7 @@ fn golden_connector_attrs_modelgraph() {
     let g = import_ok(ATTRS_RICH);
     let actual = render(&g);
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(ATTRS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(&path, &actual).unwrap();
         return;

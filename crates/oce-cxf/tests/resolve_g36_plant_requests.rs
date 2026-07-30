@@ -1,5 +1,7 @@
 //! Source-verified G36 PlantRequests composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -208,7 +210,7 @@ fn source_verified_g36_multizone_vav_plant_requests_imports_water_based_variant(
 fn golden_g36_multizone_vav_plant_requests_modelgraph() {
     let actual = render(&import_ok(G36_PLANT_REQUESTS));
     let path = golden_path(G36_PLANT_REQUESTS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

@@ -15,6 +15,8 @@
 //! OCE_BLESS=1 cargo test -p oce-cxf --test resolve_array_expression golden_array_expression_modelgraph
 //! ```
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -237,7 +239,7 @@ fn expression_list_and_flattened_encodings_converge_byte_identical() {
 #[test]
 fn golden_array_expression_modelgraph() {
     let actual = render(&import_ok(EXPRESSION));
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(golden_path().parent().unwrap()).unwrap();
         std::fs::write(golden_path(), &actual).unwrap();
         return;

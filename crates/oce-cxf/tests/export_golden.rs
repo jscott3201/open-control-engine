@@ -31,6 +31,8 @@
 //! recomputed its own expectation would assert nothing. Any unreviewed byte drift is a
 //! determinism defect.
 
+mod bless;
+
 use std::path::PathBuf;
 
 use oce_cxf::{ResolveOptions, export, export_with_report, import_cxf};
@@ -70,12 +72,12 @@ fn golden_path(rel: &str) -> PathBuf {
         .join(rel)
 }
 
-/// Compare `bytes` against the checked-in golden `rel`, or rewrite it when `OCE_BLESS` is set.
+/// Compare `bytes` against the checked-in golden `rel`, or rewrite it when `OCE_BLESS` is enabled.
 /// The comparison runs twice — once as text so a mismatch prints a readable diff, once raw so a
 /// non-UTF-8 divergence cannot slip through the lossy conversion.
 fn assert_golden(bytes: &[u8], rel: &str) {
     let path = golden_path(rel);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().expect("the golden dir has a parent"))
             .expect("golden dir is creatable");
         std::fs::write(&path, bytes).expect("golden is writable");

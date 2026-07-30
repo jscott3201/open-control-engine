@@ -1,5 +1,7 @@
 //! Source-verified G36 Generic.AirEconomizerHighLimits composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -329,7 +331,7 @@ fn golden_g36_air_economizer_high_limits_modelgraphs() {
     for case in CASES {
         let actual = render(&import_ok(case.source));
         let path = golden_path(case.golden_rel);
-        if std::env::var_os("OCE_BLESS").is_some() {
+        if bless::enabled() {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, &actual).unwrap();
             continue;

@@ -1,5 +1,7 @@
 //! Source-verified G36 CoolingOnly ActiveAirFlow composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -166,7 +168,7 @@ fn source_verified_cooling_only_active_air_flow_preserves_topology_and_bindings(
 fn cooling_only_active_air_flow_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_COOLING_ONLY_ACTIVE_AIR_FLOW));
     let path = golden_path(G36_COOLING_ONLY_ACTIVE_AIR_FLOW_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

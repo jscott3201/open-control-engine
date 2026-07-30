@@ -1,5 +1,7 @@
 //! Source-verified G36 ReliefFan composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -196,7 +198,7 @@ fn source_verified_g36_multizone_vav_relief_fan_imports_default_variant() {
 fn golden_g36_multizone_vav_relief_fan_modelgraph() {
     let actual = render(&import_ok(G36_RELIEF_FAN));
     let path = golden_path(G36_RELIEF_FAN_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

@@ -6,6 +6,8 @@
 //! `0.8*looHys`, pre-grounded here to `0.008`. The reset targets and both Boolean-to-Real pairs
 //! use typed Real whole-number literals so their exact IEEE-754 encodings remain observable.
 
+mod bless;
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -266,7 +268,7 @@ fn thermal_zone_control_loop_topology_and_bindings_match_pinned_source() {
 fn thermal_zone_control_loop_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_THERMAL_ZONES_CONTROL_LOOPS));
     let path = golden_path(G36_THERMAL_ZONES_CONTROL_LOOPS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

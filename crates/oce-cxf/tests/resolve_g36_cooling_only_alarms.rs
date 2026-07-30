@@ -4,6 +4,8 @@
 //! `floHys` and `damPosHys`. The fixture pre-grounds both expressions to `0.005` from the
 //! canonical Validation bindings while retaining references for every direct parameter binding.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -270,7 +272,7 @@ fn source_verified_cooling_only_alarms_preserves_topology_bindings_and_messages(
 fn cooling_only_alarms_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_COOLING_ONLY_ALARMS));
     let path = golden_path(G36_COOLING_ONLY_ALARMS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

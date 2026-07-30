@@ -12,6 +12,8 @@
 //! OCE_BLESS=1 cargo test -p oce-cxf --test composite_contract_corpus
 //! ```
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -286,7 +288,7 @@ fn accepted_fixtures_match_their_blessed_modelgraph_goldens_byte_exactly() {
     for (fixture, golden_rel) in ACCEPTED {
         let actual = render(&import_ok(&read_fixture(fixture)));
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(golden_rel);
-        if std::env::var_os("OCE_BLESS").is_some() {
+        if bless::enabled() {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, &actual).unwrap();
             continue;

@@ -4,6 +4,8 @@
 //! Title 24 branch is pruned before import, so only the 213 active leaf blocks participate in
 //! the flattened runtime graph.
 
+mod bless;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -535,7 +537,7 @@ fn configured_controller_preserves_nested_topology_grounding_and_fanout() {
 fn cooling_only_controller_modelgraph_is_stable() {
     let actual = render(&import_ok(FIXTURE));
     let path = golden_path();
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().expect("golden parent")).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
