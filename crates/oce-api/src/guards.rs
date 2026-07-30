@@ -138,6 +138,8 @@ fn _assert_frozen_signatures() {
     let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
         Engine::<MemStore>::set_input;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
+    let _: fn(&Engine<MemStore>, &[&str]) -> Result<Vec<(String, Value)>, OcError> =
+        Engine::<MemStore>::watch;
     let _: fn(&mut Engine<MemStore>, &SimSpec) -> Result<SimMetrics, OcError> =
         Engine::<MemStore>::simulate;
     let _: fn(&mut Engine<MemStore>, f64) -> Result<StepReport, OcError> =

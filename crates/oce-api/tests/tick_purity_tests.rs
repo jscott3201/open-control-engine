@@ -116,6 +116,39 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
 }
 
 #[test]
+fn watch_read_allocates_and_is_visible_to_the_meter() {
+    let fixture = &G36_FIXTURES[0];
+    let store = Arc::new(AllocationStore::default());
+    let mut engine = Engine::with_store(store);
+    engine
+        .load_cxf(fixture.cxf.as_bytes())
+        .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+    let output_path = engine
+        .outputs()
+        .to_map()
+        .into_iter()
+        .next()
+        .map(|(path, _)| path)
+        .expect("fixture has at least one output");
+
+    let region = Region::new(GLOBAL);
+    {
+        let paths = vec![output_path.as_str()];
+        let watched = engine
+            .watch(paths.as_slice())
+            .unwrap_or_else(|e| panic!("{} output is watchable: {e:?}", fixture.name));
+        assert_eq!(watched.len(), 1);
+        drop(watched);
+        drop(paths);
+    }
+    let stats = region.change();
+    assert!(
+        stats.allocations > 0 && stats.bytes_allocated > 0,
+        "watch's owned result must register allocation traffic: {stats:?}"
+    );
+}
+
+#[test]
 fn no_store_input_tick_path_skips_snapshot_and_reads() {
     let store = Arc::new(RecordingStore::default());
     let mut engine = Engine::with_store(Arc::clone(&store));

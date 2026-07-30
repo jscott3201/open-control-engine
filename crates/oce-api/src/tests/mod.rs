@@ -6,3 +6,4 @@ mod load_build_tick;
 mod params_tests;
 mod projection_tests;
 mod store_backed_inputs;
+mod watch_tests;
