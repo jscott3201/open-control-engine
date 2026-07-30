@@ -135,15 +135,16 @@ See `TESTING.md` for what those gates do and do not prove.
 
 Pins advance only when a needed class is absent at the current pin, the upstream subtree SHA
 diverges, or a CDL specification revision is one we intend to conform to. Advances are
-event-driven only, never on cadence. A pin-advance PR must, in one PR, run
-`bash .agents/gate.sh full` and re-bless the hash manifest, its independently pinned tree-SHA
-constant, and affected catalog fingerprints, including this README's commit row. The full gate is
+event-driven only, never on cadence. A pin-advance PR must land the whole advance in one PR:
+run `bash .agents/gate.sh full` and re-bless the hash manifest, its independently pinned tree-SHA
+constant, affected catalog fingerprints, and this README's commit row. The full gate is
 required because the G36 half of the pin guard is release-gate-only: a PR that edits the G36
 provenance commit field passes the light gate green.
 
 `.agents/revendor-upstream.sh` is the reporter of record — run it before and after any advance; it
 verifies local bytes, upstream fidelity by blob OID, and cone drift, and it never re-blesses
-anything.
+anything. It is the cheap first pass over the clone-based spot-check above (about eight API
+calls, no clone).
 
 Any byte change anywhere under this vendored tree — including to this README — requires both
 re-blessing the hash manifest and re-deriving and deliberately hand-editing the tree-SHA constant.

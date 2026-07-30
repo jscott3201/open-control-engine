@@ -12,7 +12,10 @@ set -euo pipefail
 BUILDINGS_COMMIT="a131864e4c4df22ebcd52bb8da439de0087ac365"
 MODELICA_JSON_COMMIT="85721b828a6ff8d9d3c1a48ff9a59808d2fa31fb"
 
-repo_root=$(git rev-parse --show-toplevel)
+if ! repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+  echo "SUMMARY: exit=1 — internal error: not run inside a git checkout"
+  exit 1
+fi
 vendor_root=${OCE_REVENDOR_ROOT:-"$repo_root/third_party/modelica-buildings-cdl"}
 manifest_file=${OCE_REVENDOR_MANIFEST:-"$repo_root/tools/reference-catalog/modelica-buildings-cdl.hash-manifest.json"}
 rust_file=${OCE_REVENDOR_RUST_CONSTS:-"$repo_root/crates/oce-cxf/tests/third_party_manifest/mod.rs"}
@@ -28,13 +31,14 @@ fi
 scratch_dir=$(mktemp -d "${TMPDIR:-/tmp}/oce-revendor.XXXXXX")
 trap 'rm -rf "$scratch_dir"' EXIT
 
+find "$vendor_root" -type l >"$scratch_dir/symlinks" || true
 if command -v shasum >/dev/null 2>&1; then
   find "$vendor_root" -type f -print0 | xargs -0 shasum -a 256 >"$scratch_dir/hashes" || true
 else
   find "$vendor_root" -type f -print0 | xargs -0 sha256sum >"$scratch_dir/hashes" || true
 fi
-git grep -l "$BUILDINGS_COMMIT" >"$scratch_dir/blast-files" || true
-git grep -n "$BUILDINGS_COMMIT" >"$scratch_dir/blast-lines" || true
+git -C "$repo_root" grep -l "$BUILDINGS_COMMIT" -- :/ >"$scratch_dir/blast-files" || true
+git -C "$repo_root" grep -n "$BUILDINGS_COMMIT" -- :/ >"$scratch_dir/blast-lines" || true
 
 extract_sha() {
   python3 - "$1" "$2" <<'PY'
@@ -42,9 +46,11 @@ import json, sys
 try:
     with open(sys.argv[1], encoding="utf-8") as source:
         value = json.load(source)
+    if not isinstance(value, dict):
+        raise TypeError("tree response is not a JSON object")
     print(next((x.get("sha", "") for x in value.get("tree", [])
-                if x.get("path") == sys.argv[2]), ""))
-except (OSError, ValueError, TypeError):
+                if isinstance(x, dict) and x.get("path") == sys.argv[2]), ""))
+except (OSError, ValueError, TypeError, AttributeError):
     print("")
 PY
 }
@@ -60,28 +66,44 @@ fetch() {
   printf '%s\n' "$code" >"$scratch_dir/$name.code"
 }
 
+mark_missing() {  # child parent entry — parent answered 200 but lacks the entry
+  if [ "$(cat "$scratch_dir/$2.code" 2>/dev/null)" = "200" ]; then
+    printf 'MISSING %s %s\n' "$2" "$3" >"$scratch_dir/$1.code"
+  fi
+}
+
 fetch pin_root "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$BUILDINGS_COMMIT"
-pin_buildings=$(extract_sha "$scratch_dir/pin_root.body" Buildings)
+pin_buildings=$(extract_sha "$scratch_dir/pin_root.body" Buildings || echo "")
 if [ -n "$pin_buildings" ]; then
   fetch pin_buildings "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$pin_buildings"
+else
+  mark_missing pin_buildings pin_root Buildings
 fi
-pin_controls=$(extract_sha "$scratch_dir/pin_buildings.body" Controls)
+pin_controls=$(extract_sha "$scratch_dir/pin_buildings.body" Controls || echo "")
 if [ -n "$pin_controls" ]; then
   fetch pin_controls "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$pin_controls"
+else
+  mark_missing pin_controls pin_buildings Controls
 fi
-pin_obc=$(extract_sha "$scratch_dir/pin_controls.body" OBC)
+pin_obc=$(extract_sha "$scratch_dir/pin_controls.body" OBC || echo "")
 if [ -n "$pin_obc" ]; then
   fetch pin_cone "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$pin_obc?recursive=1"
+else
+  mark_missing pin_cone pin_controls OBC
 fi
 
 fetch master_root "$api_base/repos/lbl-srg/modelica-buildings/git/trees/master"
-master_buildings=$(extract_sha "$scratch_dir/master_root.body" Buildings)
+master_buildings=$(extract_sha "$scratch_dir/master_root.body" Buildings || echo "")
 if [ -n "$master_buildings" ]; then
   fetch master_buildings "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$master_buildings"
+else
+  mark_missing master_buildings master_root Buildings
 fi
-master_controls=$(extract_sha "$scratch_dir/master_buildings.body" Controls)
+master_controls=$(extract_sha "$scratch_dir/master_buildings.body" Controls || echo "")
 if [ -n "$master_controls" ]; then
   fetch master_controls "$api_base/repos/lbl-srg/modelica-buildings/git/trees/$master_controls"
+else
+  mark_missing master_controls master_buildings Controls
 fi
 fetch modelica_master "$api_base/repos/lbl-srg/modelica-json/commits/master"
 
@@ -95,11 +117,14 @@ from collections import Counter
 override = override_text == "1"
 integrity = incomplete = trigger = False
 
+def scrub(detail):
+    return detail.replace(repo.rstrip("/") + "/", "")
+
 def emit(number, name, status, detail):
-    print(f"LEG {number} {name}: {status} — {detail}")
+    print(f"LEG {number} {name}: {status} — {scrub(detail)}")
 
 def sub(name, status, detail):
-    print(f"  SUB {name}: {status} — {detail}")
+    print(f"  SUB {name}: {status} — {scrub(detail)}")
 
 def load(filename):
     try:
@@ -164,6 +189,15 @@ for relative in sorted(set(walked) - set(entries)):
     local_errors.append(f"added file: {relative}")
 for relative in sorted(set(entries) - set(walked)):
     local_errors.append(f"missing file: {relative}")
+try:
+    with open(os.path.join(scratch, "symlinks"), encoding="utf-8") as source:
+        for line in source:
+            link = line.strip()
+            if link:
+                shown = os.path.relpath(link, root).replace(os.sep, "/")
+                local_errors.append(f"symlink in vendored tree: {shown}")
+except OSError:
+    pass
 counts = Counter()
 for relative in walked:
     if relative.startswith("Buildings/"):
@@ -224,6 +258,19 @@ def response(name, side):
         return None, f"{name} not evaluated because its parent was unavailable", "unavailable"
     with open(code_name, encoding="utf-8") as source:
         code = source.read().strip()
+    if code.startswith("MISSING"):
+        parts = code.split()
+        parent = parts[1] if len(parts) > 1 else "parent"
+        entry = parts[2] if len(parts) > 2 else "entry"
+        if side == "pin":
+            return (None,
+                    f"pin walk resolved but entry '{entry}' is absent from {parent}'s tree "
+                    "(wrong constant on a valid commit, or a substituted response)",
+                    "integrity")
+        return (None,
+                f"'{entry}' is absent from {parent}'s tree at master; "
+                "upstream may have restructured",
+                "unavailable")
     def text(suffix):
         try:
             with open(os.path.join(scratch, name + suffix),
@@ -247,9 +294,12 @@ def response(name, side):
     if code == "429" or (code.isdigit() and int(code) >= 500):
         return None, f"HTTP {code} from GitHub API", "unavailable"
     if code != "200":
-        detail = f"curl transport failure (HTTP {code})"
-        if curl_error:
-            detail += f": {curl_error}"
+        if code == "000":
+            detail = "curl transport failure"
+            if curl_error:
+                detail += f": {curl_error}"
+        else:
+            detail = f"HTTP {code} from GitHub API (unclassified)"
         return None, detail, "unavailable"
     value, error = load(os.path.join(scratch, name + ".body"))
     if error:
@@ -279,6 +329,10 @@ else:
         fidelity.append("recursive OBC cone response has truncated=true")
     expected = {x["path"]: x for x in entries.values()
                 if x.get("origin") == "upstream-buildings"}
+    declared = (manifest or {}).get("bucket_counts", {}).get("upstream-buildings")
+    if declared is not None and len(expected) != declared:
+        fidelity.append(f"manifest upstream-buildings entries {len(expected)} "
+                        f"!= header bucket count {declared}")
     actual = {}
     if "legal.html" in buildings_items:
         actual["Buildings/legal.html"] = buildings_items["legal.html"].get("sha")
