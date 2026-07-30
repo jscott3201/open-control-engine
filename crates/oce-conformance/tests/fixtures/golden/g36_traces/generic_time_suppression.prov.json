@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "e76658805efcab9e7553f2e128aa005835ecda3b",
+  "content_sha256": "89d8aae917e5227abe62ad0081ee53634d14678c47f32e2654b4372a093597f5",
   "reference_columns": [
     "http://example.org#g36.source.generic_time_suppression.yAftSup"
   ]

@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "c8c86bfb2ec40465d368819825e3fdd65774f63e",
+  "content_sha256": "5528a211f20c2c6dead5511db4cbde75d48cf4519db543a922535bab5a1ef3f7",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_supply_fan.y1SupFan",
     "http://example.org#g36.source.multizone_vav_supply_fan.ySupFan"
