@@ -12,7 +12,8 @@ const SAT_COOLING_SETPOINT: &str =
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
 
 /// Per-tick varying boundary inputs for the SAT-reset fixture; an unstaged run leaves every
-/// selected output at `Real(0.0)`, which turns the cross-check into `0.0 == 0.0`.
+/// non-constant selected output frozen at `Real(0.0)`, which turns the cross-check into
+/// `0.0 == 0.0`.
 fn sat_reset_inputs(t: f64) -> [(&'static str, Value); 2] {
     let zone_temp = match t as u32 {
         0 => 22.0,
@@ -55,7 +56,7 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
         "fixture must expose at least three internal outputs"
     );
 
-    let mut saw_nonzero = false;
+    let mut per_step_snapshots: Vec<Vec<Value>> = Vec::new();
     for step in 0..=2 {
         for (path, value) in sat_reset_inputs(step as f64) {
             engine
@@ -84,14 +85,21 @@ fn selected_g36_outputs_match_the_independent_outputs_snapshot_path() {
                 .map(|(_, value)| value)
                 .expect("selected path exists in all-output snapshot");
             assert!(watched_value.bit_eq(snapshot_value));
-            if !watched_value.bit_eq(&Value::Real(0.0)) {
-                saw_nonzero = true;
-            }
         }
+        per_step_snapshots.push(watched.into_iter().map(|(_, value)| value).collect());
     }
+    // Control on the control: a fixture-internal constant is nonzero even unstaged, so
+    // "some value is nonzero" cannot detect a lost staging loop. Only the staged, per-tick
+    // varying inputs can make a selected output CHANGE across ticks — if none does, the
+    // agreement above degenerates to comparing frozen values.
+    let first = &per_step_snapshots[0];
+    let last = per_step_snapshots.last().expect("three snapshots recorded");
     assert!(
-        saw_nonzero,
-        "staged inputs must drive at least one selected output off zero"
+        first
+            .iter()
+            .zip(last)
+            .any(|(early, late)| !early.bit_eq(late)),
+        "staged inputs must drive at least one selected output to vary across ticks"
     );
 }
 
