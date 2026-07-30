@@ -44,6 +44,7 @@ mod projection;
 mod sim;
 mod stable_hash;
 mod topology;
+mod watch;
 
 pub use engine::Engine;
 pub use error::{OcError, OcResult};

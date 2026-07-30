@@ -306,6 +306,7 @@ impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
+impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S> !core::panic::unwind_safe::RefUnwindSafe for oce_api::Engine<S>
 impl<S> !core::panic::unwind_safe::UnwindSafe for oce_api::Engine<S>
 impl<S> core::marker::Freeze for oce_api::Engine<S>
@@ -616,6 +617,7 @@ pub fn oce_api::Engine<S>::topology(&self) -> oce_api::Topology
 pub fn oce_api::Engine<S>::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::Engine<S>::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::Engine<S>::type_id(&self) -> core::any::TypeId
+pub fn oce_api::Engine<S>::watch(&self, &[&str]) -> core::result::Result<alloc::vec::Vec<(alloc::string::String, oce_model::Value)>, oce_api::OcError>
 pub fn oce_api::Engine<S>::with_store(alloc::sync::Arc<S>) -> Self
 pub fn oce_api::Engine<oce_store_mem::MemStore>::in_memory() -> Self
 pub fn oce_api::ExportReport::borrow(&self) -> &T
