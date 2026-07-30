@@ -285,10 +285,13 @@ else:
     for item in cone.get("tree", []):
         if item.get("type") == "blob" and isinstance(item.get("path"), str):
             actual["Buildings/Controls/OBC/" + item["path"]] = item.get("sha")
+    # Fidelity is manifest-driven and one-directional: every vendored entry must exist
+    # upstream with a matching blob OID. The upstream cone is a SUPERSET of the vendored
+    # set by design (Validation/, package.mo, non-CDL subtrees are deliberately not
+    # vendored), so upstream objects absent from the manifest are never a finding here;
+    # additions INSIDE the vendored tree are leg 2's business (fail-closed local walk).
     for relative in sorted(set(expected) - set(actual)):
         fidelity.append(f"upstream object missing: {relative}")
-    for relative in sorted(set(actual) - set(expected)):
-        fidelity.append(f"unvendored upstream object in selected cone: {relative}")
     for relative in sorted(set(expected) & set(actual)):
         if actual[relative] != expected[relative].get("git_blob_oid"):
             fidelity.append(f"blob OID mismatch: {relative}")
@@ -297,7 +300,7 @@ else:
         emit(3, "upstream-fidelity", "RED", "; ".join(fidelity))
     else:
         emit(3, "upstream-fidelity", "OK",
-             f"{len(expected)} manifest blob OIDs match upstream; cone is complete")
+             f"{len(expected)} manifest blob OIDs match upstream at the pin")
 
 master = {}
 problems = []
