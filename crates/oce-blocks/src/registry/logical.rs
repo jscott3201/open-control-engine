@@ -1,7 +1,7 @@
 use oce_model::ParamTable;
 
 use super::{bool_param, int_param, real_param};
-use crate::source_timetable::MIN_TIMETABLE_PERIOD;
+use crate::source_timetable::{MIN_TIMETABLE_PERIOD, TIMETABLE_TIME_SCALE_DEFAULT};
 use crate::{
     And, Block, Edge, LogicalConstant, LogicalPulse, LogicalSwitch, LogicalTimeTable,
     MAX_RESOLVED_PORT_WIDTH, MultiAnd, MultiOr, Nand, Nor, Not, Or, ParamDefault, ParamRule, Pre,
@@ -23,8 +23,10 @@ pub(super) const LOGICAL_PULSE_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_required!("period"),
     param_default_real!("shift", PULSE_SHIFT_DEFAULT),
 ];
-pub(super) const LOGICAL_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] =
-    &[param_default_required!("period")];
+pub(super) const LOGICAL_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_real!("timeScale", TIMETABLE_TIME_SCALE_DEFAULT),
+    param_default_required!("period"),
+];
 pub(super) const MULTI_LOGICAL_PARAM_DEFAULTS: &[ParamDefault] =
     &[param_default_integer!("nin", MULTI_LOGICAL_NIN_DEFAULT)];
 pub(super) const PRE_PARAM_DEFAULTS: &[ParamDefault] =

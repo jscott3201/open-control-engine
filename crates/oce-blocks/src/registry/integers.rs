@@ -2,7 +2,7 @@ use oce_model::ParamTable;
 
 use super::int_param;
 use super::real_param;
-use crate::source_timetable::MIN_TIMETABLE_PERIOD;
+use crate::source_timetable::{MIN_TIMETABLE_PERIOD, TIMETABLE_TIME_SCALE_DEFAULT};
 use crate::{
     Block, IntegerAbs, IntegerAdd, IntegerAddParameter, IntegerChange, IntegerConstant,
     IntegerEqual, IntegerGreater, IntegerGreaterEqual, IntegerGreaterEqualThreshold,
@@ -36,8 +36,10 @@ pub(super) const INTEGER_PULSE_PARAM_DEFAULTS: &[ParamDefault] = &[
     param_default_real!("shift", PULSE_SHIFT_DEFAULT),
     param_default_integer!("offset", PULSE_OFFSET_DEFAULT),
 ];
-pub(super) const INTEGER_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] =
-    &[param_default_required!("period")];
+pub(super) const INTEGER_TIME_TABLE_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_real!("timeScale", TIMETABLE_TIME_SCALE_DEFAULT),
+    param_default_required!("period"),
+];
 pub(super) const INTEGER_ADD_PARAMETER_PARAM_DEFAULTS: &[ParamDefault] =
     &[param_default_required!("p")];
 pub(super) const INTEGER_MULTI_SUM_PARAM_DEFAULTS: &[ParamDefault] = &[

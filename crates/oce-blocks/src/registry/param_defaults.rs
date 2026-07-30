@@ -54,6 +54,7 @@ pub(crate) fn param_defaults(class_path: &str) -> &'static [ParamDefault] {
         "CDL.Reals.Sources.Pulse" => reals_defaults::PULSE_PARAM_DEFAULTS,
         "CDL.Reals.Sources.Ramp" => reals_defaults::SOURCE_RAMP_PARAM_DEFAULTS,
         "CDL.Reals.Sources.Sin" => reals_defaults::SOURCE_SIN_PARAM_DEFAULTS,
+        "CDL.Reals.Sources.TimeTable" => reals_defaults::REAL_TIME_TABLE_PARAM_DEFAULTS,
         "CDL.Reals.Sources.CalendarTime" => reals_defaults::CALENDAR_TIME_PARAM_DEFAULTS,
         "CDL.Reals.Round" => reals_defaults::ROUND_PARAM_DEFAULTS,
         "CDL.Reals.AddParameter" => reals_defaults::ADD_PARAMETER_PARAM_DEFAULTS,

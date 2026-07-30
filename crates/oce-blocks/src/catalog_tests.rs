@@ -111,6 +111,42 @@ fn consumer_palette_metadata_reports_authored_defaults() {
 }
 
 #[test]
+fn time_table_classes_publish_the_upstream_authored_defaults() {
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "smoothness"),
+        DefaultSource::Literal(DefaultLiteral::EnumMember("LinearSegments"))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "extrapolation"),
+        DefaultSource::Literal(DefaultLiteral::EnumMember("Periodic"))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "offset_<i>"),
+        DefaultSource::Literal(DefaultLiteral::Real(0.0))
+    );
+    assert_eq!(
+        default("CDL.Reals.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Integers.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Integers.Sources.TimeTable", "period"),
+        DefaultSource::Required
+    );
+    assert_eq!(
+        default("CDL.Logical.Sources.TimeTable", "timeScale"),
+        DefaultSource::Literal(DefaultLiteral::Real(1.0))
+    );
+    assert_eq!(
+        default("CDL.Logical.Sources.TimeTable", "period"),
+        DefaultSource::Required
+    );
+}
+
+#[test]
 fn catalog_metadata_invariants_cross_check_independent_sources() {
     for entry in catalog() {
         assert!(

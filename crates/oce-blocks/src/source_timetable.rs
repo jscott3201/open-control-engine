@@ -23,6 +23,17 @@ pub(crate) const SMOOTHNESS_MEMBERS: &[&str] = &["LinearSegments", "ConstantSegm
 /// Source-verified `CDL.Types.Extrapolation` members in ordinal order.
 pub(crate) const EXTRAPOLATION_MEMBERS: &[&str] = &["HoldLastPoint", "LastTwoPoints", "Periodic"];
 
+/// Published catalog default for the `timeScale` parameter of every TimeTable class.
+pub(crate) const TIMETABLE_TIME_SCALE_DEFAULT: f64 = 1.0;
+/// Published catalog default member for `CDL.Reals.Sources.TimeTable.smoothness`.
+pub(crate) const TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER: &str = SMOOTHNESS_MEMBERS[0]; // LinearSegments
+/// Published catalog default member for `CDL.Reals.Sources.TimeTable.extrapolation`.
+pub(crate) const TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER: &str = EXTRAPOLATION_MEMBERS[2]; // Periodic
+/// Published catalog default for each `CDL.Reals.Sources.TimeTable.offset` element.
+pub(crate) const TIMETABLE_OFFSET_DEFAULT: f64 = 0.0;
+/// Defensive totality fallback for required `period`; deliberately unpublished.
+const TIMETABLE_PERIOD_FALLBACK: f64 = 1.0;
+
 /// Interpolation mode for `CDL.Reals.Sources.TimeTable`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TimeTableSmoothness {
@@ -52,6 +63,14 @@ impl TimeTableSmoothness {
             },
             _ => None,
         }
+    }
+}
+
+pub(crate) fn smoothness_from_member(member: &str) -> TimeTableSmoothness {
+    match member {
+        "LinearSegments" => TimeTableSmoothness::LinearSegments,
+        "ConstantSegments" => TimeTableSmoothness::ConstantSegments,
+        _ => unreachable!("registry-owned smoothness default uses valid CDL member tokens"),
     }
 }
 
@@ -92,6 +111,15 @@ impl TimeTableExtrapolation {
             },
             _ => None,
         }
+    }
+}
+
+pub(crate) fn extrapolation_from_member(member: &str) -> TimeTableExtrapolation {
+    match member {
+        "HoldLastPoint" => TimeTableExtrapolation::HoldLastPoint,
+        "LastTwoPoints" => TimeTableExtrapolation::LastTwoPoints,
+        "Periodic" => TimeTableExtrapolation::Periodic,
+        _ => unreachable!("registry-owned extrapolation default uses valid CDL member tokens"),
     }
 }
 
@@ -151,7 +179,7 @@ impl TableData {
         let time_scale = find_param(params, "timeScale")
             .and_then(numeric_value)
             .filter(|value| value.is_finite() && *value > 0.0)
-            .unwrap_or(1.0);
+            .unwrap_or(TIMETABLE_TIME_SCALE_DEFAULT);
         for time in &mut times {
             *time *= time_scale;
         }
@@ -274,10 +302,10 @@ impl RealTimeTable {
         let table = TableData::from_params(params);
         let smoothness = find_param(params, "smoothness")
             .and_then(TimeTableSmoothness::from_value)
-            .unwrap_or(TimeTableSmoothness::LinearSegments);
+            .unwrap_or_else(|| smoothness_from_member(TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER));
         let extrapolation = find_param(params, "extrapolation")
             .and_then(TimeTableExtrapolation::from_value)
-            .unwrap_or(TimeTableExtrapolation::Periodic);
+            .unwrap_or_else(|| extrapolation_from_member(TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER));
         let offsets = read_offsets(params, table.nout);
         Self::new(table, smoothness, extrapolation, offsets)
     }
@@ -303,9 +331,9 @@ impl Default for RealTimeTable {
     fn default() -> Self {
         Self::new(
             TableData::fallback(),
-            TimeTableSmoothness::LinearSegments,
-            TimeTableExtrapolation::Periodic,
-            vec![0.0],
+            smoothness_from_member(TIMETABLE_SMOOTHNESS_DEFAULT_MEMBER),
+            extrapolation_from_member(TIMETABLE_EXTRAPOLATION_DEFAULT_MEMBER),
+            vec![TIMETABLE_OFFSET_DEFAULT],
         )
     }
 }
@@ -368,7 +396,7 @@ impl IntegerTimeTable {
             TableData::from_params(params),
             find_param(params, "period")
                 .and_then(numeric_value)
-                .unwrap_or(1.0),
+                .unwrap_or(TIMETABLE_PERIOD_FALLBACK),
         )
     }
 
@@ -384,7 +412,7 @@ impl IntegerTimeTable {
         if self.period.is_finite() && self.period >= MIN_TIMETABLE_PERIOD {
             self.period
         } else {
-            1.0
+            TIMETABLE_PERIOD_FALLBACK
         }
     }
 
@@ -403,7 +431,7 @@ impl IntegerTimeTable {
 
 impl Default for IntegerTimeTable {
     fn default() -> Self {
-        Self::new(TableData::fallback(), 1.0)
+        Self::new(TableData::fallback(), TIMETABLE_PERIOD_FALLBACK)
     }
 }
 
@@ -510,7 +538,7 @@ impl Block for LogicalTimeTable {
 }
 
 fn read_offsets(params: &ParamTable, nout: usize) -> Vec<f64> {
-    let mut offsets = vec![0.0; nout];
+    let mut offsets = vec![TIMETABLE_OFFSET_DEFAULT; nout];
     for (name, value) in &params.values {
         let Some(idx) = parse_array_param_name(name.as_ref(), "offset") else {
             continue;

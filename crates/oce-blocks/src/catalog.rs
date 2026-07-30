@@ -59,7 +59,7 @@ pub enum DefaultSource {
 /// One parameter-default declaration.
 ///
 /// Width-indexed names use `<i>`, `<row>`, and `<col>` templates expanded according to the
-/// corresponding width parameter.
+/// corresponding width parameter or, for the TimeTable classes, the resolved table shape.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ParamDefault {
     /// CDL parameter name or width-indexed name template.
