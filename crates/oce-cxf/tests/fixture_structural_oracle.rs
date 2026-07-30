@@ -28,6 +28,10 @@
 //! upstream class; the AirEconomizerHighLimits parameter-specialized reductions) are
 //! listed with reasons and are not passes.
 //!
+//! The co-resident `golden_provenance` audit verifies that every
+//! `oce-conformance` G36 determinism provenance record is paired with a CSV and
+//! that its `content_sha256` matches the checked-in CSV bytes.
+//!
 //! # Regenerating
 //!
 //! ```text

@@ -1,4 +1,8 @@
 //! Integrity checks for G36 determinism golden provenance records.
+//!
+//! `content_sha256` binds each record to its checked-in CSV bytes, not to the
+//! engine that produced them. Editing a CSV together with its digest passes by
+//! design; this guard detects drift between the two checked-in artifacts.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -10,6 +14,10 @@ use sha2::{Digest as _, Sha256};
 /// Mirrors `BLESS_DISABLED_VALUES` in
 /// `oce-conformance/tests/g36_determinism/support.rs`, the source of truth.
 const BLESS_DISABLED_VALUES: &[&str] = &["", "0", "false"];
+const SUPPORT_RS: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../oce-conformance/tests/g36_determinism/support.rs"
+));
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -123,7 +131,7 @@ fn every_provenance_record_matches_its_golden_bytes() {
     assert_pairing(&pairs);
     assert!(
         !pairs.provenance.is_empty(),
-        "{} contains {} golden provenance pairs",
+        "expected at least one golden provenance record in {}, found {}",
         pairs
             .root
             .canonicalize()
@@ -132,11 +140,7 @@ fn every_provenance_record_matches_its_golden_bytes() {
         pairs.provenance.len()
     );
 
-    for provenance_path in pairs
-        .provenance
-        .iter()
-        .filter(|path| pairs.csvs.contains(&csv_for(path)))
-    {
+    for provenance_path in &pairs.provenance {
         let csv_path = csv_for(provenance_path);
         let provenance_bytes = fs::read(provenance_path)
             .unwrap_or_else(|error| panic!("cannot read {}: {error}", provenance_path.display()));
@@ -175,6 +179,20 @@ fn every_provenance_record_matches_its_golden_bytes() {
 
 #[test]
 fn bless_truthiness_vocabulary_is_pinned() {
+    let values = BLESS_DISABLED_VALUES
+        .iter()
+        .map(|value| format!("{value:?}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let expected = format!(
+        "const BLESS_DISABLED_VALUES: [&str; {}] = [{values}];",
+        BLESS_DISABLED_VALUES.len()
+    );
+    assert!(
+        SUPPORT_RS.contains(&expected),
+        "expected support.rs to contain {expected:?}; reconcile support.rs with the guard vocabulary"
+    );
+
     let cases = [
         ("", false),
         ("0", false),
@@ -195,12 +213,23 @@ fn bless_truthiness_vocabulary_is_pinned() {
     }
 }
 
+/// Refuses armed golden regeneration in the gate environment.
+///
+/// `OCE_BLESS_G36` is truthiness-gated, while every live `OCE_BLESS` writer
+/// uses presence semantics and therefore has no disabled value.
 #[test]
-fn gate_environment_does_not_enable_g36_blessing() {
+fn gate_environment_does_not_arm_golden_blessing() {
     if let Ok(value) = std::env::var("OCE_BLESS_G36") {
         assert!(
             !blessing_is_enabled(&value),
             "OCE_BLESS_G36={value:?} enables blessing in the gate environment"
         );
     }
+    assert!(
+        std::env::var_os("OCE_BLESS").is_none(),
+        "OCE_BLESS is present and arms golden regeneration; use the name-filtered commands \
+         `OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle verdict_table` or \
+         `OCE_BLESS=1 cargo test -p oce-cxf --test fixture_structural_oracle \
+         checked_in_manifest_bytes_equal_fresh_render`"
+    );
 }
