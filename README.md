@@ -269,7 +269,7 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | `oce-conformance` | The funnel-style tolerance-band / golden-trace conformance harness. |
 | `oce-extension` | **Reserved seam; nothing consumes it yet.** The intended role is the FMI / extension-block boundary. No crate depends on it today, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` is never constructed. Do not plan FMI integration against this row. |
 | `oce-docs` | **Reserved seam, not implemented.** The sequence-spec (Word/HTML) and point-list export surface is declared; every exporter is deferred to M4 and `point_list_html` currently panics with `unimplemented!`. |
-| `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface, spanning load, tick, simulate, parameters, IO inventory, CXF export with content id, and a read-only topology view. Package name is `oce-api`; the `open-control-engine` umbrella name is planned for first publish. |
+| `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface, spanning load, tick, simulate, parameters, IO inventory, key-selected output reads (`watch`), CXF export with content id, and a read-only topology view. Package name is `oce-api`; the `open-control-engine` umbrella name is planned for first publish. |
 
 ---
 

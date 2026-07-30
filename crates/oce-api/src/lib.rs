@@ -22,11 +22,11 @@
 //! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
 //! [`Engine`] handle + load/tick core), `error` ([`OcError`]), `loading` ([`LoadReport`],
 //! [`TemplateRef`], deferred loaders), `params` (the live parameter table), `sim` (execution modes
-//! + [`Outputs`]), `io` (the typed IO inventory).
+//! + [`Outputs`]), `io` (the typed IO inventory), `watch` (key-selected output reads).
 //!
 //! The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the end-to-end CXF ingest
 //! pipeline (resolve → flatten → validate → BUILD). The frozen public surface (`08` §11.1 R-PUB-5/6)
-//! includes `simulate` / `step_realtime`, `set_input` / `get_output`, the live parameter table
+//! includes `simulate` / `step_realtime`, `set_input` / `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
 //! `io_summary` / `point_list`) with final signatures and non-panicking bodies. Semantic/modelica
 //! loaders and device-filtered point lists remain deferred behind typed errors.
