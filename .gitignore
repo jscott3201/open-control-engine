@@ -37,4 +37,5 @@ _*/
 .agents/*
 !.agents/gate.sh
 !.agents/project-facts.md
+!.agents/revendor-upstream.sh
 .codex/

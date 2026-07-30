@@ -32,6 +32,9 @@ change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag` can show a f
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 
+Pin-advance PRs — any change under `third_party/**` or to the pin constants — run
+`bash .agents/gate.sh full` first-hand; see the vendored README's `## Pin-advance policy` section.
+
 **Open the PR non-draft.** Every job in `ci.yml` is conditioned on
 `github.event.pull_request.draft == false`, so a draft PR runs *no* gates at all — and
 a PR with no checks is easy to mistake for a PR with no failing checks. Confirm the
