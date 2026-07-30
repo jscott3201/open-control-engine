@@ -40,6 +40,7 @@
 //! Bless only after reading the diff: a verdict change is a finding about a fixture or
 //! about this audit, never routine churn.
 
+mod golden_provenance;
 mod structural_oracle;
 mod third_party_manifest;
 

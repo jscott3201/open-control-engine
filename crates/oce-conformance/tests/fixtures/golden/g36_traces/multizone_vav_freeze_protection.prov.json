@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "9822eb2fd886a7063504e9b95ed3d2c0e86862ba",
+  "content_sha256": "9951912d32f14c08cc26aa874e1b3ad6189f74f6ad9cbd1e7e7d1e4140605c86",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_freeze_protection.yFreProSta",
     "http://example.org#g36.source.multizone_vav_freeze_protection.y1EneCHWPum",

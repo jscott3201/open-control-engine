@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use oce_api::Value;
 use oce_conformance::{
@@ -9,10 +8,12 @@ use oce_conformance::{
     drive_trace_with_options,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest as _, Sha256};
 
 const GOLDEN_DIR: &str = "tests/fixtures/golden/g36_traces";
 const PROVENANCE_SOURCE: &str =
     "engine self-output (determinism snapshot); NOT a correctness oracle";
+const BLESS_DISABLED_VALUES: [&str; 3] = ["", "0", "false"];
 
 #[derive(Clone, Copy)]
 pub(crate) struct PointSpec {
@@ -92,7 +93,7 @@ struct Provenance {
     tier: String,
     source: String,
     depends_on_oce_blocks: bool,
-    engine_rev: String,
+    content_sha256: String,
     reference_columns: Vec<String>,
 }
 
@@ -100,8 +101,16 @@ pub(crate) fn pair(name: &str, value: Value) -> (String, Value) {
     (name.to_string(), value)
 }
 
+/// Reports whether G36 golden blessing is armed.
+///
+/// An unset value, `""`, `"0"`, or `"false"` (including `"FALSE"` and `"False"`) disables
+/// blessing. Values such as `"1"`, `"true"`, `"yes"`, and `"0.0"` enable it.
 pub(crate) fn bless_enabled() -> bool {
-    std::env::var_os("OCE_BLESS_G36").is_some()
+    std::env::var("OCE_BLESS_G36").is_ok_and(|value| {
+        !BLESS_DISABLED_VALUES
+            .iter()
+            .any(|disabled| value.eq_ignore_ascii_case(disabled))
+    })
 }
 
 pub(crate) fn bless_sequence(spec: &SequenceSpec) {
@@ -400,11 +409,6 @@ pub(crate) fn assert_provenance_matches_outputs(spec: &SequenceSpec, table: &Com
         "{} provenance must mark oce-blocks dependency",
         spec.name
     );
-    assert!(
-        !provenance.engine_rev.trim().is_empty(),
-        "{} provenance engine_rev must be set",
-        spec.name
-    );
     assert_eq!(
         provenance.reference_columns,
         table.col_names.as_ref().expect("checked table columns")[1..],
@@ -414,11 +418,13 @@ pub(crate) fn assert_provenance_matches_outputs(spec: &SequenceSpec, table: &Com
 }
 
 fn write_provenance(spec: &SequenceSpec, table: &CombiTimeTable) {
+    let golden_bytes = fs::read(golden_path(spec))
+        .unwrap_or_else(|err| panic!("{} golden read for provenance failed: {err}", spec.name));
     let provenance = Provenance {
         tier: "2".to_string(),
         source: PROVENANCE_SOURCE.to_string(),
         depends_on_oce_blocks: true,
-        engine_rev: engine_rev(),
+        content_sha256: hex(&Sha256::digest(golden_bytes)),
         reference_columns: table.col_names.as_ref().expect("checked table columns")[1..].to_vec(),
     };
     let text = serde_json::to_string_pretty(&provenance).expect("serialize provenance");
@@ -426,20 +432,14 @@ fn write_provenance(spec: &SequenceSpec, table: &CombiTimeTable) {
         .unwrap_or_else(|err| panic!("{} provenance write failed: {err}", spec.name));
 }
 
-fn engine_rev() -> String {
-    let output = Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .output()
-        .expect("run git rev-parse HEAD");
-    assert!(
-        output.status.success(),
-        "git rev-parse HEAD failed with status {}",
-        output.status
-    );
-    String::from_utf8(output.stdout)
-        .expect("git rev-parse HEAD produced non-UTF-8")
-        .trim()
-        .to_string()
+fn hex(bytes: &[u8]) -> String {
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut encoded = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        encoded.push(char::from(DIGITS[usize::from(byte >> 4)]));
+        encoded.push(char::from(DIGITS[usize::from(byte & 0x0f)]));
+    }
+    encoded
 }
 
 fn encode(kind: ValueKind, value: &Value) -> f64 {

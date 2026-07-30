@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "793b027454117bcffcadf89ea8e8dc912d788e3a",
+  "content_sha256": "03516a02a88aaec1f955689001fdf06d663e6bc523b2e7b6f8d832bf0e385376",
   "reference_columns": [
     "http://example.org#g36.source.cooling_only_alarms.yLowFloAla",
     "http://example.org#g36.source.cooling_only_alarms.yFloSenAla",
