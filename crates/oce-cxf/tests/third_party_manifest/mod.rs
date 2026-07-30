@@ -369,7 +369,7 @@ fn checked_in_manifest_bytes_equal_fresh_render() {
         fresh, &independent,
         "independent vendor walks produced different manifests"
     );
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if crate::bless::enabled() {
         fs::write(
             Path::new(env!("CARGO_MANIFEST_DIR")).join(MANIFEST_PATH),
             first,

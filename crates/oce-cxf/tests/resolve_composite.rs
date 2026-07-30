@@ -1,5 +1,7 @@
 //! Nested composite import tests for the restricted G36 CXF profile subset.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -223,7 +225,7 @@ fn nested_composite_flattens_to_leaf_blocks_and_expanded_connections() {
 fn golden_nested_composite_modelgraph() {
     let actual = render(&import_ok(NESTED));
     let path = golden_path(NESTED_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
@@ -289,7 +291,7 @@ fn source_verified_g36_trim_and_respond_have_hol_false_imports_as_explicit_compo
 fn golden_g36_trim_and_respond_have_hol_false_modelgraph() {
     let actual = render(&import_ok(G36_TRIM_AND_RESPOND));
     let path = golden_path(G36_TRIM_AND_RESPOND_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
@@ -367,7 +369,7 @@ fn source_verified_g36_multizone_vav_supply_temperature_imports_nested_trim_and_
 fn golden_g36_multizone_vav_supply_temperature_modelgraph() {
     let actual = render(&import_ok(G36_SUPPLY_TEMPERATURE));
     let path = golden_path(G36_SUPPLY_TEMPERATURE_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
@@ -478,7 +480,7 @@ fn source_verified_g36_multizone_vav_supply_fan_imports_nested_trim_and_respond(
 fn golden_g36_multizone_vav_supply_fan_modelgraph() {
     let actual = render(&import_ok(G36_SUPPLY_FAN));
     let path = golden_path(G36_SUPPLY_FAN_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
@@ -576,7 +578,7 @@ fn source_verified_g36_multizone_vav_supply_signals_imports_source_loop() {
 fn golden_g36_multizone_vav_supply_signals_modelgraph() {
     let actual = render(&import_ok(G36_SUPPLY_SIGNALS));
     let path = golden_path(G36_SUPPLY_SIGNALS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

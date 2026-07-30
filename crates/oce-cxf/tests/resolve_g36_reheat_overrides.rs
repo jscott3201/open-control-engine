@@ -1,5 +1,7 @@
 //! Source-verified G36 Reheat Overrides composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -169,7 +171,7 @@ fn source_verified_reheat_overrides_preserves_topology_and_bindings() {
 fn reheat_overrides_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_REHEAT_OVERRIDES));
     let path = golden_path(G36_REHEAT_OVERRIDES_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

@@ -16,6 +16,8 @@
 //! OCE_BLESS=1 cargo test -p oce-cxf --test resolve_array golden_array2d_modelgraph
 //! ```
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -187,7 +189,7 @@ fn array_preserved_and_flattened_converge_byte_identical() {
 #[test]
 fn golden_array_modelgraph() {
     let actual = render(&import_ok(PRESERVED));
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(golden_path().parent().unwrap()).unwrap();
         std::fs::write(golden_path(), &actual).unwrap();
         return;
@@ -422,7 +424,7 @@ fn array2d_element_values_land_row_major() {
 #[test]
 fn golden_array2d_modelgraph() {
     let actual = render(&import_ok(PRESERVED_2D));
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(golden_2d_path().parent().unwrap()).unwrap();
         std::fs::write(golden_2d_path(), &actual).unwrap();
         return;

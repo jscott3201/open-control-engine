@@ -4,6 +4,8 @@
 //! pre-grounds that expression to `0.005` from the canonical Validation binding `floHys=0.01`;
 //! this test pins the resulting constant alongside every referenced timing and hysteresis value.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -220,7 +222,7 @@ fn source_verified_cooling_only_system_requests_preserves_topology_and_bindings(
 fn cooling_only_system_requests_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_COOLING_ONLY_SYSTEM_REQUESTS));
     let path = golden_path(G36_COOLING_ONLY_SYSTEM_REQUESTS_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

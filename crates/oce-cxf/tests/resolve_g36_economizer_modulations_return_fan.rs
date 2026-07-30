@@ -1,5 +1,7 @@
 //! Source-verified G36 Economizers.Subsequences.Modulations.ReturnFan composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -240,7 +242,7 @@ fn return_fan_imports_relief_damper_branch() {
 fn golden_g36_multizone_vav_economizer_modulations_return_fan_modelgraph() {
     let actual = render(&import_ok(G36_ECONOMIZER_MODULATIONS_RETURN_FAN));
     let path = golden_path(G36_ECONOMIZER_MODULATIONS_RETURN_FAN_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
@@ -259,7 +261,7 @@ fn golden_g36_multizone_vav_economizer_modulations_return_fan_relief_damper_mode
         G36_ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER,
     ));
     let path = golden_path(G36_ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

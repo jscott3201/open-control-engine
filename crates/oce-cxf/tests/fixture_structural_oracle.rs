@@ -44,6 +44,7 @@
 //! Bless only after reading the diff: a verdict change is a finding about a fixture or
 //! about this audit, never routine churn.
 
+mod bless;
 mod golden_provenance;
 mod structural_oracle;
 mod third_party_manifest;
@@ -229,7 +230,7 @@ fn verdict_table_matches_golden() {
     let (rows, excluded) = run_suite();
     let rendered = render(&rows, &excluded);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::write(&path, &rendered).expect("write golden");
         return;
     }

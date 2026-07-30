@@ -9,6 +9,8 @@
 //! bound at `BooleanToInteger.integerTrue` must ground position-independently to Integer values
 //! 1, 2, and 3.
 
+mod bless;
+
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -242,7 +244,7 @@ fn source_verified_thermal_zones_zone_states_preserves_topology_and_grounded_bin
 fn thermal_zones_zone_states_modelgraph_is_stable() {
     let actual = render(&import_ok(G36_THERMAL_ZONES_ZONE_STATES));
     let path = golden_path(G36_THERMAL_ZONES_ZONE_STATES_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

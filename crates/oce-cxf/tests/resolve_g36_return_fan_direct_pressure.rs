@@ -1,5 +1,7 @@
 //! Source-verified G36 ReturnFanDirectPressure composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -218,7 +220,7 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
 fn golden_g36_multizone_vav_return_fan_direct_pressure_modelgraph() {
     let actual = render(&import_ok(G36_RETURN_FAN_DIRECT_PRESSURE));
     let path = golden_path(G36_RETURN_FAN_DIRECT_PRESSURE_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;
