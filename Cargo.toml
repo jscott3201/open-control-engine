@@ -26,7 +26,20 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.97.1"
+# MSRV. MUST NOT EXCEED the gate-only nightly pinned as `NIGHTLY` in
+# .github/workflows/release-gate.yml — today nightly-2026-05-01, which identifies as
+# `rustc 1.97.0-nightly`. That nightly is a TOOL, not a build target: it emits rustdoc JSON for the
+# `cargo public-api` surface gates. But `rustdoc_json::Builder::toolchain()` shells out to
+# `cargo +<nightly> rustdoc`, which resolves the whole workspace, so Cargo enforces THIS line
+# against it. Setting `1.97.1` here (PR #208) failed both surface gates with
+# `rustc 1.97.0-nightly is not supported by the following packages`, and per-PR CI cannot see it —
+# those gates run only in release-gate.yml. To raise this above the nightly, bump `NIGHTLY` first
+# and re-bless both public-api baselines.
+#
+# The pinned BUILD toolchain (rust-toolchain.toml) is 1.97.1 and stays there; 1.97.1 is a patch
+# release of 1.97.0, so the declared floor is honest. It is also genuinely exercised: release-gate
+# builds the whole workspace under the 1.97.0-class nightly on every release PR.
+rust-version = "1.97.0"
 authors = ["Justin Scott"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jscott3201/open-control-engine"
