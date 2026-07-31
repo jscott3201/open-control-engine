@@ -131,8 +131,15 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
-- `BENCHMARKS.md` records measured tick throughput (#205), with a later correction to the
-  load figure, which was a cold-process artifact (#207).
+- Measured tick throughput is recorded per run, with the commit, host and method that
+  produced it (#205), with a later correction to the load figure, which was a cold-process
+  artifact (#207). The file moved from `BENCHMARKS.md` to
+  [`docs/benchmarks.md`](docs/benchmarks.md) in the documentation restructure.
+- **Documentation restructured.** The README is a front door of ~220 lines rather than a
+  366-line dossier, with its deep material extracted into `docs/` behind an index; a new
+  `SECURITY.md` states the threat model and names the one known hardening limit; and the
+  README's Quickstart is now a compiled example (`crates/oce-api/examples/quickstart.rs`)
+  with a drift guard, so it cannot rot silently.
 - A read-only revendor reporter sits behind the pin-advance policy (#203).
 - The gate is single-sourced in `.agents/gate.sh` (#178), and CI runs that script as a
   coverage backstop rather than a parity check (#180).

@@ -2,8 +2,9 @@
 
 **open-control** (product name **Open Control Engine**; repo
 `github.com/jscott3201/open-control-engine`) is a high-performance, **embeddable Rust control engine**
-for smart-building equipment. Published crates use the **`oce-*`** prefix; the embeddable host facade
-(`oce-api`) is published under the umbrella name `open-control-engine`. Its north-star specification is
+for smart-building equipment. Crates use the **`oce-*`** prefix; the embeddable host facade is the
+package **`oce-api`**. **Nothing is published to crates.io yet** — `open-control-engine` is a
+reserved umbrella name for a future release, not a current alias. Its north-star specification is
 the **OBC / LBL Control Description Language (CDL)**:
 
 - https://obc.lbl.gov/specification/cdl.html
