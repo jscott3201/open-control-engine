@@ -276,13 +276,9 @@ fn port_decl(line: &str) -> Option<(String, &'static str, bool, bool)> {
     let (kind, rest) = ["Real", "Integer", "Boolean"]
         .iter()
         .find_map(|k| rest.strip_prefix(k).map(|r| (*k, r)))?;
-    let (is_output, rest) = if let Some(r) = rest.strip_prefix("Output") {
-        (true, r)
-    } else if let Some(r) = rest.strip_prefix("Input") {
-        (false, r)
-    } else {
-        return None;
-    };
+    let (is_output, rest) = [("Output", true), ("Input", false)]
+        .iter()
+        .find_map(|(dir, is_output)| rest.strip_prefix(dir).map(|r| (*is_output, r)))?;
     // A space is required: `RealInputFoo` is a different type, not a declaration of `Foo`.
     if !rest.starts_with(char::is_whitespace) {
         return None;

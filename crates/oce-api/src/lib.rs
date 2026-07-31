@@ -5,7 +5,7 @@
 //!
 //! # Posture (binding, FRAME §6)
 //!
-//! Library-only, synchronous, in-process, `#![forbid(unsafe_code)]`, edition 2024, rust 1.95.0,
+//! Library-only, synchronous, in-process, `#![forbid(unsafe_code)]`, edition 2024, rust 1.97.1,
 //! **no async runtime, no server**. The host owns transport, TLS, authN/Z, multi-tenancy,
 //! off-host durability, and metrics export.
 //!

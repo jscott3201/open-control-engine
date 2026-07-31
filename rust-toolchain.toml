@@ -1,7 +1,7 @@
-# Pinned toolchain for reproducible builds (edition 2024 / 1.95.0).
+# Pinned toolchain for reproducible builds (edition 2024 / 1.97.1).
 # Every open-control build pins this file at the workspace root; CI uses the same
 # pinned channel (not @stable) so CI and local builds agree exactly.
 [toolchain]
-channel = "1.95.0"
+channel = "1.97.1"
 components = ["rustfmt", "clippy"]
 profile = "default"
