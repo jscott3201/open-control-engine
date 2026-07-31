@@ -5,7 +5,7 @@
 equipment control sequences.**
 
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
-[![Rust 1.95 · edition 2024](https://img.shields.io/badge/rust-1.95%20%C2%B7%20edition%202024-orange.svg)](rust-toolchain.toml)
+[![Rust 1.97 · edition 2024](https://img.shields.io/badge/rust-1.97%20%C2%B7%20edition%202024-orange.svg)](rust-toolchain.toml)
 [![database-free](https://img.shields.io/badge/storage-database--free-success.svg)](#the-architectural-spine-the-cdl-717-non-computational-seam)
 
 CDL is a declarative, object-oriented language — a strict subset of Modelica — that expresses
@@ -180,7 +180,7 @@ The engine is, by design:
 - **Synchronous, in-process** — every public method is a blocking synchronous call. **No async
   runtime** is pulled at any layer.
 - **`#![forbid(unsafe_code)]`** in every crate.
-- **edition 2024, Rust 1.95.0** (pinned in [`rust-toolchain.toml`](rust-toolchain.toml)),
+- **edition 2024, Rust 1.97.1** (pinned in [`rust-toolchain.toml`](rust-toolchain.toml)),
   `resolver = "3"`.
 - **Deterministic on the tick** — a frozen, topologically-sorted schedule evaluated over flat
   arrays: no graph walks, no hashing, and no store access in the graph evaluator. Two carve-outs,

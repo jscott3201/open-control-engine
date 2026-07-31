@@ -7,7 +7,7 @@
 //! the release gate against a reviewer-blessed baseline (`tests/public-api.txt`).
 //!
 //! GATE-ONLY. `cargo public-api` needs rustdoc JSON, which needs a nightly toolchain — but the
-//! workspace is pinned to stable 1.95.0. So this test is **armed** by the `OCE_PUBLIC_API_NIGHTLY`
+//! workspace is pinned to stable 1.97.1. So this test is **armed** by the `OCE_PUBLIC_API_NIGHTLY`
 //! env var, which only `release-gate.yml` sets (after installing the pinned nightly). When the var
 //! is unset — the fast per-PR `ci.yml` gate and local `cargo test` — the test **skips**. When armed,
 //! it **must run to completion**: every tooling step is fail-hard, so a broken toolchain turns the
