@@ -11,20 +11,8 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
-/// Mirrors the disabled-value vocabulary from `crates/oce-bless/src/lib.rs` in the conformance
-/// support and `tests/bless/mod.rs`; their predicates are not identical because `oce-bless`
-/// additionally trims surrounding whitespace.
-const BLESS_DISABLED_VALUES: &[&str] = &["", "0", "false"];
-const SUPPORT_RS: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../oce-conformance/tests/g36_determinism/support.rs"
-));
 const BLESS_MODULE_RS: &str =
     include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/bless/mod.rs"));
-const OCE_BLESS_LIB_RS: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../oce-bless/src/lib.rs"
-));
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -179,35 +167,17 @@ fn every_provenance_record_matches_its_golden_bytes() {
 }
 
 #[test]
-fn bless_truthiness_vocabulary_is_pinned() {
-    let values = BLESS_DISABLED_VALUES
-        .iter()
-        .map(|value| format!("{value:?}"))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let expected = format!(
-        "const BLESS_DISABLED_VALUES: [&str; {}] = [{values}];",
-        BLESS_DISABLED_VALUES.len()
-    );
-    assert!(
-        SUPPORT_RS.contains(&expected),
-        "expected support.rs to contain {expected:?}; reconcile support.rs with the guard vocabulary"
-    );
-    assert!(
-        BLESS_MODULE_RS.contains(&expected),
-        "expected bless/mod.rs to contain {expected:?}; reconcile bless/mod.rs with the guard vocabulary"
-    );
-    assert!(
-        OCE_BLESS_LIB_RS.contains(&expected),
-        "expected oce-bless/src/lib.rs to contain {expected:?}; reconcile it with the guard vocabulary"
-    );
-
+fn bless_truthiness_matches_the_canonical_truth_table() {
     let cases = [
         ("", false),
         ("0", false),
         ("false", false),
         ("FALSE", false),
         ("False", false),
+        ("  false  ", false),
+        ("   ", false),
+        ("no", true),
+        ("off", true),
         ("1", true),
         ("true", true),
         ("yes", true),
@@ -215,7 +185,7 @@ fn bless_truthiness_vocabulary_is_pinned() {
     ];
     for (value, expected) in cases {
         assert_eq!(
-            crate::bless::enabled_for(value),
+            oce_bless::enabled_for(value),
             expected,
             "golden-blessing truthiness for {value:?}"
         );
@@ -237,11 +207,11 @@ fn visit_rust_sources(root: &Path, sources: &mut Vec<PathBuf>) {
     }
 }
 
-/// Pins literal `OCE_BLESS` readers to the shared helper and its comparison marker.
+/// Pins literal `OCE_BLESS` readers to the shared helper and its delegation marker.
 ///
 /// This is a source-text check, not a semantic one: environment iteration or a runtime-assembled
 /// variable name evades it; a name held in a `const` or built by `concat!` also evades the literal
-/// needles; the predicate body is pinned only by the presence of `eq_ignore_ascii_case`; and
+/// needles; the shim is pinned only by the presence of the `oce-bless` delegation; and
 /// readers outside `crates/oce-cxf/tests/` are out of scope.
 #[test]
 fn no_literal_oce_bless_reader_outside_the_helper() {
@@ -259,6 +229,7 @@ fn no_literal_oce_bless_reader_outside_the_helper() {
     let needles = [
         format!("std::env::var_os(\"{variable}\")"),
         format!("std::env::var(\"{variable}\")"),
+        format!("oce_bless::enabled(\"{variable}\")"),
     ];
     let mut matching_files = BTreeSet::new();
     let mut match_count = 0;
@@ -289,8 +260,8 @@ fn no_literal_oce_bless_reader_outside_the_helper() {
         "expected exactly one OCE_BLESS environment read"
     );
     assert!(
-        BLESS_MODULE_RS.contains("eq_ignore_ascii_case"),
-        "bless/mod.rs must retain the case-insensitive disabling-value comparison"
+        BLESS_MODULE_RS.contains("oce_bless::enabled("),
+        "bless/mod.rs must delegate arming to oce-bless"
     );
 }
 
@@ -301,7 +272,7 @@ fn no_literal_oce_bless_reader_outside_the_helper() {
 fn gate_environment_does_not_arm_golden_blessing() {
     if let Ok(value) = std::env::var("OCE_BLESS_G36") {
         assert!(
-            !crate::bless::enabled_for(&value),
+            !oce_bless::enabled_for(&value),
             "OCE_BLESS_G36={value:?} enables blessing in the gate environment"
         );
     }

@@ -13,7 +13,6 @@ use sha2::{Digest as _, Sha256};
 const GOLDEN_DIR: &str = "tests/fixtures/golden/g36_traces";
 const PROVENANCE_SOURCE: &str =
     "engine self-output (determinism snapshot); NOT a correctness oracle";
-const BLESS_DISABLED_VALUES: [&str; 3] = ["", "0", "false"];
 
 #[derive(Clone, Copy)]
 pub(crate) struct PointSpec {
@@ -103,14 +102,10 @@ pub(crate) fn pair(name: &str, value: Value) -> (String, Value) {
 
 /// Reports whether G36 golden blessing is armed.
 ///
-/// An unset value, `""`, `"0"`, or `"false"` (including `"FALSE"` and `"False"`) disables
-/// blessing. Values such as `"1"`, `"true"`, `"yes"`, and `"0.0"` enable it.
+/// Delegates to `oce_bless::enabled`. An unset, empty, whitespace-only, `"0"`, or `"false"` value
+/// (ASCII case-insensitive, surrounding whitespace ignored) disables blessing.
 pub(crate) fn bless_enabled() -> bool {
-    std::env::var("OCE_BLESS_G36").is_ok_and(|value| {
-        !BLESS_DISABLED_VALUES
-            .iter()
-            .any(|disabled| value.eq_ignore_ascii_case(disabled))
-    })
+    oce_bless::enabled("OCE_BLESS_G36")
 }
 
 pub(crate) fn bless_sequence(spec: &SequenceSpec) {
