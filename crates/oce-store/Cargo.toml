@@ -29,10 +29,11 @@ thiserror = { workspace = true }
 # Bumping any one requires re-blessing tests/public-api.txt under the matching nightly.
 #
 # `default-features = false` on public-api drops its default `snapshot-testing` feature: that feature
-# only gates `PublicApi::assert_eq_or_update`, which this crate's test does NOT use (it snapshots via
-# `expect_test::expect_file!`). Dropping it removes the `snapshot-testing` crate (license `Unlicense`,
-# not on deny.toml's allow-list) from the dev tree entirely — keeping the license surface explicit.
+# only gates `PublicApi::assert_eq_or_update`, which this crate's test does NOT use (it compares the
+# blessed baseline with a first-party read-compare-or-write gated on `oce_bless::enabled`).
+# Dropping it removes the `snapshot-testing` crate (license `Unlicense`, not on deny.toml's
+# allow-list) from the dev tree entirely — keeping the license surface explicit.
 [dev-dependencies]
+oce-bless = { workspace = true }
 public-api = { version = "=0.52.1", default-features = false }
 rustdoc-json = "=0.9.10"
-expect-test = "1.5"

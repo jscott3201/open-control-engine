@@ -37,6 +37,8 @@ const ARM_ENV: &str = "OCE_PUBLIC_API_NIGHTLY";
 /// workspace-wide nextest step, so that unarmed double-run of this same test still skips normally.
 const REQUIRE_ENV: &str = "OCE_REQUIRE_SURFACE_CHECK";
 
+const BASELINE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/public-api.txt");
+
 #[test]
 fn public_api_surface_matches_blessed_baseline() {
     let armed = std::env::var(ARM_ENV)
@@ -99,5 +101,31 @@ fn public_api_surface_matches_blessed_baseline() {
     items.sort_unstable();
     let rendered = format!("{}\n", items.join("\n"));
 
-    expect_test::expect_file!["public-api.txt"].assert_eq(&rendered);
+    if oce_bless::enabled("UPDATE_EXPECT") {
+        std::fs::write(BASELINE_PATH, &rendered).expect("write public-api baseline");
+        return;
+    }
+
+    let checked_in = std::fs::read_to_string(BASELINE_PATH)
+        .expect("read public-api baseline")
+        .replace("\r\n", "\n");
+    if checked_in != rendered {
+        let expected: Vec<&str> = checked_in.lines().collect();
+        let actual: Vec<&str> = rendered.lines().collect();
+        let at = (0..expected.len().max(actual.len()))
+            .find(|&i| expected.get(i) != actual.get(i))
+            .expect("unequal contents must differ at some line index");
+        panic!(
+            "crates/oce-api/tests/public-api.txt is stale (generated {} lines, blessed {} lines, \
+             first difference at line {}):\n  blessed: {:?}\n  actual:  {:?}\n\
+             Re-bless deliberately with `OCE_PUBLIC_API_NIGHTLY=<nightly> UPDATE_EXPECT=1 cargo \
+             nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
+             --profile public-api --locked` and review the diff.",
+            actual.len(),
+            expected.len(),
+            at + 1,
+            expected.get(at).map(|line| &line[..line.len().min(200)]),
+            actual.get(at).map(|line| &line[..line.len().min(200)]),
+        );
+    }
 }

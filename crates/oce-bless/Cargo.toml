@@ -1,0 +1,14 @@
+[package]
+name = "oce-bless"
+description = "Verification-only truthiness policy for opt-in golden regeneration."
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lints]
+workspace = true
