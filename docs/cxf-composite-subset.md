@@ -3,7 +3,7 @@
 This is the canonical statement of which nested-composite CXF shapes the Open Control Engine
 import accepts and rejects. It is written for the author of an external CXF-emitting tool who has
 never read the engine source. The behavior described here is what `oce_cxf::import_cxf` — and
-therefore `Engine::load_cxf` in the published `open-control-engine` facade — enforces; every rule
+therefore `Engine::load_cxf` in the `oce-api` facade — enforces; every rule
 is pinned by tests against the checked-in conformance corpus (see
 [Testing your emitter](#testing-your-emitter)).
 

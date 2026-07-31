@@ -87,12 +87,16 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
 - **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
   The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
-  **not** currently zero across the block library, so do not add to the exceptions: `Reals.Sort`
-  allocates two `Vec`s every tick on the arithmetic path (`reals_matrix.rs:387`, `:403`),
-  `Reals.Log` / `Reals.Log10` `format!` on non-positive input, and `Engine::tick` takes one
-  `store.snapshot()` when the model declares store-backed inputs. Note the allocation guard in
-  `oce-api/tests/tick_purity_tests.rs` covers three fixtures and does not exercise `Sort` — a new
-  allocating block will not be caught by CI.
+  **not** unconditionally zero across the block library, so do not add to the exceptions:
+  `Reals.Sort` is stack-backed through `SORT_STACK_WIDTH` (64) inputs and falls back to two
+  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`), and `Engine::tick` takes one
+  `store.snapshot()` when the model declares store-backed inputs.
+
+  A new allocating block **is** caught per-PR. `crates/oce-blocks/tests/tick_allocation_census.rs`
+  sweeps the whole registry via `catalog()` and carries a permanent positive control
+  (`CDL.Reals.Sort`), and `oce-blocks` is one of the two crates the per-PR gate runs
+  (`.agents/gate.sh`). The facade-level guard in `oce-api/tests/tick_purity_tests.rs` is
+  narrower — three fixtures — and, like all `oce-api` tests, runs only on the release gate.
 
 ## Commits
 
