@@ -45,7 +45,8 @@ shares the same gates:
 - **pre-push:** `cargo clippy --workspace --locked -- -D warnings` + the default-no-db gate.
 
 Escape hatches: `git commit/push --no-verify` (once) or `export OCE_SKIP_HOOKS=1` (whole shell
-session).
+session). Hook skipping follows the repository truthiness policy: empty, `0`, and `false`
+(case-insensitive, with surrounding ASCII whitespace ignored) do not skip; every other value does.
 
 ## Before you open a PR
 
