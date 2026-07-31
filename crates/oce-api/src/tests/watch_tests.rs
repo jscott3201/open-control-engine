@@ -307,6 +307,8 @@ fn identical_engines_produce_bit_identical_selected_snapshots() {
 #[test]
 fn selected_reads_are_available_after_realtime_step() {
     let mut engine = loaded_chain();
+    // This deterministic facade test explicitly maps model zero to the UNIX epoch.
+    engine.set_realtime_epoch_unix_nanos(0);
     engine
         .step_realtime(0.0)
         .expect("realtime chain step succeeds");

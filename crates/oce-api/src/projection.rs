@@ -272,6 +272,8 @@ fn block_key(block: &BlockInstance) -> DomainKey {
 }
 
 fn value_to_oc_value(value: &Value) -> OcValue {
+    // Durable model parameters retain native enum identity. Runtime output samples deliberately
+    // differ in `sim::output_value_to_oc_value`, using Int ordinals for input-path round trips.
     match value {
         Value::Real(v) => OcValue::Real(*v),
         Value::Integer(v) => OcValue::Int(*v),

@@ -67,6 +67,19 @@ pub enum OcError {
         /// The previous tick's time.
         prev: f64,
     },
+    /// A real-time step was requested before the host supplied its wall-clock origin.
+    #[error("real-time epoch is not configured; call set_realtime_epoch_unix_nanos first")]
+    RealtimeEpochUnset,
+    /// The host-supplied epoch and model time do not map exactly into the UNIX-nanosecond range.
+    #[error(
+        "real-time instant is not exactly representable: epoch_unix_nanos={epoch_unix_nanos}, t_now={t_now}"
+    )]
+    RealtimeInstantUnrepresentable {
+        /// Host-supplied UNIX timestamp corresponding to model time `t = 0`.
+        epoch_unix_nanos: u64,
+        /// Host-supplied model time in seconds.
+        t_now: f64,
+    },
     /// A point/connector name that does not resolve for the requested operation: either not
     /// present in the loaded model's IO inventory, or present with the wrong direction
     /// (e.g. `get_output` on an input point, `set_input` on an output point). Also returned by

@@ -676,6 +676,7 @@ fn constant_input_source_propagates_type_error() {
 #[test]
 fn step_realtime_advances_and_reports() {
     let mut eng = loaded_accumulator();
+    // Non-zero host epoch exercises the public timestamp mapping surface.
     eng.set_realtime_epoch_unix_nanos(1_000_000_000);
     let r0 = eng.step_realtime(0.0).unwrap();
     assert!(r0.asserts.is_empty());

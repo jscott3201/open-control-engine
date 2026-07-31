@@ -257,11 +257,32 @@ pub struct StepReport {
     pub tick_nanos: u64,
 }
 
-fn model_time_to_unix_nanos(epoch_unix_nanos: u64, t_now: f64) -> u64 {
-    let offset = (t_now * 1_000_000_000.0) as i128;
-    (i128::from(epoch_unix_nanos) + offset).clamp(0, i128::from(u64::MAX)) as u64
+/// Convert model seconds relative to a host epoch into a UNIX-nanosecond instant.
+///
+/// Model seconds are rounded to the nearest nanosecond. A non-finite offset or final instant outside
+/// `u64` fails with [`OcError::RealtimeInstantUnrepresentable`]. The range checks and integer
+/// addition are explicit, so input never clamps, wraps, saturates, or panics.
+fn model_time_to_unix_nanos(epoch_unix_nanos: u64, t_now: f64) -> Result<u64, OcError> {
+    let fail = || OcError::RealtimeInstantUnrepresentable {
+        epoch_unix_nanos,
+        t_now,
+    };
+    let offset = (t_now * 1_000_000_000.0).round();
+    let integer_limit = u64::MAX as f64;
+    if !offset.is_finite() || offset < -integer_limit || offset > integer_limit {
+        return Err(fail());
+    }
+    let instant = i128::from(epoch_unix_nanos)
+        .checked_add(offset as i128)
+        .ok_or_else(&fail)?;
+    u64::try_from(instant).map_err(|_| fail())
 }
 
+/// Convert an engine output into its store-facing runtime carrier.
+///
+/// Unlike `projection::value_to_oc_value`, enum outputs use `OcValue::Int` so they round-trip
+/// through `engine::sample_to_value`. String is retained for totality, but is unreachable from
+/// [`projected_output_batch`] because `io::point_rows_at_load` excludes String points. Never panics.
 pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     match value {
         Value::Real(value) => OcValue::Real(*value),
@@ -272,6 +293,11 @@ pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     }
 }
 
+/// Build the off-tick store batch for projected output columns.
+///
+/// `values` is indexed by `ConnectorId`, never column position. Load validation guarantees every
+/// projected connector is in bounds and point keys are unique. Samples use the supplied exact UNIX
+/// timestamp in nanoseconds, `Ok` status, and Telemetry durability. Never panics for a loaded model.
 pub(crate) fn projected_output_batch(
     io: &IoInventory,
     values: &[Value],
@@ -335,10 +361,15 @@ impl<S: Store> Engine<S> {
     /// Set the host wall-clock epoch corresponding to model time `t = 0`.
     ///
     /// [`Engine::step_realtime`] uses this additive mapping to timestamp computed point samples
-    /// without consulting a wall clock. The default is the UNIX epoch (`0`); hosts should set the
-    /// mapping before real-time operation when samples need an absolute production timestamp.
+    /// without consulting a wall clock. It must be called before real-time stepping.
     pub fn set_realtime_epoch_unix_nanos(&mut self, at_unix_nanos: u64) {
-        self.realtime_epoch_unix_nanos = at_unix_nanos;
+        self.realtime_epoch_unix_nanos = Some(at_unix_nanos);
+    }
+
+    /// Return the host wall-clock epoch corresponding to model time `t = 0`, if configured.
+    #[must_use]
+    pub fn realtime_epoch_unix_nanos(&self) -> Option<u64> {
+        self.realtime_epoch_unix_nanos
     }
 
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
@@ -417,15 +448,21 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// Propagates [`Engine::tick`]'s time guards ([`OcError::NonFiniteTime`] /
-    /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write. A failed write
-    /// leaves the completed tick in effect: model time and outputs have already advanced and are
-    /// not rolled back. Never panics.
+    /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write.
+    /// [`OcError::RealtimeEpochUnset`] is returned before ticking when the host has not configured
+    /// an epoch. [`OcError::RealtimeInstantUnrepresentable`] is returned before ticking when the
+    /// epoch plus `t_now` seconds is not exactly representable as a `u64` UNIX-nanosecond instant.
+    /// A failed store write leaves the completed tick in effect: model time and outputs have already
+    /// advanced and are not rolled back. Never panics.
     pub fn step_realtime(&mut self, t_now: f64) -> Result<StepReport, OcError> {
+        let epoch_unix_nanos = self
+            .realtime_epoch_unix_nanos
+            .ok_or(OcError::RealtimeEpochUnset)?;
+        let at_unix_nanos = model_time_to_unix_nanos(epoch_unix_nanos, t_now)?;
         let t0 = Instant::now();
         let collector = AssertCollector::default();
         self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-        let at_unix_nanos = model_time_to_unix_nanos(self.realtime_epoch_unix_nanos, t_now);
         let batch = projected_output_batch(&self.io, &self.state.values, at_unix_nanos);
         let written = self.store.write_points(&batch)?;
         Ok(StepReport {

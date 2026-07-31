@@ -78,6 +78,8 @@ fn sim_spec(t_start: f64, t_stop: f64, step: f64, collect: CollectSpec) -> SimSp
 #[test]
 fn step_realtime_delivers_assert_diagnostics_and_simulate_drops_them() {
     let mut eng = loaded_warning_engine();
+    // Verification-only model time is anchored explicitly at the UNIX epoch.
+    eng.set_realtime_epoch_unix_nanos(0);
     let report = eng.step_realtime(3.0).unwrap();
     assert_eq!(report.asserts.len(), 1);
     let event = &report.asserts[0];
@@ -129,6 +131,8 @@ fn loaded_assert_engine(message: &str) -> Engine<MemStore> {
 
 fn assert_trace(steps: &[(f64, bool)]) -> Vec<(String, String, u64, AssertLevel)> {
     let mut eng = loaded_assert_engine("freezestat tripped");
+    // Determinism harness: choose the UNIX epoch explicitly; no production clock is implied.
+    eng.set_realtime_epoch_unix_nanos(0);
     assert!(
         eng.outputs().is_empty(),
         "Assert declares no output connectors"
