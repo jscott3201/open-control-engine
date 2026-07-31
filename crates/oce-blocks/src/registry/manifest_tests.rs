@@ -2,9 +2,10 @@
 //!
 //! Only the byte golden compares against the checked-in `MANIFEST_JSON`; every other test asserts
 //! on freshly rendered output, so a generator/serializer defect fails them even when a stale or
-//! bad re-bless has aligned the artifact with the defect. The `UPDATE_EXPECT=1` write branch is
-//! exercised only by explicit mutation probes because it overwrites the artifact; it remains a
-//! human-diff-reviewed re-bless path.
+//! bad re-bless has aligned the artifact with the defect. A checked-in re-exec probe covers the
+//! environment lookup and truthiness composition without arming a golden variable. The write
+//! branch itself is covered only by ad-hoc mutation probes recorded outside the tracked tree and
+//! remains a human-diff-reviewed re-bless path.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -57,6 +58,8 @@ fn bless_truthiness_matches_the_canonical_truth_table() {
         ("false", false),
         ("FALSE", false),
         ("False", false),
+        ("  false  ", false),
+        ("   ", false),
         ("1", true),
         ("true", true),
         ("yes", true),
@@ -68,6 +71,35 @@ fn bless_truthiness_matches_the_canonical_truth_table() {
             "golden-blessing truthiness for {value:?}"
         );
     }
+}
+
+#[test]
+fn enabled_reads_a_controlled_environment_value() {
+    let Ok(value) = std::env::var("OCE_BLESS_SELFTEST") else {
+        return;
+    };
+    assert_eq!(
+        oce_bless::enabled("OCE_BLESS_SELFTEST"),
+        oce_bless::enabled_for(&value),
+        "environment lookup and truthiness must compose for {value:?}"
+    );
+}
+
+#[test]
+fn enabled_composition_is_covered_with_a_disabled_value() {
+    let status = std::process::Command::new(std::env::current_exe().expect("current test binary"))
+        .args([
+            "--exact",
+            "registry::manifest_tests::enabled_reads_a_controlled_environment_value",
+            "--nocapture",
+        ])
+        .env("OCE_BLESS_SELFTEST", "0")
+        .status()
+        .expect("run controlled environment probe");
+    assert!(
+        status.success(),
+        "controlled environment probe must accept 0 as disabled"
+    );
 }
 
 /// Fails the run when golden re-blessing is armed in the gate environment.

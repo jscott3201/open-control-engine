@@ -39,6 +39,23 @@ const REQUIRE_ENV: &str = "OCE_REQUIRE_SURFACE_CHECK";
 
 const BASELINE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/public-api.txt");
 
+fn difference_window<'a>(line: &'a str, other: &str) -> &'a str {
+    let different_at = line
+        .bytes()
+        .zip(other.bytes())
+        .position(|(left, right)| left != right)
+        .unwrap_or_else(|| line.len().min(other.len()));
+    let mut start = different_at.saturating_sub(100);
+    let mut end = (different_at + 100).min(line.len());
+    while start != 0 && !line.is_char_boundary(start) {
+        start -= 1;
+    }
+    while end != line.len() && !line.is_char_boundary(end) {
+        end += 1;
+    }
+    line.get(start..end).unwrap_or(line)
+}
+
 #[test]
 fn public_api_surface_matches_blessed_baseline() {
     let armed = std::env::var(ARM_ENV)
@@ -112,20 +129,35 @@ fn public_api_surface_matches_blessed_baseline() {
     if checked_in != rendered {
         let expected: Vec<&str> = checked_in.lines().collect();
         let actual: Vec<&str> = rendered.lines().collect();
-        let at = (0..expected.len().max(actual.len()))
-            .find(|&i| expected.get(i) != actual.get(i))
-            .expect("unequal contents must differ at some line index");
+        if let Some(at) =
+            (0..expected.len().max(actual.len())).find(|&i| expected.get(i) != actual.get(i))
+        {
+            let blessed = expected
+                .get(at)
+                .map(|line| difference_window(line, actual.get(at).copied().unwrap_or_default()));
+            let generated = actual
+                .get(at)
+                .map(|line| difference_window(line, expected.get(at).copied().unwrap_or_default()));
+            panic!(
+                "crates/oce-api/tests/public-api.txt is stale (generated {} lines, blessed {} \
+                 lines, first difference at line {}):\n  blessed: {blessed:?}\n  actual:  \
+                 {generated:?}\nRe-bless deliberately with `OCE_PUBLIC_API_NIGHTLY=<nightly> \
+                 UPDATE_EXPECT=1 cargo nextest run -p oce-api -E \
+                 'test(public_api_surface_matches_blessed_baseline)' --profile public-api \
+                 --locked` and review the diff.",
+                actual.len(),
+                expected.len(),
+                at + 1,
+            );
+        }
         panic!(
-            "crates/oce-api/tests/public-api.txt is stale (generated {} lines, blessed {} lines, \
-             first difference at line {}):\n  blessed: {:?}\n  actual:  {:?}\n\
+            "crates/oce-api/tests/public-api.txt is stale due to a trailing-newline or \
+             line-terminator-only difference (generated {} bytes, blessed {} bytes).\n\
              Re-bless deliberately with `OCE_PUBLIC_API_NIGHTLY=<nightly> UPDATE_EXPECT=1 cargo \
              nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
              --profile public-api --locked` and review the diff.",
-            actual.len(),
-            expected.len(),
-            at + 1,
-            expected.get(at).map(|line| &line[..line.len().min(200)]),
-            actual.get(at).map(|line| &line[..line.len().min(200)]),
+            rendered.len(),
+            checked_in.len(),
         );
     }
 }

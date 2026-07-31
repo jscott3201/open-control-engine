@@ -11,8 +11,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
-/// Mirrors `BLESS_DISABLED_VALUES` in `crates/oce-bless/src/lib.rs`, the source of truth also
-/// mirrored by `oce-conformance/tests/g36_determinism/support.rs` and `tests/bless/mod.rs`.
+/// Mirrors the disabled-value vocabulary from `crates/oce-bless/src/lib.rs` in the conformance
+/// support and `tests/bless/mod.rs`; their predicates are not identical because `oce-bless`
+/// additionally trims surrounding whitespace.
 const BLESS_DISABLED_VALUES: &[&str] = &["", "0", "false"];
 const SUPPORT_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
