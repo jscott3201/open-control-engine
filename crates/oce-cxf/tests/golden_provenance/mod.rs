@@ -11,8 +11,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
-/// Mirrors `BLESS_DISABLED_VALUES` in
-/// `oce-conformance/tests/g36_determinism/support.rs`, the source of truth.
+/// Mirrors the disabled-value vocabulary from `crates/oce-bless/src/lib.rs` in the conformance
+/// support and `tests/bless/mod.rs`; their predicates are not identical because `oce-bless`
+/// additionally trims surrounding whitespace.
 const BLESS_DISABLED_VALUES: &[&str] = &["", "0", "false"];
 const SUPPORT_RS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -20,6 +21,10 @@ const SUPPORT_RS: &str = include_str!(concat!(
 ));
 const BLESS_MODULE_RS: &str =
     include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/bless/mod.rs"));
+const OCE_BLESS_LIB_RS: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../oce-bless/src/lib.rs"
+));
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -191,6 +196,10 @@ fn bless_truthiness_vocabulary_is_pinned() {
     assert!(
         BLESS_MODULE_RS.contains(&expected),
         "expected bless/mod.rs to contain {expected:?}; reconcile bless/mod.rs with the guard vocabulary"
+    );
+    assert!(
+        OCE_BLESS_LIB_RS.contains(&expected),
+        "expected oce-bless/src/lib.rs to contain {expected:?}; reconcile it with the guard vocabulary"
     );
 
     let cases = [

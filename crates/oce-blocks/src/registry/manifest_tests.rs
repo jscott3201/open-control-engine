@@ -2,9 +2,10 @@
 //!
 //! Only the byte golden compares against the checked-in `MANIFEST_JSON`; every other test asserts
 //! on freshly rendered output, so a generator/serializer defect fails them even when a stale or
-//! bad re-bless has aligned the artifact with the defect. The `UPDATE_EXPECT=1` write branch in
-//! the byte golden is deliberately test-uncovered — exercising it would overwrite the artifact;
-//! it is a human-diff-reviewed re-bless path.
+//! bad re-bless has aligned the artifact with the defect. A checked-in re-exec probe covers the
+//! environment lookup and truthiness composition without arming a golden variable. The write
+//! branch itself is covered only by ad-hoc mutation probes recorded outside the tracked tree and
+//! remains a human-diff-reviewed re-bless path.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -28,7 +29,7 @@ fn checked_in_manifest_matches_regenerated_bytes() {
         "repeated generation must be byte-identical"
     );
 
-    if std::env::var("UPDATE_EXPECT").is_ok_and(|value| !value.trim().is_empty()) {
+    if oce_bless::enabled("UPDATE_EXPECT") {
         std::fs::write(MANIFEST_PATH, &generated).expect("write blessed manifest artifact");
         return;
     }
@@ -45,6 +46,72 @@ fn checked_in_manifest_matches_regenerated_bytes() {
              checked_in_manifest_matches_regenerated_bytes` and review the diff.",
             generated.lines().count(),
             MANIFEST_JSON.lines().count(),
+        );
+    }
+}
+
+#[test]
+fn bless_truthiness_matches_the_canonical_truth_table() {
+    for (value, expected) in [
+        ("", false),
+        ("0", false),
+        ("false", false),
+        ("FALSE", false),
+        ("False", false),
+        ("  false  ", false),
+        ("   ", false),
+        ("1", true),
+        ("true", true),
+        ("yes", true),
+        ("0.0", true),
+    ] {
+        assert_eq!(
+            oce_bless::enabled_for(value),
+            expected,
+            "golden-blessing truthiness for {value:?}"
+        );
+    }
+}
+
+#[test]
+fn enabled_reads_a_controlled_environment_value() {
+    let Ok(value) = std::env::var("OCE_BLESS_SELFTEST") else {
+        return;
+    };
+    assert_eq!(
+        oce_bless::enabled("OCE_BLESS_SELFTEST"),
+        oce_bless::enabled_for(&value),
+        "environment lookup and truthiness must compose for {value:?}"
+    );
+}
+
+#[test]
+fn enabled_composition_is_covered_with_a_disabled_value() {
+    let status = std::process::Command::new(std::env::current_exe().expect("current test binary"))
+        .args([
+            "--exact",
+            "registry::manifest_tests::enabled_reads_a_controlled_environment_value",
+            "--nocapture",
+        ])
+        .env("OCE_BLESS_SELFTEST", "0")
+        .status()
+        .expect("run controlled environment probe");
+    assert!(
+        status.success(),
+        "controlled environment probe must accept 0 as disabled"
+    );
+}
+
+/// Fails the run when golden re-blessing is armed in the gate environment.
+///
+/// Other tests in the binary may already have rewritten their goldens before this test fails.
+/// This DETECTS a leaked gate environment; it does not PREVENT a rewrite.
+#[test]
+fn gate_environment_does_not_arm_update_expect() {
+    if let Ok(value) = std::env::var("UPDATE_EXPECT") {
+        assert!(
+            !oce_bless::enabled_for(&value),
+            "UPDATE_EXPECT={value:?} arms golden re-blessing in the gate environment"
         );
     }
 }

@@ -100,26 +100,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "dissimilar"
-version = "1.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aeda16ab4059c5fd2a83f2b9c9e9c981327b18aa8e3b313f7e6563799d4f093e"
-
-[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
-
-[[package]]
-name = "expect-test"
-version = "1.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63af43ff4431e848fb47472a920f14fa71c24de13255a5692e93d4e90302acb0"
-dependencies = [
- "dissimilar",
- "once_cell",
-]
 
 [[package]]
 name = "generic-array"
@@ -181,7 +165,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 name = "oce-api"
 version = "0.1.0"
 dependencies = [
- "expect-test",
+ "oce-bless",
  "oce-blocks",
  "oce-cxf",
  "oce-diag",
@@ -200,10 +184,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oce-bless"
+version = "0.1.0"
+
+[[package]]
 name = "oce-blocks"
 version = "0.1.0"
 dependencies = [
  "libm",
+ "oce-bless",
  "oce-model",
  "serde_json",
  "stats_alloc",
@@ -227,6 +216,7 @@ dependencies = [
 name = "oce-cxf"
 version = "0.1.0"
 dependencies = [
+ "oce-bless",
  "oce-blocks",
  "oce-diag",
  "oce-expr",
@@ -304,7 +294,7 @@ dependencies = [
 name = "oce-store"
 version = "0.1.0"
 dependencies = [
- "expect-test",
+ "oce-bless",
  "public-api",
  "rustdoc-json",
  "serde",

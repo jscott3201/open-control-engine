@@ -2,9 +2,10 @@
 //!
 //! Only the byte golden compares against the checked-in `CATALOG_JSON`; the other tests assert on
 //! freshly rendered output or the live table, so a generator/table defect fails them even when a
-//! stale or bad re-bless has aligned the artifact with the defect. The `UPDATE_EXPECT=1` write
-//! branch in the byte golden is deliberately test-uncovered — exercising it would overwrite the
-//! artifact; it is a human-diff-reviewed re-bless path. The emitted-message side of the contract
+//! stale or bad re-bless has aligned the artifact with the defect. The shared environment lookup
+//! and truthiness composition has a checked-in probe in the per-PR `oce-blocks` library binary.
+//! This write branch is covered only by ad-hoc mutation probes recorded outside the tracked tree
+//! and remains a human-diff-reviewed re-bless path. The emitted-message side of the contract
 //! (every tagged rejection starts with its published prefix) lives in the integration suite
 //! `tests/resolve_composite_rules.rs`, which drives real imports through the public API.
 
@@ -23,7 +24,7 @@ fn checked_in_catalog_matches_regenerated_bytes() {
         "repeated generation must be byte-identical"
     );
 
-    if std::env::var("UPDATE_EXPECT").is_ok_and(|value| !value.trim().is_empty()) {
+    if oce_bless::enabled("UPDATE_EXPECT") {
         std::fs::write(CATALOG_PATH, &generated).expect("write blessed catalog artifact");
         return;
     }

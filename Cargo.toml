@@ -67,6 +67,13 @@ libm = { version = "0.2.16", default-features = false }
 # --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
 # version (matching workspace.package.version) keeps these from reading as wildcard deps and makes
 # them publish-ready; the path wins for in-workspace builds. ---
+# EXCEPTION to the version-alongside-path convention documented two lines above. `oce-bless` is
+# `publish = false` and consumed ONLY as a dev-dependency. Cargo strips a dev-dependency from the
+# packaged manifest only when it carries no `version`; with `version = "0.1.0"` present,
+# `cargo publish --workspace --locked --dry-run` (release.yml:71) fails with
+#   no matching package named `oce-bless` found … location searched: crates.io index
+# because the crate is never published. Verified by execution at b811229.
+oce-bless = { path = "crates/oce-bless" }
 oce-model = { path = "crates/oce-model", version = "0.1.0" }
 oce-expr = { path = "crates/oce-expr", version = "0.1.0" }
 oce-diag = { path = "crates/oce-diag", version = "0.1.0" }
