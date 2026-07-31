@@ -63,6 +63,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) params_dirty: bool,
     /// The typed IO inventory (`08` §6): built at load; the `set_input`/`get_output` name resolver.
     pub(crate) io: IoInventory,
+    /// Host-supplied UNIX epoch corresponding to model time `t = 0` for real-time writes.
+    pub(crate) realtime_epoch_unix_nanos: u64,
 }
 
 impl Engine<MemStore> {
@@ -94,6 +96,7 @@ impl<S: Store> Engine<S> {
             mode: RunMode::Running,
             params_dirty: false,
             io: IoInventory::default(),
+            realtime_epoch_unix_nanos: 0,
         }
     }
 
@@ -375,7 +378,11 @@ fn stage_store_inputs_from_snapshot(
 ///
 /// # Panics
 /// Never panics; mismatches and unsupported carriers return [`OcError::InputType`].
-fn sample_to_value(sample: PointSample, want: ValueType, path: &str) -> Result<Value, OcError> {
+pub(crate) fn sample_to_value(
+    sample: PointSample,
+    want: ValueType,
+    path: &str,
+) -> Result<Value, OcError> {
     let PointSample {
         value,
         status: _,

@@ -676,9 +676,10 @@ fn constant_input_source_propagates_type_error() {
 #[test]
 fn step_realtime_advances_and_reports() {
     let mut eng = loaded_accumulator();
+    eng.set_realtime_epoch_unix_nanos(1_000_000_000);
     let r0 = eng.step_realtime(0.0).unwrap();
     assert!(r0.asserts.is_empty());
-    assert_eq!(r0.written, 0, "MemStore commits no points");
+    assert_eq!(r0.written, 6, "all projected outputs are committed");
     eng.step_realtime(1.0).unwrap();
     // A backwards step is a typed time regression (delegated tick guard).
     assert!(matches!(

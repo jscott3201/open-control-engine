@@ -12,10 +12,11 @@ use std::time::Instant;
 use oce_blocks::Diagnostics;
 use oce_graph::RunState;
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
-use oce_store::Store;
+use oce_store::{DomainKey, Durability, OcValue, PointSample, PointStatus, PointWrite, Store};
 
 use crate::engine::Engine;
 use crate::error::OcError;
+use crate::io::IoInventory;
 
 /// An owned, enumerable snapshot of the model's **output** connector values after a tick (`08`
 /// R-API-4a). Refreshed in place each [`Engine::tick`]; no store-backend type ever appears here. The
@@ -250,10 +251,44 @@ pub struct StepReport {
     /// `Assert`-block trips this step (CDL assertion sinks; 07 verification funnel). Data, never a
     /// panic.
     pub asserts: Vec<AssertEvent>,
-    /// Points committed through the store this step (`06` `write_points`). `0` with `MemStore`.
+    /// Points committed through the store this step (`06` `write_points`).
     pub written: usize,
     /// This step's single-tick latency (nanoseconds; monotonic `Instant`, saturating).
     pub tick_nanos: u64,
+}
+
+fn model_time_to_unix_nanos(epoch_unix_nanos: u64, t_now: f64) -> u64 {
+    let offset = (t_now * 1_000_000_000.0) as i128;
+    (i128::from(epoch_unix_nanos) + offset).clamp(0, i128::from(u64::MAX)) as u64
+}
+
+pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
+    match value {
+        Value::Real(value) => OcValue::Real(*value),
+        Value::Integer(value) => OcValue::Int(*value),
+        Value::Boolean(value) => OcValue::Bool(*value),
+        Value::String(value) => OcValue::String(value.to_string()),
+        Value::Enum { ordinal, .. } => OcValue::Int(i64::from(*ordinal)),
+    }
+}
+
+pub(crate) fn projected_output_batch(
+    io: &IoInventory,
+    values: &[Value],
+    at_unix_nanos: u64,
+) -> Vec<PointWrite> {
+    io.out_columns()
+        .into_iter()
+        .map(|(path, connector_id)| PointWrite {
+            key: DomainKey::new(path),
+            sample: PointSample {
+                value: output_value_to_oc_value(&values[connector_id.0 as usize]),
+                status: PointStatus::Ok,
+                at_unix_nanos,
+            },
+            durability: Durability::Telemetry,
+        })
+        .collect()
 }
 
 /// A single tripped CDL `Assert` block, surfaced for the verification report (`08` §5.2, R-RT-4).
@@ -297,6 +332,15 @@ impl Diagnostics for AssertCollector {
 }
 
 impl<S: Store> Engine<S> {
+    /// Set the host wall-clock epoch corresponding to model time `t = 0`.
+    ///
+    /// [`Engine::step_realtime`] uses this additive mapping to timestamp computed point samples
+    /// without consulting a wall clock. The default is the UNIX epoch (`0`); hosts should set the
+    /// mapping before real-time operation when samples need an absolute production timestamp.
+    pub fn set_realtime_epoch_unix_nanos(&mut self, at_unix_nanos: u64) {
+        self.realtime_epoch_unix_nanos = at_unix_nanos;
+    }
+
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
     /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params ⇒ identical
     /// [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
@@ -367,21 +411,23 @@ impl<S: Store> Engine<S> {
     }
 
     /// One real-time / batch verification step (`08` §5.2): advance one tick at the host's `t_now`,
-    /// then batch-write the resulting point state through the store (off the read). Returns any
-    /// tripped `Assert` diagnostics.
+    /// then batch-write the resulting projected output-point state through the store (off the
+    /// read). Sample timestamps use the host-supplied model-time epoch configured by
+    /// [`Engine::set_realtime_epoch_unix_nanos`]. Returns any tripped `Assert` diagnostics.
     ///
     /// # Errors
     /// Propagates [`Engine::tick`]'s time guards ([`OcError::NonFiniteTime`] /
-    /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write. Never panics.
+    /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write. A failed write
+    /// leaves the completed tick in effect: model time and outputs have already advanced and are
+    /// not rolled back. Never panics.
     pub fn step_realtime(&mut self, t_now: f64) -> Result<StepReport, OcError> {
         let t0 = Instant::now();
         let collector = AssertCollector::default();
         self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-        // The facade does not stage store-backed point projection yet, so the batched write is empty
-        // (0 written); the seam is exercised so the contract is real. The annotation fixes `&[]`
-        // inference.
-        let written = self.store.write_points(&[] as &[oce_store::PointWrite])?;
+        let at_unix_nanos = model_time_to_unix_nanos(self.realtime_epoch_unix_nanos, t_now);
+        let batch = projected_output_batch(&self.io, &self.state.values, at_unix_nanos);
+        let written = self.store.write_points(&batch)?;
         Ok(StepReport {
             asserts: collector.events.into_inner(),
             written,
