@@ -605,10 +605,12 @@ pub fn oce_api::Engine<S>::mode(&self) -> oce_api::RunMode
 pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
 pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>
+pub fn oce_api::Engine<S>::realtime_epoch_unix_nanos(&self) -> core::option::Option<u64>
 pub fn oce_api::Engine<S>::resume(&mut self) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::schedule(&self) -> &oce_graph::Schedule
 pub fn oce_api::Engine<S>::set_input(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_param(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::set_realtime_epoch_unix_nanos(&mut self, u64)
 pub fn oce_api::Engine<S>::simulate(&mut self, &oce_api::SimSpec) -> core::result::Result<oce_api::SimMetrics, oce_api::OcError>
 pub fn oce_api::Engine<S>::step_realtime(&mut self, f64) -> core::result::Result<oce_api::StepReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::store(&self) -> &S
@@ -965,6 +967,10 @@ pub oce_api::OcError::ParamType
 pub oce_api::OcError::ParamType::path: alloc::string::String
 pub oce_api::OcError::ParamWhileRunning
 pub oce_api::OcError::ParamWhileRunning::path: alloc::string::String
+pub oce_api::OcError::RealtimeEpochUnset
+pub oce_api::OcError::RealtimeInstantUnrepresentable
+pub oce_api::OcError::RealtimeInstantUnrepresentable::epoch_unix_nanos: u64
+pub oce_api::OcError::RealtimeInstantUnrepresentable::t_now: f64
 pub oce_api::OcError::Store(oce_store::StoreError)
 pub oce_api::OcError::TimeRegression
 pub oce_api::OcError::TimeRegression::now: f64

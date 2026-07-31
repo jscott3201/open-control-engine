@@ -337,6 +337,8 @@ pub fn drive_trace_with_options(
 
     let mut engine = Engine::in_memory();
     let load_report = engine.load_cxf(cxf)?;
+    // Fixed verification origin keeps negative model-time fixtures representable without a clock.
+    engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
 
     let plan = Plan::new(&engine, config, reference)?;
     let (trace, drive_mode) = match &options.cadence {

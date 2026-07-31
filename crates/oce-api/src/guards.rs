@@ -144,6 +144,8 @@ fn _assert_frozen_signatures() {
         Engine::<MemStore>::simulate;
     let _: fn(&mut Engine<MemStore>, f64) -> Result<StepReport, OcError> =
         Engine::<MemStore>::step_realtime;
+    let _: fn(&mut Engine<MemStore>, u64) = Engine::<MemStore>::set_realtime_epoch_unix_nanos;
+    let _: fn(&Engine<MemStore>) -> Option<u64> = Engine::<MemStore>::realtime_epoch_unix_nanos;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_param;
     let _: fn(&Engine<MemStore>) -> &ParamTable = Engine::<MemStore>::params;
     let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
