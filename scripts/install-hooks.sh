@@ -8,7 +8,7 @@
 #   pre-push   -> cargo clippy -D warnings + default-no-db gate                 (fast)
 #
 # Escape hatches: `git commit/push --no-verify` (once) or
-# `export OCE_SKIP_HOOKS=1` (whole shell session).
+# `export OCE_SKIP_HOOKS=1` (whole shell session). Empty, `0`, and `false` do not skip.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -20,3 +20,4 @@ echo "core.hooksPath -> .githooks"
 echo "  pre-commit: cargo fmt --check + file-size cap + no-secret scan"
 echo "  pre-push:   cargo clippy -D warnings + default-no-db gate"
 echo "Skip once: --no-verify   |   skip session: export OCE_SKIP_HOOKS=1"
+echo "Skip truthiness: empty, 0, and false do not skip; every other value skips"

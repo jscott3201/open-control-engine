@@ -5,9 +5,17 @@
 # default-no-db tree check lets per-change pushes to `development` stay quick; the heavyweight
 # matrix runs at the development -> main release gate and inside agent workflows.
 # Skip once:    git push --no-verify
-# Skip session: export OCE_SKIP_HOOKS=1
+# Skip session: export OCE_SKIP_HOOKS=1 (values "", "0", and "false" do not skip)
 set -euo pipefail
-[ -n "${OCE_SKIP_HOOKS:-}" ] && { echo "[pre-push] skipped (OCE_SKIP_HOOKS)"; exit 0; }
+truthiness_helper="$(dirname "${BASH_SOURCE[0]}")/truthiness.sh"
+if [ -r "${truthiness_helper}" ]; then
+  # shellcheck source=truthiness.sh
+  source "${truthiness_helper}"
+  if oce_enabled_for "${OCE_SKIP_HOOKS:-}"; then
+    echo "[pre-push] skipped (OCE_SKIP_HOOKS)"
+    exit 0
+  fi
+fi
 cd "$(git rev-parse --show-toplevel)"
 
 if [ -f Cargo.toml ]; then

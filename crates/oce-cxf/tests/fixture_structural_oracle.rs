@@ -46,6 +46,7 @@
 
 mod bless;
 mod golden_provenance;
+mod hooks_truthiness;
 mod structural_oracle;
 mod third_party_manifest;
 
