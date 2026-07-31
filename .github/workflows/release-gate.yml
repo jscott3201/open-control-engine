@@ -66,6 +66,12 @@ env:
   # (as `$NIGHTLY`) and by each surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so
   # the steps cannot drift. A plain workflow env var, not `github.event.*` — safe to read inside
   # `run:`. Bump here + re-bless.
+  #
+  # This nightly's OWN version is a floor on the workspace MSRV: it identifies as
+  # `rustc 1.97.0-nightly`, and `cargo +$NIGHTLY rustdoc` resolves the whole workspace, so a
+  # `rust-version` in the root Cargo.toml ABOVE it fails every package here before rustdoc runs.
+  # See the comment on `rust-version` in Cargo.toml. Bumping this value is therefore the ONLY way
+  # to raise the MSRV past 1.97.0, and it also requires re-blessing both public-api baselines.
   NIGHTLY: nightly-2026-05-01
   CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
