@@ -39,8 +39,9 @@ conclusion would come from.
 - **Tail latency.** These are means over millions of ticks. For equipment control the tail
   usually matters more than the mean, and the property that governs it — whether a tick allocates
   at all — is gated separately and much more strictly, by
-  `crates/oce-blocks/tests/tick_allocation_census.rs` (registry-wide, with a positive control) and
-  `crates/oce-api/tests/tick_purity_tests.rs`. Those run per-PR; this file does not.
+  `crates/oce-blocks/tests/tick_allocation_census.rs` (registry-wide, with a positive control),
+  which runs per-PR. The narrower facade guard in `crates/oce-api/tests/tick_purity_tests.rs`
+  runs on the release gate, as every `oce-api` test does. This file is not gated at all.
 - **Multi-core or concurrent engines.** Single engine, single thread.
 - **Any architecture other than the one in the run header.** CI runs a determinism matrix across
   x86_64 and arm64 precisely because one machine does not speak for both.
@@ -106,9 +107,16 @@ It is a proxy for scheduled block count, not the count itself, so the per-block 
 indicative rather than exact. The linearity across 28× is the load-bearing part and does not
 depend on the proxy being tight.
 
-**In deployment terms.** `cooling_only_controller` is the largest sequence in the fixture corpus
-(213 instances, 377 edges) and ticks in ~2.5 µs. Building control sequences run at a 1 Hz cadence
-or slower.
+**In deployment terms.** `cooling_only_controller` is the largest fixture *document* in the corpus
+(409 KiB; 213 blocks and 268 connections after import) and ticks in ~2.5 µs. Building control
+sequences run at a 1 Hz cadence or slower.
+
+> **Correction, 2026-07-31.** This paragraph previously called it "the largest sequence in the
+> fixture corpus (213 instances, 377 edges)". Both halves were wrong: `relief_fan_group` imports
+> to 226 blocks, more than this fixture's 213 (pinned at
+> `crates/oce-cxf/tests/resolve_g36_relief_fan_group.rs:145-146`), and 377 was the pre-import
+> `isConnectedTo` count, not the 268 connections the tick loop actually runs. The measured timing
+> above is unchanged and was not re-run — only the description of what was measured is corrected.
 
 ## Reproducing a run
 

@@ -245,12 +245,12 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | Crate | Responsibility |
 | --- | --- |
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
-| `oce-expr` | The CDL §7.7.2 binding-expression parser/evaluator (closed-world, pure). Total over the value domain; **not** over arbitrary nesting depth — neither the parser nor the evaluator carries a depth guard, so sufficiently deep input can exhaust the thread stack. Treat untrusted expression input as a hardening gap, not a solved problem. |
+| `oce-expr` | The CDL §7.7.2 binding-expression parser/evaluator (closed-world, pure). Total over the value domain, and bounded on structure: the parser and the evaluator both reject input deeper than `MAX_NESTING_DEPTH` (64) and the parser refuses to build more than `MAX_EXPR_NODES` (4096) nodes, each as a typed error rather than a stack overflow. |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library (stateless `[A]` / stateful `[S]`), publicly enumerable via `catalog()` — ports, parameter rules, and honest parameter defaults per class. |
 | `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so this crate currently returns the model unchanged. Full `.mo` flattening is deferred. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type/attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler/executor: direct-feedthrough DAG, algebraic-loop rejection, own Kahn topological sort, the tick loop. |
-| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ the model graph, both directions. Import is the §7.1 resolver; export emits the flat/ground/scalar subset under the RT-2 round-trip contract, deferring enum-carrying blocks with warnings rather than failing. `export_with_report` surfaces those warnings; plain `export` discards them. Direct boundary input→output connects lower to reserved pass-through identities on import and elide exactly on export. |
+| `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ the model graph, both directions. Import is the §7.1 resolver; export emits the flat/ground/scalar subset under the RT-2 round-trip contract, deferring enum-carrying blocks with warnings rather than failing. `export_with_report` surfaces those warnings; plain `export` discards them. Direct boundary input→output connects lower to reserved pass-through identities on import and elide exactly on export. **One known hardening gap, stated rather than assumed:** composite boundary resolution recurses per `isConnectedTo` hop and is not yet depth-bounded, so treat untrusted CXF documents accordingly. Composite *nesting* is bounded at `MAX_COMPOSITE_NESTING_DEPTH` (64). |
 | `oce-semantics` | **Reserved seam; annotation parsing is deferred.** The intended role is vendor-annotation parsing → effective (non-computational) point/trend/semantic metadata. No `__cdl` / `__CDL` annotation parsing is implemented today. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. |
 
@@ -267,6 +267,7 @@ The dependency direction is intentional and acyclic, organized around the seam a
 | Crate | Responsibility |
 | --- | --- |
 | `oce-conformance` | The funnel-style tolerance-band / golden-trace conformance harness. |
+| `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates: empty, `0` and `false` disable; every other value enables. |
 | `oce-extension` | **Reserved seam; nothing consumes it yet.** The intended role is the FMI / extension-block boundary. No crate depends on it today, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` is never constructed. Do not plan FMI integration against this row. |
 | `oce-docs` | **Reserved seam, not implemented.** The sequence-spec (Word/HTML) and point-list export surface is declared; every exporter is deferred to M4 and `point_list_html` currently panics with `unimplemented!`. |
 | `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface, spanning load, tick, simulate, parameters, IO inventory, key-selected output reads (`watch`), CXF export with content id, and a read-only topology view. Package name is `oce-api`; the `open-control-engine` umbrella name is planned for first publish. |
@@ -322,9 +323,10 @@ purpose: **nothing re-measures them in CI**, so they describe the commit they we
 would go stale in a README without anyone noticing.
 
 What *is* enforced per-PR is the property that governs tail latency rather than mean throughput —
-whether a tick allocates at all. That is gated registry-wide with a positive control by
-`crates/oce-blocks/tests/tick_allocation_census.rs` and, for the facade's tick path, by
-`crates/oce-api/tests/tick_purity_tests.rs`.
+whether a tick allocates at all. That is gated per-PR, registry-wide and with a positive control,
+by `crates/oce-blocks/tests/tick_allocation_census.rs`. The facade's tick path has a second,
+narrower guard in `crates/oce-api/tests/tick_purity_tests.rs`, which — like every `oce-api` test —
+runs on the release gate rather than per-PR.
 
 ---
 

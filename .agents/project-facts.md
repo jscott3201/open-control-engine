@@ -25,7 +25,11 @@ The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-si
 cap, the no-secret scan, the database-free check, the golden-gen firewall, the gate
 fixtures, `cargo machete` — and engine tests for **`oce-blocks` and `oce-expr`
 only**, via the determinism matrix on x86_64 and arm64 in debug and release codegen.
-`cargo-deny` runs only when a manifest changed.
+The standalone `cargo-deny` CI job runs only when a manifest changed — but `.agents/gate.sh`
+runs `cargo deny check bans licenses sources` **unconditionally**, and CI runs that script in
+the `gate (light)` job, so the check is not actually skippable by leaving manifests alone.
+`advisories` is excluded from the script deliberately: it needs network and a writable
+advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
 Every other crate's tests run **only** on the `development` → `main` release gate. A
 change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag` can show a fully
