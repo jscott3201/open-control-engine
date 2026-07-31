@@ -5,11 +5,15 @@
 # while this shell implementation deliberately forces the locale-independent C rules.
 
 oce_enabled_for() {
-  local value folded
+  local LC_ALL=C value folded
   value="${1:-}"
-  value="$(LC_ALL=C sed 's/^[[:space:]]*//; s/[[:space:]]*$//' <<<"${value}")"
-  folded="$(LC_ALL=C tr '[:upper:]' '[:lower:]' <<<"${value}")"
-  folded="${folded%$'\n'}"
+  while [[ "${value}" == [[:space:]]* ]]; do
+    value="${value#?}"
+  done
+  while [[ "${value}" == *[[:space:]] ]]; do
+    value="${value%?}"
+  done
+  folded="$(tr '[:upper:]' '[:lower:]' <<<"${value}")"
 
   case "${folded}" in
     "" | 0 | false) return 1 ;;

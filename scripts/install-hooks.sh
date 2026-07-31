@@ -14,6 +14,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 git config core.hooksPath .githooks
 chmod +x .githooks/pre-commit .githooks/pre-push 2>/dev/null || true
+# truthiness.sh is sourced by the hooks and deliberately remains non-executable.
 chmod +x .github/scripts/*.sh 2>/dev/null || true
 
 echo "core.hooksPath -> .githooks"
