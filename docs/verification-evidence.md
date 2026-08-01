@@ -25,7 +25,8 @@ visible of them proves nothing about correctness at all.
 | Tier-2 determinism goldens | `crates/oce-conformance/tests/fixtures/golden/g36_traces/` | 46 traces + 46 `.prov.json` | **No** — engine self-output, by construction |
 | Tier-A oracles | `tools/golden-gen/goldens/` | 412 provenance records, 410 signal goldens | Yes — CI-enforced code-dependency firewall |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
-| Tier 1 and Tier 3 | — | nothing | **Not wired at all** |
+| Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 bit-exact CDL signal goldens | Yes — Tier-A generator is outside the engine workspace |
+| Tier-3 cross-implementation differential | — | nothing | **Not wired at all** |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
 

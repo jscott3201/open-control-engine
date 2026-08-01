@@ -1,9 +1,9 @@
 # NOTE: the package is named `oce-api` to match the spec's crate map (FRAME 00 §5). The
-# embeddable host facade is PUBLISHED under the umbrella name `open-control-engine` — the single
-# recommended dependency for embedders — without changing this surface (08 §11 R-PUB-4).
+# embeddable host facade is intended for a future umbrella release named `open-control-engine`
+# without changing this surface (08 §11 R-PUB-4). Nothing is published to crates.io yet.
 [package]
 name = "oce-api"
-description = "The embeddable host facade for the Open Control Engine: Engine<S: Store = MemStore>. Published under the umbrella name open-control-engine."
+description = "The embeddable host facade for the Open Control Engine: Engine<S: Store = MemStore>."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -84,6 +84,27 @@ explicitly range-checked, so a non-finite or out-of-range instant fails with
 
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
+Do not interleave horizon simulation with real-time stepping if you rely on the monotonic-time
+guard across that boundary. `simulate` deliberately clears the prior tick time on entry, so a
+following `step_realtime` cannot detect regression relative to a real-time step that happened
+before the simulation.
+
+## Lifecycle names are not equipment controls
+
+`Engine::halt()` does not stop ticks, real-time steps, simulations, or output writes. It changes
+only the parameter-edit permission mode: `set_param` is accepted while halted. The host must stop
+calling execution methods if it intends execution to stop.
+
+A `halt` / `set_param` / `resume` cycle is also a run restart, not live tuning. When parameters are
+dirty, `resume` rebuilds blocks, allocates all state again, refreshes outputs, and clears the prior
+model time. Every stateful block—including integrators, latches, timers, and filters—is re-seeded,
+and monotonic-time history is lost. Plan parameter edits as a new run.
+
+The stable API also contains two loaders that do not work yet: `load_from_semantic` and
+`load_modelica` always return `OcError::Load`. Use `load_cxf` for working ingest. Likewise, the
+public `AssertLevel::Error` variant is never emitted today; the sole assertion collector produces
+`Warning`, so hosts must not depend on receiving `Error` for escalation.
+
 ## The one hardening gap
 
 Stated plainly, because the alternative is that you assume it is handled.
@@ -104,8 +125,8 @@ dangling-reference diagnostic, so a cycle terminates. A long *acyclic* chain of 
 does not: it recurses once per hop until the stack is exhausted.
 
 The gap is in `oce-cxf`, not `oce-expr`. The expression bounds are real and typed; they do not cover
-this. The repo states the gap in `../README.md` and in `../TESTING.md:40-43` rather than leaving it
-to be discovered.
+this. The repo states the gap here, in `architecture.md`, and in `../TESTING.md:40-43` rather than
+leaving it to be discovered.
 
 ## Treat untrusted CXF as untrusted input
 

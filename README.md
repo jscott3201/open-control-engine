@@ -5,7 +5,7 @@
 library you embed in your own application.**
 
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
-[![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#platform-and-versioning)
+[![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#embeddability-posture)
 [![database-free](https://img.shields.io/badge/storage-database--free-success.svg)](docs/architecture.md)
 
 You hand it a control sequence as a CXF document (CDL's JSON-LD exchange format). It parses,
@@ -41,18 +41,23 @@ such a product would be built on.
 ## Quickstart
 
 The facade package is **`oce-api`**. `open-control-engine` is a reserved umbrella name for a future
-release, **not** a current alias — nothing is on crates.io yet, so depend on it via git and pin a
-revision:
+release, **not** a current alias — nothing is on crates.io yet, so depend on it via git. Pin a
+revision appropriate to your release process rather than following a moving branch:
 
 ```toml
 [dependencies]
-oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "000cebb" }
+oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<commit-sha>" }
 ```
 
 Load a CDL sequence from CXF and simulate it:
 
 ```rust
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
+
+const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
+const ECONOMIZER_ENABLED: &str = "conn#20";
+const DAMPER_COMMAND: &str = "conn#26";
+const OA_TEMPERATURE_DELTA: &str = "conn#2";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // An engine with the default in-memory store — no database.
@@ -68,15 +73,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         t_stop: 4.0,
         step: 1.0,
         inputs: InputSource::Closure(Box::new(|t| {
-            vec![("zone_temp".to_string(), Value::Real(22.0 + t))]
+            vec![
+                (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
+                (
+                    format!("{ECONOMIZER}.outdoor_air_temp"),
+                    Value::Real(18.0 + t),
+                ),
+                (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
+            ]
         })),
         collect: CollectSpec::Named {
-            points: vec!["sat_setpoint".to_string()],
+            points: vec![
+                ECONOMIZER_ENABLED.to_string(),
+                DAMPER_COMMAND.to_string(),
+                OA_TEMPERATURE_DELTA.to_string(),
+            ],
             stride: 1,
         },
     })?;
 
-    println!("{} rows collected", metrics.trace.times().len());
+    println!("times: {:?}", metrics.trace.times());
+    for (index, name) in metrics.trace.columns().iter().enumerate() {
+        println!(
+            "{name}: {:?}",
+            metrics.trace.column(index).unwrap_or_default()
+        );
+    }
     Ok(())
 }
 ```
@@ -119,6 +141,12 @@ Stating this plainly is more useful than a feature list.
   Modelica / Buildings toolchain. That is the honest boundary of what has been proven —
   [read the full accounting](docs/verification-evidence.md).
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
+- **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
+  `set_param` is accepted; ticks, real-time steps, and simulations continue if the host calls them.
+- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`
+  always return `OcError::Load`; use `load_cxf` for working ingest today.
+- **Assertion events are warning-only today.** Although `AssertLevel::Error` is public for surface
+  stability, the engine never produces it; hosts must not build escalation logic on that variant.
 
 ---
 

@@ -164,7 +164,8 @@ impl<S: Store> Engine<S> {
         self.mode
     }
 
-    /// Halt: enter the tune-at-rest window so `set_param` is accepted. Idempotent.
+    /// Halt: enter the tune-at-rest window so `set_param` is accepted. Idempotent. This does
+    /// **not** stop the engine: the tick loop is unaffected if the host continues calling it.
     ///
     /// # Errors
     /// Infallible today; returns `Result` for forward-compatibility (a future durable adapter may
