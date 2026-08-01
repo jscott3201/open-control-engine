@@ -116,12 +116,14 @@ fn catalog_and_disk_name_the_same_golden_provenance_records() {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
-        .expect("oce-cxf crate is nested under repository crates directory");
+        .expect("oce-cxf crate is nested under repository crates directory")
+        .canonicalize()
+        .expect("repository root resolves");
     let disk_paths = enumerate(golden_root())
         .provenance
         .into_iter()
         .map(|path| {
-            path.strip_prefix(repository_root)
+            path.strip_prefix(&repository_root)
                 .unwrap_or_else(|error| {
                     panic!(
                         "{} is outside repository root {}: {error}",

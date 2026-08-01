@@ -23,6 +23,7 @@ pub struct ExportReport {
 pub enum ContentIdError {
     /// The emitted document is partial because one or more blocks were deferred.
     #[error("cannot mint a complete CXF content identity: export has {warning_count} warning(s)")]
+    #[non_exhaustive]
     Incomplete {
         /// Number of deferral warnings carried by the export report.
         warning_count: usize,
@@ -30,22 +31,7 @@ pub enum ContentIdError {
 }
 
 impl ExportReport {
-    /// Return a non-cryptographic integrity tag computed over exactly [`Self::bytes`].
-    ///
-    /// A host can reproduce it by applying FNV-1a-128 directly to the bytes:
-    ///
-    /// ```
-    /// let bytes = b"abc";
-    /// let mut hash = 0x6c62_272e_07bb_0142_62b8_2175_6295_c58d_u128;
-    /// for byte in bytes {
-    ///     hash ^= u128::from(*byte);
-    ///     hash = hash.wrapping_mul(0x0000_0000_0100_0000_0000_0000_0000_013b);
-    /// }
-    /// assert_eq!(hash, 0xa68d_622c_ec8b_5822_836d_bc79_77af_7f3b);
-    /// ```
-    ///
-    /// This tag is not a security boundary. Hosts requiring a cryptographic digest must hash the
-    /// same bytes themselves.
+    /// Return an unchecked non-cryptographic integrity tag over exactly [`Self::bytes`].
     ///
     /// This is not [`crate::LoadReport::model_id`]: that identity preserves the authored
     /// top-composite `@id`, while export uses a synthetic root, and resumed parameter edits change
@@ -63,6 +49,24 @@ impl ExportReport {
     }
 
     /// Return the exported-document integrity tag only when the export is complete.
+    ///
+    /// The tag is FNV-1a-128 over exactly [`Self::bytes`], formatted as
+    /// `cxf:fnv1a128:<32 lowercase hex characters>`. This documents how the returned tag is
+    /// computed so hosts can verify it independently; call this method to obtain an identity so
+    /// partial exports are refused. The tag is not a security boundary. Hosts requiring a
+    /// cryptographic digest must hash the same bytes themselves after this completeness check.
+    ///
+    /// The FNV computation is reproducible independently:
+    ///
+    /// ```
+    /// let bytes = b"abc";
+    /// let mut hash = 0x6c62_272e_07bb_0142_62b8_2175_6295_c58d_u128;
+    /// for byte in bytes {
+    ///     hash ^= u128::from(*byte);
+    ///     hash = hash.wrapping_mul(0x0000_0000_0100_0000_0000_0000_0000_013b);
+    /// }
+    /// assert_eq!(hash, 0xa68d_622c_ec8b_5822_836d_bc79_77af_7f3b);
+    /// ```
     ///
     /// # Errors
     ///

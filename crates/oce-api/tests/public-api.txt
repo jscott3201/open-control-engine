@@ -1,6 +1,7 @@
 #[non_exhaustive] pub enum oce_api::ContentIdError
 #[non_exhaustive] pub enum oce_api::InputSource
 #[non_exhaustive] pub enum oce_api::OcError
+#[non_exhaustive] pub oce_api::ContentIdError::Incomplete
 #[non_exhaustive] pub struct oce_api::ExportReport
 #[non_exhaustive] pub struct oce_api::LoadReport
 #[non_exhaustive] pub struct oce_api::PassThroughPair
@@ -961,7 +962,6 @@ pub oce_api::CollectSpec::Named
 pub oce_api::CollectSpec::Named::points: alloc::vec::Vec<alloc::string::String>
 pub oce_api::CollectSpec::Named::stride: usize
 pub oce_api::CollectSpec::None
-pub oce_api::ContentIdError::Incomplete
 pub oce_api::ContentIdError::Incomplete::warning_count: usize
 pub oce_api::ExportReport::bytes: alloc::vec::Vec<u8>
 pub oce_api::ExportReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>

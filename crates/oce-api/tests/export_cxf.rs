@@ -61,6 +61,40 @@ fn content_id_hashes_exact_export_bytes_without_a_prefix_or_length_input() {
 }
 
 #[test]
+fn completeness_boundary_distinguishes_zero_from_one_warning() {
+    let mut complete_engine = Engine::in_memory();
+    complete_engine
+        .load_cxf(MINIMAL.as_bytes())
+        .expect("complete fixture loads");
+    let complete = complete_engine
+        .export_cxf()
+        .expect("complete fixture exports");
+    assert!(complete.warnings.is_empty());
+    assert_eq!(
+        complete
+            .content_id_complete()
+            .expect("zero-warning export is complete"),
+        independent_content_id(&complete.bytes)
+    );
+
+    let mut partial_engine = Engine::in_memory();
+    partial_engine
+        .load_cxf(DEFERRED.as_bytes())
+        .expect("deferred fixture loads");
+    let mut exactly_one = partial_engine.export_cxf().expect("survivor cone exports");
+    assert_eq!(exactly_one.warnings.len(), 2);
+    exactly_one.warnings.truncate(1);
+    assert_eq!(exactly_one.warnings.len(), 1);
+    assert!(matches!(
+        exactly_one.content_id_complete(),
+        Err(ContentIdError::Incomplete {
+            warning_count: 1,
+            ..
+        })
+    ));
+}
+
+#[test]
 fn content_id_tracks_exported_synthetic_document_while_model_id_stays_authored() {
     let mut engine = Engine::in_memory();
     let loaded = engine.load_cxf(MINIMAL.as_bytes()).expect("fixture loads");
