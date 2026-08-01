@@ -1,0 +1,40 @@
+{
+  "format": "oce-clean-room-derivation-v1",
+  "class": "CDL.Logical.Nand",
+  "scenario": "all_boolean_input_pairs",
+  "source": {
+    "file": "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Logical/Nand.mo",
+    "line": 15,
+    "equation": "y = not (u1 and u2)"
+  },
+  "roles": {
+    "derivation_author": "Codex lane nand-clean-room-audit",
+    "independent_reviewer": "required after frozen-derivation commit"
+  },
+  "information_separation": {
+    "engine_implementation_read": false,
+    "golden_generator_read": false,
+    "existing_expected_output_read": false,
+    "shared_math_kernel": false
+  },
+  "comparison": {
+    "value_type": "Boolean",
+    "method": "exact",
+    "atoly": 0,
+    "rounding": "none; Boolean operations are exact"
+  },
+  "derivation": [
+    "Premise: conjunction (a and b) is true exactly when both a and b are true; otherwise it is false.",
+    "Premise: negation maps false to true and true to false.",
+    "Substitution: (false and false) = false, so not false = true.",
+    "Substitution: (false and true) = false, so not false = true.",
+    "Substitution: (true and false) = false, so not false = true.",
+    "Substitution: (true and true) = true, so not true = false."
+  ],
+  "rows": [
+    { "sample": 0, "u1": false, "u2": false, "and": false, "y": true },
+    { "sample": 1, "u1": false, "u2": true,  "and": false, "y": true },
+    { "sample": 2, "u1": true,  "u2": false, "and": false, "y": true },
+    { "sample": 3, "u1": true,  "u2": true,  "and": true,  "y": false }
+  ]
+}
