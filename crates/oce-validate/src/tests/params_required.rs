@@ -2,6 +2,128 @@
 //! present in the model — omitting one is an authoring error, never a silent engine default.
 
 use super::common::*;
+use oce_blocks::{ParamRule, PortKind, catalog, lookup};
+
+fn value_type(kind: PortKind) -> ValueType {
+    match kind {
+        PortKind::Real => ValueType::Real,
+        PortKind::Integer => ValueType::Integer,
+        PortKind::Boolean => ValueType::Boolean,
+    }
+}
+
+fn representative_value(kind: ValueType) -> Value {
+    match kind {
+        ValueType::Real => Value::Real(1.0),
+        ValueType::Integer => Value::Integer(1),
+        ValueType::Boolean => Value::Boolean(true),
+        ValueType::String => Value::String(Arc::from("required parameter")),
+        ValueType::Enum(class) => Value::Enum { class, ordinal: 1 },
+    }
+}
+
+fn deliberately_wrong_value(kind: ValueType) -> Value {
+    match kind {
+        ValueType::Real | ValueType::Integer | ValueType::String | ValueType::Enum(_) => {
+            Value::Boolean(false)
+        }
+        ValueType::Boolean => Value::Integer(1),
+    }
+}
+
+fn validation_diagnostics(model: &ModelGraph) -> Vec<oce_diag::Diagnostic> {
+    match validate(model) {
+        Ok(warnings) => warnings,
+        Err(err) => err.diagnostics,
+    }
+}
+
+fn requires_flattened_table_fixture(class: &str, name: &str) -> bool {
+    matches!(
+        (class, name),
+        (
+            "CDL.Logical.Sources.TimeTable" | "CDL.Integers.Sources.TimeTable",
+            "period"
+        )
+    )
+}
+
+#[test]
+fn every_required_catalog_kind_accepts_a_matching_value_and_rejects_a_wrong_value() {
+    let mut exercised = 0;
+    let mut excluded = Vec::new();
+    for entry in catalog() {
+        let required: Vec<_> = entry
+            .param_rules
+            .iter()
+            .filter_map(|rule| match rule {
+                ParamRule::Required { name, kind } => Some((*name, *kind)),
+                _ => None,
+            })
+            .collect();
+        if required.is_empty() {
+            continue;
+        }
+
+        let matching_params: Vec<_> = required
+            .iter()
+            .map(|(name, kind)| (Arc::from(*name), representative_value(*kind)))
+            .collect();
+
+        for &(name, kind) in &required {
+            // TimeTable validation requires a consistent flattened `table` matrix in addition to
+            // the scalar `period`. The generic one-block scalar harness cannot express that shape;
+            // dedicated TimeTable tests cover it with real flattened fixtures.
+            if requires_flattened_table_fixture(entry.class_path, name) {
+                excluded.push(format!("{}.{}", entry.class_path, name));
+                continue;
+            }
+            exercised += 1;
+            let params = ParamTable {
+                values: matching_params.clone(),
+            };
+            let block = (lookup(entry.class_path)
+                .expect("catalog class is registered")
+                .make)(&params);
+            let signature = block.resolved_signature();
+            let inputs: Vec<_> = signature.inputs.iter().copied().map(value_type).collect();
+            let outputs: Vec<_> = signature.outputs.iter().copied().map(value_type).collect();
+            let matching =
+                one_block_model(entry.class_path, &inputs, &outputs, matching_params.clone());
+            let matching_diags = validation_diagnostics(&matching);
+            assert!(
+                matching_diags.iter().all(|diag| !diag.is_error()),
+                "matching {kind:?} rejected for {}.{name}: {matching_diags:?}",
+                entry.class_path
+            );
+
+            let mut wrong_params = matching_params.clone();
+            let (_, value) = wrong_params
+                .iter_mut()
+                .find(|(param_name, _)| param_name.as_ref() == name)
+                .expect("target required parameter was collected above");
+            *value = deliberately_wrong_value(kind);
+            let wrong = one_block_model(entry.class_path, &inputs, &outputs, wrong_params);
+            let wrong_diags = validation_diagnostics(&wrong);
+            assert!(
+                wrong_diags.iter().any(|diag| {
+                    diag.code == DiagCode::ParameterKindMismatch
+                        && diag.message.contains(&format!("parameter `{name}`"))
+                }),
+                "wrong value was not rejected for {}.{name} declared {kind:?}: {wrong_diags:?}",
+                entry.class_path
+            );
+        }
+    }
+    assert_eq!(exercised, 47);
+    assert_eq!(
+        excluded,
+        [
+            "CDL.Logical.Sources.TimeTable.period",
+            "CDL.Integers.Sources.TimeTable.period",
+        ]
+    );
+}
 
 #[test]
 fn required_real_parameter_rejects_boolean_value() {

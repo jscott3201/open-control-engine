@@ -230,20 +230,6 @@ fn catalog_metadata_invariants_cross_check_independent_sources() {
 }
 
 #[test]
-fn every_required_catalog_parameter_declares_a_supported_kind() {
-    let required: Vec<_> = catalog()
-        .iter()
-        .flat_map(|entry| {
-            entry.param_rules.iter().filter_map(move |rule| match rule {
-                ParamRule::Required { name, kind } => Some((entry.class_path, *name, *kind)),
-                _ => None,
-            })
-        })
-        .collect();
-    assert_eq!(required.len(), 49);
-}
-
-#[test]
 fn required_rules_and_required_defaults_agree_exactly() {
     let mut agree = 0;
     let mut rule_only = Vec::new();
