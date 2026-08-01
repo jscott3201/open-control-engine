@@ -9,6 +9,7 @@
 //! intentionally has no direct `oce-graph` or `oce-blocks` dependency.
 
 pub mod aligned;
+pub mod clean_room;
 pub mod config;
 pub mod csv;
 pub mod driver;
@@ -19,6 +20,10 @@ pub mod report;
 pub mod tiers;
 
 pub use aligned::{AlignedToleranceMismatch, AlignedToleranceResult, compare_aligned_tolerance};
+pub use clean_room::{
+    AuditDiscrepancy, BooleanDerivation, BooleanDerivationRow, ComparedParty,
+    compare_boolean_derivation,
+};
 pub use config::{
     ConfigError, IndicatorPattern, OutputPattern, PartialTolerances, PointEnd, PointMapEntry,
     ReferenceSpec, VerifyConfig,

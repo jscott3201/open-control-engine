@@ -45,6 +45,7 @@
 //! about this audit, never routine churn.
 
 mod bless;
+mod clean_room_nand;
 mod golden_provenance;
 mod hooks_truthiness;
 mod structural_oracle;
