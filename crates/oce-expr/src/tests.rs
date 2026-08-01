@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use oce_model::{EnumClassId, Value, enum_class_id, enum_member_ordinal};
 
-use super::{EvalResult, ExprAst, ExprError, Scope, eval, eval_str, parse};
+use super::{
+    BinOp, EvalResult, ExprAst, ExprError, MAX_NESTING_DEPTH, Scope, eval, eval_str, parse,
+};
 
 /// A tiny linear-scan scope for tests.
 struct TestScope {
@@ -41,6 +43,7 @@ impl Scope for TestScope {
 fn scalar(r: EvalResult) -> Value {
     match r {
         EvalResult::Scalar(v) => v,
+        other => panic!("expected a scalar result, got {other:?}"),
     }
 }
 
@@ -400,10 +403,27 @@ fn type_errors_have_no_implicit_coercion() {
 
 #[test]
 fn array_constructs_are_deferred_not_panicking() {
-    assert!(matches!(run("{1, 2}"), Err(ExprError::Parse(_))));
-    assert!(matches!(run("1:3"), Err(ExprError::Parse(_))));
-    assert!(matches!(run("sum(x)"), Err(ExprError::Parse(_))));
-    assert!(matches!(run("min(a)"), Err(ExprError::Parse(_)))); // 1-arg array form
+    // 1-D literals/ranges and the array built-ins now evaluate (full coverage in
+    // `eval_array_tests` and `eval_array_builtins_tests`); the still-deferred forms keep
+    // their typed rejections.
+    let scope = TestScope::new(&[]);
+    assert!(matches!(
+        eval_str("{1, 2}", &scope),
+        Ok(EvalResult::Array(_))
+    ));
+    assert!(matches!(eval_str("1:3", &scope), Ok(EvalResult::Array(_))));
+    // Array built-ins parse now; the unbound identifier fails at evaluation, not parse.
+    assert!(matches!(run("sum(x)"), Err(ExprError::UnknownIdent(_))));
+    assert!(matches!(run("min(a)"), Err(ExprError::UnknownIdent(_)))); // 1-arg array form
+    // Indexing parses now too; with `a` unbound the failure moves to evaluation.
+    assert!(matches!(run("a[1]"), Err(ExprError::UnknownIdent(_))));
+    assert!(matches!(run("[1, 2]"), Err(ExprError::Parse(_)))); // matrix constructor
+    // The comprehension canary flips: single-iterator comprehensions evaluate now (full
+    // coverage in `eval_comprehension_tests`); multi-iterator stays deferred at evaluation.
+    assert!(matches!(
+        eval_str("{i for i in 1:3}", &scope),
+        Ok(EvalResult::Array(_))
+    ));
 }
 
 // --- Malformed input is a typed parse error -----------------------------------------------
@@ -517,4 +537,18 @@ fn public_signatures_are_stable() {
     let _p: fn(&str) -> Result<ExprAst, ExprError> = parse;
     let _e: fn(&ExprAst, &dyn Scope) -> Result<EvalResult, ExprError> = eval;
     let _es: fn(&str, &dyn Scope) -> Result<EvalResult, ExprError> = eval_str;
+}
+
+#[test]
+fn hand_built_deep_ast_is_rejected_before_evaluation() {
+    let mut ast = ExprAst::Int(1);
+    for _ in 0..100 {
+        ast = ExprAst::Binary(BinOp::Add, Box::new(ast), Box::new(ExprAst::Int(1)));
+    }
+    assert_eq!(
+        eval(&ast, &TestScope::new(&[])).unwrap_err(),
+        ExprError::NestingTooDeep {
+            limit: MAX_NESTING_DEPTH
+        }
+    );
 }

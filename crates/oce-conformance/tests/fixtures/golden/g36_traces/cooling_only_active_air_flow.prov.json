@@ -1,0 +1,10 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "content_sha256": "1067c20a3c2a1a173a958815a02d06870006a94ec16e76ffb25b116f2e642a25",
+  "reference_columns": [
+    "http://example.org#g36.source.cooling_only_active_air_flow.VActCooMax_flow",
+    "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow"
+  ]
+}

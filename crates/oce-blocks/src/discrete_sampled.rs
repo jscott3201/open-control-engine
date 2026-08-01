@@ -67,6 +67,15 @@ pub(crate) fn sample_due(t_now: Time, t0: f64, sample_period: f64, last_index: i
     (index > last_index, index)
 }
 
+/// True when `t_now` lands exactly on the sample instant `t0 + index * period`, under the same
+/// ratio-epsilon convention as [`sample_index`] (`|ratio - index| <= SAMPLE_INDEX_EPS`). Blocks
+/// whose upstream clause is `when sampleTrigger` with NO `initial()` (`UnitDelay`) use this to
+/// avoid injecting an initial-tick sample when the simulation starts between instants.
+pub(crate) fn at_sample_instant(t_now: Time, t0: f64, sample_period: f64, index: i64) -> bool {
+    let ratio = (t_now - t0) / valid_sample_period(sample_period);
+    (ratio - index as f64).abs() <= SAMPLE_INDEX_EPS
+}
+
 /// `CDL.Discrete.Sampler` — sample `u` on `initial()` and periodic sample instants.
 ///
 /// The source parameter is required `samplePeriod(min=1E-3)`. Buildings initializes the first

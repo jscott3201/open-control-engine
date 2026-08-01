@@ -6,18 +6,33 @@ the architecture and invariants are the design of record.
 ## How changes land
 
 - Every logical change opens a pull request into the **`development`** branch.
-- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
-  formatting, the file-size cap, the no-secret scan, `rustdoc -D warnings`,
-  `clippy -D warnings`, a workspace build, the default-no-db gate, and — for dependency changes —
-  `cargo-deny`. Releases batch `development` → `main`, and a version tag drives the gated publish.
+- Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
+  `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
+  in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
+  per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
+  batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
+  only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
+  never publishes.
+- **Open your PR non-draft.** Every `ci.yml` job is conditioned on
+  `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
 ## Local setup
 
-The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.95.0, edition
-2024); `rustup` installs it automatically on first build. Install the git hooks once after
-cloning:
+The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.97.1, edition
+2024); `rustup` installs it automatically on first build.
+
+`.agents/gate.sh` also needs three cargo subcommands that do not ship with rustup. Without them
+each step fails with "no such command" on a fresh clone:
+
+```bash
+cargo install cargo-nextest --locked --version 0.9.133   # pinned; see TESTING.md
+cargo install cargo-machete --locked
+cargo install cargo-deny --locked
+```
+
+Install the git hooks once after cloning:
 
 ```bash
 bash scripts/install-hooks.sh
@@ -30,33 +45,36 @@ shares the same gates:
 - **pre-push:** `cargo clippy --workspace --locked -- -D warnings` + the default-no-db gate.
 
 Escape hatches: `git commit/push --no-verify` (once) or `export OCE_SKIP_HOOKS=1` (whole shell
-session).
+session). Hook skipping follows the repository truthiness policy: empty, `0`, and `false`
+(case-insensitive, with surrounding ASCII whitespace ignored) do not skip; every other value does.
 
 ## Before you open a PR
 
 ```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo build --workspace --locked
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace --lib --document-private-items --locked
+bash .agents/gate.sh
 ```
 
-Run the fast repository gates:
+That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
+no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
+`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
+determinism subset in debug and release codegen.
+
+CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
+`release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as
+its own job — but that is coverage, not proof that the script and the workflows still agree.
+Nothing verifies that mechanically; change a command in CI first, then here.
+
+If your change touches any other crate, its tests did not run. Add `full`:
 
 ```bash
-bash .github/scripts/check-file-size.sh
-bash .github/scripts/check-no-secrets.sh
-bash .github/scripts/check-default-no-db.sh
+bash .agents/gate.sh full
 ```
 
-Dependency or manifest changes (`Cargo.lock`, `Cargo.toml`, any `crates/*/Cargo.toml`,
-`deny.toml`) also require:
-
-```bash
-cargo deny check bans licenses sources
-```
-
-These mirror [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+[`.agents/gate.sh`](.agents/gate.sh) is the single source of truth for these commands, and it
+prints what it cannot cover locally. Earlier revisions of this file listed the commands inline
+and drifted from CI — omitting `cargo machete`, the gate-fixture job, the `--bins` rustdoc pass,
+and the determinism matrix — while claiming to mirror it. Change a command in
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) first, then in the script.
 
 ## Invariants a change must not violate
 
@@ -67,8 +85,18 @@ These mirror [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
   `selene-db`, no `tokio`, no `async-std`. The default-no-db gate enforces this.
 - **No `unsafe` code** (`#![forbid(unsafe_code)]` in every crate); public APIs require doc
   comments (the workspace denies missing docs); files stay under the 700-LOC cap.
-- **Keep the tick deterministic.** The hot path performs no allocation, hashing, I/O, or store
-  access; identical inputs and parameters must yield identical outputs.
+- **Keep the tick deterministic.** Identical inputs and parameters must yield identical outputs.
+  The evaluator performs no hashing, I/O, or store access — keep it that way. Allocation is
+  **not** unconditionally zero across the block library, so do not add to the exceptions:
+  `Reals.Sort` is stack-backed through `SORT_STACK_WIDTH` (64) inputs and falls back to two
+  heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`), and `Engine::tick` takes one
+  `store.snapshot()` when the model declares store-backed inputs.
+
+  A new allocating block **is** caught per-PR. `crates/oce-blocks/tests/tick_allocation_census.rs`
+  sweeps the whole registry via `catalog()` and carries a permanent positive control
+  (`CDL.Reals.Sort`), and `oce-blocks` is one of the two crates the per-PR gate runs
+  (`.agents/gate.sh`). The facade-level guard in `oce-api/tests/tick_purity_tests.rs` is
+  narrower — three fixtures — and, like all `oce-api` tests, runs only on the release gate.
 
 ## Commits
 

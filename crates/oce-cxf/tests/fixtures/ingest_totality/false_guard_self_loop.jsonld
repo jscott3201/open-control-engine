@@ -1,0 +1,13 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+  "@graph": [
+    { "@id": "http://example.org#top", "@type": "S231:Block", "S231:label": "top",
+      "S231:hasParameter": [ { "@id": "http://example.org#top.have" } ],
+      "S231:containsBlock": [ { "@id": "http://example.org#top.n0" } ] },
+    { "@id": "http://example.org#top.have", "S231:value": false },
+    { "@id": "http://example.org#top.n0", "@type": "S231:Block", "S231:label": "n0",
+      "S231:isConditionalComponent": true, "S231:conditionalExpression": "have",
+      "S231:containsBlock": [ { "@id": "http://example.org#top.n0" } ] },
+    { "@id": "http://example.org#unused", "@type": "S231:Block", "S231:label": "unused" }
+  ]
+}

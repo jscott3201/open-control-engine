@@ -215,4 +215,4 @@ connections: 40
   C72 -> C60
   C74 -> C76
   C77 -> C79
-external_inputs: [0, 44, 1, 43, 11, 23, 37, 64, 62, 73]
+external_inputs: [0, 44, 1, 43, 11, 23, 37, 62, 64, 73]

@@ -101,6 +101,11 @@ pub enum DiagCode {
     UnresolvedPolymorphism,
     /// A construct outside the CDL elementary subset appeared (rejected pre-build; exit #2).
     NonSubsetConstruct,
+    /// A block's port list named some of its class's declared ports and not the rest, so it can be
+    /// read neither by name nor by position. Ordering is a renderer's choice — a document that
+    /// consistently uses declared port names binds by name, and one that uses none binds by
+    /// position; only the mixture is unreadable.
+    PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
 
@@ -137,6 +142,16 @@ pub enum DiagCode {
     MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
+
+    // --- Export-time `shall`-errors (oce-cxf exporter) ---
+    /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
+    /// so the diagnostic's `subject` is `None` — no individual node is at fault.
+    ExportUnsupported,
+    /// An export subsetting deferral: an enum-carrying block (and, by cascade, its downstream
+    /// consumers) was omitted from the emitted document so the enum-free remainder could still
+    /// export. NOT an error — the export succeeds with this diagnostic carried out as a warning
+    /// (see `oce_cxf::export_with_report`); `export()` discards it.
+    ExportDeferred,
 }
 
 impl DiagCode {
@@ -163,6 +178,7 @@ impl DiagCode {
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
+            DiagCode::PortNameMismatch => "port-name-mismatch",
             DiagCode::PortKindMismatch => "port-kind-mismatch",
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
@@ -172,6 +188,8 @@ impl DiagCode {
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
+            DiagCode::ExportUnsupported => "export-unsupported",
+            DiagCode::ExportDeferred => "export-deferred",
         }
     }
 }
@@ -271,35 +289,66 @@ mod tests {
         assert_eq!(Severity::Warning.to_string(), "warning");
     }
 
+    /// Single source of truth for the pin table: expands to both the `PINNED_CODES` list the
+    /// test iterates and a wildcard-free `match` over `DiagCode`. In-crate, the match is checked
+    /// exhaustively despite `#[non_exhaustive]`, so adding a variant without pinning its string
+    /// here — or dropping an entry from this list — fails to compile before any test runs, and a
+    /// duplicated entry dies as an unreachable match arm.
+    macro_rules! pinned_diag_code_strings {
+        ($($variant:ident => $string:literal,)+) => {
+            /// Every `DiagCode` variant, derived from the same list as the exhaustive match.
+            const PINNED_CODES: &[DiagCode] = &[$(DiagCode::$variant,)+];
+
+            /// The pinned kebab-case string for `code` — the compile-time exhaustiveness guard.
+            fn pinned_str(code: DiagCode) -> &'static str {
+                match code {
+                    $(DiagCode::$variant => $string,)+
+                }
+            }
+        };
+    }
+
+    pinned_diag_code_strings! {
+        DuplicateId => "duplicate-id",
+        UnresolvedReference => "unresolved-reference",
+        ClassNotFound => "class-not-found",
+        OverlayTargetNotFound => "overlay-target-not-found",
+        ArrayFlattenCollision => "array-flatten-collision",
+        GroundingFailed => "grounding-failed",
+        UnknownEnumType => "unknown-enum-type",
+        UnknownEnumLiteral => "unknown-enum-literal",
+        EnumIntegerStandin => "enum-integer-standin",
+        ConditionalGuardUnknownParameter => "conditional-guard-unknown-parameter",
+        ConditionalGuardUnsupported => "conditional-guard-unsupported",
+        InactiveConditionalNode => "inactive-conditional-node",
+        MissingActiveConditionalNode => "missing-active-conditional-node",
+        UnresolvedPolymorphism => "unresolved-polymorphism",
+        NonSubsetConstruct => "non-subset-construct",
+        PortNameMismatch => "port-name-mismatch",
+        MalformedDocument => "malformed-document",
+        SingleAssignment => "single-assignment",
+        DirectionMismatch => "direction-mismatch",
+        TypeMismatch => "type-mismatch",
+        PortKindMismatch => "port-kind-mismatch",
+        UnitQuantityMismatch => "unit-quantity-mismatch",
+        BoundMismatch => "bound-mismatch",
+        MissingRequiredParameter => "missing-required-parameter",
+        ParameterOutOfRange => "parameter-out-of-range",
+        DisplayUnitDivergence => "display-unit-divergence",
+        AnalogCoercedToReal => "analog-coerced-to-real",
+        MissingFmuPath => "missing-fmu-path",
+        UnknownProperty => "unknown-property",
+        ExportUnsupported => "export-unsupported",
+        ExportDeferred => "export-deferred",
+    }
+
     #[test]
     fn diag_codes_have_stable_unique_strings() {
-        let codes = [
-            DiagCode::DuplicateId,
-            DiagCode::UnresolvedReference,
-            DiagCode::ClassNotFound,
-            DiagCode::OverlayTargetNotFound,
-            DiagCode::ArrayFlattenCollision,
-            DiagCode::GroundingFailed,
-            DiagCode::UnresolvedPolymorphism,
-            DiagCode::NonSubsetConstruct,
-            DiagCode::MalformedDocument,
-            DiagCode::SingleAssignment,
-            DiagCode::DirectionMismatch,
-            DiagCode::TypeMismatch,
-            DiagCode::PortKindMismatch,
-            DiagCode::UnitQuantityMismatch,
-            DiagCode::BoundMismatch,
-            DiagCode::MissingRequiredParameter,
-            DiagCode::ParameterOutOfRange,
-            DiagCode::DisplayUnitDivergence,
-            DiagCode::AnalogCoercedToReal,
-            DiagCode::MissingFmuPath,
-            DiagCode::UnknownProperty,
-        ];
-        // Every code maps to a kebab-case string, and all are distinct.
+        // Every code emits exactly its pinned kebab-case string, and all strings are distinct.
         let mut seen = Vec::new();
-        for c in codes {
-            let s = c.as_str();
+        for &code in PINNED_CODES {
+            let s = code.as_str();
+            assert_eq!(s, pinned_str(code), "{code:?} must keep its pinned string");
             assert!(!s.is_empty() && s.chars().all(|ch| ch.is_ascii_lowercase() || ch == '-'));
             assert!(!seen.contains(&s), "duplicate code string {s:?}");
             seen.push(s);

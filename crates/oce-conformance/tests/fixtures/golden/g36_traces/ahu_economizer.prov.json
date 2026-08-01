@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "3c231792e2ff8d1a8cf51b185dd486596113d2b9",
+  "content_sha256": "d76847a4e970345e41024c52fb48969f516832c4f7247d0abb5b05ea83dbfda3",
   "reference_columns": [
     "http://example.org#g36.ahu_economizer.economizer_enabled",
     "http://example.org#g36.ahu_economizer.damper_command",

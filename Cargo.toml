@@ -26,7 +26,20 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.95.0"
+# MSRV. MUST NOT EXCEED the gate-only nightly pinned as `NIGHTLY` in
+# .github/workflows/release-gate.yml — today nightly-2026-05-01, which identifies as
+# `rustc 1.97.0-nightly`. That nightly is a TOOL, not a build target: it emits rustdoc JSON for the
+# `cargo public-api` surface gates. But `rustdoc_json::Builder::toolchain()` shells out to
+# `cargo +<nightly> rustdoc`, which resolves the whole workspace, so Cargo enforces THIS line
+# against it. Setting `1.97.1` here (PR #208) failed both surface gates with
+# `rustc 1.97.0-nightly is not supported by the following packages`, and per-PR CI cannot see it —
+# those gates run only in release-gate.yml. To raise this above the nightly, bump `NIGHTLY` first
+# and re-bless both public-api baselines.
+#
+# The pinned BUILD toolchain (rust-toolchain.toml) is 1.97.1 and stays there; 1.97.1 is a patch
+# release of 1.97.0, so the declared floor is honest. It is also genuinely exercised: release-gate
+# builds the whole workspace under the 1.97.0-class nightly on every release PR.
+rust-version = "1.97.0"
 authors = ["Justin Scott"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jscott3201/open-control-engine"
@@ -54,6 +67,13 @@ libm = { version = "0.2.16", default-features = false }
 # --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
 # version (matching workspace.package.version) keeps these from reading as wildcard deps and makes
 # them publish-ready; the path wins for in-workspace builds. ---
+# EXCEPTION to the version-alongside-path convention documented two lines above. `oce-bless` is
+# `publish = false` and consumed ONLY as a dev-dependency. Cargo strips a dev-dependency from the
+# packaged manifest only when it carries no `version`; with `version = "0.1.0"` present,
+# `cargo publish --workspace --locked --dry-run` (release.yml:71) fails with
+#   no matching package named `oce-bless` found … location searched: crates.io index
+# because the crate is never published. Verified by execution at b811229.
+oce-bless = { path = "crates/oce-bless" }
 oce-model = { path = "crates/oce-model", version = "0.1.0" }
 oce-expr = { path = "crates/oce-expr", version = "0.1.0" }
 oce-diag = { path = "crates/oce-diag", version = "0.1.0" }

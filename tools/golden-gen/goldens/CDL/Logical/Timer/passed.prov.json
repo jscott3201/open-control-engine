@@ -13,7 +13,7 @@
     { "name": "u", "value_kind": "Boolean", "values": [1.0, 1.0, 1.0, 0.0, 1.0] }
   ],
   "input": "threshold t=0.25; same trace as Timer.y",
-  "reference_rule": "passed = (y >= t) AND running; _spec/03 §4.3 Timer (canonical Buildings >=)",
+  "reference_rule": "passed: Modelica latch — pre(passed)=t<=0; when u => t<=0; elsewhen u&&y>=t => true; elsewhen not u => false; else hold; Buildings Logical/Timer.mo",
   "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
   "generator": "golden-gen 0.0.0",
   "depends_on_oce_blocks": false

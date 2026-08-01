@@ -9,6 +9,30 @@
 //! - a `MemStore` model round-trip + no-op `commit`/`flush`/`recover` through the engine.
 
 use super::common::*;
+use crate::TopologyBlock;
+
+#[test]
+fn topology_block_equality_compares_real_parameters_by_bits() {
+    let block = |value| TopologyBlock {
+        instance_path: "block".to_string(),
+        class_iri: "CDL.Reals.Sources.Constant".to_string(),
+        inputs: Vec::new(),
+        outputs: vec!["block.y".to_string()],
+        params: vec![
+            (
+                "nan".to_string(),
+                Value::Real(f64::from_bits(0x7ff8_0000_0000_0001)),
+            ),
+            ("zero".to_string(), Value::Real(value)),
+        ],
+    };
+    assert_eq!(block(0.0), block(0.0), "equal NaN bits compare equal");
+    assert_ne!(
+        block(0.0),
+        block(-0.0),
+        "positive and negative zero compare unequal"
+    );
+}
 
 /// Load the canonical accumulator model into a fresh in-memory engine. Connector paths are
 /// `conn#<id>` (hand-built, no `iri`); param paths are `b<id>.<name>` (no `instance_iri`).
@@ -125,6 +149,8 @@ fn empty_engine_surface_is_inert_not_panicking() {
     assert!(matches!(eng.get_output("x"), Err(OcError::UnknownPoint(_))));
     assert!(matches!(eng.get_param("x"), Err(OcError::UnknownPoint(_))));
     assert_eq!(eng.mode(), RunMode::Running);
+    assert!(eng.export_cxf().is_err());
+    assert!(eng.topology().blocks.is_empty());
 }
 
 #[test]
@@ -650,9 +676,11 @@ fn constant_input_source_propagates_type_error() {
 #[test]
 fn step_realtime_advances_and_reports() {
     let mut eng = loaded_accumulator();
+    // Non-zero host epoch exercises the public timestamp mapping surface.
+    eng.set_realtime_epoch_unix_nanos(1_000_000_000);
     let r0 = eng.step_realtime(0.0).unwrap();
     assert!(r0.asserts.is_empty());
-    assert_eq!(r0.written, 0, "MemStore commits no points");
+    assert_eq!(r0.written, 6, "all projected outputs are committed");
     eng.step_realtime(1.0).unwrap();
     // A backwards step is a typed time regression (delegated tick guard).
     assert!(matches!(

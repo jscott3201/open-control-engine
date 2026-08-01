@@ -418,8 +418,17 @@ impl Block for Max {
 }
 
 /// `CDL.Reals.Limiter` — clip `u` to `[u_min, u_max]` (an explicit block, not an attribute clamp;
-/// `03` §4.1). The clamp is written manually (not `f64::clamp`) so an inverted `u_min > u_max`
-/// parameter degrades to `u_max` deterministically rather than panicking.
+/// `03` §4.1) via the upstream comparison chain (Buildings `Reals/Limiter.mo`, pin `a131864`):
+/// `if u > uMax then uMax elseif u < uMin then uMin else u`.
+///
+/// The chain — not `f64::clamp`, not a min/max pair — reproduces upstream bit-for-bit:
+/// a NaN `u` fails both comparisons and PASSES THROUGH to `y` (canonicalized on emit) instead
+/// of being silently absorbed into a bound (fail-visible: a faulted sensor stays visible
+/// downstream); a boundary-equal `u` returns `u`'s own bits, including its zero sign;
+/// `+inf`/`-inf` clamp to `u_max`/`u_min`. Inverted `u_min > u_max` bounds are rejected by the
+/// load-time range rule; for unvalidated embedders the chain degrades panic-free with the
+/// `u > u_max` arm winning first. A NaN bound disables only that side's clamp (also rejected
+/// at load).
 #[derive(Clone, Copy, Debug)]
 pub struct Limiter {
     pub(crate) u_min: f64,
@@ -443,7 +452,15 @@ impl Block for Limiter {
         true
     }
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
-        let y = det_min(det_max(read_real(inputs, 0), self.u_min), self.u_max);
+        let u = read_real(inputs, 0);
+        // Upstream equation verbatim: `if u > uMax then uMax elseif u < uMin then uMin else u`.
+        let y = if u > self.u_max {
+            self.u_max
+        } else if u < self.u_min {
+            self.u_min
+        } else {
+            u
+        };
         emit_real(0, y, emit);
     }
 }

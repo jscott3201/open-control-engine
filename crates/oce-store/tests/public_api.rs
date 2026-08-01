@@ -7,7 +7,7 @@
 //! the release gate against a reviewer-blessed baseline (`tests/public-api.txt`).
 //!
 //! GATE-ONLY. `cargo public-api` needs rustdoc JSON, which needs a nightly toolchain — but the
-//! workspace is pinned to stable 1.95.0. So this test is **armed** by the `OCE_PUBLIC_API_NIGHTLY`
+//! workspace is pinned to stable 1.97.1. So this test is **armed** by the `OCE_PUBLIC_API_NIGHTLY`
 //! env var, which only `release-gate.yml` sets (after installing the pinned nightly). When the var
 //! is unset — the fast per-PR `ci.yml` gate and local `cargo test` — the test **skips**. When armed,
 //! it **must run to completion**: every tooling step is fail-hard, so a broken toolchain turns the
@@ -37,6 +37,25 @@ const ARM_ENV: &str = "OCE_PUBLIC_API_NIGHTLY";
 /// `ARM_ENV` from that step — from a false-green into a RED. It is deliberately NOT set on the
 /// workspace-wide nextest step, so that unarmed double-run of this same test still skips normally.
 const REQUIRE_ENV: &str = "OCE_REQUIRE_SURFACE_CHECK";
+
+const BASELINE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/public-api.txt");
+
+fn difference_window<'a>(line: &'a str, other: &str) -> &'a str {
+    let different_at = line
+        .bytes()
+        .zip(other.bytes())
+        .position(|(left, right)| left != right)
+        .unwrap_or_else(|| line.len().min(other.len()));
+    let mut start = different_at.saturating_sub(100);
+    let mut end = (different_at + 100).min(line.len());
+    while start != 0 && !line.is_char_boundary(start) {
+        start -= 1;
+    }
+    while end != line.len() && !line.is_char_boundary(end) {
+        end += 1;
+    }
+    line.get(start..end).unwrap_or(line)
+}
 
 #[test]
 fn public_api_surface_matches_blessed_baseline() {
@@ -89,7 +108,7 @@ fn public_api_surface_matches_blessed_baseline() {
         .unwrap_or_else(|e| {
             panic!(
                 "[public_api] failed to parse rustdoc JSON — a format_version skew against the \
-                 pinned COMPAT TRIPLE (see crates/oce-api/Cargo.toml [dev-dependencies])? {e}"
+                 pinned COMPAT TRIPLE (see crates/oce-store/Cargo.toml [dev-dependencies])? {e}"
             )
         });
 
@@ -100,5 +119,46 @@ fn public_api_surface_matches_blessed_baseline() {
     items.sort_unstable();
     let rendered = format!("{}\n", items.join("\n"));
 
-    expect_test::expect_file!["public-api.txt"].assert_eq(&rendered);
+    if oce_bless::enabled("UPDATE_EXPECT") {
+        std::fs::write(BASELINE_PATH, &rendered).expect("write public-api baseline");
+        return;
+    }
+
+    let checked_in = std::fs::read_to_string(BASELINE_PATH)
+        .expect("read public-api baseline")
+        .replace("\r\n", "\n");
+    if checked_in != rendered {
+        let expected: Vec<&str> = checked_in.lines().collect();
+        let actual: Vec<&str> = rendered.lines().collect();
+        if let Some(at) =
+            (0..expected.len().max(actual.len())).find(|&i| expected.get(i) != actual.get(i))
+        {
+            let blessed = expected
+                .get(at)
+                .map(|line| difference_window(line, actual.get(at).copied().unwrap_or_default()));
+            let generated = actual
+                .get(at)
+                .map(|line| difference_window(line, expected.get(at).copied().unwrap_or_default()));
+            panic!(
+                "crates/oce-store/tests/public-api.txt is stale (generated {} lines, blessed {} \
+                 lines, first difference at line {}):\n  blessed: {blessed:?}\n  actual:  \
+                 {generated:?}\nRe-bless deliberately with `OCE_PUBLIC_API_NIGHTLY=<nightly> \
+                 UPDATE_EXPECT=1 cargo nextest run -p oce-store -E \
+                 'test(public_api_surface_matches_blessed_baseline)' --profile public-api \
+                 --locked` and review the diff.",
+                actual.len(),
+                expected.len(),
+                at + 1,
+            );
+        }
+        panic!(
+            "crates/oce-store/tests/public-api.txt is stale due to a trailing-newline or \
+             line-terminator-only difference (generated {} bytes, blessed {} bytes).\n\
+             Re-bless deliberately with `OCE_PUBLIC_API_NIGHTLY=<nightly> UPDATE_EXPECT=1 cargo \
+             nextest run -p oce-store -E 'test(public_api_surface_matches_blessed_baseline)' \
+             --profile public-api --locked` and review the diff.",
+            rendered.len(),
+            checked_in.len(),
+        );
+    }
 }

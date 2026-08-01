@@ -22,6 +22,7 @@ use std::borrow::Cow;
 
 use oce_model::{ParamTable, Value, determinism::canonicalize_real};
 
+mod catalog;
 mod conversions;
 mod discrete;
 mod discrete_sampled;
@@ -34,7 +35,9 @@ mod logical_latch;
 mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
+mod lowering;
 mod pid;
+pub mod port_names;
 mod psychrometrics;
 mod reals_arithmetic;
 mod reals_comparators;
@@ -46,6 +49,10 @@ mod reals_sources;
 mod reals_transcendental;
 mod reals_vector_reductions;
 mod registry;
+
+pub use catalog::{
+    CatalogEntry, DefaultLiteral, DefaultSource, ParamDefault, PortInfo, PortNaming, catalog,
+};
 mod routing;
 mod routing_boolean;
 mod routing_integer;
@@ -72,6 +79,7 @@ pub use logical_latch::{FallingEdge, Latch, LogicalChange, Toggle};
 pub use logical_proof::Proof;
 pub use logical_timing::{Timer, TimerAccumulating, TrueDelay, TrueFalseHold, TrueHoldWithReset};
 pub use logical_variable_pulse::LogicalVariablePulse;
+pub use lowering::{BooleanPassThrough, IntegerPassThrough, RealPassThrough};
 pub use pid::{Pid, PidWithReset};
 pub use psychrometrics::{DewPointTDryBulPhi, SpecificEnthalpyTDryBulPhi, WetBulbTDryBulPhi};
 pub use reals_arithmetic::{
@@ -262,7 +270,10 @@ impl Diagnostics for NoopDiagnostics {
 /// FRAME Block-trait resolution). A block object is an *immutable* description (class + parameters
 /// resolved at construction); all mutable per-instance `[S]` state lives in an engine-owned flat
 /// region (`RunState.words`), never in the block struct. This keeps the frozen schedule shareable
-/// and the tick zero-allocation (`01` §7 req 4, §9 req 4), so every method takes `&self`.
+/// and keeps per-instance state out of the allocator (`01` §7 req 4, §9 req 4), so every method
+/// takes `&self`. It does **not** make the tick zero-allocation: an implementation may allocate
+/// inside [`Block::step_algebraic`]; `CDL.Reals.Sort` uses stack buffers through width 64 and a
+/// heap-backed fallback above that width.
 ///
 /// `[A]` blocks override [`Block::step_algebraic`]. `[S]` blocks set [`Block::state_len`], seed via
 /// [`Block::init_state`], and override [`Block::emit_from_state`] + [`Block::update_state`].
@@ -664,7 +675,13 @@ pub(crate) fn read_int(inputs: &[Value], i: usize) -> i64 {
 mod tests;
 
 #[cfg(test)]
+mod catalog_tests;
+
+#[cfg(test)]
 mod param_rules_tests;
+
+#[cfg(test)]
+mod port_names_tests;
 
 #[cfg(test)]
 mod reals_arithmetic_tests;
@@ -709,6 +726,9 @@ mod logical_proof_tests;
 mod logical_timing_tests;
 
 #[cfg(test)]
+mod logical_timing_contract_tests;
+
+#[cfg(test)]
 mod logical_variable_pulse_tests;
 
 #[cfg(test)]
@@ -725,6 +745,9 @@ mod psychrometrics_tests;
 
 #[cfg(test)]
 mod reals_integrator_tests;
+
+#[cfg(test)]
+mod reals_filters_derivative_tests;
 
 #[cfg(test)]
 mod reals_filters_tests;

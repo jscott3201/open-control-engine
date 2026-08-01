@@ -1,0 +1,88 @@
+# Build documentation previews for development PRs and publish released truth from main only.
+
+name: docs-pages
+
+on:
+  pull_request:
+    branches: [development]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - ".github/workflows/docs-pages.yml"
+      - "docs/**"
+      - "README.md"
+      - "scripts/docs/**"
+      - "site/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/docs-pages.yml"
+      - "docs/**"
+      - "README.md"
+      - "scripts/docs/**"
+      - "site/**"
+  workflow_dispatch:
+
+concurrency:
+  group: docs-pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build docs artifact
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install checksum-pinned mdBook
+        run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
+
+      - name: Test documentation checker contracts
+        run: python3 scripts/docs/test_check_links.py
+
+      - name: Stage documentation without source writes
+        env:
+          DOCS_REPOSITORY_REVISION: ${{ github.sha }}
+        run: >-
+          python3 scripts/docs/check_integrity.py
+          --output target/docs-book
+          --revision "$DOCS_REPOSITORY_REVISION"
+
+      - name: Build mdBook
+        run: target/mdbook-bin/mdbook build target/docs-book
+
+      - name: Check generated internal links and anchors
+        run: >-
+          python3 scripts/docs/check_links.py
+          target/docs-book/book
+          --site-prefix /open-control-engine/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: target/docs-book/book
+
+  deploy:
+    name: deploy released docs
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

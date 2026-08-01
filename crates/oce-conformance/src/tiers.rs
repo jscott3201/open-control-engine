@@ -107,6 +107,19 @@ impl TierReport {
         }
     }
 
+    /// Build a failed tier report that carries its detail in the `summary` (status-and-summary
+    /// reporting), with an empty diagnostics vec. Use this for a hard failure that has no structured
+    /// [`Diagnostic`] to attach — a comparison mismatch or a non-validation load error.
+    #[must_use]
+    pub fn failure(tier: ConformanceTier, summary: impl Into<String>) -> Self {
+        Self {
+            tier,
+            status: TierStatus::Failed,
+            summary: summary.into(),
+            diagnostics: Vec::new(),
+        }
+    }
+
     /// Classify a tier from diagnostics.
     ///
     /// A [`oce_diag::Severity::Error`] diagnostic is a shall-level hard failure. Warning and info

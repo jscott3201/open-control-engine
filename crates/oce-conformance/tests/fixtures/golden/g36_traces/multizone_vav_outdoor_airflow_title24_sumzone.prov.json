@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "cf4e200fadb3e98d55bbc4d65e2b25b64034ffae",
+  "content_sha256": "431fc420ac9f1fdd635f0c1d3de7b7c8efb78089e71b990d43b254acce51b2a8",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VSumZonAbsMin_flow",
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VSumZonDesMin_flow",

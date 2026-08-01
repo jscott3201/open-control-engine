@@ -1,0 +1,15 @@
+#1
+# columns: time http://example.org#g36.source.reheat_overrides.yDam http://example.org#g36.source.reheat_overrides.yVal
+double reheat_overrides(12,3)
+0.0 0.0 0.62
+1.0 1.0 0.62
+2.0 0.37 0.62
+3.0 0.37 0.0
+4.0 1.0 0.0
+5.0 0.37 0.62
+6.0 0.0 0.0
+7.0 0.37 0.0
+8.0 0.81 0.23
+9.0 0.0 0.23
+10.0 1.0 0.23
+11.0 0.81 0.0

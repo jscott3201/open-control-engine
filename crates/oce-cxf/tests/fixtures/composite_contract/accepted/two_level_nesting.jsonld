@@ -1,0 +1,113 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.two_level_nesting",
+      "@type": "S231:Block",
+      "S231:label": "two_level_nesting",
+      "S231:hasParameter": { "@id": "http://example.org#cc.two_level_nesting.kRoot" },
+      "S231:containsBlock": { "@id": "http://example.org#cc.two_level_nesting.outer" },
+      "S231:hasInput": { "@id": "http://example.org#cc.two_level_nesting.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.two_level_nesting.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.kRoot",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.outer.u" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer",
+      "@type": "http://example.org#Vendor.Sequences.OuterStage",
+      "S231:label": "outer",
+      "S231:hasParameter": { "@id": "http://example.org#cc.two_level_nesting.outer.kOuter" },
+      "S231:containsBlock": { "@id": "http://example.org#cc.two_level_nesting.outer.inner" },
+      "S231:hasInput": { "@id": "http://example.org#cc.two_level_nesting.outer.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.two_level_nesting.outer.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.kOuter",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kRoot"
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.u" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner",
+      "@type": "http://example.org#Vendor.Sequences.InnerStage",
+      "S231:label": "inner",
+      "S231:hasParameter": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.kInner" },
+      "S231:containsBlock": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain" },
+      "S231:hasInput": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.kInner",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kOuter + 1.0"
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.u" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.outer.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasParameter": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.k" },
+      "S231:hasInput": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.y" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kInner"
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.two_level_nesting.outer.inner.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.two_level_nesting.outer.inner.y" }
+    }
+  ]
+}

@@ -68,7 +68,10 @@ fn assert_trace_bits(got: &[Value], want: &[u64]) {
 
 #[test]
 fn integrator_with_reset_state_and_feedthrough_contract() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     assert_eq!(
         block.signature().class_path,
         "CDL.Reals.IntegratorWithReset"
@@ -86,7 +89,10 @@ fn integrator_with_reset_state_and_feedthrough_contract() {
 
 #[test]
 fn forward_euler_variable_dt_trace_is_hand_derived() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     let steps = [
         (0.0, 2.0, 0.0, false),
         (0.5, 2.0, 0.0, false),
@@ -105,7 +111,10 @@ fn forward_euler_variable_dt_trace_is_hand_derived() {
 
 #[test]
 fn forward_euler_non_dyadic_residue_trace_is_hand_derived() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let steps = [
         (0.0, 0.2, 0.0, false),
         (0.1, 0.2, 0.0, false),
@@ -134,7 +143,10 @@ fn forward_euler_non_dyadic_residue_trace_is_hand_derived() {
 
 #[test]
 fn reset_is_rising_edge_and_visible_one_tick_later() {
-    let block = IntegratorWithReset { y_start: 1.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 1.0,
+    };
     let steps = [
         (0.0, 2.0, 0.0, false),
         (1.0, 2.0, 0.0, false),
@@ -153,7 +165,10 @@ fn reset_is_rising_edge_and_visible_one_tick_later() {
 
 #[test]
 fn first_tick_trigger_high_resets_for_next_emit_only() {
-    let block = IntegratorWithReset { y_start: 2.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 2.0,
+    };
     let steps = [
         (0.0, 10.0, 7.0, true),
         (1.0, 10.0, 9.0, true),
@@ -168,7 +183,10 @@ fn first_tick_trigger_high_resets_for_next_emit_only() {
 
 #[test]
 fn reset_value_path_propagates_extreme_and_nan_bits() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let quiet_nan = f64::from_bits(0x7ff8_0000_0000_0000);
     let max_steps = [
         (0.0, 1.0, 0.0, false),
@@ -204,7 +222,10 @@ fn reset_value_path_propagates_extreme_and_nan_bits() {
 
 #[test]
 fn zero_dt_negative_u_and_nonzero_start_edges_are_pinned() {
-    let block = IntegratorWithReset { y_start: 2.5 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 2.5,
+    };
     let steps = [
         (1.0, -4.0, 0.0, false),
         (1.0, -4.0, 0.0, false),
@@ -217,7 +238,10 @@ fn zero_dt_negative_u_and_nonzero_start_edges_are_pinned() {
 
 #[test]
 fn non_finite_integrand_accumulation_is_current_ieee_behavior() {
-    let block = IntegratorWithReset { y_start: 0.0 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: 0.0,
+    };
     let inf_steps = [
         (0.0, 0.0, 0.0, false),
         (1.0, f64::INFINITY, 0.0, false),
@@ -246,8 +270,57 @@ fn non_finite_integrand_accumulation_is_current_ieee_behavior() {
 }
 
 #[test]
+fn gain_scales_the_integrand_per_upstream_der_y_eq_k_times_u() {
+    // Upstream Buildings `Reals/IntegratorWithReset.mo`: `der(y) = k*u`. Hand-derived with
+    // k = 2.5: x0 = 1; x(t=0.5 update) = 1 + 2.5*2.0*0.5 = 3.5; x(t=1.5 update) =
+    // 3.5 + 2.5*(-1.0)*1.0 = 1.0. Emits show the prior accumulator.
+    let block = IntegratorWithReset {
+        k: 2.5,
+        y_start: 1.0,
+    };
+    let steps = [
+        (0.0, 2.0, 0.0, false),
+        (0.5, 2.0, 0.0, false),
+        (1.5, -1.0, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    assert_trace(&trace, &[1.0, 1.0, 3.5]);
+    assert_eq!(f64::from_bits(region[0]).to_bits(), 1.0f64.to_bits());
+}
+
+#[test]
+fn reset_value_is_not_scaled_by_gain() {
+    // Upstream `reinit(y, y_reset_in)` assigns the state directly; the gain only scales the
+    // integrand. With k = 3.0 the rising trigger at t=1 must store exactly 7.0, not 21.0.
+    let block = IntegratorWithReset {
+        k: 3.0,
+        y_start: 0.0,
+    };
+    let steps = [
+        (0.0, 1.0, 0.0, false),
+        (1.0, 1.0, 7.0, true),
+        (2.0, 0.0, 0.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    assert_trace(&trace, &[0.0, 0.0, 7.0]);
+    assert_eq!(f64::from_bits(region[0]).to_bits(), 7.0f64.to_bits());
+}
+
+#[test]
+fn default_gain_is_upstream_unity() {
+    // Buildings declares `parameter Real k=1`; the bare Rust Default must match so direct
+    // construction and an omitted CXF `k` agree.
+    let block = IntegratorWithReset::default();
+    assert_eq!(block.k.to_bits(), 1.0f64.to_bits());
+    assert_eq!(block.y_start.to_bits(), 0.0f64.to_bits());
+}
+
+#[test]
 fn integrator_trace_is_byte_deterministic_across_runs() {
-    let block = IntegratorWithReset { y_start: -0.25 };
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: -0.25,
+    };
     let steps = [
         (0.0, 1.0, 0.0, false),
         (0.25, 4.0, 0.0, false),
@@ -261,4 +334,57 @@ fn integrator_trace_is_byte_deterministic_across_runs() {
         assert!(a.bit_eq(b), "trace[{idx}] diverged: {a:?} vs {b:?}");
     }
     assert_eq!(region_a, region_b, "state words diverged");
+}
+
+#[test]
+fn nan_y_start_seed_emits_canonical_nan_and_rising_trigger_recovers() {
+    // Gain and start-state params carry NO finiteness rule by policy (upstream declares k=1,
+    // y_start=0 with no min/max): a NaN y_start follows plain IEEE propagation — canonical-NaN
+    // emits — until a rising trigger stores y_reset_in directly, which reads neither k nor
+    // y_start and fully recovers the state.
+    let block = IntegratorWithReset {
+        k: 1.0,
+        y_start: f64::from_bits(0xfff8_0000_0000_0000),
+    };
+    let steps = [
+        (0.0, 1.0, 7.0, false),
+        (0.5, 1.0, 7.0, false),
+        (1.0, 1.0, 7.0, true),
+        (1.5, 2.0, 7.0, true),
+        (2.0, 0.0, 7.0, false),
+    ];
+    let (trace, region) = drive(&block, &steps);
+    // Emit-before-update: the t=1.0 rising-trigger tick still emits the poisoned state; the
+    // reset lands at the NEXT emit (7.0), then the held-high tick integrates 7 + 1*2*0.5 = 8.
+    assert_trace_bits(
+        &trace,
+        &[
+            0x7ff8_0000_0000_0000,
+            0x7ff8_0000_0000_0000,
+            0x7ff8_0000_0000_0000,
+            7.0f64.to_bits(),
+            8.0f64.to_bits(),
+        ],
+    );
+    assert_eq!(region[0], 8.0f64.to_bits());
+}
+
+#[test]
+fn non_finite_gain_poisons_state_at_first_update_via_ieee() {
+    // k is unconstrained by policy (upstream k=1, no min/max). Emit-before-update means the
+    // first tick still emits y_start; the first update computes slope = k*u with dt = 0, so
+    // NaN*u (NaN) and inf*u*0 (inf*0 = NaN) both poison x at the very first update.
+    for poisoned_gain in [f64::NAN, f64::INFINITY] {
+        let block = IntegratorWithReset {
+            k: poisoned_gain,
+            y_start: 0.5,
+        };
+        let steps = [(0.0, 2.0, 0.0, false), (0.5, 2.0, 0.0, false)];
+        let (trace, region) = drive(&block, &steps);
+        assert_trace_bits(&trace, &[0.5f64.to_bits(), 0x7ff8_0000_0000_0000]);
+        assert!(
+            f64::from_bits(region[0]).is_nan(),
+            "gain {poisoned_gain} must poison the accumulator"
+        );
+    }
 }

@@ -187,6 +187,11 @@ pub struct DriverRun {
     pub comparisons: Vec<SignalComparison>,
     /// Drive path used.
     pub drive_mode: DriveMode,
+    /// `should`-level diagnostics surfaced while loading the CXF (resolver, §7.10 unification, and
+    /// semantic warnings). These are the Tier 0 static-conformance signal; empty on a clean load. A
+    /// `shall`-level failure aborts the load before a `DriverRun` exists (an `Err`), so this vec only
+    /// ever holds non-fatal warnings.
+    pub load_warnings: Vec<oce_diag::Diagnostic>,
 }
 
 /// Driver error.
@@ -331,7 +336,9 @@ pub fn drive_trace_with_options(
     validate_reference_shape(reference)?;
 
     let mut engine = Engine::in_memory();
-    engine.load_cxf(cxf)?;
+    let load_report = engine.load_cxf(cxf)?;
+    // Fixed verification origin keeps negative model-time fixtures representable without a clock.
+    engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
 
     let plan = Plan::new(&engine, config, reference)?;
     let (trace, drive_mode) = match &options.cadence {
@@ -364,6 +371,7 @@ pub fn drive_trace_with_options(
         trace,
         comparisons,
         drive_mode,
+        load_warnings: load_report.warnings,
     })
 }
 

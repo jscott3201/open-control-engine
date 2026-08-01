@@ -9,6 +9,9 @@ use oce_conformance::{
 };
 use serde_json::Value;
 
+#[path = "g36_funnel_band/policy.rs"]
+mod funnel_band_policy;
+
 const HIGH_LIMIT_FIXED_24: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_ashrae_fixed_24.jsonld"
 );
@@ -264,6 +267,130 @@ fn g36_air_economizer_high_limits_tier_a_oracles_match_engine_output() {
     }
 }
 
+/// Route every AirEconomizerHighLimits `temperature_cutoff` (a Real-algebraic `[A]` signal) through
+/// the L1 funnel band with the recorded per-signal tolerance (`_spec/07 §8`), asserting the band is
+/// the real comparison mechanism and that it actually landed on the routed signal. This is additive
+/// to — and file-separate from — the bit-exact oracle and determinism goldens, which stay untouched.
+///
+/// The 7 single-row fixed cases have `range_y == 0`, so their relative band collapses to exact; the
+/// live, falsifiable band is exercised on the 5 multi-row differential cases (see
+/// `recorded_last_ulp_band_rejects_out_of_band_cutoff_drift`).
+#[test]
+fn funnel_band_accepts_air_economizer_cutoff_within_recorded_last_ulp_slack() {
+    for &case in CASES {
+        let reference =
+            CombiTimeTable::read(&reference_path(case.sequence)).unwrap_or_else(|err| {
+                panic!(
+                    "AirEconomizerHighLimits {} reference read failed: {err}",
+                    case.sequence
+                )
+            });
+        let run = drive_trace_with_options(
+            case.fixture.as_bytes(),
+            &funnel_config(case),
+            &reference,
+            &DriverOptions {
+                cadence: DriveCadence::EventAligned {
+                    instants: (0..case.rows)
+                        .map(|tick| tick as f64 * SAMPLE_STEP)
+                        .collect(),
+                },
+                input_replay: DriverInputReplay::ReferenceTable,
+                comparison: ComparisonMode::Funnel,
+            },
+        )
+        .unwrap_or_else(|err| {
+            panic!(
+                "AirEconomizerHighLimits {} funnel driver run failed: {err}",
+                case.sequence
+            )
+        });
+
+        assert_eq!(
+            run.comparisons.len(),
+            1,
+            "{} comparison count",
+            case.sequence
+        );
+        let comparison = &run.comparisons[0];
+        assert_eq!(comparison.output, case.output.cdl_name);
+        assert!(
+            !comparison.masked,
+            "{} cutoff must be an unmasked funnel comparison",
+            case.sequence
+        );
+        // The recorded near-ULP band actually resolved onto this signal (not a zero fall-through).
+        assert_eq!(
+            comparison.tolerance.rtoly.to_bits(),
+            funnel_band_policy::NEAR_ULP_RTOLY.to_bits(),
+            "{} recorded rtoly",
+            case.sequence
+        );
+        assert_eq!(
+            comparison.tolerance.atoly.to_bits(),
+            0.0f64.to_bits(),
+            "{} exact-math atoly stays zero",
+            case.sequence
+        );
+        match &comparison.result {
+            ComparisonResult::Funnel(result) => {
+                assert!(
+                    result.passed,
+                    "AirEconomizerHighLimits {} funnel comparison failed: {:?}",
+                    case.sequence, result.first_failure_x
+                );
+                assert_eq!(
+                    result.compared_points, case.rows,
+                    "{} funnel compared points (non-vacuous)",
+                    case.sequence
+                );
+                assert_eq!(
+                    result.max_error.to_bits(),
+                    0.0f64.to_bits(),
+                    "{} funnel max error",
+                    case.sequence
+                );
+                assert_eq!(
+                    result.first_failure_x, None,
+                    "{} funnel first failure",
+                    case.sequence
+                );
+            }
+            other => panic!(
+                "AirEconomizerHighLimits {} used non-funnel comparison: {other:?}",
+                case.sequence
+            ),
+        }
+    }
+}
+
+/// Anti-tautology control: the recorded band is falsifiable, not decorative. Uses a multi-row
+/// differential reference (`range_y > 0`, so the relative near-ULP band is live) and checks — on the
+/// engine-independent oracle values only — that a within-band drift passes and an out-of-band drift
+/// fails. Without this, routing the bit-exact-matching engine trace through the band would certify
+/// nothing.
+#[test]
+fn recorded_last_ulp_band_rejects_out_of_band_cutoff_drift() {
+    let case = CASES
+        .iter()
+        .find(|case| case.rows > 1)
+        .expect("a multi-row differential case exercises the relative band");
+    let reference = CombiTimeTable::read(&reference_path(case.sequence))
+        .unwrap_or_else(|err| panic!("{} reference read failed: {err}", case.sequence));
+    let columns = reference.col_names.as_ref().expect("reference columns");
+    let cutoff_col = columns
+        .iter()
+        .position(|name| name == case.output.reference_name)
+        .expect("temperature_cutoff column present");
+    let times: Vec<f64> = (0..reference.n_rows)
+        .map(|row| reference.data[row * reference.n_cols])
+        .collect();
+    let cutoff: Vec<f64> = (0..reference.n_rows)
+        .map(|row| reference.data[row * reference.n_cols + cutoff_col])
+        .collect();
+    funnel_band_policy::assert_near_ulp_band_is_falsifiable(&times, &cutoff);
+}
+
 #[derive(Clone, Copy)]
 struct PointSpec {
     reference_name: &'static str,
@@ -297,6 +424,21 @@ fn config(case: Case) -> VerifyConfig {
             ltoly: 0.0,
         },
         outputs: Vec::new(),
+        indicators: Vec::new(),
+        sampling: Some(SAMPLE_STEP),
+        run_controller: true,
+    }
+}
+
+fn funnel_config(case: Case) -> VerifyConfig {
+    VerifyConfig {
+        references: vec![ReferenceSpec {
+            model: "g36".to_string(),
+            sequence: case.sequence.to_string(),
+            point_name_mapping: point_mapping(case),
+        }],
+        tolerances: funnel_band_policy::zero_base(),
+        outputs: vec![funnel_band_policy::near_ulp_override(case.output.cdl_name)],
         indicators: Vec::new(),
         sampling: Some(SAMPLE_STEP),
         run_controller: true,

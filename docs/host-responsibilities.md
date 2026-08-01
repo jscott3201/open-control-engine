@@ -1,0 +1,125 @@
+# Host responsibilities
+
+For anyone about to wire this engine to real equipment. It answers one question: what safety
+behavior must **you** implement, because the engine deliberately does not?
+
+This engine executes a control sequence. It does not supervise the equipment that sequence drives,
+and it does not judge the quality of the data it is fed. Those are your job, and the engine will not
+warn you if you skip them.
+
+## Staging is status-agnostic
+
+A sample is converted from its value regardless of `PointStatus`. `Fault`, `Stale`, `Uninitialized`
+and `Override` all stage exactly like `Ok`.
+
+The conversion function destructures the sample and discards both quality fields:
+`crates/oce-api/src/engine.rs:381-386` binds `status: _` and `at_unix_nanos: _`, then dispatches
+purely on the value and the target type. The five statuses are defined at
+`crates/oce-store/src/lib.rs:81-92`; nothing in the engine reads them. The behavior is pinned by
+`store_backed_input_staging_is_status_agnostic`
+(`crates/oce-api/src/tests/store_backed_inputs.rs:75`), which ticks the same fixture once per status
+and asserts identical staging.
+
+This is a design decision, not an oversight — point quality is metadata for the application and BMS
+layer, and an engine that silently reinterpreted a faulted reading would be harder to reason about
+than one that never looks. But it means a faulted sensor reading drives your sequence exactly as a
+healthy one does.
+
+## A missing sample is not an error
+
+If no sample is available for a bound input, the connector keeps its current value and the tick
+proceeds. There is no diagnostic. Before the first sample ever arrives, that held value is the
+type's `zero_value()` — so an input that has never been written reads as `0`, `0.0` or `false`, not
+as "unknown".
+
+The hold is explicit: `crates/oce-api/src/engine.rs:356-360` continues past a missing sample with
+the comment "Deliberate hold-last: no store sample means no overwrite of the current state value",
+and the policy is documented at `engine.rs:336-342`. `missing_store_sample_holds_prior_input_value`
+(`crates/oce-api/src/tests/store_backed_inputs.rs:99`) pins it.
+
+**A dead sensor and a steady sensor are indistinguishable to the engine, forever.** Nothing in the
+engine will ever notice that a point stopped updating.
+
+## The engine implements no fail-safe policy of its own
+
+Taken together, the two behaviors above mean the engine has no concept of degraded operation. It
+will keep computing and keep writing outputs from held, stale, faulted values indefinitely. If your
+plant needs to fail safe, the logic that makes it fail safe lives above the engine, in your host
+layer. At minimum, implement all of the following:
+
+1. **Per-point staleness limits.** `PointSample` carries `at_unix_nanos`
+   (`crates/oce-store/src/lib.rs:97-104`), and the engine throws it away at staging. Track sample age
+   yourself and define, per point, how old is too old.
+2. **A status reaction policy.** Decide what `Fault`, `Stale`, `Uninitialized` and `Override` mean
+   for each input, and act on them before or instead of ticking. The engine will not.
+3. **A defined safe state, and a path to it.** Know what output set is safe for the equipment, and
+   drive it from the host when the input contract is violated — do not expect the sequence to
+   produce it.
+4. **Plausibility checks on inputs.** Range, rate-of-change and cross-sensor consistency, applied
+   before staging.
+5. **Equipment protection below the engine.** Any interlock you are relying on to prevent physical
+   damage — freeze protection, high-limit cutouts, minimum off-times enforced in hardware — must
+   exist in the host layer or in the equipment itself. The engine executes the sequence you gave it
+   and nothing else; a sequence that omits an interlock has no interlock.
+6. **Write-failure handling.** `Engine::step_realtime` is not transactional: if the batched store
+   write fails, the tick has already completed and model time and outputs have advanced, and they
+   are not rolled back (`crates/oce-api/src/sim.rs:455-456`).
+
+## Time is host-supplied
+
+The engine never reads a wall clock. `std::time::Instant` appears only as a monotonic timer for
+latency metrics, never as a time source for the model (`crates/oce-api/src/sim.rs:6`). Model time
+arrives as a `f64` argument you pass in, and it must be monotonic — a decrease returns
+`OcError::TimeRegression` (`crates/oce-api/src/error.rs:62-69`).
+
+For real-time stepping you must first configure the UNIX epoch corresponding to model `t = 0`, via
+`Engine::set_realtime_epoch_unix_nanos` (`crates/oce-api/src/sim.rs:360-373`). If you never do,
+`step_realtime` returns `OcError::RealtimeEpochUnset` before ticking rather than silently stamping
+samples at 1970 (`crates/oce-api/src/sim.rs:457-461`, variant at `crates/oce-api/src/error.rs:70-72`,
+pinned by `host_epoch_is_required_and_exact_mapping_handles_signed_model_time` at
+`crates/oce-api/src/tests/realtime_write_back_tests.rs:79`). The epoch-plus-offset mapping is
+explicitly range-checked, so a non-finite or out-of-range instant fails with
+`OcError::RealtimeInstantUnrepresentable` rather than clamping, wrapping or panicking
+(`crates/oce-api/src/sim.rs:265-279`).
+
+Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
+
+## The one hardening gap
+
+Stated plainly, because the alternative is that you assume it is handled.
+
+| Bound | Limit | Defined at | Behavior when exceeded |
+| --- | --- | --- | --- |
+| Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs:125` | typed `NestingTooDeep` error |
+| Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs:132` | typed `ExpressionTooLarge` error |
+| Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs:22`, checked at `:231` | `MalformedDocument` diagnostic |
+| Composite **boundary resolution** (`isConnectedTo` hops) | **none** | `crates/oce-cxf/src/resolve/composite.rs:427-474` | **unbounded recursion** |
+
+The last row is the gap, and the distinction between the last two rows is the part to get right.
+Composite *nesting* — how deeply composites contain other composites — is bounded at 64 and rejects
+cleanly. Composite *boundary resolution* is a different walk: `resolve_target` and `follow_boundary`
+are mutually recursive and take one stack frame per `isConnectedTo` hop, with no depth counter. A
+`seen` set (`composite.rs:459-464`) catches authored cycles and routes them to the ordinary
+dangling-reference diagnostic, so a cycle terminates. A long *acyclic* chain of boundary connectors
+does not: it recurses once per hop until the stack is exhausted.
+
+The gap is in `oce-cxf`, not `oce-expr`. The expression bounds are real and typed; they do not cover
+this. The repo states the gap in `../README.md` and in `../TESTING.md:40-43` rather than leaving it
+to be discovered.
+
+## Treat untrusted CXF as untrusted input
+
+A CXF document is a program. Loading one from a source you do not control is running code you did
+not write, through a resolver with one known unbounded recursion. If you must:
+
+- Bound document size and connector-chain length before handing bytes to the loader.
+- Load in a process or thread whose loss you can absorb, with a stack you have sized deliberately.
+- Never load an untrusted document in the same process that is actively commanding equipment.
+
+The rest of the ingest path is bounded and returns typed diagnostics rather than panicking, and
+`../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather
+than "an error occurred". That standard is why this one gap is written down instead of assumed away.
+
+One more thing worth knowing: the tests cited on this page live in `oce-api`, and the per-PR gate
+does not run `oce-api`'s tests. They execute on the release gate. See
+[`ci-and-the-gate.md`](ci-and-the-gate.md) for what a green check actually covers.

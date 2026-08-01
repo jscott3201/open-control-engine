@@ -1,0 +1,22 @@
+{
+  "class_path": "CDL.Reals.Derivative",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 5,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "k", "T", "u", "y"],
+  "inputs": [
+    { "name": "k", "value_kind": "Real", "values": [2.0, 2.0, 2.0, 2.0, 2.0] },
+    { "name": "T", "value_kind": "Real", "values": [1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "u", "value_kind": "Real", "values": [1.0, 2.0, 2.0, 0.5, 0.5] }
+  ],
+  "input": "constant k=2, T=1 wired as inputs; y_start=0.25; dt=0.5 grid; initial x = u - T*y_start/k = 0.875, then the implicit filter tracks the step down to u=0.5",
+  "reference_rule": "Emit y=(k/T_nonZero)*(u-x) from prior x (first tick: x = u - T*y_start/k, raw T); then x advances by the implicit filter x'=(u-x)/T_nonZero; T_nonZero=max(T,100*eps); Buildings Reals/Derivative.mo (k, T are RealInputs)",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

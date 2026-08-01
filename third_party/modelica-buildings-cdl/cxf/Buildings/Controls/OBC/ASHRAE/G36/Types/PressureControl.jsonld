@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration defining types of building pressure control system",
+      "S231:label": "PressureControl",
+      "S231:value": "PressureControl"
+    },
+    {
+      "@id": "ex:PressureControl.BarometricRelief",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "S231:description": "Nonactuated barometric relief",
+      "S231:label": "BarometricRelief",
+      "S231:value": "BarometricRelief"
+    },
+    {
+      "@id": "ex:PressureControl.ReliefDamper",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "S231:description": "Actuated relief damper, without fan",
+      "S231:label": "ReliefDamper",
+      "S231:value": "ReliefDamper"
+    },
+    {
+      "@id": "ex:PressureControl.ReliefFan",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "S231:description": "Actuated relief damper, with relief fan(s)",
+      "S231:label": "ReliefFan",
+      "S231:value": "ReliefFan"
+    },
+    {
+      "@id": "ex:PressureControl.ReturnFanDp",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "S231:description": "Return fan, with direct building pressure control",
+      "S231:label": "ReturnFanDp",
+      "S231:value": "ReturnFanDp"
+    },
+    {
+      "@id": "ex:PressureControl.ReturnFanMeasuredAir",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+      "S231:description": "Return fan, tracking measured supply and return airflow",
+      "S231:label": "ReturnFanMeasuredAir",
+      "S231:value": "ReturnFanMeasuredAir"
+    }
+  ]
+}

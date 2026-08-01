@@ -7,6 +7,60 @@ use oce_model::{ParamTable, SimpleController, Value, ZeroTime};
 use crate::source_pulse::SOURCE_PULSE_PARAM_RULES;
 use crate::{ParamRule, RegistryEntry};
 
+macro_rules! param_default_real {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Real($value)),
+        }
+    };
+}
+
+macro_rules! param_default_integer {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Integer($value)),
+        }
+    };
+}
+
+macro_rules! param_default_boolean {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::Boolean($value)),
+        }
+    };
+}
+
+macro_rules! param_default_enum {
+    ($name:literal, $value:expr) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Literal(crate::DefaultLiteral::EnumMember($value)),
+        }
+    };
+}
+
+macro_rules! param_default_derived {
+    ($name:literal, $formula:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Derived { formula: $formula },
+        }
+    };
+}
+
+macro_rules! param_default_required {
+    ($name:literal) => {
+        crate::ParamDefault {
+            name: $name,
+            default: crate::DefaultSource::Required,
+        }
+    };
+}
+
 mod conversions;
 mod discrete;
 mod integers;
@@ -14,9 +68,12 @@ mod logical;
 mod logical_proof;
 mod logical_timing;
 mod logical_variable_pulse;
+mod lowering;
+mod param_defaults;
 mod pid;
 mod psychrometrics;
 mod reals;
+mod reals_defaults;
 mod reals_filters;
 mod reals_integrator;
 mod reals_ramp;
@@ -27,6 +84,10 @@ mod utilities;
 mod catalog_guard_support;
 #[cfg(test)]
 mod catalog_tests;
+#[cfg(test)]
+pub(crate) mod manifest;
+#[cfg(test)]
+mod manifest_tests;
 
 /// Look up an elementary-block constructor by canonical class path. Unknown paths return `None`
 /// (an unresolved external / extension block — never a panic; R-IMPL-2).
@@ -38,10 +99,22 @@ pub fn lookup(class_path: &str) -> Option<&'static RegistryEntry> {
         .find(|e| e.class_path == class_path)
 }
 
+/// Every registered entry in catalog order, used to build the public [`crate::catalog()`] metadata
+/// and by in-crate closure audits. It remains `pub(crate)` so constructors and raw function
+/// pointers stay behind the stable metadata surface rather than becoming public API.
+pub(crate) fn all_entries() -> impl Iterator<Item = &'static RegistryEntry> {
+    CATALOG.iter().flat_map(|entries| entries.iter())
+}
+
+pub(crate) use param_defaults::param_defaults;
+
 pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
     match class_path {
         "CDL.Logical.Sources.SampleTrigger" => logical::SAMPLE_TRIGGER_PARAM_RULES,
         "CDL.Logical.Sources.TimeTable" => logical::TIME_TABLE_PARAM_RULES,
+        "CDL.Logical.Sources.Constant" => logical::LOGICAL_CONSTANT_PARAM_RULES,
+        "CDL.Logical.TrueDelay" => logical_timing::TRUE_DELAY_PARAM_RULES,
+        "CDL.Logical.TrueFalseHold" => logical_timing::TRUE_FALSE_HOLD_PARAM_RULES,
         "CDL.Logical.MultiAnd" | "CDL.Logical.MultiOr" => logical::MULTI_LOGICAL_PARAM_RULES,
         "CDL.Logical.Sources.Pulse" | "CDL.Reals.Sources.Pulse" | "CDL.Integers.Sources.Pulse" => {
             SOURCE_PULSE_PARAM_RULES
@@ -51,7 +124,14 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Integers.MultiSum" => integers::MULTI_SUM_PARAM_RULES,
         "CDL.Integers.Sources.TimeTable" => integers::TIME_TABLE_PARAM_RULES,
         "CDL.Integers.Stage" => integers::STAGE_PARAM_RULES,
+        "CDL.Integers.Sources.Constant" => integers::INTEGER_CONSTANT_PARAM_RULES,
+        "CDL.Integers.AddParameter" => integers::INTEGER_ADD_PARAMETER_PARAM_RULES,
         "CDL.Reals.Limiter" => reals::LIMITER_PARAM_RULES,
+        "CDL.Reals.Round" => reals::ROUND_PARAM_RULES,
+        "CDL.Reals.AddParameter" => reals::ADD_PARAMETER_PARAM_RULES,
+        "CDL.Reals.MultiplyByParameter" => reals::MULTIPLY_BY_PARAMETER_PARAM_RULES,
+        "CDL.Reals.Sources.Constant" => reals::REAL_CONSTANT_PARAM_RULES,
+        "CDL.Reals.Hysteresis" => reals::HYSTERESIS_PARAM_RULES,
         "CDL.Reals.MultiMax" | "CDL.Reals.MultiMin" => reals::MULTI_REAL_PARAM_RULES,
         "CDL.Reals.MultiSum" => reals::MULTI_SUM_PARAM_RULES,
         "CDL.Reals.MatrixGain" => reals::MATRIX_GAIN_PARAM_RULES,
@@ -62,7 +142,6 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Reals.Sources.Sin" => reals::SOURCE_SIN_PARAM_RULES,
         "CDL.Reals.Sources.CalendarTime" => reals::CALENDAR_TIME_PARAM_RULES,
         "CDL.Reals.Sources.TimeTable" => reals::REAL_TIMETABLE_PARAM_RULES,
-        "CDL.Reals.Derivative" => reals_filters::DERIVATIVE_PARAM_RULES,
         "CDL.Reals.LimitSlewRate" => reals_filters::LIMIT_SLEW_RATE_PARAM_RULES,
         "CDL.Reals.MovingAverage" => reals_filters::MOVING_AVERAGE_PARAM_RULES,
         "CDL.Reals.Ramp" => reals_ramp::RAMP_PARAM_RULES,
@@ -86,6 +165,7 @@ pub(crate) fn param_rules(class_path: &str) -> &'static [ParamRule] {
         "CDL.Psychrometrics.SpecificEnthalpy_TDryBulPhi" => {
             psychrometrics::SPECIFIC_ENTHALPY_PARAM_RULES
         }
+        "CDL.Utilities.Assert" => utilities::ASSERT_PARAM_RULES,
         "CDL.Utilities.SunRiseSet" => utilities::SUN_RISE_SET_RULES,
         "CDL.Discrete.FirstOrderHold"
         | "CDL.Discrete.Sampler"
@@ -107,6 +187,7 @@ static CATALOG: &[&[RegistryEntry]] = &[
     logical_proof::ENTRIES,
     logical_variable_pulse::ENTRIES,
     logical_timing::ENTRIES,
+    lowering::ENTRIES,
     conversions::ENTRIES,
     integers::ENTRIES,
     routing::ENTRIES,

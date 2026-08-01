@@ -1,0 +1,655 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.Dampers",
+      "S231:label": "cooling_only_dampers",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VMin_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VCooMax_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.damCon" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.kDam" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.TiDam" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.TdDam" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.dTHys" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.iniDam" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.con" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.con1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.gre" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or3" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add3" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or1" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VActMin_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.TSup" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.TZon" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.uCoo" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VActCooMax_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.uZonSta" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.oveFloSet" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.u1Fan" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.oveDamPos" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VSet_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.yDam" }
+      ]
+    },
+
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VMin_flow", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VCooMax_flow", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:value": { "@value": "0.09", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.damCon", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController" }, "S231:value": "Buildings.Controls.OBC.CDL.Types.SimpleController.PI" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.kDam", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.TiDam", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "s", "S231:quantity": "Time", "S231:value": { "@value": "300", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.TdDam", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "s", "S231:quantity": "Time", "S231:value": { "@value": "0.1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.dTHys", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "TemperatureDifference", "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.iniDam", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.VActMin_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u3" }
+      ]
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.TSup", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "ThermodynamicTemperature", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u1" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.TZon", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "K", "S231:quantity": "ThermodynamicTemperature", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u2" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.uCoo", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.u" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VActCooMax_flow", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f2" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.uZonSta", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.oveFloSet",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u1" }
+      ]
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.u1Fan", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.trigger" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flow", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate", "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.oveDamPos",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u1" }
+      ]
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VSet_flow", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "m3/s", "S231:quantity": "VolumeFlowRate" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.yDam", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:unit": "1" },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.con.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.con.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.con.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.con1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.con1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.con1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.con1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.con1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.lin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Line",
+      "S231:label": "lin",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.u" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.x2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.f2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.lin.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u3" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.gre",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "gre",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dTHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.gre.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.swi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u1" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "actFlo",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u3" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conPID",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.PIDWithReset",
+      "S231:label": "conPID",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.controllerType" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.k" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.Ti" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.Td" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.y_reset" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_s" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_m" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.trigger" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.controllerType", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.CDL.Types.SimpleController" }, "S231:value": "damCon" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "kDam" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.Ti", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "TiDam" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.Td", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "TdDam" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.y_reset", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "iniDam" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_s", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_m", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.trigger", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u3" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.ZoneStates.cooling" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "cooSta",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooSta.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.actFlo.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "nomFlow",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "VCooMax_flow" },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.nomFlow.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u2" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:label": "VDisSet_flowNor",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_s" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Divide",
+      "S231:label": "VDis_flowNor",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.VDis_flowNor.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.conPID.u_m" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 1 },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt1.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "forZerFlo",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forZerFlo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "forCooMax",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt2.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.forCooMax.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "forMinFlo",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt3",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt3.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.forMinFlo.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "zerFlo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.realTrue" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.zerFlo.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "cooMax",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.realTrue" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "VCooMax_flow" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cooMax.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "minFlo",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.realTrue" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "VMin_flow" },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.minFlo.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.add2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.add1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add1.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.swi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VSet_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.VDisSet_flowNor.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.or3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or3.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt4",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 1 },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt4.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu4",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "conInt5",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.conInt5.y", "@type": "S231:IntegerOutput", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.intEqu4.u2" } },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "cloDam",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.realTrue" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.cloDam.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "opeDam",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.realTrue" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.realFalse" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "1", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.realFalse", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": { "@value": "0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.opeDam.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.add3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.add3.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u1" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or2.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u2" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.swi2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:label": "swi2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.u3", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.swi2.y", "@type": "S231:RealOutput", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.yDam" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_dampers.or1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_dampers.or1.y", "@type": "S231:BooleanOutput", "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_dampers.swi1.u2" } }
+  ]
+}

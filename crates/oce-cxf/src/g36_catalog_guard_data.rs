@@ -16,6 +16,14 @@ pub(super) const VAV_SINGLE_ZONE: &str =
     include_str!("../tests/fixtures/g36/vav_single_zone.jsonld");
 pub(super) const G36_TRIM_AND_RESPOND: &str =
     include_str!("../tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
+pub(super) const G36_GENERIC_TIME_SUPPRESSION: &str =
+    include_str!("../tests/fixtures/g36/generic_time_suppression.jsonld");
+pub(super) const G36_THERMAL_ZONES_ZONE_STATES: &str =
+    include_str!("../tests/fixtures/g36/thermal_zones_zone_states.jsonld");
+pub(super) const G36_THERMAL_ZONES_CONTROL_LOOPS: &str =
+    include_str!("../tests/fixtures/g36/thermal_zones_control_loops.jsonld");
+pub(super) const G36_VENTILATION_ZONES_ASHRAE62_1_SETPOINTS: &str =
+    include_str!("../tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld");
 pub(super) const G36_SUPPLY_TEMPERATURE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_supply_temperature.jsonld");
 pub(super) const G36_SUPPLY_FAN: &str =
@@ -32,6 +40,18 @@ pub(super) const G36_RELIEF_FAN_GROUP: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld");
 pub(super) const G36_FREEZE_PROTECTION: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_freeze_protection.jsonld");
+pub(super) const G36_COOLING_ONLY_CONTROLLER: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_controller.jsonld");
+pub(super) const G36_COOLING_ONLY_ACTIVE_AIR_FLOW: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_active_air_flow.jsonld");
+pub(super) const G36_COOLING_ONLY_ALARMS: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_alarms.jsonld");
+pub(super) const G36_COOLING_ONLY_DAMPERS: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_dampers.jsonld");
+pub(super) const G36_COOLING_ONLY_SYSTEM_REQUESTS: &str =
+    include_str!("../tests/fixtures/g36/cooling_only_system_requests.jsonld");
+pub(super) const G36_REHEAT_OVERRIDES: &str =
+    include_str!("../tests/fixtures/g36/reheat_overrides.jsonld");
 pub(super) const G36_RETURN_FAN_AIRFLOW: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld");
 pub(super) const G36_RETURN_FAN_DIRECT_PRESSURE: &str =
@@ -91,17 +111,13 @@ pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_AHU: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld");
 pub(super) const G36_OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str =
     include_str!("../tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld");
-pub(super) const PROFILE_SMALL_COMPOSITE: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld"
-));
-pub(super) const PROFILE_PARAMETER_GATED: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld"
-));
+pub(super) const PROFILE_SMALL_COMPOSITE: &str =
+    include_str!("../tests/fixtures/profile/small-composite.jsonld");
+pub(super) const PROFILE_PARAMETER_GATED: &str =
+    include_str!("../tests/fixtures/profile/parameter-gated-connector.jsonld");
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "ea910623dec63502";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "315ad188a5abe2b5";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",
@@ -117,6 +133,11 @@ pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/package.order",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/package.order",
     "Buildings/Controls/OBC/ASHRAE/G36/Types/DemandLimitLevels/package.order",
@@ -150,8 +171,18 @@ pub(super) const EXPECTED_SEQUENCE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Alarms.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/SystemRequests.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
     "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/Generic/TimeSuppression.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ControlLoops.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/ThermalZones/ZoneStates.mo",
+    "Buildings/Controls/OBC/ASHRAE/G36/VentilationZones/ASHRAE62_1/Setpoints.mo",
 ];
 pub(super) const EXPECTED_TYPE_SOURCE_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/Types/ASHRAEClimateZone.mo",
@@ -240,6 +271,56 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
         name: "multizone_vav_freeze_protection",
         path: "crates/oce-cxf/tests/fixtures/g36/multizone_vav_freeze_protection.jsonld",
         text: G36_FREEZE_PROTECTION,
+    },
+    FixtureSource {
+        name: "cooling_only_controller",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld",
+        text: G36_COOLING_ONLY_CONTROLLER,
+    },
+    FixtureSource {
+        name: "cooling_only_active_air_flow",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_active_air_flow.jsonld",
+        text: G36_COOLING_ONLY_ACTIVE_AIR_FLOW,
+    },
+    FixtureSource {
+        name: "cooling_only_alarms",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_alarms.jsonld",
+        text: G36_COOLING_ONLY_ALARMS,
+    },
+    FixtureSource {
+        name: "generic_time_suppression",
+        path: "crates/oce-cxf/tests/fixtures/g36/generic_time_suppression.jsonld",
+        text: G36_GENERIC_TIME_SUPPRESSION,
+    },
+    FixtureSource {
+        name: "thermal_zones_zone_states",
+        path: "crates/oce-cxf/tests/fixtures/g36/thermal_zones_zone_states.jsonld",
+        text: G36_THERMAL_ZONES_ZONE_STATES,
+    },
+    FixtureSource {
+        name: "thermal_zones_control_loops",
+        path: "crates/oce-cxf/tests/fixtures/g36/thermal_zones_control_loops.jsonld",
+        text: G36_THERMAL_ZONES_CONTROL_LOOPS,
+    },
+    FixtureSource {
+        name: "ventilation_zones_ashrae62_1_setpoints",
+        path: "crates/oce-cxf/tests/fixtures/g36/ventilation_zones_ashrae62_1_setpoints.jsonld",
+        text: G36_VENTILATION_ZONES_ASHRAE62_1_SETPOINTS,
+    },
+    FixtureSource {
+        name: "cooling_only_dampers",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_dampers.jsonld",
+        text: G36_COOLING_ONLY_DAMPERS,
+    },
+    FixtureSource {
+        name: "cooling_only_system_requests",
+        path: "crates/oce-cxf/tests/fixtures/g36/cooling_only_system_requests.jsonld",
+        text: G36_COOLING_ONLY_SYSTEM_REQUESTS,
+    },
+    FixtureSource {
+        name: "reheat_overrides",
+        path: "crates/oce-cxf/tests/fixtures/g36/reheat_overrides.jsonld",
+        text: G36_REHEAT_OVERRIDES,
     },
     FixtureSource {
         name: "multizone_vav_return_fan_airflow_tracking",
@@ -366,12 +447,12 @@ pub(super) const COMPOSITE_IMPORT_FIXTURES: &[FixtureSource] = &[
 pub(super) const PROFILE_FIXTURES: &[FixtureSource] = &[
     FixtureSource {
         name: "small_composite",
-        path: "_spec/oce_g36_gap_specs_v1/reference/fixtures/small-composite.jsonld",
+        path: "crates/oce-cxf/tests/fixtures/profile/small-composite.jsonld",
         text: PROFILE_SMALL_COMPOSITE,
     },
     FixtureSource {
         name: "parameter_gated_connector",
-        path: "_spec/oce_g36_gap_specs_v1/reference/fixtures/parameter-gated-connector.jsonld",
+        path: "crates/oce-cxf/tests/fixtures/profile/parameter-gated-connector.jsonld",
         text: PROFILE_PARAMETER_GATED,
     },
 ];

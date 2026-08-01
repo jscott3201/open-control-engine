@@ -5,7 +5,7 @@
 //!
 //! # Posture (binding, FRAME §6)
 //!
-//! Library-only, synchronous, in-process, `#![forbid(unsafe_code)]`, edition 2024, rust 1.95.0,
+//! Library-only, synchronous, in-process, `#![forbid(unsafe_code)]`, edition 2024, rust 1.97.1,
 //! **no async runtime, no server**. The host owns transport, TLS, authN/Z, multi-tenancy,
 //! off-host durability, and metrics export.
 //!
@@ -22,17 +22,18 @@
 //! stays `oce_api::Foo` (R-PUB-1/4; the `cargo public-api` baseline): `engine` (the
 //! [`Engine`] handle + load/tick core), `error` ([`OcError`]), `loading` ([`LoadReport`],
 //! [`TemplateRef`], deferred loaders), `params` (the live parameter table), `sim` (execution modes
-//! + [`Outputs`]), `io` (the typed IO inventory).
+//! + [`Outputs`]), `io` (the typed IO inventory), `watch` (key-selected output reads).
 //!
 //! The full load → tick → simulate loop works; [`Engine::load_cxf`] runs the end-to-end CXF ingest
 //! pipeline (resolve → flatten → validate → BUILD). The frozen public surface (`08` §11.1 R-PUB-5/6)
-//! includes `simulate` / `step_realtime`, `set_input` / `get_output`, the live parameter table
+//! includes `simulate` / `step_realtime`, `set_input` / `get_output` / `watch`, the live parameter table
 //! (`get_param` / `set_param` / `halt` / `resume` / `mode`), and the typed IO inventory (`io` /
 //! `io_summary` / `point_list`) with final signatures and non-panicking bodies. Semantic/modelica
 //! loaders and device-filtered point lists remain deferred behind typed errors.
 
 mod engine;
 mod error;
+mod export;
 /// Compile-time PyO3 binding-shape guards (R-API-PY-1..8). A non-test module so a frozen surface
 /// drift fails the normal `cargo build`, not only the release-gate test run.
 mod guards;
@@ -41,9 +42,13 @@ mod loading;
 mod params;
 mod projection;
 mod sim;
+mod stable_hash;
+mod topology;
+mod watch;
 
 pub use engine::Engine;
 pub use error::{OcError, OcResult};
+pub use export::{ContentIdError, ExportReport};
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,
     TrendCfg, TrendInterval,
@@ -54,6 +59,7 @@ pub use sim::{
     AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
     StepReport,
 };
+pub use topology::{PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
 /// binder owns it as `oce_api::Diagnostic`.

@@ -1,5 +1,7 @@
 //! Source-verified G36 ReturnFanAirflowTracking composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -124,8 +126,8 @@ fn source_verified_g36_multizone_vav_return_fan_airflow_tracking_imports_default
             .as_array()
             .expect("children")
             .len(),
-        7,
-        "ReturnFanAirflowTracking fixture should preserve five source children plus two explicit Boolean alias bridge blocks"
+        5,
+        "ReturnFanAirflowTracking fixture should preserve its five active source children"
     );
     assert_eq!(top["S231:hasInput"].as_array().expect("inputs").len(), 3);
     assert_eq!(top["S231:hasOutput"].as_array().expect("outputs").len(), 2);
@@ -133,23 +135,15 @@ fn source_verified_g36_multizone_vav_return_fan_airflow_tracking_imports_default
     let graph = import_ok(G36_RETURN_FAN_AIRFLOW);
     assert_eq!(
         graph.blocks.len(),
-        7,
-        "return-fan airflow-tracking sequence should import all active children"
+        6,
+        "imported blocks are five active children plus one pass-through lowering block"
     );
     let instances = graph
         .blocks
         .iter()
-        .map(|block| block.instance_iri.as_deref().expect("source path"))
+        .filter_map(|block| block.instance_iri.as_deref())
         .collect::<Vec<_>>();
-    for suffix in [
-        ".conP",
-        ".swi",
-        ".conErr",
-        ".zerSpe",
-        ".difFlo",
-        ".y1RetFanPas",
-        ".tru",
-    ] {
+    for suffix in [".conP", ".swi", ".conErr", ".zerSpe", ".difFlo"] {
         assert!(
             instances.iter().any(|iri| iri.ends_with(suffix)),
             "missing source component {suffix}"
@@ -183,9 +177,14 @@ fn source_verified_g36_multizone_vav_return_fan_airflow_tracking_imports_default
         }),
         "ReturnFanAirflowTracking is intentionally not the P-only relief-fan cone"
     );
-    assert!(
-        block_param(&graph, ".tru", "k").bit_eq(&Value::Boolean(true)),
-        "Boolean alias bridge must be a pure identity for y1RetFan = u1SupFan"
+    assert_eq!(
+        graph
+            .blocks
+            .last()
+            .expect("lowering block")
+            .class_iri
+            .as_ref(),
+        "urn:oce:lowering#PassThrough.Boolean"
     );
 }
 
@@ -193,7 +192,7 @@ fn source_verified_g36_multizone_vav_return_fan_airflow_tracking_imports_default
 fn golden_g36_multizone_vav_return_fan_airflow_tracking_modelgraph() {
     let actual = render(&import_ok(G36_RETURN_FAN_AIRFLOW));
     let path = golden_path(G36_RETURN_FAN_AIRFLOW_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

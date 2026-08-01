@@ -22,9 +22,7 @@
         { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.swi" },
         { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.conErr" },
         { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.zerSpe" },
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.difFlo" },
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas" },
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru" }
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.difFlo" }
       ],
       "S231:hasInput": [
         { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirSup_flow" },
@@ -114,7 +112,7 @@
       "S231:isOfDataType": { "@id": "S231:Boolean" },
       "S231:isConnectedTo": [
         { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.swi.u2" },
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u1" }
+        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan" }
       ]
     },
     {
@@ -302,53 +300,6 @@
       "@type": "S231:RealOutput",
       "S231:isOfDataType": { "@id": "S231:Real" },
       "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.conErr.u2" }
-    },
-
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas",
-      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
-      "S231:label": "y1RetFanPas",
-      "S231:hasInput": [
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u1" },
-        { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u2" }
-      ],
-      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.y" }
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u1",
-      "@type": "S231:BooleanInput",
-      "S231:isOfDataType": { "@id": "S231:Boolean" }
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u2",
-      "@type": "S231:BooleanInput",
-      "S231:isOfDataType": { "@id": "S231:Boolean" }
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.y",
-      "@type": "S231:BooleanOutput",
-      "S231:isOfDataType": { "@id": "S231:Boolean" },
-      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan" }
-    },
-
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru",
-      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
-      "S231:label": "tru",
-      "S231:hasParameter": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru.k" },
-      "S231:hasOutput": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru.y" }
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru.k",
-      "@type": "S231:Parameter",
-      "S231:isOfDataType": { "@id": "S231:Boolean" },
-      "S231:value": true
-    },
-    {
-      "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.tru.y",
-      "@type": "S231:BooleanOutput",
-      "S231:isOfDataType": { "@id": "S231:Boolean" },
-      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFanPas.u2" }
     }
   ]
 }

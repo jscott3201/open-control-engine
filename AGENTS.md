@@ -2,8 +2,9 @@
 
 **open-control** (product name **Open Control Engine**; repo
 `github.com/jscott3201/open-control-engine`) is a high-performance, **embeddable Rust control engine**
-for smart-building equipment. Published crates use the **`oce-*`** prefix; the embeddable host facade
-(`oce-api`) is published under the umbrella name `open-control-engine`. Its north-star specification is
+for smart-building equipment. Crates use the **`oce-*`** prefix; the embeddable host facade is the
+package **`oce-api`**. **Nothing is published to crates.io yet** — `open-control-engine` is a
+reserved umbrella name for a future release, not a current alias. Its north-star specification is
 the **OBC / LBL Control Description Language (CDL)**:
 
 - https://obc.lbl.gov/specification/cdl.html
@@ -18,73 +19,70 @@ responsibility, authored app-side behind the storage port.
 
 ---
 
-## 🧠 Memory bootstrap → Aionforge Memory (the long-term substrate)
+## 🧭 Start here
 
-This file is only a **pointer**. The durable working substrate for this project is the
-**Aionforge Memory** MCP server (`aionforge-memory`). Treat it as the source of truth for
-decisions, rationale, open work, and handoffs — not these MD files.
+Read [`.agents/project-facts.md`](.agents/project-facts.md) before your first change. It
+covers the gate, what CI does and does not run, and the conventions this repo enforces
+mechanically.
 
-**On entering this repo, before substantial work:**
+If you are an agent working on this project, `.agents/` also holds local operating notes
+kept out of the published tree — the memory protocol and identity handling in
+`memory-bootstrap.md`, and delegation and review process in `lane-facts.md`. They are
+gitignored, so they exist only in a working checkout. If you cloned this repo and they are
+absent, you are a contributor and `project-facts.md` is what you need.
 
-1. **Read the project identity.** The project's **dedicated** Aionforge identity (`agent_id`
-   and `namespace`) lives in `claude-id.json` (git-ignored, machine-local). Load it from there —
-   never hardcode it — and pass it as `principal.agent_id` (and `viewer`) on every memory call.
-   ⛔ Do **not** use the shared steward identity from the environment for project memory; it is
-   **off-limits** for open-control.
-2. **Recall first.** `search` for relevant prior decisions/preferences/failures and `work_query`
-   (status `todo` / `in_progress`) for open work. Recall again when new files, errors, or
-   subsystem names appear.
-3. **Capture durable facts the moment they land** — decisions, corrections, validation results,
-   failed approaches, release/handoff state — via `capture` / `batch_capture`. Don't batch to the
-   end; a context compaction can drop them first.
-4. **Track work as it moves** — `work_create` for tasks/blockers/TODOs, `work_advance` as status
-   changes, `work_link` to tag. Work items are persistent and status-tracked; memory episodes
-   decay.
-5. **Never store secrets** (keys, tokens, credentials). User direction overrides memory.
-
-The `aionforge-memory` plugin skills (`memory-loop`, `memory-recall`, `memory-capture`,
-`work-tracking`, `memory-maintenance`) and commands (`/aionforge-memory:memory-session`,
-`/aionforge-memory:memory-handoff`) encode this cadence. A SessionStart hook re-seeds it after a
-fresh context, resume, or compaction.
-
-- **Private namespace** — the project's own `agent:` namespace (from `claude-id.json`) →
-  open-control project working memory.
-- **Shared namespace** — the Aionforge Memory dogfooding team → cross-project dogfooding feedback
-  **only**. Keep project internals out of it.
+That arrangement governs what is published **from here on**. Earlier revisions of this
+file, and a since-deleted `.claude/skills/codex-handoff/SKILL.md`, carried some of the same
+orchestration material and remain readable in this repository's public git history — as do
+four `_spec/oce_g36_gap_specs_v1/reference/` files that were force-added until 2026-07-28
+and are now local-only. Nothing there is a credential or an identity value, so it is
+accepted rather than remediated — deleting a file stops publishing it, it does not
+unpublish it.
 
 ---
 
 ## 📂 Repository layout
 
-| Path          | Purpose                                                                    |
-| ------------- | -------------------------------------------------------------------------- |
-| `_research/`  | Research findings (`cdl/`, `selene-db/`). Inputs to the spec.              |
-| `_spec/`      | Architecture & engine specification (the design of record before code).    |
-| `claude-id.json` | Machine-local Aionforge identity (git-ignored).                         |
+Everything below is local-only unless marked tracked. `.gitignore` excludes every
+top-level `_*/` directory, so a clone contains none of the working directories — if
+you cloned this repo, you will not find them, and that is expected.
+
+| Path | Tracked? | Purpose |
+| --- | --- | --- |
+| `crates/` | tracked | The engine. Published crates use the `oce-*` prefix. |
+| `third_party/` | tracked | Vendored third-party source, verbatim and uncompiled. Today: 176 Modelica Buildings `.mo` classes plus 44 modelica-json CXF translations, read as data by three input-hygiene audits. Sits outside every crate root, so `cargo package` never ships it. Its own license applies — see the directory README. |
+| `.agents/` | partly | `gate.sh`, `project-facts.md`, and `revendor-upstream.sh` are tracked; other files there are local operating notes. |
+| `_spec/` | local-only | Architecture and engine specification — the design of record before code. |
+| `_research/` | local-only | Research findings that feed the spec. |
+| `_codex-briefs/`, `_review/`, `_tracker/` | local-only | Working artifacts. |
+| `*-id.json` | never committed | Machine-local agent identities. |
 
 ---
 
 ## 🛠️ Working norms
 
-- **Ultracode / workflows:** orchestrate substantive research and design via the Workflow tool;
-  cap concurrency at **5–10 agents** at a time to avoid API rate-limiting (owner directive).
-- Spec before code: land architecture decisions in `_spec/` (and Aionforge Memory) before
-  scaffolding crates.
+- Spec before code: land architecture decisions in `_spec/` before scaffolding crates.
 - **Testing standard (safety-critical):** this engine controls real equipment — a wrong result
   is a physical hazard, so testing is a **first-class deliverable, not an afterthought**. Every
   PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
   bit-exactly), oracle cross-checks, and determinism goldens** per `TESTING.md`. Thin coverage
   is a **blocking review defect**. See `TESTING.md` for the full standard.
-- **Testing & the CI gate split:** **cargo-nextest is the test runner**, locally and in CI. Run
-  `cargo nextest run` for unit + integration tests and `cargo test --doc` for doctests (nextest
-  cannot run doctests). Config lives at `.config/nextest.toml` (`default` profile = fast local
-  fail-fast; `ci` profile = the release gate). CI is **dev-light / release-heavy**: per-PR gates
-  into `development` (`ci.yml`) run fmt/clippy/build/rustdoc/file-size/no-secret/default-no-db
-  (+ cargo-deny on manifest change) plus the targeted `determinism-matrix` nextest subset for
-  `oce-blocks`/`oce-expr` on x86_64 and arm64 in debug and release codegen; the **full test suite
-  runs only on `development` -> `main` release PRs** via `release-gate.yml` (which also re-runs the
-  light gates against the release tip and runs cargo-deny unconditionally). Tests are NOT run by the
-  git hooks — keep commits and pushes fast.
+- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate; `bash .agents/gate.sh full` adds
+  the workspace suite and doctests. That script is the single source of truth for gate commands —
+  do not restate them here or anywhere else, and change one only by changing `ci.yml` first. Nine
+  divergent copies of the command list existed before it was written, two of them materially
+  weaker than CI.
+- **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
+  **`oce-blocks` and `oce-expr` only** (the `determinism-matrix` job, x86_64 and arm64, debug and
+  release codegen). Every other crate's tests run only on `development` -> `main` release PRs via
+  `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
+  run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
+  (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = the release gate); it cannot
+  run doctests, which is why they are a separate step. The git hooks run no tests — keep commits
+  and pushes fast.
+- **Project facts:** what this repo expects of a change, beyond what the code says, lives in
+  `.agents/project-facts.md` — the gate, the CI split, the clippy feature rule, the gitignored
+  working directories, and disk hygiene. Read it before your first PR.
 
 ### Naming, modularization & docs
 

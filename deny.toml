@@ -51,7 +51,13 @@ multiple-versions = "warn"
 # The internal `oce-*` crates carry an explicit `version` alongside their `path` (see the root
 # Cargo.toml), so they are not wildcard deps; this keeps `wildcards = "deny"` meaningful for any
 # real crates.io wildcard requirement.
+#
+# ONE exception: `oce-bless` is a `publish = false`, dev-dependency-only verification crate whose
+# workspace entry deliberately carries NO version, because a versioned path dep to an unpublished
+# crate breaks `cargo publish --workspace --dry-run` (release.yml:71). `allow-wildcard-paths`
+# permits wildcards for PATH deps only; a real crates.io wildcard requirement is still denied.
 wildcards = "deny"
+allow-wildcard-paths = true
 highlight = "all"
 # DB-free/async-runtime-free hardening (WI-9).
 #

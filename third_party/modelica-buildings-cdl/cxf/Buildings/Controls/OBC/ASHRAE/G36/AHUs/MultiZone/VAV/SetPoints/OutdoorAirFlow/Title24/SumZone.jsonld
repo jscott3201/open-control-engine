@@ -1,0 +1,530 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-120,-120},{120,120}},preserveAspectRatio=false)",
+      "S231:documentation": "info=<html>\n<p>\nThis sequence sums up zone level minimum outdoor airflow setpoints when complying\nwith California Title 24 ventilation requirements. It is implemented according\nto Section 5.16.3.2 of ASHRAE Guideline G36, May 2020.\n</p>\n<p>\nIt calculates following values:\n</p>\n<ol>\n<li>\nSum of the zone absolute minimum outdoor airflow setpoint <code>VZonAbsMin_flow</code>\nfor all zones in all zone groups that are in occupied mode.\n</li>\n<li>\nSum of the zone design minimum outdoor airflow setpoint <code>VZonDesMin_flow</code>\nfor all zones in all zone groups that are in occupied mode.\n</li>\n<li>\nMaximum zone level CO2 control loop signal <code>yMaxCO2</code>.\n</li>\n</ol>\n<p>\nSee the zone absolute and design minimum outdoor airflow setpoint\n<code>VZonAbsMin_flow</code> and <code>VZonDesMin_flow</code> from\n<a href=\\modelica://Buildings.Controls.OBC.ASHRAE.G36.VentilationZones.Title24.Setpoints\\>\nBuildings.Controls.OBC.ASHRAE.G36.VentilationZones.Title24.Setpoints</a> for the detailed\ndescription.\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nMarch 12, 2022, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.uCO2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.uOpeMod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VZonAbsMin_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VZonDesMin_flow"
+        }
+      ],
+      "S231:hasOutput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonAbsMin_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonDesMin_flow"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.yMaxCO2"
+        }
+      ],
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.have_CO2Sen"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.nGro"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.nZon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.zonGroMat"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}}),graphics={Rectangle(extent={{-100,100},{100,-100}},lineColor={0,0,0},fillColor={255,255,255},fillPattern=FillPattern.Solid),Text(textString=\"%name\",textColor={0,0,255},extent={{-100,140},{100,100}}),Text(textString=\"VZonAbsMin_flow\",textColor={0,0,0},extent={{-98,38},{-26,22}}),Text(textString=\"VZonDesMin_flow\",textColor={0,0,0},extent={{-96,-22},{-26,-38}}),Text(textString=\"uOpeMod\",textColor={255,127,0},extent={{-96,86},{-52,72}}),Text(textString=\"VSumZonAbsMin_flow\",textColor={0,0,0},extent={{22,70},{94,54}}),Text(textString=\"VSumZonDesMin_flow\",textColor={0,0,0},extent={{26,10},{98,-6}}),Text(textString=\"uCO2\",textColor={0,0,0},extent={{-96,-72},{-66,-86}},visible=have_CO2Sen),Text(textString=\"yMaxCO2\",textColor={0,0,0},extent={{66,-40},{96,-54}},visible=have_CO2Sen)}",
+      "S231:label": "SumZone"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert boolean to real",
+      "S231:graphics": "Placement(transformation(extent={{0,60},{20,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea.y"
+        }
+      ],
+      "S231:isArray": true,
+      "S231:label": "booToRea[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MatrixGain",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Vector of total zone flow of each group",
+      "S231:graphics": "Placement(transformation(extent={{-100,10},{-80,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.K"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.y"
+        }
+      ],
+      "S231:label": "groFlo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.K",
+      "S231:isFinal": true,
+      "S231:value": "zonGroMat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MatrixGain",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Vector of total zone flow of each group",
+      "S231:graphics": "Placement(transformation(extent={{-100,-60},{-80,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.K"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.y"
+        }
+      ],
+      "S231:label": "groFlo1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.K",
+      "S231:isFinal": true,
+      "S231:value": "zonGroMat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.have_CO2Sen",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "True: some zones have CO2 sensor",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_CO2Sen"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if operation mode is occupied",
+      "S231:graphics": "Placement(transformation(extent={{-40,60},{-20,80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.y"
+        }
+      ],
+      "S231:isArray": true,
+      "S231:label": "intEqu1[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.booToRea.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Find the total flow of zone group",
+      "S231:graphics": "Placement(transformation(extent={{40,30},{60,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.y"
+        }
+      ],
+      "S231:isArray": true,
+      "S231:label": "mul[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Find the total flow of zone group",
+      "S231:graphics": "Placement(transformation(extent={{40,-40},{60,-20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.y"
+        }
+      ],
+      "S231:isArray": true,
+      "S231:label": "mul1[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mul1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiMax",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Maximum CO2 loop signal",
+      "S231:graphics": "Placement(transformation(extent={{40,-110},{60,-90}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.nin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "mulMax"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.nin",
+      "S231:isFinal": true,
+      "S231:value": "nZon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.yMaxCO2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sum of the zone absolute minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{80,30},{100,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.nin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.y"
+        }
+      ],
+      "S231:label": "mulSum"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.nin",
+      "S231:isFinal": true,
+      "S231:value": "nGro"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonAbsMin_flow"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiSum",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sum of the zone design minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{80,-40},{100,-20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.nin"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.y"
+        }
+      ],
+      "S231:label": "mulSum1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.nin",
+      "S231:isFinal": true,
+      "S231:value": "nGro"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulSum1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonDesMin_flow"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.nGro",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Total number of groups",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:label": "nGro"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.nZon",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Total number of serving zones",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:label": "nZon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Occupied mode index",
+      "S231:graphics": "Placement(transformation(extent={{-100,50},{-80,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod.y"
+        }
+      ],
+      "S231:isArray": true,
+      "S231:label": "occMod[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod.k",
+      "S231:isFinal": true,
+      "S231:value": "fill(Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied,nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.occMod.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.uCO2",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Zone CO2 control loop",
+      "S231:graphics": "Placement(transformation(extent={{-160,-120},{-120,-80}})),iconTransformation(extent={{-140,-100},{-100,-60}})))",
+      "S231:isArray": true,
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.mulMax.u"
+      },
+      "S231:label": "uCO2[nZon]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nZon)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Groups operation mode",
+      "S231:graphics": "Placement(transformation(extent={{-160,80},{-120,120}})),iconTransformation(extent={{-140,60},{-100,100}})))",
+      "S231:isArray": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.intEqu1.u1"
+      },
+      "S231:label": "uOpeMod[nGro]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nGro)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonAbsMin_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sum of the zone absolute minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{120,20},{160,60}})),iconTransformation(extent={{100,40},{140,80}})))",
+      "S231:label": "VSumZonAbsMin_flow",
+      "S231:min": 0,
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VSumZonDesMin_flow",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sum of the zone design minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{120,-50},{160,-10}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "VSumZonDesMin_flow",
+      "S231:min": 0,
+      "qudt:hasQuantityKind": {
+        "@id": "q:VolumeFlowRate"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:M3-PER-SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VZonAbsMin_flow",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone absolute minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-160,0},{-120,40}})),iconTransformation(extent={{-140,10},{-100,50}})))",
+      "S231:isArray": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo.u"
+      },
+      "S231:label": "VZonAbsMin_flow[nZon]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nZon)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.VZonDesMin_flow",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone design minimum outdoor airflow setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-160,-70},{-120,-30}})),iconTransformation(extent={{-140,-50},{-100,-10}})))",
+      "S231:isArray": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.groFlo1.u"
+      },
+      "S231:label": "VZonDesMin_flow[nZon]",
+      "S231:numberDimensions": 1,
+      "S231:sizeOfDimensions": "(nZon)"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.yMaxCO2",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_CO2Sen",
+      "S231:description": "Maximum CO2 control loop signal",
+      "S231:graphics": "Placement(transformation(extent={{120,-120},{160,-80}})),iconTransformation(extent={{100,-70},{140,-30}})))",
+      "S231:isConditionalComponent": true,
+      "S231:label": "yMaxCO2",
+      "qudt:hasUnit": {
+        "@id": "unit:UNITLESS"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.AHUs.MultiZone.VAV.SetPoints.OutdoorAirFlow.Title24.SumZone.zonGroMat",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Zone matrix with zone group as row index and zone as column index. It flags which zone is grouped in which zone group",
+      "S231:isArray": true,
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:label": "zonGroMat[nGro,nZon]",
+      "S231:numberDimensions": 2,
+      "S231:sizeOfDimensions": "(nGro,nZon)"
+    }
+  ]
+}

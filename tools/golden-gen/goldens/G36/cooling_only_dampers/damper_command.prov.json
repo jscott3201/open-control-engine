@@ -1,0 +1,33 @@
+{
+  "class_path": "G36",
+  "scenario": "cooling_only_dampers",
+  "signal": "damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 34,
+  "n_reference_columns": 13,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "active_minimum_airflow", "supply_air_temperature", "zone_temperature", "cooling_loop", "active_cooling_maximum_airflow", "zone_state", "airflow_override_index", "supply_fan_status", "discharge_airflow", "damper_override_index", "airflow_setpoint", "damper_command"],
+  "inputs": [
+    { "name": "active_minimum_airflow", "value_kind": "Real", "values": [0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.012] },
+    { "name": "supply_air_temperature", "value_kind": "Real", "values": [290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 296.0, 294.9, 294.7, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 290.0, 296.0, 294.7] },
+    { "name": "zone_temperature", "value_kind": "Real", "values": [295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0, 295.0] },
+    { "name": "cooling_loop", "value_kind": "Real", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.75, 0.25, 0.6, 0.6, 0.6, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.4, 0.4, 0.4, 0.4, 0.0, 0.0, 0.5, 1.0, 1.0] },
+    { "name": "active_cooling_maximum_airflow", "value_kind": "Real", "values": [0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075, 0.075] },
+    { "name": "zone_state", "value_kind": "Integer", "values": [2.0, 2.0, 2.0, 2.0, 1.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0] },
+    { "name": "airflow_override_index", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 4.0, -1.0, 0.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0] },
+    { "name": "supply_fan_status", "value_kind": "Boolean", "values": [0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0] },
+    { "name": "discharge_airflow", "value_kind": "Real", "values": [0.012, 0.012, 0.012, 0.012, 0.012, 0.012, 0.03, 0.03, 0.03, 0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.01, 0.06, 0.0, 0.0, 0.0, 0.0, 0.09, 0.09, 0.09, 0.0, 0.0, 0.0, 0.0, 0.09, 0.09, 0.04, 0.02, 0.02] },
+    { "name": "damper_override_index", "value_kind": "Integer", "values": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0] }
+  ],
+  "input": "Dampers damper: local PI-with-reset recurrence, two fan rising edges, live fan-false state, flow/damper override interactions, saturation, and recovery",
+  "reference_rule": "Dampers.mo lines 258-267 and 303-332 plus PIDWithReset.mo: normalize by 0.09, emit limited PI, then update xI with reset or Ni=0.9 back-calculation; swi2 applies only damper overrides",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/Dampers.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

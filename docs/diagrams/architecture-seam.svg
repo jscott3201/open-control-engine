@@ -11,7 +11,7 @@
   <!-- Facade -->
   <rect x="80" y="88" width="800" height="56" rx="8" fill="#fef7e0" stroke="#ea8600" stroke-width="1.5"/>
   <text x="480" y="112" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">oce-api — the embeddable facade</text>
-  <text x="480" y="131" text-anchor="middle" font-size="12" fill="#5f6368" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Engine&lt;S: Store = MemStore&gt;&#8195;·&#8195;published as open-control-engine</text>
+  <text x="480" y="131" text-anchor="middle" font-size="12" fill="#5f6368" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Engine&lt;S: Store = MemStore&gt;&#8195;·&#8195;package oce-api</text>
 
   <!-- arrows from facade -->
   <path d="M300 144 L300 178" stroke="#9aa0a6" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
@@ -34,7 +34,7 @@
     <rect x="218" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="298" y="352" text-anchor="middle">oce-semantics</text>
     <rect x="396" y="330" width="160" height="34" rx="6" fill="#ffffff" stroke="#aecbfa"/><text x="476" y="352" text-anchor="middle">oce-diag</text>
   </g>
-  <text x="300" y="392" text-anchor="middle" font-size="12" fill="#174ea6" font-style="italic">frozen Kahn schedule over flat arrays — no graph walk, no alloc, no I/O</text>
+  <text x="300" y="392" text-anchor="middle" font-size="12" fill="#174ea6" font-style="italic">frozen Kahn schedule over flat arrays — no graph walk, no hashing, no store access</text>
   <text x="300" y="432" text-anchor="middle" font-size="13" fill="#174ea6">load → flatten → validate → schedule → tick → simulate</text>
 
   <!-- the seam -->

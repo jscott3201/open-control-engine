@@ -80,6 +80,19 @@ fn catalog_guard_mutations_cover_required_failures() {
     let prov = parse(PROV_JSON);
     let registry = registry_class_paths();
 
+    let mut missing_internal_lowering = catalog.clone();
+    missing_internal_lowering["internal_lowering"]
+        .as_array_mut()
+        .expect("internal_lowering array")
+        .pop();
+    assert_validation_error(
+        &missing_internal_lowering,
+        &prov,
+        GOLDEN_MANIFEST,
+        &registry,
+        "stale-internal-lowering-classification",
+    );
+
     let mut unclassified = catalog.clone();
     let package = runtime_package_mut(&mut unclassified, "CDL.Reals");
     let removed = remove_string(
@@ -135,19 +148,40 @@ fn catalog_guard_mutations_cover_required_failures() {
         package["implemented"]["legacy_evidence_exemption"]
             .as_array_mut()
             .unwrap(),
-        "Nand",
+        "Nor",
     );
     assert!(removed);
     package["implemented"]["golden_manifest"]
         .as_array_mut()
         .unwrap()
-        .push(Value::String("Nand".to_owned()));
+        .push(Value::String("Nor".to_owned()));
     assert_validation_error(
         &stale_manifest,
         &prov,
         GOLDEN_MANIFEST,
         &registry,
-        "stale-generated-manifest: CDL.Logical.Nand",
+        "stale-generated-manifest: CDL.Logical.Nor",
+    );
+
+    let mut golden_marked_exempt = catalog.clone();
+    let package = runtime_package_mut(&mut golden_marked_exempt, "CDL.Reals");
+    let removed = remove_string(
+        package["implemented"]["golden_manifest"]
+            .as_array_mut()
+            .unwrap(),
+        "Abs",
+    );
+    assert!(removed);
+    package["implemented"]["legacy_evidence_exemption"]
+        .as_array_mut()
+        .unwrap()
+        .push(Value::String("Abs".to_owned()));
+    assert_validation_error(
+        &golden_marked_exempt,
+        &prov,
+        GOLDEN_MANIFEST,
+        &registry,
+        "exempt-class-has-golden: CDL.Reals.Abs",
     );
 
     let manifest_with_unclassified_class = format!(

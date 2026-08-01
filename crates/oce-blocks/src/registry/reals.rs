@@ -1,5 +1,6 @@
 use oce_model::ParamTable;
 
+use super::reals_defaults::*;
 use super::{bool_param, int_param, real_param, zero_time_param};
 use crate::reals_sources::{MIN_SOURCE_RAMP_DURATION, ZERO_TIME_MEMBERS};
 use crate::source_timetable::{EXTRAPOLATION_MEMBERS, SMOOTHNESS_MEMBERS};
@@ -195,7 +196,12 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
+/// Upstream `Limiter.mo` (pin `a131864`) declares `uMax`/`uMin` with NO default value and an
+/// initial-equation `assert(uMin < uMax)`; the engine errors on inversion and softens equality
+/// to a warning.
 pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "uMax" },
+    ParamRule::Required { name: "uMin" },
     ParamRule::RealLessOrEqual {
         lower: "uMin",
         upper: "uMax",
@@ -203,6 +209,35 @@ pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
     ParamRule::RealEqualWarning {
         left: "uMin",
         right: "uMax",
+    },
+];
+
+/// Upstream declares these parameters with NO default value (pin `a131864`): `Round.n`
+/// ("Number of digits to be round to"), `AddParameter.p`, `MultiplyByParameter.k`, and
+/// `Sources/Constant.k`. Omitting one in a model is an authoring error that previously fell
+/// through to a silent engine default (n=0 / p=0 / k=1 / k=0.0), silently changing behavior.
+pub(super) const ROUND_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "n" }];
+
+pub(super) const ADD_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "p" }];
+
+pub(super) const MULTIPLY_BY_PARAMETER_PARAM_RULES: &[ParamRule] =
+    &[ParamRule::Required { name: "k" }];
+
+pub(super) const REAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+
+/// Upstream `Hysteresis.mo` (pin `a131864`) declares `uLow`/`uHigh` with NO default and an
+/// initial-equation `assert(uHigh > uLow)`; mirrored like the Limiter pair (error on
+/// inversion, warning on equality).
+pub(super) const HYSTERESIS_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "uLow" },
+    ParamRule::Required { name: "uHigh" },
+    ParamRule::RealLessOrEqual {
+        lower: "uLow",
+        upper: "uHigh",
+    },
+    ParamRule::RealEqualWarning {
+        left: "uLow",
+        right: "uHigh",
     },
 ];
 
@@ -402,7 +437,7 @@ pub(super) const SORT_PARAM_RULES: &[ParamRule] = &[
 
 fn make_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Constant {
-        k: real_param(p, "k", 0.0),
+        k: real_param(p, "k", CONSTANT_K_FALLBACK),
     })
 }
 
@@ -412,38 +447,38 @@ fn make_civil_time(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_real_pulse(p: &ParamTable) -> Box<dyn Block> {
     Box::new(RealPulse {
-        amplitude: real_param(p, "amplitude", 1.0),
-        width: real_param(p, "width", 0.5),
-        period: real_param(p, "period", 1.0),
-        shift: real_param(p, "shift", 0.0),
-        offset: real_param(p, "offset", 0.0),
+        amplitude: real_param(p, "amplitude", PULSE_AMPLITUDE_DEFAULT),
+        width: real_param(p, "width", PULSE_WIDTH_DEFAULT),
+        period: real_param(p, "period", PULSE_PERIOD_FALLBACK),
+        shift: real_param(p, "shift", PULSE_SHIFT_DEFAULT),
+        offset: real_param(p, "offset", PULSE_OFFSET_DEFAULT),
     })
 }
 
 fn make_source_ramp(p: &ParamTable) -> Box<dyn Block> {
     Box::new(SourceRamp {
-        height: real_param(p, "height", 1.0),
-        duration: real_param(p, "duration", 1.0),
-        offset: real_param(p, "offset", 0.0),
-        start_time: real_param(p, "startTime", 0.0),
+        height: real_param(p, "height", SOURCE_RAMP_HEIGHT_DEFAULT),
+        duration: real_param(p, "duration", SOURCE_RAMP_DURATION_FALLBACK),
+        offset: real_param(p, "offset", SOURCE_RAMP_OFFSET_DEFAULT),
+        start_time: real_param(p, "startTime", SOURCE_RAMP_START_TIME_DEFAULT),
     })
 }
 
 fn make_source_sin(p: &ParamTable) -> Box<dyn Block> {
     Box::new(SourceSin {
-        amplitude: real_param(p, "amplitude", 1.0),
-        freq_hz: real_param(p, "freqHz", 1.0),
-        phase: real_param(p, "phase", 0.0),
-        offset: real_param(p, "offset", 0.0),
-        start_time: real_param(p, "startTime", 0.0),
+        amplitude: real_param(p, "amplitude", SOURCE_SIN_AMPLITUDE_DEFAULT),
+        freq_hz: real_param(p, "freqHz", SOURCE_SIN_FREQ_HZ_FALLBACK),
+        phase: real_param(p, "phase", SOURCE_SIN_PHASE_DEFAULT),
+        offset: real_param(p, "offset", SOURCE_SIN_OFFSET_DEFAULT),
+        start_time: real_param(p, "startTime", SOURCE_SIN_START_TIME_DEFAULT),
     })
 }
 
 fn make_calendar_time(p: &ParamTable) -> Box<dyn Block> {
     Box::new(CalendarTime {
-        zer_tim: zero_time_param(p, "zerTim", oce_model::ZeroTime::NewYear(2016)),
-        year_ref: int_param(p, "yearRef", 2016),
-        offset: real_param(p, "offset", 0.0),
+        zer_tim: zero_time_param(p, "zerTim", CALENDAR_ZERO_TIME_FALLBACK),
+        year_ref: int_param(p, "yearRef", CALENDAR_YEAR_REF_DEFAULT),
+        offset: real_param(p, "offset", CALENDAR_OFFSET_DEFAULT),
     })
 }
 
@@ -521,19 +556,19 @@ fn make_modulo(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_round(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Round {
-        n: int_param(p, "n", 0),
+        n: int_param(p, "n", ROUND_N_FALLBACK),
     })
 }
 
 fn make_add_parameter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(AddParameter {
-        p: real_param(p, "p", 0.0),
+        p: real_param(p, "p", ADD_PARAMETER_P_FALLBACK),
     })
 }
 
 fn make_multiply_by_parameter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MultiplyByParameter {
-        k: real_param(p, "k", 1.0),
+        k: real_param(p, "k", MULTIPLY_BY_PARAMETER_K_FALLBACK),
     })
 }
 
@@ -560,14 +595,14 @@ fn make_multi_min(p: &ParamTable) -> Box<dyn Block> {
 fn make_multi_sum(p: &ParamTable) -> Box<dyn Block> {
     let nin = bounded_nin(p);
     let gains = (1..=nin)
-        .map(|idx| real_param(p, &format!("k_{idx}"), 1.0))
+        .map(|idx| real_param(p, &format!("k_{idx}"), MULTI_SUM_K_DEFAULT))
         .collect();
     Box::new(MultiSum::new(gains))
 }
 
 fn make_matrix_gain(p: &ParamTable) -> Box<dyn Block> {
-    let nout = bounded_usize_param(p, "nout", 2);
-    let nin = bounded_usize_param(p, "nin", 2);
+    let nout = bounded_usize_param(p, "nout", MATRIX_GAIN_NOUT_DEFAULT);
+    let nin = bounded_usize_param(p, "nin", MATRIX_GAIN_NIN_DEFAULT);
     let Some(product) = nout.checked_mul(nin) else {
         return Box::new(MatrixGain::new(0, 0, Vec::new()));
     };
@@ -589,9 +624,9 @@ fn make_matrix_gain(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_matrix_max(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MatrixMax::new(
-        bounded_usize_param(p, "nRow", 1),
-        bounded_usize_param(p, "nCol", 1),
-        if bool_param(p, "rowMax", true) {
+        bounded_usize_param(p, "nRow", MATRIX_EXTREME_NROW_FALLBACK),
+        bounded_usize_param(p, "nCol", MATRIX_EXTREME_NCOL_FALLBACK),
+        if bool_param(p, "rowMax", MATRIX_MAX_ROW_DEFAULT) {
             MatrixReductionAxis::Rows
         } else {
             MatrixReductionAxis::Columns
@@ -601,9 +636,9 @@ fn make_matrix_max(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_matrix_min(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MatrixMin::new(
-        bounded_usize_param(p, "nRow", 1),
-        bounded_usize_param(p, "nCol", 1),
-        if bool_param(p, "rowMin", true) {
+        bounded_usize_param(p, "nRow", MATRIX_EXTREME_NROW_FALLBACK),
+        bounded_usize_param(p, "nCol", MATRIX_EXTREME_NCOL_FALLBACK),
+        if bool_param(p, "rowMin", MATRIX_MIN_ROW_DEFAULT) {
             MatrixReductionAxis::Rows
         } else {
             MatrixReductionAxis::Columns
@@ -613,60 +648,60 @@ fn make_matrix_min(p: &ParamTable) -> Box<dyn Block> {
 
 fn make_sort(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Sort::new(
-        bounded_usize_param(p, "nin", 0),
-        bool_param(p, "ascending", true),
+        bounded_usize_param(p, "nin", SORT_NIN_DEFAULT),
+        bool_param(p, "ascending", SORT_ASCENDING_DEFAULT),
     ))
 }
 
 fn make_limiter(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Limiter {
-        u_min: real_param(p, "uMin", f64::NEG_INFINITY),
-        u_max: real_param(p, "uMax", f64::INFINITY),
+        u_min: real_param(p, "uMin", LIMITER_U_MIN_FALLBACK),
+        u_max: real_param(p, "uMax", LIMITER_U_MAX_FALLBACK),
     })
 }
 
 fn make_line(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Line {
-        limit_below: bool_param(p, "limitBelow", true),
-        limit_above: bool_param(p, "limitAbove", true),
+        limit_below: bool_param(p, "limitBelow", LINE_LIMIT_BELOW_DEFAULT),
+        limit_above: bool_param(p, "limitAbove", LINE_LIMIT_ABOVE_DEFAULT),
     })
 }
 
 fn make_greater(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Greater {
-        h: real_param(p, "h", 0.0),
-        pre_y_start: bool_param(p, "pre_y_start", false),
+        h: real_param(p, "h", COMPARATOR_H_DEFAULT),
+        pre_y_start: bool_param(p, "pre_y_start", COMPARATOR_PRE_Y_START_DEFAULT),
     })
 }
 
 fn make_greater_threshold(p: &ParamTable) -> Box<dyn Block> {
     Box::new(GreaterThreshold {
-        t: real_param(p, "t", 0.0),
-        h: real_param(p, "h", 0.0),
-        pre_y_start: bool_param(p, "pre_y_start", false),
+        t: real_param(p, "t", COMPARATOR_T_DEFAULT),
+        h: real_param(p, "h", COMPARATOR_H_DEFAULT),
+        pre_y_start: bool_param(p, "pre_y_start", COMPARATOR_PRE_Y_START_DEFAULT),
     })
 }
 
 fn make_hysteresis(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Hysteresis {
-        u_low: real_param(p, "uLow", 0.0),
-        u_high: real_param(p, "uHigh", 1.0),
-        pre_y_start: bool_param(p, "pre_y_start", false),
+        u_low: real_param(p, "uLow", HYSTERESIS_U_LOW_FALLBACK),
+        u_high: real_param(p, "uHigh", HYSTERESIS_U_HIGH_FALLBACK),
+        pre_y_start: bool_param(p, "pre_y_start", HYSTERESIS_PRE_Y_START_DEFAULT),
     })
 }
 
 fn make_less(p: &ParamTable) -> Box<dyn Block> {
     Box::new(Less {
-        h: real_param(p, "h", 0.0),
-        pre_y_start: bool_param(p, "pre_y_start", false),
+        h: real_param(p, "h", COMPARATOR_H_DEFAULT),
+        pre_y_start: bool_param(p, "pre_y_start", COMPARATOR_PRE_Y_START_DEFAULT),
     })
 }
 
 fn make_less_threshold(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LessThreshold {
-        t: real_param(p, "t", 0.0),
-        h: real_param(p, "h", 0.0),
-        pre_y_start: bool_param(p, "pre_y_start", false),
+        t: real_param(p, "t", COMPARATOR_T_DEFAULT),
+        h: real_param(p, "h", COMPARATOR_H_DEFAULT),
+        pre_y_start: bool_param(p, "pre_y_start", COMPARATOR_PRE_Y_START_DEFAULT),
     })
 }
 
@@ -675,7 +710,7 @@ fn make_switch(_p: &ParamTable) -> Box<dyn Block> {
 }
 
 fn bounded_nin(p: &ParamTable) -> usize {
-    let raw = int_param(p, "nin", 0);
+    let raw = int_param(p, "nin", MULTI_NIN_DEFAULT);
     usize::try_from(raw)
         .unwrap_or(0)
         .min(MAX_RESOLVED_PORT_WIDTH)

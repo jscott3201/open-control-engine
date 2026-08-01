@@ -1,0 +1,9 @@
+{
+  "tier": "2",
+  "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
+  "depends_on_oce_blocks": true,
+  "content_sha256": "e0ee361ac2c6ac0eea3140cb730396094dace0bc6ea0eba4fb93c7da6d31bbc8",
+  "reference_columns": [
+    "http://example.org#g36.source.thermal_zones_zone_states.yZonSta"
+  ]
+}

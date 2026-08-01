@@ -5,6 +5,18 @@
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
+mod ashrae62_1_setpoints;
+mod cdl_recurrences;
+mod cooling_only_active_air_flow;
+mod cooling_only_alarms;
+mod cooling_only_controller;
+mod cooling_only_controller_airflow;
+mod cooling_only_controller_conditioning;
+mod cooling_only_controller_timing;
+mod cooling_only_dampers;
+mod cooling_only_system_requests;
+mod control_loops;
+mod reheat_overrides;
 mod freeze_protection;
 mod air_economizer_high_limits;
 mod economizer_limits_common;
@@ -12,6 +24,7 @@ mod economizer_controller;
 mod economizer_modulations_reliefs;
 mod economizer_modulations_return_fan;
 mod plant_requests;
+mod provenance;
 mod economizer_enable;
 mod outdoor_airflow_ahu;
 mod outdoor_airflow_sumzone;
@@ -24,8 +37,18 @@ mod return_fan_airflow_tracking;
 mod return_fan_direct_pressure;
 mod supply_fan;
 mod supply_signals;
+mod time_suppression;
 mod trim_and_respond;
 mod vav_single_zone;
+mod zone_states;
+
+#[allow(unused_imports)]
+pub(crate) use cdl_recurrences::{
+    buildings_line, buildings_round_six, clamp, edge, greater_hysteretic, hysteresis,
+    initial_sample_time, latch, less_hysteretic, pre, sample_due, sample_index, sampler_output,
+    timer, triggered_sampler, true_delay, true_delay_on_init, true_delay_output, unit_delay,
+};
+use provenance::{SOURCE_COMMIT, fixture_status, source_files};
 
 const SAT: &str = "ahu_supply_air_temp_reset";
 const ECON: &str = "ahu_economizer";
@@ -78,8 +101,17 @@ const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_2";
 const AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3: &str =
     "generic_air_economizer_high_limits_title24_differential_offset_3";
+const ASHRAE62_1_SETPOINTS: &str = "ventilation_zones_ashrae62_1_setpoints";
+const TIME_SUPPRESSION: &str = "generic_time_suppression";
+const THERMAL_ZONES_ZONE_STATES: &str = "thermal_zones_zone_states";
+const THERMAL_ZONES_CONTROL_LOOPS: &str = "thermal_zones_control_loops";
 const FREEZE_PROTECTION: &str = "multizone_vav_freeze_protection";
-const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
+const COOLING_ONLY_ACTIVE_AIR_FLOW: &str = "cooling_only_active_air_flow";
+const COOLING_ONLY_ALARMS: &str = "cooling_only_alarms";
+const COOLING_ONLY_CONTROLLER: &str = "cooling_only_controller";
+const COOLING_ONLY_DAMPERS: &str = "cooling_only_dampers";
+const COOLING_ONLY_SYSTEM_REQUESTS: &str = "cooling_only_system_requests";
+const REHEAT_OVERRIDES: &str = "reheat_overrides";
 
 /// A generated provenance-only marker for deferred correctness-oracle coverage.
 pub struct DeferredProvenance {
@@ -117,7 +149,17 @@ pub fn goldens() -> Vec<Golden> {
     out.extend(economizer_modulations_reliefs::goldens());
     out.extend(economizer_modulations_return_fan::goldens());
     out.extend(air_economizer_high_limits::goldens());
+    out.extend(ashrae62_1_setpoints::goldens());
+    out.extend(time_suppression::goldens());
+    out.extend(zone_states::goldens());
+    out.extend(control_loops::goldens());
     out.extend(freeze_protection::goldens());
+    out.extend(cooling_only_active_air_flow::goldens());
+    out.extend(cooling_only_alarms::goldens());
+    out.extend(cooling_only_controller::goldens());
+    out.extend(cooling_only_dampers::goldens());
+    out.extend(cooling_only_system_requests::goldens());
+    out.extend(reheat_overrides::goldens());
     out
 }
 
@@ -301,174 +343,8 @@ fn sequence_golden(
         .with_provenance("fixture_status", fixture_status(sequence))
 }
 
-fn source_files(sequence: &str) -> &'static str {
-    match sequence {
-        SAT => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo",
-        ECON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
-        VAV => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/Supply.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/SingleZone/VAV/SetPoints/SupplyFan.mo",
-        SUPPLY_TEMP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyTemperature.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
-        SUPPLY_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplyFan.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo",
-        SUPPLY_SIGNALS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/SupplySignals.mo",
-        TRIM_AND_RESPOND_HAVE_HOL_FALSE => {
-            "Buildings/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.mo"
-        }
-        PLANT_REQUESTS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/PlantRequests.mo",
-        OUTDOOR_AIRFLOW_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/AHU.mo",
-        OUTDOOR_AIRFLOW_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/ASHRAE62_1/SumZone.mo",
-        OUTDOOR_AIRFLOW_TITLE24_AHU => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/AHU.mo",
-        OUTDOOR_AIRFLOW_TITLE24_SUMZONE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/package.order; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/OutdoorAirFlow/Title24/SumZone.mo",
-        RELIEF_DAMPER => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefDamper.mo",
-        RELIEF_FAN => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFan.mo",
-        RELIEF_FAN_GROUP => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReliefFanGroup.mo",
-        RETURN_FAN_AIRFLOW => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanAirflowTracking.mo",
-        RETURN_FAN_DIRECT_PRESSURE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/ReturnFanDirectPressure.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Controller.mo",
-        ECONOMIZER_ENABLE => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo",
-        ECONOMIZER_LIMITS_COMMON => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo",
-        ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21 => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Controller.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Limits/Common.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.mo; Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo; Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo",
-        ECONOMIZER_MODULATIONS_RELIEFS => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo",
-        ECONOMIZER_MODULATIONS_RETURN_FAN
-        | ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER => {
-            "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/ReturnFan.mo"
-        }
-        AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
-        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
-        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_24
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_23
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21
-        | AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3 => {
-            "Buildings/Controls/OBC/ASHRAE/G36/Generic/AirEconomizerHighLimits.mo"
-        }
-        FREEZE_PROTECTION => "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/SetPoints/FreezeProtection.mo",
-        _ => unreachable!("unknown G36 sequence {sequence}"),
-    }
-}
-
-fn fixture_status(sequence: &str) -> &'static str {
-    match sequence {
-        SUPPLY_TEMP
-        | SUPPLY_FAN
-        | SUPPLY_SIGNALS
-        | TRIM_AND_RESPOND_HAVE_HOL_FALSE
-        | PLANT_REQUESTS
-        | OUTDOOR_AIRFLOW_AHU
-        | OUTDOOR_AIRFLOW_SUMZONE
-        | OUTDOOR_AIRFLOW_TITLE24_AHU
-        | OUTDOOR_AIRFLOW_TITLE24_SUMZONE
-        | RELIEF_DAMPER
-        | RELIEF_FAN
-        | RELIEF_FAN_GROUP
-        | RETURN_FAN_AIRFLOW
-        | RETURN_FAN_DIRECT_PRESSURE
-        | ECONOMIZER_ENABLE
-        | ECONOMIZER_LIMITS_COMMON
-        | ECONOMIZER_CONTROLLER_SINGLE_DAMPER_RELIEF_DAMPER_FIXED_21
-        | ECONOMIZER_MODULATIONS_RELIEFS
-        | ECONOMIZER_MODULATIONS_RETURN_FAN
-        | ECONOMIZER_MODULATIONS_RETURN_FAN_RELIEF_DAMPER
-        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_24
-        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_21
-        | AIR_ECONOMIZER_HIGH_LIMITS_FIXED_18
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_24
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_23
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_22
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_FIXED_21
-        | AIR_ECONOMIZER_HIGH_LIMITS_ASHRAE_DIFFERENTIAL
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_0
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_1
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
-        | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
-        | FREEZE_PROTECTION => {
-            "supported-runtime-sequence source-verified composite"
-        }
-        SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",
-        _ => unreachable!("unknown G36 sequence {sequence}"),
-    }
-}
-
 fn unit_ticks(n: usize) -> Vec<f64> {
     (0..n).map(|tick| tick as f64).collect()
-}
-
-fn buildings_line(x1: f64, f1: f64, x2: f64, f2: f64, u: f64) -> f64 {
-    let x_lim = clamp(u, x1, x2);
-    let slope = (f2 - f1) / (x2 - x1);
-    let intercept = f2 - slope * x2;
-    intercept + slope * x_lim
-}
-
-fn clamp(value: f64, min: f64, max: f64) -> f64 {
-    min.max(value.min(max))
-}
-
-fn hysteresis(u: &[f64], u_low: f64, u_high: f64, pre_y_start: bool) -> Vec<bool> {
-    let mut previous = pre_y_start;
-    let mut out = Vec::with_capacity(u.len());
-    for &value in u {
-        let next = if value > u_high {
-            true
-        } else if value < u_low {
-            false
-        } else {
-            previous
-        };
-        out.push(next);
-        previous = next;
-    }
-    out
-}
-
-fn true_delay(time: &[f64], u: &[bool], delay_time: f64) -> Vec<bool> {
-    let mut entry_time = None;
-    let mut previous_u = false;
-    let mut out = Vec::with_capacity(time.len());
-    for (&t, &input) in time.iter().zip(u) {
-        if input && !previous_u {
-            entry_time = Some(t);
-        }
-        out.push(input && entry_time.is_some_and(|entry| t - entry >= delay_time));
-        if !input {
-            entry_time = None;
-        }
-        previous_u = input;
-    }
-    out
-}
-
-fn latch(u: &[bool], clear: &[bool]) -> Vec<bool> {
-    let mut previous_u = false;
-    let mut previous_y = false;
-    let mut out = Vec::with_capacity(u.len());
-    for (&input, &clr) in u.iter().zip(clear) {
-        let rising = input && !previous_u;
-        let next = if clr {
-            false
-        } else if rising {
-            true
-        } else {
-            previous_y
-        };
-        out.push(next);
-        previous_y = next;
-        previous_u = input;
-    }
-    out
-}
-
-fn less_hysteretic(u1: &[f64], u2: &[f64], h: f64, pre_y_start: bool) -> Vec<bool> {
-    let mut previous = pre_y_start;
-    let mut out = Vec::with_capacity(u1.len());
-    for (&left, &right) in u1.iter().zip(u2) {
-        let next = (!previous && left < right) || (previous && left < right + h);
-        out.push(next);
-        previous = next;
-    }
-    out
 }
 
 fn supply_temperature_setpoint_trace(
@@ -501,7 +377,11 @@ fn supply_temperature_setpoint_trace(
     let mut sampler_last_index = -1;
     let mut sampler_initialized = false;
 
-    let mut unit_delay_held = T_SUP_COO_MAX;
+    // Upstream Buildings `Discrete/UnitDelay.mo` pair: `y = pre(u_internal)` (held across the
+    // interval) and the staged `u_internal` (sampled at the most recent instant). Both initialize
+    // to y_start = T_SUP_COO_MAX (maxSupTemRes.uniDel iniSet).
+    let mut unit_delay_y = T_SUP_COO_MAX;
+    let mut unit_delay_u_internal = T_SUP_COO_MAX;
     let mut unit_delay_t0 = 0.0;
     let mut unit_delay_last_index = -1;
     let mut unit_delay_initialized = false;
@@ -543,7 +423,15 @@ fn supply_temperature_setpoint_trace(
         } else {
             TRI_AMO
         };
-        let candidate = clamp(unit_delay_held + net_reset, T_SUP_COO_MIN, T_SUP_COO_MAX);
+        // UnitDelay output at this tick: at a sample instant the `when` fires before the output
+        // is read (y becomes the previously staged sample); between instants y holds.
+        let unit_delay_out = if !unit_delay_initialized {
+            unit_delay_y
+        } else {
+            let (due, _) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
+            if due { unit_delay_u_internal } else { unit_delay_y }
+        };
+        let candidate = clamp(unit_delay_out + net_reset, T_SUP_COO_MIN, T_SUP_COO_MAX);
         let trim_respond = if fan_on { candidate } else { T_SUP_COO_MAX };
         let reset_branch = buildings_line(
             T_OUT_MIN,
@@ -596,87 +484,19 @@ fn supply_temperature_setpoint_trace(
         if !unit_delay_initialized {
             unit_delay_t0 = initial_sample_time(t, SAMPLE_PERIOD);
             unit_delay_last_index = sample_index(t, unit_delay_t0, SAMPLE_PERIOD);
-            unit_delay_held = trim_respond;
+            // First instant: `y = pre(u_internal)` keeps y_start; the current input is staged.
+            unit_delay_u_internal = trim_respond;
             unit_delay_initialized = true;
         } else {
             let (due, index) = sample_due(t, unit_delay_t0, SAMPLE_PERIOD, unit_delay_last_index);
             if due {
                 unit_delay_last_index = index;
-                unit_delay_held = trim_respond;
+                unit_delay_y = unit_delay_u_internal; // y = pre(u_internal)
+                unit_delay_u_internal = trim_respond; // u_internal = u
             }
         }
     }
     out
-}
-
-#[allow(clippy::too_many_arguments)]
-fn true_delay_output(
-    t: f64,
-    u: bool,
-    delay_time: f64,
-    delay_on_init: bool,
-    prev_time: Option<f64>,
-    prev_u: bool,
-    held: bool,
-    timer: f64,
-) -> (bool, f64) {
-    if !u {
-        return (false, 0.0);
-    }
-    let delay = delay_time.max(0.0);
-    let Some(previous_time) = prev_time else {
-        return if delay_on_init && delay > 0.0 {
-            (false, 0.0)
-        } else {
-            (true, delay)
-        };
-    };
-    if held {
-        (true, delay)
-    } else if !prev_u {
-        (delay <= 0.0, 0.0)
-    } else {
-        let next_timer = timer + (t - previous_time).max(0.0);
-        (next_timer >= delay, next_timer)
-    }
-}
-
-fn sampler_output(
-    t: f64,
-    input: f64,
-    period: f64,
-    initialized: bool,
-    t0: f64,
-    last_index: i64,
-    held: f64,
-) -> f64 {
-    if !initialized || sample_due(t, t0, period, last_index).0 {
-        input
-    } else {
-        held
-    }
-}
-
-fn initial_sample_time(t_start: f64, period: f64) -> f64 {
-    buildings_round_six((t_start / period).floor() * period)
-}
-
-fn buildings_round_six(x: f64) -> f64 {
-    const FACTOR: f64 = 1_000_000.0;
-    if x > 0.0 {
-        (x * FACTOR + 0.5).floor() / FACTOR
-    } else {
-        (x * FACTOR - 0.5).ceil() / FACTOR
-    }
-}
-
-fn sample_index(t_now: f64, t0: f64, period: f64) -> i64 {
-    ((t_now - t0) / period + 1e-9).floor() as i64
-}
-
-fn sample_due(t_now: f64, t0: f64, period: f64, last_index: i64) -> (bool, i64) {
-    let index = sample_index(t_now, t0, period);
-    (index > last_index, index)
 }
 
 fn sat_inputs(zone_temp: &[f64], cooling_setpoint: &[f64]) -> Vec<InputSeries> {

@@ -63,6 +63,8 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) params_dirty: bool,
     /// The typed IO inventory (`08` §6): built at load; the `set_input`/`get_output` name resolver.
     pub(crate) io: IoInventory,
+    /// Host-supplied UNIX epoch corresponding to model time `t = 0` for real-time writes.
+    pub(crate) realtime_epoch_unix_nanos: Option<u64>,
 }
 
 impl Engine<MemStore> {
@@ -94,6 +96,7 @@ impl<S: Store> Engine<S> {
             mode: RunMode::Running,
             params_dirty: false,
             io: IoInventory::default(),
+            realtime_epoch_unix_nanos: None,
         }
     }
 

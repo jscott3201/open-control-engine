@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Reals.Limiter",
+  "scenario": "non_finite_and_boundary",
+  "signal": "y",
+  "tier": "A",
+  "source": "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "bit-exact for finite; Inf/NaN by IEEE class (Value::bit_eq)",
+  "n_samples": 6,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": ["NaN", "inf", "-inf", 5.5, 0.0, 2.2] }
+  ],
+  "input": "params uMin=0.0, uMax=5.5; u=[NaN,+inf,-inf,5.5,0.0,2.2]: NaN passes through fail-visible, infinities clamp to the bounds, boundary-equal u returns verbatim",
+  "reference_rule": "y = if u > uMax then uMax elseif u < uMin then uMin else u; NaN fails both comparisons and reaches y (upstream Reals/Limiter.mo); oracle-diff for the 2026-07-06 NaN-absorption divergence fix",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

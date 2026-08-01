@@ -1,0 +1,9 @@
+#1
+# columns: time k T u y
+double CDL_Reals_Derivative_time_varying_gain_and_time_constant_reference(6,5)
+0.0 1.0 0.5 0.0 0.0
+0.1 1.0 0.5 1.0 2.0
+0.2 2.5 0.5 1.0 4.166666666666666
+0.3 2.5 0.25 1.0 6.944444444444445
+0.4 0.0 0.25 1.0 0.0
+0.5 1.0 0.25 -1.0 -6.582766439909298

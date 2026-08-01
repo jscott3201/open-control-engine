@@ -1,5 +1,7 @@
 //! Source-verified G36 Economizers.Subsequences.Enable composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -194,7 +196,7 @@ fn source_verified_g36_multizone_vav_economizer_enable_imports_no_enthalpy_varia
 fn golden_g36_multizone_vav_economizer_enable_modelgraph() {
     let actual = render(&import_ok(G36_ECONOMIZER_ENABLE));
     let path = golden_path(G36_ECONOMIZER_ENABLE_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

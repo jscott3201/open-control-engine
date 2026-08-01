@@ -1,0 +1,72 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout",
+      "@type": "S231:Block",
+      "S231:label": "registered_leaf_carveout",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#cc.registered_leaf_carveout.con" },
+        { "@id": "http://example.org#cc.registered_leaf_carveout.post" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#cc.registered_leaf_carveout.y" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "http://example.org#cc.registered_leaf_carveout.con.k" },
+      "S231:containsBlock": { "@id": "http://example.org#cc.registered_leaf_carveout.con.protected" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.registered_leaf_carveout.con.y" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.con.protected",
+      "S231:label": "protected"
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "1.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.registered_leaf_carveout.post.u" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.post",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "post",
+      "S231:hasParameter": { "@id": "http://example.org#cc.registered_leaf_carveout.post.k" },
+      "S231:hasInput": { "@id": "http://example.org#cc.registered_leaf_carveout.post.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.registered_leaf_carveout.post.y" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.post.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "4.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.post.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.registered_leaf_carveout.post.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.registered_leaf_carveout.y" }
+    }
+  ]
+}

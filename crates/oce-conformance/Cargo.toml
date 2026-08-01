@@ -20,3 +20,7 @@ regex = "1"
 ryu = "1.0"
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+oce-bless = { workspace = true }
+sha2 = "0.10"

@@ -1,0 +1,36 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration of different freeze stat options",
+      "S231:label": "FreezeStat",
+      "S231:value": "FreezeStat"
+    },
+    {
+      "@id": "ex:FreezeStat.Hardwired_to_BAS",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+      "S231:description": "Freeze stat hardwired to the equipment and the BAS",
+      "S231:label": "Hardwired_to_BAS",
+      "S231:value": "Hardwired_to_BAS"
+    },
+    {
+      "@id": "ex:FreezeStat.Hardwired_to_equipment",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+      "S231:description": "Freeze stat only hardwired to the equipment",
+      "S231:label": "Hardwired_to_equipment",
+      "S231:value": "Hardwired_to_equipment"
+    },
+    {
+      "@id": "ex:FreezeStat.No_freeze_stat",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+      "S231:description": "No freeze stat",
+      "S231:label": "No_freeze_stat",
+      "S231:value": "No_freeze_stat"
+    }
+  ]
+}

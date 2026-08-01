@@ -1,0 +1,276 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.ActiveAirFlow",
+      "S231:label": "cooling_only_active_air_flow",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VCooMax_flow" },
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.uOpeMod" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VOccMin_flow" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActCooMax_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActHeaMax_flow" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VCooMax_flow",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:value": { "@value": "0.94", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.uOpeMod",
+      "@type": "S231:IntegerInput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VOccMin_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActCooMax_flow",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActHeaMax_flow",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate"
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "actCooMax",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.realTrue" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.realTrue",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "VCooMax_flow"
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActCooMax_flow" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToReal",
+      "S231:label": "booToRea",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.realTrue" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.realTrue", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 1.0 },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:label": "actMin",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActHeaMax_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "occMod",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.occupied" },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.occMod.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.booToRea.u" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "cooDowMod",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.coolDown" },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.cooDowMod.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "setUpMod",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes" }, "S231:value": "Buildings.Controls.OBC.ASHRAE.G36.Types.OperationModes.setUp" },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.setUpMod.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Equal",
+      "S231:label": "intEqu1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.u2", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.intEqu1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or3.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Or",
+      "S231:label": "or2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_active_air_flow.or2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.u" }
+    }
+  ]
+}

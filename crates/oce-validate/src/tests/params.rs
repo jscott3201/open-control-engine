@@ -1,82 +1,7 @@
-//! Block-parameter rules: required params, positivity/range errors, and equal-range warnings.
+//! Block-parameter rules: positivity/range errors and equal-range warnings. The
+//! required-parameter (missing-param) rules live in `params_required`.
 
 use super::common::*;
-
-#[test]
-fn missing_required_sample_trigger_period_is_an_error() {
-    let model = one_block_model(
-        "CDL.Logical.Sources.SampleTrigger",
-        &[],
-        &[ValueType::Boolean],
-        vec![],
-    );
-    let err = validate(&model).expect_err("missing required period must fail");
-    assert_eq!(
-        codes(&err.diagnostics),
-        vec![DiagCode::MissingRequiredParameter]
-    );
-    assert_eq!(err.diagnostics[0].severity, Severity::Error);
-    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#0"));
-    assert!(err.diagnostics[0].message.contains("`period`"));
-}
-
-#[test]
-fn missing_required_proof_parameters_are_errors() {
-    let model = one_block_model(
-        "CDL.Logical.Proof",
-        &[ValueType::Boolean, ValueType::Boolean],
-        &[ValueType::Boolean, ValueType::Boolean],
-        vec![],
-    );
-    let err = validate(&model).expect_err("Proof debounce and feedbackDelay are required");
-    assert_eq!(
-        codes(&err.diagnostics),
-        vec![
-            DiagCode::MissingRequiredParameter,
-            DiagCode::MissingRequiredParameter,
-        ]
-    );
-    assert!(
-        err.diagnostics
-            .iter()
-            .all(|diag| diag.severity == Severity::Error)
-    );
-    assert!(err.diagnostics[0].message.contains("`debounce`"));
-    assert!(err.diagnostics[1].message.contains("`feedbackDelay`"));
-}
-
-#[test]
-fn missing_required_stage_parameters_are_errors() {
-    let model = one_block_model(
-        "CDL.Integers.Stage",
-        &[ValueType::Real],
-        &[ValueType::Integer],
-        vec![],
-    );
-    let err = validate(&model).expect_err("Stage n and holdDuration are required");
-    assert_eq!(
-        codes(&err.diagnostics),
-        vec![
-            DiagCode::MissingRequiredParameter,
-            DiagCode::MissingRequiredParameter,
-        ]
-    );
-    assert!(
-        err.diagnostics
-            .iter()
-            .all(|diag| diag.severity == Severity::Error)
-    );
-    assert!(
-        err.diagnostics
-            .iter()
-            .any(|diag| diag.message.contains("`n`"))
-    );
-    assert!(
-        err.diagnostics
-            .iter()
-            .any(|diag| diag.message.contains("`holdDuration`"))
-    );
-}
 
 #[test]
 fn triggered_moving_mean_n_parameter_is_required_and_positive() {
@@ -476,70 +401,127 @@ fn ramp_parameter_bounds_are_pinned() {
 
 #[test]
 fn strict_positive_param_rules_reject_zero() {
-    let cases: &[(&str, &[ValueType], &[ValueType], &str)] = &[
-        (
-            "CDL.Reals.Derivative",
-            &[ValueType::Real],
-            &[ValueType::Real],
-            "T",
-        ),
-        (
-            "CDL.Reals.LimitSlewRate",
-            &[ValueType::Real],
-            &[ValueType::Real],
-            "Td",
-        ),
-        (
-            "CDL.Reals.MovingAverage",
-            &[ValueType::Real],
-            &[ValueType::Real],
-            "delta",
-        ),
-        (
-            "CDL.Reals.PID",
-            &[ValueType::Real, ValueType::Real],
-            &[ValueType::Real],
-            "Td",
-        ),
-        (
-            "CDL.Reals.PID",
-            &[ValueType::Real, ValueType::Real],
-            &[ValueType::Real],
-            "Nd",
-        ),
-        (
-            "CDL.Reals.PIDWithReset",
-            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
-            &[ValueType::Real],
-            "Td",
-        ),
-        (
-            "CDL.Reals.PIDWithReset",
-            &[ValueType::Real, ValueType::Real, ValueType::Boolean],
-            &[ValueType::Real],
-            "Nd",
-        ),
-    ];
-    for (class, inputs, outputs, param) in cases {
-        let model = one_block_model(class, inputs, outputs, vec![rp(param, 0.0)]);
-        let err = match validate(&model) {
-            Ok(warnings) => panic!(
-                "{class}.{param}=0 must fail the strict-positive rule, got warnings: {warnings:?}"
-            ),
-            Err(err) => err,
-        };
+    // The PID-family zero cases moved to the inclusive upstream 100*eps floor
+    // (`pid_range_rules_floor_at_the_upstream_min_annotation`); the strict `> 0` rules that
+    // remain are LimitSlewRate.Td and MovingAverage.delta.
+    let slew = one_block_model(
+        "CDL.Reals.LimitSlewRate",
+        &[ValueType::Real],
+        &[ValueType::Real],
+        vec![rp("raisingSlewRate", 1.0), rp("Td", 0.0)],
+    );
+    let err = validate(&slew).expect_err("LimitSlewRate.Td=0 must fail the strict-positive rule");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(
+        err.diagnostics[0].message.contains("Td"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+
+    let moving_average = one_block_model(
+        "CDL.Reals.MovingAverage",
+        &[ValueType::Real],
+        &[ValueType::Real],
+        vec![rp("delta", 0.0)],
+    );
+    let err =
+        validate(&moving_average).expect_err("MovingAverage.delta=0 must fail the strict rule");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(
+        err.diagnostics[0].message.contains("delta"),
+        "unexpected diagnostic: {:?}",
+        err.diagnostics
+    );
+}
+
+#[test]
+fn pid_range_rules_floor_at_the_upstream_min_annotation() {
+    // Upstream PID.mo/PIDWithReset.mo (pin a131864) annotate `min=100*Constants.eps` — an
+    // INCLUSIVE Modelica bound — on exactly {k, Ti, Td, r, Ni, Nd}: zero and sub-floor values
+    // are rejected, the exact floor value is legal, and NaN never satisfies the annotation.
+    const FLOOR: f64 = 100.0 * 1e-15;
+    let pid_io: (&[ValueType], &[ValueType]) =
+        (&[ValueType::Real, ValueType::Real], &[ValueType::Real]);
+    let reset_io: (&[ValueType], &[ValueType]) = (
+        &[ValueType::Real, ValueType::Real, ValueType::Boolean],
+        &[ValueType::Real],
+    );
+    for (class, io) in [
+        ("CDL.Reals.PID", pid_io),
+        ("CDL.Reals.PIDWithReset", reset_io),
+    ] {
+        for param in ["k", "Ti", "Td", "r", "Ni", "Nd"] {
+            for bad in [0.0, 5e-14] {
+                let model = one_block_model(class, io.0, io.1, vec![rp(param, bad)]);
+                let err = match validate(&model) {
+                    Ok(warnings) => panic!(
+                        "{class}.{param}={bad} must fail the 100*eps floor, got {warnings:?}"
+                    ),
+                    Err(err) => err,
+                };
+                assert_eq!(
+                    codes(&err.diagnostics),
+                    vec![DiagCode::ParameterOutOfRange],
+                    "{class}.{param}={bad}"
+                );
+                assert_eq!(err.diagnostics[0].severity, Severity::Error);
+                assert!(
+                    err.diagnostics[0].message.contains(param),
+                    "{class}.{param}: {:?}",
+                    err.diagnostics
+                );
+            }
+            let at_floor = one_block_model(class, io.0, io.1, vec![rp(param, FLOOR)]);
+            let warnings = validate(&at_floor)
+                .unwrap_or_else(|err| panic!("{class}.{param}=100*eps is legal: {err:?}"));
+            assert!(warnings.is_empty(), "{class}.{param}: {warnings:?}");
+        }
+        let nan_gain = one_block_model(class, io.0, io.1, vec![rp("k", f64::NAN)]);
+        let err = validate(&nan_gain)
+            .expect_err("a NaN gain never satisfies the upstream min annotation");
         assert_eq!(
             codes(&err.diagnostics),
             vec![DiagCode::ParameterOutOfRange],
-            "{class}.{param}"
-        );
-        assert_eq!(err.diagnostics[0].severity, Severity::Error);
-        assert!(
-            err.diagnostics[0].message.contains(param),
-            "{class}.{param}: {:?}",
-            err.diagnostics
+            "{class}.k=NaN"
         );
     }
+}
+
+#[test]
+fn pid_output_bound_pair_mirrors_the_limiter_rule() {
+    // Upstream constrains yMin/yMax two ways: directly via `cheYMinMax(final k=yMin < yMax)` wired
+    // into `assMesYMinMax` ("LimPID: Limits must be yMin < yMax"), and transitively through the
+    // instantiated `Limiter lim(final uMax=yMax, final uMin=yMin)` and its `assert(uMin < uMax)`;
+    // the engine mirrors its own Limiter precedent — error on inversion, warning on equality.
+    let inverted = one_block_model(
+        "CDL.Reals.PID",
+        &[ValueType::Real, ValueType::Real],
+        &[ValueType::Real],
+        vec![rp("yMin", 0.5), rp("yMax", 0.2)],
+    );
+    let err = validate(&inverted).expect_err("yMin > yMax must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("yMin <= yMax"));
+
+    let equal = one_block_model(
+        "CDL.Reals.PIDWithReset",
+        &[ValueType::Real, ValueType::Real, ValueType::Boolean],
+        &[ValueType::Real],
+        vec![rp("yMin", 0.4), rp("yMax", 0.4)],
+    );
+    let warnings = validate(&equal).expect("yMin == yMax is a safe deterministic degrade");
+    assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(warnings[0].severity, Severity::Warning);
+    // The equal-bounds warning must be block-agnostic: PID has an internal Limiter, but the shared
+    // RealEqualWarning message must not name it (it is reused by Hysteresis, which has none).
+    assert!(
+        warnings[0].message.contains("collapses to a single value"),
+        "unexpected warning: {:?}",
+        warnings
+    );
 }
 
 #[test]
@@ -575,7 +557,49 @@ fn limiter_equal_bounds_are_a_warning_only() {
     let warnings = validate(&model).expect("uMin == uMax is a safe deterministic degrade");
     assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
     assert_eq!(warnings[0].severity, Severity::Warning);
-    assert!(warnings[0].message.contains("clamp to a constant"));
+    assert!(warnings[0].message.contains("collapses to a single value"));
+}
+
+#[test]
+fn hysteresis_threshold_pair_mirrors_the_limiter_rule() {
+    // Upstream Hysteresis.mo has the initial-equation `assert(uHigh > uLow)`; the engine
+    // errors on inversion and softens equality to a warning, like its Limiter precedent.
+    let inverted = one_block_model(
+        "CDL.Reals.Hysteresis",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("uLow", 2.0), rp("uHigh", 1.0)],
+    );
+    let err = validate(&inverted).expect_err("uLow > uHigh must fail");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert!(err.diagnostics[0].message.contains("uLow <= uHigh"));
+
+    let equal = one_block_model(
+        "CDL.Reals.Hysteresis",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("uLow", 1.0), rp("uHigh", 1.0)],
+    );
+    let warnings = validate(&equal).expect("uLow == uHigh degrades deterministically");
+    assert_eq!(codes(&warnings), vec![DiagCode::ParameterOutOfRange]);
+    assert_eq!(warnings[0].severity, Severity::Warning);
+    // Hysteresis has NO internal Limiter, so the equal-bounds warning must not mention one; the
+    // shared message states the block-agnostic invariant (the bounded interval degenerates).
+    assert!(
+        warnings[0].message.contains("collapses to a single value"),
+        "unexpected warning: {:?}",
+        warnings
+    );
+
+    let healthy = one_block_model(
+        "CDL.Reals.Hysteresis",
+        &[ValueType::Real],
+        &[ValueType::Boolean],
+        vec![rp("uLow", 0.5), rp("uHigh", 1.0)],
+    );
+    let warnings = validate(&healthy).expect("a healthy threshold pair validates");
+    assert!(warnings.is_empty(), "{warnings:?}");
 }
 
 #[test]

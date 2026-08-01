@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "520526343f724a5da68c5e02297a9cecc6c0da55",
+  "content_sha256": "c5a02ff6931461e1aa76132ac023ee5cf7bfdc9f0c3aed96e7a5ad1f84ff364b",
   "reference_columns": [
     "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TCut"
   ]

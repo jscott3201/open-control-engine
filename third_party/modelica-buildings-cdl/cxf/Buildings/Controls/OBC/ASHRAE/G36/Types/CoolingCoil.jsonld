@@ -1,0 +1,36 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+      "@type": "S231:EnumerationType",
+      "S231:description": "Enumeration to configure the cooling coil",
+      "S231:label": "CoolingCoil",
+      "S231:value": "CoolingCoil"
+    },
+    {
+      "@id": "ex:CoolingCoil.DXCoil",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+      "S231:description": "Direct expansion cooling coil",
+      "S231:label": "DXCoil",
+      "S231:value": "DXCoil"
+    },
+    {
+      "@id": "ex:CoolingCoil.None",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+      "S231:description": "No coil",
+      "S231:label": "None",
+      "S231:value": "None"
+    },
+    {
+      "@id": "ex:CoolingCoil.WaterBased",
+      "@type": "ex:Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+      "S231:description": "Chilled water coil",
+      "S231:label": "WaterBased",
+      "S231:value": "WaterBased"
+    }
+  ]
+}

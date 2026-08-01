@@ -8,6 +8,7 @@
 
 use oce_cxf::{CxfError, ResolveOptions, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
+use oce_model::{EnumClassId, ValueType};
 use serde_json::{Value, json};
 
 /// A minimal valid single-composite model: `c1 = Constant(k=1.0)` whose output drives
@@ -56,6 +57,37 @@ fn node_mut<'a>(doc: &'a mut Value, suffix: &str) -> &'a mut Value {
         .unwrap_or_else(|| panic!("no @graph node ending in {suffix:?}"))
 }
 
+/// Add a composite boundary input that drives `M.c2.u`.
+fn add_boundary_input(doc: &mut Value, datatype: &str) {
+    node_mut(doc, "#M")["S231:hasInput"] = json!({ "@id": "http://example.org#M.boundaryInput" });
+    doc["@graph"].as_array_mut().unwrap().push(json!({
+        "@id": "http://example.org#M.boundaryInput",
+        "@type": "S231:Input",
+        "S231:isOfDataType": { "@id": datatype },
+        "S231:isConnectedTo": { "@id": "http://example.org#M.c2.u" }
+    }));
+}
+
+/// Add a composite boundary output driven by `M.c2.y2`.
+fn add_boundary_output(doc: &mut Value, datatype: &str) {
+    node_mut(doc, "#M")["S231:hasOutput"] = json!({ "@id": "http://example.org#M.boundaryOutput" });
+    doc["@graph"].as_array_mut().unwrap().push(json!({
+        "@id": "http://example.org#M.boundaryOutput",
+        "@type": "S231:Output",
+        "S231:isOfDataType": { "@id": datatype }
+    }));
+    node_mut(doc, "M.c2.y2")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.boundaryOutput" });
+}
+
+/// Remove the BASE output-to-input edge so a boundary input is `M.c2.u`'s only driver.
+fn remove_internal_input_drive(doc: &mut Value) {
+    node_mut(doc, "M.c1.y")
+        .as_object_mut()
+        .unwrap()
+        .remove("S231:isConnectedTo");
+}
+
 fn import(doc: &Value) -> Result<(oce_model::ModelGraph, oce_cxf::ValidationReport), CxfError> {
     let bytes = serde_json::to_vec(doc).expect("serialize doc");
     import_cxf(&bytes, &ResolveOptions::default())
@@ -76,6 +108,21 @@ fn assert_error_code(doc: &Value, code: DiagCode) -> Vec<Diagnostic> {
         Ok((_g, r)) => panic!("expected Validation({code:?}), but import succeeded: {r:?}"),
         Err(other) => panic!("expected Validation({code:?}), got {other:?}"),
     }
+}
+
+/// Assert one error pins its code, complete message, and subject.
+#[track_caller]
+fn assert_error_detail(doc: &Value, code: DiagCode, message: &str, subject: &str) {
+    let diags = assert_error_code(doc, code);
+    assert!(
+        diags.iter().any(|d| {
+            d.is_error()
+                && d.code == code
+                && d.message == message
+                && d.subject.as_deref() == Some(subject)
+        }),
+        "expected {code:?} with message {message:?} and subject {subject:?}, got {diags:#?}"
+    );
 }
 
 #[test]
@@ -156,10 +203,24 @@ fn doubly_driven_input_is_single_assignment() {
 }
 
 #[test]
-fn input_driving_output_is_direction_mismatch() {
+fn an_input_subject_is_an_orientation_and_is_judged_on_the_model_it_denotes() {
     let mut doc = base();
-    // Make the input c2.u a connection SOURCE to the output c2.y2 → In→Out, a direction violation.
+    // Anchoring an edge on the input is legal authoring, not a violation: CXF §8.2 admits either
+    // endpoint as the subject and CDL states `connect` argument order does not matter. So this
+    // denotes `c2.y2 → c2.u`. The document is still REJECTED — `c1.y` already drives `c2.u`, making
+    // this a second driver — and the code is now the one that names what is actually wrong.
     node_mut(&mut doc, "M.c2.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.c2.y2" });
+    assert_error_code(&doc, DiagCode::SingleAssignment);
+}
+
+#[test]
+fn a_direction_violation_survives_reorientation() {
+    let mut doc = base();
+    // Out→Out is invalid in BOTH orientations, so no re-anchoring can rescue it. This is the
+    // property `input_driving_output_is_direction_mismatch` was really guarding: a pair that names
+    // two drivers, or two driven ends, is a direction error however the document phrases it.
+    node_mut(&mut doc, "M.c1.y")["S231:isConnectedTo"] =
         json!({ "@id": "http://example.org#M.c2.y2" });
     assert_error_code(&doc, DiagCode::DirectionMismatch);
 }
@@ -181,6 +242,190 @@ fn type_mismatched_connection_is_rejected() {
     u["@type"] = json!("S231:BooleanInput");
     u["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
     assert_error_code(&doc, DiagCode::TypeMismatch);
+}
+
+#[test]
+fn real_boundary_input_driving_boolean_child_input_is_rejected() {
+    let mut doc = base();
+    remove_internal_input_drive(&mut doc);
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:BooleanInput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+    add_boundary_input(&mut doc, "S231:Real");
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Real → Boolean",
+        "http://example.org#M.c2.u",
+    );
+}
+
+#[test]
+fn integer_boundary_input_driving_real_child_input_is_rejected() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Integer");
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Integer → Real",
+        "http://example.org#M.c2.u",
+    );
+}
+
+#[test]
+fn boolean_child_output_driving_real_boundary_output_is_rejected() {
+    let mut doc = base();
+    let child = node_mut(&mut doc, "M.c2.y2");
+    child["@type"] = json!("S231:BooleanOutput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Boolean" });
+    add_boundary_output(&mut doc, "S231:Real");
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Boolean → Real",
+        "http://example.org#M.c2.y2",
+    );
+}
+
+#[test]
+fn real_child_output_driving_integer_boundary_output_is_rejected() {
+    let mut doc = base();
+    add_boundary_output(&mut doc, "S231:Integer");
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        "connected types differ: Real → Integer",
+        "http://example.org#M.c2.y2",
+    );
+}
+
+#[test]
+fn enum_boundary_input_driving_integer_child_input_is_rejected() {
+    let mut doc = base();
+    remove_internal_input_drive(&mut doc);
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:IntegerInput");
+    child["S231:isOfDataType"] = json!({ "@id": "S231:Integer" });
+    add_boundary_input(
+        &mut doc,
+        "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+    );
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        &format!(
+            "connected types differ: {:?} → Integer",
+            ValueType::Enum(EnumClassId::G36_VENTILATION_STANDARD)
+        ),
+        "http://example.org#M.c2.u",
+    );
+}
+
+#[test]
+fn different_enum_classes_across_boundary_elision_are_rejected() {
+    let mut doc = base();
+    remove_internal_input_drive(&mut doc);
+    let child = node_mut(&mut doc, "M.c2.u");
+    child["@type"] = json!("S231:Input");
+    child["S231:isOfDataType"] =
+        json!({ "@id": "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil" });
+    add_boundary_input(
+        &mut doc,
+        "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+    );
+    assert_error_detail(
+        &doc,
+        DiagCode::TypeMismatch,
+        &format!(
+            "connected types differ: {:?} → {:?}",
+            ValueType::Enum(EnumClassId::G36_VENTILATION_STANDARD),
+            ValueType::Enum(EnumClassId::G36_HEATING_COIL)
+        ),
+        "http://example.org#M.c2.u",
+    );
+}
+
+#[test]
+fn matched_types_across_both_boundary_elision_arms_resolve() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Real");
+    add_boundary_output(&mut doc, "S231:Real");
+    let (graph, report) = import(&doc).expect("matching boundary types must resolve");
+    assert!(report.is_empty(), "unexpected diagnostics: {report:?}");
+    assert_eq!(graph.external_inputs.len(), 1);
+}
+
+#[test]
+fn unresolvable_boundary_datatype_is_diagnosed() {
+    let mut doc = base();
+    add_boundary_input(&mut doc, "S231:Frobnicate");
+    assert_error_code(&doc, DiagCode::UnresolvedReference);
+}
+
+#[test]
+fn nodeless_boundary_input_is_rejected_once_with_boundary_subject() {
+    let mut doc = base();
+    remove_internal_input_drive(&mut doc);
+    node_mut(&mut doc, "#M")["S231:hasInput"] =
+        json!({ "@id": "http://example.org#M.missingInput" });
+    node_mut(&mut doc, "M.c2.u")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.missingInput" });
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingInput")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "missing boundary is diagnosed once: {diags:#?}"
+    );
+}
+
+#[test]
+fn nodeless_boundary_output_is_rejected_once_with_boundary_subject() {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasOutput"] =
+        json!({ "@id": "http://example.org#M.missingOutput" });
+    node_mut(&mut doc, "M.c2.y2")["S231:isConnectedTo"] =
+        json!({ "@id": "http://example.org#M.missingOutput" });
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingOutput")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "missing boundary is diagnosed once: {diags:#?}"
+    );
+}
+
+#[test]
+fn nodeless_boundary_shared_by_input_and_output_lists_is_rejected_once() {
+    let mut doc = base();
+    let missing = json!({ "@id": "http://example.org#M.missingBoundary" });
+    node_mut(&mut doc, "#M")["S231:hasInput"] = missing.clone();
+    node_mut(&mut doc, "#M")["S231:hasOutput"] = missing;
+    let diags = assert_error_code(&doc, DiagCode::UnresolvedReference);
+    let matching: Vec<&Diagnostic> = diags
+        .iter()
+        .filter(|d| {
+            d.code == DiagCode::UnresolvedReference
+                && d.subject.as_deref() == Some("http://example.org#M.missingBoundary")
+        })
+        .collect();
+    assert_eq!(
+        matching.len(),
+        1,
+        "one IRI in both boundary lists is diagnosed once: {diags:#?}"
+    );
 }
 
 #[test]
@@ -540,4 +785,77 @@ fn double_driven_fixture_is_rejected() {
     let doc: Value = serde_json::from_str(include_str!("fixtures/invalid/double_driven.jsonld"))
         .expect("fixture is valid JSON");
     assert_error_code(&doc, DiagCode::SingleAssignment);
+}
+
+// ---- NonSubsetConstruct reject paths (the shall-level CDL-subset gate) ----------------------
+
+/// Every banned Modelica key that survives CXF lowering must be rejected as a `shall`-level
+/// `NonSubsetConstruct` error (`_spec/04`; CDL is a subset — `redeclare`/`extends`-family
+/// machinery must not leak past the importer).
+#[test]
+fn surviving_modelica_keys_are_rejected_as_non_subset_constructs() {
+    for key in [
+        "S231:redeclare",
+        "S231:constrainedby",
+        "S231:extends",
+        "S231:extendsFrom",
+        "S231:moSource",
+        "S231:modelicaSource",
+    ] {
+        let mut doc = base();
+        node_mut(&mut doc, ".c2")[key] = json!("http://example.org#SomeBase");
+        let diags = assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+        let term = key.rsplit(':').next().expect("test key has a term");
+        assert!(
+            diags
+                .iter()
+                .any(|d| d.code == DiagCode::NonSubsetConstruct && d.message.contains(term)),
+            "the {key} rejection must name the surviving construct, got {diags:#?}"
+        );
+    }
+}
+
+/// The ban matches the term after the last `:`/`#`/`/`, so bare and absolute-IRI spellings of a
+/// banned key are rejected exactly like the prefixed form.
+#[test]
+fn modelica_key_ban_matches_bare_and_iri_prefixed_forms() {
+    let mut doc = base();
+    node_mut(&mut doc, ".c1")["extends"] = json!(true);
+    assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+
+    let mut doc = base();
+    node_mut(&mut doc, ".c1")["http://data.ashrae.org/S231P#redeclare"] = json!({});
+    assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+}
+
+/// Unknown keys OUTSIDE the banned set are lossless passthrough (R-8), not non-subset rejects:
+/// the ban must not over-match vendor extensions.
+#[test]
+fn unknown_vendor_keys_pass_through_without_a_non_subset_reject() {
+    let mut doc = base();
+    node_mut(&mut doc, ".c2")["S231:vendorAnnotation"] = json!("lossless passthrough");
+    import(&doc).expect("a vendor-extension key must not be rejected as a non-subset construct");
+}
+
+/// An array-valued parameter on a composite is outside this CXF lowering subset and must be
+/// rejected with `NonSubsetConstruct` (second emission site, distinct from the surviving-key
+/// scan).
+#[test]
+fn array_valued_composite_parameter_is_rejected_as_non_subset() {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasParameter"] = json!({ "@id": "http://example.org#M.p" });
+    doc["@graph"]
+        .as_array_mut()
+        .expect("@graph array")
+        .push(json!({
+            "@id": "http://example.org#M.p",
+            "S231:isArray": true,
+            "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+        }));
+    let diags = assert_error_code(&doc, DiagCode::NonSubsetConstruct);
+    assert!(
+        diags.iter().any(|d| d.code == DiagCode::NonSubsetConstruct
+            && d.message.contains("array-valued composite parameters")),
+        "the array-param rejection must use the site-2 message, got {diags:#?}"
+    );
 }

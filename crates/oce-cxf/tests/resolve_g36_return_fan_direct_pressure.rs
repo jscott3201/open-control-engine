@@ -1,5 +1,7 @@
 //! Source-verified G36 ReturnFanDirectPressure composite import tests.
 
+mod bless;
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -125,8 +127,8 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
             .as_array()
             .expect("children")
             .len(),
-        23,
-        "ReturnFanDirectPressure fixture should preserve 21 source children plus two explicit Boolean alias bridge blocks"
+        21,
+        "ReturnFanDirectPressure fixture should preserve its 21 active source children"
     );
     assert_eq!(top["S231:hasInput"].as_array().expect("inputs").len(), 3);
     assert_eq!(top["S231:hasOutput"].as_array().expect("outputs").len(), 5);
@@ -134,13 +136,13 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
     let graph = import_ok(G36_RETURN_FAN_DIRECT_PRESSURE);
     assert_eq!(
         graph.blocks.len(),
-        23,
-        "return-fan direct-pressure sequence should import all active children"
+        22,
+        "imported blocks are 21 active children plus one pass-through lowering block"
     );
     let instances = graph
         .blocks
         .iter()
-        .map(|block| block.instance_iri.as_deref().expect("source path"))
+        .filter_map(|block| block.instance_iri.as_deref())
         .collect::<Vec<_>>();
     for suffix in [
         ".movMea",
@@ -164,8 +166,6 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
         ".retFanSpeMin",
         ".retFanSpeMax",
         ".zer2",
-        ".y1RetFanPas",
-        ".tru",
     ] {
         assert!(
             instances.iter().any(|iri| iri.ends_with(suffix)),
@@ -205,9 +205,14 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
         assert!(block_param(&graph, suffix, "limitBelow").bit_eq(&Value::Boolean(true)));
         assert!(block_param(&graph, suffix, "limitAbove").bit_eq(&Value::Boolean(true)));
     }
-    assert!(
-        block_param(&graph, ".tru", "k").bit_eq(&Value::Boolean(true)),
-        "Boolean alias bridge must be a pure identity for y1RetFan = u1SupFan"
+    assert_eq!(
+        graph
+            .blocks
+            .last()
+            .expect("lowering block")
+            .class_iri
+            .as_ref(),
+        "urn:oce:lowering#PassThrough.Boolean"
     );
 }
 
@@ -215,7 +220,7 @@ fn source_verified_g36_multizone_vav_return_fan_direct_pressure_imports_default_
 fn golden_g36_multizone_vav_return_fan_direct_pressure_modelgraph() {
     let actual = render(&import_ok(G36_RETURN_FAN_DIRECT_PRESSURE));
     let path = golden_path(G36_RETURN_FAN_DIRECT_PRESSURE_GOLDEN_REL);
-    if std::env::var_os("OCE_BLESS").is_some() {
+    if bless::enabled() {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, &actual).unwrap();
         return;

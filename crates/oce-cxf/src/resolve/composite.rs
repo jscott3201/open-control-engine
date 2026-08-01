@@ -9,7 +9,17 @@ use crate::{bridge, resolve::local_name};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 
+use super::composite_orientation::CompositeOrientation;
+use super::composite_rules::{
+    ARRAY_PARAMETER, BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT,
+};
 use super::specialize::{Specialization, validate_g36_parameter_value};
+
+/// Maximum supported composite depth during `containsBlock` lowering.
+///
+/// The outermost composite is depth one. Real inputs measured at depth three or less; this cap
+/// bounds the recursive lowering walk well below the measured stack-exhaustion threshold.
+const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
 
 /// A CXF document lowered to the existing single-root, flat-child resolver shape.
 #[derive(Clone, Debug)]
@@ -40,21 +50,24 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let boundary = BoundaryIndex::new(doc, by_id, root, specialization);
+    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
     let mut leaf_order = Vec::new();
     let mut stack = HashSet::new();
+    let mut path = Vec::new();
     collect_leaves(
         root,
+        1,
         Vec::new(),
         by_id,
         specialization,
         diags,
         &mut stack,
+        &mut path,
         &mut leaf_order,
         &mut inherited_scope,
     );
 
-    let rewritten = rewrite_connections(doc, by_id, specialization, &boundary);
+    let rewritten = rewrite_connections(doc, by_id, root, specialization, &boundary);
     for node in &mut lowered.graph {
         let id = node.id.as_str();
         if id == root {
@@ -105,20 +118,40 @@ fn root_composite<'a>(
         .collect();
     match roots.as_slice() {
         [root] => Some(*root),
-        _ => {
+        [] => {
+            // A pure `containsBlock` cycle lands HERE, not in the cycle detector: every cycle
+            // member is referenced, so classification yields zero candidate roots and `lower`
+            // returns before `collect_leaves` can run.
             diags.push(Diagnostic::error(
-                DiagCode::MalformedDocument,
-                format!(
-                    "expected exactly one top composite root after nested classification, found {}",
-                    roots.len()
+                ROOT_COUNT.code,
+                ROOT_COUNT.message(
+                    "expected exactly one top composite root after nested classification, \
+                     found zero candidate roots",
                 ),
             ));
+            None
+        }
+        candidates => {
+            // Candidates are already in document `@graph` order (`composites` derives from
+            // `doc.graph.iter()`); the first one is the deterministic subject.
+            diags.push(
+                Diagnostic::error(
+                    ROOT_COUNT.code,
+                    ROOT_COUNT.message(format!(
+                        "expected exactly one top composite root after nested classification, \
+                         found {} candidate roots: {}",
+                        candidates.len(),
+                        candidates.join(", ")
+                    )),
+                )
+                .with_subject(candidates[0].to_owned()),
+            );
             None
         }
     }
 }
 
-fn is_runtime_composite(node: &Node) -> bool {
+pub(super) fn is_runtime_composite(node: &Node) -> bool {
     !node.contains_block.is_empty() && !is_registered_leaf(node)
 }
 
@@ -148,8 +181,9 @@ fn reject_unsupported_constructs(
         if node.is_replaceable == Some(true) {
             diags.push(
                 Diagnostic::error(
-                    DiagCode::UnresolvedPolymorphism,
-                    "replaceable CXF components must be resolved before import",
+                    REPLACEABLE.code,
+                    REPLACEABLE
+                        .message("replaceable CXF components must be resolved before import"),
                 )
                 .with_subject(node.id.clone()),
             );
@@ -158,8 +192,10 @@ fn reject_unsupported_constructs(
             if unsupported_modelica_key(key) {
                 diags.push(
                     Diagnostic::error(
-                        DiagCode::NonSubsetConstruct,
-                        format!("unsupported Modelica construct `{key}` survived CXF lowering"),
+                        BANNED_MODELICA_KEY.code,
+                        BANNED_MODELICA_KEY.message(format!(
+                            "unsupported Modelica construct `{key}` survived CXF lowering"
+                        )),
                     )
                     .with_subject(node.id.clone()),
                 );
@@ -176,33 +212,66 @@ fn unsupported_modelica_key(key: &str) -> bool {
     )
 }
 
+/// Depth-first `containsBlock` flattening. `stack` gives O(1) cycle membership; `path` mirrors it
+/// as the ordered traversal spine so a detected cycle can name every participant in path order.
+/// Both are pushed/popped together — `stack` and `path` always hold the same ids.
 #[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     composite_id: &str,
+    depth: usize,
     parent_scope: Vec<(Arc<str>, EvalResult)>,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
     diags: &mut Vec<Diagnostic>,
     stack: &mut HashSet<String>,
+    path: &mut Vec<String>,
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
 ) {
-    if !stack.insert(composite_id.to_owned()) {
+    if depth > MAX_COMPOSITE_NESTING_DEPTH {
         diags.push(
             Diagnostic::error(
                 DiagCode::MalformedDocument,
-                "cycle in nested composite containsBlock graph",
+                format!(
+                    "composite/nesting-too-deep: containsBlock nesting exceeds the supported \
+                     depth ({MAX_COMPOSITE_NESTING_DEPTH})"
+                ),
             )
             .with_subject(composite_id.to_owned()),
         );
         return;
     }
+    if !stack.insert(composite_id.to_owned()) {
+        // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
+        // closing with the re-entered id itself. Traversal follows `containsBlock` document
+        // order, so the participant list is deterministic. (`position` cannot miss — `stack`
+        // membership implies `path` membership — but fall back to the whole spine, never panic.)
+        let start = path
+            .iter()
+            .position(|id| id == composite_id)
+            .unwrap_or_default();
+        let mut participants: Vec<&str> = path[start..].iter().map(String::as_str).collect();
+        participants.push(composite_id);
+        diags.push(
+            Diagnostic::error(
+                CONTAINS_CYCLE.code,
+                CONTAINS_CYCLE.message(format!(
+                    "cycle in nested composite containsBlock graph: {}",
+                    participants.join(" -> ")
+                )),
+            )
+            .with_subject(composite_id.to_owned()),
+        );
+        return;
+    }
+    path.push(composite_id.to_owned());
     let Some(composite) = by_id.get(composite_id).copied() else {
         diags.push(
             Diagnostic::error(DiagCode::UnresolvedReference, "composite node not found")
                 .with_subject(composite_id.to_owned()),
         );
         stack.remove(composite_id);
+        path.pop();
         return;
     };
     let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
@@ -223,11 +292,13 @@ fn collect_leaves(
         if is_runtime_composite(node) {
             collect_leaves(
                 child,
+                depth + 1,
                 scope.clone(),
                 by_id,
                 specialization,
                 diags,
                 stack,
+                path,
                 leaf_order,
                 inherited_scope,
             );
@@ -237,6 +308,7 @@ fn collect_leaves(
         }
     }
     stack.remove(composite_id);
+    path.pop();
 }
 
 fn composite_scope(
@@ -265,8 +337,11 @@ fn composite_scope(
         if pnode.is_array == Some(true) {
             diags.push(
                 Diagnostic::error(
-                    DiagCode::NonSubsetConstruct,
-                    "array-valued composite parameters are not supported by this CXF lowering subset",
+                    ARRAY_PARAMETER.code,
+                    ARRAY_PARAMETER.message(
+                        "array-valued composite parameters are not supported by this CXF \
+                         lowering subset",
+                    ),
                 )
                 .with_subject(piri.to_owned()),
             );
@@ -294,63 +369,28 @@ fn composite_scope(
     scope
 }
 
-#[derive(Clone, Debug, Default)]
-struct BoundaryIndex {
-    composites: HashSet<String>,
-    inputs: HashSet<String>,
-    outputs: HashSet<String>,
-    top_inputs: HashSet<String>,
-    top_outputs: HashSet<String>,
-}
-
-impl BoundaryIndex {
-    fn new(
-        doc: &CxfDocument,
-        by_id: &HashMap<&str, &Node>,
-        root: &str,
-        specialization: &Specialization,
-    ) -> Self {
-        let mut index = BoundaryIndex::default();
-        for node in &doc.graph {
-            if !is_runtime_composite(node) || specialization.is_inactive(&node.id) {
-                continue;
-            }
-            index.composites.insert(node.id.clone());
-            for input in node.has_input.iter().map(|r| r.id.clone()) {
-                index.inputs.insert(input.clone());
-                if node.id == root {
-                    index.top_inputs.insert(input);
-                }
-            }
-            for output in node.has_output.iter().map(|r| r.id.clone()) {
-                index.outputs.insert(output.clone());
-                if node.id == root {
-                    index.top_outputs.insert(output);
-                }
-            }
-            for child in node.contains_block.iter().map(|r| r.id.as_str()) {
-                if by_id
-                    .get(child)
-                    .is_some_and(|node| is_runtime_composite(node))
-                {
-                    index.composites.insert(child.to_owned());
-                }
-            }
-        }
-        index
-    }
-}
-
 fn rewrite_connections(
     doc: &CxfDocument,
     by_id: &HashMap<&str, &Node>,
+    root: &str,
     specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    boundary: &CompositeOrientation,
 ) -> HashMap<String, Vec<String>> {
+    let (canonical, crossed_drivers) =
+        boundary.canonical_connections(doc, by_id, root, specialization);
     let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    let walk = BoundaryWalk {
+        by_id,
+        canonical: &canonical,
+        specialization,
+        boundary,
+    };
     for node in &doc.graph {
         let source = node.id.as_str();
-        if specialization.is_inactive(source) || node.is_connected_to.is_empty() {
+        let Some(authored_targets) = canonical.get(source) else {
+            continue;
+        };
+        if specialization.is_inactive(source) {
             continue;
         }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
@@ -360,15 +400,14 @@ fn rewrite_connections(
             continue;
         }
         let mut targets = Vec::new();
-        for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-            resolve_target(
-                target,
-                by_id,
-                specialization,
-                boundary,
-                &mut HashSet::new(),
-                &mut targets,
-            );
+        for target in authored_targets {
+            resolve_target(target, &walk, &mut HashSet::new(), &mut targets);
+        }
+        // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
+        // already collapsed in the canonical map, so any surviving duplicate is a genuine
+        // double-drive that must stay visible to the single-assignment check.
+        if crossed_drivers.contains(source) {
+            targets.sort_by_key(|target| boundary.position(target));
         }
         if !targets.is_empty() {
             out.entry(source.to_owned()).or_default().extend(targets);
@@ -377,52 +416,59 @@ fn rewrite_connections(
     out
 }
 
+struct BoundaryWalk<'a> {
+    by_id: &'a HashMap<&'a str, &'a Node>,
+    canonical: &'a HashMap<String, Vec<String>>,
+    specialization: &'a Specialization,
+    boundary: &'a CompositeOrientation,
+}
+
+/// Resolve one rewritten target.
 fn resolve_target(
     target: &str,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
     out: &mut Vec<String>,
 ) {
-    if specialization.is_inactive(target) {
+    if walk.specialization.is_inactive(target) {
         out.push(target.to_owned());
         return;
     }
-    if boundary.inputs.contains(target) && !boundary.top_inputs.contains(target) {
-        follow_boundary(target, by_id, specialization, boundary, seen, out);
+    if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
+        follow_boundary(target, walk, seen, out);
         return;
     }
-    if boundary.outputs.contains(target) {
-        if boundary.top_outputs.contains(target) {
+    if walk.boundary.outputs.contains(target) {
+        if walk.boundary.top_outputs.contains(target) {
             out.push(target.to_owned());
         } else {
-            follow_boundary(target, by_id, specialization, boundary, seen, out);
+            follow_boundary(target, walk, seen, out);
         }
         return;
     }
     out.push(target.to_owned());
 }
 
+/// Walk through a non-top composite boundary node.
 fn follow_boundary(
     boundary_iri: &str,
-    by_id: &HashMap<&str, &Node>,
-    specialization: &Specialization,
-    boundary: &BoundaryIndex,
+    walk: &BoundaryWalk<'_>,
     seen: &mut HashSet<String>,
     out: &mut Vec<String>,
 ) {
     if !seen.insert(boundary_iri.to_owned()) {
+        // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
+        // resolver's ordinary dangling-reference diagnostic.
         out.push(boundary_iri.to_owned());
         return;
     }
-    let Some(node) = by_id.get(boundary_iri).copied() else {
+    if !walk.by_id.contains_key(boundary_iri) {
         out.push(boundary_iri.to_owned());
         seen.remove(boundary_iri);
         return;
-    };
-    for target in node.is_connected_to.iter().map(|r| r.id.as_str()) {
-        resolve_target(target, by_id, specialization, boundary, seen, out);
+    }
+    for target in walk.canonical.get(boundary_iri).into_iter().flatten() {
+        resolve_target(target, walk, seen, out);
     }
     seen.remove(boundary_iri);
 }

@@ -1,0 +1,27 @@
+{
+  "class_path": "G36",
+  "scenario": "reheat_overrides",
+  "signal": "damper_command",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 12,
+  "n_reference_columns": 7,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "damper_override_index", "damper_command_input", "heating_valve_off", "heating_valve_command_input", "damper_command", "heating_valve_command"],
+  "inputs": [
+    { "name": "damper_override_index", "value_kind": "Integer", "values": [1.0, 2.0, 0.0, 0.0, 2.0, 3.0, 1.0, 3.0, -1.0, 1.0, 2.0, 0.0] },
+    { "name": "damper_command_input", "value_kind": "Real", "values": [0.37, 0.37, 0.37, 0.37, 0.37, 0.37, 0.37, 0.37, 0.81, 0.81, 0.81, 0.81] },
+    { "name": "heating_valve_off", "value_kind": "Boolean", "values": [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0] },
+    { "name": "heating_valve_command_input", "value_kind": "Real", "values": [0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.62, 0.23, 0.23, 0.23, 0.23] }
+  ],
+  "input": "Overrides: indices 1/2 force 0/1; all other integers pass through distinct 0.37 and 0.81 commands",
+  "reference_rule": "Overrides.mo: Equal(k=1/k=2) gates feed Or and Switch; add3 sums cloDam=0 with opeDam=1 only for index 2",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/Reheat/Subsequences/Overrides.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

@@ -261,7 +261,7 @@ impl Block for Log {
 
     fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
-        warn_if_not_positive(ctx, "CDL.Reals.Log", "Log", u);
+        warn_if_not_positive(ctx, "CDL.Reals.Log", LOG_DOMAIN_WARNING, u);
         emit_real(0, libm::log(u), emit);
     }
 }
@@ -290,7 +290,7 @@ impl Block for Log10 {
 
     fn step_algebraic(&self, ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         let u = read_real(inputs, 0);
-        warn_if_not_positive(ctx, "CDL.Reals.Log10", "Log10", u);
+        warn_if_not_positive(ctx, "CDL.Reals.Log10", LOG10_DOMAIN_WARNING, u);
         emit_real(0, libm::log10(u), emit);
     }
 }
@@ -304,12 +304,14 @@ const fn unary_signature(class_path: &'static str) -> BlockSignature {
     }
 }
 
-fn warn_if_not_positive(ctx: &Ctx<'_>, class_path: &'static str, name: &str, u: f64) {
+const LOG_DOMAIN_WARNING: &str =
+    "Log: input u must be greater than zero; returning deterministic libm value";
+const LOG10_DOMAIN_WARNING: &str =
+    "Log10: input u must be greater than zero; returning deterministic libm value";
+
+fn warn_if_not_positive(ctx: &Ctx<'_>, class_path: &'static str, message: &'static str, u: f64) {
     if u > 0.0 {
         return;
     }
-    ctx.warn(
-        class_path,
-        &format!("{name}: input u must be greater than zero; returning deterministic libm value"),
-    );
+    ctx.warn(class_path, message);
 }

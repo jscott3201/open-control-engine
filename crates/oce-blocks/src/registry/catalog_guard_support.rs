@@ -20,7 +20,7 @@ pub(super) const GOLDEN_MANIFEST: &str = include_str!(concat!(
 ));
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "7135fc53e40d3075";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "9edead4415592f28";
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/CDL/package.order",
     "Buildings/Controls/OBC/CDL/Conversions/package.order",
@@ -87,6 +87,7 @@ pub(super) fn validate_catalog(
         .collect::<BTreeSet<_>>();
     let deferred_oracles = deferred_oracle_paths(catalog);
     let extensions = extension_paths(catalog);
+    let internal_lowering = internal_lowering_paths(catalog);
 
     if runtime.len() != 132 {
         errors.push(format!("runtime-count: {}", runtime.len()));
@@ -106,7 +107,10 @@ pub(super) fn validate_catalog(
     }
 
     for path in registry_paths {
-        if !implemented.contains(path) && !extensions.contains(path) {
+        if !implemented.contains(path)
+            && !extensions.contains(path)
+            && !internal_lowering.contains(path)
+        {
             errors.push(format!("registry-class-not-in-catalog: {path}"));
         }
     }
@@ -123,7 +127,11 @@ pub(super) fn validate_catalog(
                     errors.push(format!("stale-generated-manifest: {}", entry.class_path));
                 }
             }
-            "legacy_evidence_exemption" => {}
+            "legacy_evidence_exemption" => {
+                if manifest_mentions(manifest, &entry.class_path) {
+                    errors.push(format!("exempt-class-has-golden: {}", entry.class_path));
+                }
+            }
             _ => errors.push(format!(
                 "implemented-class-without-golden-or-exemption: {}",
                 entry.class_path
@@ -136,6 +144,9 @@ pub(super) fn validate_catalog(
         .collect::<BTreeSet<_>>();
     let classified_manifest_classes = implemented
         .union(&extensions)
+        .cloned()
+        .collect::<BTreeSet<_>>()
+        .union(&internal_lowering)
         .cloned()
         .collect::<BTreeSet<_>>()
         .union(&deferred_oracles)
@@ -174,6 +185,16 @@ pub(super) fn validate_catalog(
         errors.push(
             "extension-present-in-reference-runtime: CDL.Logical.TrueHoldWithReset".to_owned(),
         );
+    }
+    let expected_internal = [
+        "urn:oce:lowering#PassThrough.Boolean".to_owned(),
+        "urn:oce:lowering#PassThrough.Integer".to_owned(),
+        "urn:oce:lowering#PassThrough.Real".to_owned(),
+    ]
+    .into_iter()
+    .collect::<BTreeSet<_>>();
+    if internal_lowering != expected_internal {
+        errors.push("stale-internal-lowering-classification".to_owned());
     }
     if validation_packages(catalog).len() != 11 {
         errors.push(format!(
@@ -329,6 +350,13 @@ pub(super) fn registry_class_paths() -> BTreeSet<String> {
 
 fn extension_paths(catalog: &Value) -> BTreeSet<String> {
     array_field(catalog, "extensions")
+        .iter()
+        .map(|entry| str_field(entry, "class_path").to_owned())
+        .collect()
+}
+
+fn internal_lowering_paths(catalog: &Value) -> BTreeSet<String> {
+    array_field(catalog, "internal_lowering")
         .iter()
         .map(|entry| str_field(entry, "class_path").to_owned())
         .collect()

@@ -14,16 +14,17 @@
 # == ...` clauses in each `if:` document the non-PR paths and avoid relying on GitHub's null coercion.
 #
 # WHAT RUNS HERE vs. ci.yml:
-#   * NEW value — the FULL test suite. ci.yml runs NO tests, so this gate is the first and only
-#     place behavioral tests execute in CI:
+#   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-blocks`/`oce-expr`
+#     determinism subset, so this gate is the first place every OTHER crate's tests execute:
 #       - `cargo nextest run` for every unit + integration test in the workspace,
 #       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
 #       - `cargo test --doc`  for doctests (nextest cannot run doctests),
 #       - two armed per-crate public-API surface snapshots (`oce-api` and `oce-store`).
 #     `--no-tests=fail` is explicit: a run that discovers zero tests HARD-FAILS, catching the
-#     regression where tests silently stop compiling or being discovered. (Today: all unit
-#     tests across the workspace; there are no integration-test targets or doctests yet —
-#     `crates/oce-cxf/tests/` holds only `fixtures/`. The command needs no change as those land.)
+#     regression where tests silently stop compiling or being discovered. It covers unit tests,
+#     the workspace's integration-test targets (`crates/*/tests/`, including the `oce-cxf`
+#     round-trip and deferral suites), and — via the separate `cargo test --doc` step — the
+#     doctests nextest cannot run.
 #   * Re-run of the light correctness gates against the RELEASE TIP. A `development` -> `main`
 #     PR matches no other workflow, so without these the release PR would be ENTIRELY ungated.
 #     `development` also drifts between the last per-PR run and the release cut, and the merge
@@ -65,6 +66,12 @@ env:
   # (as `$NIGHTLY`) and by each surface-gate step (as the `OCE_PUBLIC_API_NIGHTLY` arming value) so
   # the steps cannot drift. A plain workflow env var, not `github.event.*` — safe to read inside
   # `run:`. Bump here + re-bless.
+  #
+  # This nightly's OWN version is a floor on the workspace MSRV: it identifies as
+  # `rustc 1.97.0-nightly`, and `cargo +$NIGHTLY rustdoc` resolves the whole workspace, so a
+  # `rust-version` in the root Cargo.toml ABOVE it fails every package here before rustdoc runs.
+  # See the comment on `rust-version` in Cargo.toml. Bumping this value is therefore the ONLY way
+  # to raise the MSRV past 1.97.0, and it also requires re-blessing both public-api baselines.
   NIGHTLY: nightly-2026-05-01
   CHECKOUT_REF: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'development' || github.ref }}
 
@@ -80,10 +87,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       # Gate-only nightly for the `cargo public-api` surface snapshots (crates/oce-api/tests/
       # public_api.rs and crates/oce-store/tests/public_api.rs, exit #7). Installed but NOT made the
-      # default — the workspace still builds on 1.95.0 above; each test shells out to THIS exact
+      # default — the workspace still builds on 1.97.1 above; each test shells out to THIS exact
       # toolchain to emit rustdoc JSON. It is one leg of the (public-api, rustdoc-json, nightly)
       # COMPAT TRIPLE pinned in both crates' Cargo.toml files (a format_version skew fails the JSON
       # parse); bump `$NIGHTLY` (above) + all three together and re-bless the baselines.
@@ -150,7 +157,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
         with:
           components: rustfmt
       - run: cargo fmt --all --check
@@ -204,7 +211,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-machete
@@ -218,7 +225,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
       - run: bash .github/scripts/check-default-no-db.sh
 
@@ -230,7 +237,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - run: bash .github/scripts/check-golden-gen-anti-tautology.sh
 
   clippy:
@@ -241,7 +248,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
@@ -256,7 +263,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
       - name: cargo build (default — no DB)
         run: cargo build --workspace --locked
@@ -269,7 +276,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - uses: Swatinem/rust-cache@v2
       - name: cargo doc — libs (deny warnings)
         env:
@@ -288,8 +295,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: dtolnay/rust-toolchain@1.97.1
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny
       - run: cargo deny check bans licenses sources advisories
+
+  # The gate script in `full` mode, EXECUTED rather than parsed. See the twin job in ci.yml for
+  # why this is a coverage backstop and explicitly NOT a parity check.
+  #
+  # `full` is the higher-stakes half. AGENTS.md instructs every agent to run `bash .agents/gate.sh
+  # full` before claiming a change's tests pass — the per-PR gate runs only oce-blocks/oce-expr, so
+  # for a change confined to any other crate that claim rests entirely on this script. Running it
+  # here is what keeps the commands behind that instruction under CI observation.
+  #
+  # Wall-clock cost is nil: `test-suite` above is a ~22-minute long pole and this job runs beside
+  # it, so it finishes well inside the time that job already takes.
+  gate:
+    name: gate (full)
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.133,cargo-deny,cargo-machete
+      - run: bash .agents/gate.sh full

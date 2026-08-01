@@ -2,9 +2,14 @@ use oce_model::ParamTable;
 
 use super::real_param;
 use crate::{
-    Block, DewPointTDryBulPhi, ParamRule, RegistryEntry, SpecificEnthalpyTDryBulPhi,
+    Block, DewPointTDryBulPhi, ParamDefault, ParamRule, RegistryEntry, SpecificEnthalpyTDryBulPhi,
     WetBulbTDryBulPhi,
 };
+
+const P_ATM_DEFAULT: f64 = 101_325.0;
+
+pub(super) const SPECIFIC_ENTHALPY_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_real!("pAtm", P_ATM_DEFAULT)];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -33,7 +38,7 @@ fn make_dew_point_t_dry_bul_phi(_p: &ParamTable) -> Box<dyn Block> {
 
 fn make_specific_enthalpy_t_dry_bul_phi(p: &ParamTable) -> Box<dyn Block> {
     Box::new(SpecificEnthalpyTDryBulPhi {
-        p_atm: real_param(p, "pAtm", 101_325.0),
+        p_atm: real_param(p, "pAtm", P_ATM_DEFAULT),
     })
 }
 

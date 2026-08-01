@@ -1,0 +1,17 @@
+#1
+# columns: time operating_mode occupied_minimum_airflow active_cooling_maximum_airflow active_minimum_airflow active_heating_maximum_airflow
+double G36_cooling_only_active_air_flow_reference(14,6)
+0.0 1.0 0.0 0.94 0.0 0.0
+1.0 1.0 0.31 0.94 0.31 0.31
+2.0 2.0 0.31 0.94 0.0 0.0
+3.0 2.0 0.0 0.94 0.0 0.0
+4.0 3.0 0.18 0.94 0.0 0.0
+5.0 3.0 0.31 0.94 0.0 0.0
+6.0 4.0 0.0 0.0 0.0 0.0
+7.0 4.0 0.31 0.0 0.0 0.0
+8.0 5.0 0.12 0.0 0.0 0.0
+9.0 5.0 0.0 0.0 0.0 0.0
+10.0 6.0 0.31 0.0 0.0 0.0
+11.0 6.0 0.0 0.0 0.0 0.0
+12.0 7.0 0.22 0.0 0.0 0.0
+13.0 7.0 0.31 0.0 0.0 0.0

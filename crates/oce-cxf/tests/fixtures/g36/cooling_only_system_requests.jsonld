@@ -1,0 +1,809 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests",
+      "@type": "http://example.org#Buildings.Controls.OBC.ASHRAE.G36.TerminalUnits.CoolingOnly.Subsequences.SystemRequests",
+      "S231:label": "cooling_only_system_requests",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrTemDif" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoTemDif" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.durTimTem" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.durTimFlo" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.dTHys" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.floHys" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.looHys" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.damPosHys" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.samplePeriod" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.uAftSup" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.TCooSet" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.TZon" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.uCoo" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.VSet_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.VDis_flow" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.uDam" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonTemResReq" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonPreResReq" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.thrTemDif",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "TemperatureDifference",
+      "S231:value": { "@value": "3.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.twoTemDif",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "TemperatureDifference",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.durTimTem",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "120.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.durTimFlo",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "60.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.dTHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "TemperatureDifference",
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.floHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.looHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.damPosHys",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:value": { "@value": "0.01", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "s",
+      "S231:quantity": "Time",
+      "S231:value": { "@value": "120.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.uAftSup",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.TCooSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.TZon",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u1" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.uCoo",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.VSet_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.VDis_flow",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "m3/s",
+      "S231:quantity": "VolumeFlowRate",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.uDam",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "1",
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonTemResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonPreResReq",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr1",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.t" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "thrTemDif" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dTHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr2",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.t" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "twoTemDif" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "dTHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr3",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.t" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.95 },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "damPosHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1.u" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.t" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.95 },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "looHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:label": "greThr4",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.t" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.h" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.t", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "floHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.005 },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Conversions.BooleanToInteger",
+      "S231:label": "booToInt1",
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.booToInt1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.5 },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gai2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.k" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": 0.7 },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "sub2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sub2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr1.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:label": "sub3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sub3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr2.u" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and2",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and4",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "thrCooResReq",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.thrCooResReq.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "twoCooResReq",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.twoCooResReq.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "thrPreResReq",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 3 },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.thrPreResReq.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u1" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:label": "twoPreResReq",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq.k" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq.k", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Integer" }, "S231:value": 2 },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.twoPreResReq.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u1" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u3", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonTemResReq" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "intSwi1",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.u3", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi1.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.intSwi.u3" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "swi4",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u3", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.yZonPreResReq" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Switch",
+      "S231:label": "swi5",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u3" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u1", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.u3", "@type": "S231:IntegerInput", "S231:isOfDataType": { "@id": "S231:Integer" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.swi5.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.swi4.u3" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "tim1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.delayTime", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "durTimTem" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and2.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "tim2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.delayTime", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "durTimTem" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim2.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and1.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:label": "tim3",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.delayTime" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.delayTime", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "durTimFlo" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.u", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.tim3.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u2" }
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "greEqu",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "floHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "greEqu1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.h" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.h", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "floHys" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u2" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and5",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and5",
+      "S231:hasInput": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u1", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.u2", "@type": "S231:BooleanInput", "S231:isOfDataType": { "@id": "S231:Boolean" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.and5.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and3.u1" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.and4.u1" }
+      ]
+    },
+
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:label": "sampler",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.samplePeriod" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.samplePeriod", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "samplePeriod" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:label": "sampler1",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.samplePeriod" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.samplePeriod", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "samplePeriod" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler1.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr3.u" }
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:label": "sampler2",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.samplePeriod" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.samplePeriod", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "samplePeriod" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler2.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu.u2" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greEqu1.u2" }
+      ]
+    },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:label": "sampler3",
+      "S231:hasParameter": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.samplePeriod" },
+      "S231:hasInput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.u" },
+      "S231:hasOutput": { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.y" }
+    },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.samplePeriod", "@type": "S231:Parameter", "S231:isOfDataType": { "@id": "S231:Real" }, "S231:value": "samplePeriod" },
+    { "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    {
+      "@id": "http://example.org#g36.source.cooling_only_system_requests.sampler3.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.greThr4.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai1.u" },
+        { "@id": "http://example.org#g36.source.cooling_only_system_requests.gai2.u" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "format": "oce-clean-room-derivation-v1",
+  "class": "CDL.Logical.Nand",
+  "scenario": "all_boolean_input_pairs",
+  "source": {
+    "file": "third_party/modelica-buildings-cdl/Buildings/Controls/OBC/CDL/Logical/Nand.mo",
+    "line": 15,
+    "equation": "y = not (u1 and u2)"
+  },
+  "roles": {
+    "derivation_author": "Codex lane nand-clean-room-audit",
+    "independent_reviewer": "completed by orchestrator on 2026-08-01: equation and rows verified; pre-freeze read log audited with zero forbidden-content reads"
+  },
+  "information_separation": {
+    "engine_implementation_read": false,
+    "golden_generator_read": false,
+    "existing_expected_output_read": false,
+    "shared_math_kernel": false,
+    "limitation": "An in-repository Boolean cannot prove historical non-reading; it is a self-attestation checked for schema consistency only.",
+    "external_evidence": [
+      "Frozen derivation commit f234758 precedes implementation and expected-output comparison.",
+      "The orchestrator audited the pre-freeze read log and recorded zero forbidden-content reads in the PR body."
+    ]
+  },
+  "comparison": {
+    "value_type": "Boolean",
+    "method": "exact",
+    "atoly": 0,
+    "rounding": "none; Boolean operations are exact"
+  },
+  "derivation": [
+    "Premise: conjunction (a and b) is true exactly when both a and b are true; otherwise it is false.",
+    "Premise: negation maps false to true and true to false.",
+    "Substitution: (false and false) = false, so not false = true.",
+    "Substitution: (false and true) = false, so not false = true.",
+    "Substitution: (true and false) = false, so not false = true.",
+    "Substitution: (true and true) = true, so not true = false."
+  ],
+  "rows": [
+    { "sample": 0, "u1": false, "u2": false, "and": false, "y": true },
+    { "sample": 1, "u1": false, "u2": true,  "and": false, "y": true },
+    { "sample": 2, "u1": true,  "u2": false, "and": false, "y": true },
+    { "sample": 3, "u1": true,  "u2": true,  "and": true,  "y": false }
+  ]
+}

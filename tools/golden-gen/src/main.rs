@@ -5,8 +5,9 @@
 //! one per-block `reference.csv` containing `time`, machine-readable inputs, and all outputs, and
 //! a crate-root `oracle.lock` toolchain/version pin skeleton.
 //!
-//! ANTI-TAUTOLOGY: all reference math is re-derived independently from `_spec/03`, `_spec/02`,
-//! `_spec/01`, `_spec/07` (format only) and CDL §7.x. This crate has ZERO dependency on
+//! ANTI-TAUTOLOGY: reference math is re-derived from `_spec/03`, `_spec/02`, `_spec/01`,
+//! `_spec/07` (format only), and CDL §7.x. Some exact oracles share a pinned math kernel or
+//! restate the documented recurrence used by the engine. This crate has ZERO dependency on
 //! `oce-blocks` (the implementation under test) and never reads it.
 
 mod csv;
@@ -19,6 +20,8 @@ mod logical_variable_pulse;
 mod oracle;
 mod psychrometrics;
 mod reals;
+mod reals_filters;
+mod reals_integrator;
 mod reals_matrix;
 mod reals_pid;
 mod reals_ramp;
@@ -66,6 +69,8 @@ fn main() {
     goldens.extend(source_pulse::goldens());
     goldens.extend(source_timetable::goldens());
     goldens.extend(reals_pid::goldens());
+    goldens.extend(reals_integrator::goldens());
+    goldens.extend(reals_filters::goldens());
     goldens.extend(psychrometrics::goldens());
     goldens.extend(utilities::goldens());
     goldens.extend(logical::goldens());
@@ -389,20 +394,50 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
 }
 
 fn provenance_source(g: &Golden) -> &'static str {
+    const SHARED_KERNEL: &str = "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine";
     if g.class_path == "G36" {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
     } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
+    } else if g.class_path == "CDL.Reals.LimitSlewRate" {
+        "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
     } else if g.class_path == "CDL.Reals.Ramp" {
-        "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; independent re-derivation"
+        "closed-form discrete recurrence from Buildings CDL.Reals.Ramp.mo plus the project-wide implicit Reals dynamics convention; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
     } else if g.class_path == "CDL.Reals.Sources.Sin" {
-        "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; independent re-derivation"
+        "closed-form from Buildings CDL.Reals.Sources.Sin.mo source equation; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
     } else if g.class_path == "CDL.Reals.Sources.CalendarTime" {
-        "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; independent re-derivation"
+        "closed-form from Buildings CDL.Reals.Sources.CalendarTime.mo and Buildings.Utilities.Time.CalendarTime.mo timestamp tables; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if g.class_path.starts_with("CDL.Psychrometrics.") {
+        "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine"
+    } else if matches!(
+        g.class_path,
+        "CDL.Reals.Sin"
+            | "CDL.Reals.Cos"
+            | "CDL.Reals.Tan"
+            | "CDL.Reals.Asin"
+            | "CDL.Reals.Acos"
+            | "CDL.Reals.Atan"
+            | "CDL.Reals.Atan2"
+            | "CDL.Reals.Exp"
+            | "CDL.Reals.Log"
+            | "CDL.Reals.Log10"
+            | "CDL.Reals.Sqrt"
+            | "CDL.Reals.Sort"
+            | "CDL.Reals.Round"
+            | "CDL.Reals.Line"
+            | "CDL.Reals.Derivative"
+            | "CDL.Reals.Sources.Pulse"
+            | "CDL.Logical.Sources.Pulse"
+            | "CDL.Integers.Sources.Pulse"
+            | "CDL.Utilities.SunRiseSet"
+            | "CDL.Logical.VariablePulse"
+            | "CDL.Discrete.Sampler"
+            | "CDL.Discrete.ZeroOrderHold"
+            | "CDL.Discrete.FirstOrderHold"
+    ) {
+        SHARED_KERNEL
     } else if g.class_path.ends_with(".Sources.TimeTable") {
         "closed-form from Buildings CDL.*.Sources.TimeTable.mo and Modelica.Blocks.Sources.CombiTimeTable v4.1.0 semantics; independent re-derivation"
-    } else if g.class_path.starts_with("CDL.Psychrometrics.") {
-        "closed-form from Buildings CDL.Psychrometrics block equations plus saturationPressure helpers, with Open Control Engine fail-closed guards for non-finite inputs and singular pressures; independent re-derivation"
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }

@@ -9,6 +9,9 @@ use oce_conformance::{
 };
 use serde_json::Value;
 
+#[path = "g36_funnel_band/policy.rs"]
+mod funnel_band_policy;
+
 const RELIEF_DAMPER: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 
@@ -79,6 +82,39 @@ fn g36_relief_damper_tier_a_oracle_matches_engine_output() {
         }
         other => panic!("ReliefDamper used non-exact comparison: {other:?}"),
     }
+}
+
+/// Route this sequence's Real outputs through the L1 funnel band with the recorded per-signal
+/// tolerance (`_spec/07 §8`); the Boolean `supply_fan_status` input is replayed unchanged and there
+/// are no discrete outputs to exclude. Additive to — and separate from — the exact oracle above.
+#[test]
+fn funnel_band_routes_relief_damper_real_outputs() {
+    let inputs = funnel_points(INPUTS);
+    let outputs = funnel_points(OUTPUTS);
+    let instants: Vec<f64> = (0..=5).map(f64::from).collect();
+    funnel_band_policy::route_real_outputs_through_funnel_band(
+        &funnel_band_policy::FunnelRouting {
+            sequence: SEQUENCE,
+            cxf: RELIEF_DAMPER.as_bytes(),
+            inputs: &inputs,
+            outputs: &outputs,
+            instants: &instants,
+            sample_step: 1.0,
+            reference_csv: &reference_path(),
+            kind_to_str: kind_name,
+        },
+    );
+}
+
+fn funnel_points(specs: &[PointSpec]) -> Vec<funnel_band_policy::FunnelPoint> {
+    specs
+        .iter()
+        .map(|point| funnel_band_policy::FunnelPoint {
+            reference_name: point.reference_name,
+            cdl_name: point.cdl_name,
+            kind: point.kind,
+        })
+        .collect()
 }
 
 #[derive(Clone, Copy)]

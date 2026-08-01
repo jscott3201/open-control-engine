@@ -1,0 +1,21 @@
+{
+  "class_path": "CDL.Reals.LimitSlewRate",
+  "scenario": "rising_saturation",
+  "signal": "y",
+  "tier": "A",
+  "source": "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine",
+  "value_kind": "Real",
+  "compare_regime": "Real banded/bit-exact (rtoly~1e-9; exact f64 ops -> bit-exact)",
+  "n_samples": 5,
+  "n_reference_columns": 3,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "u", "y"],
+  "inputs": [
+    { "name": "u", "value_kind": "Real", "values": [0.0, 10.0, 10.0, 3.0, 3.0] }
+  ],
+  "input": "raisingSlewRate=1.0, fallingSlewRate=-0.5, Td=0.2, enable=true; u=[0,10,10,3,3]",
+  "reference_rule": "Buildings CDL.Reals.LimitSlewRate.mo plus the project-wide implicit Reals dynamics convention (implicit lag, then post-filter increment clamp); t=0 first-tick y=u; t=1,2 rising-clamped at +1.0*dt; t=3,4 unsaturated lag",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

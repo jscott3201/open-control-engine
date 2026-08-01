@@ -1,198 +1,204 @@
 # Open Control Engine
 
-**A high-performance, embeddable Rust control engine that natively executes the OBC / LBL
-[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html) for smart-building
-equipment control sequences.**
+**Open Control Engine runs building control sequences written in the OBC / LBL
+[Control Description Language (CDL)](https://obc.lbl.gov/specification/cdl.html), as a Rust
+library you embed in your own application.**
 
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
-[![Rust 1.95 · edition 2024](https://img.shields.io/badge/rust-1.95%20%C2%B7%20edition%202024-orange.svg)](rust-toolchain.toml)
-[![database-free](https://img.shields.io/badge/storage-database--free-success.svg)](#the-architectural-spine-the-cdl-717-non-computational-seam)
+[![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#platform-and-versioning)
+[![database-free](https://img.shields.io/badge/storage-database--free-success.svg)](docs/architecture.md)
 
-CDL is a declarative, object-oriented language — a strict subset of Modelica — that expresses
-building control logic as block diagrams. Its determinism contract (CDL §7.16: synchronous
-data flow + single assignment) means identical inputs and parameters yield identical outputs,
-which makes the Open Control Engine a valid **executable specification** for commissioning and
-continuous functional verification — the same control sequence, run bit-for-bit reproducibly.
+You hand it a control sequence as a CXF document (CDL's JSON-LD exchange format). It parses,
+validates, and compiles that sequence into a frozen topological schedule, then ticks the schedule
+deterministically — identical inputs and parameters produce bit-identical outputs, run to run and
+across x86_64 and arm64, checked against committed goldens on both architectures on every pull
+request.
 
-It is designed to be the **core engine under the hood** of larger building-control products: the
-public API and core semantics stay small, embeddable, and stable.
+It is a library and nothing else: no `main`, no daemon, no network listener, no async runtime, and
+no database. Everything non-computational — points, trends, tags, durability — sits behind a
+storage port your application implements. That split is not a design preference; it is CDL §7.17,
+which states that such metadata does not affect the computation of a control signal.
 
----
-
-## Status
-
-The architecture specification is the design of record and is complete; the implementation is
-progressing milestone by milestone, each gated by extensive tests.
-
-| Milestone | Scope | State |
-| --- | --- | --- |
-| **M0** | Deterministic execution core — workspace, types, scheduler, tick loop | ✅ done |
-| **M1** | CXF ingest, database-free, end-to-end *load → simulate* | ✅ done |
-| **M2** | CDL block-library breadth (G36) + conformance/oracle + parameter validation | ✅ done (in-repo) |
-| **M3** | Durability through the `oce-store` port (reference adapter) | ⬜ planned |
-| **M4** | Docs/point-list export, model-from-semantic, hardening, and `oce-py` PyO3 bindings (MVP) | ⬜ planned |
-| **M5** | Python free-threading (`gil_used = false`) + free-threaded wheels + first PyPI publish | ⬜ planned |
-
-Today the engine loads representative **ASHRAE Guideline 36** sequences (AHU supply-air-temperature
-reset, AHU economizer, single-zone VAV) from CXF and simulates them end-to-end through the frozen
-facade, against **~70 CDL elementary blocks**, with a self-contained schedule cross-check oracle,
-whole-sequence **bit-exact determinism goldens**, an **independent closed-form conformance oracle**,
-and block-parameter validation. External Modelica/Buildings reference cross-checks are a deliberately
-deferred tail. The project is **pre-1.0** and not yet published to crates.io.
+Today it loads and simulates **46 ASHRAE Guideline 36 sequence fixtures** against a registry of
+**133 CDL block classes**. It is **pre-1.0 and not published to crates.io**.
 
 ---
 
-## The architectural spine: the CDL §7.17 non-computational seam
+## Who this is for
 
-CDL §7.17 states that point lists, trends, display units, tags, and all Brick / Haystack /
-ASHRAE 223P semantics **do not affect the computation of a control signal**. That single rule is the
-cleanest seam in the system, and the engine is built around it.
+- **BAS and OEM product teams** who need a sequence runtime inside a controller or supervisory
+  product, without adopting a database or a runtime framework along with it.
+- **Commissioning and FDD tool authors** who need the same sequence to produce the same numbers
+  today that it produced last quarter, as evidence rather than as a hope.
+- **CDL researchers and toolchain authors** who want an independent executable implementation to
+  compare against.
 
-![Architecture: the execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port](docs/diagrams/architecture-seam.svg)
-
-- An **execution core** — a small, deterministic, in-memory dataflow machine that sees *only*
-  blocks, typed connections, and values. This is the hot path. It has **zero** dependency on any
-  database.
-- A **storage layer behind a trait** — everything the evaluator must *not* read (equipment topology,
-  points, instance structure, parameters, trends, semantic triples) plus durable persistence — is
-  reached only through the `oce-store` port traits. The library ships **no first-party database**;
-  durable/queryable backends are **app-side adapters** behind the port, with an in-memory default
-  (`oce-store-mem`).
-
-A downstream project can embed the engine for *load → flatten → validate → schedule → tick →
-simulate* with no database at all.
-
-![Pipeline: load, flatten, validate, and schedule run once per load; tick and simulate run on the deterministic hot path](docs/diagrams/pipeline.svg)
-
----
-
-## Embeddability posture
-
-The engine is, by design:
-
-- **Library-only** — no `main`, no daemon, no server, no network listener. The host owns process
-  lifecycle, transport, TLS, authN/Z, multi-tenancy, off-host durability, and metrics export.
-- **Synchronous, in-process** — every public method is a blocking synchronous call. **No async
-  runtime** is pulled at any layer.
-- **`#![forbid(unsafe_code)]`** in every crate.
-- **edition 2024, Rust 1.95.0** (pinned in [`rust-toolchain.toml`](rust-toolchain.toml)),
-  `resolver = "3"`.
-- **Deterministic on the tick** — a frozen, topologically-sorted schedule evaluated over flat
-  arrays: no graph walks, no hashing, no allocation, no I/O, and no store access on the hot path.
+If you are looking for a finished building-automation product, this is not that. It is the engine
+such a product would be built on.
 
 ---
 
 ## Quickstart
 
-> The facade crate is **`oce-api`**, published under the umbrella name **`open-control-engine`**.
-> Until the first crates.io release, depend on it via git:
+The facade package is **`oce-api`**. `open-control-engine` is a reserved umbrella name for a future
+release, **not** a current alias — nothing is on crates.io yet, so depend on it via git and pin a
+revision:
 
 ```toml
 [dependencies]
-oce-api = { git = "https://github.com/jscott3201/open-control-engine" }
+oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "000cebb" }
 ```
 
-A minimal embed — load a CDL sequence from CXF and simulate it (illustrative sketch):
+Load a CDL sequence from CXF and simulate it:
 
 ```rust
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 
-// 1. An engine with the default in-memory store — no database.
-let mut engine = Engine::in_memory();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // An engine with the default in-memory store — no database.
+    let mut engine = Engine::in_memory();
 
-// 2. Load a CDL sequence from CXF (JSON-LD): parse, validate, freeze the schedule.
-engine.load_cxf(cxf_bytes)?;
+    // Parse, validate, and freeze the schedule.
+    let cxf_bytes = std::fs::read("crates/oce-cxf/tests/fixtures/g36/ahu_economizer.jsonld")?;
+    engine.load_cxf(&cxf_bytes)?;
 
-// 3. Simulate: feed inputs per tick, collect named outputs.
-let metrics = engine.simulate(&SimSpec {
-    t_start: 0.0,
-    t_stop: 4.0,
-    step: 1.0,
-    inputs: InputSource::Closure(Box::new(|t| {
-        vec![("zone_temp".to_string(), Value::Real(22.0 + t))]
-    })),
-    collect: CollectSpec::Named { points: vec!["sat_setpoint".to_string()], stride: 1 },
-})?;
+    // Simulate: feed inputs per tick, collect named outputs.
+    let metrics = engine.simulate(&SimSpec {
+        t_start: 0.0,
+        t_stop: 4.0,
+        step: 1.0,
+        inputs: InputSource::Closure(Box::new(|t| {
+            vec![("zone_temp".to_string(), Value::Real(22.0 + t))]
+        })),
+        collect: CollectSpec::Named {
+            points: vec!["sat_setpoint".to_string()],
+            stride: 1,
+        },
+    })?;
+
+    println!("{} rows collected", metrics.trace.times().len());
+    Ok(())
+}
+```
+
+To run the engine's own tests from a clone:
+
+```bash
+git clone https://github.com/jscott3201/open-control-engine
+cd open-control-engine
+cargo nextest run -p oce-blocks -p oce-expr    # the per-PR engine subset
+bash .agents/gate.sh                            # the full per-PR gate, as CI runs it
 ```
 
 ---
 
-## The crate map (`oce-*`)
+## What it does today
 
-The dependency direction is intentional and acyclic, organized around the seam above.
+- Imports CXF via the CDL §7.1 resolver, and **exports** back to CXF under a round-trip contract
+  where re-importing the emitted bytes renders bit-identically — Reals compared by IEEE-754 bits,
+  not by epsilon. See [CXF round trip](docs/cxf-round-trip.md).
+- Executes a registry of **133 CDL elementary block classes** plus 3 reserved internal lowering
+  classes, enumerable at runtime via `oce_blocks::catalog()` with per-class ports, parameter rules,
+  and honest parameter defaults. See [CDL coverage](docs/cdl-coverage.md).
+- Runs **46 G36 conformance fixtures** end to end through the frozen facade, each with a committed
+  whole-sequence golden trace.
+- Commits computed outputs through the storage port after a real-time step, with host-supplied
+  timestamps — the seam never invents time.
 
-**Execution core (Group A — no store, no database):**
+## What it does not do
 
-| Crate | Responsibility |
-| --- | --- |
-| `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
-| `oce-expr` | The CDL §7.7.2 binding-expression parser/evaluator (closed-world; pure, total). |
-| `oce-blocks` | The `Block` trait and the native CDL elementary-block library (stateless `[A]` / stateful `[S]`). |
-| `oce-flatten` | Elaboration / CXF-path resolution (CXF arrives pre-flattened; full `.mo` flattening is deferred). |
-| `oce-validate` | Loader conformance: subset rejection, single-assignment, type/attribute unification, parameter rules. |
-| `oce-graph` | The deterministic scheduler/executor: direct-feedthrough DAG, algebraic-loop rejection, own Kahn topological sort, the tick loop. |
-| `oce-cxf` | CXF (Control eXchange Format) JSON-LD import/export ↔ the model graph. |
-| `oce-semantics` | Vendor-annotation parsing → effective (non-computational) point/trend/semantic metadata. |
-| `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. |
+Stating this plainly is more useful than a feature list.
 
-**Storage ports (the seam — traits only, no database types):**
-
-| Crate | Responsibility |
-| --- | --- |
-| `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` traits + DTOs. No database types. |
-| `oce-store-mem` | The default in-memory backend, so the engine runs with no database. |
-
-**Verification, externals & host facade:**
-
-| Crate | Responsibility |
-| --- | --- |
-| `oce-conformance` | The funnel-style tolerance-band / golden-trace conformance harness. |
-| `oce-extension` | The FMI / extension-block boundary (v1 surfaces extension blocks as unresolved externals). |
-| `oce-docs` | Sequence-spec (Word/HTML) and point-list document export. |
-| `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` — the single public surface. Published as **`open-control-engine`**. |
+- **It does not parse or flatten Modelica `.mo` sources.** It executes the block graph a CXF
+  document hands it. `oce-flatten` is a reserved seam that returns the model unchanged.
+- **It is not general ASHRAE G36 support.** The supported set is explicitly
+  *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
+  arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
+- **It has never been run against the normative reference implementation.** Two verification tiers
+  are deliberately not wired, including the cross-implementation differential against an external
+  Modelica / Buildings toolchain. That is the honest boundary of what has been proven —
+  [read the full accounting](docs/verification-evidence.md).
+- **It has no Python bindings**, no daemon, no scheduler, and no database.
 
 ---
 
-## Testing
+## Before you drive equipment
 
-This engine controls real equipment, so **a wrong result is a physical hazard** — testing is a
-first-class deliverable, not an afterthought. Every change ships extensive edge-case tests, **golden
-tests** (checked-in expected outputs compared bit-exactly), **oracle cross-checks** (results compared
-against independently-derived references), and **determinism goldens**. See
-[`TESTING.md`](TESTING.md) for the full standard.
+The engine deliberately implements **no fail-safe policy of its own**, and that is a decision your
+host layer has to answer for:
 
-[cargo-nextest](https://nexte.st/) is the test runner:
+- **Staging is status-agnostic.** A sample is converted from its value regardless of `PointStatus`
+  — `Fault`, `Stale`, and `Uninitialized` all stage exactly like `Ok`.
+- **A missing sample is not an error.** The connector holds its previous value indefinitely. A dead
+  sensor is indistinguishable from a steady one, for as long as it stays dead.
 
-```bash
-cargo nextest run        # unit + integration tests
-cargo test --doc         # doctests (nextest does not run these)
-```
-
-CI is **dev-light / release-heavy**: per-PR gates into `development` run fmt / clippy / build /
-rustdoc / file-size / no-secret / database-free checks; the **full test suite runs on
-`development → main` release gates**.
+Staleness limits, fault reactions, and safe-state fallback belong in the host above the engine.
+**[Host responsibilities](docs/host-responsibilities.md)** is the checklist; read it before wiring
+anything to a physical output.
 
 ---
 
-## Build & develop
+## Architecture
 
-```bash
-cargo build --workspace        # the engine only — no database, no async runtime
-```
+CDL §7.17 states that point lists, trends, display units, tags, and Brick / Haystack / ASHRAE 223P
+semantics do not affect the computation of a control signal. That one rule is the seam the whole
+system is built around: an execution core that sees only blocks, typed connections, and values, and
+a storage port for everything else.
 
-`oce-api` exposes one feature today: `default = ["mem"]`, which wires the in-memory store as the
-default `Store` backend. Durable/queryable backends are the consuming application's responsibility,
-authored app-side as an adapter behind the `oce-store` port.
+![The execution core sees only blocks, connections, and values and has no database; everything non-computational sits behind the oce-store port](docs/diagrams/architecture-seam.svg)
 
-Install the shared git hooks once after cloning (fast format/lint/no-DB gates on commit and push):
+Full layer-by-layer detail, the crate map, and the platform and MSRV policy are in
+**[Architecture](docs/architecture.md)**.
 
-```bash
-bash scripts/install-hooks.sh
-```
+---
 
-Changes land via pull requests into the `development` branch, behind the CI gate in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml). Contributions are welcome — see
-[`CONTRIBUTING.md`](CONTRIBUTING.md), and [`CHANGELOG.md`](CHANGELOG.md) for notable changes.
+## How it is verified
+
+Four different things in this repository are called "tests", and they prove four different things.
+One of them proves nothing about correctness at all — the 46 fixture goldens are **engine
+self-output**, a determinism snapshot that catches drift, not wrongness.
+
+Correctness is bounded separately by 412 provenance records generated by a tool held off the
+workspace and **forbidden from depending on the block library**, with CI enforcing that
+code-dependency firewall. 410 signal goldens are compared bit-exactly.
+
+Two tiers are **not wired**, and no sequence here has been executed against an external Modelica /
+Buildings toolchain.
+
+**[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
+it cannot, and which checks are not running.
+
+---
+
+## Documentation
+
+| Page | For |
+| --- | --- |
+| [Architecture](docs/architecture.md) | Layers, the §7.17 seam, the crate map, platform and MSRV |
+| [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
+| [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |
+| [CXF round trip](docs/cxf-round-trip.md) | Export guarantees, and where it silently drops things |
+| [CXF composite subset](docs/cxf-composite-subset.md) | Normative contract for external CXF emitters |
+| [Host responsibilities](docs/host-responsibilities.md) | What you must implement before driving equipment |
+| [CI and the gate](docs/ci-and-the-gate.md) | What runs when, and what a green check proves |
+| [Benchmarks](docs/benchmarks.md) | Measured tick throughput, per run |
+| [Testing standard](TESTING.md) | The bar every change is held to |
+| [Security](SECURITY.md) | Reporting, threat model, and known limits |
+
+---
+
+## Contributing
+
+Changes land via pull requests into `development`. Install the shared git hooks once after cloning
+with `bash scripts/install-hooks.sh`, and run `bash .agents/gate.sh` before opening a PR — that
+script is the single source of truth for what CI runs.
+
+Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
+test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**.
+
+One thing worth knowing up front: the per-PR gate runs engine tests for `oce-blocks` and `oce-expr`
+only. A change confined to another crate can show every check green having run none of its own
+tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
 ---
 
@@ -206,3 +212,8 @@ Dual-licensed under either of:
 at your option. Unless you explicitly state otherwise, any contribution intentionally submitted for
 inclusion in the work by you shall be dual-licensed as above, without any additional terms or
 conditions.
+
+`third_party/` vendors upstream Modelica Buildings CDL sources and modelica-json CXF translations
+verbatim, under their own license — see
+[`third_party/modelica-buildings-cdl/README.md`](third_party/modelica-buildings-cdl/README.md). That
+tree sits outside every crate root, so `cargo package` never ships it.

@@ -1,7 +1,25 @@
 use oce_model::ParamTable;
 
 use super::{bool_param, real_param};
-use crate::{Block, Derivative, LimitSlewRate, MovingAverage, ParamRule, RegistryEntry};
+use crate::{
+    Block, Derivative, LimitSlewRate, MovingAverage, ParamDefault, ParamRule, RegistryEntry,
+};
+
+const DERIVATIVE_Y_START_DEFAULT: f64 = 0.0;
+const RAISING_SLEW_RATE_FALLBACK: f64 = 1.0;
+const ENABLE_DEFAULT: bool = true;
+const MOVING_AVERAGE_DELTA_FALLBACK: f64 = 1.0;
+
+pub(super) const DERIVATIVE_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_real!("y_start", DERIVATIVE_Y_START_DEFAULT)];
+pub(super) const LIMIT_SLEW_RATE_PARAM_DEFAULTS: &[ParamDefault] = &[
+    param_default_required!("raisingSlewRate"),
+    param_default_derived!("fallingSlewRate", "-raisingSlewRate"),
+    param_default_derived!("Td", "raisingSlewRate * 10.0"),
+    param_default_boolean!("enable", ENABLE_DEFAULT),
+];
+pub(super) const MOVING_AVERAGE_PARAM_DEFAULTS: &[ParamDefault] =
+    &[param_default_required!("delta")];
 
 pub(super) const ENTRIES: &[RegistryEntry] = &[
     RegistryEntry {
@@ -18,41 +36,48 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
     },
 ];
 
-pub(super) const DERIVATIVE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "T",
-    min: 0.0,
-}];
+/// Upstream `LimitSlewRate.mo` (pin `a131864`) declares `raisingSlewRate` with NO default
+/// (`fallingSlewRate` and `Td` default derived from it). Exact-bound alignment of the range
+/// rules to the upstream `min=` annotations is tracked separately.
+pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required {
+        name: "raisingSlewRate",
+    },
+    ParamRule::RealGreaterThan {
+        name: "Td",
+        min: 0.0,
+    },
+];
 
-pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "Td",
-    min: 0.0,
-}];
-
-pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[ParamRule::RealGreaterThan {
-    name: "delta",
-    min: 0.0,
-}];
+/// Upstream `MovingAverage.mo` (pin `a131864`) declares `delta(min=1E-5)` with NO default.
+pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[
+    ParamRule::Required { name: "delta" },
+    ParamRule::RealGreaterThan {
+        name: "delta",
+        min: 0.0,
+    },
+];
 
 fn make_derivative(p: &ParamTable) -> Box<dyn Block> {
+    // `k` and `T` are RealInput connectors upstream (declaration order k, T, u), not parameters;
+    // `y_start` is the block's only parameter.
     Box::new(Derivative {
-        k: real_param(p, "k", 1.0),
-        t: real_param(p, "T", 0.1),
-        y_start: real_param(p, "y_start", 0.0),
+        y_start: real_param(p, "y_start", DERIVATIVE_Y_START_DEFAULT),
     })
 }
 
 fn make_limit_slew_rate(p: &ParamTable) -> Box<dyn Block> {
-    let raising_slew_rate = real_param(p, "raisingSlewRate", 1.0);
+    let raising_slew_rate = real_param(p, "raisingSlewRate", RAISING_SLEW_RATE_FALLBACK);
     Box::new(LimitSlewRate {
         raising_slew_rate,
         falling_slew_rate: real_param(p, "fallingSlewRate", -raising_slew_rate),
         td: real_param(p, "Td", raising_slew_rate * 10.0),
-        enable: bool_param(p, "enable", true),
+        enable: bool_param(p, "enable", ENABLE_DEFAULT),
     })
 }
 
 fn make_moving_average(p: &ParamTable) -> Box<dyn Block> {
     Box::new(MovingAverage {
-        delta: real_param(p, "delta", 1.0),
+        delta: real_param(p, "delta", MOVING_AVERAGE_DELTA_FALLBACK),
     })
 }

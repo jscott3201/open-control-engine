@@ -226,6 +226,9 @@ fn min_max_edges_follow_scalar_expression_policy() {
 
 #[test]
 fn limiter_signed_zero_clamp_boundaries_are_pinned() {
+    // The upstream comparison chain treats +0.0 and -0.0 as EQUAL, so a boundary-equal u takes
+    // the passthrough arm and keeps ITS OWN zero sign — the pre-upstream-alignment det chain
+    // zero-pinned u=+0.0 against a -0.0 ceiling to -0.0, a bit upstream never produces.
     assert_real_bits(
         &Limiter {
             u_min: -0.0,
@@ -240,8 +243,63 @@ fn limiter_signed_zero_clamp_boundaries_are_pinned() {
             u_max: -0.0,
         },
         &[0.0],
+        0.0f64.to_bits(),
+    );
+    // Mirror: a -0.0 input at a +0.0 floor passes through as -0.0.
+    assert_real_bits(
+        &Limiter {
+            u_min: 0.0,
+            u_max: 1.0,
+        },
+        &[-0.0],
         (-0.0f64).to_bits(),
     );
+}
+
+#[test]
+fn limiter_non_finite_and_boundary_inputs_follow_upstream_comparison_chain() {
+    let lim = Limiter {
+        u_min: -1.5,
+        u_max: 2.5,
+    };
+    // Upstream Limiter.mo: `if u > uMax then uMax elseif u < uMin then uMin else u`. A NaN u
+    // fails both comparisons and PASSES THROUGH fail-visible (canonicalized on emit) instead of
+    // being silently absorbed into uMin as the old det chain did — a faulted sensor must stay
+    // visible downstream.
+    assert_real_bits(&lim, &[f64::NAN], 0x7ff8_0000_0000_0000);
+    assert_real_bits(
+        &lim,
+        &[f64::from_bits(0xfff8_0000_0000_0000)],
+        0x7ff8_0000_0000_0000,
+    );
+    // Infinities clamp to the bounds, exactly as upstream.
+    assert_real_bits(&lim, &[f64::INFINITY], 2.5f64.to_bits());
+    assert_real_bits(&lim, &[f64::NEG_INFINITY], (-1.5f64).to_bits());
+    // Boundary-equal inputs take the passthrough arm and return u's own bits.
+    assert_real_bits(&lim, &[2.5], 2.5f64.to_bits());
+    assert_real_bits(&lim, &[-1.5], (-1.5f64).to_bits());
+
+    // A NaN bound disables only that side's clamp (load-time validation rejects NaN bounds;
+    // this pins the panic-free degrade for unvalidated embedders).
+    let nan_floor = Limiter {
+        u_min: f64::NAN,
+        u_max: 2.5,
+    };
+    assert_real_bits(&nan_floor, &[-9.0], (-9.0f64).to_bits());
+    assert_real_bits(&nan_floor, &[9.0], 2.5f64.to_bits());
+}
+
+#[test]
+fn limiter_inverted_bounds_degrade_by_chain_order_without_panicking() {
+    // Load-time validation rejects u_min > u_max; unvalidated embedders get the upstream
+    // chain's arm order: `u > u_max` wins first, then `u < u_min`, else passthrough.
+    let inv = Limiter {
+        u_min: 10.0,
+        u_max: 0.0,
+    };
+    assert_real_bits(&inv, &[5.0], 0.0f64.to_bits());
+    assert_real_bits(&inv, &[-5.0], 10.0f64.to_bits());
+    assert_real_bits(&inv, &[f64::NAN], 0x7ff8_0000_0000_0000);
 }
 
 #[test]

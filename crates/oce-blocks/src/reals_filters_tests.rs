@@ -1,12 +1,14 @@
-//! Tests for `CDL.Reals` filter, slew, and moving-average blocks.
-//! Expected traces are hand-derived from the documented discrete recurrences.
+//! Tests for the `CDL.Reals` slew and moving-average blocks. Expected traces are hand-derived
+//! from the documented discrete recurrences. The `Derivative` suite lives in
+//! `reals_filters_derivative_tests` (split along the behavioral sub-topic).
 
 use std::cell::RefCell;
+use std::sync::Arc;
 
 use oce_model::{ParamTable, Value};
 
 use super::{
-    Block, BlockKind, Ctx, Derivative, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics,
+    Block, BlockKind, Ctx, Diagnostics, LimitSlewRate, MovingAverage, NoopDiagnostics, lookup,
 };
 
 #[derive(Default)]
@@ -74,6 +76,61 @@ fn drive(block: &dyn Block, steps: &[(f64, f64)]) -> (Vec<Value>, Vec<u64>) {
     (trace, region)
 }
 
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn registry_trace(parameters: &ParamTable, steps: &[(f64, f64)]) -> Vec<Value> {
+    let block = (lookup("CDL.Reals.LimitSlewRate").unwrap().make)(parameters);
+    let mut region = vec![0; block.state_len()];
+    block.init_state(&mut region, parameters);
+    steps
+        .iter()
+        .map(|&(time, input)| tick(block.as_ref(), &mut region, time, input))
+        .collect()
+}
+
+fn values_bit_equal(left: &[Value], right: &[Value]) -> bool {
+    left.len() == right.len()
+        && left
+            .iter()
+            .zip(right)
+            .all(|(left, right)| left.bit_eq(right))
+}
+
+#[test]
+fn falling_slew_rate_tracks_raising_rate_and_changes_the_trace() {
+    let derived = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let explicit = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("fallingSlewRate", Value::Real(-2.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let sensitive = parameter_table(&[
+        ("raisingSlewRate", Value::Real(2.0)),
+        ("fallingSlewRate", Value::Real(-4.0)),
+        ("Td", Value::Real(0.01)),
+    ]);
+    let steps = [(0.0, 10.0), (1.0, -10.0), (2.0, -10.0)];
+    let derived_trace = registry_trace(&derived, &steps);
+    assert!(values_bit_equal(
+        &derived_trace,
+        &registry_trace(&explicit, &steps)
+    ));
+    assert!(!values_bit_equal(
+        &derived_trace,
+        &registry_trace(&sensitive, &steps)
+    ));
+}
+
 fn assert_trace_bits(got: &[Value], want: &[u64]) {
     assert_eq!(got.len(), want.len());
     for (idx, (got, want)) in got.iter().zip(want).enumerate() {
@@ -89,18 +146,13 @@ fn assert_real_bits(got: &Value, want: u64) {
 
 #[test]
 fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
-    let blocks: [&dyn Block; 3] = [
-        &Derivative::default(),
-        &LimitSlewRate::default(),
-        &MovingAverage::default(),
-    ];
+    let blocks: [&dyn Block; 2] = [&LimitSlewRate::default(), &MovingAverage::default()];
     for block in blocks {
         assert_eq!(block.kind(), BlockKind::Stateful);
         assert_eq!(block.signature().inputs.len(), 1);
         assert_eq!(block.signature().outputs.len(), 1);
         assert!(block.feeds_through(0, 0));
     }
-    assert_eq!(Derivative::default().state_len(), 2);
     assert_eq!(LimitSlewRate::default().state_len(), 2);
     assert_eq!(MovingAverage::default().state_len(), 134);
 }
@@ -108,15 +160,6 @@ fn dynamic_reals_contracts_are_stateful_feedthrough_not_loop_cuts() {
 #[test]
 fn dynamic_reals_outputs_canonicalize_nan_bits() {
     let negative_nan = f64::from_bits(0xfff8_0000_0000_0000);
-
-    let derivative = Derivative {
-        y_start: negative_nan,
-        ..Derivative::default()
-    };
-    assert_real_bits(
-        &emit_real(&derivative, &init_region(&derivative), 0.0, 1.0),
-        0x7ff8000000000000,
-    );
 
     let slew = LimitSlewRate {
         enable: false,
@@ -137,66 +180,6 @@ fn dynamic_reals_outputs_canonicalize_nan_bits() {
         ),
         0x7ff8000000000000,
     );
-}
-
-#[test]
-fn derivative_yd_start_implicit_filter_and_bounded_regime_are_pinned() {
-    let yd = Derivative {
-        k: 2.0,
-        t: 1.0,
-        y_start: 0.25,
-    };
-    let steps = [(0.0, 1.0), (0.5, 2.0), (1.0, 2.0)];
-    let (trace, region) = drive(&yd, &steps);
-    // Initial x=1 - T*y_start/k = 0.875. With alpha=0.5, x becomes 1.25 then 1.5.
-    assert_trace_bits(
-        &trace,
-        &[
-            0x3fd0_0000_0000_0000,
-            0x4002_0000_0000_0000,
-            0x3ff8_0000_0000_0000,
-        ],
-    );
-    assert_eq!(region[0], 0x3ff8_0000_0000_0000);
-
-    let bounded = Derivative {
-        k: 1.0,
-        t: 0.01,
-        y_start: 0.0,
-    };
-    let steps = [(0.0, 0.0), (1.0, 1.0), (2.0, 1.0), (3.0, 1.0), (4.0, 1.0)];
-    let (trace, region) = drive(&bounded, &steps);
-    // T=0.01, alpha=100. Explicit Euler would diverge; implicit Euler leaves residual /101.
-    assert_trace_bits(
-        &trace,
-        &[
-            0x0000_0000_0000_0000,
-            0x4059_0000_0000_0000,
-            0x3fef_aee4_1e6a_74a0,
-            0x3f84_1393_15ce_ed00,
-            0x3f19_7185_2d60_8000,
-        ],
-    );
-    assert_eq!(region[0], 0x3fef_ffff_fad7_3d19);
-}
-
-#[test]
-fn derivative_feedthrough_perturbation_and_determinism_are_pinned() {
-    let block = Derivative::default();
-    let mut region = init_region(&block);
-    tick(&block, &mut region, 0.0, 1.0);
-    let low = emit_real(&block, &region, 1.0, 1.0);
-    let high = emit_real(&block, &region, 1.0, 2.0);
-    assert_real_bits(&low, 0.0f64.to_bits());
-    assert_real_bits(&high, 10.0f64.to_bits());
-
-    let steps = [(0.0, 0.2), (0.1, 0.3), (0.2, 0.3), (0.4, 0.1)];
-    let (trace_a, region_a) = drive(&block, &steps);
-    let (trace_b, region_b) = drive(&block, &steps);
-    for (idx, (a, b)) in trace_a.iter().zip(&trace_b).enumerate() {
-        assert!(a.bit_eq(b), "trace[{idx}] {a:?} vs {b:?}");
-    }
-    assert_eq!(region_a, region_b);
 }
 
 #[test]

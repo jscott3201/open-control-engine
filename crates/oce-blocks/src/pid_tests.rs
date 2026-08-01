@@ -320,13 +320,24 @@ fn pid_output_limiter_signed_zero_boundaries_are_pinned() {
         },
     };
 
+    // The output clamp is the upstream Limiter comparison chain: IEEE comparisons treat +0.0
+    // and -0.0 as EQUAL, so a boundary-equal y_u takes the passthrough arm and keeps ITS OWN
+    // zero sign — +0.0 against a -0.0 ceiling stays +0.0 (the old det_min zero-pin returned
+    // -0.0 here, an engine-invented bit upstream never produces).
     assert_real_bits(
         &emit_real(&lower_floor, &pid_inputs(0.0, 0.0), &[], 0.0),
         0.0f64.to_bits(),
     );
     assert_real_bits(
         &emit_real(&upper_ceiling, &pid_inputs(0.0, 0.0), &[], 0.0),
-        (-0.0f64).to_bits(),
+        0.0f64.to_bits(),
+    );
+    // A -0.0 setpoint still emits +0.0: the P term sums with the +0.0 I/D contributions before
+    // the clamp, and IEEE addition flushes -0.0 + 0.0 to +0.0 — the passthrough sign itself is
+    // pinned at the Limiter block level (reals_arithmetic_tests).
+    assert_real_bits(
+        &emit_real(&lower_floor, &pid_inputs(-0.0, 0.0), &[], 0.0),
+        0.0f64.to_bits(),
     );
 }
 
@@ -671,7 +682,7 @@ fn pid_with_reset_non_finite_reset_parameter_path_is_pinned() {
 }
 
 #[test]
-fn pid_non_finite_input_current_behavior_is_panic_free_and_pinned() {
+fn pid_non_finite_input_is_panic_free_and_nan_stays_visible() {
     use oce_model::SimpleController::P;
     let block = Pid {
         config: ControllerConfig {
@@ -681,11 +692,14 @@ fn pid_non_finite_input_current_behavior_is_panic_free_and_pinned() {
             ..ControllerConfig::default()
         },
     };
-    // The manual limiter mirrors `CDL.Reals.Limiter`: f64::max/min absorb NaN to the bound.
+    // The output clamp mirrors the upstream `CDL.Reals.Limiter` comparison chain: a NaN
+    // control signal fails both comparisons and PASSES THROUGH (canonicalized on emit) instead
+    // of being silently absorbed into y_min — a faulted loop stays visible downstream.
     assert_real_bits(
         &emit_real(&block, &pid_inputs(f64::NAN, 0.0), &[], 0.0),
-        0.0f64.to_bits(),
+        0x7ff8_0000_0000_0000,
     );
+    // An infinite error still saturates to the bound, exactly as upstream.
     assert_real_bits(
         &emit_real(&block, &pid_inputs(f64::INFINITY, 0.0), &[], 0.0),
         1.0f64.to_bits(),

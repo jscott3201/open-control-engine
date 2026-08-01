@@ -1,0 +1,25 @@
+{
+  "class_path": "G36",
+  "scenario": "cooling_only_active_air_flow",
+  "signal": "active_heating_maximum_airflow",
+  "tier": "A",
+  "source": "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation",
+  "value_kind": "Real",
+  "compare_regime": "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
+  "n_samples": 14,
+  "n_reference_columns": 6,
+  "reference_csv": "reference.csv",
+  "reference_columns": ["time", "operating_mode", "occupied_minimum_airflow", "active_cooling_maximum_airflow", "active_minimum_airflow", "active_heating_maximum_airflow"],
+  "inputs": [
+    { "name": "operating_mode", "value_kind": "Integer", "values": [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0, 7.0, 7.0] },
+    { "name": "occupied_minimum_airflow", "value_kind": "Real", "values": [0.0, 0.31, 0.31, 0.0, 0.18, 0.31, 0.0, 0.31, 0.12, 0.0, 0.31, 0.0, 0.22, 0.31] }
+  ],
+  "input": "ActiveAirFlow: occupied and non-occupied samples share 0.31 m3/s VOccMin_flow controls",
+  "reference_rule": "ActiveAirFlow.mo: VActHeaMax_flow and VActMin_flow are both connected directly from actMin.y and are identical by source construction",
+  "source_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+  "source_files": "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.mo",
+  "fixture_status": "supported-runtime-sequence source-verified composite",
+  "format": "Modelica CombiTimeTable CSV (_spec/07 §9); signal CSV is time+one output; reference.csv is time+inputs+all outputs; ryu shortest-round-trip f64",
+  "generator": "golden-gen 0.0.0",
+  "depends_on_oce_blocks": false
+}

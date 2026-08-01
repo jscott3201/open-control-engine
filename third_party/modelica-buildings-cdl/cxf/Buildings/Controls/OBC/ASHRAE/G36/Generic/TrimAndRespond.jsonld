@@ -1,0 +1,1630 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri"
+        }
+      ],
+      "S231:diagram": "coordinateSystem(extent={{-220,-260},{220,260}},preserveAspectRatio=false),graphics={Rectangle(extent={{-218,0},{218,-258}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Rectangle(extent={{-218,258},{218,82}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Text(textString=\"Check device status,\nCount time\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{-214,260},{-118,230}}),Text(textString=\"Reset setpoint based\non request number\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{-214,0},{-108,-28}}),Rectangle(extent={{-218,80},{218,2}},lineColor={0,0,0},fillColor={215,215,215},pattern=LinePattern.None,fillPattern=FillPattern.Solid),Text(textString=\"Optional hold of the loop output\",textColor={0,0,255},horizontalAlignment=TextAlignment.Left,extent={{22,68},{174,20}})}",
+      "S231:documentation": "info=<html>\n<p>\nThis block implements the trim and respond logic according to Section 5.1.14.3 \nand 5.1.14.4 of ASHRAE Guideline 36, May 2020.\n</p>\n<p>\nFor each upstream system or plant set point being controlled by a trim and respond\nloop, define the initial values in system or plant sequences. Values for trim,\nrespond, time step, etc. shall be tuned to provide stable control.\n</p>\n<table summary=\\summary\\ border=\\1\\>\n<tr><th> Variable </th> <th> Value </th> <th> Definition </th> </tr>\n<tr><td>Device</td><td>AHU Supply Fan</td> <td>Associated device</td></tr>\n<tr><td>SP0</td><td><code>iniSet</code></td><td>Initial setpoint</td></tr>\n<tr><td>SPmin</td><td><code>minSet</code></td><td>Minimum setpoint</td></tr>\n<tr><td>SPmax</td><td><code>maxSet</code></td><td>Maximum setpoint</td></tr>\n<tr><td>Td</td><td><code>delTim</code></td><td>Delay timer</td></tr>\n<tr><td>T</td><td><code>samplePeriod</code></td><td>Time step</td></tr>\n<tr><td>I</td><td><code>numIgnReq</code></td><td>Number of ignored requests</td></tr>\n<tr><td>R</td><td><code>numOfReq</code></td><td>Number of requests</td></tr>\n<tr><td>SPtrim</td><td><code>triAmo</code></td><td>Trim amount</td></tr>\n<tr><td>SPres</td><td><code>resAmo</code></td><td>Respond amount</td></tr>\n<tr><td>SPres_max</td><td><code>maxRes</code></td><td>Maximum response per time interval</td></tr>\n</table>\n<p>\nThe trim and respond logic shall reset setpoint within the range <code>minSet</code> to\n<code>maxSet</code>.\nWhen the associated device is off (<code>uDevSta=false</code>), the setpoint\nshall be <code>iniSet</code>.\nThe reset logic shall be active while the associated device is proven\non (<code>uDevSta=true</code>), starting <code>delTim</code> after initial\ndevice start command.\nWhen active, every time step <code>samplePeriod</code>, trim the setpoint by\n<code>triAmo</code>.\nIf there are more than <code>numIgnReq</code> requests, respond by changing\nthe setpoint by <code>resAmo*(numOfReq-numIgnReq)</code>, i.e., the number of\nrequests minus the number of ignored requests, but no more than <code>maxRes</code>.\n</p>\n<p>\nIn other words, every time step <code>samplePeriod</code>:\n</p>\n<ul>\n<li>Change setpoint by <code>triAmo</code>; </li>\n<li>If <code>numOfReq > numIgnReq</code>, <i>also</i> change setpoint by <code>resAmo*(numOfReq\n-numIgnReq)</code> but no more than <code>maxRes</code>.\n</li>\n</ul>\n<h4>Hold and release loop output</h4>\n<p>\nOptionally, if the parameter <code>have_hol</code> is set to true, an additional\ninput signal <code>uHol</code> allows for holding the trim and respond loop output\nat a fixed value for the longer of the time the input <code>uHol</code> remains true \nand the duration specified by the parameter <code>dtHol</code>.\nWhen <code>uHol</code> switches back to false, the hold is released and resetting\ncontinues from the previously held value (without reinitializing to <code>iniSet</code>\nor going through a delay time of <code>delTim</code>). \n</p>\n<p>\nThis is typically used in control sequences to freeze the reset logic during the plant\nstaging process.\nConsider for example the following specification:<br/>\n\\When a plant stage change is initiated, the reset logic shall be disabled and value\nfixed at its last value for the longer of <i>15</i> minutes and the time it takes \nfor the plant to successfully stage.\\<br/>\nUsing this block with <code>have_hol=true</code> and <code>dtHol=15*60</code> \nyields the following sequence of events.\n</p>\n<ul>\n<li>0:00 - Stage change is initiated. T&amp;R loop output is at <i>50&nbsp;%</i>.</li>\n<li>0:12 - Stage change is completed. T&amp;R loop output remains at <i>50&nbsp;%</i> \nsince <i>&lt;&nbsp;15&nbsp;</i>minutes have elapsed.</li>\n<li>0:15 - T&amp;R is released and continues resetting from <i>50&nbsp;%</i>.</li>\n</ul>\n<h4>Examples</h4>\n<p>\nThe figure below illustrates the trim and respond logic with a negative trim amount,\ncomparing scenarios with and without holding the loop output.\n</p>\n<p>\n<img alt=\\Trend graph for trim and response\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond.png\\/>\n</p>\n<p>\nThe figure below illustrates the trim and respond logic with a positive trim amount.\n</p>\n<p>\n<img alt=\\Trend graph for trim and response\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond1.png\\/>\n</p>\n<p>\nThe figure below illustrates the trim and respond logic with a negative trim amount,\nin a scenario where the equipment switches on and off.\n</p>\n<p>\n<img alt=\\Trend graph for trim and response\\\nsrc=\\modelica://Buildings/Resources/Images/Controls/OBC/ASHRAE/G36/Generic/TrimAndRespond2.png\\/>\n</p>\n</html>,revisions=<html>\n<ul>\n<li>\nJune 6, 2024, by Antoine Gautier:<br/>\nAdded logic to hold trim and respond loop output.\nThis is for <a href=\\https://github.com/lbl-srg/modelica-buildings/issues/3761\\>#3761</a>.\n</li>\n<li>\nJune 3, 2020, by Jianjun Hu:<br/>\nUpgraded according to G36 official release.\n</li>\n<li>\nApril 13, 2020, by Jianjun Hu:<br/>\nCorrected to delay the true initial device status.\nThis is for <a href=\\https://github.com/lbl-srg/modelica-buildings/issues/1876\\>#1876</a>.\n</li>\n<li>\nAugust 28, 2019, by Jianjun Hu:<br/>\nAdded assertions and corrected implementation when response amount is negative.\nThis is for <a href=\\https://github.com/lbl-srg/modelica-buildings/issues/1530\\>#1503</a>.\n</li>\n<li>\nJuly 10, 2017, by Jianjun Hu:<br/>\nFirst implementation.\n</li>\n</ul>\n</html>",
+      "S231:hasInput": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numOfReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uDevSta"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uHol"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.y"
+      },
+      "S231:hasParameter": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.delTim"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.dtHol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.have_hol"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxRes"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSet"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReq"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmo"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmo"
+        }
+      ],
+      "S231:icon": "coordinateSystem(extent={{-100,-100},{100,100}}),graphics={Rectangle(extent={{-100,-100},{100,100}},borderPattern=BorderPattern.Raised,lineColor={0,0,127},fillColor={223,211,169},fillPattern=FillPattern.Solid,lineThickness=5),Text(textString=\"%name\",textColor={0,0,255},extent={{-114,146},{106,108}}),Text(textString=\"Trim & Respond\",textColor={192,192,192},extent={{-88,58},{90,-42}})}",
+      "S231:label": "TrimAndRespond"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Absolute value of real input",
+      "S231:graphics": "Placement(transformation(extent={{-120,-180},{-100,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs.y"
+        }
+      ],
+      "S231:label": "abs"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Abs",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Absolute value of real input",
+      "S231:graphics": "Placement(transformation(extent={{-120,-250},{-100,-230}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1.y"
+        }
+      ],
+      "S231:label": "abs1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Increase setpoint by amount of value defined from reset logic",
+      "S231:graphics": "Placement(transformation(extent={{-28,130},{-8,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.y"
+        }
+      ],
+      "S231:label": "add1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Net reset value",
+      "S231:graphics": "Placement(transformation(extent={{120,-136},{140,-116}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.y"
+        }
+      ],
+      "S231:label": "add2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "After (device ON + delTim + timSta), when request number becomes more than ignored requests number",
+      "S231:graphics": "Placement(transformation(extent={{120,-80},{140,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.y"
+        }
+      ],
+      "S231:label": "and2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.u1",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.y"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Generate alarm message",
+      "S231:graphics": "Placement(transformation(extent={{-80,-150},{-60,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes.u"
+        }
+      ],
+      "S231:label": "assMes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes.message",
+      "S231:isFinal": true,
+      "S231:value": "Trim amount triAmo and respond amount resAmo must have opposite signs."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Utilities.Assert",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Generate alarm message",
+      "S231:graphics": "Placement(transformation(extent={{-80,-220},{-60,-200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2.message"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2.u"
+        }
+      ],
+      "S231:label": "assMes2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2.message",
+      "S231:isFinal": true,
+      "S231:value": "Respond amount resAmo and maximum respond amount maxRes must have same sign."
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.delTim",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Delay time",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "delTim",
+      "S231:min": "100*1e-15",
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Subtract",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Difference between ignored request number and the real request number",
+      "S231:graphics": "Placement(transformation(extent={{-100,-80},{-80,-60}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.y"
+        }
+      ],
+      "S231:label": "difReqIgnReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.dtHol",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum hold time",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "dtHol",
+      "S231:min": 0,
+      "S231:start": 0,
+      "S231:value": 0,
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "not undefined",
+      "S231:description": "Constant – Placeholder value if there is no hold signal",
+      "S231:graphics": "Placement(transformation(extent={{-210,50},{-190,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "fal"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal.k",
+      "S231:isFinal": true,
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.fal.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Convert results back to negative",
+      "S231:graphics": "Placement(transformation(extent={{80,-230},{100,-210}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.y"
+        }
+      ],
+      "S231:label": "gai"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.k",
+      "S231:isFinal": true,
+      "S231:value": -1
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if the real requests is more than ignored requests setting",
+      "S231:graphics": "Placement(transformation(extent={{20,-100},{40,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr.y"
+        }
+      ],
+      "S231:label": "greThr"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.and2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if response amount have positive sign",
+      "S231:graphics": "Placement(transformation(extent={{20,-200},{40,-180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1.y"
+        }
+      ],
+      "S231:label": "greThr1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.GreaterThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if trim and response amount have opposite sign",
+      "S231:graphics": "Placement(transformation(extent={{-120,-220},{-100,-200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2.y"
+        }
+      ],
+      "S231:label": "greThr2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.have_hol",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Set to true to allow holding the reset, false to continuously reset when enabled",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:label": "have_hol",
+      "S231:value": false
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Initial setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "iniSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Initial setpoint",
+      "S231:graphics": "Placement(transformation(extent={{-90,220},{-70,240}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon.y"
+        }
+      ],
+      "S231:label": "iniSetCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon.k",
+      "S231:isFinal": true,
+      "S231:value": "iniSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.iniSetCon.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Conversions.IntegerToReal",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Convert integer input to real output",
+      "S231:graphics": "Placement(transformation(extent={{-200,-60},{-180,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea.y"
+        }
+      ],
+      "S231:label": "intToRea"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Latch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "True when hold is active and sampler clock ticks: enables applying the last calculated reset before freezing output",
+      "S231:graphics": "Placement(transformation(extent={{-90,10},{-70,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.clr"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.y"
+        }
+      ],
+      "S231:label": "lat"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.LessThreshold",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Check if trim and response amount have same sign",
+      "S231:graphics": "Placement(transformation(extent={{-120,-150},{-100,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1.y"
+        }
+      ],
+      "S231:label": "lesThr1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.assMes.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Max",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Reset setpoint should not be lower than the minimum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{52,130},{72,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.y"
+        }
+      ],
+      "S231:label": "maxInp"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxRes",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Maximum response per time interval (must have same sign as resAmo)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "maxRes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Maximum response per time interval",
+      "S231:graphics": "Placement(transformation(extent={{-200,-250},{-180,-230}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon.y"
+        }
+      ],
+      "S231:label": "maxResCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon.k",
+      "S231:isFinal": true,
+      "S231:value": "maxRes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxResCon.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Maximum setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "maxSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Maximum setpoint constant",
+      "S231:graphics": "Placement(transformation(extent={{-28,100},{-8,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon.y"
+        }
+      ],
+      "S231:label": "maxSetCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon.k",
+      "S231:isFinal": true,
+      "S231:value": "maxSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxSetCon.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Reset setpoint should not be higher than the maximum setpoint",
+      "S231:graphics": "Placement(transformation(extent={{12,130},{32,150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.y"
+        }
+      ],
+      "S231:label": "min1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.min1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Min",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Total response should not be more than maximum response",
+      "S231:graphics": "Placement(transformation(extent={{20,-170},{40,-150}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.y"
+        }
+      ],
+      "S231:label": "minInp"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.gai.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSet",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Minimum setpoint",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "minSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Minimum setpoint constant",
+      "S231:graphics": "Placement(transformation(extent={{12,100},{32,120}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon.y"
+        }
+      ],
+      "S231:label": "minSetCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon.k",
+      "S231:value": "minSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minSetCon.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.maxInp.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Net setpoint reset value",
+      "S231:graphics": "Placement(transformation(extent={{160,-60},{180,-80}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.y"
+        }
+      ],
+      "S231:label": "netRes"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Logical Not",
+      "S231:graphics": "Placement(transformation(extent={{-90,170},{-70,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1.y"
+        }
+      ],
+      "S231:label": "not1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return true if hold is released",
+      "S231:graphics": "Placement(transformation(extent={{-170,50},{-150,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol.y"
+        }
+      ],
+      "S231:label": "notHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Return true if hold is released and sampler clock ticks",
+      "S231:graphics": "Placement(transformation(extent={{-130,30},{-110,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.y"
+        }
+      ],
+      "S231:label": "notHolAndTic"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.clr"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReq",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Number of ignored requests",
+      "S231:isOfDataType": {
+        "@id": "S231:Integer"
+      },
+      "S231:label": "numIgnReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Number of ignored requests",
+      "S231:graphics": "Placement(transformation(extent={{-160,-98},{-140,-78}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon.y"
+        }
+      ],
+      "S231:label": "numIgnReqCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon.k",
+      "S231:isFinal": true,
+      "S231:value": "numIgnReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numIgnReqCon.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.numOfReq",
+      "@type": "S231:IntegerInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Number of requests from zones/systems",
+      "S231:graphics": "Placement(transformation(extent={{-260,-70},{-220,-30}})),iconTransformation(extent={{-140,-100},{-100,-60}})))",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.intToRea.u"
+      },
+      "S231:label": "numOfReq"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Products of net requests and respond amount value",
+      "S231:graphics": "Placement(transformation(extent={{-20,-150},{0,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.y"
+        }
+      ],
+      "S231:label": "pro"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.minInp.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Product of trim and respond amount",
+      "S231:graphics": "Placement(transformation(extent={{-160,-150},{-140,-130}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.y"
+        }
+      ],
+      "S231:label": "pro1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lesThr1.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Multiply",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Product of respond and maximum amount",
+      "S231:graphics": "Placement(transformation(extent={{-160,-220},{-140,-200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.y"
+        }
+      ],
+      "S231:label": "pro2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr2.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmo",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Respond amount (must have opposite sign of triAmo)",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "resAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon",
+      "@type": "ex:CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Respond amount constant",
+      "S231:graphics": "Placement(transformation(extent={{-200,-180},{-180,-160}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon.y"
+        }
+      ],
+      "S231:label": "resAmoCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon.k",
+      "S231:isFinal": true,
+      "S231:value": "resAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.resAmoCon.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.abs.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.greThr1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro2.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sample period of component",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "samplePeriod",
+      "S231:min": {
+        "@value": "0.001",
+        "@type": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      "qudt:hasUnit": {
+        "@id": "unit:SEC"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Discrete.Sampler",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Sample number of requests",
+      "S231:graphics": "Placement(transformation(extent={{-160,-60},{-140,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.y"
+        }
+      ],
+      "S231:label": "sampler"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.samplePeriod",
+      "S231:isFinal": true,
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.sampler.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.difReqIgnReq.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.Sources.SampleTrigger",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Generate signal matching the request sampling frequency",
+      "S231:graphics": "Placement(transformation(extent={{-170,10},{-150,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.period"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.shift"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.y"
+        }
+      ],
+      "S231:label": "samTri"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.period",
+      "S231:isFinal": true,
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.shift",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.samTri.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.lat.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHolAndTic.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Switch between initial setpoint and reseted setpoint",
+      "S231:graphics": "Placement(transformation(extent={{160,220},{180,200}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.y"
+        }
+      ],
+      "S231:label": "swi"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.y"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Before instant (device ON + delTim + samplePeriod), the setpoint should not be trimmed",
+      "S231:graphics": "Placement(transformation(extent={{120,-40},{140,-20}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.y"
+        }
+      ],
+      "S231:label": "swi1"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.netRes.u3"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Reinitialize setpoint to initial setting when device become OFF",
+      "S231:graphics": "Placement(transformation(extent={{100,170},{120,190}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.y"
+        }
+      ],
+      "S231:label": "swi2"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi2.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.u"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Logical switch",
+      "S231:graphics": "Placement(transformation(extent={{120,-200},{140,-180}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.y"
+        }
+      ],
+      "S231:label": "swi3"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi3.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Switch",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Switch to zero reset until hold is released and sampler clock ticks",
+      "S231:graphics": "Placement(transformation(extent={{-50,30},{-30,50}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u3"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.y"
+        }
+      ],
+      "S231:label": "swiHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.u2"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Send an on signal after some delay time",
+      "S231:graphics": "Placement(transformation(extent={{-200,200},{-180,220}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.delayOnInit"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.delayTime"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.y"
+        }
+      ],
+      "S231:label": "tim"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.delayOnInit",
+      "S231:isFinal": true,
+      "S231:value": true
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.delayTime",
+      "S231:isFinal": true,
+      "S231:value": "delTim +samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi.u2"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u2"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmo",
+      "@type": "S231:Parameter",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Trim amount",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:label": "triAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Trim amount constant",
+      "S231:graphics": "Placement(transformation(extent={{-200,-130},{-180,-110}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon.y"
+        }
+      ],
+      "S231:label": "triAmoCon"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon.k",
+      "S231:isFinal": true,
+      "S231:value": "triAmo"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.triAmoCon.y",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add2.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.pro1.u1"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u1"
+        }
+      ]
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Logical.TrueFalseHold",
+      "S231:accessSpecifier": "protected",
+      "S231:conditionalExpression": "have_hol",
+      "S231:description": "Hold true for the longer of dtHol and the time uHol remains true",
+      "S231:graphics": "Placement(transformation(extent={{-210,10},{-190,30}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.falseHoldDuration"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.trueHoldDuration"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.y"
+        }
+      ],
+      "S231:isConditionalComponent": true,
+      "S231:label": "truHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.falseHoldDuration",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.trueHoldDuration",
+      "S231:isFinal": true,
+      "S231:value": "dtHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.notHol.u"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uDevSta",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "On/Off status of the associated device",
+      "S231:graphics": "Placement(transformation(extent={{-260,190},{-220,230}})),iconTransformation(extent={{-140,60},{-100,100}})))",
+      "S231:isConnectedTo": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.not1.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.tim.u"
+        }
+      ],
+      "S231:label": "uDevSta"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uHol",
+      "@type": "S231:BooleanInput",
+      "S231:accessSpecifier": "public",
+      "S231:conditionalExpression": "have_hol",
+      "S231:description": "Hold signal",
+      "S231:graphics": "Placement(transformation(extent={{-260,0},{-220,40}})),iconTransformation(extent={{-140,-20},{-100,20}})))",
+      "S231:isConditionalComponent": true,
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.truHol.u"
+      },
+      "S231:label": "uHol"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Output the input signal with a unit delay",
+      "S231:graphics": "Placement(transformation(extent={{-90,136},{-70,156}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.samplePeriod"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.u"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.y"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.y_start"
+        }
+      ],
+      "S231:label": "uniDel"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.samplePeriod",
+      "S231:isFinal": true,
+      "S231:value": "samplePeriod"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.add1.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.uniDel.y_start",
+      "S231:isFinal": true,
+      "S231:value": "iniSet"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.y",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Setpoint that have been reset",
+      "S231:graphics": "Placement(transformation(extent={{220,190},{260,230}})),iconTransformation(extent={{100,-20},{140,20}})))",
+      "S231:label": "y"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Constant",
+      "S231:graphics": "Placement(transformation(extent={{-90,50},{-70,70}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer.y"
+        }
+      ],
+      "S231:label": "zer"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zer.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swiHol.u1"
+      }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Zero reset amount during time range from (device ON) to (device ON + delTim + timSet)",
+      "S231:graphics": "Placement(transformation(extent={{60,-60},{80,-40}})))",
+      "S231:hasInstance": [
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri.k"
+        },
+        {
+          "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri.y"
+        }
+      ],
+      "S231:label": "zerTri"
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri.k",
+      "S231:isFinal": true,
+      "S231:value": 0
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.zerTri.y",
+      "S231:isConnectedTo": {
+        "@id": "ex:Buildings.Controls.OBC.ASHRAE.G36.Generic.TrimAndRespond.swi1.u3"
+      }
+    }
+  ]
+}

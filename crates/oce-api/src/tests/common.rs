@@ -139,6 +139,54 @@ pub(super) fn build_accumulator_model() -> (ModelGraph, ConnectorId, ConnectorId
     (mb.finish(), add_out[0], gt_out[0], lim_out[0])
 }
 
+/// Accumulator fixture extended with Integer, Enum, and metadata-only String outputs.
+///
+/// The Integer source has honest registry arity. The registry has no executable Enum or String
+/// source block, so the final two probe connectors are owned by block zero but intentionally sit
+/// outside its declared output list. The current validator accepts these detached output probes;
+/// they exercise allocation/projection only and are never evaluated by the owning block.
+pub(super) fn build_realtime_output_model() -> ModelGraph {
+    let (mut model, _, _, _) = build_accumulator_model();
+    let integer_block = BlockId(model.blocks.len() as u32);
+    let integer_output = ConnectorId(model.connectors.len() as u32);
+    model.connectors.push(Connector::new(
+        integer_output,
+        integer_block,
+        Dir::Out,
+        ValueType::Integer,
+        0,
+    ));
+    model.blocks.push(BlockInstance {
+        id: integer_block,
+        class_iri: Arc::from("CDL.Integers.Sources.Constant"),
+        inputs: Vec::new(),
+        outputs: vec![integer_output],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Integer(7))],
+        },
+        decl_order: integer_block.0,
+        instance_iri: None,
+    });
+
+    let enum_output = ConnectorId(model.connectors.len() as u32);
+    model.connectors.push(Connector::new(
+        enum_output,
+        BlockId(0),
+        Dir::Out,
+        ValueType::Enum(oce_model::EnumClassId(17)),
+        1,
+    ));
+    let string_output = ConnectorId(model.connectors.len() as u32);
+    model.connectors.push(Connector::new(
+        string_output,
+        BlockId(0),
+        Dir::Out,
+        ValueType::String,
+        2,
+    ));
+    model
+}
+
 /// Two `Add` blocks driving each other: a feedthrough cycle with **no** state-holding loop-breaker
 /// — the model an engine must reject (CDL §7.16), not silently solve.
 pub(super) fn build_algebraic_loop_model() -> ModelGraph {

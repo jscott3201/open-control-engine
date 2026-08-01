@@ -1,0 +1,55 @@
+fixture                                             inst       edges flip absent miss dangl extra clsmis ronly oonly unk  verdict
+cooling_only_active_air_flow                     11/11      17/17       1      0    0     0     0      0     0     0   0  EXACT
+cooling_only_alarms                              47/47      65/65       0      0    0     0     0      0     0     0   0  EXACT
+cooling_only_controller                         213/213    377/377      4     48    0     0     0      0     0     0   0  EXACT
+cooling_only_dampers                             35/35      57/57       0      0    0     0     0      0     0     0   0  EXACT
+cooling_only_system_requests                     33/33      48/48       3      0    0     0     0      0     0     0   0  EXACT
+generic_time_suppression                         24/24      33/33       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21   44/43     102/102     16     75    0     0     0      0     0     0   0  EXACT-XFOLD
+multizone_vav_economizer_enable                  19/19      35/35       4      2    0     0     0      0     0     0   0  EXACT
+multizone_vav_economizer_limits_common           16/16      30/30       1      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_economizer_modulations_reliefs      8/8       16/16      11      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_economizer_modulations_return_fan    4/4        7/7        0      2    0     0     0      0     0     0   0  EXACT
+multizone_vav_economizer_modulations_return_fan_relief_damper    6/6       13/13       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_freeze_protection                  61/61     103/103      0     33    0     0     0      0     0     0   0  EXACT
+multizone_vav_outdoor_airflow_ahu                15/15      26/26       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_outdoor_airflow_sumzone            35/19      29/29       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_outdoor_airflow_title24_ahu        14/14      27/27       0      1    0     0     0      0     0     0   0  EXACT
+multizone_vav_outdoor_airflow_title24_sumzone    15/10      15/15       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_plant_requests                     32/32      54/54       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_relief_damper                       6/6        8/8        0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_relief_fan                         19/19      29/29       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_relief_fan_group                  226/90     128/128      1      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_return_fan_airflow_tracking         5/5        9/9        0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_return_fan_direct_pressure         21/21      36/36       3      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_supply_fan                         65/65      89/89       2      2    0     0     0      0     0     0   0  EXACT
+multizone_vav_supply_signals                      9/9       19/19       0      0    0     0     0      0     0     0   0  EXACT
+multizone_vav_supply_temperature                 62/62      88/88       1      1    0     0     0      0     0     0   0  EXACT
+reheat_overrides                                 11/11      18/18       0      0    0     0     0      0     0     0   0  EXACT
+thermal_zones_control_loops                      16/16      28/28       0      0    0     0     0      0     0     0   0  EXACT
+thermal_zones_zone_states                        13/13      20/20       0      0    0     0     0      0     0     0   0  EXACT
+trim_and_respond_have_hol_false                  44/44      58/58       1      1    0     0     0      0     0     0   0  EXACT
+ventilation_zones_ashrae62_1_setpoints           34/34      61/61       0     10    0     0     0      0     0     0   0  EXACT
+
+VERDICTS: EXACT=30 EXACT-XFOLD=1   EXCLUDED=15
+
+EXCLUDED (never counted as passes):
+  ahu_economizer: own composition, no upstream class
+  ahu_supply_air_temp_reset: own composition, no upstream class
+  generic_air_economizer_high_limits_ashrae_differential: parameter-specialized pass-through reduction of AirEconomizerHighLimits (retAirIdentity carries TRet to TCut); structurally unverifiable by design
+  generic_air_economizer_high_limits_ashrae_fixed_18: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_ashrae_fixed_21: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_ashrae_fixed_24: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_differential_offset_0: parameter-specialized pass-through reduction of AirEconomizerHighLimits (retAirIdentity carries TRet to TCut); structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_differential_offset_1: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_differential_offset_2: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_differential_offset_3: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_fixed_21: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_fixed_22: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_fixed_23: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  generic_air_economizer_high_limits_title24_fixed_24: parameter-specialized constant fold of AirEconomizerHighLimits; values verified against upstream constants; structurally unverifiable by design
+  vav_single_zone: own composition, no upstream class
+
+--- multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21  [EXACT-XFOLD]
+   excluded-subtree: ["ecoHigLim"] (146 ref inst, 0 our nodes)
+   (note: 3 unevaluable connector condition(s) immaterial — every touching edge dead via its other endpoint: ["effAbsOutAir_normalized", "effDesOutAir_normalized", "uCO2Loo_max"])

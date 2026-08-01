@@ -1,0 +1,37 @@
+{
+  "root-count": {
+    "diag_code": "malformed-document",
+    "message_prefix": "composite/root-count: ",
+    "summary": "nested classification must select exactly one top composite containsBlock root"
+  },
+  "contains-cycle": {
+    "diag_code": "malformed-document",
+    "message_prefix": "composite/contains-cycle: ",
+    "summary": "the nested composite containsBlock graph must be acyclic"
+  },
+  "replaceable": {
+    "diag_code": "unresolved-polymorphism",
+    "message_prefix": "composite/replaceable: ",
+    "summary": "replaceable CXF components must be resolved before import"
+  },
+  "banned-modelica-key": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/banned-modelica-key: ",
+    "summary": "banned Modelica construct keys must not survive CXF lowering"
+  },
+  "array-parameter": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/array-parameter: ",
+    "summary": "array-valued composite parameters are outside the CXF lowering subset"
+  },
+  "array-connector": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/array-connector: ",
+    "summary": "active array-valued connector nodes require per-element encoding"
+  },
+  "array-instance": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/array-instance: ",
+    "summary": "active array-valued block-instance nodes require per-element encoding"
+  }
+}

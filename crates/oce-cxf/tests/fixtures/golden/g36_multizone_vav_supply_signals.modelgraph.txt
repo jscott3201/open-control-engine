@@ -73,4 +73,4 @@ connections: 12
   C12 -> C20
   C12 -> C15
   C12 -> C16
-external_inputs: [1, 0, 5, 2]
+external_inputs: [1, 0, 2, 5]

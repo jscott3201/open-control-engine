@@ -2,7 +2,7 @@
   "tier": "2",
   "source": "engine self-output (determinism snapshot); NOT a correctness oracle",
   "depends_on_oce_blocks": true,
-  "engine_rev": "796a277599fa1ac61a28d79ee7575f32aec6f48d",
+  "content_sha256": "e71e77ee63e9d4603d1b3a67bd55a33b6b44981a6ef304e31b6d28c5e9477f03",
   "reference_columns": [
     "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam",
     "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam"

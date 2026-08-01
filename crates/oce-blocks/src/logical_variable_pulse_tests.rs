@@ -1,5 +1,7 @@
 //! Scenario tests for `CDL.Logical.VariablePulse`.
 
+use std::sync::Arc;
+
 use oce_model::{ParamTable, Value};
 
 use super::{
@@ -34,6 +36,48 @@ fn run(block: &dyn Block, steps: &[(f64, f64)]) -> Vec<bool> {
         .iter()
         .map(|&(t, u)| tick_at(block, &mut region, t, u))
         .collect()
+}
+
+fn parameter_table(values: &[(&str, Value)]) -> ParamTable {
+    ParamTable {
+        values: values
+            .iter()
+            .map(|(name, value)| (Arc::from(*name), value.clone()))
+            .collect(),
+    }
+}
+
+fn registry_trace(parameters: &ParamTable, steps: &[(f64, f64)]) -> Vec<bool> {
+    let block = (lookup("CDL.Logical.VariablePulse").unwrap().make)(parameters);
+    let mut region = vec![0; block.state_len()];
+    block.init_state(&mut region, parameters);
+    steps
+        .iter()
+        .map(|&(time, input)| tick_at(block.as_ref(), &mut region, time, input))
+        .collect()
+}
+
+#[test]
+fn minimum_hold_tracks_period_and_changes_the_trace() {
+    let derived = parameter_table(&[("period", Value::Real(1.0))]);
+    let explicit = parameter_table(&[
+        ("period", Value::Real(1.0)),
+        ("minTruFalHol", Value::Real(0.01)),
+    ]);
+    let sensitive = parameter_table(&[
+        ("period", Value::Real(1.0)),
+        ("minTruFalHol", Value::Real(0.05)),
+    ]);
+    let steps = [
+        (0.0, 0.01),
+        (0.011, 0.01),
+        (0.02, 0.01),
+        (1.0, 0.01),
+        (1.011, 0.01),
+    ];
+    let derived_trace = registry_trace(&derived, &steps);
+    assert_eq!(derived_trace, registry_trace(&explicit, &steps));
+    assert_ne!(derived_trace, registry_trace(&sensitive, &steps));
 }
 
 fn variable_pulse(period: f64, delta_u: f64, min_true_false_hold: f64) -> LogicalVariablePulse {

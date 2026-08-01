@@ -1,0 +1,158 @@
+/*
+ * Thin semantic layer for Open Control Engine documentation.
+ *
+ * These neutral custom properties are the only design-value seam. A later,
+ * separately licensed design-token pass can replace values without changing
+ * the page structure or overriding mdBook's built-in theme files.
+ */
+:root {
+  --oce-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --oce-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --oce-content-width: 72rem;
+  --oce-reading-width: 52rem;
+  --oce-space-1: 0.35rem;
+  --oce-space-2: 0.75rem;
+  --oce-space-3: 1.25rem;
+  --oce-space-4: 2rem;
+  --oce-space-5: 3.5rem;
+  --oce-radius: 0.35rem;
+  --oce-border-width: 1px;
+  --oce-accent: #35635a;
+  --oce-accent-strong: #244b44;
+  --oce-accent-contrast: #ffffff;
+  --oce-surface: rgba(127, 127, 127, 0.07);
+  --oce-border: rgba(80, 80, 80, 0.3);
+  --oce-focus: #2d6f9f;
+}
+
+html.coal,
+html.navy,
+html.ayu {
+  --oce-accent: #8fc6b8;
+  --oce-accent-strong: #b6ded4;
+  --oce-accent-contrast: #10201c;
+  --oce-surface: rgba(255, 255, 255, 0.06);
+  --oce-border: rgba(255, 255, 255, 0.22);
+  --oce-focus: #8fc8ee;
+}
+
+.content main {
+  max-width: var(--oce-reading-width);
+}
+
+.content main:has(.oce-landing) {
+  max-width: var(--oce-content-width);
+}
+
+.oce-landing {
+  font-family: var(--oce-font-sans);
+  padding-bottom: var(--oce-space-5);
+}
+
+.oce-hero {
+  border-bottom: var(--oce-border-width) solid var(--oce-border);
+  padding: var(--oce-space-4) 0 var(--oce-space-5);
+}
+
+.oce-eyebrow,
+.oce-card-label {
+  color: var(--oce-accent-strong);
+  font-family: var(--oce-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  margin: 0 0 var(--oce-space-2);
+}
+
+.oce-hero h1 {
+  font-size: clamp(2.4rem, 7vw, 5.2rem);
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  margin: 0;
+  max-width: 12ch;
+}
+
+.oce-lede {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.55;
+  margin: var(--oce-space-3) 0 0;
+  max-width: 48rem;
+}
+
+.oce-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--oce-space-2);
+  margin-top: var(--oce-space-4);
+}
+
+.oce-action {
+  border: var(--oce-border-width) solid var(--oce-border);
+  border-radius: var(--oce-radius);
+  display: inline-block;
+  font-weight: 700;
+  padding: 0.7rem 1rem;
+  text-decoration: none;
+}
+
+.oce-action-primary {
+  background: var(--oce-accent);
+  border-color: var(--oce-accent);
+  color: var(--oce-accent-contrast) !important;
+}
+
+.oce-action:hover,
+.oce-card a:hover,
+.oce-evidence a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.oce-action:focus-visible,
+.oce-card a:focus-visible,
+.oce-evidence a:focus-visible {
+  outline: 3px solid var(--oce-focus);
+  outline-offset: 3px;
+}
+
+.oce-paths,
+.oce-evidence {
+  padding-top: var(--oce-space-5);
+}
+
+.oce-card-grid {
+  display: grid;
+  gap: var(--oce-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.oce-card {
+  background: var(--oce-surface);
+  border: var(--oce-border-width) solid var(--oce-border);
+  border-radius: var(--oce-radius);
+  padding: var(--oce-space-4);
+}
+
+.oce-card h3 {
+  margin-top: 0;
+}
+
+.oce-card a,
+.oce-evidence a {
+  color: var(--oce-accent-strong);
+  font-weight: 700;
+}
+
+.oce-evidence {
+  max-width: 48rem;
+}
+
+@media (max-width: 48rem) {
+  .oce-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .oce-hero {
+    padding-top: var(--oce-space-3);
+  }
+}
