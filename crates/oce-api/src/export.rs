@@ -17,6 +17,18 @@ pub struct ExportReport {
     pub warnings: Vec<oce_diag::Diagnostic>,
 }
 
+/// The reason a checked CXF content identity could not be minted.
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ContentIdError {
+    /// The emitted document is partial because one or more blocks were deferred.
+    #[error("cannot mint a complete CXF content identity: export has {warning_count} warning(s)")]
+    Incomplete {
+        /// Number of deferral warnings carried by the export report.
+        warning_count: usize,
+    },
+}
+
 impl ExportReport {
     /// Return a non-cryptographic integrity tag computed over exactly [`Self::bytes`].
     ///
@@ -40,9 +52,33 @@ impl ExportReport {
     /// exported bytes without recomputing `model_id`.
     ///
     /// When [`Self::warnings`] is non-empty, the id identifies only the partial emitted survivor
-    /// document. Hosts minting version identities must require an empty warning list.
+    /// document. Hosts minting version identities must call [`Self::content_id_complete`] instead.
+    #[deprecated(
+        since = "0.1.0",
+        note = "use ExportReport::content_id_complete to reject partial exports"
+    )]
     #[must_use]
     pub fn content_id(&self) -> String {
+        self.content_id_unchecked()
+    }
+
+    /// Return the exported-document integrity tag only when the export is complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ContentIdError::Incomplete`] with the warning count when any blocks were deferred
+    /// from the emitted survivor document. It never panics.
+    pub fn content_id_complete(&self) -> Result<String, ContentIdError> {
+        if self.warnings.is_empty() {
+            Ok(self.content_id_unchecked())
+        } else {
+            Err(ContentIdError::Incomplete {
+                warning_count: self.warnings.len(),
+            })
+        }
+    }
+
+    fn content_id_unchecked(&self) -> String {
         let mut hash = StableHash::new();
         hash.write_bytes(&self.bytes);
         format!("cxf:fnv1a128:{:032x}", hash.finish())
