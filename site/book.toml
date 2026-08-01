@@ -1,0 +1,19 @@
+[book]
+title = "Open Control Engine"
+authors = ["Open Control Engine contributors"]
+description = "Reference documentation for the deterministic, embeddable Rust control engine."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+additional-css = ["custom.css"]
+default-theme = "light"
+preferred-dark-theme = "navy"
+site-url = "/open-control-engine/"
+git-repository-url = "https://github.com/jscott3201/open-control-engine"
+no-section-label = true
+hash-files = true
