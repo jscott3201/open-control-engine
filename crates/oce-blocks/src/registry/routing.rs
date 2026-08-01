@@ -159,8 +159,14 @@ pub(super) const SCALAR_REPLICATOR_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const VECTOR_FILTER_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "nin" },
-    ParamRule::Required { name: "nout" },
+    ParamRule::Required {
+        name: "nin",
+        kind: oce_model::ValueType::Integer,
+    },
+    ParamRule::Required {
+        name: "nout",
+        kind: oce_model::ValueType::Integer,
+    },
     ParamRule::Structural { name: "nin" },
     ParamRule::Structural { name: "nout" },
     ParamRule::StructuralArrayElements { base: "msk" },

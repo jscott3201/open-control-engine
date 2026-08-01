@@ -270,9 +270,18 @@ fn registry_constructs_sun_rise_set_and_exposes_param_rules() {
     assert_eq!(
         entry.param_rules(),
         &[
-            ParamRule::Required { name: "lat" },
-            ParamRule::Required { name: "lon" },
-            ParamRule::Required { name: "timZon" },
+            ParamRule::Required {
+                name: "lat",
+                kind: oce_model::ValueType::Real
+            },
+            ParamRule::Required {
+                name: "lon",
+                kind: oce_model::ValueType::Real
+            },
+            ParamRule::Required {
+                name: "timZon",
+                kind: oce_model::ValueType::Real
+            },
             ParamRule::RealGreaterOrEqual {
                 name: "lat",
                 min: -std::f64::consts::FRAC_PI_2,

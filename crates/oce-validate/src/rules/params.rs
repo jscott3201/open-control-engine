@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 
 use oce_blocks::{ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{BlockInstance, ModelGraph, ParamTable, Value};
+use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType};
 
 use super::{block_subject_of, params_flattened};
 
@@ -25,7 +25,7 @@ pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>
 
 fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>) {
     match rule {
-        ParamRule::Required { name } if find_param(&blk.params, name).is_none() => {
+        ParamRule::Required { name, .. } if find_param(&blk.params, name).is_none() => {
             diags.push(
                 Diagnostic::error(
                     DiagCode::MissingRequiredParameter,
@@ -37,7 +37,22 @@ fn check_rule(blk: &BlockInstance, rule: ParamRule, diags: &mut Vec<Diagnostic>)
                 .with_subject(block_subject_of(blk)),
             );
         }
-        ParamRule::Required { .. } => {}
+        ParamRule::Required { name, kind } => {
+            let value = find_param(&blk.params, name).expect("presence checked by preceding arm");
+            if !required_kind_matches(value, kind) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::ParameterKindMismatch,
+                        format!(
+                            "parameter `{name}` on block `{}` must have kind {kind:?}; got {}",
+                            blk.class_iri,
+                            value_kind_name(value)
+                        ),
+                    )
+                    .with_subject(block_subject_of(blk)),
+                );
+            }
+        }
         ParamRule::Structural { .. } => {}
         ParamRule::StructuralArrayElements { .. } => {}
         ParamRule::Boolean { name } => {
@@ -550,6 +565,29 @@ fn find_param<'a>(params: &'a ParamTable, name: &str) -> Option<&'a Value> {
         .iter()
         .find(|(n, _)| n.as_ref() == name)
         .map(|(_, v)| v)
+}
+
+fn required_kind_matches(value: &Value, kind: ValueType) -> bool {
+    match (kind, value) {
+        (ValueType::Real, Value::Real(_) | Value::Integer(_))
+        | (ValueType::Integer, Value::Integer(_))
+        | (ValueType::Boolean, Value::Boolean(_))
+        | (ValueType::String, Value::String(_)) => true,
+        (ValueType::Enum(class), Value::Enum { class: actual, .. }) => class == *actual,
+        // Resolved CXF preserves the established enum stand-ins accepted by `EnumMembers`.
+        (ValueType::Enum(_), Value::Integer(_) | Value::String(_)) => true,
+        _ => false,
+    }
+}
+
+fn value_kind_name(value: &Value) -> &'static str {
+    match value {
+        Value::Real(_) => "Real",
+        Value::Integer(_) => "Integer",
+        Value::Boolean(_) => "Boolean",
+        Value::String(_) => "String",
+        Value::Enum { .. } => "Enum",
+    }
 }
 
 fn real_value(value: &Value) -> Option<f64> {

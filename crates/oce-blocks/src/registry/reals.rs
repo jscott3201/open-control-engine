@@ -200,8 +200,14 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 /// initial-equation `assert(uMin < uMax)`; the engine errors on inversion and softens equality
 /// to a warning.
 pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "uMax" },
-    ParamRule::Required { name: "uMin" },
+    ParamRule::Required {
+        name: "uMax",
+        kind: oce_model::ValueType::Real,
+    },
+    ParamRule::Required {
+        name: "uMin",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealLessOrEqual {
         lower: "uMin",
         upper: "uMax",
@@ -216,21 +222,38 @@ pub(super) const LIMITER_PARAM_RULES: &[ParamRule] = &[
 /// ("Number of digits to be round to"), `AddParameter.p`, `MultiplyByParameter.k`, and
 /// `Sources/Constant.k`. Omitting one in a model is an authoring error that previously fell
 /// through to a silent engine default (n=0 / p=0 / k=1 / k=0.0), silently changing behavior.
-pub(super) const ROUND_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "n" }];
+pub(super) const ROUND_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "n",
+    kind: oce_model::ValueType::Integer,
+}];
 
-pub(super) const ADD_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "p" }];
+pub(super) const ADD_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "p",
+    kind: oce_model::ValueType::Real,
+}];
 
-pub(super) const MULTIPLY_BY_PARAMETER_PARAM_RULES: &[ParamRule] =
-    &[ParamRule::Required { name: "k" }];
+pub(super) const MULTIPLY_BY_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "k",
+    kind: oce_model::ValueType::Real,
+}];
 
-pub(super) const REAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+pub(super) const REAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "k",
+    kind: oce_model::ValueType::Real,
+}];
 
 /// Upstream `Hysteresis.mo` (pin `a131864`) declares `uLow`/`uHigh` with NO default and an
 /// initial-equation `assert(uHigh > uLow)`; mirrored like the Limiter pair (error on
 /// inversion, warning on equality).
 pub(super) const HYSTERESIS_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "uLow" },
-    ParamRule::Required { name: "uHigh" },
+    ParamRule::Required {
+        name: "uLow",
+        kind: oce_model::ValueType::Real,
+    },
+    ParamRule::Required {
+        name: "uHigh",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealLessOrEqual {
         lower: "uLow",
         upper: "uHigh",
@@ -242,7 +265,10 @@ pub(super) const HYSTERESIS_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const SOURCE_RAMP_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "duration" },
+    ParamRule::Required {
+        name: "duration",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealGreaterOrEqual {
         name: "duration",
         min: MIN_SOURCE_RAMP_DURATION,
@@ -250,7 +276,10 @@ pub(super) const SOURCE_RAMP_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const SOURCE_SIN_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "freqHz" },
+    ParamRule::Required {
+        name: "freqHz",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::Real { name: "amplitude" },
     ParamRule::Real { name: "freqHz" },
     ParamRule::Real { name: "phase" },
@@ -259,7 +288,10 @@ pub(super) const SOURCE_SIN_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const CALENDAR_TIME_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "zerTim" },
+    ParamRule::Required {
+        name: "zerTim",
+        kind: oce_model::ValueType::Enum(oce_model::EnumClassId::ZERO_TIME),
+    },
     ParamRule::EnumMembers {
         name: "zerTim",
         members: ZERO_TIME_MEMBERS,
@@ -363,8 +395,14 @@ pub(super) const MATRIX_GAIN_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const MATRIX_MAX_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "nRow" },
-    ParamRule::Required { name: "nCol" },
+    ParamRule::Required {
+        name: "nRow",
+        kind: oce_model::ValueType::Integer,
+    },
+    ParamRule::Required {
+        name: "nCol",
+        kind: oce_model::ValueType::Integer,
+    },
     ParamRule::Structural { name: "nRow" },
     ParamRule::Structural { name: "nCol" },
     ParamRule::Structural { name: "rowMax" },
@@ -393,8 +431,14 @@ pub(super) const MATRIX_MAX_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const MATRIX_MIN_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "nRow" },
-    ParamRule::Required { name: "nCol" },
+    ParamRule::Required {
+        name: "nRow",
+        kind: oce_model::ValueType::Integer,
+    },
+    ParamRule::Required {
+        name: "nCol",
+        kind: oce_model::ValueType::Integer,
+    },
     ParamRule::Structural { name: "nRow" },
     ParamRule::Structural { name: "nCol" },
     ParamRule::Structural { name: "rowMin" },

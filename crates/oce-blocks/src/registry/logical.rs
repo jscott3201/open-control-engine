@@ -100,7 +100,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 ];
 
 pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "period" },
+    ParamRule::Required {
+        name: "period",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealGreaterThan {
         name: "period",
         min: 0.0,
@@ -120,7 +123,10 @@ pub(super) const MULTI_LOGICAL_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "period" },
+    ParamRule::Required {
+        name: "period",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::TimeTableMatrix {
         base: "table",
         values: TimeTableValues::Boolean,
@@ -147,7 +153,10 @@ pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
 /// `Sources.Constant` siblings. Omitting it previously fell through to a silent `k=false` engine
 /// default — a silently-defeated enable/interlock constant in a safety-critical model — so `k` is
 /// required at load time.
-pub(super) const LOGICAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+pub(super) const LOGICAL_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "k",
+    kind: oce_model::ValueType::Boolean,
+}];
 
 fn make_logical_constant(p: &ParamTable) -> Box<dyn Block> {
     Box::new(LogicalConstant {

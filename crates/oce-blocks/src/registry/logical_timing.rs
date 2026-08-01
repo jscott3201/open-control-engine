@@ -74,8 +74,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 /// `delayTime=0` engine default, disabling the rising-edge delay; there is no upstream `min`
 /// annotation and the equations guard with `delayTime > 0`, so `delayTime` is required with no
 /// value bound.
-pub(super) const TRUE_DELAY_PARAM_RULES: &[ParamRule] =
-    &[ParamRule::Required { name: "delayTime" }];
+pub(super) const TRUE_DELAY_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "delayTime",
+    kind: oce_model::ValueType::Real,
+}];
 
 /// Upstream `TrueFalseHold.mo` (pin `a131864`) declares `parameter Real trueHoldDuration` with NO
 /// default value; `falseHoldDuration` DOES have a default (`= trueHoldDuration`) and so stays
@@ -84,6 +86,7 @@ pub(super) const TRUE_DELAY_PARAM_RULES: &[ParamRule] =
 /// required with no value bound.
 pub(super) const TRUE_FALSE_HOLD_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
     name: "trueHoldDuration",
+    kind: oce_model::ValueType::Real,
 }];
 
 fn make_falling_edge(p: &ParamTable) -> Box<dyn Block> {

@@ -129,6 +129,8 @@ pub enum DiagCode {
     BoundMismatch,
     /// A block instance omitted a parameter that the class requires at build time.
     MissingRequiredParameter,
+    /// A required block parameter has a scalar kind the block constructor does not consume.
+    ParameterKindMismatch,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
 
@@ -183,6 +185,7 @@ impl DiagCode {
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
+            DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
@@ -333,6 +336,7 @@ mod tests {
         UnitQuantityMismatch => "unit-quantity-mismatch",
         BoundMismatch => "bound-mismatch",
         MissingRequiredParameter => "missing-required-parameter",
+        ParameterKindMismatch => "parameter-kind-mismatch",
         ParameterOutOfRange => "parameter-out-of-range",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
