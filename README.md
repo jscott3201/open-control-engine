@@ -51,6 +51,11 @@ oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<c
 
 Load a CDL sequence from CXF and simulate it:
 
+Known gap: authored output names are not yet carried into the point inventory, so outputs currently
+use positional `conn#<N>` paths. Those indices can change when the CXF document changes; the
+semantic constant names below make the selected signals readable, but their values are not stable
+identities and are not the intended long-term design.
+
 ```rust
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 
