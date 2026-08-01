@@ -129,20 +129,23 @@ resolver produced.
 
 Every graph the resolver produces is correct by construction on both axes.
 
-## `content_id`: an integrity tag, not a digest
+## `content_id_complete`: a checked integrity tag, not a digest
 
-`ExportReport::content_id()` (`crates/oce-api/src/export.rs:45`) returns
-`cxf:fnv1a128:<32 hex chars>` computed over **exactly** the emitted bytes. Its rustdoc carries a
-runnable reproduction so a host can recompute it independently. Three properties worth internalizing:
+`ExportReport::content_id_complete()` returns `cxf:fnv1a128:<32 hex chars>` computed over
+**exactly** the emitted bytes when the export is complete. If any content was deferred, it returns
+the typed `ContentIdError::Incomplete { warning_count, .. }` instead of minting an identity. Its
+rustdoc carries a runnable reproduction of the tag computation so a host can verify a returned tag
+independently. Three properties worth internalizing:
 
 - It is explicitly **non-cryptographic** and not a security boundary. A host needing a cryptographic
   digest must hash the same bytes itself.
 - It is **not** `LoadReport::model_id`. `model_id` preserves the authored top-composite `@id`; export
   uses a synthetic root, and resumed parameter edits change exported bytes without recomputing
   `model_id`.
-- When `warnings` is non-empty, the id names only the **partial** survivor document. Hosts minting
-  version identities must require an empty warning list. The behavior is pinned by
-  `crates/oce-api/tests/export_cxf.rs:46`, `:57`, and `:77`.
+- When `warnings` is non-empty, the unchecked tag would name only the **partial** survivor document;
+  `content_id_complete()` refuses that case and reports the exact warning count. The older
+  `content_id()` method remains only as deprecated compatibility behavior and should not be used to
+  mint version identities. The checked behavior is pinned by `crates/oce-api/tests/export_cxf.rs`.
 
 ## The import side
 

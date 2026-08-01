@@ -13,6 +13,10 @@ use sha2::{Digest as _, Sha256};
 
 const BLESS_MODULE_RS: &str =
     include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/bless/mod.rs"));
+const G36_CATALOG_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../tools/reference-catalog/Buildings.Controls.OBC.ASHRAE.G36.catalog.json"
+));
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -33,6 +37,8 @@ struct GoldenPairs {
 fn golden_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../oce-conformance/tests/fixtures/golden/g36_traces")
+        .canonicalize()
+        .expect("G36 golden trace directory resolves")
 }
 
 fn enumerate(root: PathBuf) -> GoldenPairs {
@@ -76,6 +82,73 @@ fn csv_for(provenance: &Path) -> PathBuf {
 
 fn provenance_for(csv: &Path) -> PathBuf {
     csv.with_extension("prov.json")
+}
+
+fn collect_catalog_provenance(value: &serde_json::Value, paths: &mut BTreeSet<String>) {
+    match value {
+        serde_json::Value::Object(fields) => {
+            if let Some(path) = fields
+                .get("determinism_provenance")
+                .and_then(serde_json::Value::as_str)
+            {
+                paths.insert(path.to_owned());
+            }
+            for child in fields.values() {
+                collect_catalog_provenance(child, paths);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                collect_catalog_provenance(item, paths);
+            }
+        }
+        _ => {}
+    }
+}
+
+#[test]
+fn catalog_and_disk_name_the_same_golden_provenance_records() {
+    let catalog: serde_json::Value =
+        serde_json::from_str(G36_CATALOG_JSON).expect("G36 catalog is valid JSON");
+    let mut catalog_paths = BTreeSet::new();
+    collect_catalog_provenance(&catalog, &mut catalog_paths);
+
+    let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("oce-cxf crate is nested under repository crates directory")
+        .canonicalize()
+        .expect("repository root resolves");
+    let disk_paths = enumerate(golden_root())
+        .provenance
+        .into_iter()
+        .map(|path| {
+            path.strip_prefix(&repository_root)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "{} is outside repository root {}: {error}",
+                        path.display(),
+                        repository_root.display()
+                    )
+                })
+                .to_string_lossy()
+                .replace('\\', "/")
+        })
+        .collect::<BTreeSet<_>>();
+
+    let missing_on_disk = catalog_paths
+        .difference(&disk_paths)
+        .cloned()
+        .collect::<Vec<_>>();
+    let missing_from_catalog = disk_paths
+        .difference(&catalog_paths)
+        .cloned()
+        .collect::<Vec<_>>();
+    assert!(
+        missing_on_disk.is_empty() && missing_from_catalog.is_empty(),
+        "G36 golden provenance identity-set mismatch; catalog entries missing on disk: \
+         {missing_on_disk:?}; disk entries missing from catalog: {missing_from_catalog:?}"
+    );
 }
 
 fn assert_pairing(pairs: &GoldenPairs) {

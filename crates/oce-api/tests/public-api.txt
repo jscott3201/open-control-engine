@@ -1,5 +1,7 @@
+#[non_exhaustive] pub enum oce_api::ContentIdError
 #[non_exhaustive] pub enum oce_api::InputSource
 #[non_exhaustive] pub enum oce_api::OcError
+#[non_exhaustive] pub oce_api::ContentIdError::Incomplete
 #[non_exhaustive] pub struct oce_api::ExportReport
 #[non_exhaustive] pub struct oce_api::LoadReport
 #[non_exhaustive] pub struct oce_api::PassThroughPair
@@ -36,6 +38,7 @@ impl core::clone::Clone for oce_api::TopologyBlock
 impl core::clone::Clone for oce_api::TopologyConnection
 impl core::clone::Clone for oce_api::TrendCfg
 impl core::cmp::Eq for oce_api::AssertLevel
+impl core::cmp::Eq for oce_api::ContentIdError
 impl core::cmp::Eq for oce_api::IoClass
 impl core::cmp::Eq for oce_api::IoSummary
 impl core::cmp::Eq for oce_api::PhysicalKind
@@ -43,6 +46,7 @@ impl core::cmp::Eq for oce_api::RunMode
 impl core::cmp::Eq for oce_api::TemplateRef
 impl core::cmp::Eq for oce_api::TrendCfg
 impl core::cmp::PartialEq for oce_api::AssertLevel
+impl core::cmp::PartialEq for oce_api::ContentIdError
 impl core::cmp::PartialEq for oce_api::IoClass
 impl core::cmp::PartialEq for oce_api::IoSummary
 impl core::cmp::PartialEq for oce_api::ParamAttrs
@@ -70,10 +74,12 @@ impl core::default::Default for oce_api::ParamTable
 impl core::default::Default for oce_api::RunMode
 impl core::default::Default for oce_api::SimMetrics
 impl core::default::Default for oce_api::StepReport
+impl core::error::Error for oce_api::ContentIdError
 impl core::error::Error for oce_api::OcError
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
 impl core::fmt::Debug for oce_api::CollectSpec
+impl core::fmt::Debug for oce_api::ContentIdError
 impl core::fmt::Debug for oce_api::ExportReport
 impl core::fmt::Debug for oce_api::InputSource
 impl core::fmt::Debug for oce_api::IoClass
@@ -97,6 +103,7 @@ impl core::fmt::Debug for oce_api::Topology
 impl core::fmt::Debug for oce_api::TopologyBlock
 impl core::fmt::Debug for oce_api::TopologyConnection
 impl core::fmt::Debug for oce_api::TrendCfg
+impl core::fmt::Display for oce_api::ContentIdError
 impl core::fmt::Display for oce_api::OcError
 impl core::hash::Hash for oce_api::TemplateRef
 impl core::marker::Copy for oce_api::AssertLevel
@@ -108,6 +115,7 @@ impl core::marker::Copy for oce_api::TrendCfg
 impl core::marker::Freeze for oce_api::AssertEvent
 impl core::marker::Freeze for oce_api::AssertLevel
 impl core::marker::Freeze for oce_api::CollectSpec
+impl core::marker::Freeze for oce_api::ContentIdError
 impl core::marker::Freeze for oce_api::ExportReport
 impl core::marker::Freeze for oce_api::InputSource
 impl core::marker::Freeze for oce_api::IoClass
@@ -134,6 +142,7 @@ impl core::marker::Freeze for oce_api::TrendCfg
 impl core::marker::Send for oce_api::AssertEvent
 impl core::marker::Send for oce_api::AssertLevel
 impl core::marker::Send for oce_api::CollectSpec
+impl core::marker::Send for oce_api::ContentIdError
 impl core::marker::Send for oce_api::ExportReport
 impl core::marker::Send for oce_api::InputSource
 impl core::marker::Send for oce_api::IoClass
@@ -158,6 +167,7 @@ impl core::marker::Send for oce_api::TopologyBlock
 impl core::marker::Send for oce_api::TopologyConnection
 impl core::marker::Send for oce_api::TrendCfg
 impl core::marker::StructuralPartialEq for oce_api::AssertLevel
+impl core::marker::StructuralPartialEq for oce_api::ContentIdError
 impl core::marker::StructuralPartialEq for oce_api::IoClass
 impl core::marker::StructuralPartialEq for oce_api::IoSummary
 impl core::marker::StructuralPartialEq for oce_api::ParamAttrs
@@ -171,6 +181,7 @@ impl core::marker::StructuralPartialEq for oce_api::TrendCfg
 impl core::marker::Sync for oce_api::AssertEvent
 impl core::marker::Sync for oce_api::AssertLevel
 impl core::marker::Sync for oce_api::CollectSpec
+impl core::marker::Sync for oce_api::ContentIdError
 impl core::marker::Sync for oce_api::ExportReport
 impl core::marker::Sync for oce_api::InputSource
 impl core::marker::Sync for oce_api::IoClass
@@ -197,6 +208,7 @@ impl core::marker::Sync for oce_api::TrendCfg
 impl core::marker::Unpin for oce_api::AssertEvent
 impl core::marker::Unpin for oce_api::AssertLevel
 impl core::marker::Unpin for oce_api::CollectSpec
+impl core::marker::Unpin for oce_api::ContentIdError
 impl core::marker::Unpin for oce_api::ExportReport
 impl core::marker::Unpin for oce_api::InputSource
 impl core::marker::Unpin for oce_api::IoClass
@@ -223,6 +235,7 @@ impl core::marker::Unpin for oce_api::TrendCfg
 impl core::marker::UnsafeUnpin for oce_api::AssertEvent
 impl core::marker::UnsafeUnpin for oce_api::AssertLevel
 impl core::marker::UnsafeUnpin for oce_api::CollectSpec
+impl core::marker::UnsafeUnpin for oce_api::ContentIdError
 impl core::marker::UnsafeUnpin for oce_api::ExportReport
 impl core::marker::UnsafeUnpin for oce_api::InputSource
 impl core::marker::UnsafeUnpin for oce_api::IoClass
@@ -249,6 +262,7 @@ impl core::marker::UnsafeUnpin for oce_api::TrendCfg
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertLevel
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
@@ -272,6 +286,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::TrendCfg
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertEvent
 impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertLevel
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CollectSpec
+impl core::panic::unwind_safe::UnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
@@ -317,6 +332,7 @@ impl<S> core::marker::UnsafeUnpin for oce_api::Engine<S>
 impl<T, U> core::convert::Into<U> for oce_api::AssertEvent where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::AssertLevel where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::CollectSpec where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::ContentIdError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Engine<S> where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ExportReport where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::convert::From<T>
@@ -344,6 +360,7 @@ impl<T, U> core::convert::Into<U> for oce_api::TrendCfg where U: core::convert::
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertEvent where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::AssertLevel where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::CollectSpec where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::ContentIdError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Engine<S> where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReport where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::convert::Into<T>
@@ -371,6 +388,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::TrendCfg where U: core::conver
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertEvent where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::AssertLevel where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::CollectSpec where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::ContentIdError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Engine<S> where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ExportReport where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::convert::TryFrom<T>
@@ -417,10 +435,12 @@ impl<T> alloc::borrow::ToOwned for oce_api::Topology where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyBlock where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyConnection where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TrendCfg where T: core::clone::Clone
+impl<T> alloc::string::ToString for oce_api::ContentIdError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::CollectSpec where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::ContentIdError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Engine<S> where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ExportReport where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker::Sized
@@ -448,6 +468,7 @@ impl<T> core::any::Any for oce_api::TrendCfg where T: 'static + ?core::marker::S
 impl<T> core::borrow::Borrow<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::AssertLevel where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Engine<S> where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker::Sized
@@ -475,6 +496,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::TrendCfg where T: ?core::marker::Si
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertEvent where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::AssertLevel where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::CollectSpec where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Engine<S> where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::marker::Sized
@@ -524,6 +546,7 @@ impl<T> core::clone::CloneToUninit for oce_api::TrendCfg where T: core::clone::C
 impl<T> core::convert::From<T> for oce_api::AssertEvent
 impl<T> core::convert::From<T> for oce_api::AssertLevel
 impl<T> core::convert::From<T> for oce_api::CollectSpec
+impl<T> core::convert::From<T> for oce_api::ContentIdError
 impl<T> core::convert::From<T> for oce_api::Engine<S>
 impl<T> core::convert::From<T> for oce_api::ExportReport
 impl<T> core::convert::From<T> for oce_api::InputSource
@@ -588,6 +611,17 @@ pub fn oce_api::CollectSpec::to_owned(&self) -> T
 pub fn oce_api::CollectSpec::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::CollectSpec::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::CollectSpec::type_id(&self) -> core::any::TypeId
+pub fn oce_api::ContentIdError::borrow(&self) -> &T
+pub fn oce_api::ContentIdError::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::ContentIdError::eq(&self, &oce_api::ContentIdError) -> bool
+pub fn oce_api::ContentIdError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ContentIdError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::ContentIdError::from(T) -> T
+pub fn oce_api::ContentIdError::into(self) -> U
+pub fn oce_api::ContentIdError::to_string(&self) -> alloc::string::String
+pub fn oce_api::ContentIdError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::ContentIdError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::ContentIdError::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::Engine<S>::export_cxf(&self) -> core::result::Result<oce_api::ExportReport, oce_api::OcError>
@@ -625,6 +659,7 @@ pub fn oce_api::Engine<oce_store_mem::MemStore>::in_memory() -> Self
 pub fn oce_api::ExportReport::borrow(&self) -> &T
 pub fn oce_api::ExportReport::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::ExportReport::content_id(&self) -> alloc::string::String
+pub fn oce_api::ExportReport::content_id_complete(&self) -> core::result::Result<alloc::string::String, oce_api::ContentIdError>
 pub fn oce_api::ExportReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::ExportReport::from(T) -> T
 pub fn oce_api::ExportReport::into(self) -> U
@@ -927,6 +962,7 @@ pub oce_api::CollectSpec::Named
 pub oce_api::CollectSpec::Named::points: alloc::vec::Vec<alloc::string::String>
 pub oce_api::CollectSpec::Named::stride: usize
 pub oce_api::CollectSpec::None
+pub oce_api::ContentIdError::Incomplete::warning_count: usize
 pub oce_api::ExportReport::bytes: alloc::vec::Vec<u8>
 pub oce_api::ExportReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
 pub oce_api::InputSource::Closure(alloc::boxed::Box<(dyn core::ops::function::Fn(f64) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)> + core::marker::Send + core::marker::Sync)>)
@@ -1049,6 +1085,8 @@ pub type oce_api::AssertLevel::Owned = T
 pub type oce_api::CollectSpec::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::CollectSpec::Error = core::convert::Infallible
 pub type oce_api::CollectSpec::Owned = T
+pub type oce_api::ContentIdError::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::ContentIdError::Error = core::convert::Infallible
 pub type oce_api::Engine<S>::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::Engine<S>::Error = core::convert::Infallible
 pub type oce_api::ExportReport::Error = <U as core::convert::TryFrom<T>>::Error

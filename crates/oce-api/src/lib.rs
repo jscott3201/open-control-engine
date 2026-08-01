@@ -48,7 +48,7 @@ mod watch;
 
 pub use engine::Engine;
 pub use error::{OcError, OcResult};
-pub use export::ExportReport;
+pub use export::{ContentIdError, ExportReport};
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,
     TrendCfg, TrendInterval,
