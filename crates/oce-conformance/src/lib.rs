@@ -21,8 +21,9 @@ pub mod tiers;
 
 pub use aligned::{AlignedToleranceMismatch, AlignedToleranceResult, compare_aligned_tolerance};
 pub use clean_room::{
-    AuditDiscrepancy, BooleanDerivation, BooleanDerivationRow, ComparedParty,
-    compare_boolean_derivation,
+    AuditDiscrepancy, BooleanDerivation, BooleanDerivationRow, BooleanReferenceRow, ComparedParty,
+    DerivationComparison, DerivationRoles, DerivationSource, InformationSeparation,
+    compare_boolean_derivation, validate_boolean_derivation, validate_derivation_source,
 };
 pub use config::{
     ConfigError, IndicatorPattern, OutputPattern, PartialTolerances, PointEnd, PointMapEntry,

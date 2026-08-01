@@ -6,7 +6,7 @@ use block_harness::{
     B, BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
     assert_cases_match_exact_oracle, case, drive_case_for_audit,
 };
-use oce_conformance::{BooleanDerivation, compare_boolean_derivation};
+use oce_conformance::{BooleanDerivation, BooleanReferenceRow, compare_boolean_derivation};
 
 const U: &[Port] = &[Port { name: "u", kind: B }];
 const U_REAL: &[Port] = &[Port { name: "u", kind: R }];
@@ -588,7 +588,12 @@ fn frozen_nand_derivation_agrees_with_tier_a_and_engine() {
     let tier_a = reference
         .data
         .chunks_exact(reference.n_cols)
-        .map(|row| row[3] == 1.0)
+        .map(|row| BooleanReferenceRow {
+            time: row[0],
+            u1: row[1] == 1.0,
+            u2: row[2] == 1.0,
+            y: row[3] == 1.0,
+        })
         .collect::<Vec<_>>();
     let engine = run
         .trace

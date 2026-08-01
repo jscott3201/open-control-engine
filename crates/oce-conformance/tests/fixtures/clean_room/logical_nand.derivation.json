@@ -9,13 +9,18 @@
   },
   "roles": {
     "derivation_author": "Codex lane nand-clean-room-audit",
-    "independent_reviewer": "required after frozen-derivation commit"
+    "independent_reviewer": "completed by orchestrator on 2026-08-01: equation and rows verified; pre-freeze read log audited with zero forbidden-content reads"
   },
   "information_separation": {
     "engine_implementation_read": false,
     "golden_generator_read": false,
     "existing_expected_output_read": false,
-    "shared_math_kernel": false
+    "shared_math_kernel": false,
+    "limitation": "An in-repository Boolean cannot prove historical non-reading; it is a self-attestation checked for schema consistency only.",
+    "external_evidence": [
+      "Frozen derivation commit f234758 precedes implementation and expected-output comparison.",
+      "The orchestrator audited the pre-freeze read log and recorded zero forbidden-content reads in the PR body."
+    ]
   },
   "comparison": {
     "value_type": "Boolean",
