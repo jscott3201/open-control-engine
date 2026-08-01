@@ -4,8 +4,9 @@ mod block_harness;
 
 use block_harness::{
     B, BlockCase, Param, ParamValue, Port, R, assert_cases_are_deterministic,
-    assert_cases_match_exact_oracle, case,
+    assert_cases_match_exact_oracle, case, drive_case_for_audit,
 };
+use oce_conformance::{BooleanDerivation, BooleanReferenceRow, compare_boolean_derivation};
 
 const U: &[Port] = &[Port { name: "u", kind: B }];
 const U_REAL: &[Port] = &[Port { name: "u", kind: R }];
@@ -571,6 +572,48 @@ const STATEFUL_LOGICAL_SLUGS: &[&str] = &[
 #[test]
 fn logical_reference_blocks_match_exact_oracle() {
     assert_cases_match_exact_oracle(CASES, "CDL/Logical", "single-block-logical");
+}
+
+#[test]
+fn frozen_nand_derivation_agrees_with_tier_a_and_engine() {
+    let record: BooleanDerivation = serde_json::from_str(include_str!(
+        "fixtures/clean_room/logical_nand.derivation.json"
+    ))
+    .expect("frozen Nand derivation should parse");
+    let case = CASES
+        .iter()
+        .find(|case| case.slug == "logical_nand")
+        .expect("logical_nand case");
+    let (reference, run) = drive_case_for_audit(case, "CDL/Logical", "single-block-logical");
+    let tier_a = reference
+        .data
+        .chunks_exact(reference.n_cols)
+        .map(|row| BooleanReferenceRow {
+            time: row[0],
+            u1: row[1] == 1.0,
+            u2: row[2] == 1.0,
+            y: row[3] == 1.0,
+        })
+        .collect::<Vec<_>>();
+    let engine = run
+        .trace
+        .column("conn#2")
+        .expect("Nand engine output")
+        .values
+        .iter()
+        .map(|value| *value == 1.0)
+        .collect::<Vec<_>>();
+    let discrepancies = compare_boolean_derivation(&record, &tier_a, &engine)
+        .expect("three-way comparison should be structurally valid");
+    assert!(
+        discrepancies.is_empty(),
+        "{}",
+        discrepancies
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
 }
 
 #[test]

@@ -241,6 +241,17 @@ fn drive_case(
     )
 }
 
+pub(crate) fn drive_case_for_audit(
+    case: &BlockCase,
+    family_dir: &str,
+    sequence: &str,
+) -> (CombiTimeTable, oce_conformance::DriverRun) {
+    let reference = read_reference(case, family_dir);
+    let cxf = build_cxf(case);
+    let run = drive_case(case, sequence, &cxf, &reference);
+    (reference, run)
+}
+
 fn drive_case_with_mode(
     case: &BlockCase,
     sequence: &str,
