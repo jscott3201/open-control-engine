@@ -25,6 +25,7 @@ pub(super) const UNIT_DELAY_PARAM_DEFAULTS: &[ParamDefault] = &[
 pub(super) const SAMPLED_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Required {
         name: "samplePeriod",
+        kind: oce_model::ValueType::Real,
     },
     ParamRule::RealGreaterOrEqual {
         name: "samplePeriod",
@@ -33,7 +34,10 @@ pub(super) const SAMPLED_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const TRIGGERED_MOVING_MEAN_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "n" },
+    ParamRule::Required {
+        name: "n",
+        kind: oce_model::ValueType::Integer,
+    },
     ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
 ];
 

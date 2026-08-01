@@ -4,6 +4,89 @@
 use super::common::*;
 
 #[test]
+fn required_real_parameter_rejects_boolean_value() {
+    let model = one_block_model(
+        "CDL.Reals.Sources.Constant",
+        &[],
+        &[ValueType::Real],
+        vec![(Arc::from("k"), Value::Boolean(true))],
+    );
+    let err = validate(&model).expect_err("Boolean k must not execute as the Real fallback");
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![DiagCode::ParameterKindMismatch]
+    );
+    assert_eq!(err.diagnostics[0].severity, Severity::Error);
+    assert_eq!(
+        err.diagnostics[0].message,
+        "parameter `k` on block `CDL.Reals.Sources.Constant` must have kind Real; got Boolean"
+    );
+}
+
+#[test]
+fn required_integer_and_boolean_parameters_reject_wrong_kinds() {
+    for (class, output, value, expected, actual) in [
+        (
+            "CDL.Integers.Sources.Constant",
+            ValueType::Integer,
+            Value::Boolean(true),
+            "Integer",
+            "Boolean",
+        ),
+        (
+            "CDL.Logical.Sources.Constant",
+            ValueType::Boolean,
+            Value::Real(3.5),
+            "Boolean",
+            "Real",
+        ),
+    ] {
+        let model = one_block_model(class, &[], &[output], vec![(Arc::from("k"), value)]);
+        let err = validate(&model).expect_err("wrong-kind required parameter must fail");
+        assert_eq!(
+            codes(&err.diagnostics),
+            vec![DiagCode::ParameterKindMismatch]
+        );
+        assert!(err.diagnostics[0].message.contains(expected));
+        assert!(err.diagnostics[0].message.contains(actual));
+        assert!(err.diagnostics[0].message.contains("`k`"));
+    }
+}
+
+#[test]
+fn required_scalar_parameters_accept_declared_kinds_and_real_widening() {
+    for (class, output, value) in [
+        (
+            "CDL.Reals.Sources.Constant",
+            ValueType::Real,
+            Value::Real(3.5),
+        ),
+        (
+            "CDL.Integers.Sources.Constant",
+            ValueType::Integer,
+            Value::Integer(7),
+        ),
+        (
+            "CDL.Logical.Sources.Constant",
+            ValueType::Boolean,
+            Value::Boolean(true),
+        ),
+        (
+            "CDL.Reals.Sources.Constant",
+            ValueType::Real,
+            Value::Integer(3),
+        ),
+    ] {
+        let model = one_block_model(class, &[], &[output], vec![(Arc::from("k"), value)]);
+        assert!(
+            validate(&model)
+                .expect("declared kind must load")
+                .is_empty()
+        );
+    }
+}
+
+#[test]
 fn missing_required_sample_trigger_period_is_an_error() {
     let model = one_block_model(
         "CDL.Logical.Sources.SampleTrigger",

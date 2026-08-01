@@ -93,7 +93,10 @@ fn registry_rules_pin_source_parameter_bounds_and_warning() {
     assert_eq!(
         lookup("CDL.Logical.VariablePulse").unwrap().param_rules(),
         &[
-            ParamRule::Required { name: "period" },
+            ParamRule::Required {
+                name: "period",
+                kind: oce_model::ValueType::Real
+            },
             ParamRule::RealGreaterOrEqual {
                 name: "deltaU",
                 min: 0.001,

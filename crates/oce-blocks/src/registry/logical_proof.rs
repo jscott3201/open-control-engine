@@ -19,9 +19,13 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[RegistryEntry {
 }];
 
 pub(super) const PROOF_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "debounce" },
+    ParamRule::Required {
+        name: "debounce",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::Required {
         name: "feedbackDelay",
+        kind: oce_model::ValueType::Real,
     },
     ParamRule::RealLessOrEqualWarning {
         lower: "debounce",

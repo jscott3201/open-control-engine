@@ -359,7 +359,10 @@ fn source_ramp_registry_rules_are_pinned() {
     assert_eq!(
         lookup("CDL.Reals.Sources.Ramp").unwrap().param_rules(),
         &[
-            ParamRule::Required { name: "duration" },
+            ParamRule::Required {
+                name: "duration",
+                kind: oce_model::ValueType::Real
+            },
             ParamRule::RealGreaterOrEqual {
                 name: "duration",
                 min: 1e-37,
@@ -369,7 +372,10 @@ fn source_ramp_registry_rules_are_pinned() {
     assert_eq!(
         lookup("CDL.Reals.Sources.Sin").unwrap().param_rules(),
         &[
-            ParamRule::Required { name: "freqHz" },
+            ParamRule::Required {
+                name: "freqHz",
+                kind: oce_model::ValueType::Real
+            },
             ParamRule::Real { name: "amplitude" },
             ParamRule::Real { name: "freqHz" },
             ParamRule::Real { name: "phase" },
@@ -382,7 +388,10 @@ fn source_ramp_registry_rules_are_pinned() {
             .unwrap()
             .param_rules(),
         &[
-            ParamRule::Required { name: "zerTim" },
+            ParamRule::Required {
+                name: "zerTim",
+                kind: oce_model::ValueType::Enum(oce_model::EnumClassId::ZERO_TIME)
+            },
             ParamRule::EnumMembers {
                 name: "zerTim",
                 members: &[

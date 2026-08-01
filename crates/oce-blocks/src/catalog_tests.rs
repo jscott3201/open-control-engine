@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::{
-    BlockKind, DefaultLiteral, DefaultSource, ParamRule, PortKind, PortNaming, catalog, port_names,
-    registry,
+    BlockKind, Ctx, DefaultLiteral, DefaultSource, NoopDiagnostics, ParamRule, PortKind,
+    PortNaming, catalog, port_names, registry,
 };
-use oce_model::ParamTable;
+use oce_model::{ParamTable, Value};
 
 fn entry(path: &str) -> &'static crate::CatalogEntry {
     catalog()
@@ -159,6 +159,8 @@ fn time_table_classes_publish_the_upstream_authored_defaults() {
 
 #[test]
 fn catalog_metadata_invariants_cross_check_independent_sources() {
+    let mut required_rules = 0;
+    let mut required_defaults = 0;
     for entry in catalog() {
         assert!(
             entry
@@ -175,7 +177,21 @@ fn catalog_metadata_invariants_cross_check_independent_sources() {
                 .all(|default| names.insert(default.name))
         );
         for rule in entry.param_rules {
-            if let ParamRule::Required { name } = rule {
+            if let ParamRule::Required { name, kind } = rule {
+                required_rules += 1;
+                assert!(
+                    matches!(
+                        kind,
+                        oce_model::ValueType::Real
+                            | oce_model::ValueType::Integer
+                            | oce_model::ValueType::Boolean
+                            | oce_model::ValueType::String
+                            | oce_model::ValueType::Enum(_)
+                    ),
+                    "{}.{} has no supported required kind",
+                    entry.class_path,
+                    name
+                );
                 assert_eq!(
                     entry
                         .param_defaults
@@ -188,12 +204,114 @@ fn catalog_metadata_invariants_cross_check_independent_sources() {
                 );
             }
         }
+        for default in entry
+            .param_defaults
+            .iter()
+            .filter(|default| default.default == DefaultSource::Required)
+        {
+            required_defaults += 1;
+            assert!(
+                entry.param_rules.iter().any(
+                    |rule| matches!(rule, ParamRule::Required { name, .. } if *name == default.name)
+                ),
+                "{}.{} has a required default but no Required rule",
+                entry.class_path,
+                default.name
+            );
+        }
         assert_eq!(
             entry.naming == PortNaming::Named,
             port_names::port_names(entry.class_path).is_some()
         );
         // `port_names_tests::width_driven_classes_are_exactly_the_unnamed_structural_set`
         // independently re-derives the structural predicate; do not duplicate it from catalog data.
+    }
+    assert_eq!((required_rules, required_defaults), (49, 49));
+}
+
+#[test]
+fn every_required_catalog_parameter_declares_a_supported_kind() {
+    let required: Vec<_> = catalog()
+        .iter()
+        .flat_map(|entry| {
+            entry.param_rules.iter().filter_map(move |rule| match rule {
+                ParamRule::Required { name, kind } => Some((entry.class_path, *name, *kind)),
+                _ => None,
+            })
+        })
+        .collect();
+    assert_eq!(required.len(), 49);
+}
+
+#[test]
+fn required_rules_and_required_defaults_agree_exactly() {
+    let mut agree = 0;
+    let mut rule_only = Vec::new();
+    let mut default_only = Vec::new();
+    for entry in catalog() {
+        for rule in entry.param_rules {
+            if let ParamRule::Required { name, .. } = rule {
+                if entry.param_defaults.iter().any(|default| {
+                    default.name == *name && default.default == DefaultSource::Required
+                }) {
+                    agree += 1;
+                } else {
+                    rule_only.push(format!("{}.{}", entry.class_path, name));
+                }
+            }
+        }
+        for default in entry
+            .param_defaults
+            .iter()
+            .filter(|default| default.default == DefaultSource::Required)
+        {
+            if !entry.param_rules.iter().any(
+                |rule| matches!(rule, ParamRule::Required { name, .. } if *name == default.name),
+            ) {
+                default_only.push(format!("{}.{}", entry.class_path, default.name));
+            }
+        }
+    }
+    assert_eq!(agree, 49);
+    assert!(rule_only.is_empty(), "rule-only: {rule_only:?}");
+    assert!(default_only.is_empty(), "default-only: {default_only:?}");
+}
+
+#[test]
+fn required_constant_kinds_execute_authored_values_including_real_widening() {
+    for (class, authored, expected) in [
+        (
+            "CDL.Reals.Sources.Constant",
+            Value::Real(3.5),
+            Value::Real(3.5),
+        ),
+        (
+            "CDL.Integers.Sources.Constant",
+            Value::Integer(7),
+            Value::Integer(7),
+        ),
+        (
+            "CDL.Logical.Sources.Constant",
+            Value::Boolean(true),
+            Value::Boolean(true),
+        ),
+        (
+            "CDL.Reals.Sources.Constant",
+            Value::Integer(3),
+            Value::Real(3.0),
+        ),
+    ] {
+        let params = ParamTable {
+            values: vec![(Arc::from("k"), authored)],
+        };
+        let block = (registry::lookup(class).expect("constant registered").make)(&params);
+        let mut emitted = Vec::new();
+        block.step_algebraic(&Ctx::new(0.0, &NoopDiagnostics), &[], &mut |port, value| {
+            emitted.push((port, value));
+        });
+        assert_eq!(emitted.len(), 1, "{class}");
+        assert_eq!(emitted[0].0, 0, "{class}");
+        assert!(emitted[0].1.bit_eq(&expected), "{class}: {emitted:?}");
     }
 }
 
