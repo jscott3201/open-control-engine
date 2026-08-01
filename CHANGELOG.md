@@ -45,9 +45,11 @@ read in full.
   that is not exactly representable is a typed error rather than a silent clamp.
 - **`Engine::watch`** — key-selected, stateless, deterministic reads of output connector
   values (#201, prose #202).
-- **Catalog introspection, CXF export, a content id, and a read-only topology view** are
-  public on the facade (#192): `oce_blocks::catalog()`, `Engine::export_cxf()`,
+- **CXF export, a content id, and a read-only topology view** are public on the facade (#192):
+  `Engine::export_cxf()`,
   `ExportReport::content_id()` (`cxf:fnv1a128:`), and `Engine::topology()`.
+  Catalog introspection is available separately through `oce_blocks::catalog()` and is not
+  re-exported by `oce-api`.
 - `Engine::get_output` and `CollectSpec::Named` resolve **output** connectors only; naming
   an input point returns `OcError::UnknownPoint` rather than reading the staged input value.
 

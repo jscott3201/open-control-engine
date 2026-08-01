@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 //! `oce-api` — the embeddable host facade for the Open Control Engine
 //! (`08-embeddable-api-and-performance.md`). The single public surface downstream projects link
-//! against (published under the umbrella name `open-control-engine`).
+//! against. The `open-control-engine` umbrella name is reserved for a future release; nothing is
+//! published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
 //!

@@ -11,6 +11,11 @@
 
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 
+const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
+const ECONOMIZER_ENABLED: &str = "conn#20";
+const DAMPER_COMMAND: &str = "conn#26";
+const OA_TEMPERATURE_DELTA: &str = "conn#2";
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // An engine with the default in-memory store — no database.
     let mut engine = Engine::in_memory();
@@ -25,14 +30,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         t_stop: 4.0,
         step: 1.0,
         inputs: InputSource::Closure(Box::new(|t| {
-            vec![("zone_temp".to_string(), Value::Real(22.0 + t))]
+            vec![
+                (format!("{ECONOMIZER}.return_air_temp"), Value::Real(24.0)),
+                (
+                    format!("{ECONOMIZER}.outdoor_air_temp"),
+                    Value::Real(18.0 + t),
+                ),
+                (format!("{ECONOMIZER}.operating_mode"), Value::Integer(1)),
+            ]
         })),
         collect: CollectSpec::Named {
-            points: vec!["sat_setpoint".to_string()],
+            points: vec![
+                ECONOMIZER_ENABLED.to_string(),
+                DAMPER_COMMAND.to_string(),
+                OA_TEMPERATURE_DELTA.to_string(),
+            ],
             stride: 1,
         },
     })?;
 
-    println!("{} rows collected", metrics.trace.times().len());
+    println!("times: {:?}", metrics.trace.times());
+    for (index, name) in metrics.trace.columns().iter().enumerate() {
+        println!(
+            "{name}: {:?}",
+            metrics.trace.column(index).unwrap_or_default()
+        );
+    }
     Ok(())
 }

@@ -268,3 +268,5 @@ jobs:
           tool: nextest@0.9.133,cargo-deny,cargo-machete
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
+      - name: Quickstart executes successfully
+        run: bash .github/scripts/check-quickstart-runs.sh
