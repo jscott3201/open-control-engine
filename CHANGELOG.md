@@ -142,6 +142,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   `SECURITY.md` states the threat model and names the one known hardening limit; and the
   README's Quickstart is now a compiled example (`crates/oce-api/examples/quickstart.rs`)
   with a drift guard, so it cannot rot silently.
+- **The documentation is published as a site** at
+  [jscott3201.github.io/open-control-engine](https://jscott3201.github.io/open-control-engine/)
+  (#219). mdBook builds a staged copy whose paths and content bytes are hashed before and after
+  staging, so the published pages cannot diverge from the tracked `docs/` corpus. Deployment runs
+  on pushes to `main` only, which means the site trails `development` by a release — the README
+  says so at the point where it links the site.
 - A read-only revendor reporter sits behind the pin-advance policy (#203).
 - The gate is single-sourced in `.agents/gate.sh` (#178), and CI runs that script as a
   coverage backstop rather than a parity check (#180).

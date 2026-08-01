@@ -7,6 +7,7 @@ library you embed in your own application.**
 [![License: Apache-2.0 OR MIT](https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg)](#license)
 [![Rust 1.97.0 MSRV · edition 2024](https://img.shields.io/badge/rust-1.97.0%20MSRV%20%C2%B7%20edition%202024-orange.svg)](docs/architecture.md#embeddability-posture)
 [![database-free](https://img.shields.io/badge/storage-database--free-success.svg)](docs/architecture.md)
+[![documentation site](https://img.shields.io/badge/docs-jscott3201.github.io-informational.svg)](https://jscott3201.github.io/open-control-engine/)
 
 You hand it a control sequence as a CXF document (CDL's JSON-LD exchange format). It parses,
 validates, and compiles that sequence into a frozen topological schedule, then ticks the schedule
@@ -204,6 +205,12 @@ it cannot, and which checks are not running.
 ---
 
 ## Documentation
+
+The `docs/` pages below are also published as a site:
+**[jscott3201.github.io/open-control-engine](https://jscott3201.github.io/open-control-engine/)**.
+`TESTING.md` and `SECURITY.md` are not on it; they are repository-only. The site is built from
+`main`, so it trails `development` by a release — where the two differ, the Markdown in this
+repository is the newer copy.
 
 | Page | For |
 | --- | --- |
