@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage the immutable documentation corpus for mdBook.
+"""Stage the documentation corpus without modifying source-file contents.
 
 The tracked files under ``docs/`` are copied into an owned, disposable build
 tree. Repository-relative links are rewritten only in those staged copies so

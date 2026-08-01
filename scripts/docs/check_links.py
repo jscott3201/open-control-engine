@@ -8,6 +8,7 @@ import collections
 import html
 import posixpath
 import sys
+import tomllib
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
@@ -56,6 +57,40 @@ class PageParser(HTMLParser):
                     url = candidate.strip().split(maxsplit=1)[0]
                     if url:
                         self.references.append(Reference(self.source, tag, name, url))
+
+
+def configured_site_prefix(output: Path) -> tuple[Path, str]:
+    """Read the site URL path from the staged book configuration."""
+
+    configuration = output.parent / "book.toml"
+    with configuration.open("rb") as stream:
+        book = tomllib.load(stream)
+
+    try:
+        site_prefix = book["output"]["html"]["site-url"]
+    except (KeyError, TypeError) as error:
+        raise ValueError(
+            f"{configuration} must declare [output.html].site-url"
+        ) from error
+    if not isinstance(site_prefix, str):
+        raise ValueError(f"{configuration} [output.html].site-url must be a string")
+    if not site_prefix.startswith("/") or not site_prefix.endswith("/"):
+        raise ValueError(
+            f"{configuration} [output.html].site-url must begin and end with '/'"
+        )
+    return configuration, site_prefix
+
+
+def agreed_site_prefix(output: Path, supplied: str) -> str:
+    """Require the supplied prefix to match the staged book configuration."""
+
+    configuration, configured = configured_site_prefix(output)
+    if supplied != configured:
+        raise ValueError(
+            f"--site-prefix {supplied!r} disagrees with "
+            f"{configuration} [output.html].site-url {configured!r}"
+        )
+    return configured
 
 
 def normalized_target(source: str, value: str, site_prefix: str) -> tuple[str, str] | None:
@@ -155,7 +190,11 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="mdBook HTML output directory")
-    parser.add_argument("--site-prefix", default="/open-control-engine/", help="configured site URL path")
+    parser.add_argument(
+        "--site-prefix",
+        required=True,
+        help="site URL path; must match staged book.toml [output.html].site-url",
+    )
     arguments = parser.parse_args()
 
     site_prefix = arguments.site_prefix
@@ -165,6 +204,7 @@ def main() -> int:
 
     output = arguments.output.resolve()
     try:
+        site_prefix = agreed_site_prefix(output, site_prefix)
         page_count, reference_count, anchor_count, errors = check(output, site_prefix)
     except (OSError, UnicodeError, ValueError) as error:
         print(f"generated link check: FAIL: {error}", file=sys.stderr)

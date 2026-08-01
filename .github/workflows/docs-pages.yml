@@ -41,7 +41,10 @@ jobs:
       - name: Install checksum-pinned mdBook
         run: bash scripts/docs/install-mdbook.sh target/mdbook-bin
 
-      - name: Stage immutable documentation corpus
+      - name: Test documentation checker contracts
+        run: python3 scripts/docs/test_check_links.py
+
+      - name: Stage documentation without source writes
         env:
           DOCS_REPOSITORY_REVISION: ${{ github.sha }}
         run: >-

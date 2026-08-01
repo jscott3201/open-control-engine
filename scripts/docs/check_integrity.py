@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove that a full docs staging run leaves every docs/ byte unchanged."""
+"""Prove staging preserves regular-file paths and content bytes under docs/."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ def repository_root() -> Path:
 
 
 def corpus_manifest(root: Path) -> tuple[list[str], str]:
-    """Hash every regular filesystem entry under docs/ in path order."""
+    """Hash each regular file's relative path and content bytes under docs/."""
 
     docs = root / "docs"
     files = sorted((path for path in docs.rglob("*") if path.is_file()), key=lambda path: path.as_posix())
@@ -48,7 +48,7 @@ def main() -> int:
     try:
         before, before_digest = corpus_manifest(root)
     except (OSError, ValueError) as error:
-        print(f"docs byte integrity: FAIL before staging: {error}", file=sys.stderr)
+        print(f"docs content-byte integrity: FAIL before staging: {error}", file=sys.stderr)
         return 1
 
     print(f"docs before staging: {before_digest} ({len(before)} files)", flush=True)
@@ -57,23 +57,23 @@ def main() -> int:
         command.extend(["--revision", arguments.revision])
     staged = subprocess.run(command, cwd=root, check=False)
     if staged.returncode != 0:
-        print(f"docs byte integrity: FAIL: staging exited {staged.returncode}", file=sys.stderr)
+        print(f"docs content-byte integrity: FAIL: staging exited {staged.returncode}", file=sys.stderr)
         return staged.returncode
 
     try:
         after, after_digest = corpus_manifest(root)
     except (OSError, ValueError) as error:
-        print(f"docs byte integrity: FAIL after staging: {error}", file=sys.stderr)
+        print(f"docs content-byte integrity: FAIL after staging: {error}", file=sys.stderr)
         return 1
 
     print(f"docs after staging:  {after_digest} ({len(after)} files)")
     if before != after:
-        print("docs byte integrity: FAIL: staging changed docs/", file=sys.stderr)
+        print("docs content-byte integrity: FAIL: staging changed docs/", file=sys.stderr)
         for line in difflib.unified_diff(before, after, fromfile="before", tofile="after", lineterm=""):
             print(line, file=sys.stderr)
         return 1
 
-    print("docs byte integrity: PASS")
+    print("docs content-byte integrity: PASS")
     return 0
 
 
