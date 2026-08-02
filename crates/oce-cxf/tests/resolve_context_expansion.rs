@@ -239,6 +239,25 @@ fn remote_context_reference_is_refused_as_non_subset() {
 }
 
 #[test]
+fn non_absolute_prefix_binding_refuses_up_front_with_one_diagnostic() {
+    // Reviewer probe J: the compact twin with `ex` bound to the empty string previously loaded
+    // with ZERO diagnostics and identities like `MinLoop.con.y` — a relative identity routed
+    // past the per-token guard by concatenation. The binding itself now refuses, alone and
+    // before any slot is read.
+    let mut document: Value = serde_json::from_slice(COMPACT_TWIN).expect("twin parses");
+    document["@context"]["ex"] = json!("");
+    let diags = import_value(&document).expect_err("empty prefix binding must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
+    assert_eq!(diags[0].subject.as_deref(), Some("ex"));
+    assert!(
+        diags[0].message.contains("absolute IRI"),
+        "{}",
+        diags[0].message
+    );
+}
+
+#[test]
 fn context_base_and_vocab_declarations_are_refused_as_non_subset() {
     // The review's @vocab probe: at the previous head this document survived context handling
     // (the keyword skipped as if it were @version) and died much later in composite root

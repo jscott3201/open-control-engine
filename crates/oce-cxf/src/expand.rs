@@ -32,8 +32,10 @@
 //! both change identity semantics this engine does not implement, and skipping them silently
 //! would reintroduce the exact spelling-dependent-identity hazard this pass exists to close.
 //! Every other `@`-keyword entry (`@version`, `@protected`, …) is skipped; a non-`@` key with
-//! a simple-string value declares a prefix term; any other value shape is refused as
-//! `MalformedDocument`. A **remote context** — the whole `@context` a string IRI, or a string
+//! a simple-string value declares a prefix term, and that value must itself be a syntactically
+//! absolute IRI (see [`is_absolute_iri`]) or the binding is refused as `NonSubsetConstruct` —
+//! a prefix bound to a relative value would smuggle relative identities past the per-token
+//! guard; any other value shape is refused as `MalformedDocument`. A **remote context** — the whole `@context` a string IRI, or a string
 //! element inside the list — is refused as `NonSubsetConstruct`: a deterministic embedded
 //! engine dereferences nothing at load. Context-shape validation runs BEFORE slot expansion
 //! and its refusals return alone, so a `RelativeIri` refusal's "declares no @base" clause is
@@ -149,9 +151,23 @@ fn merge_context_entries<'a>(
             continue;
         }
         match value {
-            serde_json::Value::String(iri) => {
+            serde_json::Value::String(iri) if is_absolute_iri(iri) => {
                 table.insert(term.clone(), iri.clone());
             }
+            serde_json::Value::String(iri) => diags.push(
+                // A prefix bound to a non-absolute value would concatenate every CURIE under
+                // it into a RELATIVE identity that the per-token guard cannot see (the joined
+                // token contains a `:` from the CURIE spelling), defeating the canonical-key
+                // contract. Refuse the binding itself, up front.
+                Diagnostic::error(
+                    DiagCode::NonSubsetConstruct,
+                    format!(
+                        "@context term `{term}` binds `{iri}`, which is not an absolute IRI; \
+                         a prefix must bind an absolute IRI (a scheme, then `:`)"
+                    ),
+                )
+                .with_subject(term.clone()),
+            ),
             other => diags.push(
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
@@ -163,6 +179,26 @@ fn merge_context_entries<'a>(
                 .with_subject(term.clone()),
             ),
         }
+    }
+}
+
+/// Whether `value` is a syntactically absolute IRI: it contains a `:` and everything before
+/// the FIRST colon is a nonempty ASCII scheme per RFC 3986 §3.1 — a letter, then letters,
+/// digits, `+`, `-`, or `.`. The contract is syntactic canonical-absolute FORM, not semantic
+/// reachability, so `S231:x` passes (`S231` is an RFC-valid scheme) — nested-CURIE expansion
+/// is deliberately not chased.
+fn is_absolute_iri(value: &str) -> bool {
+    match value.split_once(':') {
+        Some((scheme, _)) => {
+            let mut chars = scheme.chars();
+            match chars.next() {
+                Some(first) if first.is_ascii_alphabetic() => {
+                    chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+                }
+                _ => false,
+            }
+        }
+        None => false,
     }
 }
 
@@ -458,6 +494,48 @@ mod tests {
             assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
             assert_eq!(diags[0].subject.as_deref(), Some(keyword));
             assert!(diags[0].message.contains(keyword), "{}", diags[0].message);
+        }
+    }
+
+    #[test]
+    fn non_absolute_prefix_bindings_are_refused_naming_the_term() {
+        // Each value would concatenate CURIEs into relative identities the per-token guard
+        // cannot see (the joined token carries the CURIE's own `:`): empty, scheme-less,
+        // relative-path, and digit-led-scheme spellings all refuse.
+        for value in ["", "example.org/", "../up#", "1st:x"] {
+            let mut diags = Vec::new();
+            let context = Context::Map(
+                [("ex".to_owned(), serde_json::json!(value))]
+                    .into_iter()
+                    .collect(),
+            );
+            prefix_table(&context, &mut diags);
+            assert_eq!(diags.len(), 1, "{value:?}: {diags:?}");
+            assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
+            assert_eq!(diags[0].subject.as_deref(), Some("ex"));
+            assert!(
+                diags[0].message.contains("absolute IRI") && diags[0].message.contains("ex"),
+                "{}",
+                diags[0].message
+            );
+        }
+    }
+
+    #[test]
+    fn absolute_prefix_bindings_pass_the_scheme_predicate() {
+        // Controls, including the pre-ruled edge: `S231:x` passes because `S231` is an
+        // RFC 3986-valid scheme — the contract is syntactic absolute form, and nested-CURIE
+        // expansion is deliberately not chased.
+        for value in ["http://example.org#", "urn:oce:names#", "S231:x"] {
+            let mut diags = Vec::new();
+            let context = Context::Map(
+                [("ex".to_owned(), serde_json::json!(value))]
+                    .into_iter()
+                    .collect(),
+            );
+            let table = prefix_table(&context, &mut diags);
+            assert!(diags.is_empty(), "{value:?}: {diags:?}");
+            assert_eq!(table["ex"], value);
         }
     }
 
