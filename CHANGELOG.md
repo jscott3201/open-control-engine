@@ -6,6 +6,13 @@ sits under `Unreleased`: the package is not on crates.io and there is no semver 
 Entries are grouped by area rather than by date, and each names the PR so the change can be
 read in full.
 
+An entry is expected from every PR that changes behaviour, the public surface, or a published
+claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
+what mattered, so no check can derive one, and a check that merely required *some* text would pass
+on a placeholder. It has therefore fallen behind twice (#215 recovered 64 commits; this file
+recovered seven PRs). The cheapest place to notice is a `development` → `main` promotion, where
+`git log main..development -- CHANGELOG.md` returning nothing means the release is undocumented.
+
 ## Unreleased
 
 ### CXF import and export
@@ -35,6 +42,22 @@ read in full.
   the document to read if you emit CXF for this engine.
 - A multiply-driven input is rejected rather than exported as bytes that cannot re-import
   (#179).
+- **Authored connector identities survive import and export** (#226). Ingest previously discarded
+  every connector's authored `@id` and minted port identities positionally on the way out, so a
+  port's name did not round-trip. A missing `@id` is now a load error and a duplicate is rejected
+  naming both offenders. Host-visible point paths were deliberately left unchanged there; a
+  follow-up retires them.
+- **Boundary outputs are represented in the model, so export stops dropping the authored output
+  contract** (#227). Exporting `ahu_economizer` produced a root with no `S231:hasOutput` at all
+  where the source declares four names, and the driving edge went with it — 130 authored boundary
+  output names across the G36 corpus existed in no engine artifact. The RT-2 round trip could not
+  see it: the fixpoint is asserted over `ModelGraph`, which had `external_inputs` and no output
+  counterpart, so the loss was identical on both sides of the comparison and the test passed
+  because of the defect. `ModelGraph` now carries `boundary_outputs`, and export restores both the
+  nodes and the edges. `minimal_loop`'s content identity moved as a result — a migration event for
+  anyone persisting one, not a golden refresh. Composite-level `hasParameter`/`hasConstant` remain
+  absent from exports by design: flattening resolves them into child block values, which are
+  emitted.
 
 ### Host facade
 
@@ -52,6 +75,13 @@ read in full.
   re-exported by `oce-api`.
 - `Engine::get_output` and `CollectSpec::Named` resolve **output** connectors only; naming
   an input point returns `OcError::UnknownPoint` rather than reading the staged input value.
+- **Export completeness is enforceable** (#217). `ExportReport::content_id()` would mint a
+  well-formed `cxf:fnv1a128:…` identity for a *partially* exported document. Its rustdoc already
+  said hosts must require an empty warning list; nothing made them, and because deferral warnings
+  are `Warning` severity by design a partial export returns `Ok`. The G36 corpus pins real deferral
+  cones of 83/213 and 63/226, so an automated caller would have received a valid-looking identity
+  naming a fragment. `content_id_complete()` refuses when warnings exist and reports the count;
+  `content_id()` is deprecated in its favour.
 
 ### Binding expressions
 
@@ -91,6 +121,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   out-of-range tune-at-rest edits are rejected through `Engine::set_param`.
 - All three TimeTable classes publish their authored parameter defaults from single-source
   constants (#200).
+- **A required parameter declares its kind, so a wrong-kind value cannot execute as a silent
+  fallback** (#225). All 49 `ParamRule::Required` declarations named a parameter and not its type,
+  so a model supplying (say) a Boolean where a Real was required loaded clean and ran the
+  constructor's own default instead. `Required` now carries an `oce_model::ValueType` and
+  validation rejects the mismatch. Integer values still satisfy a Real requirement, which is
+  widening, not coercion.
 - A machine-readable registry manifest is published with a regenerate-and-diff guard (#171).
 
 ### Verification
@@ -109,6 +145,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   hand-edited subtree SHA, alongside a pinned modelica-json constant.
 - A populated Tier 0–4 conformance report is assembled from a real G36 run (#152), and the
   G36 suites route through the L1 funnel band (#149, #150, #151).
+- **One Tier-A oracle was audited clean-room** (#218). `Nand`'s provenance record asserted
+  `"independent re-derivation"` in its own `source` field, and `Nand` was zero-oracle until
+  shortly before that claim was written — so whether its expected values were derived or
+  transcribed was an open question nothing could answer. This is **not** Tier 3: this repository
+  defines Tier 3 as cross-implementation differential testing, and analytical re-derivation adds
+  no independence. What it shows is that clean-room adjudication is executable here at all.
 
 ### Hardening
 
@@ -148,6 +190,17 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   staging, so the published pages cannot diverge from the tracked `docs/` corpus. Deployment runs
   on pushes to `main` only, which means the site trails `development` by a release — the README
   says so at the point where it links the site.
+- **The README Quickstart is executed by CI, not merely compiled** (#221). It had been a compiled
+  example with a byte-level drift guard since #216 — and it **errored on line one**, because
+  nothing ever ran it. Compiling proves a snippet type-checks; it says nothing about whether the
+  model loads. A new gate step runs it and fails on a non-zero exit. That step rides the existing
+  required `gate (light)` job, so it adds no branch-protection context.
+- **The README points at the published site and says where it lags** (#222). Merging is not
+  publishing: the docs site deploys only on pushes to `main`, so the live Quickstart page was still
+  serving the pre-#221 example — the exact version that errored — while `development` carried the
+  fix. Found by fetching the page and diffing it, not by anything going red. `TESTING.md` and
+  `SECURITY.md` are repository-only and the README now says so, because the site's page list is a
+  hardcoded summary that does not include them.
 - A read-only revendor reporter sits behind the pin-advance policy (#203).
 - The gate is single-sourced in `.agents/gate.sh` (#178), and CI runs that script as a
   coverage backstop rather than a parity check (#180).
