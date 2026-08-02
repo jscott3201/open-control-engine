@@ -70,6 +70,10 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
   expandable spelling. Diagnostics that name an expandable token as their subject now carry the
   canonical expanded IRI, not the authored compact spelling. Unit/quantity/displayUnit terms are
   deliberately untouched: lexical terms, not graph identities — permanently outside expansion.
+  The supported `@context` form is an inline prefix map (a single map, or a list of maps merged
+  in order, later bindings winning); a remote context reference, `@base`, and `@vocab` are
+  refused at load as non-subset constructs rather than silently ignored, so the same-identity
+  guarantee holds for every document that loads at all.
 
 ### Host facade
 

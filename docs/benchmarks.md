@@ -79,6 +79,9 @@ process-start and page-cache cost.
 | `ahu_economizer` | 16 | 0.14 | **0.11** | 0.10 | 1.3× | 144 |
 | `vav_single_zone` | 14 | 0.11 | **0.09** | 0.08 | 1.3× | 150 |
 
+These numbers were measured before #230, which added a working-clone `@context` expansion pass to
+ingest; load cost moved roughly +9–12% there, tick cost not at all.
+
 **Correction to an earlier revision of this file.** It reported `11.0 ms` for
 `cooling_only_controller` and placed the "runs agreed within ~2%" sentence where it read as
 covering that column too. Both were wrong. That figure was a **single first call in a cold

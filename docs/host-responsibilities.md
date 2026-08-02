@@ -117,7 +117,10 @@ connector node without an `@id`, so a document-loaded point can never receive a 
 identity. Because keys are canonical, a document re-serialized between compact and expanded
 spellings keeps its point paths; a relative `@id` that no `@context` can canonicalize is refused
 at load with a typed `relative-iri` diagnostic rather than admitted under a spelling-dependent
-key.
+key. The supported `@context` form is an inline prefix map — a single map, or a list of maps
+merged in order with later bindings winning; a remote context reference, `@base`, and `@vocab`
+are refused at load as non-subset constructs rather than silently ignored, so the canonical-key
+guarantee holds for every document that loads at all.
 
 One caveat bounds that guarantee. The document's declared boundary-output names (root
 `S231:hasOutput`) are not facade-addressable: address the driving internal connector's path, or
