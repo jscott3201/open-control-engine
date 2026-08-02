@@ -113,9 +113,11 @@ pub enum DiagCode {
     /// An identity token — a node `@id` or a followed structural reference — is a relative IRI
     /// reference (no scheme and no declared `@context` prefix), and the document declares no
     /// `@base` to resolve it against, so the token cannot be expanded to the canonical absolute
-    /// IRI that keys the model (doc 04 R-3). Typing tokens (`@type`, `isOfDataType`) are never
-    /// refused with this code: their no-match paths ([`DiagCode::ClassNotFound`],
-    /// [`DiagCode::UnresolvedReference`]) own junk there.
+    /// IRI that keys the model (doc 04 R-3). The no-`@base` clause holds by construction:
+    /// context-shape validation runs before slot expansion, and a document declaring `@base`
+    /// is refused there as [`DiagCode::NonSubsetConstruct`] before this code can fire. Typing
+    /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
+    /// ([`DiagCode::ClassNotFound`], [`DiagCode::UnresolvedReference`]) own junk there.
     RelativeIri,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---

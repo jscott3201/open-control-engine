@@ -1,5 +1,5 @@
 {
-  "comment": "Synthetic fixture authored in the modelica-json translation style (compact everything: ex:/S231: CURIEs, the S231# no-P namespace, qudt/unit decoration keys) but within the engine's supported subset — ports declared via S231:hasInput/S231:hasOutput, not S231:hasInstance. Proves a document in the real emitter dialect loads clean with authored, expanded point paths. Consumed by resolve_context_expansion.rs and oce-api's context_expansion_identity.rs. third_party/ itself deliberately gains no reader from this.",
+  "comment": "Synthetic fixture authored in the modelica-json translation style (compact everything: ex:/S231: CURIEs, the S231# no-P namespace, and one S231:unit IRI-node decoration written with the declared unit: prefix) but within the engine's supported subset — ports declared via S231:hasInput/S231:hasOutput, not S231:hasInstance. Proves a document in the real emitter dialect loads clean with authored, expanded point paths, while the unit term on gai.y stays the verbatim CURIE unit:K — lexical terms are excluded from expansion even when their prefix is declared. Consumed by resolve_context_expansion.rs and oce-api's context_expansion_identity.rs. third_party/ itself deliberately gains no reader from this.",
   "@context": {
     "S231": "http://data.ashrae.org/S231#",
     "qudt": "http://qudt.org/schema/qudt#",
@@ -50,6 +50,7 @@
       "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.y",
       "@type": "S231:RealOutput",
       "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": { "@id": "unit:K" },
       "S231:isConnectedTo": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.ySup" }
     },
     {
