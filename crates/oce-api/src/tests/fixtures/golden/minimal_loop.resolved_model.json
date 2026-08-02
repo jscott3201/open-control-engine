@@ -94,7 +94,7 @@
   ],
   "points": [
     {
-      "key": "conn#0",
+      "key": "http://example.org#MinLoop.con.y",
       "owner_block": "http://example.org#MinLoop.con",
       "direction": "Out",
       "value_type": "Real",
@@ -113,7 +113,7 @@
       "embedding": null
     },
     {
-      "key": "conn#1",
+      "key": "http://example.org#MinLoop.add.u1",
       "owner_block": "http://example.org#MinLoop.add",
       "direction": "In",
       "value_type": "Real",
@@ -132,7 +132,7 @@
       "embedding": null
     },
     {
-      "key": "conn#2",
+      "key": "http://example.org#MinLoop.add.u2",
       "owner_block": "http://example.org#MinLoop.add",
       "direction": "In",
       "value_type": "Real",
@@ -151,7 +151,7 @@
       "embedding": null
     },
     {
-      "key": "conn#3",
+      "key": "http://example.org#MinLoop.add.y",
       "owner_block": "http://example.org#MinLoop.add",
       "direction": "Out",
       "value_type": "Real",
@@ -170,7 +170,7 @@
       "embedding": null
     },
     {
-      "key": "conn#4",
+      "key": "http://example.org#MinLoop.del.u",
       "owner_block": "http://example.org#MinLoop.del",
       "direction": "In",
       "value_type": "Real",
@@ -189,7 +189,7 @@
       "embedding": null
     },
     {
-      "key": "conn#5",
+      "key": "http://example.org#MinLoop.del.y",
       "owner_block": "http://example.org#MinLoop.del",
       "direction": "Out",
       "value_type": "Real",
@@ -208,7 +208,7 @@
       "embedding": null
     },
     {
-      "key": "conn#6",
+      "key": "http://example.org#MinLoop.gain.u",
       "owner_block": "http://example.org#MinLoop.gain",
       "direction": "In",
       "value_type": "Real",
@@ -227,7 +227,7 @@
       "embedding": null
     },
     {
-      "key": "conn#7",
+      "key": "http://example.org#MinLoop.gain.y",
       "owner_block": "http://example.org#MinLoop.gain",
       "direction": "Out",
       "value_type": "Real",
@@ -246,7 +246,7 @@
       "embedding": null
     },
     {
-      "key": "conn#8",
+      "key": "http://example.org#MinLoop.gt.u1",
       "owner_block": "http://example.org#MinLoop.gt",
       "direction": "In",
       "value_type": "Real",
@@ -284,7 +284,7 @@
       "embedding": null
     },
     {
-      "key": "conn#10",
+      "key": "http://example.org#MinLoop.gt.y",
       "owner_block": "http://example.org#MinLoop.gt",
       "direction": "Out",
       "value_type": "Bool",
@@ -305,24 +305,24 @@
   ],
   "connections": [
     {
-      "from_point": "conn#0",
-      "to_point": "conn#1"
+      "from_point": "http://example.org#MinLoop.add.y",
+      "to_point": "http://example.org#MinLoop.del.u"
     },
     {
-      "from_point": "conn#3",
-      "to_point": "conn#4"
+      "from_point": "http://example.org#MinLoop.con.y",
+      "to_point": "http://example.org#MinLoop.add.u1"
     },
     {
-      "from_point": "conn#5",
-      "to_point": "conn#6"
+      "from_point": "http://example.org#MinLoop.del.y",
+      "to_point": "http://example.org#MinLoop.gain.u"
     },
     {
-      "from_point": "conn#5",
-      "to_point": "conn#8"
+      "from_point": "http://example.org#MinLoop.del.y",
+      "to_point": "http://example.org#MinLoop.gt.u1"
     },
     {
-      "from_point": "conn#7",
-      "to_point": "conn#2"
+      "from_point": "http://example.org#MinLoop.gain.y",
+      "to_point": "http://example.org#MinLoop.add.u2"
     }
   ],
   "containment": []

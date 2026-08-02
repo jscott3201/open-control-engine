@@ -88,9 +88,12 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
         .map(|point| point.key.as_str().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(dto_paths, io_paths);
+    // The conn#<id> fallback regime is reachable from in-crate tests only: no public API accepts
+    // a `ModelGraph`, and CXF ingest rejects any connector node missing its `@id`, so every
+    // document-loaded point is keyed by its authored subject IRI.
     assert!(
         dto_paths.iter().all(|path| path.starts_with("conn#")),
-        "all-None IRI models use deterministic connector fallbacks"
+        "IRI-less hand-built models keep the in-crate-only positional fallback"
     );
 }
 
