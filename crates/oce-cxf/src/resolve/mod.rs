@@ -130,6 +130,15 @@ pub(crate) fn resolve(
     doc: &CxfDocument,
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
+    // --- Step 0: expand identity and typing tokens against `@context` on a working clone
+    // (doc 04 R-3), BEFORE any `@id` index exists — expansion must precede the by_id build or
+    // `ex:A` and its absolute spelling become two nodes instead of a `DuplicateId`. A document
+    // whose identity tokens cannot be canonicalized is refused here with typed diagnostics.
+    let expanded = match crate::expand::expand_document(doc) {
+        Ok(expanded) => expanded,
+        Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
+    };
+    let doc = &expanded;
     let mut diags: Vec<Diagnostic> = Vec::new();
 
     // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument). by_id is

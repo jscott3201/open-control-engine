@@ -59,7 +59,9 @@ pub enum Context {
 /// optional; everything unmodeled flows through `other` (R-8).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Node {
-    /// The raw IRI `@id` (expanded lazily against `@context`, R-3).
+    /// The `@id` exactly as authored. The DTO keeps this raw spelling for lossless round-trip;
+    /// the resolver expands it against `@context` to canonical absolute form on its own working
+    /// clone at ingest (R-3), so compact and expanded spellings key the same node there.
     #[serde(rename = "@id", default)]
     pub id: String,
     /// `@type`: an `S231:*` class for library/composite nodes, OR a concrete class IRI for an
@@ -422,7 +424,9 @@ pub enum TermAttr {
     },
     /// An IRI-node reference `{"@id": "..."}` (the S231P-canonical qudt:Unit / qudt:QuantityKind form).
     Iri {
-        /// The referenced IRI — used verbatim as the term until IRI/CURIE normalization is added.
+        /// The referenced IRI — used verbatim as the lexical term. Deliberately excluded from
+        /// the resolver's `@context` expansion, permanently: unit/quantity/displayUnit are
+        /// lexical terms the §7.10 gate compares by exact string equality, not graph identities.
         #[serde(rename = "@id")]
         id: String,
         /// Any other keys on the reference object, preserved for lossless round-trip (R-8).
@@ -439,7 +443,8 @@ impl TermAttr {
     /// The lexical term: the bare string, the typed literal's `@value`, or the IRI node's `@id`;
     /// `None` for the malformed `Other` arm. This is the string the §7.10 deep gate unifies on. An
     /// IRI-node term is the raw IRI (e.g. `"unit:K"`); cross-form unit equivalence (IRI ⇔
-    /// bare-string ⇔ CURIE normalization) is deferred, so terms compare by exact string equality.
+    /// bare-string ⇔ CURIE normalization) is out of scope by design — terms compare by exact
+    /// string equality, and the resolver's `@context` expansion never touches this arm.
     #[must_use]
     pub fn as_term(&self) -> Option<&str> {
         match self {
