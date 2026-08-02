@@ -316,6 +316,9 @@ fn graph_node_order_follows_model_graph_vector_order() {
             expected.push(boundary);
         }
     }
+    for output in &g.boundary_outputs {
+        expected.push(output.iri.to_string());
+    }
 
     let doc: serde_json::Value = serde_json::from_slice(&bytes).expect("export emits JSON");
     let emitted: Vec<&str> = doc["@graph"]

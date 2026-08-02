@@ -62,6 +62,7 @@ fn malformed_reserved_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -83,6 +84,7 @@ fn missing_reserved_external_input_membership_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let mut missing_external = valid();
     missing_external.external_inputs.clear();
@@ -117,6 +119,7 @@ fn reserved_input_owned_by_another_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -138,6 +141,7 @@ fn boundary_output_iri_collision_rejects_at_plan_time() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -176,6 +180,7 @@ fn pass_through_plus_only_deferred_blocks_rejects_total_deferral() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -196,6 +201,7 @@ fn only_reserved_pass_through_blocks_reject_with_truthful_message() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(

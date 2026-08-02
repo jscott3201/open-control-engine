@@ -37,6 +37,7 @@ use crate::{CxfError, bridge};
 
 mod array_nodes;
 mod attrs;
+mod boundary_outputs;
 mod composite;
 mod composite_orientation;
 mod composite_rules;
@@ -504,6 +505,7 @@ pub(crate) fn resolve(
     let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
     let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
     let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut boundary_output_sources: HashMap<String, ConnectorId> = HashMap::new();
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
@@ -693,6 +695,9 @@ pub(crate) fn resolve(
                             .entry(target.to_owned())
                             .or_default()
                             .insert(format!("connector:{}", from.0));
+                        boundary_output_sources
+                            .entry(target.to_owned())
+                            .or_insert(from);
                     }
                     None => diags.push(
                         Diagnostic::error(
@@ -769,6 +774,7 @@ pub(crate) fn resolve(
         .enumerate()
         .map(|(i, n)| (n.id.as_str(), i))
         .collect();
+    let boundary_outputs = boundary_outputs::materialize(doc, &boundary_output_sources);
     pass_through_pairs.sort_by_key(|(input, output)| {
         (
             graph_pos.get(input.as_str()).copied().unwrap_or(usize::MAX),
@@ -842,6 +848,7 @@ pub(crate) fn resolve(
         connectors,
         connections,
         external_inputs,
+        boundary_outputs,
     };
     Ok((
         graph,

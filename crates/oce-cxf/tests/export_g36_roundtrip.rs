@@ -37,6 +37,7 @@ use oce_model::{
     ValueType,
 };
 use render::{render, render_attrs, render_value};
+use serde_json::Value as JsonValue;
 
 /// Every `*.jsonld` under `tests/fixtures/g36/`, sorted. Checked in so that adding a fixture is a
 /// deliberate, reviewed act rather than a silent expansion — and so that adding one without
@@ -123,6 +124,56 @@ fn import_ok(fixture: &str, bytes: &[u8]) -> ModelGraph {
 fn export_ok(fixture: &str, g: &ModelGraph) -> ExportReport {
     export_with_report(g)
         .unwrap_or_else(|e| panic!("`{fixture}` must be inside the export subset: {e:?}"))
+}
+
+fn top_composite(doc: &JsonValue) -> &JsonValue {
+    doc["@graph"]
+        .as_array()
+        .expect("@graph array")
+        .iter()
+        .find(|node| node.get("S231:containsBlock").is_some())
+        .expect("top composite")
+}
+
+fn reference_ids(value: Option<&JsonValue>) -> BTreeSet<String> {
+    let Some(value) = value else {
+        return BTreeSet::new();
+    };
+    let values = value
+        .as_array()
+        .map_or_else(|| vec![value], |items| items.iter().collect());
+    values
+        .into_iter()
+        .map(|item| item["@id"].as_str().expect("reference @id").to_owned())
+        .collect()
+}
+
+fn assert_authored_boundary_output_contract(
+    fixture: &str,
+    source: &[u8],
+    graph: &ModelGraph,
+    report: &ExportReport,
+) {
+    let source_doc: JsonValue = serde_json::from_slice(source).expect("source JSON");
+    let export_doc: JsonValue = serde_json::from_slice(&report.bytes).expect("export JSON");
+    let mut expected = reference_ids(top_composite(&source_doc).get("S231:hasOutput"));
+    let deferred = deferred_subjects(report);
+    for output in &graph.boundary_outputs {
+        let connector = &graph.connectors[output.source.0 as usize];
+        let owner = &graph.blocks[connector.block.0 as usize];
+        if owner
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| deferred.contains(iri))
+        {
+            expected.remove(output.iri.as_ref());
+        }
+    }
+    let actual = reference_ids(top_composite(&export_doc).get("S231:hasOutput"));
+    assert_eq!(
+        actual, expected,
+        "`{fixture}` authored boundary-output contract"
+    );
 }
 
 /// The blocks a report says were deferred, read off the warning subjects.
@@ -484,7 +535,7 @@ fn the_least_closure_excludes_a_cycle_no_enum_root_reaches() {
                 to: ConnectorId(3),
             }, // spinB -> spinA
         ],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let closure = least_deferred_closure(&g);
@@ -522,12 +573,46 @@ fn the_fixture_directory_and_the_swept_list_stay_one_to_one() {
 fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     let mut enum_free = 0usize;
     let mut deferring = 0usize;
+    let mut authored_outputs = 0usize;
+    let mut represented_outputs = 0usize;
+    let mut shared_output_drivers = Vec::new();
+    let mut other_root_keys = BTreeSet::new();
+    let mut lost_root_keys = BTreeSet::new();
 
     for fixture in EXPECTED_G36_FIXTURES {
         let bytes = std::fs::read(g36_dir().join(fixture))
             .unwrap_or_else(|e| panic!("`{fixture}` must be readable: {e}"));
         let g1 = import_ok(fixture, &bytes);
+        let source_doc: JsonValue = serde_json::from_slice(&bytes).expect("source JSON");
+        authored_outputs += reference_ids(top_composite(&source_doc).get("S231:hasOutput")).len();
+        represented_outputs += g1.boundary_outputs.len();
+        let mut by_source: BTreeMap<ConnectorId, usize> = BTreeMap::new();
+        for output in &g1.boundary_outputs {
+            *by_source.entry(output.source).or_default() += 1;
+        }
+        for (source, count) in by_source.into_iter().filter(|(_, count)| *count > 1) {
+            let connector = &g1.connectors[source.0 as usize];
+            let owner = g1.blocks[connector.block.0 as usize]
+                .instance_iri
+                .as_deref()
+                .expect("imported owner IRI");
+            shared_output_drivers.push(format!("{fixture}:{owner}:source={}:{count}", source.0));
+        }
         let report = export_ok(fixture, &g1);
+        assert_authored_boundary_output_contract(fixture, &bytes, &g1, &report);
+        let export_doc: JsonValue = serde_json::from_slice(&report.bytes).expect("export JSON");
+        let exported_root = top_composite(&export_doc);
+        for key in top_composite(&source_doc)
+            .as_object()
+            .expect("root object")
+            .keys()
+            .filter(|key| key.as_str() != "S231:hasOutput" && key.as_str() != "S231:label")
+        {
+            other_root_keys.insert(key.clone());
+            if exported_root.get(key).is_none() {
+                lost_root_keys.insert(key.clone());
+            }
+        }
 
         // The corpus carries no enum-typed connectors at all; every deferral is on the parameter
         // axis. Pinned because it is what makes the two-branch split exhaustive.
@@ -555,6 +640,37 @@ fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     assert!(
         enum_free > 0 && deferring > 0,
         "both branches must be exercised, got enum-free={enum_free} deferring={deferring}"
+    );
+    assert_eq!(authored_outputs, 132, "top-composite authored outputs");
+    assert_eq!(
+        represented_outputs, 130,
+        "child-output-driven boundary outputs"
+    );
+    assert_eq!(
+        shared_output_drivers.len(),
+        1,
+        "exactly one corpus connector drives multiple top-level outputs: {shared_output_drivers:?}"
+    );
+    assert_eq!(
+        other_root_keys,
+        BTreeSet::from([
+            "@id".to_owned(),
+            "@type".to_owned(),
+            "S231:containsBlock".to_owned(),
+            "S231:hasConstant".to_owned(),
+            "S231:hasInput".to_owned(),
+            "S231:hasParameter".to_owned(),
+        ]),
+        "all other import-surviving root keys are explicitly swept"
+    );
+    assert_eq!(
+        lost_root_keys,
+        BTreeSet::from([
+            "S231:hasConstant".to_owned(),
+            "S231:hasInput".to_owned(),
+            "S231:hasParameter".to_owned(),
+        ]),
+        "the root-key blind-spot inventory changed"
     );
 }
 

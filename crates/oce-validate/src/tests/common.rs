@@ -114,6 +114,7 @@ pub(super) fn one_block_model(
         connectors,
         connections: vec![],
         external_inputs: input_ids.into_iter().map(ConnectorId).collect(),
+        boundary_outputs: vec![],
     }
 }
 
