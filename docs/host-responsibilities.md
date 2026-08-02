@@ -105,18 +105,27 @@ The stable API also contains two loaders that do not work yet: `load_from_semant
 public `AssertLevel::Error` variant is never emitted today; the sole assertion collector produces
 `Warning`, so hosts must not depend on receiving `Error` for escalation.
 
-## CXF output identities are positional today
+## CXF point identities are the authored `@id`s
 
-Authored output IRIs are not currently carried into the point inventory after CXF loading. Every
-output therefore receives a synthetic `conn#<N>` path, where `N` is its `ConnectorId`: an index into
-the connector array populated at load, not a nominal identity. Editing or reordering the document
-can move that index even when the output's authored name is unchanged.
+Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
+through the PointStore port — is an authored `@id` from the source CXF document, taken exactly as
+written there: for a connector driven by a composite boundary input it is the declared boundary
+input's `@id` (one host point fans out to every internal consumer, which is why the G36 corpus's
+3020 connectors surface as 2895 points), and for every other connector it is the connector's own
+node's `@id`. CXF ingest rejects a connector node without an `@id`, so a document-loaded point can
+never receive a positional identity.
 
-The same path is used for the host-visible `IoInventory` and the durable `PointDto` projection sent
-through the PointStore port. A host that persists trends must therefore treat a model revision as an
-identity migration boundary: do not assume an old `conn#<N>` history belongs to the same authored
-output after loading a changed document. Restoring authored output IRIs is a known engine gap, not
-the intended identity design.
+Two caveats bound that guarantee. The `@id` is stored unexpanded — no JSON-LD `@context`
+expansion is applied — so it equals the full subject IRI only when the document writes expanded
+`@id`s (every shipped fixture does); a document re-serialized between compact and expanded
+spellings renames its points until expansion lands, a known engine gap tracked as a follow-up.
+And the document's declared boundary-output names (root `S231:hasOutput`) are not
+facade-addressable: address the driving internal connector's path, or `get_output` returns
+`UnknownPoint`.
+
+Point histories persisted under the earlier positional `conn#<N>` keys are disposable, not
+migratable: an index is not traceable to an authored connector after the document that produced it
+changes.
 
 ## The one hardening gap
 

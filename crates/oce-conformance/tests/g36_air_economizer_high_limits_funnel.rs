@@ -53,8 +53,6 @@ const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 const SAMPLE_STEP: f64 = 1.0;
 
 const RETURN_AIR_TEMPERATURE: PointSpec = PointSpec::real("return_air_temperature", "");
-const FIXED_TEMPERATURE_CUTOFF: PointSpec = PointSpec::real("temperature_cutoff", "conn#0");
-const DIFFERENTIAL_TEMPERATURE_CUTOFF: PointSpec = PointSpec::real("temperature_cutoff", "conn#1");
 const FIXED_REFERENCE_COLUMNS: &[&str] = &["time", "temperature_cutoff"];
 const DIFFERENTIAL_REFERENCE_COLUMNS: &[&str] =
     &["time", "return_air_temperature", "temperature_cutoff"];
@@ -74,7 +72,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_24",
         fixture: HIGH_LIMIT_FIXED_24,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -82,7 +83,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_21",
         fixture: HIGH_LIMIT_FIXED_21,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.con1.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -90,7 +94,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_ashrae_fixed_18",
         fixture: HIGH_LIMIT_FIXED_18,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.con2.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -98,7 +105,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_title24_fixed_24",
         fixture: HIGH_LIMIT_TITLE24_FIXED_24,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.con5.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -106,7 +116,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_title24_fixed_23",
         fixture: HIGH_LIMIT_TITLE24_FIXED_23,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.con6.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -114,7 +127,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_title24_fixed_22",
         fixture: HIGH_LIMIT_TITLE24_FIXED_22,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -122,7 +138,10 @@ const CASES: &[Case] = &[
         sequence: "generic_air_economizer_high_limits_title24_fixed_21",
         fixture: HIGH_LIMIT_TITLE24_FIXED_21,
         input: None,
-        output: FIXED_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y",
+        ),
         rows: 1,
         reference_columns: FIXED_REFERENCE_COLUMNS,
     },
@@ -133,7 +152,10 @@ const CASES: &[Case] = &[
             RETURN_AIR_TEMPERATURE.reference_name,
             "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet",
         )),
-        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.retAirIdentity.y",
+        ),
         rows: 4,
         reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },
@@ -144,7 +166,10 @@ const CASES: &[Case] = &[
             RETURN_AIR_TEMPERATURE.reference_name,
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet",
         )),
-        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.retAirIdentity.y",
+        ),
         rows: 4,
         reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },
@@ -155,7 +180,10 @@ const CASES: &[Case] = &[
             RETURN_AIR_TEMPERATURE.reference_name,
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet",
         )),
-        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar.y",
+        ),
         rows: 4,
         reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },
@@ -166,7 +194,10 @@ const CASES: &[Case] = &[
             RETURN_AIR_TEMPERATURE.reference_name,
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet",
         )),
-        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.addPar1.y",
+        ),
         rows: 4,
         reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },
@@ -177,7 +208,10 @@ const CASES: &[Case] = &[
             RETURN_AIR_TEMPERATURE.reference_name,
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet",
         )),
-        output: DIFFERENTIAL_TEMPERATURE_CUTOFF,
+        output: PointSpec::real(
+            "temperature_cutoff",
+            "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y",
+        ),
         rows: 4,
         reference_columns: DIFFERENTIAL_REFERENCE_COLUMNS,
     },

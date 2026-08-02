@@ -64,7 +64,12 @@ pub struct TrendCfg {
 /// excluded (CDL §7.8: a String signal is metadata, not a control point).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointInfo {
-    /// Dotted instance path == `DomainKey` identity (06 D5); `conn#<id>` for an unnamed connector.
+    /// The point identity == `DomainKey` identity (06 D5): the authored `@id`, as written in the
+    /// source CXF document, of the connector's host-visible identity node — the declared boundary
+    /// input's node for a composite-boundary-driven connector (one host point fans out to every
+    /// internal consumer), the connector's own node otherwise. The `@id` is not `@context`-expanded
+    /// (a known gap; every shipped fixture writes expanded IRIs). The positional `conn#<id>`
+    /// fallback appears only for hand-built, IRI-less models, which no public API can construct.
     pub path: String,
     /// `In` | `Out` (CDL §7.8).
     pub direction: PointDirection,
@@ -135,21 +140,23 @@ pub(crate) struct PointInventoryRow {
     pub(crate) connector_id: ConnectorId,
 }
 
-/// The canonical point path of a connector.
+/// The canonical point path of a connector: the authored `@id`, as written in the source CXF
+/// document, of its host-visible identity node — the declared boundary input's node for a
+/// composite-boundary-driven connector, the connector's own node otherwise (the resolver stamps
+/// that choice into `Connector::iri` at ingest).
 ///
-/// Connectors outside the legacy named-point surface retain the compatibility `conn#<id>` identity
-/// even when CXF ingest retained an authored IRI. The load-time inventory walk identifies legacy
-/// named boundary connectors explicitly, matching the pre-migration facade.
+/// The `@id` is stored unexpanded: it equals the full subject IRI when the document writes
+/// expanded `@id`s (every shipped fixture does), and JSON-LD `@context` expansion is a known gap
+/// tracked as a follow-up. CXF ingest rejects any connector node without an `@id`, so every
+/// document-loaded connector has an authored identity and the positional `conn#<id>` spelling is
+/// unreachable from the public API. It survives only as the fallback for hand-built, IRI-less
+/// models (`Connector::new` without `with_iri`), which are constructible from in-crate tests
+/// alone. The distinction matters: a positional index renumbers under JSON-LD `@graph`
+/// reordering, an authored `@id` does not.
 #[must_use]
-pub(crate) fn connector_path(_iri: Option<&str>, id: ConnectorId) -> String {
-    format!("conn#{}", id.0)
-}
-
-/// Whether this connector belonged to the authored host-point surface before connector IRIs were
-/// retained generally: composite boundary inputs and both endpoints of native pass-through
-/// lowering. Part 2 removes this compatibility predicate.
-fn had_legacy_authored_path(connector: &oce_model::Connector) -> bool {
-    connector.iri_was_legacy_host_path
+pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
+    iri.map(str::to_owned)
+        .unwrap_or_else(|| format!("conn#{}", id.0))
 }
 
 /// The shared load-time point walk. It is the single source of truth for both host-visible
@@ -195,13 +202,7 @@ pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
         };
         rows.push(PointInventoryRow {
             info: PointInfo {
-                path: if had_legacy_authored_path(c) {
-                    c.iri
-                        .as_deref()
-                        .map_or_else(|| connector_path(None, c.id), str::to_owned)
-                } else {
-                    connector_path(c.iri.as_deref(), c.id)
-                },
+                path: connector_path(c.iri.as_deref(), c.id),
                 direction,
                 value_type,
                 io_class,

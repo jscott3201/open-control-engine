@@ -39,12 +39,18 @@ const RETURN_DAMPER_PHYSICAL_MAX_LIMIT_SOURCE: &str =
 const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_limits_common.yEnaMinOut";
 
-const OUTDOOR_DAMPER_MIN_LIMIT_RUNTIME: &str = "conn#16";
-const OUTDOOR_DAMPER_MAX_LIMIT_RUNTIME: &str = "conn#30";
-const RETURN_DAMPER_MIN_LIMIT_RUNTIME: &str = "conn#26";
-const RETURN_DAMPER_MAX_LIMIT_RUNTIME: &str = "conn#22";
-const RETURN_DAMPER_PHYSICAL_MAX_LIMIT_RUNTIME: &str = "conn#7";
-const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_RUNTIME: &str = "conn#39";
+const OUTDOOR_DAMPER_MIN_LIMIT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minOutDam.y";
+const OUTDOOR_DAMPER_MAX_LIMIT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPosMaxSwitch.y";
+const RETURN_DAMPER_MIN_LIMIT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPosMinSwitch.y";
+const RETURN_DAMPER_MAX_LIMIT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minRetDam.y";
+const RETURN_DAMPER_PHYSICAL_MAX_LIMIT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMaxSig.y";
+const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.y";
 
 const OUTDOOR_AIRFLOW_NORMALIZED_VALUES: [f64; 8] = [0.0; 8];
 const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED_VALUES: [f64; 8] =
@@ -61,27 +67,21 @@ const INPUTS: &[PointSpec] = &[
 const OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(
         OUTDOOR_DAMPER_MIN_LIMIT_SOURCE,
-        OUTDOOR_DAMPER_MIN_LIMIT_RUNTIME,
+        OUTDOOR_DAMPER_MIN_LIMIT_PATH,
     ),
     PointSpec::real_alias(
         OUTDOOR_DAMPER_MAX_LIMIT_SOURCE,
-        OUTDOOR_DAMPER_MAX_LIMIT_RUNTIME,
+        OUTDOOR_DAMPER_MAX_LIMIT_PATH,
     ),
-    PointSpec::real_alias(
-        RETURN_DAMPER_MIN_LIMIT_SOURCE,
-        RETURN_DAMPER_MIN_LIMIT_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        RETURN_DAMPER_MAX_LIMIT_SOURCE,
-        RETURN_DAMPER_MAX_LIMIT_RUNTIME,
-    ),
+    PointSpec::real_alias(RETURN_DAMPER_MIN_LIMIT_SOURCE, RETURN_DAMPER_MIN_LIMIT_PATH),
+    PointSpec::real_alias(RETURN_DAMPER_MAX_LIMIT_SOURCE, RETURN_DAMPER_MAX_LIMIT_PATH),
     PointSpec::real_alias(
         RETURN_DAMPER_PHYSICAL_MAX_LIMIT_SOURCE,
-        RETURN_DAMPER_PHYSICAL_MAX_LIMIT_RUNTIME,
+        RETURN_DAMPER_PHYSICAL_MAX_LIMIT_PATH,
     ),
     PointSpec::boolean_alias(
         MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_SOURCE,
-        MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_RUNTIME,
+        MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_PATH,
     ),
 ];
 const SPEC: SequenceSpec = SequenceSpec {

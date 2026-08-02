@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use oce_conformance::{
     CombiTimeTable, ComparisonMode, ComparisonResult, DriverOptions, OutputPattern,
     PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec, Tolerances, VerifyConfig,
-    drive_trace_with_options,
+    drive_trace_with_options, escape_regex,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -298,7 +298,8 @@ fn config(case: &BlockCase, sequence: &str, tolerances: Tolerances) -> VerifyCon
             .iter()
             .enumerate()
             .map(|(idx, _)| OutputPattern {
-                pattern: output_point(case, idx),
+                // Anchored and escaped: the authored path's dots are regex wildcards.
+                pattern: format!("^{}$", escape_regex(&output_point(case, idx))),
                 tolerances: PartialTolerances::default(),
             })
             .collect(),
@@ -350,10 +351,13 @@ fn input_point(case: &BlockCase, input: &Port) -> String {
     format!("http://example.org#{}.{}", case.slug, input.name)
 }
 
-fn output_point(case: &BlockCase, output_idx: usize) -> String {
-    // The one-block CXF lists inputs first and outputs last, so connector_path renders
-    // output i as conn#(inputs+i).
-    format!("conn#{}", case.inputs.len() + output_idx)
+pub(crate) fn output_point(case: &BlockCase, output_idx: usize) -> String {
+    // The authored `@id` this harness emits for the block's output connector in `build_cxf`;
+    // the facade point path is that subject IRI.
+    format!(
+        "http://example.org#{}.block.{}",
+        case.slug, case.outputs[output_idx].name
+    )
 }
 
 fn build_cxf(case: &BlockCase) -> String {

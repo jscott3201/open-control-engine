@@ -25,8 +25,8 @@ const DAMPER_COMMAND_INPUT: &str = "http://example.org#g36.source.reheat_overrid
 const HEATING_VALVE_OFF: &str = "http://example.org#g36.source.reheat_overrides.uHeaOff";
 const HEATING_VALVE_COMMAND_INPUT: &str = "http://example.org#g36.source.reheat_overrides.uVal";
 
-const DAMPER_COMMAND: &str = "conn#21";
-const HEATING_VALVE_COMMAND: &str = "conn#24";
+const DAMPER_COMMAND: &str = "http://example.org#g36.source.reheat_overrides.swi1.y";
+const HEATING_VALVE_COMMAND: &str = "http://example.org#g36.source.reheat_overrides.pro.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer("damper_override_index", DAMPER_OVERRIDE_INDEX),

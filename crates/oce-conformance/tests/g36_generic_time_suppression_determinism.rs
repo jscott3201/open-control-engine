@@ -22,7 +22,8 @@ const SETPOINT_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_s
 const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_suppression.TZon";
 const AFTER_SUPPRESSION_SOURCE: &str =
     "http://example.org#g36.source.generic_time_suppression.yAftSup";
-const AFTER_SUPPRESSION_RUNTIME: &str = "conn#42";
+const AFTER_SUPPRESSION_PATH: &str =
+    "http://example.org#g36.source.generic_time_suppression.pasSupTim.y";
 
 const ROWS: usize = 91;
 const INPUTS: &[PointSpec] = &[
@@ -31,7 +32,7 @@ const INPUTS: &[PointSpec] = &[
 ];
 const OUTPUTS: &[PointSpec] = &[PointSpec::boolean_alias(
     AFTER_SUPPRESSION_SOURCE,
-    AFTER_SUPPRESSION_RUNTIME,
+    AFTER_SUPPRESSION_PATH,
 )];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "generic_time_suppression",

@@ -38,10 +38,14 @@ const ZONE_TEMPERATURE: &str =
 const DISCHARGE_AIR_TEMPERATURE: &str =
     "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.TDis";
 
-const ADJUSTED_POPULATION_FLOW: &str = "conn#44";
-const OCCUPIED_MINIMUM_FLOW: &str = "conn#52";
-const ADJUSTED_AREA_FLOW: &str = "conn#48";
-const MINIMUM_OUTDOOR_AIRFLOW: &str = "conn#80";
+const ADJUSTED_POPULATION_FLOW: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modPopBreAir.y";
+const OCCUPIED_MINIMUM_FLOW: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.y";
+const ADJUSTED_AREA_FLOW: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modAreBreAir.y";
+const MINIMUM_OUTDOOR_AIRFLOW: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.minOA.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::boolean("window_status", WINDOW_STATUS),

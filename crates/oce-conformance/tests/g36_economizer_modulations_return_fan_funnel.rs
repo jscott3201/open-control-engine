@@ -27,8 +27,10 @@ const RETURN_DAMPER_MIN: &str =
     "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_min";
 const RETURN_DAMPER_MAX: &str =
     "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_max";
-const RETURN_DAMPER_COMMAND: &str = "conn#7";
-const OUTDOOR_DAMPER_COMMAND: &str = "conn#8";
+const RETURN_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.retDamPos.y";
+const OUTDOOR_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.one.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_temperature_signal", SUPPLY_TEMPERATURE_SIGNAL),

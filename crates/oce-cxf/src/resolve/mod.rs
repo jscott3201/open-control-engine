@@ -395,7 +395,6 @@ pub(crate) fn resolve(
         });
         let mut c = Connector::new(ConnectorId(i as u32), block, dir, vt, i as u32);
         c.iri = Some(Arc::from(node.id.as_str()));
-        c.iri_was_legacy_host_path = false;
         c.attrs = connector_attrs(node, vt, &mut diags);
         connectors.push(c);
     }
@@ -649,7 +648,6 @@ pub(crate) fn resolve(
                             external_inputs.push(to);
                         }
                         connectors[to.0 as usize].iri = Some(Arc::from(source));
-                        connectors[to.0 as usize].iri_was_legacy_host_path = true;
                     }
                     None => diags.push(
                         Diagnostic::error(

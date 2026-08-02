@@ -35,15 +35,24 @@ const PROOF_2: &str = "http://example.org#g36.source.multizone_vav_relief_fan_gr
 const PROOF_3: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3";
 const PROOF_4: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4";
 
-const AVERAGED_PRESSURE: &str = "conn#19";
-const RELIEF_FAN_1_SPEED: &str = "conn#417";
-const RELIEF_FAN_2_SPEED: &str = "conn#420";
-const RELIEF_FAN_3_SPEED: &str = "conn#423";
-const RELIEF_FAN_4_SPEED: &str = "conn#426";
-const RELIEF_DAMPER_1: &str = "conn#519";
-const RELIEF_DAMPER_2: &str = "conn#522";
-const RELIEF_DAMPER_3: &str = "conn#525";
-const RELIEF_DAMPER_4: &str = "conn#528";
+const AVERAGED_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.movMea.y";
+const RELIEF_FAN_1_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_1.y";
+const RELIEF_FAN_2_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_2.y";
+const RELIEF_FAN_3_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_3.y";
+const RELIEF_FAN_4_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_4.y";
+const RELIEF_DAMPER_1: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_1.y";
+const RELIEF_DAMPER_2: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_2.y";
+const RELIEF_DAMPER_3: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_3.y";
+const RELIEF_DAMPER_4: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_4.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::boolean("supply_fan_1_status", SUPPLY_FAN_1),

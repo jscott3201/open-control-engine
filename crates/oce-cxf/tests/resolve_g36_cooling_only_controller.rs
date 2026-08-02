@@ -529,7 +529,7 @@ fn configured_controller_preserves_nested_topology_grounding_and_fanout() {
             .collect::<BTreeSet<_>>()
             .len(),
         10,
-        "all ten named outputs must resolve to distinct conn#N runtime edges"
+        "all ten named outputs must resolve to distinct connector arena slots"
     );
 }
 

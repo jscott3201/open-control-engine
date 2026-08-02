@@ -26,8 +26,10 @@ const SAMPLE_STEP: f64 = 60.0;
 const COOLING_SETPOINT: &str = "http://example.org#g36.source.thermal_zones_control_loops.TCooSet";
 const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.thermal_zones_control_loops.TZon";
 const HEATING_SETPOINT: &str = "http://example.org#g36.source.thermal_zones_control_loops.THeaSet";
-const COOLING_LOOP_SIGNAL: &str = "conn#22";
-const HEATING_LOOP_SIGNAL: &str = "conn#31";
+const COOLING_LOOP_SIGNAL: &str =
+    "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.y";
+const HEATING_LOOP_SIGNAL: &str =
+    "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("cooling_setpoint", COOLING_SETPOINT),

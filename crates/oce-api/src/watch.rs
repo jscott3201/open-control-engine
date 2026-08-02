@@ -15,14 +15,12 @@ impl<S: Store> Engine<S> {
     /// there is a single writer.
     ///
     /// Keys are output point paths; every output connector, internal and boundary alike, is
-    /// addressable. After CXF import, only boundary inputs and lowered pass-through ports carry
-    /// IRIs; essentially every output path is synthetic (`conn#<id>`), so path form does not tell a
-    /// host whether a point is internal. Hosts wanting stable labels map
-    /// [`crate::TopologyBlock::instance_path`] to that block's ordered
-    /// [`crate::TopologyBlock::outputs`] entries and use those connector paths as keys; lowered
-    /// pass-through ports are reported in [`crate::Topology::pass_through`] rather than in
-    /// `blocks`, so that recipe does not reach them. An instance path itself identifies a block
-    /// and is never a valid key.
+    /// addressable. A point path is the authored `@id`, as written in the source CXF document, of
+    /// the connector's host-visible identity node, so the same key names the same point across
+    /// loads of the same document. The `@id` is not `@context`-expanded (a known gap; every
+    /// shipped fixture writes expanded IRIs), so a document re-serialized between compact and
+    /// expanded spellings renames its points until expansion lands. An instance path identifies a
+    /// block, not a connector, and is never a valid key.
     ///
     /// Returned pairs echo the supplied keys, including duplicates; an empty `points` slice
     /// returns `Ok` with an empty vector. If duplicate output paths exist in the model, the
@@ -107,10 +105,10 @@ impl<S: Store> Engine<S> {
     /// engine.load_cxf(cxf)?;
     /// // The multiply's output has an upstream input, so its slot is 0.0 until a tick runs —
     /// // reading it before and after pins that watch returns exactly tick t's values.
-    /// let before = engine.watch(&["conn#2"])?;
+    /// let before = engine.watch(&["http://example.org#Example.gain.y"])?;
     /// assert!(before[0].1.bit_eq(&Value::Real(0.0)));
     /// engine.tick(0.0)?;
-    /// let after = engine.watch(&["conn#2"])?;
+    /// let after = engine.watch(&["http://example.org#Example.gain.y"])?;
     /// assert!(after[0].1.bit_eq(&Value::Real(6.0)));
     /// # Ok::<(), oce_api::OcError>(())
     /// ```

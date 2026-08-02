@@ -27,8 +27,10 @@ const ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE: &str =
 const ACTIVE_MINIMUM_AIRFLOW_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow";
 
-const ACTIVE_COOLING_MAXIMUM_AIRFLOW_RUNTIME: &str = "conn#1";
-const ACTIVE_MINIMUM_AIRFLOW_RUNTIME: &str = "conn#9";
+const ACTIVE_COOLING_MAXIMUM_AIRFLOW_PATH: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y";
+const ACTIVE_MINIMUM_AIRFLOW_PATH: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y";
 
 const OPERATING_MODES: [i64; 14] = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
 const OCCUPIED_MINIMUM_FLOWS: [f64; 14] = [
@@ -40,18 +42,15 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(OCCUPIED_MINIMUM_AIRFLOW),
 ];
 // Upstream ActiveAirFlow.mo connects VActMin_flow and VActHeaMax_flow from the same actMin.y
-// signal (lines 104-107), so both source names resolve to conn#9. The determinism snapshot lists
-// distinct runtime connectors and uses VActMin_flow as the canonical name. The facade, Tier-A exact,
-// and funnel suites still assert VActHeaMax_flow bit-exactly under its own source name.
+// signal (lines 104-107), so both source names resolve to ACTIVE_MINIMUM_AIRFLOW_PATH. The
+// determinism snapshot uses VActMin_flow as the canonical name; the facade, Tier-A exact, and
+// funnel suites still assert VActHeaMax_flow bit-exactly under its own source name.
 const OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(
         ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE,
-        ACTIVE_COOLING_MAXIMUM_AIRFLOW_RUNTIME,
+        ACTIVE_COOLING_MAXIMUM_AIRFLOW_PATH,
     ),
-    PointSpec::real_alias(
-        ACTIVE_MINIMUM_AIRFLOW_SOURCE,
-        ACTIVE_MINIMUM_AIRFLOW_RUNTIME,
-    ),
+    PointSpec::real_alias(ACTIVE_MINIMUM_AIRFLOW_SOURCE, ACTIVE_MINIMUM_AIRFLOW_PATH),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_active_air_flow",

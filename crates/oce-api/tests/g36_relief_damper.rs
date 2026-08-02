@@ -7,7 +7,8 @@ const RELIEF_DAMPER: &str =
 
 const BUILDING_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_damper.dpBui";
 const SUPPLY_FAN_ON: &str = "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan";
-const RELIEF_DAMPER_COMMAND: &str = "conn#3";
+const RELIEF_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_relief_damper.swi.y";
 
 const EXPECTED_TIMES: [f64; 6] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 

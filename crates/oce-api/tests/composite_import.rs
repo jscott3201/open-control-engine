@@ -71,16 +71,14 @@ fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
             .expect("point inventory is available")
         {
             total_points += 1;
-            if !point.path.starts_with("conn#") {
-                actual.insert((
-                    fixture_name.to_owned(),
-                    match point.direction {
-                        PointDirection::In => "In",
-                        PointDirection::Out => "Out",
-                    },
-                    point.path,
-                ));
-            }
+            actual.insert((
+                fixture_name.to_owned(),
+                match point.direction {
+                    PointDirection::In => "In",
+                    PointDirection::Out => "Out",
+                },
+                point.path,
+            ));
         }
     }
 
@@ -89,10 +87,10 @@ fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
         .map(|(fixture, direction, path)| (fixture.to_owned(), direction, path.to_owned()))
         .collect::<BTreeSet<_>>();
     assert_eq!(total_points, 2_895, "development corpus point count moved");
-    assert_eq!(actual.len(), 184, "development named-point count moved");
+    assert_eq!(actual.len(), 2_895, "authored point inventory count moved");
     assert_eq!(
         actual, expected,
-        "host-visible named points must remain byte-identical to development"
+        "host-visible authored points must remain byte-identical to the checked-in inventory"
     );
 }
 
@@ -258,10 +256,10 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
         "inactive nested have_hol=false optional input should not survive facade IO export"
     );
 
-    let output = "conn#123";
+    let output = &format!("{G36_SUPPLY_TEMPERATURE_MODEL}.swi3.y");
     assert!(
-        paths.contains(&output.to_owned()),
-        "SupplyTemperature output alias {output} should be visible"
+        paths.contains(output),
+        "SupplyTemperature output {output} should be visible"
     );
 
     engine
@@ -328,12 +326,12 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
         "inactive nested have_hol=false optional input should not survive facade IO export"
     );
 
-    let fan_speed = "conn#107";
-    let fan_status = "conn#110";
+    let fan_speed = &format!("{G36_SUPPLY_FAN_MODEL}.swi.y");
+    let fan_status = &format!("{G36_SUPPLY_FAN_MODEL}.or1.y");
     for output in [fan_speed, fan_status] {
         assert!(
-            paths.contains(&output.to_owned()),
-            "SupplyFan output alias {output} should be visible"
+            paths.contains(output),
+            "SupplyFan output {output} should be visible"
         );
     }
 
@@ -407,13 +405,13 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         assert!(paths.contains(required), "missing facade input {required}");
     }
 
-    let u_t_sup = "conn#7";
-    let cooling = "conn#18";
-    let heating = "conn#24";
+    let u_t_sup = &format!("{G36_SUPPLY_SIGNALS_MODEL}.swi.y");
+    let cooling = &format!("{G36_SUPPLY_SIGNALS_MODEL}.conSigCoo.y");
+    let heating = &format!("{G36_SUPPLY_SIGNALS_MODEL}.conSigHea.y");
     for output in [u_t_sup, cooling, heating] {
         assert!(
-            paths.contains(&output.to_owned()),
-            "SupplySignals output alias {output} should be visible"
+            paths.contains(output),
+            "SupplySignals output {output} should be visible"
         );
     }
 

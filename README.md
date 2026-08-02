@@ -52,18 +52,21 @@ oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<c
 
 Load a CDL sequence from CXF and simulate it:
 
-Known gap: authored output names are not yet carried into the point inventory, so outputs currently
-use positional `conn#<N>` paths. Those indices can change when the CXF document changes; the
-semantic constant names below make the selected signals readable, but their values are not stable
-identities and are not the intended long-term design.
+Every point is named by an authored `@id` from the CXF document, exactly as written there — the
+declared boundary input's `@id` for a boundary-driven point, the connector's own otherwise — so
+the same key names the same point across loads of the same document. The `@id` is not
+`@context`-expanded yet (a known gap; a document re-serialized between compact and expanded
+spellings renames its points until that lands). The document's declared boundary-output names
+(root `S231:hasOutput`) are not yet facade-addressable; internal connector paths, like the three
+below, are the output identities for now.
 
 ```rust
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
-const ECONOMIZER_ENABLED: &str = "conn#20";
-const DAMPER_COMMAND: &str = "conn#26";
-const OA_TEMPERATURE_DELTA: &str = "conn#2";
+const ECONOMIZER_ENABLED: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
+const DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
+const OA_TEMPERATURE_DELTA: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // An engine with the default in-memory store — no database.

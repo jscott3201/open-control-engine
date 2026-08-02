@@ -24,7 +24,8 @@ const RETURN_AIRFLOW: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirRet_flow";
 const SUPPLY_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
-const RETURN_FAN_SPEED: &str = "conn#6";
+const RETURN_FAN_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.swi.y";
 const RETURN_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 

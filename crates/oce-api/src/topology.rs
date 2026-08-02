@@ -108,8 +108,10 @@ impl PartialEq for Topology {
 impl<S: Store> Engine<S> {
     /// Build an owned, read-only topology snapshot.
     ///
-    /// This off-tick-path accessor allocates for the snapshot. It never panics for any loaded or
-    /// unloaded model; malformed connector indices degrade to their synthetic `conn#<id>` paths.
+    /// Every connector path is the authored `@id` of its host-visible identity node, as written
+    /// in the source document. This off-tick-path accessor allocates for the snapshot and never
+    /// panics for any loaded or unloaded model; only a malformed (out-of-range) connector index,
+    /// or an IRI-less hand-built connector, degrades to the synthetic `conn#<id>` fallback.
     #[must_use]
     pub fn topology(&self) -> Topology {
         let mut blocks = Vec::with_capacity(self.model.blocks.len());

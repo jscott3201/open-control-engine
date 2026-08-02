@@ -78,8 +78,6 @@ const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE: &str = "http:
 const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TCut";
 const RETURN_AIR_TEMPERATURE_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet";
 const TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE: &str = "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TCut";
-const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
-const DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#1";
 const RETURN_AIR_TEMPERATURES: [f64; 4] = [289.25, 293.15, 297.5, 301.75];
 
 const NO_INPUTS: &[PointSpec] = &[];
@@ -100,51 +98,51 @@ const INPUTS_TITLE24_DIFFERENTIAL_OFFSET_3: &[PointSpec] = &[PointSpec::real(
 )];
 const OUTPUTS_FIXED_24: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_FIXED_24_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y",
 )];
 const OUTPUTS_FIXED_21: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_FIXED_21_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.con1.y",
 )];
 const OUTPUTS_FIXED_18: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_FIXED_18_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.con2.y",
 )];
 const OUTPUTS_TITLE24_FIXED_24: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_FIXED_24_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.con5.y",
 )];
 const OUTPUTS_TITLE24_FIXED_23: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_FIXED_23_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.con6.y",
 )];
 const OUTPUTS_TITLE24_FIXED_22: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_FIXED_22_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7.y",
 )];
 const OUTPUTS_TITLE24_FIXED_21: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_FIXED_21_SOURCE,
-    TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y",
 )];
 const OUTPUTS_ASHRAE_DIFFERENTIAL: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_ASHRAE_DIFFERENTIAL_SOURCE,
-    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.retAirIdentity.y",
 )];
 const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_0: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_0_SOURCE,
-    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.retAirIdentity.y",
 )];
 const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_1: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_1_SOURCE,
-    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar.y",
 )];
 const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_2: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_2_SOURCE,
-    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.addPar1.y",
 )];
 const OUTPUTS_TITLE24_DIFFERENTIAL_OFFSET_3: &[PointSpec] = &[PointSpec::real_alias(
     TEMPERATURE_CUTOFF_TITLE24_DIFFERENTIAL_OFFSET_3_SOURCE,
-    DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+    "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y",
 )];
 
 const SPECS: &[SequenceSpec] = &[

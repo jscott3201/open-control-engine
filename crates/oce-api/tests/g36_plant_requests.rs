@@ -12,10 +12,13 @@ const COOLING_COIL_VALVE: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet";
 const HEATING_COIL_VALVE: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet";
-const CHILLED_WATER_RESET: &str = "conn#17";
-const CHILLER_PLANT: &str = "conn#42";
-const HOT_WATER_RESET: &str = "conn#57";
-const HOT_WATER_PLANT: &str = "conn#81";
+const CHILLED_WATER_RESET: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.y";
+const CHILLER_PLANT: &str = "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.y";
+const HOT_WATER_RESET: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.y";
+const HOT_WATER_PLANT: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y";
 
 const EXPECTED_TIMES: [f64; 20] = [
     0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0, 420.0, 480.0, 540.0, 600.0, 660.0, 720.0, 780.0,

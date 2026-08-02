@@ -13,8 +13,10 @@ const RETURN_DAMPER_MIN: &str =
 const RETURN_DAMPER_MAX: &str =
     "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_max";
 
-const RETURN_DAMPER_COMMAND: &str = "conn#7";
-const OUTDOOR_DAMPER_COMMAND: &str = "conn#8";
+const RETURN_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.retDamPos.y";
+const OUTDOOR_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.one.y";
 
 const EXPECTED_TIMES: [f64; 7] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
 const SUPPLY_TEMPERATURE_SIGNAL_VALUES: [f64; 7] = [-0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5];

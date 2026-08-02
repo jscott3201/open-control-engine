@@ -61,17 +61,28 @@ const HOT_WATER_PLANT_REQUEST_SOURCE: &str =
 const ALARM_LEVEL_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_freeze_protection.yAla";
 
-const FREEZE_PROTECTION_STAGE_RUNTIME: &str = "conn#137";
-const CHILLED_WATER_PUMP_ENABLE_RUNTIME: &str = "conn#72";
-const RETURN_DAMPER_COMMAND_RUNTIME: &str = "conn#132";
-const OUTDOOR_DAMPER_COMMAND_RUNTIME: &str = "conn#81";
-const MINIMUM_OUTDOOR_DAMPER_COMMAND_RUNTIME: &str = "conn#119";
-const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#153";
-const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#76";
-const COOLING_COIL_COMMAND_RUNTIME: &str = "conn#85";
-const HEATING_COIL_COMMAND_RUNTIME: &str = "conn#101";
-const HOT_WATER_PLANT_REQUEST_RUNTIME: &str = "conn#89";
-const ALARM_LEVEL_RUNTIME: &str = "conn#105";
+const FREEZE_PROTECTION_STAGE_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.y";
+const CHILLED_WATER_PUMP_ENABLE_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.y";
+const RETURN_DAMPER_COMMAND_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.y";
+const OUTDOOR_DAMPER_COMMAND_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.y";
+const MINIMUM_OUTDOOR_DAMPER_COMMAND_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.y";
+const SUPPLY_FAN_STATUS_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.and2.y";
+const SUPPLY_FAN_SPEED_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.y";
+const COOLING_COIL_COMMAND_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.y";
+const HEATING_COIL_COMMAND_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.y";
+const HOT_WATER_PLANT_REQUEST_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.y";
+const ALARM_LEVEL_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(OUTDOOR_DAMPER_MIN_POSITION),
@@ -87,32 +98,23 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(MIXED_AIR_TEMPERATURE),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::integer_alias(
-        FREEZE_PROTECTION_STAGE_SOURCE,
-        FREEZE_PROTECTION_STAGE_RUNTIME,
-    ),
+    PointSpec::integer_alias(FREEZE_PROTECTION_STAGE_SOURCE, FREEZE_PROTECTION_STAGE_PATH),
     PointSpec::boolean_alias(
         CHILLED_WATER_PUMP_ENABLE_SOURCE,
-        CHILLED_WATER_PUMP_ENABLE_RUNTIME,
+        CHILLED_WATER_PUMP_ENABLE_PATH,
     ),
-    PointSpec::real_alias(RETURN_DAMPER_COMMAND_SOURCE, RETURN_DAMPER_COMMAND_RUNTIME),
-    PointSpec::real_alias(
-        OUTDOOR_DAMPER_COMMAND_SOURCE,
-        OUTDOOR_DAMPER_COMMAND_RUNTIME,
-    ),
+    PointSpec::real_alias(RETURN_DAMPER_COMMAND_SOURCE, RETURN_DAMPER_COMMAND_PATH),
+    PointSpec::real_alias(OUTDOOR_DAMPER_COMMAND_SOURCE, OUTDOOR_DAMPER_COMMAND_PATH),
     PointSpec::real_alias(
         MINIMUM_OUTDOOR_DAMPER_COMMAND_SOURCE,
-        MINIMUM_OUTDOOR_DAMPER_COMMAND_RUNTIME,
+        MINIMUM_OUTDOOR_DAMPER_COMMAND_PATH,
     ),
-    PointSpec::boolean_alias(SUPPLY_FAN_STATUS_SOURCE, SUPPLY_FAN_STATUS_RUNTIME),
-    PointSpec::real_alias(SUPPLY_FAN_SPEED_SOURCE, SUPPLY_FAN_SPEED_RUNTIME),
-    PointSpec::real_alias(COOLING_COIL_COMMAND_SOURCE, COOLING_COIL_COMMAND_RUNTIME),
-    PointSpec::real_alias(HEATING_COIL_COMMAND_SOURCE, HEATING_COIL_COMMAND_RUNTIME),
-    PointSpec::integer_alias(
-        HOT_WATER_PLANT_REQUEST_SOURCE,
-        HOT_WATER_PLANT_REQUEST_RUNTIME,
-    ),
-    PointSpec::integer_alias(ALARM_LEVEL_SOURCE, ALARM_LEVEL_RUNTIME),
+    PointSpec::boolean_alias(SUPPLY_FAN_STATUS_SOURCE, SUPPLY_FAN_STATUS_PATH),
+    PointSpec::real_alias(SUPPLY_FAN_SPEED_SOURCE, SUPPLY_FAN_SPEED_PATH),
+    PointSpec::real_alias(COOLING_COIL_COMMAND_SOURCE, COOLING_COIL_COMMAND_PATH),
+    PointSpec::real_alias(HEATING_COIL_COMMAND_SOURCE, HEATING_COIL_COMMAND_PATH),
+    PointSpec::integer_alias(HOT_WATER_PLANT_REQUEST_SOURCE, HOT_WATER_PLANT_REQUEST_PATH),
+    PointSpec::integer_alias(ALARM_LEVEL_SOURCE, ALARM_LEVEL_PATH),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_freeze_protection",

@@ -22,13 +22,13 @@ const REQUEST_COUNT: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq";
 const DEVICE_STATUS: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta";
 const SETPOINT_SOURCE: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.y";
-const SETPOINT_RUNTIME: &str = "conn#23";
+const SETPOINT_PATH: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer(REQUEST_COUNT),
     PointSpec::boolean(DEVICE_STATUS),
 ];
-const OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(SETPOINT_SOURCE, SETPOINT_RUNTIME)];
+const OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(SETPOINT_SOURCE, SETPOINT_PATH)];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "trim_and_respond_have_hol_false",
     cxf: TRIM_AND_RESPOND,

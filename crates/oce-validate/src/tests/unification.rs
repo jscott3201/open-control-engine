@@ -246,7 +246,6 @@ fn t24_tag_invariant_violation_is_skipped_not_unwrapped() {
         attrs: Attrs::Integer(IntAttrs::default()),
         decl_order: 0,
         iri: None,
-        iri_was_legacy_host_path: true,
     };
     let mut m = ModelGraph {
         connectors: vec![bad, real_unit(1, 1, Dir::In, Some("K"))],

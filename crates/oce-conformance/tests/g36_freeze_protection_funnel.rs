@@ -40,17 +40,27 @@ const COOLING_COIL: &str = "http://example.org#g36.source.multizone_vav_freeze_p
 const MIXED_AIR_TEMPERATURE: &str =
     "http://example.org#g36.source.multizone_vav_freeze_protection.TAirMix";
 
-const FREEZE_PROTECTION_STAGE: &str = "conn#137";
-const CHILLED_WATER_PUMP_ENABLE: &str = "conn#72";
-const RETURN_DAMPER_COMMAND: &str = "conn#132";
-const OUTDOOR_DAMPER_COMMAND: &str = "conn#81";
-const MINIMUM_OUTDOOR_DAMPER_COMMAND: &str = "conn#119";
-const SUPPLY_FAN_STATUS: &str = "conn#153";
-const SUPPLY_FAN_SPEED: &str = "conn#76";
-const COOLING_COIL_COMMAND: &str = "conn#85";
-const HEATING_COIL_COMMAND: &str = "conn#101";
-const HOT_WATER_PLANT_REQUEST: &str = "conn#89";
-const ALARM_LEVEL: &str = "conn#105";
+const FREEZE_PROTECTION_STAGE: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi2.y";
+const CHILLED_WATER_PUMP_ENABLE: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.lat1.y";
+const RETURN_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.retDam.y";
+const OUTDOOR_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.outDam.y";
+const MINIMUM_OUTDOOR_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.minOutDam.y";
+const SUPPLY_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.and2.y";
+const SUPPLY_FAN_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.supFan.y";
+const COOLING_COIL_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.cooCoiVal.y";
+const HEATING_COIL_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.heaCoiPos.y";
+const HOT_WATER_PLANT_REQUEST: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.hotWatPlaReq3.y";
+const ALARM_LEVEL: &str = "http://example.org#g36.source.multizone_vav_freeze_protection.intSwi3.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_damper_min_position", OUTDOOR_DAMPER_MIN_POSITION),
