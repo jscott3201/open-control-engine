@@ -226,7 +226,7 @@ fn the_enum_connector_deferral_warning_renders_every_placeholder() {
             conn(2, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -267,7 +267,7 @@ fn the_enum_parameter_deferral_warning_renders_every_placeholder() {
             conn(1, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -312,7 +312,7 @@ fn the_cascade_deferral_warning_renders_every_placeholder() {
             conn(4, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -363,7 +363,7 @@ fn every_warning_shape_graph() -> ModelGraph {
             conn(5, 3, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(1, 3)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 
@@ -461,7 +461,7 @@ fn a_parameter_named_like_a_placeholder_survives_verbatim() {
             conn(1, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -512,7 +512,7 @@ fn a_parameter_named_like_the_subject_slot_survives_verbatim() {
             conn(1, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -565,7 +565,7 @@ fn a_block_iri_shaped_like_a_placeholder_survives_verbatim() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -622,7 +622,7 @@ fn a_cascade_deferred_block_iri_shaped_like_a_placeholder_survives_verbatim() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -666,7 +666,7 @@ fn two_enum_classes_on_one_block_do_not_render_as_the_same_label() {
             conn(2, 1, Dir::Out, ValueType::Enum(EnumClassId::EXTRAPOLATION)),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -718,7 +718,7 @@ fn a_string_connector_on_an_enum_deferred_block_does_not_abort_the_export() {
             conn(1, 1, Dir::Out, ValueType::String),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -759,7 +759,7 @@ fn a_string_connector_on_a_cascade_deferred_block_does_not_abort_the_export() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -801,7 +801,7 @@ fn a_string_connector_on_a_surviving_block_still_rejects_alongside_a_deferral() 
             conn(1, 1, Dir::Out, ValueType::String),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let diags = export_rejection(&g);

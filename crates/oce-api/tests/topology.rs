@@ -33,6 +33,7 @@ struct GoldenTopology {
     connector_paths: BTreeMap<u32, String>,
     connections: Vec<(u32, u32)>,
     external_inputs: Vec<u32>,
+    boundary_outputs: vec![],
 }
 
 fn bracketed_ids(value: &str) -> Vec<u32> {

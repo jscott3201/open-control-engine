@@ -484,7 +484,7 @@ fn the_least_closure_excludes_a_cycle_no_enum_root_reaches() {
                 to: ConnectorId(3),
             }, // spinB -> spinA
         ],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let closure = least_deferred_closure(&g);

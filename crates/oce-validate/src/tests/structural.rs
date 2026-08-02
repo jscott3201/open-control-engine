@@ -34,6 +34,7 @@ fn t2_minimal_valid_graph_passes_all_rules() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(2)],
+        boundary_outputs: vec![],
     };
     let warnings = validate(&m).expect("minimal valid graph passes");
     assert!(warnings.is_empty(), "no warnings expected: {warnings:?}");
@@ -48,7 +49,7 @@ fn t3_undriven_input_not_external_is_single_assignment_error() {
         blocks: vec![block(0, "unknown.Class", &[0], &[])],
         connectors: vec![conn(0, 0, Dir::In, ValueType::Real)],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("undriven non-external input must fail");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::SingleAssignment]);
@@ -61,6 +62,7 @@ fn t4_undriven_input_that_is_external_is_ok() {
         connectors: vec![conn(0, 0, Dir::In, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     assert!(
         validate(&m)
@@ -80,7 +82,7 @@ fn t5_input_with_in_degree_two_is_single_assignment_error() {
             conn(2, 0, Dir::In, ValueType::Real),
         ],
         connections: vec![conn_edge(0, 2), conn_edge(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("doubly-driven input must fail");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::SingleAssignment]);
@@ -100,6 +102,7 @@ fn t6_external_input_driven_from_inside_is_still_an_error() {
         ],
         connections: vec![conn_edge(0, 2), conn_edge(1, 2)],
         external_inputs: vec![ConnectorId(2)], // declared external, yet doubly driven
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("external + doubly-driven must still fail");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::SingleAssignment]);
@@ -112,7 +115,7 @@ fn t7_output_with_zero_in_degree_is_fine() {
         blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     assert!(validate(&m).expect("lone output is valid").is_empty());
 }
@@ -130,6 +133,7 @@ fn t8_connection_from_input_is_direction_mismatch() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(0)], // silence the single-assignment rule on C0
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("from-an-input is a direction mismatch");
     assert!(codes(&err.diagnostics).contains(&DiagCode::DirectionMismatch));
@@ -144,7 +148,7 @@ fn t9_connection_to_output_is_direction_mismatch() {
             conn(1, 0, Dir::Out, ValueType::Real),
         ],
         connections: vec![conn_edge(0, 1)], // to an output → wrong
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("to-an-output is a direction mismatch");
     assert!(codes(&err.diagnostics).contains(&DiagCode::DirectionMismatch));
@@ -160,7 +164,7 @@ fn t10_cross_type_connection_is_type_mismatch() {
             conn(1, 0, Dir::In, ValueType::Boolean),
         ],
         connections: vec![conn_edge(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("Real→Boolean must fail");
     assert!(codes(&err.diagnostics).contains(&DiagCode::TypeMismatch));
@@ -180,6 +184,7 @@ fn t11_input_mistyped_against_signature_is_port_kind_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)], // silence single-assignment
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("mistyped Add input must fail");
     // Exactly one Rule-3 diagnostic — the conforming Real input C1 and output C2 must not fire.
@@ -206,6 +211,7 @@ fn t12_switch_boolean_control_port_typed_real_is_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1), ConnectorId(2)],
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("Switch control port mistype must fail");
     // Exactly one Rule-3 diagnostic on the control port C1; the conforming Real ports must not fire.
@@ -223,7 +229,7 @@ fn t13_unknown_class_skips_rule3_silently() {
             conn(1, 0, Dir::Out, ValueType::Real),
         ],
         connections: vec![conn_edge(1, 0)], // type mismatch on the *connection* (Rule 2), not Rule 3
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("connection type mismatch still fires");
     // Only the Rule-2 connection type mismatch, never a Rule-3 signature mismatch (class unknown).
@@ -268,7 +274,7 @@ fn t39_connector_block_out_of_range_is_malformed() {
         blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 7, Dir::Out, ValueType::Real)],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("connector must reference an in-range block");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
@@ -287,7 +293,7 @@ fn t40_connector_block_at_blocks_len_boundary_is_malformed() {
         blocks: vec![constant_block(0, &[0])],
         connectors: vec![conn(0, 1, Dir::Out, ValueType::Real)],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("connector block id equal to blocks.len() must fail");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
@@ -312,6 +318,7 @@ fn t25_block_port_out_of_range_connector_is_malformed() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("out-of-range port connector must fail");
     assert!(codes(&err.diagnostics).contains(&DiagCode::MalformedDocument));
@@ -325,7 +332,7 @@ fn t41_block_ids_must_be_dense_unique_arena_indices() {
         blocks: vec![constant_block(1, &[0])],
         connectors: vec![conn(0, 0, Dir::Out, ValueType::Real)],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("block id must equal arena index");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
@@ -351,7 +358,7 @@ fn t42_block_port_ids_are_bounded_before_signature_lookup() {
         blocks: vec![block(0, "unknown.Class", &[7], &[8])],
         connectors: vec![],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let err = validate(&m).expect_err("block port connector ids must be bounded unconditionally");
     assert_eq!(
@@ -382,6 +389,7 @@ fn t30_output_port_mistyped_against_signature_is_port_kind_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+        boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("mistyped Greater output must fail");
     assert_eq!(codes(&err.diagnostics), vec![DiagCode::PortKindMismatch]);
@@ -660,6 +668,7 @@ fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
             connectors,
             connections: vec![],
             external_inputs,
+            boundary_outputs: vec![],
         };
         let err = match validate(&m) {
             Err(err) => err,

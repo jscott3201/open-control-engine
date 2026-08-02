@@ -71,7 +71,7 @@ fn constant_graph(params: Vec<(Arc<str>, Value)>) -> ModelGraph {
             0,
         )],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 
@@ -353,7 +353,7 @@ fn abs_graph() -> ModelGraph {
             Connector::new(ConnectorId(1), BlockId(0), Dir::Out, ValueType::Real, 1),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 

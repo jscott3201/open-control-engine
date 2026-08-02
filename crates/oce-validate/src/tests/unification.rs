@@ -16,7 +16,7 @@ fn t14_one_sided_unit_propagates_to_unset_peer() {
             real_unit(1, 1, Dir::In, None),
         ],
         connections: vec![conn_edge(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let warnings = unify_attributes(&mut m).expect("one-sided unit unifies cleanly");
     assert!(warnings.is_empty());

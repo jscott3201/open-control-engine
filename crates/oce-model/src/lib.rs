@@ -477,6 +477,15 @@ pub struct Connection {
     pub to: ConnectorId,
 }
 
+/// An authored top-composite boundary output and the child output connector that drives it.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct BoundaryOutput {
+    /// The boundary output's authored full subject IRI, preserved verbatim for CXF export.
+    pub iri: Arc<str>,
+    /// The surviving child output connector whose value is exposed at the boundary.
+    pub source: ConnectorId,
+}
+
 /// The flattened, monomorphic model the engine schedules and ticks (D1's executable truth).
 ///
 /// This is the canonical in-memory artifact named `ModelGraph` by `oce-cxf` and the store
@@ -494,6 +503,17 @@ pub struct ModelGraph {
     /// in-degree-0 input that is **not** listed here as a single-assignment error. Empty for a
     /// fully-internal hand-built model.
     pub external_inputs: Vec<ConnectorId>,
+    /// Authored top-composite boundary outputs driven by surviving child output connectors.
+    ///
+    /// Unlike a boundary input, whose IRI can be back-filled onto its surviving target connector,
+    /// an output boundary node is elided without leaving a connector of its own. Its identity must
+    /// therefore be carried alongside the source connector. Entries follow the boundary nodes'
+    /// positions in the source document's `@graph`; this is deterministic for a document and
+    /// independent of `hasOutput` and `isConnectedTo` array spelling, but intentionally not
+    /// invariant under a whole-`@graph` permutation because node order remains load-bearing in the
+    /// resolver. Boundary IRIs are unique in a valid document. A source connector may occur more
+    /// than once when it intentionally drives multiple distinct boundary outputs.
+    pub boundary_outputs: Vec<BoundaryOutput>,
 }
 
 /// Short alias for the scheduler-facing view of [`ModelGraph`] (`01` §3). Same in-memory type.

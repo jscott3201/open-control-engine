@@ -842,6 +842,7 @@ pub(crate) fn resolve(
         connectors,
         connections,
         external_inputs,
+        boundary_outputs: vec![],
     };
     Ok((
         graph,
