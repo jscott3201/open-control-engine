@@ -5,8 +5,8 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const RELIEF_DAMPER: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_damper.jsonld");
 
-const BUILDING_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_damper.dpBui";
-const SUPPLY_FAN_ON: &str = "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan";
+const BUILDING_PRESSURE: &str = "conn#4";
+const SUPPLY_FAN_ON: &str = "conn#1";
 const RELIEF_DAMPER_COMMAND: &str = "conn#3";
 
 const EXPECTED_TIMES: [f64; 6] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];

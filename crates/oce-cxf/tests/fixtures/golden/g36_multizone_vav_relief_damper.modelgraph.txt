@@ -18,19 +18,19 @@ blocks: 6
     inputs=[] outputs=[12]
     param k=Real(0x0000000000000000)
 connectors: 13
-  C0 block=B0 dir=In type=Real decl=0 iri=None
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.swi.u1")
   C1 block=B0 dir=In type=Boolean decl=1 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan")
-  C2 block=B0 dir=In type=Real decl=2 iri=None
-  C3 block=B0 dir=Out type=Real decl=3 iri=None
+  C2 block=B0 dir=In type=Real decl=2 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.swi.u3")
+  C3 block=B0 dir=Out type=Real decl=3 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.swi.y")
   C4 block=B1 dir=In type=Real decl=4 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.dpBui")
-  C5 block=B1 dir=In type=Real decl=5 iri=None
-  C6 block=B1 dir=Out type=Real decl=6 iri=None
-  C7 block=B2 dir=In type=Real decl=7 iri=None
-  C8 block=B2 dir=In type=Real decl=8 iri=None
-  C9 block=B2 dir=Out type=Real decl=9 iri=None
-  C10 block=B3 dir=Out type=Real decl=10 iri=None
-  C11 block=B4 dir=Out type=Real decl=11 iri=None
-  C12 block=B5 dir=Out type=Real decl=12 iri=None
+  C5 block=B1 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.conErr.u2")
+  C6 block=B1 dir=Out type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.conErr.y")
+  C7 block=B2 dir=In type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.conP.u_s")
+  C8 block=B2 dir=In type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.conP.u_m")
+  C9 block=B2 dir=Out type=Real decl=9 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.conP.y")
+  C10 block=B3 dir=Out type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.zerDam.y")
+  C11 block=B4 dir=Out type=Real decl=11 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.dpBuiSetPoi.y")
+  C12 block=B5 dir=Out type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_relief_damper.zer.y")
 connections: 5
   C6 -> C8
   C9 -> C0

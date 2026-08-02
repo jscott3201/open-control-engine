@@ -48,6 +48,7 @@ mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
+mod single_assignment;
 mod specialize;
 mod value_types;
 
@@ -138,12 +139,29 @@ pub(crate) fn resolve(
             "CXF @graph is empty — nothing to resolve",
         )]));
     }
-    let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
-    for node in &doc.graph {
-        if by_id.insert(node.id.as_str(), node).is_some() {
+    let mut by_id: HashMap<&str, (usize, &Node)> = HashMap::with_capacity(doc.graph.len());
+    for (index, node) in doc.graph.iter().enumerate() {
+        if node.id.is_empty() {
+            let subject = format!("connector at @graph[{index}]");
             diags.push(
-                Diagnostic::error(DiagCode::DuplicateId, "duplicate @id in @graph")
-                    .with_subject(node.id.clone()),
+                Diagnostic::error(
+                    DiagCode::MissingConnectorId,
+                    format!("{subject} is missing its authored @id"),
+                )
+                .with_subject(subject),
+            );
+            continue;
+        }
+        if let Some((first_index, _)) = by_id.insert(node.id.as_str(), (index, node)) {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::DuplicateId,
+                    format!(
+                        "duplicate @id `{}` on @graph nodes {first_index} and {index}",
+                        node.id
+                    ),
+                )
+                .with_subject(node.id.clone()),
             );
         }
     }
@@ -151,6 +169,10 @@ pub(crate) fn resolve(
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
 
+    let by_id: HashMap<&str, &Node> = by_id
+        .into_iter()
+        .map(|(id, (_, node))| (id, node))
+        .collect();
     let specialization = specialize(doc, &by_id, &mut diags);
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
     let lowered = lower(doc, &by_id, &specialization, &mut diags);
@@ -371,6 +393,7 @@ pub(crate) fn resolve(
             (BlockId(0), Dir::In)
         });
         let mut c = Connector::new(ConnectorId(i as u32), block, dir, vt, i as u32);
+        c.iri = Some(Arc::from(node.id.as_str()));
         c.attrs = connector_attrs(node, vt, &mut diags);
         connectors.push(c);
     }
@@ -804,43 +827,7 @@ pub(crate) fn resolve(
 
     // --- Step 11: boundary-aware single-assignment pre-check (AD-2). in-degree per input over the
     // emitted connections; in-degree 0 is legal iff the input is an external boundary input.
-    let mut in_degree: HashMap<ConnectorId, u32> = HashMap::new();
-    for c in &connections {
-        *in_degree.entry(c.to).or_insert(0) += 1;
-    }
-    for conn in &connectors {
-        if conn.dir != Dir::In {
-            continue;
-        }
-        // A boundary input is elided into `external_inputs` rather than counted here, so a
-        // connector that is both an external entry and the target of one wire scores in-degree 1
-        // and is accepted. That is deliberate, not an oversight: it is the shape export/re-import
-        // produces, and folding boundary targets into this count would false-reject a graph that
-        // round-trips. `export_single_assignment.rs` pins it as the false-reject guard.
-        let deg = in_degree.get(&conn.id).copied().unwrap_or(0);
-        if deg == 1 {
-            continue;
-        }
-        if deg == 0 {
-            if !external_inputs.contains(&conn.id) {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::SingleAssignment,
-                        "input is undriven (in-degree 0)",
-                    )
-                    .with_subject(subject_of(conn)),
-                );
-            }
-        } else {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::SingleAssignment,
-                    format!("input is multiply driven (in-degree {deg})"),
-                )
-                .with_subject(subject_of(conn)),
-            );
-        }
-    }
+    single_assignment::check(&connectors, &connections, &external_inputs, &mut diags);
 
     // --- Step 12: deterministic sort + return. On any Error (or any Warning under deny_warnings),
     // withhold the graph and return Err(CxfError::Validation).

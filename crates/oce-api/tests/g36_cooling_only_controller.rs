@@ -9,8 +9,6 @@ const FIXTURE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/cooling_only_controller.jsonld");
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/cooling_only_controller/reference.csv");
-const MODEL: &str = "http://example.org#g36.source.cooling_only_controller";
-
 const AIRFLOW_SETPOINT: &str = "conn#460";
 const DAMPER_COMMAND: &str = "conn#485";
 const ADJUSTED_POPULATION_FLOW: &str = "conn#352";
@@ -171,7 +169,24 @@ impl ReferenceTable {
 }
 
 fn point(name: &str) -> String {
-    format!("{MODEL}.{name}")
+    let connector = match name {
+        "uOpeMod" => 12,
+        "TZon" => 43,
+        "TCooSet" => 44,
+        "VDis_flow" => 100,
+        "THeaSet" => 108,
+        "u1Fan" => 198,
+        "ppmCO2Set" => 312,
+        "ppmCO2" => 314,
+        "u1Occ" => 361,
+        "TDis" => 391,
+        "u1Win" => 397,
+        "TSup" => 407,
+        "oveFloSet" => 434,
+        "oveDamPos" => 465,
+        other => panic!("unknown controller point {other}"),
+    };
+    format!("conn#{connector}")
 }
 
 fn reference_inputs(reference: &ReferenceTable, t: f64) -> Vec<(String, Value)> {

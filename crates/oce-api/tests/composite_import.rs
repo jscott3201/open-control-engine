@@ -4,6 +4,7 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimSpec, Value};
 use oce_store::ModelStore;
 
 const FANOUT: &str = include_str!("../../oce-cxf/tests/fixtures/boundary_fanout.jsonld");
+const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
 const NESTED: &str = include_str!("../../oce-cxf/tests/fixtures/nested_composite.jsonld");
 const G36_TRIM_AND_RESPOND: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
@@ -13,13 +14,29 @@ const G36_SUPPLY_FAN: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_fan.jsonld");
 const G36_SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
-const FANOUT_INPUT: &str = "http://example.org#g36.profile.boundary_fanout.u";
-const INPUT: &str = "http://example.org#g36.profile.nested_composite.u";
+const FANOUT_INPUT: &str = "conn#0";
+const INPUT: &str = "conn#0";
 const G36_TRIM_MODEL: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false";
 const G36_SUPPLY_TEMPERATURE_MODEL: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature";
 const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
-const G36_SUPPLY_SIGNALS_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_signals";
+
+#[test]
+fn authored_connector_iris_do_not_move_host_point_inventory() {
+    let mut engine = Engine::in_memory();
+    engine
+        .load_cxf(MINIMAL_LOOP.as_bytes())
+        .expect("minimal loop loads");
+    let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
+    assert_eq!(
+        paths,
+        [
+            "conn#0", "conn#1", "conn#2", "conn#3", "conn#4", "conn#5", "conn#6", "conn#7",
+            "conn#8", "conn#9", "conn#10",
+        ],
+        "part 1 retains authored connector IRIs internally without changing host identity"
+    );
+}
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
@@ -144,8 +161,8 @@ fn source_verified_g36_trim_and_respond_fixture_loads_through_frozen_facade() {
     );
 
     let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
-    let num_of_req = format!("{G36_TRIM_MODEL}.numOfReq");
-    let device_status = format!("{G36_TRIM_MODEL}.uDevSta");
+    let num_of_req = "conn#52".to_owned();
+    let device_status = "conn#0".to_owned();
     let hold = format!("{G36_TRIM_MODEL}.uHol");
     assert!(paths.contains(&num_of_req));
     assert!(paths.contains(&device_status));
@@ -170,10 +187,10 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
     );
 
     let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
-    let outdoor_temp = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.TOut");
-    let fan_status = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.u1SupFan");
-    let operating_mode = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uOpeMod");
-    let requests = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.uZonTemResReq");
+    let outdoor_temp = "conn#103".to_owned();
+    let fan_status = "conn#0".to_owned();
+    let operating_mode = "conn#125".to_owned();
+    let requests = "conn#52".to_owned();
     let hold = format!("{G36_SUPPLY_TEMPERATURE_MODEL}.maxSupTemRes.uHol");
     for required in [&outdoor_temp, &fan_status, &operating_mode, &requests] {
         assert!(paths.contains(required), "missing facade input {required}");
@@ -241,9 +258,9 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
     );
 
     let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
-    let operating_mode = format!("{G36_SUPPLY_FAN_MODEL}.uOpeMod");
-    let duct_pressure = format!("{G36_SUPPLY_FAN_MODEL}.dpDuc");
-    let pressure_requests = format!("{G36_SUPPLY_FAN_MODEL}.uZonPreResReq");
+    let operating_mode = "conn#120".to_owned();
+    let duct_pressure = "conn#139".to_owned();
+    let pressure_requests = "conn#52".to_owned();
     let hold = format!("{G36_SUPPLY_FAN_MODEL}.staPreSetRes.uHol");
     for required in [&operating_mode, &duct_pressure, &pressure_requests] {
         assert!(paths.contains(required), "missing facade input {required}");
@@ -325,9 +342,9 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
     );
 
     let paths: Vec<String> = engine.io().iter().map(|point| point.path).collect();
-    let measured_temp = format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSup");
-    let setpoint = format!("{G36_SUPPLY_SIGNALS_MODEL}.TAirSupSet");
-    let fan_status = format!("{G36_SUPPLY_SIGNALS_MODEL}.u1SupFan");
+    let measured_temp = "conn#1".to_owned();
+    let setpoint = "conn#0".to_owned();
+    let fan_status = "conn#2".to_owned();
     for required in [&measured_temp, &setpoint, &fan_status] {
         assert!(paths.contains(required), "missing facade input {required}");
     }

@@ -48,27 +48,40 @@ fn declaration_order_is_the_identity_permutation() {
     assert_eq!(ports, [ConnectorId(4), ConnectorId(9)]);
 }
 
-/// This engine's own exporter mints `.in0`/`.in1`, which name positions rather than ports. Those
-/// documents must keep binding positionally and must NOT raise a diagnostic — the RT-2 round-trip
-/// re-imports exactly those bytes.
+/// This engine's exporter can mint `.in0`/`.in1`, which unambiguously name positions rather than
+/// declared ports. They produce the identity permutation and no diagnostic.
 #[test]
 fn position_named_ports_bind_positionally_without_complaint() {
-    assert!(matches!(
-        match_names(
+    assert_eq!(
+        order_of(
             &["http://ex.org#loop.pid.in0", "http://ex.org#loop.pid.in1"],
             &["u_s", "u_m"],
         ),
-        Binding::Positional
-    ));
+        vec![0, 1]
+    );
 }
 
-/// A document naming some ports after declared ports and the rest after something else follows no
-/// convention that can be read safely, so it is reported rather than guessed at.
+/// A boundary-elided port can carry the exporter's positional marker beside an authored sibling.
 #[test]
-fn a_partial_name_match_is_reported_not_guessed() {
+fn authored_and_canonical_positional_names_bind_together() {
+    assert_eq!(
+        order_of(
+            &["http://ex.org#loop.pid.u_s", "http://ex.org#loop.pid.in1"],
+            &["u_s", "u_m"],
+        ),
+        vec![0, 1]
+    );
+}
+
+/// A partial authored-name match with no canonical positional marker remains a rejection.
+#[test]
+fn an_ambiguous_partial_name_match_is_reported_not_guessed() {
     assert!(matches!(
         match_names(
-            &["http://ex.org#loop.pid.u_s", "http://ex.org#loop.pid.in1"],
+            &[
+                "http://ex.org#loop.pid.u_s",
+                "http://ex.org#loop.pid.unknown"
+            ],
             &["u_s", "u_m"],
         ),
         Binding::Partial {

@@ -5,13 +5,10 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const PLANT_REQUESTS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_plant_requests.jsonld");
 
-const SUPPLY_AIR_TEMP: &str = "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
-const SUPPLY_AIR_SETPOINT: &str =
-    "http://example.org#g36.source.multizone_vav_plant_requests.TAirSupSet";
-const COOLING_COIL_VALVE: &str =
-    "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet";
-const HEATING_COIL_VALVE: &str =
-    "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet";
+const SUPPLY_AIR_TEMP: &str = "conn#0";
+const SUPPLY_AIR_SETPOINT: &str = "conn#1";
+const COOLING_COIL_VALVE: &str = "conn#11";
+const HEATING_COIL_VALVE: &str = "conn#62";
 const CHILLED_WATER_RESET: &str = "conn#17";
 const CHILLER_PLANT: &str = "conn#42";
 const HOT_WATER_RESET: &str = "conn#57";

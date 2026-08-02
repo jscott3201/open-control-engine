@@ -5,34 +5,20 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const OUTDOOR_AIRFLOW_SUMZONE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_sumzone.jsonld");
 
-const U_OPE_MOD_1: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_1";
-const U_OPE_MOD_2: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_2";
-const POP_1: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_1";
-const POP_2: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_2";
-const POP_3: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_3";
-const AREA_1: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_1";
-const AREA_2: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_2";
-const AREA_3: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_3";
-const PRI_1: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1";
-const PRI_2: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2";
-const PRI_3: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3";
-const MIN_OA_1: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_1";
-const MIN_OA_2: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_2";
-const MIN_OA_3: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3";
+const U_OPE_MOD_1: &str = "conn#26";
+const U_OPE_MOD_2: &str = "conn#29";
+const POP_1: &str = "conn#0";
+const POP_2: &str = "conn#1";
+const POP_3: &str = "conn#2";
+const AREA_1: &str = "conn#5";
+const AREA_2: &str = "conn#6";
+const AREA_3: &str = "conn#7";
+const PRI_1: &str = "conn#10";
+const PRI_2: &str = "conn#11";
+const PRI_3: &str = "conn#12";
+const MIN_OA_1: &str = "conn#94";
+const MIN_OA_2: &str = "conn#97";
+const MIN_OA_3: &str = "conn#100";
 
 const SUMMED_POP_FLOW: &str = "conn#52";
 const SUMMED_AREA_FLOW: &str = "conn#55";

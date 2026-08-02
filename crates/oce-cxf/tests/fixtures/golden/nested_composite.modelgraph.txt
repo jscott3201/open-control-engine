@@ -11,10 +11,10 @@ blocks: 3
     param k=Real(0x4000000000000000)
 connectors: 5
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.profile.nested_composite.u")
-  C1 block=B0 dir=Out type=Real decl=1 iri=None
-  C2 block=B1 dir=Out type=Real decl=2 iri=None
-  C3 block=B2 dir=In type=Real decl=3 iri=None
-  C4 block=B2 dir=Out type=Real decl=4 iri=None
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#g36.profile.nested_composite.sub.gain.y")
+  C2 block=B1 dir=Out type=Real decl=2 iri=Some("http://example.org#g36.profile.nested_composite.sub.enumCarrier.y")
+  C3 block=B2 dir=In type=Real decl=3 iri=Some("http://example.org#g36.profile.nested_composite.post.u")
+  C4 block=B2 dir=Out type=Real decl=4 iri=Some("http://example.org#g36.profile.nested_composite.post.y")
 connections: 1
   C1 -> C3
 external_inputs: [0]

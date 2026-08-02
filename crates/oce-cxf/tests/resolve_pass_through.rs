@@ -600,7 +600,10 @@ fn same_composite_both_ways_rejects_for_the_two_undriven_leaf_inputs() {
         .collect::<Vec<_>>();
     assert_eq!(
         undriven_subjects,
-        [Some("connector#0"), Some("connector#3")],
+        [
+            Some("http://example.org#g36.profile.nested_composite.sub.gain.u"),
+            Some("http://example.org#g36.profile.nested_composite.post.u"),
+        ],
         "{diagnostics:?}"
     );
     assert!(

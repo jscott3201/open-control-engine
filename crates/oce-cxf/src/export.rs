@@ -16,12 +16,12 @@
 //!   rejected).
 //! - Parameter node `@id`s are `<instance_iri>.<name>`; the importer recovers the parameter name
 //!   as the segment after the last `.`, so names containing `.` are rejected.
-//! - Connectors carry no usable source IRI (the resolver leaves `Connector::iri` `None` except
-//!   for the AD-2 boundary-input overwrite), so port `@id`s are minted deterministically as
-//!   `<instance_iri>.in<k>` / `<instance_iri>.out<k>` from the owner's port-list position.
-//!   Re-import rebuilds wiring from `isConnectedTo`, so port names never need to round-trip.
+//! - Ordinary imported connectors retain their authored IRI, which is emitted verbatim so port
+//!   identity survives an RT-2 round trip. A port `@id` is minted deterministically as
+//!   `<instance_iri>.in<k>` / `<instance_iri>.out<k>` only when the connector has no usable own
+//!   IRI, including a boundary-driven child whose stored IRI belongs to the boundary node.
 //! - Each `external_inputs` connector's stored boundary IRI is emitted verbatim as a boundary
-//!   node listed under the root's `hasInput` and wired `isConnectedTo` → the **minted** child
+//!   node listed under the root's `hasInput` and wired `isConnectedTo` → the child
 //!   port. The boundary node carries the driven child connector's `isOfDataType`; fan-out is
 //!   rejected if the driven connector types disagree. Re-import then re-elides the boundary
 //!   (AD-2), restoring both the `external_inputs` entry and the child connector's boundary IRI.
@@ -29,7 +29,7 @@
 //!   `@id` between the root's and a child's port list re-imports as a rejection.
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
-//! The five in-subset §7.4.1 attrs live on the **minted child port node** (never the shared
+//! The five in-subset §7.4.1 attrs live on the **child port node** (never the shared
 //! boundary node), each emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
 //! `displayUnit` as bare strings ([`TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
@@ -363,7 +363,17 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
 
         let mut input_ports = Vec::with_capacity(b.inputs.len());
         for (k, cid) in b.inputs.iter().enumerate() {
-            let minted = format!("{subject}.in{k}");
+            // Boundary-input elision intentionally replaces the child input's IRI with the
+            // boundary IRI. Keep synthesising that child port so the boundary node and child port
+            // remain distinct; all other imported connectors retain their authored identity.
+            let minted = if g.external_inputs.contains(cid) {
+                format!("{subject}.in{k}")
+            } else {
+                g.connectors[cid.0 as usize]
+                    .iri
+                    .as_deref()
+                    .map_or_else(|| format!("{subject}.in{k}"), str::to_owned)
+            };
             if claim_port(
                 g,
                 bi,
@@ -380,7 +390,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
         let mut output_ports = Vec::with_capacity(b.outputs.len());
         for (k, cid) in b.outputs.iter().enumerate() {
-            let minted = format!("{subject}.out{k}");
+            let minted = g.connectors[cid.0 as usize]
+                .iri
+                .as_deref()
+                .map_or_else(|| format!("{subject}.out{k}"), str::to_owned);
             if claim_port(
                 g,
                 bi,

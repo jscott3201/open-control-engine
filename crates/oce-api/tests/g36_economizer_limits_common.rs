@@ -5,13 +5,10 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const ECONOMIZER_LIMITS_COMMON: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_limits_common.jsonld");
 
-const OUTDOOR_AIRFLOW_NORMALIZED: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.VOut_flow_normalized";
-const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED: &str = "http://example.org#g36.source.multizone_vav_economizer_limits_common.VOutMinSet_flow_normalized";
-const OPERATION_MODE: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.uOpeMod";
-const SUPPLY_FAN_STATUS: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.u1SupFan";
+const OUTDOOR_AIRFLOW_NORMALIZED: &str = "conn#1";
+const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED: &str = "conn#0";
+const OPERATION_MODE: &str = "conn#34";
+const SUPPLY_FAN_STATUS: &str = "conn#2";
 
 const OUTDOOR_DAMPER_MIN_LIMIT: &str = "conn#16";
 const OUTDOOR_DAMPER_MAX_LIMIT: &str = "conn#30";

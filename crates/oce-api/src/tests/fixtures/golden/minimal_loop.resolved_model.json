@@ -265,7 +265,7 @@
       "embedding": null
     },
     {
-      "key": "http://example.org#MinLoop.uSet",
+      "key": "conn#9",
       "owner_block": "http://example.org#MinLoop.gt",
       "direction": "In",
       "value_type": "Real",

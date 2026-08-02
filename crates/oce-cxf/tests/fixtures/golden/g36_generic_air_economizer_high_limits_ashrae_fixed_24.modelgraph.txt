@@ -3,6 +3,6 @@ blocks: 1
     inputs=[] outputs=[0]
     param k=Real(0x4072926666666666)
 connectors: 1
-  C0 block=B0 dir=Out type=Real decl=0 iri=None
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y")
 connections: 0
 external_inputs: []

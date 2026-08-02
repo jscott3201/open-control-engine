@@ -18,36 +18,25 @@ const SUPPLY_FAN: &str =
 const SUPPLY_SIGNALS: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_supply_signals.jsonld");
 
-const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
-const SAT_COOLING_SETPOINT: &str =
-    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
-const ECON_RETURN_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.return_air_temp";
-const ECON_OUTDOOR_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.outdoor_air_temp";
-const ECON_OPERATING_MODE: &str = "http://example.org#g36.ahu_economizer.operating_mode";
+const SAT_ZONE_TEMP: &str = "conn#0";
+const SAT_COOLING_SETPOINT: &str = "conn#1";
+const ECON_RETURN_AIR_TEMP: &str = "conn#0";
+const ECON_OUTDOOR_AIR_TEMP: &str = "conn#1";
+const ECON_OPERATING_MODE: &str = "conn#5";
 
-const VAV_ZONE_TEMP: &str = "http://example.org#g36.vav_single_zone.zone_temp";
-const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooling_setpoint";
-const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heating_setpoint";
-const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
-    "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
-const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
-    "http://example.org#g36.source.multizone_vav_supply_temperature.u1SupFan";
-const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
-    "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
-const SUPPLY_TEMPERATURE_REQUESTS: &str =
-    "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
-const SUPPLY_FAN_OPERATING_MODE: &str =
-    "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
-const SUPPLY_FAN_DUCT_PRESSURE: &str =
-    "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
-const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
-    "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
-const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
-    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
-const SUPPLY_SIGNALS_SETPOINT: &str =
-    "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet";
-const SUPPLY_SIGNALS_FAN_STATUS: &str =
-    "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan";
+const VAV_ZONE_TEMP: &str = "conn#0";
+const VAV_COOLING_SETPOINT: &str = "conn#2";
+const VAV_HEATING_SETPOINT: &str = "conn#10";
+const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str = "conn#103";
+const SUPPLY_TEMPERATURE_FAN_STATUS: &str = "conn#0";
+const SUPPLY_TEMPERATURE_OPERATING_MODE: &str = "conn#125";
+const SUPPLY_TEMPERATURE_REQUESTS: &str = "conn#52";
+const SUPPLY_FAN_OPERATING_MODE: &str = "conn#120";
+const SUPPLY_FAN_DUCT_PRESSURE: &str = "conn#139";
+const SUPPLY_FAN_PRESSURE_REQUESTS: &str = "conn#52";
+const SUPPLY_SIGNALS_MEASURED_TEMP: &str = "conn#1";
+const SUPPLY_SIGNALS_SETPOINT: &str = "conn#0";
+const SUPPLY_SIGNALS_FAN_STATUS: &str = "conn#2";
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 

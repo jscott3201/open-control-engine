@@ -10,10 +10,10 @@ const REHEAT_OVERRIDES: &str =
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/reheat_overrides/reference.csv");
 
-const DAMPER_OVERRIDE_INDEX: &str = "http://example.org#g36.source.reheat_overrides.oveDamPos";
-const DAMPER_COMMAND_INPUT: &str = "http://example.org#g36.source.reheat_overrides.uDam";
-const HEATING_VALVE_OFF: &str = "http://example.org#g36.source.reheat_overrides.uHeaOff";
-const HEATING_VALVE_COMMAND_INPUT: &str = "http://example.org#g36.source.reheat_overrides.uVal";
+const DAMPER_OVERRIDE_INDEX: &str = "conn#1";
+const DAMPER_COMMAND_INPUT: &str = "conn#20";
+const HEATING_VALVE_OFF: &str = "conn#25";
+const HEATING_VALVE_COMMAND_INPUT: &str = "conn#23";
 
 const DAMPER_COMMAND: &str = "conn#21";
 const HEATING_VALVE_COMMAND: &str = "conn#24";

@@ -14,8 +14,8 @@ const TIME_SUPPRESSION: &str =
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/generic_time_suppression/reference.csv");
 
-const SETPOINT_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_suppression.TSet";
-const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_suppression.TZon";
+const SETPOINT_TEMPERATURE: &str = "conn#3";
+const ZONE_TEMPERATURE: &str = "conn#49";
 const AFTER_SUPPRESSION: &str = "conn#42";
 
 const T_STOP: f64 = 5_400.0;

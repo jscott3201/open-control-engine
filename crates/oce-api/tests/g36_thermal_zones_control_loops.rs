@@ -13,9 +13,9 @@ const CONTROL_LOOPS: &str =
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/thermal_zones_control_loops/reference.csv");
 
-const COOLING_SETPOINT: &str = "http://example.org#g36.source.thermal_zones_control_loops.TCooSet";
-const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.thermal_zones_control_loops.TZon";
-const HEATING_SETPOINT: &str = "http://example.org#g36.source.thermal_zones_control_loops.THeaSet";
+const COOLING_SETPOINT: &str = "conn#0";
+const ZONE_TEMPERATURE: &str = "conn#1";
+const HEATING_SETPOINT: &str = "conn#4";
 const COOLING_LOOP_SIGNAL: &str = "conn#22";
 const HEATING_LOOP_SIGNAL: &str = "conn#31";
 

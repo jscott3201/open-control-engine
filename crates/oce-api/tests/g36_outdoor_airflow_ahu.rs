@@ -5,16 +5,11 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const OUTDOOR_AIRFLOW_AHU: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_ahu.jsonld");
 
-const POPULATION_FLOW: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjPopBreZon_flow";
-const AREA_FLOW: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjAreBreZon_flow";
-const PRIMARY_FLOW: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumZonPri_flow";
-const MAX_OUTDOOR_AIR_FRACTION: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uOutAirFra_max";
-const MEASURED_OUTDOOR_AIR: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VAirOut_flow";
+const POPULATION_FLOW: &str = "conn#1";
+const AREA_FLOW: &str = "conn#2";
+const PRIMARY_FLOW: &str = "conn#16";
+const MAX_OUTDOOR_AIR_FRACTION: &str = "conn#13";
+const MEASURED_OUTDOOR_AIR: &str = "conn#30";
 const UNCORRECTED_OUTDOOR_AIR: &str = "conn#6";
 const EFFECTIVE_MIN_OUTDOOR_AIR: &str = "conn#24";
 const EFFECTIVE_NORMALIZED: &str = "conn#29";

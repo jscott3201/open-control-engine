@@ -6,16 +6,11 @@ const ECONOMIZER_MODULATIONS_RELIEFS: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_reliefs.jsonld"
 );
 
-const SUPPLY_TEMPERATURE_SIGNAL: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup";
-const OUTDOOR_DAMPER_MIN: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_min";
-const OUTDOOR_DAMPER_MAX: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max";
-const RETURN_DAMPER_MIN: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min";
-const RETURN_DAMPER_MAX: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_max";
+const SUPPLY_TEMPERATURE_SIGNAL: &str = "conn#8";
+const OUTDOOR_DAMPER_MIN: &str = "conn#5";
+const OUTDOOR_DAMPER_MAX: &str = "conn#7";
+const RETURN_DAMPER_MIN: &str = "conn#13";
+const RETURN_DAMPER_MAX: &str = "conn#11";
 
 const OUTDOOR_DAMPER_COMMAND: &str = "conn#18";
 const RETURN_DAMPER_COMMAND: &str = "conn#21";

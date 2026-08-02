@@ -102,7 +102,7 @@ fn empty_model_graph_is_rejected_without_a_subject() {
 
 #[test]
 fn declared_connector_attrs_export_cleanly_under_the_bare_scalar_canonical_shape() {
-    // R6: the five in-subset §7.4.1 attrs on `A.con.y` (an OUTPUT, iri=None) are EMITTED, not
+    // R6: the five in-subset §7.4.1 attrs on authored output `A.con.y` are EMITTED, not
     // rejected. The full RT-2 render fixpoint (`render(import(export(G))) == render(G)`, all five
     // BSC `RealAttrs` fields) lives in `tests/export_roundtrip.rs` — `render()` is not reachable
     // from this `src/` unit-test module. Here we assert the unit-level acceptance: the export is
@@ -114,10 +114,10 @@ fn declared_connector_attrs_export_cleanly_under_the_bare_scalar_canonical_shape
         text.contains(r#""S231:unit":"K""#),
         "the bare-string unit must be emitted on the port node, got: {text}"
     );
-    // The owning block's instance_iri is the port @id prefix (the connector carries no IRI).
+    // Imported ports retain their authored identity through export.
     assert!(
-        text.contains(r#""@id":"http://example.org#A.con.out0""#),
-        "the attr-bearing port is minted under the owning block, got: {text}"
+        text.contains(r#""@id":"http://example.org#A.con.y""#),
+        "the attr-bearing port must retain its authored @id, got: {text}"
     );
 }
 

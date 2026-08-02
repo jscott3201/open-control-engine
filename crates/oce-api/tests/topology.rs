@@ -60,7 +60,7 @@ fn parse_golden() -> GoldenTopology {
             .strip_prefix('B')
             .filter(|_| trimmed.contains(" decl="))
         {
-            let (id, rest) = rest.split_once(' ').unwrap();
+            let (id, _) = rest.split_once(' ').unwrap();
             let class_iri = rest
                 .split_whitespace()
                 .find_map(|part| part.strip_prefix("class="))
@@ -111,14 +111,9 @@ fn parse_golden() -> GoldenTopology {
             .strip_prefix('C')
             .filter(|_| trimmed.contains(" block="))
         {
-            let (id, rest) = rest.split_once(' ').unwrap();
+            let (id, _) = rest.split_once(' ').unwrap();
             let id: u32 = id.parse().unwrap();
-            let iri = rest.split_once(" iri=").unwrap().1;
-            let path = iri
-                .strip_prefix("Some(\"")
-                .and_then(|value| value.strip_suffix("\")"))
-                .map_or_else(|| format!("conn#{id}"), str::to_string);
-            connector_paths.insert(id, path);
+            connector_paths.insert(id, format!("conn#{id}"));
         } else if let Some((from, to)) = trimmed.split_once(" -> ") {
             connections.push((
                 from.strip_prefix('C').unwrap().parse().unwrap(),
@@ -227,23 +222,19 @@ fn topology_matches_checked_in_resolver_golden() {
         .map(|id| golden.connector_paths[id].clone())
         .collect();
     assert_eq!(topology.external_inputs, expected_external);
-    let supply_fan =
-        "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
+    let supply_fan = "conn#4";
     assert_eq!(
         topology
             .external_inputs
             .iter()
             .filter(|path| path.as_str() == supply_fan)
             .count(),
-        2,
-        "shared child/pass-through boundary paths retain golden multiplicity"
+        1,
+        "shared boundary inputs are exposed once as one logical host point"
     );
     assert_eq!(topology.pass_through.len(), 1);
-    assert_eq!(topology.pass_through[0].input, supply_fan);
-    assert_eq!(
-        topology.pass_through[0].output,
-        "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan"
-    );
+    assert_eq!(topology.pass_through[0].input, "conn#12");
+    assert_eq!(topology.pass_through[0].output, "conn#13");
     assert!(
         topology
             .blocks
@@ -274,18 +265,13 @@ fn independent_loads_produce_equal_reconstructable_topologies() {
     assert!(
         left.pass_through
             .iter()
-            .any(|pair| { pair.input.ends_with("u1SupFan") && pair.output.ends_with("y1RetFan") })
+            .any(|pair| pair.input == "conn#12" && pair.output == "conn#13")
     );
-    let input = left
-        .pass_through
-        .iter()
-        .find(|pair| pair.input.ends_with("u1SupFan"))
-        .unwrap();
-    assert!(left.external_inputs.contains(&input.input));
+    assert!(left.external_inputs.contains(&"conn#4".to_owned()));
     assert!(
         left.blocks
             .iter()
-            .any(|block| block.inputs.contains(&input.input))
+            .any(|block| block.inputs.contains(&"conn#4".to_owned()))
     );
     for edge in &left.connections {
         assert!(

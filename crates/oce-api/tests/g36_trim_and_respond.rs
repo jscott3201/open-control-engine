@@ -5,9 +5,8 @@ use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimMetrics, SimS
 const TRIM_AND_RESPOND: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/trim_and_respond_have_hol_false.jsonld");
 
-const REQUEST_COUNT: &str =
-    "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq";
-const DEVICE_STATUS: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta";
+const REQUEST_COUNT: &str = "conn#52";
+const DEVICE_STATUS: &str = "conn#0";
 const HOLD_INPUT: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.uHol";
 const SETPOINT_RUNTIME: &str = "conn#23";
 

@@ -567,9 +567,10 @@ fn unwired_sibling_boundary_cannot_fabricate_a_leaf_connection() {
     assert!(
         diagnostics.iter().any(|diagnostic| {
             diagnostic.code == DiagCode::SingleAssignment
-                && diagnostic.subject.as_deref() == Some("connector#3")
+                && diagnostic.subject.as_deref()
+                    == Some("http://example.org#fabrication.subD.gain.u")
         }),
-        "undriven subject must be subD's leaf input (lowered connector#3): {diagnostics:?}"
+        "undriven subject must be subD's authored leaf input: {diagnostics:?}"
     );
 }
 

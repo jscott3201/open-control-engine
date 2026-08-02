@@ -135,19 +135,30 @@ pub(crate) struct PointInventoryRow {
     pub(crate) connector_id: ConnectorId,
 }
 
-/// The canonical point path of a connector: its `iri`, or a synthetic `conn#<id>` for an unnamed
-/// (hand-built) connector. The **single** path-derivation rule, shared by the inventory and by the
-/// `Outputs` snapshot, so the two never disagree (the `to_map` keying contract).
+/// The canonical point path of a connector.
+///
+/// Part 1 of the authored-connector-identity migration deliberately preserves the existing
+/// host-visible `conn#<id>` identity even when CXF ingest retained an authored IRI. Part 2 removes
+/// this compatibility hold. The rule remains shared by inventory and [`crate::sim::Outputs`]
+/// snapshots.
 #[must_use]
-pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
-    iri.map(str::to_owned)
-        .unwrap_or_else(|| format!("conn#{}", id.0))
+pub(crate) fn connector_path(_iri: Option<&str>, id: ConnectorId) -> String {
+    format!("conn#{}", id.0)
 }
 
 /// The shared load-time point walk. It is the single source of truth for both host-visible
 /// [`IoInventory`] rows and the durable [`oce_store::PointDto`] projection.
 pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
     let mut rows = Vec::with_capacity(model.connectors.len());
+    // A single authored boundary may fan out to several child connectors. Preserve the existing
+    // one-host-point behavior by keying every member of that boundary group to its first external
+    // connector's compatibility path.
+    let mut external_path_ids = HashMap::<&str, ConnectorId>::new();
+    for id in &model.external_inputs {
+        if let Some(iri) = model.connectors[id.0 as usize].iri.as_deref() {
+            external_path_ids.entry(iri).or_insert(*id);
+        }
+    }
     for c in &model.connectors {
         let value_type = match c.value_type {
             ValueType::Real => PointValueType::Real,
@@ -187,7 +198,13 @@ pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
         };
         rows.push(PointInventoryRow {
             info: PointInfo {
-                path: connector_path(c.iri.as_deref(), c.id),
+                path: connector_path(
+                    c.iri.as_deref(),
+                    c.iri
+                        .as_deref()
+                        .and_then(|iri| external_path_ids.get(iri).copied())
+                        .unwrap_or(c.id),
+                ),
                 direction,
                 value_type,
                 io_class,

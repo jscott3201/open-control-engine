@@ -337,10 +337,21 @@ pub fn drive_trace_with_options(
 
     let mut engine = Engine::in_memory();
     let load_report = engine.load_cxf(cxf)?;
+    let (model, _) = oce_cxf::import_cxf(cxf, &oce_cxf::ResolveOptions::default())
+        .map_err(|error| DriverError::Engine(OcError::Cxf(error)))?;
+    let mut authored_paths: HashMap<String, Vec<String>> = HashMap::new();
+    for connector in &model.connectors {
+        if let Some(iri) = &connector.iri {
+            authored_paths
+                .entry(iri.to_string())
+                .or_default()
+                .push(format!("conn#{}", connector.id.0));
+        }
+    }
     // Fixed verification origin keeps negative model-time fixtures representable without a clock.
     engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
 
-    let plan = Plan::new(&engine, config, reference)?;
+    let plan = Plan::new(&engine, config, reference, &authored_paths)?;
     let (trace, drive_mode) = match &options.cadence {
         DriveCadence::Auto => {
             if let Some((t_start, t_stop, step)) = uniform_grid(&plan.times) {
@@ -388,6 +399,7 @@ impl Plan {
         engine: &Engine,
         config: &VerifyConfig,
         reference: &CombiTimeTable,
+        authored_paths: &HashMap<String, Vec<String>>,
     ) -> Result<Self, DriverError> {
         let point_info = engine
             .io()
@@ -406,20 +418,46 @@ impl Plan {
                     .ok_or_else(|| {
                         DriverError::MissingReferenceColumn(mapping.device.name.clone())
                     })?;
-                let point = point_info.get(&mapping.cdl.name);
+                let candidates = authored_paths
+                    .get(&mapping.cdl.name)
+                    .cloned()
+                    .unwrap_or_else(|| vec![mapping.cdl.name.clone()]);
+                // Preserve the old authored-key collision behavior while the public facade remains
+                // on conn#N paths: the last inventory point carrying an authored IRI determined
+                // whether a mapping was an input or output. Keep only inventory paths of that
+                // direction so boundary fanout aliases cannot accidentally stage an output.
+                let point = candidates
+                    .iter()
+                    .rev()
+                    .find_map(|path| point_info.get(path));
+                let paths = point.map_or(candidates.clone(), |selected| {
+                    candidates
+                        .iter()
+                        .filter(|path| {
+                            point_info
+                                .get(*path)
+                                .is_some_and(|candidate| candidate.direction == selected.direction)
+                        })
+                        .cloned()
+                        .collect()
+                });
                 let fallback_kind = point_end_kind(mapping.cdl.kind.as_deref())?;
                 match point.map(|p| p.direction) {
                     Some(PointDirection::In) => {
                         let kind = point_value_kind(point.expect("point checked").value_type)?;
-                        inputs.push(InputColumn {
-                            point: mapping.cdl.name.clone(),
-                            values: decode_values(reference, column, kind, &names[column])?,
-                        });
+                        let values = decode_values(reference, column, kind, &names[column])?;
+                        for path in &paths {
+                            inputs.push(InputColumn {
+                                point: path.clone(),
+                                values: values.clone(),
+                            });
+                        }
                     }
                     Some(PointDirection::Out) => {
                         let kind = point_value_kind(point.expect("point checked").value_type)?;
                         outputs.push(OutputColumn {
                             point: mapping.cdl.name.clone(),
+                            engine_point: paths[0].clone(),
                             reference_column: names[column].clone(),
                             reference_values: reference_values(reference, column),
                             kind,
@@ -428,6 +466,7 @@ impl Plan {
                     None => {
                         outputs.push(OutputColumn {
                             point: mapping.cdl.name.clone(),
+                            engine_point: mapping.cdl.name.clone(),
                             reference_column: names[column].clone(),
                             reference_values: reference_values(reference, column),
                             kind: fallback_kind,
@@ -443,14 +482,25 @@ impl Plan {
 
         let mut capture = Vec::new();
         for output in &outputs {
-            push_capture(&mut capture, &point_info, &output.point, output.kind)?;
+            push_capture(
+                &mut capture,
+                &point_info,
+                &output.point,
+                &output.engine_point,
+                output.kind,
+            )?;
             for signal in config.indicator_signals_for_output(&output.point)? {
-                let kind = point_info
+                let engine_signal = authored_paths
                     .get(&signal)
+                    .and_then(|paths| paths.first())
+                    .cloned()
+                    .unwrap_or_else(|| signal.clone());
+                let kind = point_info
+                    .get(&engine_signal)
                     .map(|point| point_value_kind(point.value_type))
                     .transpose()?
                     .unwrap_or(ValueKind::Boolean);
-                push_capture(&mut capture, &point_info, &signal, kind)?;
+                push_capture(&mut capture, &point_info, &signal, &engine_signal, kind)?;
             }
         }
 
@@ -486,6 +536,7 @@ impl InputColumn {
 #[derive(Clone, Debug)]
 struct OutputColumn {
     point: String,
+    engine_point: String,
     reference_column: String,
     reference_values: Vec<f64>,
     kind: ValueKind,
@@ -493,6 +544,7 @@ struct OutputColumn {
 
 #[derive(Clone, Debug)]
 struct CaptureColumn {
+    name: String,
     point: String,
     kind: ValueKind,
 }
@@ -556,7 +608,7 @@ fn run_event_aligned(
         .capture
         .iter()
         .map(|column| CapturedColumn {
-            name: column.point.clone(),
+            name: column.name.clone(),
             kind: column.kind,
             values: Vec::with_capacity(instants.len()),
         })
@@ -593,11 +645,7 @@ fn trace_from_output_trace(
             .map(|value| capture_column.kind.encode_value(value))
             .collect::<Result<Vec<_>, _>>()?;
         columns.push(CapturedColumn {
-            name: trace
-                .columns()
-                .get(idx)
-                .cloned()
-                .unwrap_or_else(|| capture_column.point.clone()),
+            name: capture_column.name.clone(),
             kind: capture_column.kind,
             values,
         });
@@ -692,19 +740,21 @@ fn decode_value(kind: ValueKind, value: f64, column: &str) -> Result<Value, Driv
 fn push_capture(
     capture: &mut Vec<CaptureColumn>,
     point_info: &HashMap<String, PointInfo>,
-    point: &str,
+    name: &str,
+    engine_point: &str,
     fallback_kind: ValueKind,
 ) -> Result<(), DriverError> {
-    if capture.iter().any(|column| column.point == point) {
+    if capture.iter().any(|column| column.name == name) {
         return Ok(());
     }
     let kind = point_info
-        .get(point)
+        .get(engine_point)
         .map(|info| point_value_kind(info.value_type))
         .transpose()?
         .unwrap_or(fallback_kind);
     capture.push(CaptureColumn {
-        point: point.to_string(),
+        name: name.to_string(),
+        point: engine_point.to_string(),
         kind,
     });
     Ok(())

@@ -4,6 +4,6 @@ blocks: 1
     param p=Real(0xc008000000000000)
 connectors: 2
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet")
-  C1 block=B0 dir=Out type=Real decl=1 iri=None
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y")
 connections: 0
 external_inputs: [0]
