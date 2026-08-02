@@ -43,7 +43,7 @@ fn assert_fixpoint(source: &[u8]) -> String {
 #[test]
 fn deterministic_export_reaches_fixpoint_for_regular_and_pass_through_models() {
     let id = assert_fixpoint(MINIMAL.as_bytes());
-    assert_eq!(id, "cxf:fnv1a128:44eaa8e78e93be6d5e399db5e8f33f78");
+    assert_eq!(id, "cxf:fnv1a128:de3ae3208d304eb9b8300520e730fed7");
     assert_fixpoint(PASS_THROUGH.as_bytes());
 }
 

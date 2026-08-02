@@ -106,6 +106,47 @@ fn reordering_a_boundary_fan_out_array_does_not_reorder_external_inputs() {
     );
 }
 
+fn two_boundary_outputs(reversed: bool) -> Value {
+    let mut doc = document(false);
+    let graph = doc["@graph"].as_array_mut().expect("graph array");
+    graph[0]["S231:hasOutput"] = json!([
+        { "@id": iri("yOut") },
+        { "@id": iri("yOut2") }
+    ]);
+    graph[4]["S231:isConnectedTo"] = json!([
+        { "@id": iri("yOut") },
+        { "@id": iri("yOut2") }
+    ]);
+    graph.push(json!({
+        "@id": iri("yOut2"),
+        "@type": "S231:RealOutput",
+        "S231:isOfDataType": { "@id": "S231:Real" }
+    }));
+    if reversed {
+        graph[0]["S231:hasOutput"].as_array_mut().unwrap().reverse();
+        graph[4]["S231:isConnectedTo"]
+            .as_array_mut()
+            .unwrap()
+            .reverse();
+    }
+    doc
+}
+
+#[test]
+fn array_spelling_does_not_reorder_outputs_sharing_one_driver() {
+    let a = import(&two_boundary_outputs(false));
+    let b = import(&two_boundary_outputs(true));
+    let identity = |g: &ModelGraph| {
+        g.boundary_outputs
+            .iter()
+            .map(|output| (output.iri.to_string(), output.source))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(identity(&a), identity(&b));
+    assert_eq!(a.boundary_outputs.len(), 2);
+    assert_eq!(a.boundary_outputs[0].source, a.boundary_outputs[1].source);
+}
+
 /// The order reaches the **wire**, so pin it there too.
 ///
 /// `export` fills each boundary node's own `isConnectedTo` array from `external_inputs`, not only

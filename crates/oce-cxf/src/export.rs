@@ -31,7 +31,7 @@
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
 //! The five in-subset §7.4.1 attrs live on the **child port node** (never the shared
 //! boundary node), each emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
-//! `displayUnit` as bare strings ([`TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
+//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
 //! render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
@@ -73,12 +73,12 @@
 //! error ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
-use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
+use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
+use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::has_valid_shape;
 use crate::{CxfError, bridge};
@@ -532,6 +532,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // what keeps a multiply-driven input on a deferred block from being counted at all. Move the
     // increment above either one and the count stops describing the emitted document.
     let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
+    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Surviving drivers per connector, for the §7.10 single-assignment check after this loop, as
     // two flags rather than a count. Recorded at the `targets` push site so they describe exactly
     // the edges the document will carry.
@@ -586,6 +587,33 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
     }
 
+    for output in &g.boundary_outputs {
+        let idx = output.source.0 as usize;
+        let Some(source) = g.connectors.get(idx) else {
+            diags.push(Diagnostic::error(
+                DiagCode::ExportUnsupported,
+                MSG_STRUCTURE,
+            ));
+            continue;
+        };
+        if source.dir != Dir::Out || deferred.contains(&(source.block.0 as usize)) {
+            if source.dir != Dir::Out {
+                diags.push(reject(MSG_STRUCTURE, &owner_subject(g, source, idx)));
+            }
+            continue;
+        }
+        let Some(_) = port_iri[idx] else {
+            continue;
+        };
+        let iri = output.iri.as_ref();
+        claim_emitted_id(&mut seen, iri, &owner_subject(g, source, idx), &mut diags);
+        targets[idx].push(iri.to_owned());
+        boundary_outputs.push(PlannedBoundaryOutput {
+            iri: iri.to_owned(),
+            datatype: datatypes[idx],
+        });
+    }
+
     // Phase 5b — §7.10 single assignment over the survivor cone. Every edge counted above is one
     // the document emits, so an input carrying two of them re-imports with a `SingleAssignment`
     // error and the bytes do not load at all. That is the outcome class this exporter refuses:
@@ -614,7 +642,6 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // scan: an omitted block contributes no errors. That arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
-    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -826,41 +853,6 @@ fn param_binding(
     }
 }
 
-/// The classified §7.4.1 attributes for one port node, narrowed to the Bare-Scalar Canonical
-/// emit subset. Produced by [`classify_attrs`] only when the connector's `Attrs` variant matches
-/// its `value_type` (the mismatch branch takes [`PortAttrs::None`] and a `MSG_STRUCTURE` diag
-/// instead, so no rejection double-fires). `build()` consumes this infallibly via
-/// [`emit_port_attrs`]: every variant is total, and `build()` never sees `PortAttrs::Real` on an
-/// `Integer` connector (`plan()`'s `attrs.matches` gate rejects that first).
-#[derive(Clone, Debug)]
-enum PortAttrs {
-    /// Real connector attrs: the three term attrs plus the two finite Real bounds. Any
-    /// `nominal`/`unbounded`/non-finite bound was already rejected by [`classify_attrs`] and is
-    /// absent here.
-    Real {
-        /// `S231:unit` (bare string).
-        unit: Option<Arc<str>>,
-        /// `S231:quantity` (bare string).
-        quantity: Option<Arc<str>>,
-        /// `S231:displayUnit` (bare string).
-        display_unit: Option<Arc<str>>,
-        /// `S231:min` (bare number, finite).
-        min: Option<f64>,
-        /// `S231:max` (bare number, finite).
-        max: Option<f64>,
-    },
-    /// Integer connector attrs: the two integer bounds (no non-finite hazard — `i64` has no NaN).
-    Integer {
-        /// `S231:min` (bare integer).
-        min: Option<i64>,
-        /// `S231:max` (bare integer).
-        max: Option<i64>,
-    },
-    /// No attrs to emit: a Boolean/String/Enum connector, or a tag-mismatched one. Emits zero
-    /// attr keys, byte-identical to an attr-free port node.
-    None,
-}
-
 /// Classify a type-matched connector's [`Attrs`] into the [`PortAttrs`] emit subset, rejecting
 /// `nominal`/`unbounded`/non-finite bounds (outside the canonical subset) into `diags`. A safe,
 /// total `match attrs` — no `as_real().unwrap()`, so no `plan()`-reachable panic. The importer
@@ -908,51 +900,6 @@ fn finite_real_bound(v: Option<f64>, subject: &str, diags: &mut Vec<Diagnostic>)
             None
         }
         None => None,
-    }
-}
-
-/// Emit a port node's classified §7.4.1 attributes under the Bare-Scalar Canonical wire shape.
-/// Infallible: a total `match attrs` with no `Option::unwrap`, no index, no partial match. Term
-/// attrs go out as [`TermAttr::Bare`] (the self-reproducing shape; `Arc<str>` → `String` via
-/// `as_ref().to_owned()` since `TermAttr::Bare` owns a `String`); Real bounds as
-/// [`CxfValue::Float`], Integer bounds as [`CxfValue::Int`]. `None` fields stay `None` (omitted
-/// on serialization by `skip_serializing_if = "Option::is_none"`), so an all-default connector
-/// emits zero attr keys. `serde` serializes `Node` in its declared field order regardless of
-/// assignment order here.
-fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
-    match attrs {
-        PortAttrs::Real {
-            unit,
-            quantity,
-            display_unit,
-            min,
-            max,
-        } => {
-            if let Some(u) = unit {
-                node.unit = Some(TermAttr::Bare(u.as_ref().to_owned()));
-            }
-            if let Some(q) = quantity {
-                node.quantity = Some(TermAttr::Bare(q.as_ref().to_owned()));
-            }
-            if let Some(d) = display_unit {
-                node.display_unit = Some(TermAttr::Bare(d.as_ref().to_owned()));
-            }
-            if let Some(m) = min {
-                node.min = Some(CxfValue::Float(*m));
-            }
-            if let Some(m) = max {
-                node.max = Some(CxfValue::Float(*m));
-            }
-        }
-        PortAttrs::Integer { min, max } => {
-            if let Some(m) = min {
-                node.min = Some(CxfValue::Int(*m));
-            }
-            if let Some(m) = max {
-                node.max = Some(CxfValue::Int(*m));
-            }
-        }
-        PortAttrs::None => {}
     }
 }
 

@@ -25,6 +25,7 @@ mod arrays;
 mod bridge;
 pub mod dto;
 mod export;
+mod export_attrs;
 mod export_defer;
 mod export_pass_through;
 #[cfg(test)]
