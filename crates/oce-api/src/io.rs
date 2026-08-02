@@ -64,12 +64,13 @@ pub struct TrendCfg {
 /// excluded (CDL §7.8: a String signal is metadata, not a control point).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointInfo {
-    /// The point identity == `DomainKey` identity (06 D5): the authored `@id`, as written in the
-    /// source CXF document, of the connector's host-visible identity node — the declared boundary
-    /// input's node for a composite-boundary-driven connector (one host point fans out to every
-    /// internal consumer), the connector's own node otherwise. The `@id` is not `@context`-expanded
-    /// (a known gap; every shipped fixture writes expanded IRIs). The positional `conn#<id>`
-    /// fallback appears only for hand-built, IRI-less models, which no public API can construct.
+    /// The point identity == `DomainKey` identity (06 D5): the authored `@id` of the connector's
+    /// host-visible identity node — the declared boundary input's node for a
+    /// composite-boundary-driven connector (one host point fans out to every internal consumer),
+    /// the connector's own node otherwise — expanded against the document `@context` to
+    /// canonical absolute form at ingest, so compact and expanded spellings of the same subject
+    /// IRI name the same point. The positional `conn#<id>` fallback appears only for
+    /// hand-built, IRI-less models, which no public API can construct.
     pub path: String,
     /// `In` | `Out` (CDL §7.8).
     pub direction: PointDirection,
@@ -145,9 +146,11 @@ pub(crate) struct PointInventoryRow {
 /// composite-boundary-driven connector, the connector's own node otherwise (the resolver stamps
 /// that choice into `Connector::iri` at ingest).
 ///
-/// The `@id` is stored unexpanded: it equals the full subject IRI when the document writes
-/// expanded `@id`s (every shipped fixture does), and JSON-LD `@context` expansion is a known gap
-/// tracked as a follow-up. CXF ingest rejects any connector node without an `@id`, so every
+/// The stored `@id` is the canonical absolute subject IRI: the resolver expands the authored
+/// spelling against the document `@context` at ingest, so a document re-serialized between
+/// compact and expanded spellings keeps its point paths, and a relative `@id` no context can
+/// canonicalize is refused at load with a typed diagnostic rather than admitted under a
+/// spelling-dependent key. CXF ingest rejects any connector node without an `@id`, so every
 /// document-loaded connector has an authored identity and the positional `conn#<id>` spelling is
 /// unreachable from the public API. It survives only as the fallback for hand-built, IRI-less
 /// models (`Connector::new` without `with_iri`), which are constructible from in-crate tests

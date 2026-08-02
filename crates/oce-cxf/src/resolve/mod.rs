@@ -14,6 +14,14 @@
 //! twice and byte-compare the whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a
 //! defect.
 //!
+//! The order contract, stated once: array order is load-bearing wherever the resolver reads an
+//! array — `@graph` node position, `containsBlock` order, each instance's port and parameter
+//! lists, `isConnectedTo` order. The one carve-out is the boundary-input elision vector
+//! (`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's
+//! own `@graph` node position instead of inheriting the order of that port's `isConnectedTo`
+//! array (Step 9's re-key below). Neither array order nor node position is a stable identity:
+//! key by authored name, never by position.
+//!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input
 //! is an illegal `In→In` edge: instead of a connection, the driven child input is recorded in

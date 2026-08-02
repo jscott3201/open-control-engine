@@ -58,6 +58,18 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
   anyone persisting one, not a golden refresh. Composite-level `hasParameter`/`hasConstant` remain
   absent from exports by design: flattening resolves them into child block values, which are
   emitted.
+- **Identity tokens expand against `@context` at ingest** (#230), closing the gap #229 named.
+  Compact and expanded spellings of the same subject IRI now name the same point, block, model,
+  and datatype: expansion runs as one pre-resolve pass over the document's `@id`s, followed
+  structural references, `@type`s, and `isOfDataType`, before any identity map is built — so a
+  compact and an absolute spelling of one subject collide as `DuplicateId` instead of loading as
+  two nodes, and a document re-serialized between spellings keeps its point paths. A relative
+  `@id` no context can canonicalize is refused with the new `relative-iri` diagnostic. Safety
+  consequence: a compact `isOfDataType` previously *disabled* G36 closed-world enum checking —
+  a wrong-class enum literal loaded with zero diagnostics; expansion closes that hole for every
+  expandable spelling. Diagnostics that name an expandable token as their subject now carry the
+  canonical expanded IRI, not the authored compact spelling. Unit/quantity/displayUnit terms are
+  deliberately untouched: lexical terms, not graph identities — permanently outside expansion.
 
 ### Host facade
 
