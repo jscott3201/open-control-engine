@@ -18,6 +18,23 @@ the architecture and invariants are the design of record.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
+## Release checklist
+
+Promotions into `main` are infrequent enough that every step gets forgotten by someone. In
+order (a checklist by convention, not a CI gate):
+
+1. **Bring `CHANGELOG.md` current first.** Check with
+   `git log origin/main..development -- CHANGELOG.md` — `origin/main`, because a fresh checkout
+   has no local `main`. If it returns nothing, the release is undocumented; recover the entries
+   before opening the PR.
+2. Open the promotion PR `development` → `main`.
+3. Merge with a **merge commit**, never squash — both prior promotions (`a57d860`, `cf70c80`)
+   are true merges, and squashing would rewrite the history `development` continues from.
+4. The release gate and manual publishing then apply as described under
+   [How changes land](#how-changes-land) — the full-workspace release gate runs on the
+   promotion PR, and publishing stays manual (`workflow_dispatch`; a tag alone never
+   publishes).
+
 ## Local setup
 
 The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.97.1, edition

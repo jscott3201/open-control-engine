@@ -4,8 +4,10 @@
 //! semantically identical re-serializations; a durable store keyed on one can graft a point's
 //! samples onto another point's history with no error. CXF ingest rejects any connector node
 //! without an `@id`, so every facade surface of a CXF-loaded model must carry authored
-//! identities (as written — `@context` expansion is a known gap) and the positional spelling
-//! survives only as the in-crate fallback for hand-built, IRI-less models.
+//! identities in canonical `@context`-expanded form, and the positional spelling survives only
+//! as the in-crate fallback for hand-built, IRI-less models. Expansion is identity on this
+//! corpus — every G36 identity slot is written absolute — which is why the membership oracle
+//! below can keep comparing facade paths against the raw document's `@id` values.
 
 use std::collections::BTreeSet;
 use std::fs;

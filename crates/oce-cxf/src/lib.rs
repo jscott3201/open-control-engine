@@ -24,6 +24,7 @@ use oce_model::ModelGraph;
 mod arrays;
 mod bridge;
 pub mod dto;
+mod expand;
 mod export;
 mod export_attrs;
 mod export_defer;

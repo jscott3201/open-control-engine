@@ -14,6 +14,14 @@
 //! twice and byte-compare the whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a
 //! defect.
 //!
+//! The order contract, stated once: array order is load-bearing wherever the resolver reads an
+//! array — `@graph` node position, `containsBlock` order, each instance's port and parameter
+//! lists, `isConnectedTo` order. The one carve-out is the boundary-input elision vector
+//! (`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's
+//! own `@graph` node position instead of inheriting the order of that port's `isConnectedTo`
+//! array (Step 9's re-key below). Neither array order nor node position is a stable identity:
+//! key by authored name, never by position.
+//!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input
 //! is an illegal `In→In` edge: instead of a connection, the driven child input is recorded in
@@ -130,6 +138,15 @@ pub(crate) fn resolve(
     doc: &CxfDocument,
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
+    // --- Step 0: expand identity and typing tokens against `@context` on a working clone
+    // (doc 04 R-3), BEFORE any `@id` index exists — expansion must precede the by_id build or
+    // `ex:A` and its absolute spelling become two nodes instead of a `DuplicateId`. A document
+    // whose identity tokens cannot be canonicalized is refused here with typed diagnostics.
+    let expanded = match crate::expand::expand_document(doc) {
+        Ok(expanded) => expanded,
+        Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
+    };
+    let doc = &expanded;
     let mut diags: Vec<Diagnostic> = Vec::new();
 
     // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument). by_id is

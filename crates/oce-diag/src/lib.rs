@@ -110,6 +110,15 @@ pub enum DiagCode {
     PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
+    /// An identity token — a node `@id` or a followed structural reference — is a relative IRI
+    /// reference (no scheme and no declared `@context` prefix), and the document declares no
+    /// `@base` to resolve it against, so the token cannot be expanded to the canonical absolute
+    /// IRI that keys the model (doc 04 R-3). The no-`@base` clause holds by construction:
+    /// context-shape validation runs before slot expansion, and a document declaring `@base`
+    /// is refused there as [`DiagCode::NonSubsetConstruct`] before this code can fire. Typing
+    /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
+    /// ([`DiagCode::ClassNotFound`], [`DiagCode::UnresolvedReference`]) own junk there.
+    RelativeIri,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---
     /// An input's in-degree was not exactly 1 and it is not an external boundary input
@@ -180,6 +189,7 @@ impl DiagCode {
             DiagCode::UnresolvedPolymorphism => "unresolved-polymorphism",
             DiagCode::NonSubsetConstruct => "non-subset-construct",
             DiagCode::MalformedDocument => "malformed-document",
+            DiagCode::RelativeIri => "relative-iri",
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
@@ -333,6 +343,7 @@ mod tests {
         NonSubsetConstruct => "non-subset-construct",
         PortNameMismatch => "port-name-mismatch",
         MalformedDocument => "malformed-document",
+        RelativeIri => "relative-iri",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",
         TypeMismatch => "type-mismatch",

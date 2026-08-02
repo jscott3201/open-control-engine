@@ -108,20 +108,32 @@ public `AssertLevel::Error` variant is never emitted today; the sole assertion c
 ## CXF point identities are the authored `@id`s
 
 Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
-through the PointStore port — is an authored `@id` from the source CXF document, taken exactly as
-written there: for a connector driven by a composite boundary input it is the declared boundary
-input's `@id` (one host point fans out to every internal consumer, which is why the G36 corpus's
-3020 connectors surface as 2895 points), and for every other connector it is the connector's own
-node's `@id`. CXF ingest rejects a connector node without an `@id`, so a document-loaded point can
-never receive a positional identity.
+through the PointStore port — is an authored `@id` from the source CXF document, expanded against
+the document's `@context` to canonical absolute form at ingest: for a connector driven by a
+composite boundary input it is the declared boundary input's `@id` (one host point fans out to
+every internal consumer, which is why the G36 corpus's 3020 connectors surface as 2895 points),
+and for every other connector it is the connector's own node's `@id`. CXF ingest rejects a
+connector node without an `@id`, so a document-loaded point can never receive a positional
+identity. Because keys are canonical, a document re-serialized between compact and expanded
+spellings keeps its point paths; a relative `@id` that no `@context` can canonicalize is refused
+at load with a typed `relative-iri` diagnostic rather than admitted under a spelling-dependent
+key. The supported `@context` form is an inline prefix map — a single map, or a list of maps
+merged in order with later bindings winning; a remote context reference, `@base`, `@vocab`, and
+prefix bindings that are not absolute IRIs are refused at load as non-subset constructs rather
+than silently ignored, so the canonical-key guarantee holds for every document that loads at
+all.
 
-Two caveats bound that guarantee. The `@id` is stored unexpanded — no JSON-LD `@context`
-expansion is applied — so it equals the full subject IRI only when the document writes expanded
-`@id`s (every shipped fixture does); a document re-serialized between compact and expanded
-spellings renames its points until expansion lands, a known engine gap tracked as a follow-up.
-And the document's declared boundary-output names (root `S231:hasOutput`) are not
-facade-addressable: address the driving internal connector's path, or `get_output` returns
-`UnknownPoint`.
+One caveat bounds that guarantee. The document's declared boundary-output names (root
+`S231:hasOutput`) are not facade-addressable: address the driving internal connector's path, or
+`get_output` returns `UnknownPoint`.
+
+A related contract for emitters and durable stores: array order is load-bearing wherever the
+resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and
+parameter lists, `isConnectedTo` order. The one carve-out is the boundary-input elision vector
+(`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's own
+`@graph` node position instead of inheriting the order of that port's `isConnectedTo` array
+(`crates/oce-cxf/src/resolve/mod.rs`, Step 9). Neither array order nor node position is a stable
+identity: key by authored name, never by position.
 
 Point histories persisted under the earlier positional `conn#<N>` keys are disposable, not
 migratable: an index is not traceable to an authored connector after the document that produced it

@@ -62,12 +62,19 @@ nodes take their connections with them.
 > protected implementation children out of composite classification. Classification never
 > rejects; rule 1 has no DiagCode.
 
-`@type` resolution: take the fragment after the last `#` (the whole string when there is no
-`#`), strip a leading `Buildings.Controls.OBC.`, and look the remainder up in the native block
-registry (published as `tools/reference-catalog/oce-blocks.registry-manifest.json`). So
-`http://example.org#Buildings.Controls.OBC.CDL.Reals.Add` resolves to the registered class
-`CDL.Reals.Add` and is a leaf; `S231:Block` or a vendor class path resolves to nothing and — with
-children — is a composite.
+`@type` resolution operates on the `@context`-expanded form: the token is first expanded
+against the document `@context` (a CURIE with a declared prefix becomes its absolute IRI;
+anything else stays as written — a typing token is never refused), then take the fragment after
+the last `#` (the whole string when there is no `#`), strip a leading `Buildings.Controls.OBC.`,
+and look the remainder up in the native block registry (published as
+`tools/reference-catalog/oce-blocks.registry-manifest.json`). So
+`http://example.org#Buildings.Controls.OBC.CDL.Reals.Add` — or the compact
+`ex:Buildings.Controls.OBC.CDL.Reals.Add` under `"ex": "http://example.org#"` — resolves to the
+registered class `CDL.Reals.Add` and is a leaf; `S231:Block` (expanded,
+`http://data.ashrae.org/S231P#Block`) or a vendor class path resolves to nothing and — with
+children — is a composite. Note the contrast with rule 7: **identities and typing tokens
+expand; property KEYS match by suffix** — the banned-key and array-marker matching below stays
+on the term after the last `:`, `#`, or `/`, whatever the spelling.
 
 ```json
 { "@id": "…#M.sub", "@type": "http://…#Vendor.Sequences.ScaleAndForward",
@@ -112,6 +119,14 @@ Array order is significant: reordering a `containsBlock` array reorders the impo
 block and connector ids, which changes goldens, point ids, and any consumer keyed on dense ids.
 An emitter must produce `containsBlock` arrays in a deterministic order of its own choosing and
 keep that order stable across exports of the same source.
+
+The full order contract: array order is load-bearing wherever the resolver reads an array —
+`@graph` node position, `containsBlock` order, each instance's port and parameter lists,
+`isConnectedTo` order. The one carve-out is the boundary-input elision vector
+(`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's own
+`@graph` node position instead of inheriting the order of that port's `isConnectedTo` array
+(`crates/oce-cxf/src/resolve/mod.rs`, Step 9). Neither array order nor node position is a stable
+identity: key by authored name, never by position.
 
 ```json
 "S231:containsBlock": [ { "@id": "…#M.sub" }, { "@id": "…#M.post" } ]
