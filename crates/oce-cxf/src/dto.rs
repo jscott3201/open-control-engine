@@ -60,7 +60,7 @@ pub enum Context {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Node {
     /// The raw IRI `@id` (expanded lazily against `@context`, R-3).
-    #[serde(rename = "@id")]
+    #[serde(rename = "@id", default)]
     pub id: String,
     /// `@type`: an `S231:*` class for library/composite nodes, OR a concrete class IRI for an
     /// instance (G-3). Absent for overlay nodes.

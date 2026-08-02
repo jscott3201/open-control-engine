@@ -654,21 +654,22 @@ fn structural_diagnostics_sort_by_ascending_connector_id() {
     let CxfError::Validation(diags) = import(&doc).unwrap_err() else {
         panic!("expected Validation");
     };
-    let ids: Vec<u32> = diags
+    let subjects: Vec<&str> = diags
         .iter()
         .filter(|d| d.code == DiagCode::SingleAssignment)
-        .filter_map(|d| {
-            d.subject
-                .as_deref()?
-                .strip_prefix("connector#")?
-                .parse::<u32>()
-                .ok()
-        })
+        .filter_map(|d| d.subject.as_deref())
         .collect();
     assert_eq!(
-        ids,
-        vec![0, 2, 4, 6, 8, 10],
-        "IRI-less structural diagnostics must sort by ascending ConnectorId, not lexically"
+        subjects,
+        [
+            "http://example.org#M.b0.u",
+            "http://example.org#M.b1.u",
+            "http://example.org#M.b2.u",
+            "http://example.org#M.b3.u",
+            "http://example.org#M.b4.u",
+            "http://example.org#M.b5.u",
+        ],
+        "authored diagnostic subjects must retain ascending ConnectorId order"
     );
 }
 

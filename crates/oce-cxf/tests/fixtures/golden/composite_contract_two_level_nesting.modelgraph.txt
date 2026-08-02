@@ -4,6 +4,6 @@ blocks: 1
     param k=Real(0x4010000000000000)
 connectors: 2
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.two_level_nesting.u")
-  C1 block=B0 dir=Out type=Real decl=1 iri=None
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.two_level_nesting.outer.inner.gain.y")
 connections: 0
 external_inputs: [0]

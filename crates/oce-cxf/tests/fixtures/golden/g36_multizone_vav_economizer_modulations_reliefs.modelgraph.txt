@@ -24,28 +24,28 @@ blocks: 8
   B7 decl=7 class=CDL.Reals.Max instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max")
     inputs=[19, 20] outputs=[21]
 connectors: 22
-  C0 block=B0 dir=Out type=Real decl=0 iri=None
-  C1 block=B1 dir=Out type=Real decl=1 iri=None
-  C2 block=B2 dir=Out type=Real decl=2 iri=None
-  C3 block=B3 dir=Out type=Real decl=3 iri=None
-  C4 block=B4 dir=In type=Real decl=4 iri=None
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMinLimSig.y")
+  C1 block=B1 dir=Out type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamMaxLimSig.y")
+  C2 block=B2 dir=Out type=Real decl=2 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamConMinLimSig.y")
+  C3 block=B3 dir=Out type=Real decl=3 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamMaxLimSig.y")
+  C4 block=B4 dir=In type=Real decl=4 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x1")
   C5 block=B4 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_min")
-  C6 block=B4 dir=In type=Real decl=6 iri=None
+  C6 block=B4 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.x2")
   C7 block=B4 dir=In type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max")
   C8 block=B4 dir=In type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup")
-  C9 block=B4 dir=Out type=Real decl=9 iri=None
-  C10 block=B5 dir=In type=Real decl=10 iri=None
+  C9 block=B4 dir=Out type=Real decl=9 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.outDamPos.y")
+  C10 block=B5 dir=In type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x1")
   C11 block=B5 dir=In type=Real decl=11 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_max")
-  C12 block=B5 dir=In type=Real decl=12 iri=None
+  C12 block=B5 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.x2")
   C13 block=B5 dir=In type=Real decl=13 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min")
   C14 block=B5 dir=In type=Real decl=14 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uTSup")
-  C15 block=B5 dir=Out type=Real decl=15 iri=None
-  C16 block=B6 dir=In type=Real decl=16 iri=None
+  C15 block=B5 dir=Out type=Real decl=15 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.retDamPos.y")
+  C16 block=B6 dir=In type=Real decl=16 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.u1")
   C17 block=B6 dir=In type=Real decl=17 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uOutDam_max")
-  C18 block=B6 dir=Out type=Real decl=18 iri=None
-  C19 block=B7 dir=In type=Real decl=19 iri=None
+  C18 block=B6 dir=Out type=Real decl=18 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.min.y")
+  C19 block=B7 dir=In type=Real decl=19 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.u1")
   C20 block=B7 dir=In type=Real decl=20 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.uRetDam_min")
-  C21 block=B7 dir=Out type=Real decl=21 iri=None
+  C21 block=B7 dir=Out type=Real decl=21 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.max.y")
 connections: 6
   C0 -> C4
   C1 -> C6

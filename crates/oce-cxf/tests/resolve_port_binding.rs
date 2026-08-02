@@ -180,7 +180,7 @@ fn position_named_ports_resolve_without_a_diagnostic() {
 /// convention, and is reported rather than silently read either way.
 #[test]
 fn a_partially_named_port_list_is_rejected() {
-    let doc = document(["u_s", "in1"], DECLARED);
+    let doc = document(["u_s", "unknown"], DECLARED);
     let bytes = serde_json::to_vec(&doc).expect("serialize");
     match import_cxf(&bytes, &ResolveOptions::default()) {
         Err(CxfError::Validation(diags)) => assert!(

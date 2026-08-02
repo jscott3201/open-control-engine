@@ -114,105 +114,105 @@ connectors: 102
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_1")
   C1 block=B0 dir=In type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_2")
   C2 block=B0 dir=In type=Real decl=2 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjPopBreZon_flow_3")
-  C3 block=B0 dir=Out type=Real decl=3 iri=None
-  C4 block=B0 dir=Out type=Real decl=4 iri=None
+  C3 block=B0 dir=Out type=Real decl=3 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y1")
+  C4 block=B0 dir=Out type=Real decl=4 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo.y2")
   C5 block=B1 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_1")
   C6 block=B1 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_2")
   C7 block=B1 dir=In type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VAdjAreBreZon_flow_3")
-  C8 block=B1 dir=Out type=Real decl=8 iri=None
-  C9 block=B1 dir=Out type=Real decl=9 iri=None
+  C8 block=B1 dir=Out type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y1")
+  C9 block=B1 dir=Out type=Real decl=9 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo1.y2")
   C10 block=B10 dir=In type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1")
   C11 block=B10 dir=In type=Real decl=11 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2")
   C12 block=B10 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3")
-  C13 block=B10 dir=Out type=Real decl=13 iri=None
-  C14 block=B10 dir=Out type=Real decl=14 iri=None
-  C15 block=B17 dir=In type=Real decl=15 iri=None
-  C16 block=B17 dir=In type=Real decl=16 iri=None
-  C17 block=B17 dir=Out type=Real decl=17 iri=None
-  C18 block=B17 dir=Out type=Real decl=18 iri=None
-  C19 block=B17 dir=Out type=Real decl=19 iri=None
-  C20 block=B2 dir=In type=Boolean decl=20 iri=None
-  C21 block=B2 dir=Out type=Real decl=21 iri=None
-  C22 block=B3 dir=In type=Boolean decl=22 iri=None
-  C23 block=B3 dir=Out type=Real decl=23 iri=None
-  C24 block=B22 dir=Out type=Integer decl=24 iri=None
-  C25 block=B23 dir=Out type=Integer decl=25 iri=None
+  C13 block=B10 dir=Out type=Real decl=13 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y1")
+  C14 block=B10 dir=Out type=Real decl=14 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo2.y2")
+  C15 block=B17 dir=In type=Real decl=15 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u1")
+  C16 block=B17 dir=In type=Real decl=16 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.u2")
+  C17 block=B17 dir=Out type=Real decl=17 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y1")
+  C18 block=B17 dir=Out type=Real decl=18 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y2")
+  C19 block=B17 dir=Out type=Real decl=19 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.groFlo3.y3")
+  C20 block=B2 dir=In type=Boolean decl=20 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.u")
+  C21 block=B2 dir=Out type=Real decl=21 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_1.y")
+  C22 block=B3 dir=In type=Boolean decl=22 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.u")
+  C23 block=B3 dir=Out type=Real decl=23 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.booToRea_2.y")
+  C24 block=B22 dir=Out type=Integer decl=24 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_1.y")
+  C25 block=B23 dir=Out type=Integer decl=25 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.occMod_2.y")
   C26 block=B24 dir=In type=Integer decl=26 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_1")
-  C27 block=B24 dir=In type=Integer decl=27 iri=None
-  C28 block=B24 dir=Out type=Boolean decl=28 iri=None
+  C27 block=B24 dir=In type=Integer decl=27 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.u2")
+  C28 block=B24 dir=Out type=Boolean decl=28 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_1.y")
   C29 block=B25 dir=In type=Integer decl=29 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOpeMod_2")
-  C30 block=B25 dir=In type=Integer decl=30 iri=None
-  C31 block=B25 dir=Out type=Boolean decl=31 iri=None
-  C32 block=B4 dir=In type=Real decl=32 iri=None
-  C33 block=B4 dir=In type=Real decl=33 iri=None
-  C34 block=B4 dir=Out type=Real decl=34 iri=None
-  C35 block=B5 dir=In type=Real decl=35 iri=None
-  C36 block=B5 dir=In type=Real decl=36 iri=None
-  C37 block=B5 dir=Out type=Real decl=37 iri=None
-  C38 block=B6 dir=In type=Real decl=38 iri=None
-  C39 block=B6 dir=In type=Real decl=39 iri=None
-  C40 block=B6 dir=Out type=Real decl=40 iri=None
-  C41 block=B7 dir=In type=Real decl=41 iri=None
-  C42 block=B7 dir=In type=Real decl=42 iri=None
-  C43 block=B7 dir=Out type=Real decl=43 iri=None
-  C44 block=B11 dir=In type=Real decl=44 iri=None
-  C45 block=B11 dir=In type=Real decl=45 iri=None
-  C46 block=B11 dir=Out type=Real decl=46 iri=None
-  C47 block=B12 dir=In type=Real decl=47 iri=None
-  C48 block=B12 dir=In type=Real decl=48 iri=None
-  C49 block=B12 dir=Out type=Real decl=49 iri=None
-  C50 block=B8 dir=In type=Real decl=50 iri=None
-  C51 block=B8 dir=In type=Real decl=51 iri=None
-  C52 block=B8 dir=Out type=Real decl=52 iri=None
-  C53 block=B9 dir=In type=Real decl=53 iri=None
-  C54 block=B9 dir=In type=Real decl=54 iri=None
-  C55 block=B9 dir=Out type=Real decl=55 iri=None
-  C56 block=B13 dir=In type=Real decl=56 iri=None
-  C57 block=B13 dir=In type=Real decl=57 iri=None
-  C58 block=B13 dir=Out type=Real decl=58 iri=None
-  C59 block=B21 dir=In type=Real decl=59 iri=None
-  C60 block=B21 dir=In type=Real decl=60 iri=None
-  C61 block=B21 dir=In type=Real decl=61 iri=None
-  C62 block=B21 dir=Out type=Real decl=62 iri=None
-  C63 block=B14 dir=In type=Real decl=63 iri=None
-  C64 block=B14 dir=In type=Real decl=64 iri=None
-  C65 block=B14 dir=Out type=Real decl=65 iri=None
-  C66 block=B15 dir=In type=Real decl=66 iri=None
-  C67 block=B15 dir=In type=Real decl=67 iri=None
-  C68 block=B15 dir=Out type=Real decl=68 iri=None
-  C69 block=B16 dir=In type=Real decl=69 iri=None
-  C70 block=B16 dir=In type=Real decl=70 iri=None
-  C71 block=B16 dir=Out type=Real decl=71 iri=None
-  C72 block=B18 dir=In type=Real decl=72 iri=None
-  C73 block=B18 dir=In type=Real decl=73 iri=None
-  C74 block=B18 dir=Out type=Real decl=74 iri=None
-  C75 block=B19 dir=In type=Real decl=75 iri=None
-  C76 block=B19 dir=In type=Real decl=76 iri=None
-  C77 block=B19 dir=Out type=Real decl=77 iri=None
-  C78 block=B20 dir=In type=Real decl=78 iri=None
-  C79 block=B20 dir=In type=Real decl=79 iri=None
-  C80 block=B20 dir=Out type=Real decl=80 iri=None
-  C81 block=B29 dir=Out type=Real decl=81 iri=None
-  C82 block=B30 dir=Out type=Real decl=82 iri=None
-  C83 block=B31 dir=Out type=Real decl=83 iri=None
+  C30 block=B25 dir=In type=Integer decl=30 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.u2")
+  C31 block=B25 dir=Out type=Boolean decl=31 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.intEqu1_2.y")
+  C32 block=B4 dir=In type=Real decl=32 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u1")
+  C33 block=B4 dir=In type=Real decl=33 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.u2")
+  C34 block=B4 dir=Out type=Real decl=34 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_1.y")
+  C35 block=B5 dir=In type=Real decl=35 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u1")
+  C36 block=B5 dir=In type=Real decl=36 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.u2")
+  C37 block=B5 dir=Out type=Real decl=37 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul_2.y")
+  C38 block=B6 dir=In type=Real decl=38 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u1")
+  C39 block=B6 dir=In type=Real decl=39 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.u2")
+  C40 block=B6 dir=Out type=Real decl=40 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_1.y")
+  C41 block=B7 dir=In type=Real decl=41 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u1")
+  C42 block=B7 dir=In type=Real decl=42 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.u2")
+  C43 block=B7 dir=Out type=Real decl=43 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul1_2.y")
+  C44 block=B11 dir=In type=Real decl=44 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u1")
+  C45 block=B11 dir=In type=Real decl=45 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.u2")
+  C46 block=B11 dir=Out type=Real decl=46 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_1.y")
+  C47 block=B12 dir=In type=Real decl=47 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u1")
+  C48 block=B12 dir=In type=Real decl=48 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.u2")
+  C49 block=B12 dir=Out type=Real decl=49 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul2_2.y")
+  C50 block=B8 dir=In type=Real decl=50 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u1")
+  C51 block=B8 dir=In type=Real decl=51 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.u2")
+  C52 block=B8 dir=Out type=Real decl=52 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y")
+  C53 block=B9 dir=In type=Real decl=53 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u1")
+  C54 block=B9 dir=In type=Real decl=54 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.u2")
+  C55 block=B9 dir=Out type=Real decl=55 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y")
+  C56 block=B13 dir=In type=Real decl=56 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u1")
+  C57 block=B13 dir=In type=Real decl=57 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.u2")
+  C58 block=B13 dir=Out type=Real decl=58 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y")
+  C59 block=B21 dir=In type=Real decl=59 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u1")
+  C60 block=B21 dir=In type=Real decl=60 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u2")
+  C61 block=B21 dir=In type=Real decl=61 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.u3")
+  C62 block=B21 dir=Out type=Real decl=62 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y")
+  C63 block=B14 dir=In type=Real decl=63 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u1")
+  C64 block=B14 dir=In type=Real decl=64 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.u2")
+  C65 block=B14 dir=Out type=Real decl=65 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_1.y")
+  C66 block=B15 dir=In type=Real decl=66 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u1")
+  C67 block=B15 dir=In type=Real decl=67 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.u2")
+  C68 block=B15 dir=Out type=Real decl=68 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_2.y")
+  C69 block=B16 dir=In type=Real decl=69 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u1")
+  C70 block=B16 dir=In type=Real decl=70 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.u2")
+  C71 block=B16 dir=Out type=Real decl=71 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.div1_3.y")
+  C72 block=B18 dir=In type=Real decl=72 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u1")
+  C73 block=B18 dir=In type=Real decl=73 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.u2")
+  C74 block=B18 dir=Out type=Real decl=74 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_1.y")
+  C75 block=B19 dir=In type=Real decl=75 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u1")
+  C76 block=B19 dir=In type=Real decl=76 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.u2")
+  C77 block=B19 dir=Out type=Real decl=77 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_2.y")
+  C78 block=B20 dir=In type=Real decl=78 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u1")
+  C79 block=B20 dir=In type=Real decl=79 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.u2")
+  C80 block=B20 dir=Out type=Real decl=80 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mul3_3.y")
+  C81 block=B29 dir=Out type=Real decl=81 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_1.y")
+  C82 block=B30 dir=Out type=Real decl=82 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_2.y")
+  C83 block=B31 dir=Out type=Real decl=83 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.neaZer_3.y")
   C84 block=B26 dir=In type=Real decl=84 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1")
-  C85 block=B26 dir=In type=Real decl=85 iri=None
-  C86 block=B26 dir=Out type=Real decl=86 iri=None
+  C85 block=B26 dir=In type=Real decl=85 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.u2")
+  C86 block=B26 dir=Out type=Real decl=86 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_1.y")
   C87 block=B27 dir=In type=Real decl=87 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2")
-  C88 block=B27 dir=In type=Real decl=88 iri=None
-  C89 block=B27 dir=Out type=Real decl=89 iri=None
+  C88 block=B27 dir=In type=Real decl=88 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.u2")
+  C89 block=B27 dir=Out type=Real decl=89 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_2.y")
   C90 block=B28 dir=In type=Real decl=90 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3")
-  C91 block=B28 dir=In type=Real decl=91 iri=None
-  C92 block=B28 dir=Out type=Real decl=92 iri=None
+  C91 block=B28 dir=In type=Real decl=91 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.u2")
+  C92 block=B28 dir=Out type=Real decl=92 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.max2_3.y")
   C93 block=B32 dir=In type=Real decl=93 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_1")
   C94 block=B32 dir=In type=Real decl=94 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_1")
-  C95 block=B32 dir=Out type=Real decl=95 iri=None
+  C95 block=B32 dir=Out type=Real decl=95 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_1.y")
   C96 block=B33 dir=In type=Real decl=96 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_2")
   C97 block=B33 dir=In type=Real decl=97 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_2")
-  C98 block=B33 dir=Out type=Real decl=98 iri=None
+  C98 block=B33 dir=Out type=Real decl=98 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_2.y")
   C99 block=B34 dir=In type=Real decl=99 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VZonPri_flow_3")
   C100 block=B34 dir=In type=Real decl=100 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3")
-  C101 block=B34 dir=Out type=Real decl=101 iri=None
+  C101 block=B34 dir=Out type=Real decl=101 iri=Some("http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.min1_3.y")
 connections: 42
   C3 -> C33
   C4 -> C36

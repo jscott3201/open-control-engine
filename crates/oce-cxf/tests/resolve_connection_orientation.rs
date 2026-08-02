@@ -494,8 +494,8 @@ fn a_rejected_pair_blames_the_driving_end() {
     let err = import(&doc).expect_err("input → input must not resolve");
     assert_eq!(
         faults(&err),
-        vec![(DiagCode::DirectionMismatch, "connector#1".to_owned())],
-        "sum.u1 is connector#1 and is the authored driver; blaming anything else means the pair \
+        vec![(DiagCode::DirectionMismatch, iri("sum.u1"))],
+        "sum.u1 is the authored driver; blaming anything else means the pair \
          was swapped when it should not have been"
     );
 }

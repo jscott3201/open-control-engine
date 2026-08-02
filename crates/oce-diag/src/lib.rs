@@ -69,6 +69,8 @@ pub enum DiagCode {
     // --- Resolve-time `shall`-errors (oce-cxf, doc 04 §9.1) ---
     /// Two `@graph` nodes share an `@id` (§9.1.1).
     DuplicateId,
+    /// A connector node in a CXF document has no authored `@id`.
+    MissingConnectorId,
     /// An `@id` referenced by an edge / `hasInstance` / `containsBlock` / `isConnectedTo` /
     /// `isOfDataType` is absent from both the document and the libraries (§9.1.2).
     UnresolvedReference,
@@ -162,6 +164,7 @@ impl DiagCode {
     pub fn as_str(self) -> &'static str {
         match self {
             DiagCode::DuplicateId => "duplicate-id",
+            DiagCode::MissingConnectorId => "missing-connector-id",
             DiagCode::UnresolvedReference => "unresolved-reference",
             DiagCode::ClassNotFound => "class-not-found",
             DiagCode::OverlayTargetNotFound => "overlay-target-not-found",
@@ -313,6 +316,7 @@ mod tests {
 
     pinned_diag_code_strings! {
         DuplicateId => "duplicate-id",
+        MissingConnectorId => "missing-connector-id",
         UnresolvedReference => "unresolved-reference",
         ClassNotFound => "class-not-found",
         OverlayTargetNotFound => "overlay-target-not-found",

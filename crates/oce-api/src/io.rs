@@ -135,13 +135,21 @@ pub(crate) struct PointInventoryRow {
     pub(crate) connector_id: ConnectorId,
 }
 
-/// The canonical point path of a connector: its `iri`, or a synthetic `conn#<id>` for an unnamed
-/// (hand-built) connector. The **single** path-derivation rule, shared by the inventory and by the
-/// `Outputs` snapshot, so the two never disagree (the `to_map` keying contract).
+/// The canonical point path of a connector.
+///
+/// Connectors outside the legacy named-point surface retain the compatibility `conn#<id>` identity
+/// even when CXF ingest retained an authored IRI. The load-time inventory walk identifies legacy
+/// named boundary connectors explicitly, matching the pre-migration facade.
 #[must_use]
-pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
-    iri.map(str::to_owned)
-        .unwrap_or_else(|| format!("conn#{}", id.0))
+pub(crate) fn connector_path(_iri: Option<&str>, id: ConnectorId) -> String {
+    format!("conn#{}", id.0)
+}
+
+/// Whether this connector belonged to the authored host-point surface before connector IRIs were
+/// retained generally: composite boundary inputs and both endpoints of native pass-through
+/// lowering. Part 2 removes this compatibility predicate.
+fn had_legacy_authored_path(connector: &oce_model::Connector) -> bool {
+    connector.iri_was_legacy_host_path
 }
 
 /// The shared load-time point walk. It is the single source of truth for both host-visible
@@ -187,7 +195,13 @@ pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
         };
         rows.push(PointInventoryRow {
             info: PointInfo {
-                path: connector_path(c.iri.as_deref(), c.id),
+                path: if had_legacy_authored_path(c) {
+                    c.iri
+                        .as_deref()
+                        .map_or_else(|| connector_path(None, c.id), str::to_owned)
+                } else {
+                    connector_path(c.iri.as_deref(), c.id)
+                },
                 direction,
                 value_type,
                 io_class,

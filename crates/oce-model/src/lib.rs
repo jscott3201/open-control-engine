@@ -374,6 +374,10 @@ pub struct Connector {
     /// Source IRI of this connector in the originating CXF document, if any — used for
     /// diagnostics and boundary-input identity. `None` for hand-built models.
     pub iri: Option<Arc<str>>,
+    /// Whether an attached IRI belonged to the host-visible point surface before CXF import began
+    /// retaining every authored connector IRI. Defaults true for hand-built connectors and is
+    /// cleared only by the resolver's general authored-IRI assignment.
+    pub iri_was_legacy_host_path: bool,
 }
 
 /// The R5 tag-invariant violation returned by [`Connector::with_attrs`] when an attribute set's
@@ -404,6 +408,7 @@ impl Connector {
             attrs: Attrs::default_for(value_type),
             decl_order,
             iri: None,
+            iri_was_legacy_host_path: true,
         }
     }
 

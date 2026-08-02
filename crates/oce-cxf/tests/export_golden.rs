@@ -283,10 +283,24 @@ fn graph_node_order_follows_model_graph_vector_order() {
             expected.push(format!("{iri}.{name}"));
         }
         for (k, cid) in b.inputs.iter().enumerate() {
-            port_iri[cid.0 as usize] = Some(format!("{iri}.in{k}"));
+            let connector = &g.connectors[cid.0 as usize];
+            port_iri[cid.0 as usize] = Some(if g.external_inputs.contains(cid) {
+                format!("{iri}.in{k}")
+            } else {
+                connector
+                    .iri
+                    .as_deref()
+                    .map_or_else(|| format!("{iri}.in{k}"), str::to_owned)
+            });
         }
         for (k, cid) in b.outputs.iter().enumerate() {
-            port_iri[cid.0 as usize] = Some(format!("{iri}.out{k}"));
+            let connector = &g.connectors[cid.0 as usize];
+            port_iri[cid.0 as usize] = Some(
+                connector
+                    .iri
+                    .as_deref()
+                    .map_or_else(|| format!("{iri}.out{k}"), str::to_owned),
+            );
         }
     }
     for minted in port_iri {

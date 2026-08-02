@@ -4,6 +4,6 @@ blocks: 1
     param k_1=Real(0x4000000000000000)
     param k_2=Real(0x4008000000000000)
 connectors: 1
-  C0 block=B0 dir=Out type=Real decl=0 iri=None
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#A.con.y")
 connections: 0
 external_inputs: []
