@@ -597,7 +597,7 @@ fn frozen_nand_derivation_agrees_with_tier_a_and_engine() {
         .collect::<Vec<_>>();
     let engine = run
         .trace
-        .column("conn#2")
+        .column(&block_harness::output_point(case, 0))
         .expect("Nand engine output")
         .values
         .iter()

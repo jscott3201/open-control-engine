@@ -22,16 +22,24 @@ const SEQUENCE: &str = "cooling_only_controller";
 const ROWS: usize = 1_441;
 const SAMPLE_STEP: f64 = 60.0;
 
-const AIRFLOW_SETPOINT: &str = "conn#460";
-const DAMPER_COMMAND: &str = "conn#485";
-const ADJUSTED_POPULATION_FLOW: &str = "conn#352";
-const ADJUSTED_AREA_FLOW: &str = "conn#356";
-const MINIMUM_OUTDOOR_AIRFLOW: &str = "conn#388";
-const ZONE_TEMPERATURE_RESET_REQUEST: &str = "conn#68";
-const ZONE_PRESSURE_RESET_REQUEST: &str = "conn#76";
-const LOW_AIRFLOW_ALARM: &str = "conn#182";
-const AIRFLOW_SENSOR_ALARM: &str = "conn#212";
-const LEAKING_DAMPER_ALARM: &str = "conn#227";
+const AIRFLOW_SETPOINT: &str = "http://example.org#g36.source.cooling_only_controller.dam.swi1.y";
+const DAMPER_COMMAND: &str = "http://example.org#g36.source.cooling_only_controller.dam.swi2.y";
+const ADJUSTED_POPULATION_FLOW: &str =
+    "http://example.org#g36.source.cooling_only_controller.setPoi.modPopBreAir.y";
+const ADJUSTED_AREA_FLOW: &str =
+    "http://example.org#g36.source.cooling_only_controller.setPoi.modAreBreAir.y";
+const MINIMUM_OUTDOOR_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_controller.setPoi.minOA.y";
+const ZONE_TEMPERATURE_RESET_REQUEST: &str =
+    "http://example.org#g36.source.cooling_only_controller.sysReq.intSwi.y";
+const ZONE_PRESSURE_RESET_REQUEST: &str =
+    "http://example.org#g36.source.cooling_only_controller.sysReq.swi4.y";
+const LOW_AIRFLOW_ALARM: &str =
+    "http://example.org#g36.source.cooling_only_controller.ala.proInt.y";
+const AIRFLOW_SENSOR_ALARM: &str =
+    "http://example.org#g36.source.cooling_only_controller.ala.booToInt2.y";
+const LEAKING_DAMPER_ALARM: &str =
+    "http://example.org#g36.source.cooling_only_controller.ala.booToInt3.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(

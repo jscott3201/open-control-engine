@@ -16,7 +16,7 @@ const REFERENCE_CSV: &str =
 
 const HEATING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uHea";
 const COOLING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uCoo";
-const ZONE_STATE: &str = "conn#31";
+const ZONE_STATE: &str = "http://example.org#g36.source.thermal_zones_zone_states.addInt1.y";
 
 const T_STOP: f64 = 2_580.0;
 const SAMPLE_STEP: f64 = 60.0;

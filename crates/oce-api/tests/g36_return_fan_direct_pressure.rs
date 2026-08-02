@@ -12,10 +12,14 @@ const MIN_OUTDOOR_AIR_DAMPER: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1MinOutAirDam";
 const SUPPLY_FAN_ON: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1SupFan";
-const AVERAGED_PRESSURE: &str = "conn#1";
-const RELIEF_DAMPER_COMMAND: &str = "conn#20";
-const DISCHARGE_PRESSURE_SETPOINT: &str = "conn#24";
-const RETURN_FAN_SPEED: &str = "conn#37";
+const AVERAGED_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.movMea.y";
+const RELIEF_DAMPER_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi1.y";
+const DISCHARGE_PRESSURE_SETPOINT: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi.y";
+const RETURN_FAN_SPEED: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.swi2.y";
 const RETURN_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 

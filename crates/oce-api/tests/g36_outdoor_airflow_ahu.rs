@@ -15,10 +15,14 @@ const MAX_OUTDOOR_AIR_FRACTION: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uOutAirFra_max";
 const MEASURED_OUTDOOR_AIR: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VAirOut_flow";
-const UNCORRECTED_OUTDOOR_AIR: &str = "conn#6";
-const EFFECTIVE_MIN_OUTDOOR_AIR: &str = "conn#24";
-const EFFECTIVE_NORMALIZED: &str = "conn#29";
-const MEASURED_NORMALIZED: &str = "conn#32";
+const UNCORRECTED_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min1.y";
+const EFFECTIVE_MIN_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min2.y";
+const EFFECTIVE_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOutMin.y";
+const MEASURED_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOut.y";
 
 const EXPECTED_TIMES: [f64; 5] = [0.0, 1.0, 2.0, 3.0, 4.0];
 

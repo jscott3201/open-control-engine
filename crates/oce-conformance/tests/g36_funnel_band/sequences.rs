@@ -39,24 +39,26 @@ const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
-const SAT_SETPOINT_RUNTIME: &str = "conn#14";
-const SAT_COOLING_DEMAND_RUNTIME: &str = "conn#4";
+const SAT_SETPOINT_PATH: &str = "http://example.org#g36.ahu_supply_air_temp_reset.satLine.y";
+const SAT_COOLING_DEMAND_PATH: &str =
+    "http://example.org#g36.ahu_supply_air_temp_reset.demandLimiter.y";
 
 const ECON_RETURN_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.return_air_temp";
 const ECON_OUTDOOR_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.outdoor_air_temp";
 const ECON_OPERATING_MODE: &str = "http://example.org#g36.ahu_economizer.operating_mode";
-const ECON_ENABLED_RUNTIME: &str = "conn#20";
-const ECON_DAMPER_COMMAND_RUNTIME: &str = "conn#26";
-const ECON_OPERATING_MODE_REAL_RUNTIME: &str = "conn#10";
-const ECON_OA_TEMP_DELTA_RUNTIME: &str = "conn#2";
+const ECON_ENABLED_PATH: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
+const ECON_DAMPER_COMMAND_PATH: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
+const ECON_OPERATING_MODE_REAL_PATH: &str = "http://example.org#g36.ahu_economizer.modeToReal.y";
+const ECON_OA_TEMP_DELTA_PATH: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 const VAV_ZONE_TEMP: &str = "http://example.org#g36.vav_single_zone.zone_temp";
 const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooling_setpoint";
 const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heating_setpoint";
-pub const VAV_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
-pub const VAV_AIRFLOW_SETPOINT_RUNTIME: &str = "conn#16";
-const VAV_COOLING_SIGNAL_RUNTIME: &str = "conn#4";
-pub const VAV_HEATING_ENABLED_RUNTIME: &str = "conn#11";
+pub const VAV_DAMPER_COMMAND_PATH: &str = "http://example.org#g36.vav_single_zone.damperLimiter.y";
+pub const VAV_AIRFLOW_SETPOINT_PATH: &str =
+    "http://example.org#g36.vav_single_zone.airflowSwitch.y";
+const VAV_COOLING_SIGNAL_PATH: &str = "http://example.org#g36.vav_single_zone.coolingPid.y";
+pub const VAV_HEATING_ENABLED_PATH: &str = "http://example.org#g36.vav_single_zone.heatingNeed.y";
 const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
 const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
@@ -65,29 +67,34 @@ const SUPPLY_TEMPERATURE_OPERATING_MODE: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uOpeMod";
 const SUPPLY_TEMPERATURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
-const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
+const SUPPLY_TEMPERATURE_SETPOINT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_supply_temperature.swi3.y";
 const SUPPLY_FAN_OPERATING_MODE: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
 const SUPPLY_FAN_DUCT_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.dpDuc";
 const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
-const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#110";
-const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#107";
+const SUPPLY_FAN_STATUS_PATH: &str = "http://example.org#g36.source.multizone_vav_supply_fan.or1.y";
+const SUPPLY_FAN_SPEED_PATH: &str = "http://example.org#g36.source.multizone_vav_supply_fan.swi.y";
 const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
 const SUPPLY_SIGNALS_SETPOINT: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet";
 const SUPPLY_SIGNALS_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan";
-const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
-const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
-const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
+const SUPPLY_SIGNALS_U_T_SUP_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.swi.y";
+const SUPPLY_SIGNALS_COOLING_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.y";
+const SUPPLY_SIGNALS_HEATING_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y";
 const TRIM_AND_RESPOND_REQUESTS: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq";
 const TRIM_AND_RESPOND_DEVICE_STATUS: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta";
-const TRIM_AND_RESPOND_SETPOINT_RUNTIME: &str = "conn#23";
+const TRIM_AND_RESPOND_SETPOINT_PATH: &str =
+    "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y";
 const PLANT_REQUESTS_SUPPLY_AIR: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
 const PLANT_REQUESTS_SETPOINT: &str =
@@ -96,10 +103,14 @@ const PLANT_REQUESTS_COOLING_VALVE: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.uCooCoiSet";
 const PLANT_REQUESTS_HEATING_VALVE: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.uHeaCoiSet";
-const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
-const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
-const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
-const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
+const PLANT_REQUESTS_CHILLED_RESET_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.chiWatRes3.y";
+const PLANT_REQUESTS_CHILLER_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.intSwi3.y";
+const PLANT_REQUESTS_HOT_RESET_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.hotWatRes3.y";
+const PLANT_REQUESTS_HOT_PLANT_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_plant_requests.intSwi1.y";
 const OUTDOOR_AIRFLOW_POPULATION_FLOW: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjPopBreZon_flow";
 const OUTDOOR_AIRFLOW_AREA_FLOW: &str =
@@ -110,18 +121,22 @@ const OUTDOOR_AIRFLOW_MAX_FRACTION: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.uOutAirFra_max";
 const OUTDOOR_AIRFLOW_MEASURED_FLOW: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VAirOut_flow";
-const OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME: &str = "conn#6";
-const OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME: &str = "conn#24";
-const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME: &str = "conn#29";
-const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME: &str = "conn#32";
+const OUTDOOR_AIRFLOW_UNCORRECTED_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min1.y";
+const OUTDOOR_AIRFLOW_EFFECTIVE_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.min2.y";
+const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOutMin.y";
+const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.norVOut.y";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real("zone_temp", SAT_ZONE_TEMP),
     PointSpec::real("cooling_setpoint", SAT_COOLING_SETPOINT),
 ];
 const SAT_EXACT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real("sat_setpoint", SAT_SETPOINT_RUNTIME),
-    PointSpec::real("cooling_demand", SAT_COOLING_DEMAND_RUNTIME),
+    PointSpec::real("sat_setpoint", SAT_SETPOINT_PATH),
+    PointSpec::real("cooling_demand", SAT_COOLING_DEMAND_PATH),
 ];
 
 const ECON_INPUTS: &[PointSpec] = &[
@@ -130,10 +145,10 @@ const ECON_INPUTS: &[PointSpec] = &[
     PointSpec::integer("operating_mode", ECON_OPERATING_MODE),
 ];
 const ECON_EXACT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real("oa_temperature_delta", ECON_OA_TEMP_DELTA_RUNTIME),
-    PointSpec::real("operating_mode_real", ECON_OPERATING_MODE_REAL_RUNTIME),
-    PointSpec::boolean("economizer_enabled", ECON_ENABLED_RUNTIME),
-    PointSpec::real("damper_command", ECON_DAMPER_COMMAND_RUNTIME),
+    PointSpec::real("oa_temperature_delta", ECON_OA_TEMP_DELTA_PATH),
+    PointSpec::real("operating_mode_real", ECON_OPERATING_MODE_REAL_PATH),
+    PointSpec::boolean("economizer_enabled", ECON_ENABLED_PATH),
+    PointSpec::real("damper_command", ECON_DAMPER_COMMAND_PATH),
 ];
 
 const VAV_INPUTS: &[PointSpec] = &[
@@ -142,10 +157,10 @@ const VAV_INPUTS: &[PointSpec] = &[
     PointSpec::real("heating_setpoint", VAV_HEATING_SETPOINT),
 ];
 const VAV_EXACT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real("damper_command", VAV_DAMPER_COMMAND_RUNTIME),
-    PointSpec::real("airflow_setpoint", VAV_AIRFLOW_SETPOINT_RUNTIME),
-    PointSpec::real("cooling_signal", VAV_COOLING_SIGNAL_RUNTIME),
-    PointSpec::boolean("heating_enabled", VAV_HEATING_ENABLED_RUNTIME),
+    PointSpec::real("damper_command", VAV_DAMPER_COMMAND_PATH),
+    PointSpec::real("airflow_setpoint", VAV_AIRFLOW_SETPOINT_PATH),
+    PointSpec::real("cooling_signal", VAV_COOLING_SIGNAL_PATH),
+    PointSpec::boolean("heating_enabled", VAV_HEATING_ENABLED_PATH),
 ];
 const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_air_temperature", SUPPLY_TEMPERATURE_OUTDOOR_AIR),
@@ -158,7 +173,7 @@ const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
 ];
 const SUPPLY_TEMPERATURE_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::real(
     "supply_air_temperature_setpoint",
-    SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
+    SUPPLY_TEMPERATURE_SETPOINT_PATH,
 )];
 const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
     PointSpec::integer("operating_mode", SUPPLY_FAN_OPERATING_MODE),
@@ -166,8 +181,8 @@ const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
     PointSpec::integer("zone_pressure_reset_requests", SUPPLY_FAN_PRESSURE_REQUESTS),
 ];
 const SUPPLY_FAN_EXACT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::boolean("supply_fan_status", SUPPLY_FAN_STATUS_RUNTIME),
-    PointSpec::real("supply_fan_speed", SUPPLY_FAN_SPEED_RUNTIME),
+    PointSpec::boolean("supply_fan_status", SUPPLY_FAN_STATUS_PATH),
+    PointSpec::real("supply_fan_speed", SUPPLY_FAN_SPEED_PATH),
 ];
 const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_air_temperature", SUPPLY_SIGNALS_MEASURED_TEMP),
@@ -175,18 +190,16 @@ const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
     PointSpec::boolean("supply_fan_status", SUPPLY_SIGNALS_FAN_STATUS),
 ];
 const SUPPLY_SIGNALS_EXACT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real("uTSup", SUPPLY_SIGNALS_U_T_SUP_RUNTIME),
-    PointSpec::real("yHeaCoi", SUPPLY_SIGNALS_HEATING_RUNTIME),
-    PointSpec::real("yCooCoi", SUPPLY_SIGNALS_COOLING_RUNTIME),
+    PointSpec::real("uTSup", SUPPLY_SIGNALS_U_T_SUP_PATH),
+    PointSpec::real("yHeaCoi", SUPPLY_SIGNALS_HEATING_PATH),
+    PointSpec::real("yCooCoi", SUPPLY_SIGNALS_COOLING_PATH),
 ];
 const TRIM_AND_RESPOND_INPUTS: &[PointSpec] = &[
     PointSpec::integer("request_count", TRIM_AND_RESPOND_REQUESTS),
     PointSpec::boolean("device_status", TRIM_AND_RESPOND_DEVICE_STATUS),
 ];
-const TRIM_AND_RESPOND_EXACT_OUTPUTS: &[PointSpec] = &[PointSpec::real(
-    "setpoint",
-    TRIM_AND_RESPOND_SETPOINT_RUNTIME,
-)];
+const TRIM_AND_RESPOND_EXACT_OUTPUTS: &[PointSpec] =
+    &[PointSpec::real("setpoint", TRIM_AND_RESPOND_SETPOINT_PATH)];
 const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_air_temperature", PLANT_REQUESTS_SUPPLY_AIR),
     PointSpec::real("supply_air_temperature_setpoint", PLANT_REQUESTS_SETPOINT),
@@ -196,11 +209,11 @@ const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
 const PLANT_REQUESTS_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::integer(
         "chilled_water_reset_request",
-        PLANT_REQUESTS_CHILLED_RESET_RUNTIME,
+        PLANT_REQUESTS_CHILLED_RESET_PATH,
     ),
-    PointSpec::integer("chiller_plant_request", PLANT_REQUESTS_CHILLER_RUNTIME),
-    PointSpec::integer("hot_water_reset_request", PLANT_REQUESTS_HOT_RESET_RUNTIME),
-    PointSpec::integer("hot_water_plant_request", PLANT_REQUESTS_HOT_PLANT_RUNTIME),
+    PointSpec::integer("chiller_plant_request", PLANT_REQUESTS_CHILLER_PATH),
+    PointSpec::integer("hot_water_reset_request", PLANT_REQUESTS_HOT_RESET_PATH),
+    PointSpec::integer("hot_water_plant_request", PLANT_REQUESTS_HOT_PLANT_PATH),
 ];
 const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
     PointSpec::real("population_flow", OUTDOOR_AIRFLOW_POPULATION_FLOW),
@@ -212,19 +225,19 @@ const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
 const OUTDOOR_AIRFLOW_EXACT_OUTPUTS: &[PointSpec] = &[
     PointSpec::real(
         "uncorrected_outdoor_airflow",
-        OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME,
+        OUTDOOR_AIRFLOW_UNCORRECTED_PATH,
     ),
     PointSpec::real(
         "effective_minimum_outdoor_airflow",
-        OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME,
+        OUTDOOR_AIRFLOW_EFFECTIVE_PATH,
     ),
     PointSpec::real(
         "effective_outdoor_airflow_normalized",
-        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME,
+        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_PATH,
     ),
     PointSpec::real(
         "measured_outdoor_airflow_normalized",
-        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME,
+        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_PATH,
     ),
 ];
 

@@ -10,6 +10,12 @@ const RETURN_FAN: &str = include_str!(
 const RETURN_FAN_GOLDEN: &str = include_str!(
     "../../oce-cxf/tests/fixtures/golden/g36_multizone_vav_return_fan_airflow_tracking.modelgraph.txt"
 );
+/// The authored boundary-input IRI shared by a child input (C4) and the pass-through input (C12):
+/// one host point staged into two internal connectors, so it appears twice in `external_inputs`.
+const SUPPLY_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
+const RETURN_FAN_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 
 #[derive(Debug)]
 enum GoldenValue {
@@ -113,7 +119,17 @@ fn parse_golden() -> GoldenTopology {
         {
             let (id, _) = rest.split_once(' ').unwrap();
             let id: u32 = id.parse().unwrap();
-            connector_paths.insert(id, format!("conn#{id}"));
+            // Every connector in a CXF-resolved golden carries its authored subject IRI —
+            // ingest rejects an `@id`-less connector node, so a missing IRI is a golden defect.
+            let path = rest
+                .split_once("iri=")
+                .unwrap()
+                .1
+                .strip_prefix("Some(\"")
+                .and_then(|value| value.strip_suffix("\")"))
+                .unwrap_or_else(|| panic!("golden connector C{id} must carry an authored IRI"))
+                .to_string();
+            connector_paths.insert(id, path);
         } else if let Some((from, to)) = trimmed.split_once(" -> ") {
             connections.push((
                 from.strip_prefix('C').unwrap().parse().unwrap(),
@@ -222,19 +238,18 @@ fn topology_matches_checked_in_resolver_golden() {
         .map(|id| golden.connector_paths[id].clone())
         .collect();
     assert_eq!(topology.external_inputs, expected_external);
-    let supply_fan = "conn#4";
     assert_eq!(
         topology
             .external_inputs
             .iter()
-            .filter(|path| path.as_str() == supply_fan)
+            .filter(|path| path.as_str() == SUPPLY_FAN_STATUS)
             .count(),
-        1,
-        "shared boundary inputs are exposed once as one logical host point"
+        2,
+        "a shared boundary IRI keeps one entry per consuming internal connector"
     );
     assert_eq!(topology.pass_through.len(), 1);
-    assert_eq!(topology.pass_through[0].input, "conn#12");
-    assert_eq!(topology.pass_through[0].output, "conn#13");
+    assert_eq!(topology.pass_through[0].input, SUPPLY_FAN_STATUS);
+    assert_eq!(topology.pass_through[0].output, RETURN_FAN_COMMAND);
     assert!(
         topology
             .blocks
@@ -265,13 +280,13 @@ fn independent_loads_produce_equal_reconstructable_topologies() {
     assert!(
         left.pass_through
             .iter()
-            .any(|pair| pair.input == "conn#12" && pair.output == "conn#13")
+            .any(|pair| pair.input == SUPPLY_FAN_STATUS && pair.output == RETURN_FAN_COMMAND)
     );
-    assert!(left.external_inputs.contains(&"conn#4".to_owned()));
+    assert!(left.external_inputs.contains(&SUPPLY_FAN_STATUS.to_owned()));
     assert!(
         left.blocks
             .iter()
-            .any(|block| block.inputs.contains(&"conn#4".to_owned()))
+            .any(|block| block.inputs.contains(&SUPPLY_FAN_STATUS.to_owned()))
     );
     for edge in &left.connections {
         assert!(

@@ -9,7 +9,7 @@ const REQUEST_COUNT: &str =
     "http://example.org#g36.source.trim_and_respond_have_hol_false.numOfReq";
 const DEVICE_STATUS: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.uDevSta";
 const HOLD_INPUT: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.uHol";
-const SETPOINT_RUNTIME: &str = "conn#23";
+const SETPOINT_PATH: &str = "http://example.org#g36.source.trim_and_respond_have_hol_false.swi.y";
 
 type ScheduleSignature = (Vec<u32>, Vec<u32>, Vec<u32>);
 
@@ -49,8 +49,8 @@ fn load_trim_and_respond() -> Engine {
         engine
             .io()
             .iter()
-            .any(|point| point.direction == PointDirection::Out && point.path == SETPOINT_RUNTIME),
-        "top setpoint output should be exposed as {SETPOINT_RUNTIME}"
+            .any(|point| point.direction == PointDirection::Out && point.path == SETPOINT_PATH),
+        "top setpoint output should be exposed as {SETPOINT_PATH}"
     );
 
     engine
@@ -89,13 +89,13 @@ fn simulate(mut engine: Engine) -> (ScheduleSignature, SimMetrics) {
             step: 60.0,
             inputs: InputSource::Closure(Box::new(inputs)),
             collect: CollectSpec::Named {
-                points: vec![SETPOINT_RUNTIME.to_string()],
+                points: vec![SETPOINT_PATH.to_string()],
                 stride: 1,
             },
         })
         .expect("G36 TrimAndRespond simulates");
     assert_eq!(metrics.ticks, 23);
-    assert_eq!(metrics.trace.columns(), &[SETPOINT_RUNTIME.to_string()]);
+    assert_eq!(metrics.trace.columns(), &[SETPOINT_PATH.to_string()]);
     assert_all_finite(&metrics);
     (schedule, metrics)
 }

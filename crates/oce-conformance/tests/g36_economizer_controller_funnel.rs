@@ -29,10 +29,10 @@ const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_eco
 const OPERATION_MODE: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOpeMod";
 const FREEZE_PROTECTION_STAGE: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uFreProSta";
 
-const OUTDOOR_DAMPER_MIN_LIMIT: &str = "conn#16";
-const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: &str = "conn#39";
-const OUTDOOR_DAMPER_COMMAND: &str = "conn#109";
-const RETURN_DAMPER_COMMAND: &str = "conn#112";
+const OUTDOOR_DAMPER_MIN_LIMIT: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.minOutDam.y";
+const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.damLim.and3.y";
+const OUTDOOR_DAMPER_COMMAND: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.min.y";
+const RETURN_DAMPER_COMMAND: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.modRel.max.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_airflow_normalized", OUTDOOR_AIRFLOW_NORMALIZED),

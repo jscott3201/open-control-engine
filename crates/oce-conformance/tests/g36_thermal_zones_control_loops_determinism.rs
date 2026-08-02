@@ -23,8 +23,10 @@ const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.thermal_zones_cont
 const HEATING_SETPOINT: &str = "http://example.org#g36.source.thermal_zones_control_loops.THeaSet";
 const COOLING_LOOP_SOURCE: &str = "http://example.org#g36.source.thermal_zones_control_loops.yCoo";
 const HEATING_LOOP_SOURCE: &str = "http://example.org#g36.source.thermal_zones_control_loops.yHea";
-const COOLING_LOOP_RUNTIME: &str = "conn#22";
-const HEATING_LOOP_RUNTIME: &str = "conn#31";
+const COOLING_LOOP_PATH: &str =
+    "http://example.org#g36.source.thermal_zones_control_loops.cooConSig.y";
+const HEATING_LOOP_PATH: &str =
+    "http://example.org#g36.source.thermal_zones_control_loops.heaConSig.y";
 
 const ROWS: usize = 54;
 const INPUTS: &[PointSpec] = &[
@@ -33,8 +35,8 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(HEATING_SETPOINT),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(COOLING_LOOP_SOURCE, COOLING_LOOP_RUNTIME),
-    PointSpec::real_alias(HEATING_LOOP_SOURCE, HEATING_LOOP_RUNTIME),
+    PointSpec::real_alias(COOLING_LOOP_SOURCE, COOLING_LOOP_PATH),
+    PointSpec::real_alias(HEATING_LOOP_SOURCE, HEATING_LOOP_PATH),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "thermal_zones_control_loops",

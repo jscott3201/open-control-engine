@@ -376,6 +376,24 @@ fn invalid_error(message: impl Into<String>) -> ConfigError {
     ConfigError::Invalid(message.into())
 }
 
+/// Escape regex metacharacters so a point path can key a pattern literally.
+///
+/// [`OutputPattern`] and [`IndicatorPattern`] patterns compile as unanchored regexes. Authored
+/// point paths are connector IRIs whose instance segments contain `.` (a regex wildcard), so an
+/// unescaped path can silently select a point it never named; callers embed the escaped form
+/// inside `^…$` anchors.
+#[must_use]
+pub fn escape_regex(input: &str) -> String {
+    let mut escaped = String::with_capacity(input.len());
+    for ch in input.chars() {
+        if "\\.^$|?*+()[]{}".contains(ch) {
+            escaped.push('\\');
+        }
+        escaped.push(ch);
+    }
+    escaped
+}
+
 fn default_run_controller() -> bool {
     true
 }

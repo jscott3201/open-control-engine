@@ -30,9 +30,11 @@ const AIRFLOW_SENSOR_ALARM_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_alarms.yFloSenAla";
 const LEAKING_DAMPER_ALARM_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_alarms.yLeaDamAla";
-const LOW_AIRFLOW_ALARM_RUNTIME: &str = "conn#36";
-const AIRFLOW_SENSOR_ALARM_RUNTIME: &str = "conn#66";
-const LEAKING_DAMPER_ALARM_RUNTIME: &str = "conn#81";
+const LOW_AIRFLOW_ALARM_PATH: &str = "http://example.org#g36.source.cooling_only_alarms.proInt.y";
+const AIRFLOW_SENSOR_ALARM_PATH: &str =
+    "http://example.org#g36.source.cooling_only_alarms.booToInt2.y";
+const LEAKING_DAMPER_ALARM_PATH: &str =
+    "http://example.org#g36.source.cooling_only_alarms.booToInt3.y";
 
 #[derive(Clone, Copy)]
 struct Row {
@@ -128,9 +130,9 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(DAMPER_POSITION),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::integer_alias(LOW_AIRFLOW_ALARM_SOURCE, LOW_AIRFLOW_ALARM_RUNTIME),
-    PointSpec::integer_alias(AIRFLOW_SENSOR_ALARM_SOURCE, AIRFLOW_SENSOR_ALARM_RUNTIME),
-    PointSpec::integer_alias(LEAKING_DAMPER_ALARM_SOURCE, LEAKING_DAMPER_ALARM_RUNTIME),
+    PointSpec::integer_alias(LOW_AIRFLOW_ALARM_SOURCE, LOW_AIRFLOW_ALARM_PATH),
+    PointSpec::integer_alias(AIRFLOW_SENSOR_ALARM_SOURCE, AIRFLOW_SENSOR_ALARM_PATH),
+    PointSpec::integer_alias(LEAKING_DAMPER_ALARM_SOURCE, LEAKING_DAMPER_ALARM_PATH),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_alarms",

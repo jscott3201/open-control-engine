@@ -24,9 +24,9 @@ const SAMPLE_STEP: f64 = 1.0;
 const SUPPLY_TEMPERATURE_SIGNAL: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uTSup";
 const RETURN_DAMPER_MIN: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_min";
 const RETURN_DAMPER_MAX: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_max";
-const RETURN_DAMPER_COMMAND: &str = "conn#7";
-const RELIEF_DAMPER_COMMAND: &str = "conn#13";
-const OUTDOOR_DAMPER_COMMAND: &str = "conn#15";
+const RETURN_DAMPER_COMMAND: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.y";
+const RELIEF_DAMPER_COMMAND: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y";
+const OUTDOOR_DAMPER_COMMAND: &str = "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("supply_temperature_signal", SUPPLY_TEMPERATURE_SIGNAL),

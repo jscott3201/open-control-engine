@@ -45,10 +45,14 @@ const MIN_OA_2: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_2";
 const MIN_OA_3: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VMinOA_flow_3";
-const SUMMED_POP_FLOW: &str = "conn#52";
-const SUMMED_AREA_FLOW: &str = "conn#55";
-const SUMMED_PRIMARY_FLOW: &str = "conn#58";
-const MAX_OUTDOOR_AIR_FRACTION: &str = "conn#62";
+const SUMMED_POP_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y";
+const SUMMED_AREA_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y";
+const SUMMED_PRIMARY_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y";
+const MAX_OUTDOOR_AIR_FRACTION: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer("operation_mode_1", U_OPE_MOD_1),

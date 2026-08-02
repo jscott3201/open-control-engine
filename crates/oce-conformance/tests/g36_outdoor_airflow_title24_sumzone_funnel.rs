@@ -40,9 +40,12 @@ const CO2_2: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_2";
 const CO2_3: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_3";
-const SUMMED_ABSOLUTE_MIN_FLOW: &str = "conn#28";
-const SUMMED_DESIGN_MIN_FLOW: &str = "conn#31";
-const MAX_CO2: &str = "conn#43";
+const SUMMED_ABSOLUTE_MIN_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum.y";
+const SUMMED_DESIGN_MIN_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum1.y";
+const MAX_CO2: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulMax.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer("operation_mode_1", U_OPE_MOD_1),

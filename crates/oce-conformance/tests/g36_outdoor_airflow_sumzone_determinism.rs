@@ -54,10 +54,14 @@ const SUMMED_PRIMARY_FLOW_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.VSumZonPri_flow";
 const MAX_OUTDOOR_AIR_FRACTION_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.uOutAirFra_max";
-const SUMMED_POP_FLOW_RUNTIME: &str = "conn#52";
-const SUMMED_AREA_FLOW_RUNTIME: &str = "conn#55";
-const SUMMED_PRIMARY_FLOW_RUNTIME: &str = "conn#58";
-const MAX_OUTDOOR_AIR_FRACTION_RUNTIME: &str = "conn#62";
+const SUMMED_POP_FLOW_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum.y";
+const SUMMED_AREA_FLOW_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum1.y";
+const SUMMED_PRIMARY_FLOW_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulSum2.y";
+const MAX_OUTDOOR_AIR_FRACTION_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_sumzone.mulMax.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer(U_OPE_MOD_1),
@@ -76,12 +80,12 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(MIN_OA_3),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(SUMMED_POP_FLOW_SOURCE, SUMMED_POP_FLOW_RUNTIME),
-    PointSpec::real_alias(SUMMED_AREA_FLOW_SOURCE, SUMMED_AREA_FLOW_RUNTIME),
-    PointSpec::real_alias(SUMMED_PRIMARY_FLOW_SOURCE, SUMMED_PRIMARY_FLOW_RUNTIME),
+    PointSpec::real_alias(SUMMED_POP_FLOW_SOURCE, SUMMED_POP_FLOW_PATH),
+    PointSpec::real_alias(SUMMED_AREA_FLOW_SOURCE, SUMMED_AREA_FLOW_PATH),
+    PointSpec::real_alias(SUMMED_PRIMARY_FLOW_SOURCE, SUMMED_PRIMARY_FLOW_PATH),
     PointSpec::real_alias(
         MAX_OUTDOOR_AIR_FRACTION_SOURCE,
-        MAX_OUTDOOR_AIR_FRACTION_RUNTIME,
+        MAX_OUTDOOR_AIR_FRACTION_PATH,
     ),
 ];
 const SPEC: SequenceSpec = SequenceSpec {

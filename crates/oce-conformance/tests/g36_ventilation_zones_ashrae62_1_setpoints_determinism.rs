@@ -42,10 +42,14 @@ const ADJUSTED_AREA_FLOW_SOURCE: &str =
 const MINIMUM_OUTDOOR_AIRFLOW_SOURCE: &str =
     "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.VMinOA_flow";
 
-const ADJUSTED_POPULATION_FLOW_RUNTIME: &str = "conn#44";
-const OCCUPIED_MINIMUM_FLOW_RUNTIME: &str = "conn#52";
-const ADJUSTED_AREA_FLOW_RUNTIME: &str = "conn#48";
-const MINIMUM_OUTDOOR_AIRFLOW_RUNTIME: &str = "conn#80";
+const ADJUSTED_POPULATION_FLOW_PATH: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modPopBreAir.y";
+const OCCUPIED_MINIMUM_FLOW_PATH: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.occMinAir.y";
+const ADJUSTED_AREA_FLOW_PATH: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.modAreBreAir.y";
+const MINIMUM_OUTDOOR_AIRFLOW_PATH: &str =
+    "http://example.org#g36.source.ventilation_zones_ashrae62_1_setpoints.minOA.y";
 
 const ROWS: usize = 60;
 const INPUTS: &[PointSpec] = &[
@@ -60,14 +64,11 @@ const INPUTS: &[PointSpec] = &[
 const OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(
         ADJUSTED_POPULATION_FLOW_SOURCE,
-        ADJUSTED_POPULATION_FLOW_RUNTIME,
+        ADJUSTED_POPULATION_FLOW_PATH,
     ),
-    PointSpec::real_alias(OCCUPIED_MINIMUM_FLOW_SOURCE, OCCUPIED_MINIMUM_FLOW_RUNTIME),
-    PointSpec::real_alias(ADJUSTED_AREA_FLOW_SOURCE, ADJUSTED_AREA_FLOW_RUNTIME),
-    PointSpec::real_alias(
-        MINIMUM_OUTDOOR_AIRFLOW_SOURCE,
-        MINIMUM_OUTDOOR_AIRFLOW_RUNTIME,
-    ),
+    PointSpec::real_alias(OCCUPIED_MINIMUM_FLOW_SOURCE, OCCUPIED_MINIMUM_FLOW_PATH),
+    PointSpec::real_alias(ADJUSTED_AREA_FLOW_SOURCE, ADJUSTED_AREA_FLOW_PATH),
+    PointSpec::real_alias(MINIMUM_OUTDOOR_AIRFLOW_SOURCE, MINIMUM_OUTDOOR_AIRFLOW_PATH),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "ventilation_zones_ashrae62_1_setpoints",

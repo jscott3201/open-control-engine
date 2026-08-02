@@ -26,12 +26,18 @@ const CO2_LOOP_MAX: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.uCO2Loo_max";
 const MEASURED_OUTDOOR_AIR: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VAirOut_flow";
-const EFFECTIVE_ABSOLUTE_OUTDOOR_AIR: &str = "conn#3";
-const EFFECTIVE_ABSOLUTE_NORMALIZED: &str = "conn#13";
-const EFFECTIVE_DESIGN_OUTDOOR_AIR: &str = "conn#7";
-const EFFECTIVE_DESIGN_NORMALIZED: &str = "conn#10";
-const EFFECTIVE_OUTDOOR_AIR_NORMALIZED: &str = "conn#24";
-const MEASURED_NORMALIZED: &str = "conn#27";
+const EFFECTIVE_ABSOLUTE_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min1.y";
+const EFFECTIVE_ABSOLUTE_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin1.y";
+const EFFECTIVE_DESIGN_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min2.y";
+const EFFECTIVE_DESIGN_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin.y";
+const EFFECTIVE_OUTDOOR_AIR_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin2.y";
+const MEASURED_NORMALIZED: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOut.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("absolute_min_flow", ABSOLUTE_MIN_FLOW),

@@ -22,8 +22,10 @@ const DISCHARGE_AIRFLOW: &str =
     "http://example.org#g36.source.cooling_only_system_requests.VDis_flow";
 const DAMPER_POSITION: &str = "http://example.org#g36.source.cooling_only_system_requests.uDam";
 
-const ZONE_TEMPERATURE_REQUEST: &str = "conn#43";
-const ZONE_PRESSURE_REQUEST: &str = "conn#51";
+const ZONE_TEMPERATURE_REQUEST: &str =
+    "http://example.org#g36.source.cooling_only_system_requests.intSwi.y";
+const ZONE_PRESSURE_REQUEST: &str =
+    "http://example.org#g36.source.cooling_only_system_requests.swi4.y";
 
 const T_STOP: f64 = 1_800.0;
 const SAMPLE_STEP: f64 = 60.0;
