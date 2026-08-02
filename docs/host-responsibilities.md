@@ -105,18 +105,15 @@ The stable API also contains two loaders that do not work yet: `load_from_semant
 public `AssertLevel::Error` variant is never emitted today; the sole assertion collector produces
 `Warning`, so hosts must not depend on receiving `Error` for escalation.
 
-## CXF output identities are positional today
+## CXF point identities are the authored subject IRIs
 
-Authored output IRIs are not currently carried into the point inventory after CXF loading. Every
-output therefore receives a synthetic `conn#<N>` path, where `N` is its `ConnectorId`: an index into
-the connector array populated at load, not a nominal identity. Editing or reordering the document
-can move that index even when the output's authored name is unchanged.
-
-The same path is used for the host-visible `IoInventory` and the durable `PointDto` projection sent
-through the PointStore port. A host that persists trends must therefore treat a model revision as an
-identity migration boundary: do not assume an old `conn#<N>` history belongs to the same authored
-output after loading a changed document. Restoring authored output IRIs is a known engine gap, not
-the intended identity design.
+Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
+through the PointStore port — is the connector's authored subject IRI, the `@id` of its node in
+the source CXF document. CXF ingest rejects a connector node without an `@id`, so a document-loaded
+point can never receive a positional identity, and a semantically identical re-serialization of the
+document names every point the same. Point histories persisted under the earlier positional
+`conn#<N>` keys are disposable, not migratable: an index is not traceable to an authored connector
+after the document that produced it changes.
 
 ## The one hardening gap
 

@@ -61,6 +61,15 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
 
 ### Host facade
 
+- **The durable point path is the authored subject IRI.** Every facade surface — `point_list`,
+  topology block ports and edges, `external_inputs`, pass-through pairs, `Outputs::to_map` keys —
+  and the durable `PointDto` projection now name a point by its connector's `@id` in the source
+  CXF document. The positional `conn#<N>` form survives only as the fallback for hand-built,
+  IRI-less models, which no public API can construct: JSON-LD `@graph` is an unordered set, so a
+  semantically identical document could renumber every point, and a store keyed on `conn#4` could
+  graft one point's samples onto a different point's history with no error. Migration note for
+  hosts: histories persisted under `conn#<N>` keys are disposable, not migratable — an index is
+  not traceable to an authored connector once the document changes.
 - **`Engine::step_realtime` commits computed outputs through the `PointStore` port** (#212).
   It previously advanced a tick and then wrote a hardcoded *empty* batch, while its own
   rustdoc claimed it wrote point state through the store. Sample timestamps come from a
