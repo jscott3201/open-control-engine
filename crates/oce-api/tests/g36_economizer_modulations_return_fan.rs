@@ -6,9 +6,12 @@ const ECONOMIZER_MODULATIONS_RETURN_FAN: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_modulations_return_fan.jsonld"
 );
 
-const SUPPLY_TEMPERATURE_SIGNAL: &str = "conn#6";
-const RETURN_DAMPER_MIN: &str = "conn#5";
-const RETURN_DAMPER_MAX: &str = "conn#3";
+const SUPPLY_TEMPERATURE_SIGNAL: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uTSup";
+const RETURN_DAMPER_MIN: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_min";
+const RETURN_DAMPER_MAX: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan.uRetDam_max";
 
 const RETURN_DAMPER_COMMAND: &str = "conn#7";
 const OUTDOOR_DAMPER_COMMAND: &str = "conn#8";

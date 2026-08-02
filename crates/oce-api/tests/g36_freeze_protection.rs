@@ -11,17 +11,25 @@ const REFERENCE_CSV: &str = include_str!(
     "../../../tools/golden-gen/goldens/G36/multizone_vav_freeze_protection/reference.csv"
 );
 
-const OUTDOOR_DAMPER_MIN_POSITION: &str = "conn#10";
-const OUTDOOR_DAMPER: &str = "conn#12";
-const HEATING_COIL: &str = "conn#19";
-const MINIMUM_OUTDOOR_DAMPER: &str = "conn#45";
-const RETURN_DAMPER: &str = "conn#49";
-const SUPPLY_AIR_TEMPERATURE: &str = "conn#0";
-const SOFTWARE_RESET: &str = "conn#71";
-const SUPPLY_FAN_STATUS_INPUT: &str = "conn#151";
-const SUPPLY_FAN_SPEED_INPUT: &str = "conn#75";
-const COOLING_COIL: &str = "conn#84";
-const MIXED_AIR_TEMPERATURE: &str = "conn#92";
+const OUTDOOR_DAMPER_MIN_POSITION: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDamPosMin";
+const OUTDOOR_DAMPER: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.uOutDam";
+const HEATING_COIL: &str = "http://example.org#g36.source.multizone_vav_freeze_protection.uHeaCoi";
+const MINIMUM_OUTDOOR_DAMPER: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.uMinOutDam";
+const RETURN_DAMPER: &str = "http://example.org#g36.source.multizone_vav_freeze_protection.uRetDam";
+const SUPPLY_AIR_TEMPERATURE: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.TAirSup";
+const SOFTWARE_RESET: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.u1SofSwiRes";
+const SUPPLY_FAN_STATUS_INPUT: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.u1SupFan";
+const SUPPLY_FAN_SPEED_INPUT: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.uSupFan";
+const COOLING_COIL: &str = "http://example.org#g36.source.multizone_vav_freeze_protection.uCooCoi";
+const MIXED_AIR_TEMPERATURE: &str =
+    "http://example.org#g36.source.multizone_vav_freeze_protection.TAirMix";
 
 const FREEZE_PROTECTION_STAGE: &str = "conn#137";
 const CHILLED_WATER_PUMP_ENABLE: &str = "conn#72";

@@ -6,13 +6,13 @@ const ECONOMIZER_CONTROLLER: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld"
 );
 
-const OUTDOOR_AIRFLOW_NORMALIZED: &str = "conn#1";
-const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED: &str = "conn#0";
-const SUPPLY_TEMPERATURE_SIGNAL: &str = "conn#99";
-const OUTDOOR_AIR_TEMPERATURE: &str = "conn#45";
-const SUPPLY_FAN_STATUS: &str = "conn#2";
-const OPERATION_MODE: &str = "conn#34";
-const FREEZE_PROTECTION_STAGE: &str = "conn#77";
+const OUTDOOR_AIRFLOW_NORMALIZED: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOut_flow_normalized";
+const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.VOutMinSet_flow_normalized";
+const SUPPLY_TEMPERATURE_SIGNAL: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uTSup";
+const OUTDOOR_AIR_TEMPERATURE: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.TOut";
+const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.u1SupFan";
+const OPERATION_MODE: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uOpeMod";
+const FREEZE_PROTECTION_STAGE: &str = "http://example.org#g36.source.multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.uFreProSta";
 
 const OUTDOOR_DAMPER_MIN_LIMIT: &str = "conn#16";
 const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: &str = "conn#39";

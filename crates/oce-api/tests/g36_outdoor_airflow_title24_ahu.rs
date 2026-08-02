@@ -6,10 +6,14 @@ const OUTDOOR_AIRFLOW_TITLE24_AHU: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_ahu.jsonld"
 );
 
-const ABSOLUTE_MIN_FLOW: &str = "conn#2";
-const DESIGN_MIN_FLOW: &str = "conn#6";
-const CO2_LOOP_MAX: &str = "conn#20";
-const MEASURED_OUTDOOR_AIR: &str = "conn#25";
+const ABSOLUTE_MIN_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VSumZonAbsMin_flow";
+const DESIGN_MIN_FLOW: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VSumZonDesMin_flow";
+const CO2_LOOP_MAX: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.uCO2Loo_max";
+const MEASURED_OUTDOOR_AIR: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.VAirOut_flow";
 const EFFECTIVE_ABSOLUTE_OUTDOOR_AIR: &str = "conn#3";
 const EFFECTIVE_ABSOLUTE_NORMALIZED: &str = "conn#13";
 const EFFECTIVE_DESIGN_OUTDOOR_AIR: &str = "conn#7";

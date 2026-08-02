@@ -95,7 +95,7 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
 }
 
 #[test]
-fn iri_bearing_projection_keeps_compatibility_paths_and_inventory_coherent() {
+fn iri_keyed_projection_is_deterministic_and_coherent_with_io_inventory() {
     let (model, semantics) = fully_populated_projection_fixture();
 
     let first =
@@ -116,8 +116,10 @@ fn iri_bearing_projection_keeps_compatibility_paths_and_inventory_coherent() {
         .collect::<Vec<_>>();
     assert_eq!(dto_paths, io_paths);
     assert!(
-        dto_paths.iter().all(|path| path.starts_with("conn#")),
-        "part 1 keeps host and durable point keys on connector compatibility paths"
+        dto_paths
+            .iter()
+            .all(|path| path.starts_with("http://example.org#")),
+        "IRI-bearing models must keep source connector IRIs as point keys"
     );
 }
 
@@ -162,18 +164,16 @@ fn string_connectors_are_metadata_only_and_skipped() {
 }
 
 #[test]
-fn duplicate_connector_iris_do_not_collide_during_the_compatibility_hold() {
+fn duplicate_connector_domain_key_is_rejected_before_store_handoff() {
     let model = duplicate_point_key_model();
     let semantics = oce_semantics::resolve(&model).expect("semantics resolves");
 
-    let resolved = project_resolved_model(&model, &semantics, None)
-        .expect("connector IRIs are not host keys during part 1");
-    let keys: Vec<&str> = resolved
-        .points
-        .iter()
-        .map(|point| point.key.as_str())
-        .collect();
-    assert_eq!(keys, ["conn#0", "conn#1"]);
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "duplicate point DomainKey",
+        "duplicate connector IRI must fail producer-side",
+    );
 }
 
 #[test]
@@ -218,14 +218,17 @@ fn semantic_metadata_key_mismatch_is_rejected_before_projection() {
 }
 
 #[test]
-fn empty_connector_iri_does_not_empty_the_compatibility_point_key() {
+fn empty_point_domain_key_is_rejected_before_store_handoff() {
     let (mut model, mut semantics) = fully_populated_projection_fixture();
     model.connectors[0].iri = Some(Arc::from(""));
     semantics.points[0].key = PointKey::Iri(Arc::from(""));
 
-    let resolved = project_resolved_model(&model, &semantics, None)
-        .expect("connector IRI is not projected as the point key during part 1");
-    assert_eq!(resolved.points[0].key.as_str(), "conn#0");
+    assert_projection_validation(
+        &model,
+        &semantics,
+        "connector 0 projected an empty DomainKey",
+        "empty point key must fail producer-side",
+    );
 }
 
 #[test]

@@ -5,15 +5,24 @@ use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
 const ECONOMIZER_ENABLE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
 
-const OUTDOOR_AIR_TEMPERATURE: &str = "conn#5";
-const OUTDOOR_AIR_CUTOFF: &str = "conn#6";
-const OUTDOOR_DAMPER_MIN: &str = "conn#10";
-const OUTDOOR_DAMPER_MAX: &str = "conn#12";
-const RETURN_DAMPER_MAX: &str = "conn#14";
-const RETURN_DAMPER_MIN: &str = "conn#16";
-const RETURN_DAMPER_PHYSICAL_MAX: &str = "conn#18";
-const SUPPLY_FAN_ON: &str = "conn#32";
-const FREEZE_PROTECTION_STAGE: &str = "conn#37";
+const OUTDOOR_AIR_TEMPERATURE: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.TOut";
+const OUTDOOR_AIR_CUTOFF: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.TOutCut";
+const OUTDOOR_DAMPER_MIN: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_min";
+const OUTDOOR_DAMPER_MAX: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_max";
+const RETURN_DAMPER_MAX: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_max";
+const RETURN_DAMPER_MIN: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_min";
+const RETURN_DAMPER_PHYSICAL_MAX: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uRetDamPhy_max";
+const SUPPLY_FAN_ON: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.u1SupFan";
+const FREEZE_PROTECTION_STAGE: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta";
 
 const OUTDOOR_DAMPER_MAX_OUTPUT: &str = "conn#13";
 const RETURN_DAMPER_MAX_OUTPUT: &str = "conn#21";

@@ -204,7 +204,6 @@ version = "0.1.0"
 dependencies = [
  "oce-api",
  "oce-bless",
- "oce-cxf",
  "oce-diag",
  "oce-model",
  "regex",

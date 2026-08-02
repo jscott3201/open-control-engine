@@ -1,5 +1,5 @@
 {
-  "model_id": "model:fnv1a128:def91d512930eb453953cb886ce16cd9",
+  "model_id": "model:fnv1a128:1ae83fbbc6a9c09423cd9083c664afbf",
   "schema_rev": 1,
   "classes": [
     {
@@ -65,7 +65,7 @@
   ],
   "points": [
     {
-      "key": "conn#0",
+      "key": "http://example.org#ahu.sat",
       "owner_block": "http://example.org#ahu.controller",
       "direction": "In",
       "value_type": "Real",
@@ -84,7 +84,7 @@
       "embedding": null
     },
     {
-      "key": "conn#1",
+      "key": "http://example.org#ahu.mode",
       "owner_block": "http://example.org#ahu.source",
       "direction": "Out",
       "value_type": "Int",
@@ -105,7 +105,7 @@
       "embedding": null
     },
     {
-      "key": "conn#2",
+      "key": "http://example.org#ahu.enable",
       "owner_block": "http://example.org#ahu.controller",
       "direction": "In",
       "value_type": "Bool",
@@ -126,7 +126,7 @@
       "embedding": null
     },
     {
-      "key": "conn#3",
+      "key": "http://example.org#ahu.command",
       "owner_block": "http://example.org#ahu.source",
       "direction": "Out",
       "value_type": "Bool",
@@ -147,12 +147,12 @@
   ],
   "connections": [
     {
-      "from_point": "conn#1",
-      "to_point": "conn#0"
+      "from_point": "http://example.org#ahu.command",
+      "to_point": "http://example.org#ahu.enable"
     },
     {
-      "from_point": "conn#3",
-      "to_point": "conn#2"
+      "from_point": "http://example.org#ahu.mode",
+      "to_point": "http://example.org#ahu.sat"
     }
   ],
   "containment": []

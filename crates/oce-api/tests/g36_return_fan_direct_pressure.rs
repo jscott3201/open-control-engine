@@ -6,14 +6,18 @@ const RETURN_FAN_DIRECT_PRESSURE: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_direct_pressure.jsonld"
 );
 
-const BUILDING_PRESSURE: &str = "conn#0";
-const MIN_OUTDOOR_AIR_DAMPER: &str = "conn#46";
-const SUPPLY_FAN_ON: &str = "conn#22";
+const BUILDING_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui";
+const MIN_OUTDOOR_AIR_DAMPER: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1MinOutAirDam";
+const SUPPLY_FAN_ON: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.u1SupFan";
 const AVERAGED_PRESSURE: &str = "conn#1";
 const RELIEF_DAMPER_COMMAND: &str = "conn#20";
 const DISCHARGE_PRESSURE_SETPOINT: &str = "conn#24";
 const RETURN_FAN_SPEED: &str = "conn#37";
-const RETURN_FAN_STATUS: &str = "conn#53";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 
 const EXPECTED_TIMES: [f64; 6] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
 

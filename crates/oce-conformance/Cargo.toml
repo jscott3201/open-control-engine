@@ -14,7 +14,6 @@ workspace = true
 
 [dependencies]
 oce-api = { workspace = true }
-oce-cxf = { workspace = true }
 oce-diag = { workspace = true }
 oce-model = { workspace = true }
 regex = "1"

@@ -7,8 +7,9 @@ use super::common::*;
 
 const AHU_SAT_RESET: &str =
     include_str!("../../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
-const SAT_ZONE_TEMP: &str = "conn#0";
-const SAT_COOLING_SETPOINT: &str = "conn#1";
+const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
+const SAT_COOLING_SETPOINT: &str =
+    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
 
 /// Per-tick varying boundary inputs for the SAT-reset fixture; an unstaged run leaves every
 /// non-constant selected output frozen at `Real(0.0)`, which turns the cross-check into

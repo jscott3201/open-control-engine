@@ -14,8 +14,8 @@ const ZONE_STATES: &str =
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/thermal_zones_zone_states/reference.csv");
 
-const HEATING_CONTROL: &str = "conn#12";
-const COOLING_CONTROL: &str = "conn#14";
+const HEATING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uHea";
+const COOLING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uCoo";
 const ZONE_STATE: &str = "conn#31";
 
 const T_STOP: f64 = 2_580.0;

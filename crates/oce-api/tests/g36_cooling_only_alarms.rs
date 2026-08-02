@@ -13,11 +13,12 @@ const ALARMS: &str = include_str!("../../oce-cxf/tests/fixtures/g36/cooling_only
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/cooling_only_alarms/reference.csv");
 
-const DISCHARGE_AIRFLOW: &str = "conn#2";
-const ACTIVE_AIRFLOW_SETPOINT: &str = "conn#0";
-const SUPPLY_FAN_STATUS: &str = "conn#52";
-const OPERATION_MODE: &str = "conn#93";
-const DAMPER_POSITION: &str = "conn#69";
+const DISCHARGE_AIRFLOW: &str = "http://example.org#g36.source.cooling_only_alarms.VDis_flow";
+const ACTIVE_AIRFLOW_SETPOINT: &str =
+    "http://example.org#g36.source.cooling_only_alarms.VActSet_flow";
+const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.cooling_only_alarms.u1Fan";
+const OPERATION_MODE: &str = "http://example.org#g36.source.cooling_only_alarms.uOpeMod";
+const DAMPER_POSITION: &str = "http://example.org#g36.source.cooling_only_alarms.uDam";
 
 const LOW_AIRFLOW_ALARM: &str = "conn#36";
 const AIRFLOW_SENSOR_ALARM: &str = "conn#66";

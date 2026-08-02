@@ -137,28 +137,25 @@ pub(crate) struct PointInventoryRow {
 
 /// The canonical point path of a connector.
 ///
-/// Part 1 of the authored-connector-identity migration deliberately preserves the existing
-/// host-visible `conn#<id>` identity even when CXF ingest retained an authored IRI. Part 2 removes
-/// this compatibility hold. The rule remains shared by inventory and [`crate::sim::Outputs`]
-/// snapshots.
+/// Connectors outside the legacy named-point surface retain the compatibility `conn#<id>` identity
+/// even when CXF ingest retained an authored IRI. The load-time inventory walk identifies legacy
+/// named boundary connectors explicitly, matching the pre-migration facade.
 #[must_use]
 pub(crate) fn connector_path(_iri: Option<&str>, id: ConnectorId) -> String {
     format!("conn#{}", id.0)
+}
+
+/// Whether this connector belonged to the authored host-point surface before connector IRIs were
+/// retained generally: composite boundary inputs and both endpoints of native pass-through
+/// lowering. Part 2 removes this compatibility predicate.
+fn had_legacy_authored_path(connector: &oce_model::Connector) -> bool {
+    connector.iri_was_legacy_host_path
 }
 
 /// The shared load-time point walk. It is the single source of truth for both host-visible
 /// [`IoInventory`] rows and the durable [`oce_store::PointDto`] projection.
 pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
     let mut rows = Vec::with_capacity(model.connectors.len());
-    // A single authored boundary may fan out to several child connectors. Preserve the existing
-    // one-host-point behavior by keying every member of that boundary group to its first external
-    // connector's compatibility path.
-    let mut external_path_ids = HashMap::<&str, ConnectorId>::new();
-    for id in &model.external_inputs {
-        if let Some(iri) = model.connectors[id.0 as usize].iri.as_deref() {
-            external_path_ids.entry(iri).or_insert(*id);
-        }
-    }
     for c in &model.connectors {
         let value_type = match c.value_type {
             ValueType::Real => PointValueType::Real,
@@ -198,13 +195,13 @@ pub(crate) fn point_rows_at_load(model: &ModelGraph) -> Vec<PointInventoryRow> {
         };
         rows.push(PointInventoryRow {
             info: PointInfo {
-                path: connector_path(
-                    c.iri.as_deref(),
+                path: if had_legacy_authored_path(c) {
                     c.iri
                         .as_deref()
-                        .and_then(|iri| external_path_ids.get(iri).copied())
-                        .unwrap_or(c.id),
-                ),
+                        .map_or_else(|| connector_path(None, c.id), str::to_owned)
+                } else {
+                    connector_path(c.iri.as_deref(), c.id)
+                },
                 direction,
                 value_type,
                 io_class,

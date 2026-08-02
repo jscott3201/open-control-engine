@@ -67,14 +67,15 @@ const NO_STORE_INPUTS: &str = r##"{
   ]
 }"##;
 
-const SAT_ZONE_TEMP: &str = "conn#0";
-const SAT_COOLING_SETPOINT: &str = "conn#1";
-const ECON_RETURN_AIR_TEMP: &str = "conn#0";
-const ECON_OUTDOOR_AIR_TEMP: &str = "conn#1";
-const ECON_OPERATING_MODE: &str = "conn#5";
-const VAV_ZONE_TEMP: &str = "conn#0";
-const VAV_COOLING_SETPOINT: &str = "conn#2";
-const VAV_HEATING_SETPOINT: &str = "conn#10";
+const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
+const SAT_COOLING_SETPOINT: &str =
+    "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
+const ECON_RETURN_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.return_air_temp";
+const ECON_OUTDOOR_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.outdoor_air_temp";
+const ECON_OPERATING_MODE: &str = "http://example.org#g36.ahu_economizer.operating_mode";
+const VAV_ZONE_TEMP: &str = "http://example.org#g36.vav_single_zone.zone_temp";
+const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooling_setpoint";
+const VAV_HEATING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.heating_setpoint";
 
 struct G36Fixture {
     name: &'static str,

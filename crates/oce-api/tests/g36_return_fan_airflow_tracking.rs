@@ -6,11 +6,15 @@ const RETURN_FAN_AIRFLOW: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_return_fan_airflow_tracking.jsonld"
 );
 
-const SUPPLY_AIRFLOW: &str = "conn#7";
-const RETURN_AIRFLOW: &str = "conn#1";
-const SUPPLY_FAN_ON: &str = "conn#4";
+const SUPPLY_AIRFLOW: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirSup_flow";
+const RETURN_AIRFLOW: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirRet_flow";
+const SUPPLY_FAN_ON: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
 const RETURN_FAN_SPEED: &str = "conn#6";
-const RETURN_FAN_STATUS: &str = "conn#13";
+const RETURN_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 
 const EXPECTED_TIMES: [f64; 8] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
 

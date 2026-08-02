@@ -9,16 +9,18 @@ const DAMPERS: &str = include_str!("../../oce-cxf/tests/fixtures/g36/cooling_onl
 const REFERENCE_CSV: &str =
     include_str!("../../../tools/golden-gen/goldens/G36/cooling_only_dampers/reference.csv");
 
-const ACTIVE_MINIMUM_AIRFLOW: &str = "conn#3";
-const SUPPLY_AIR_TEMPERATURE: &str = "conn#8";
-const ZONE_TEMPERATURE: &str = "conn#9";
-const COOLING_LOOP: &str = "conn#6";
-const ACTIVE_COOLING_MAXIMUM_AIRFLOW: &str = "conn#5";
-const ZONE_STATE: &str = "conn#25";
-const AIRFLOW_OVERRIDE_INDEX: &str = "conn#35";
-const SUPPLY_FAN_STATUS: &str = "conn#21";
-const DISCHARGE_AIRFLOW: &str = "conn#31";
-const DAMPER_OVERRIDE_INDEX: &str = "conn#66";
+const ACTIVE_MINIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_dampers.VActMin_flow";
+const SUPPLY_AIR_TEMPERATURE: &str = "http://example.org#g36.source.cooling_only_dampers.TSup";
+const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.cooling_only_dampers.TZon";
+const COOLING_LOOP: &str = "http://example.org#g36.source.cooling_only_dampers.uCoo";
+const ACTIVE_COOLING_MAXIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_dampers.VActCooMax_flow";
+const ZONE_STATE: &str = "http://example.org#g36.source.cooling_only_dampers.uZonSta";
+const AIRFLOW_OVERRIDE_INDEX: &str = "http://example.org#g36.source.cooling_only_dampers.oveFloSet";
+const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.cooling_only_dampers.u1Fan";
+const DISCHARGE_AIRFLOW: &str = "http://example.org#g36.source.cooling_only_dampers.VDis_flow";
+const DAMPER_OVERRIDE_INDEX: &str = "http://example.org#g36.source.cooling_only_dampers.oveDamPos";
 
 const AIRFLOW_SETPOINT: &str = "conn#61";
 const DAMPER_COMMAND: &str = "conn#86";

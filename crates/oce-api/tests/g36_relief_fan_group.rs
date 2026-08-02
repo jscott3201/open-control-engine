@@ -5,17 +5,20 @@ use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
 const RELIEF_FAN_GROUP: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_relief_fan_group.jsonld");
 
-const SUPPLY_FAN_1: &str = "conn#6";
-const SUPPLY_FAN_2: &str = "conn#8";
-const BUILDING_PRESSURE: &str = "conn#18";
-const ALARM_1: &str = "conn#473";
-const ALARM_2: &str = "conn#476";
-const ALARM_3: &str = "conn#479";
-const ALARM_4: &str = "conn#482";
-const PROOF_1: &str = "conn#79";
-const PROOF_2: &str = "conn#81";
-const PROOF_3: &str = "conn#83";
-const PROOF_4: &str = "conn#85";
+const SUPPLY_FAN_1: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_1";
+const SUPPLY_FAN_2: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.u1SupFan_2";
+const BUILDING_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.dpBui";
+const ALARM_1: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_1";
+const ALARM_2: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_2";
+const ALARM_3: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_3";
+const ALARM_4: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.uRelFanAla_4";
+const PROOF_1: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_1";
+const PROOF_2: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_2";
+const PROOF_3: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3";
+const PROOF_4: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4";
 
 const AVERAGED_PRESSURE: &str = "conn#19";
 const RELIEF_FAN_SPEEDS: [&str; 4] = ["conn#417", "conn#420", "conn#423", "conn#426"];

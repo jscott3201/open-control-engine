@@ -11,8 +11,9 @@ const REFERENCE_CSV: &str = include_str!(
     "../../../tools/golden-gen/goldens/G36/cooling_only_active_air_flow/reference.csv"
 );
 
-const OPERATING_MODE: &str = "conn#12";
-const OCCUPIED_MINIMUM_AIRFLOW: &str = "conn#8";
+const OPERATING_MODE: &str = "http://example.org#g36.source.cooling_only_active_air_flow.uOpeMod";
+const OCCUPIED_MINIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.VOccMin_flow";
 
 const ACTIVE_COOLING_MAXIMUM_AIRFLOW: &str = "conn#1";
 const ACTIVE_MINIMUM_AIRFLOW: &str = "conn#9";

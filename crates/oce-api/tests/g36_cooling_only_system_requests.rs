@@ -11,13 +11,16 @@ const REFERENCE_CSV: &str = include_str!(
     "../../../tools/golden-gen/goldens/G36/cooling_only_system_requests/reference.csv"
 );
 
-const AFTER_SUPPRESSION: &str = "conn#24";
-const COOLING_SETPOINT: &str = "conn#19";
-const ZONE_TEMPERATURE: &str = "conn#18";
-const COOLING_LOOP: &str = "conn#71";
-const AIRFLOW_SETPOINT: &str = "conn#77";
-const DISCHARGE_AIRFLOW: &str = "conn#75";
-const DAMPER_POSITION: &str = "conn#73";
+const AFTER_SUPPRESSION: &str =
+    "http://example.org#g36.source.cooling_only_system_requests.uAftSup";
+const COOLING_SETPOINT: &str = "http://example.org#g36.source.cooling_only_system_requests.TCooSet";
+const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.cooling_only_system_requests.TZon";
+const COOLING_LOOP: &str = "http://example.org#g36.source.cooling_only_system_requests.uCoo";
+const AIRFLOW_SETPOINT: &str =
+    "http://example.org#g36.source.cooling_only_system_requests.VSet_flow";
+const DISCHARGE_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_system_requests.VDis_flow";
+const DAMPER_POSITION: &str = "http://example.org#g36.source.cooling_only_system_requests.uDam";
 
 const ZONE_TEMPERATURE_REQUEST: &str = "conn#43";
 const ZONE_PRESSURE_REQUEST: &str = "conn#51";

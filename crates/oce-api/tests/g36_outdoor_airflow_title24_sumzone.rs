@@ -6,17 +6,28 @@ const OUTDOOR_AIRFLOW_TITLE24_SUMZONE: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/multizone_vav_outdoor_airflow_title24_sumzone.jsonld"
 );
 
-const U_OPE_MOD_1: &str = "conn#34";
-const U_OPE_MOD_2: &str = "conn#37";
-const ABS_MIN_1: &str = "conn#0";
-const ABS_MIN_2: &str = "conn#1";
-const ABS_MIN_3: &str = "conn#2";
-const DES_MIN_1: &str = "conn#5";
-const DES_MIN_2: &str = "conn#6";
-const DES_MIN_3: &str = "conn#7";
-const CO2_1: &str = "conn#40";
-const CO2_2: &str = "conn#41";
-const CO2_3: &str = "conn#42";
+const U_OPE_MOD_1: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uOpeMod_1";
+const U_OPE_MOD_2: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uOpeMod_2";
+const ABS_MIN_1: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonAbsMin_flow_1";
+const ABS_MIN_2: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonAbsMin_flow_2";
+const ABS_MIN_3: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonAbsMin_flow_3";
+const DES_MIN_1: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonDesMin_flow_1";
+const DES_MIN_2: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonDesMin_flow_2";
+const DES_MIN_3: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VZonDesMin_flow_3";
+const CO2_1: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_1";
+const CO2_2: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_2";
+const CO2_3: &str =
+    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.uCO2_3";
 
 const SUMMED_ABSOLUTE_MIN_FLOW: &str = "conn#28";
 const SUMMED_DESIGN_MIN_FLOW: &str = "conn#31";
