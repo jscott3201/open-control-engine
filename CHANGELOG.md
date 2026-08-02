@@ -45,8 +45,8 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
 - **Authored connector identities survive import and export** (#226). Ingest previously discarded
   every connector's authored `@id` and minted port identities positionally on the way out, so a
   port's name did not round-trip. A missing `@id` is now a load error and a duplicate is rejected
-  naming both offenders. Host-visible point paths were deliberately left unchanged there; a
-  follow-up retires them.
+  naming both offenders. Host-visible point paths were deliberately left unchanged there; #229
+  retires them.
 - **Boundary outputs are represented in the model, so export stops dropping the authored output
   contract** (#227). Exporting `ahu_economizer` produced a root with no `S231:hasOutput` at all
   where the source declares four names, and the driving edge went with it — 130 authored boundary
@@ -61,15 +61,19 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
 
 ### Host facade
 
-- **The durable point path is the authored subject IRI.** Every facade surface — `point_list`,
+- **The durable point path is an authored `@id`** (#229). Every facade surface — `point_list`,
   topology block ports and edges, `external_inputs`, pass-through pairs, `Outputs::to_map` keys —
-  and the durable `PointDto` projection now name a point by its connector's `@id` in the source
-  CXF document. The positional `conn#<N>` form survives only as the fallback for hand-built,
-  IRI-less models, which no public API can construct: JSON-LD `@graph` is an unordered set, so a
-  semantically identical document could renumber every point, and a store keyed on `conn#4` could
-  graft one point's samples onto a different point's history with no error. Migration note for
-  hosts: histories persisted under `conn#<N>` keys are disposable, not migratable — an index is
-  not traceable to an authored connector once the document changes.
+  and the durable `PointDto` projection now name a point by the authored `@id`, as written in the
+  source CXF document, of its host-visible identity node: the declared boundary input's node for a
+  composite-boundary-driven connector, the connector's own node otherwise. The `@id` is not
+  `@context`-expanded — a known gap, so a document re-serialized between compact and expanded
+  spellings renames its points until expansion lands. The positional `conn#<N>` form survives only
+  as the fallback for hand-built, IRI-less models, which no public API can construct: JSON-LD
+  `@graph` is an unordered set, so a semantically identical document could renumber every point,
+  and a store keyed on `conn#4` could graft one point's samples onto a different point's history
+  with no error. Migration note for hosts: histories persisted under `conn#<N>` keys are
+  disposable, not migratable — an index is not traceable to an authored connector once the
+  document changes.
 - **`Engine::step_realtime` commits computed outputs through the `PointStore` port** (#212).
   It previously advanced a tick and then wrote a hardcoded *empty* batch, while its own
   rustdoc claimed it wrote point state through the store. Sample timestamps come from a

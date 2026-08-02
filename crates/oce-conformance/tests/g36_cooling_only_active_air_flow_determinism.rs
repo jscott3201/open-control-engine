@@ -42,9 +42,9 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(OCCUPIED_MINIMUM_AIRFLOW),
 ];
 // Upstream ActiveAirFlow.mo connects VActMin_flow and VActHeaMax_flow from the same actMin.y
-// signal (lines 104-107), so both source names resolve to http://example.org#g36.source.cooling_only_active_air_flow.actMin.y. The determinism snapshot lists
-// distinct runtime connectors and uses VActMin_flow as the canonical name. The facade, Tier-A exact,
-// and funnel suites still assert VActHeaMax_flow bit-exactly under its own source name.
+// signal (lines 104-107), so both source names resolve to ACTIVE_MINIMUM_AIRFLOW_PATH. The
+// determinism snapshot uses VActMin_flow as the canonical name; the facade, Tier-A exact, and
+// funnel suites still assert VActHeaMax_flow bit-exactly under its own source name.
 const OUTPUTS: &[PointSpec] = &[
     PointSpec::real_alias(
         ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE,

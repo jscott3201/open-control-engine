@@ -15,10 +15,12 @@ impl<S: Store> Engine<S> {
     /// there is a single writer.
     ///
     /// Keys are output point paths; every output connector, internal and boundary alike, is
-    /// addressable. A point path is the connector's authored subject IRI — its `@id` in the
-    /// source CXF document — so the same key names the same point across loads and across
-    /// semantically identical re-serializations. An instance path identifies a block, not a
-    /// connector, and is never a valid key.
+    /// addressable. A point path is the authored `@id`, as written in the source CXF document, of
+    /// the connector's host-visible identity node, so the same key names the same point across
+    /// loads of the same document. The `@id` is not `@context`-expanded (a known gap; every
+    /// shipped fixture writes expanded IRIs), so a document re-serialized between compact and
+    /// expanded spellings renames its points until expansion lands. An instance path identifies a
+    /// block, not a connector, and is never a valid key.
     ///
     /// Returned pairs echo the supplied keys, including duplicates; an empty `points` slice
     /// returns `Ok` with an empty vector. If duplicate output paths exist in the model, the

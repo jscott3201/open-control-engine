@@ -1,11 +1,11 @@
-//! Corpus guard: a document-loaded point's identity is its authored connector subject IRI.
+//! Corpus guard: a document-loaded point's identity is an authored `@id` from the document.
 //!
 //! JSON-LD `@graph` is an unordered set, so a positional connector-index path renumbers under
 //! semantically identical re-serializations; a durable store keyed on one can graft a point's
 //! samples onto another point's history with no error. CXF ingest rejects any connector node
-//! without an `@id`, so every facade surface of a CXF-loaded model must carry authored IRIs —
-//! the positional spelling survives only as the in-crate fallback for hand-built, IRI-less
-//! models.
+//! without an `@id`, so every facade surface of a CXF-loaded model must carry authored
+//! identities (as written — `@context` expansion is a known gap) and the positional spelling
+//! survives only as the in-crate fallback for hand-built, IRI-less models.
 
 use std::collections::BTreeSet;
 use std::fs;

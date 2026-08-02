@@ -119,7 +119,7 @@ fn parse_golden() -> GoldenTopology {
         {
             let (id, _) = rest.split_once(' ').unwrap();
             let id: u32 = id.parse().unwrap();
-            // Every connector in a CXF-resolved golden carries its authored subject IRI —
+            // Every connector in a CXF-resolved golden carries its authored identity IRI —
             // ingest rejects an `@id`-less connector node, so a missing IRI is a golden defect.
             let path = rest
                 .split_once("iri=")
