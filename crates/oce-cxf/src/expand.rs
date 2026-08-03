@@ -9,14 +9,16 @@
 //!   `hasInput`, `hasOutput`, `hasParameter`, `hasConstant`, `isConnectedTo`, and
 //!   `hasInstance`. A whole-token `@context` term match or a CURIE with a declared prefix
 //!   expands; a token whose first `:` is followed by `//` is never CURIE-split and stays as
-//!   written (JSON-LD §3.2, scheme unchecked); any other token stays as written only when it
-//!   is itself a syntactically absolute IRI — the same [`is_absolute_iri`] predicate a
-//!   `@context` binding value must pass, so a spelling refused as a binding cannot load as a
-//!   durable identity. What remains — no `:`, an empty scheme (`:x`), a scheme-invalid
-//!   spelling (`2024:x`) — is a relative IRI reference and — `@base` being a refused
-//!   construct, below — is refused with [`DiagCode::RelativeIri`], because a node the
-//!   document cannot name canonically has no identity to key on. An **empty** `@id` is left
-//!   alone: the resolver's own `MissingConnectorId` arm owns that case.
+//!   written (JSON-LD §3.2 — the scheme goes unchecked on this arm, so even `1st://x`
+//!   survives); any other token stays as written only when it is itself a syntactically
+//!   absolute IRI — the same [`is_absolute_iri`] predicate a `@context` binding value must
+//!   pass, so on the undeclared-prefix arm a spelling refused as a binding cannot load as a
+//!   durable identity. What remains — no `:`, or a suffix not starting with `//` after an
+//!   empty or scheme-invalid prefix (`:x`, `2024:x`) — is a relative IRI reference and —
+//!   `@base` being a refused construct, below — is refused with [`DiagCode::RelativeIri`],
+//!   because a node the document cannot name canonically has no identity to key on. An
+//!   **empty** `@id` is left alone: the resolver's own `MissingConnectorId` arm owns that
+//!   case.
 //! - **Typing slots** — every `@type` value and the `isOfDataType` reference: the identical
 //!   expansion, **best-effort**. Whatever does not expand stays verbatim and is never refused
 //!   here — the downstream `ClassNotFound` / `UnresolvedReference` no-match diagnostics are the
@@ -433,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn a_spelling_refused_as_a_binding_is_refused_as_an_identity_token() {
+    fn a_spelling_refused_as_a_binding_is_refused_as_an_identity_when_its_prefix_is_undeclared() {
         // The symmetry property itself: `is_absolute_iri` guards both sides, so no spelling
         // is simultaneously an illegal `@context` binding value and a legal durable identity.
         for spelling in ["1st:x", "2024:x", ":x"] {
