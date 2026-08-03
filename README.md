@@ -52,13 +52,13 @@ oce-api = { git = "https://github.com/jscott3201/open-control-engine", rev = "<c
 
 Load a CDL sequence from CXF and simulate it:
 
-Every point is named by an authored `@id` from the CXF document, exactly as written there — the
-declared boundary input's `@id` for a boundary-driven point, the connector's own otherwise — so
-the same key names the same point across loads of the same document. The `@id` is not
-`@context`-expanded yet (a known gap; a document re-serialized between compact and expanded
-spellings renames its points until that lands). The document's declared boundary-output names
-(root `S231:hasOutput`) are not yet facade-addressable; internal connector paths, like the three
-below, are the output identities for now.
+Every point is named by an authored `@id` from the CXF document, expanded against the document's
+`@context` to canonical absolute form at ingest — the declared boundary input's `@id` for a
+boundary-driven point, the connector's own otherwise — so the same key names the same point
+across loads of the same document, including a document re-serialized between compact and
+expanded spellings. The document's declared boundary-output names (root `S231:hasOutput`) read
+as aliases for their driving connectors on `get_output`, `watch`, and `CollectSpec::Named`;
+internal connector paths, like the three below, remain valid output identities alongside them.
 
 ```rust
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
