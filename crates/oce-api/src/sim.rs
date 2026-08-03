@@ -303,7 +303,7 @@ pub(crate) fn projected_output_batch(
     values: &[Value],
     at_unix_nanos: u64,
 ) -> Vec<PointWrite> {
-    io.out_columns()
+    io.durable_columns()
         .into_iter()
         .map(|(path, connector_id)| PointWrite {
             key: DomainKey::new(path),
@@ -542,7 +542,7 @@ impl<S: Store> Engine<S> {
     ) -> Result<Vec<(String, ConnectorId)>, OcError> {
         match c {
             CollectSpec::None => Ok(Vec::new()),
-            CollectSpec::All { .. } => Ok(self.io.out_columns()),
+            CollectSpec::All { .. } => Ok(self.io.trace_columns()),
             CollectSpec::Named { points, .. } => points
                 .iter()
                 .map(|name| {

@@ -272,8 +272,31 @@ impl IoInventory {
     }
 
     /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// `CollectSpec::All` recording set for `simulate`.
-    pub(crate) fn out_columns(&self) -> Vec<(String, ConnectorId)> {
+    /// `CollectSpec::All` recording set for `simulate` (the host-facing trace surface).
+    ///
+    /// Deliberately a separate method from [`IoInventory::durable_columns`] even though the two
+    /// bodies are identical today: the trace surface and the durable store batch are distinct
+    /// contracts (`_spec/18` D2/D3), and splitting the readers means a future decision to admit
+    /// declared boundary-output aliases into one of them is a visible edit to exactly one method
+    /// — and a red `trace_and_durable_output_columns_agree` assertion — instead of a silent
+    /// change to both.
+    pub(crate) fn trace_columns(&self) -> Vec<(String, ConnectorId)> {
+        self.points
+            .iter()
+            .zip(&self.conn_id)
+            .filter(|(p, _)| p.direction == PointDirection::Out)
+            .map(|(p, &cid)| (p.path.clone(), cid))
+            .collect()
+    }
+
+    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
+    /// key set for the per-tick durable store batch (`projected_output_batch`).
+    ///
+    /// Must contain connector-identity keys only, never declared boundary-output aliases: every
+    /// existing host trend history is keyed by these paths, and an alias here would double-write
+    /// each aliased sample (`_spec/18` D3). See [`IoInventory::trace_columns`] for why the two
+    /// readers are separate methods.
+    pub(crate) fn durable_columns(&self) -> Vec<(String, ConnectorId)> {
         self.points
             .iter()
             .zip(&self.conn_id)
