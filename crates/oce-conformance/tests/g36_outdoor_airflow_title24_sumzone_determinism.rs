@@ -45,12 +45,6 @@ const SUMMED_ABSOLUTE_MIN_FLOW_SOURCE: &str = "http://example.org#g36.source.mul
 const SUMMED_DESIGN_MIN_FLOW_SOURCE: &str = "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.VSumZonDesMin_flow";
 const MAX_CO2_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.yMaxCO2";
-const SUMMED_ABSOLUTE_MIN_FLOW_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum.y";
-const SUMMED_DESIGN_MIN_FLOW_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulSum1.y";
-const MAX_CO2_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_sumzone.mulMax.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::integer(U_OPE_MOD_1),
@@ -66,12 +60,9 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(CO2_3),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        SUMMED_ABSOLUTE_MIN_FLOW_SOURCE,
-        SUMMED_ABSOLUTE_MIN_FLOW_PATH,
-    ),
-    PointSpec::real_alias(SUMMED_DESIGN_MIN_FLOW_SOURCE, SUMMED_DESIGN_MIN_FLOW_PATH),
-    PointSpec::real_alias(MAX_CO2_SOURCE, MAX_CO2_PATH),
+    PointSpec::real(SUMMED_ABSOLUTE_MIN_FLOW_SOURCE),
+    PointSpec::real(SUMMED_DESIGN_MIN_FLOW_SOURCE),
+    PointSpec::real(MAX_CO2_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_outdoor_airflow_title24_sumzone",

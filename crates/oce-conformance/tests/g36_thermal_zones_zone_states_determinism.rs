@@ -21,14 +21,13 @@ const ZONE_STATES: &str =
 const HEATING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uHea";
 const COOLING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uCoo";
 const ZONE_STATE_SOURCE: &str = "http://example.org#g36.source.thermal_zones_zone_states.yZonSta";
-const ZONE_STATE_PATH: &str = "http://example.org#g36.source.thermal_zones_zone_states.addInt1.y";
 
 const ROWS: usize = 44;
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(HEATING_CONTROL),
     PointSpec::real(COOLING_CONTROL),
 ];
-const OUTPUTS: &[PointSpec] = &[PointSpec::integer_alias(ZONE_STATE_SOURCE, ZONE_STATE_PATH)];
+const OUTPUTS: &[PointSpec] = &[PointSpec::integer(ZONE_STATE_SOURCE)];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "thermal_zones_zone_states",
     cxf: ZONE_STATES,

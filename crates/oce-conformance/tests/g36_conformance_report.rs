@@ -80,9 +80,9 @@ const DETERMINISM_INPUTS: &[PointSpec] = &[
     PointSpec::integer(FREEZE_PROTECTION_STAGE),
 ];
 const DETERMINISM_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(OUTDOOR_DAMPER_MAX_SOURCE, OUTDOOR_DAMPER_MAX_PATH),
-    PointSpec::real_alias(RETURN_DAMPER_MAX_SOURCE, RETURN_DAMPER_MAX_PATH),
-    PointSpec::real_alias(RETURN_DAMPER_MIN_SOURCE, RETURN_DAMPER_MIN_PATH),
+    PointSpec::real(OUTDOOR_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MIN_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: SEQUENCE,

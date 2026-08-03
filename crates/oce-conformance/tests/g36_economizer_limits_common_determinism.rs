@@ -39,19 +39,6 @@ const RETURN_DAMPER_PHYSICAL_MAX_LIMIT_SOURCE: &str =
 const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_limits_common.yEnaMinOut";
 
-const OUTDOOR_DAMPER_MIN_LIMIT_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minOutDam.y";
-const OUTDOOR_DAMPER_MAX_LIMIT_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPosMaxSwitch.y";
-const RETURN_DAMPER_MIN_LIMIT_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPosMinSwitch.y";
-const RETURN_DAMPER_MAX_LIMIT_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minRetDam.y";
-const RETURN_DAMPER_PHYSICAL_MAX_LIMIT_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMaxSig.y";
-const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.y";
-
 const OUTDOOR_AIRFLOW_NORMALIZED_VALUES: [f64; 8] = [0.0; 8];
 const MINIMUM_OUTDOOR_AIRFLOW_SETPOINT_NORMALIZED_VALUES: [f64; 8] =
     [1.0, 1.0, 1.0, 12.0, 24.0, 8.0, 8.0, 8.0];
@@ -65,24 +52,12 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::boolean(SUPPLY_FAN_STATUS),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        OUTDOOR_DAMPER_MIN_LIMIT_SOURCE,
-        OUTDOOR_DAMPER_MIN_LIMIT_PATH,
-    ),
-    PointSpec::real_alias(
-        OUTDOOR_DAMPER_MAX_LIMIT_SOURCE,
-        OUTDOOR_DAMPER_MAX_LIMIT_PATH,
-    ),
-    PointSpec::real_alias(RETURN_DAMPER_MIN_LIMIT_SOURCE, RETURN_DAMPER_MIN_LIMIT_PATH),
-    PointSpec::real_alias(RETURN_DAMPER_MAX_LIMIT_SOURCE, RETURN_DAMPER_MAX_LIMIT_PATH),
-    PointSpec::real_alias(
-        RETURN_DAMPER_PHYSICAL_MAX_LIMIT_SOURCE,
-        RETURN_DAMPER_PHYSICAL_MAX_LIMIT_PATH,
-    ),
-    PointSpec::boolean_alias(
-        MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_SOURCE,
-        MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_PATH,
-    ),
+    PointSpec::real(OUTDOOR_DAMPER_MIN_LIMIT_SOURCE),
+    PointSpec::real(OUTDOOR_DAMPER_MAX_LIMIT_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MIN_LIMIT_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MAX_LIMIT_SOURCE),
+    PointSpec::real(RETURN_DAMPER_PHYSICAL_MAX_LIMIT_SOURCE),
+    PointSpec::boolean(MINIMUM_OUTDOOR_AIR_LOOP_ENABLED_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_economizer_limits_common",

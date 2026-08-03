@@ -52,25 +52,6 @@ const RELIEF_DAMPER_3_SOURCE: &str =
 const RELIEF_DAMPER_4_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_4";
 
-const AVERAGED_PRESSURE_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.movMea.y";
-const RELIEF_FAN_1_SPEED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_1.y";
-const RELIEF_FAN_2_SPEED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_2.y";
-const RELIEF_FAN_3_SPEED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_3.y";
-const RELIEF_FAN_4_SPEED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_4.y";
-const RELIEF_DAMPER_1_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_1.y";
-const RELIEF_DAMPER_2_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_2.y";
-const RELIEF_DAMPER_3_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_3.y";
-const RELIEF_DAMPER_4_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_4.y";
-
 const INPUTS: &[PointSpec] = &[
     PointSpec::boolean(SUPPLY_FAN_1),
     PointSpec::boolean(SUPPLY_FAN_2),
@@ -85,15 +66,15 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::boolean(PROOF_4),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(AVERAGED_PRESSURE_SOURCE, AVERAGED_PRESSURE_PATH),
-    PointSpec::real_alias(RELIEF_FAN_1_SPEED_SOURCE, RELIEF_FAN_1_SPEED_PATH),
-    PointSpec::real_alias(RELIEF_FAN_2_SPEED_SOURCE, RELIEF_FAN_2_SPEED_PATH),
-    PointSpec::real_alias(RELIEF_FAN_3_SPEED_SOURCE, RELIEF_FAN_3_SPEED_PATH),
-    PointSpec::real_alias(RELIEF_FAN_4_SPEED_SOURCE, RELIEF_FAN_4_SPEED_PATH),
-    PointSpec::real_alias(RELIEF_DAMPER_1_SOURCE, RELIEF_DAMPER_1_PATH),
-    PointSpec::real_alias(RELIEF_DAMPER_2_SOURCE, RELIEF_DAMPER_2_PATH),
-    PointSpec::real_alias(RELIEF_DAMPER_3_SOURCE, RELIEF_DAMPER_3_PATH),
-    PointSpec::real_alias(RELIEF_DAMPER_4_SOURCE, RELIEF_DAMPER_4_PATH),
+    PointSpec::real(AVERAGED_PRESSURE_SOURCE),
+    PointSpec::real(RELIEF_FAN_1_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_2_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_3_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_4_SPEED_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_1_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_2_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_3_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_4_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_relief_fan_group",
