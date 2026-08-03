@@ -8,11 +8,17 @@
 //! - **Identity slots** — every [`Node`] `@id` and every [`IriRef`] in `containsBlock`,
 //!   `hasInput`, `hasOutput`, `hasParameter`, `hasConstant`, `isConnectedTo`, and
 //!   `hasInstance`. A whole-token `@context` term match or a CURIE with a declared prefix
-//!   expands; any other token containing `:` is absolute-as-written; a non-empty token with no
-//!   `:` is a relative IRI reference and — `@base` being a refused construct, below — is
-//!   refused with [`DiagCode::RelativeIri`], because a node the document cannot name
-//!   canonically has no identity to key on. An **empty** `@id` is left alone: the resolver's
-//!   own `MissingConnectorId` arm owns that case.
+//!   expands; a token whose first `:` is followed by `//` is never CURIE-split and stays as
+//!   written (JSON-LD §3.2 — the scheme goes unchecked on this arm, so even `1st://x`
+//!   survives); any other token stays as written only when it is itself a syntactically
+//!   absolute IRI — the same [`is_absolute_iri`] predicate a `@context` binding value must
+//!   pass, so on the undeclared-prefix arm a spelling refused as a binding cannot load as a
+//!   durable identity. What remains — no `:`, or a suffix not starting with `//` after an
+//!   empty or scheme-invalid prefix (`:x`, `2024:x`) — is a relative IRI reference and —
+//!   `@base` being a refused construct, below — is refused with [`DiagCode::RelativeIri`],
+//!   because a node the document cannot name canonically has no identity to key on. An
+//!   **empty** `@id` is left alone: the resolver's own `MissingConnectorId` arm owns that
+//!   case.
 //! - **Typing slots** — every `@type` value and the `isOfDataType` reference: the identical
 //!   expansion, **best-effort**. Whatever does not expand stays verbatim and is never refused
 //!   here — the downstream `ClassNotFound` / `UnresolvedReference` no-match diagnostics are the
@@ -206,13 +212,20 @@ fn is_absolute_iri(value: &str) -> bool {
 enum Expansion {
     /// A whole-token term match or a CURIE with a declared prefix: the canonical form.
     Expanded(String),
-    /// Kept as written: an absolute IRI, an unknown prefix, or a `//`-suffix.
+    /// Kept as written: a `//`-suffix token (never CURIE-split), or an undeclared-prefix
+    /// token that is already a syntactically absolute IRI.
     Verbatim,
-    /// A relative IRI reference: no `:` and no whole-token term match.
+    /// No canonical absolute form: no `:` and no whole-token term match, or an undeclared
+    /// prefix that is not an RFC 3986 scheme (empty, or scheme-invalid like `2024`).
     Relative,
 }
 
 /// Classify and expand one token. Pure; the caller decides what `Relative` means per slot.
+///
+/// The verbatim arm is symmetric with the `@context` binding check: an undeclared-prefix
+/// token survives as written only when [`is_absolute_iri`] accepts it, so a spelling refused
+/// as a binding value cannot become a durable key here. The `//`-suffix arm is the one
+/// carve-out — it never inspects the scheme.
 fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
     // A whole-token term match wins over CURIE splitting (JSON-LD term semantics): a token
     // that IS a declared term substitutes even though it contains no `:`.
@@ -225,7 +238,11 @@ fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
         Some((_, suffix)) if suffix.starts_with("//") => Expansion::Verbatim,
         Some((prefix, suffix)) => match table.get(prefix) {
             Some(iri) => Expansion::Expanded(format!("{iri}{suffix}")),
-            None => Expansion::Verbatim,
+            None if is_absolute_iri(token) => Expansion::Verbatim,
+            // `2024:x` and `:x` expand against nothing and are not absolute (the part before
+            // the first `:` is not an RFC 3986 scheme): refusing beats minting a durable key
+            // from a malformed spelling with zero diagnostics.
+            None => Expansion::Relative,
         },
         None => Expansion::Relative,
     }
@@ -382,12 +399,94 @@ mod tests {
     }
 
     #[test]
-    fn unknown_prefix_passes_through_as_written() {
+    fn unknown_prefix_in_absolute_form_passes_through_as_written() {
+        // `vendor` is an RFC 3986-valid scheme, so the token is already canonical-absolute
+        // and survives without a binding. Contrast the scheme-invalid refusals below.
         let table = table(&[("ex", "http://example.org#")]);
         assert_eq!(identity("vendor:Thing", &table).unwrap(), "vendor:Thing");
         let mut typing = "vendor:Thing".to_owned();
         expand_typing(&mut typing, &table);
         assert_eq!(typing, "vendor:Thing");
+    }
+
+    #[test]
+    fn unknown_prefix_without_absolute_form_is_refused_as_relative_iri() {
+        // Before the symmetric guard, ANY colon-containing token passed the verbatim arm:
+        // a digit-led scheme and an empty scheme both loaded clean as durable keys. They now
+        // refuse exactly like colon-free relatives — same code, same subject, same message
+        // shape. The identical token in a typing slot stays verbatim: typing is best-effort
+        // and the downstream no-match diagnostics own junk there.
+        let table = table(&[("ex", "http://example.org#")]);
+        for token in ["2024:MinLoop.con.y", ":x"] {
+            let diags = identity(token, &table).unwrap_err();
+            assert_eq!(diags.len(), 1, "{token}: {diags:?}");
+            assert_eq!(diags[0].code, DiagCode::RelativeIri);
+            assert_eq!(diags[0].subject.as_deref(), Some(token));
+            assert!(
+                diags[0].message.contains(&format!("`{token}`"))
+                    && diags[0].message.contains("@base"),
+                "{}",
+                diags[0].message
+            );
+            let mut typing = token.to_owned();
+            expand_typing(&mut typing, &table);
+            assert_eq!(typing, token);
+        }
+    }
+
+    #[test]
+    fn a_spelling_refused_as_a_binding_is_refused_as_an_identity_when_its_prefix_is_undeclared() {
+        // The symmetry property itself: `is_absolute_iri` guards both sides, so no
+        // undeclared-prefix spelling is simultaneously an illegal `@context` binding value
+        // and a legal durable identity.
+        for spelling in ["1st:x", "2024:x", ":x"] {
+            let mut binding_diags = Vec::new();
+            let context = Context::Map(
+                [("ex".to_owned(), serde_json::json!(spelling))]
+                    .into_iter()
+                    .collect(),
+            );
+            prefix_table(&context, &mut binding_diags);
+            assert_eq!(binding_diags.len(), 1, "{spelling}: {binding_diags:?}");
+            assert_eq!(binding_diags[0].code, DiagCode::NonSubsetConstruct);
+            let identity_diags = identity(spelling, &table(&[])).unwrap_err();
+            assert_eq!(identity_diags.len(), 1, "{spelling}: {identity_diags:?}");
+            assert_eq!(identity_diags[0].code, DiagCode::RelativeIri);
+        }
+    }
+
+    #[test]
+    fn export_root_urn_needs_no_binding_to_survive_byte_identical() {
+        // The load-bearing regression: the export fixtures' root subject declares no `urn`
+        // binding, and `urn` is an RFC 3986-valid scheme, so the token passes the
+        // absolute-form guard and stays byte-identical through an empty table.
+        assert_eq!(
+            identity("urn:open-control:cxf-export:root", &table(&[])).unwrap(),
+            "urn:open-control:cxf-export:root"
+        );
+    }
+
+    #[test]
+    fn declaring_the_prefix_rescues_a_scheme_invalid_compact_token() {
+        // The refusal is undeclared-prefix-only. Term NAMES are not scheme-checked (only
+        // binding values are), so declaring `2024` turns the same spelling into an ordinary
+        // CURIE that expands instead of refusing.
+        let table = table(&[("2024", "http://example.org#")]);
+        assert_eq!(
+            identity("2024:MinLoop.con.y", &table).unwrap(),
+            "http://example.org#MinLoop.con.y"
+        );
+    }
+
+    #[test]
+    fn double_slash_suffix_stays_verbatim_without_a_scheme_check() {
+        // The `//` arm precedes the absolute-form guard and does not inspect the scheme, so
+        // these scheme-invalid spellings still pass verbatim. Pinned so a future tightening
+        // of that arm is a deliberate acceptance change, not a drive-by.
+        let table = table(&[("ex", "http://example.org#")]);
+        for token in ["1st://x", "://x"] {
+            assert_eq!(identity(token, &table).unwrap(), token);
+        }
     }
 
     #[test]
