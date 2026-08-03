@@ -4,8 +4,9 @@
 //! its output against, so every pin here is a published promise: accepted fixtures are held to
 //! blessed byte-exact `.modelgraph.txt` goldens (stored in the shared golden tree under a
 //! `composite_contract_` prefix), rejected fixtures are held to their full
-//! (DiagCode, subject, message) triple per file, and the corpus `README.md` index is held equal
-//! to the deterministically sorted `*.jsonld` listing so no fixture ships unindexed.
+//! (DiagCode, subject, message) triple per file, warned fixtures load with exactly their pinned
+//! warning vector, and the corpus `README.md` index is held equal to the deterministically
+//! sorted `*.jsonld` listing so no fixture ships unindexed.
 //!
 //! Regenerate the accepted goldens after an intentional lowering change:
 //! ```text
@@ -98,6 +99,10 @@ fn render(graph: &ModelGraph) -> String {
             .map(|id| id.0)
             .collect::<Vec<_>>()
     );
+    let _ = writeln!(out, "boundary_outputs: {}", graph.boundary_outputs.len());
+    for output in &graph.boundary_outputs {
+        let _ = writeln!(out, "  {} <- C{}", output.iri, output.source.0);
+    }
     out
 }
 
@@ -262,7 +267,49 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                  import",
             )],
         ),
+        // Boundary-interface machinery (untagged — not composite-shape rules; see the doc's
+        // "shared import machinery" note): a declared boundary output must not shadow an
+        // existing connector identity, and must not be multiply driven.
+        (
+            "rejected/shadowed_output_child_connector.jsonld",
+            vec![error_with_subject(
+                DiagCode::BoundaryOutputShadowsConnector,
+                "http://example.org#M.c1.y",
+                "boundary output shadows an instance port connector",
+            )],
+        ),
+        (
+            "rejected/shadowed_output_input_output.jsonld",
+            vec![error_with_subject(
+                DiagCode::BoundaryOutputShadowsConnector,
+                "http://example.org#M.io",
+                "boundary output IRI is also a boundary input",
+            )],
+        ),
+        (
+            "rejected/multi_driven_boundary_output.jsonld",
+            vec![error_with_subject(
+                DiagCode::SingleAssignment,
+                "http://example.org#M.y",
+                "boundary output is multiply driven (distinct drivers 2)",
+            )],
+        ),
     ]
+}
+
+/// The published pin per warned fixture file: the exact, complete warning vector its import
+/// returns alongside a successful load.
+fn expected_warnings() -> Vec<(&'static str, Vec<Diagnostic>)> {
+    vec![(
+        "warned/undriven_boundary_output.jsonld",
+        vec![
+            Diagnostic::warning(
+                DiagCode::UndrivenBoundaryOutput,
+                "declared boundary output has no internal driver",
+            )
+            .with_subject("http://example.org#M.y".to_owned()),
+        ],
+    )]
 }
 
 /// Deterministically sorted `<subdir>/<name>.jsonld` listing of one corpus subdirectory.
@@ -406,6 +453,38 @@ fn rejected_fixture_rejections_are_byte_identical_across_repeated_imports() {
     }
 }
 
+// ---- warned corpus ----------------------------------------------------------------------------
+
+#[test]
+fn warned_fixtures_load_with_exactly_their_pinned_warning_vectors() {
+    for (fixture, expected) in expected_warnings() {
+        let (_, report) = import_cxf(read_fixture(fixture).as_bytes(), &ResolveOptions::default())
+            .unwrap_or_else(|e| panic!("{fixture} must import despite its advisory: {e:?}"));
+        assert_eq!(
+            report.diagnostics, expected,
+            "{fixture} must load with exactly its published warning vector"
+        );
+    }
+}
+
+#[test]
+fn warned_fixture_reports_are_byte_identical_across_repeated_imports() {
+    for (fixture, _) in expected_warnings() {
+        let src = read_fixture(fixture);
+        let report = |src: &str| {
+            import_cxf(src.as_bytes(), &ResolveOptions::default())
+                .expect("warned fixture imports")
+                .1
+                .diagnostics
+        };
+        assert_eq!(
+            report(&src),
+            report(&src),
+            "{fixture} must warn deterministically"
+        );
+    }
+}
+
 #[test]
 fn every_corpus_fixture_file_is_driven_by_a_pin_and_every_pin_has_a_file() {
     let mut pinned: Vec<String> = expected_rejections()
@@ -429,6 +508,17 @@ fn every_corpus_fixture_file_is_driven_by_a_pin_and_every_pin_has_a_file() {
         accepted,
         "the accepted corpus on disk and the golden table must stay one-to-one"
     );
+
+    let mut warned: Vec<String> = expected_warnings()
+        .iter()
+        .map(|(fixture, _)| (*fixture).to_owned())
+        .collect();
+    warned.sort();
+    assert_eq!(
+        sorted_fixture_listing("warned"),
+        warned,
+        "the warned corpus on disk and the pinned warning table must stay one-to-one"
+    );
 }
 
 // ---- README index -----------------------------------------------------------------------------
@@ -437,9 +527,9 @@ fn every_corpus_fixture_file_is_driven_by_a_pin_and_every_pin_has_a_file() {
 fn readme_index_lists_exactly_the_sorted_jsonld_corpus() {
     // Index scope contract (documented in the corpus README): the index covers `*.jsonld`
     // fixture files only — goldens live in the shared golden tree, outside the corpus dirs.
-    // Every backtick-quoted token of the shape `accepted/<name>.jsonld` or
-    // `rejected/<name>.jsonld` is an index row; the sorted token set must equal the sorted
-    // on-disk listing, with no duplicate rows.
+    // Every backtick-quoted token of the shape `accepted/<name>.jsonld`,
+    // `warned/<name>.jsonld`, or `rejected/<name>.jsonld` is an index row; the sorted token set
+    // must equal the sorted on-disk listing, with no duplicate rows.
     let readme = read_fixture("README.md");
     let mut indexed: Vec<String> = readme
         .split('`')
@@ -447,7 +537,9 @@ fn readme_index_lists_exactly_the_sorted_jsonld_corpus() {
         .step_by(2)
         .filter(|token| {
             token.ends_with(".jsonld")
-                && (token.starts_with("accepted/") || token.starts_with("rejected/"))
+                && (token.starts_with("accepted/")
+                    || token.starts_with("warned/")
+                    || token.starts_with("rejected/"))
         })
         .map(str::to_owned)
         .collect();
@@ -461,6 +553,7 @@ fn readme_index_lists_exactly_the_sorted_jsonld_corpus() {
         "README must index each fixture exactly once, duplicated: {duplicates:?}"
     );
     let mut on_disk = sorted_fixture_listing("accepted");
+    on_disk.extend(sorted_fixture_listing("warned"));
     on_disk.extend(sorted_fixture_listing("rejected"));
     on_disk.sort();
     assert_eq!(

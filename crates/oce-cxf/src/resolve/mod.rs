@@ -753,20 +753,18 @@ pub(crate) fn resolve(
         }
     }
 
-    for (output, drivers) in &boundary_output_drivers {
-        if drivers.len() > 1 {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::SingleAssignment,
-                    format!(
-                        "boundary output is multiply driven (distinct drivers {})",
-                        drivers.len()
-                    ),
-                )
-                .with_subject(output.clone()),
-            );
-        }
-    }
+    // Declared-interface checks (`boundary_outputs`): refuse a declared output whose IRI
+    // shadows an existing connector identity, refuse one with multiple distinct drivers, and
+    // warn for one whose node exists but that nothing drives.
+    boundary_outputs::check_declared_interface(
+        top,
+        &boundary_in,
+        &boundary_out,
+        &conn_of_iri,
+        &by_id,
+        &boundary_output_drivers,
+        &mut diags,
+    );
 
     // `external_inputs` was filled by walking `@graph`, appending each boundary target as it was
     // met — so within one boundary port the vector inherited the order of that port's

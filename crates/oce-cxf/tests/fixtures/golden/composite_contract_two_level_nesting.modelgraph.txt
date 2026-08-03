@@ -7,3 +7,5 @@ connectors: 2
   C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.two_level_nesting.outer.inner.gain.y")
 connections: 0
 external_inputs: [0]
+boundary_outputs: 1
+  http://example.org#cc.two_level_nesting.y <- C1

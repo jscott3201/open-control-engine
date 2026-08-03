@@ -12,3 +12,5 @@ connectors: 3
 connections: 1
   C0 -> C1
 external_inputs: []
+boundary_outputs: 1
+  http://example.org#cc.registered_leaf_carveout.y <- C2

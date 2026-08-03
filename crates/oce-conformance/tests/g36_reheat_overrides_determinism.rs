@@ -25,8 +25,6 @@ const HEATING_VALVE_COMMAND_INPUT: &str = "http://example.org#g36.source.reheat_
 
 const DAMPER_COMMAND_SOURCE: &str = "http://example.org#g36.source.reheat_overrides.yDam";
 const HEATING_VALVE_COMMAND_SOURCE: &str = "http://example.org#g36.source.reheat_overrides.yVal";
-const DAMPER_COMMAND_PATH: &str = "http://example.org#g36.source.reheat_overrides.swi1.y";
-const HEATING_VALVE_COMMAND_PATH: &str = "http://example.org#g36.source.reheat_overrides.pro.y";
 
 const DAMPER_OVERRIDE_INDICES: [i64; 12] = [1, 2, 0, 0, 2, 3, 1, 3, -1, 1, 2, 0];
 const DAMPER_COMMANDS: [f64; 12] = [
@@ -46,8 +44,8 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(HEATING_VALVE_COMMAND_INPUT),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(DAMPER_COMMAND_SOURCE, DAMPER_COMMAND_PATH),
-    PointSpec::real_alias(HEATING_VALVE_COMMAND_SOURCE, HEATING_VALVE_COMMAND_PATH),
+    PointSpec::real(DAMPER_COMMAND_SOURCE),
+    PointSpec::real(HEATING_VALVE_COMMAND_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "reheat_overrides",

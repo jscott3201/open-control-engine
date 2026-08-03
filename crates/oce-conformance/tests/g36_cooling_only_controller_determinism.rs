@@ -41,46 +41,16 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::boolean("http://example.org#g36.source.cooling_only_controller.u1Fan"),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VSet_flow",
-        "http://example.org#g36.source.cooling_only_controller.dam.swi1.y",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.yDam",
-        "http://example.org#g36.source.cooling_only_controller.dam.swi2.y",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VAdjPopBreZon_flow",
-        "http://example.org#g36.source.cooling_only_controller.setPoi.modPopBreAir.y",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VAdjAreBreZon_flow",
-        "http://example.org#g36.source.cooling_only_controller.setPoi.modAreBreAir.y",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VMinOA_flow",
-        "http://example.org#g36.source.cooling_only_controller.setPoi.minOA.y",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yZonTemResReq",
-        "http://example.org#g36.source.cooling_only_controller.sysReq.intSwi.y",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yZonPreResReq",
-        "http://example.org#g36.source.cooling_only_controller.sysReq.swi4.y",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yLowFloAla",
-        "http://example.org#g36.source.cooling_only_controller.ala.proInt.y",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yFloSenAla",
-        "http://example.org#g36.source.cooling_only_controller.ala.booToInt2.y",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yLeaDamAla",
-        "http://example.org#g36.source.cooling_only_controller.ala.booToInt3.y",
-    ),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VSet_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.yDam"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VAdjPopBreZon_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VAdjAreBreZon_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VMinOA_flow"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yZonTemResReq"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yZonPreResReq"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yLowFloAla"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yFloSenAla"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yLeaDamAla"),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_controller",

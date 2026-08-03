@@ -27,11 +27,6 @@ const ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE: &str =
 const ACTIVE_MINIMUM_AIRFLOW_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_active_air_flow.VActMin_flow";
 
-const ACTIVE_COOLING_MAXIMUM_AIRFLOW_PATH: &str =
-    "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y";
-const ACTIVE_MINIMUM_AIRFLOW_PATH: &str =
-    "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y";
-
 const OPERATING_MODES: [i64; 14] = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
 const OCCUPIED_MINIMUM_FLOWS: [f64; 14] = [
     0.0, 0.31, 0.31, 0.0, 0.18, 0.31, 0.0, 0.31, 0.12, 0.0, 0.31, 0.0, 0.22, 0.31,
@@ -42,15 +37,16 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(OCCUPIED_MINIMUM_AIRFLOW),
 ];
 // Upstream ActiveAirFlow.mo connects VActMin_flow and VActHeaMax_flow from the same actMin.y
-// signal (lines 104-107), so both source names resolve to ACTIVE_MINIMUM_AIRFLOW_PATH. The
-// determinism snapshot uses VActMin_flow as the canonical name; the facade, Tier-A exact, and
-// funnel suites still assert VActHeaMax_flow bit-exactly under its own source name.
+// signal (lines 104-107), so both declared names alias one driver connector. The determinism
+// snapshot uses VActMin_flow as the canonical column; a VActHeaMax_flow declared-identity
+// column needs its own reviewed golden re-bless (_spec/18 §6) and is deliberately not added
+// here. The VALUE is asserted bit-exactly by the Tier-A golden under the reference name
+// `active_heating_maximum_airflow`, keyed on the driver path actMin.y; the only place the
+// VActHeaMax_flow IRI itself is a lookup KEY is the facade boundary-output oracle's
+// shared-driver control. The declared-identity external-oracle column is the filed follow-up.
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE,
-        ACTIVE_COOLING_MAXIMUM_AIRFLOW_PATH,
-    ),
-    PointSpec::real_alias(ACTIVE_MINIMUM_AIRFLOW_SOURCE, ACTIVE_MINIMUM_AIRFLOW_PATH),
+    PointSpec::real(ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE),
+    PointSpec::real(ACTIVE_MINIMUM_AIRFLOW_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_active_air_flow",

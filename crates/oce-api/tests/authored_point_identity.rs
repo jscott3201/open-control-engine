@@ -85,8 +85,9 @@ fn document_id_values(bytes: &[u8]) -> BTreeSet<String> {
     ids
 }
 
-/// Every point path visible on the six facade surfaces: point_list, topology block ports,
-/// connection endpoints, external_inputs, pass_through pairs, and `to_map` keys.
+/// Every point path visible on the seven facade surfaces: point_list, topology block ports,
+/// connection endpoints, external_inputs, pass_through pairs, boundary_outputs, and `to_map`
+/// keys.
 fn facade_surface_paths<S: Store>(engine: &Engine<S>) -> Vec<(&'static str, String)> {
     let mut paths = Vec::new();
     for point in engine.point_list(None).expect("point inventory") {
@@ -111,6 +112,10 @@ fn facade_surface_paths<S: Store>(engine: &Engine<S>) -> Vec<(&'static str, Stri
     for pair in &topology.pass_through {
         paths.push(("pass_through input", pair.input.clone()));
         paths.push(("pass_through output", pair.output.clone()));
+    }
+    for output in &topology.boundary_outputs {
+        paths.push(("boundary_output path", output.path.clone()));
+        paths.push(("boundary_output driver", output.driver_path.clone()));
     }
     for (key, _) in engine.outputs().to_map() {
         paths.push(("to_map key", key));
@@ -248,7 +253,9 @@ fn expected_paths(prefix: &str, names: &[&str]) -> BTreeSet<String> {
 // three internal connectors surface under the boundary `@id`s and their own node `@id`s appear
 // nowhere. The remaining twelve block-level inputs keep their own `@id`s. Every block-level
 // output keeps its own `@id`; the root's four `S231:hasOutput` declarations (economizer_enabled,
-// damper_command, operating_mode_real, oa_temperature_delta) are export-only and must NOT appear.
+// damper_command, operating_mode_real, oa_temperature_delta) — addressable on `get_output`/
+// `watch`/`CollectSpec::Named` as read aliases and enumerated in `Topology.boundary_outputs` —
+// are deliberately absent from point rows (the _spec/18 D2 fence) and must NOT appear here.
 #[test]
 fn economizer_point_sets_match_the_hand_derived_document_reading() {
     let fixture = corpus_fixtures()
@@ -315,8 +322,9 @@ fn economizer_point_sets_match_the_hand_derived_document_reading() {
 // declared boundary output y1RetFan. The direct input->output edge lowers to a pass-through
 // whose input carries u1SupFan and whose output carries y1RetFan — so u1SupFan feeds two
 // internal connectors yet appears ONCE in the In set, and y1RetFan is the one declared boundary
-// output that IS a point. The other declared output, yRetFan (driven by swi.y), is export-only
-// and must not appear.
+// output that owns a real connector row. The other declared output, yRetFan (driven by swi.y),
+// is addressable as a read alias and enumerated in `Topology.boundary_outputs`, but is
+// deliberately absent from point rows (the _spec/18 D2 fence) and must not appear here.
 #[test]
 fn return_fan_airflow_tracking_point_sets_pin_the_boundary_fan_out_collapse() {
     let fixture = corpus_fixtures()

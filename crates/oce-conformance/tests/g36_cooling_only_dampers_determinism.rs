@@ -34,8 +34,6 @@ const DAMPER_OVERRIDE_INDEX: &str = "http://example.org#g36.source.cooling_only_
 const AIRFLOW_SETPOINT_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_dampers.VSet_flow";
 const DAMPER_COMMAND_SOURCE: &str = "http://example.org#g36.source.cooling_only_dampers.yDam";
-const AIRFLOW_SETPOINT_PATH: &str = "http://example.org#g36.source.cooling_only_dampers.swi1.y";
-const DAMPER_COMMAND_PATH: &str = "http://example.org#g36.source.cooling_only_dampers.swi2.y";
 
 #[derive(Clone, Copy)]
 struct Row {
@@ -118,8 +116,8 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::integer(DAMPER_OVERRIDE_INDEX),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(AIRFLOW_SETPOINT_SOURCE, AIRFLOW_SETPOINT_PATH),
-    PointSpec::real_alias(DAMPER_COMMAND_SOURCE, DAMPER_COMMAND_PATH),
+    PointSpec::real(AIRFLOW_SETPOINT_SOURCE),
+    PointSpec::real(DAMPER_COMMAND_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_dampers",

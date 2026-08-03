@@ -37,18 +37,6 @@ const EFFECTIVE_OUTDOOR_AIR_NORMALIZED_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.effOutAir_normalized";
 const MEASURED_NORMALIZED_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.outAir_normalized";
-const EFFECTIVE_ABSOLUTE_OUTDOOR_AIR_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min1.y";
-const EFFECTIVE_ABSOLUTE_NORMALIZED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin1.y";
-const EFFECTIVE_DESIGN_OUTDOOR_AIR_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.min2.y";
-const EFFECTIVE_DESIGN_NORMALIZED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin.y";
-const EFFECTIVE_OUTDOOR_AIR_NORMALIZED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOutMin2.y";
-const MEASURED_NORMALIZED_PATH: &str =
-    "http://example.org#g36.source.multizone_vav_outdoor_airflow_title24_ahu.norVOut.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(ABSOLUTE_MIN_FLOW),
@@ -57,27 +45,12 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(MEASURED_OUTDOOR_AIR),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        EFFECTIVE_ABSOLUTE_OUTDOOR_AIR_SOURCE,
-        EFFECTIVE_ABSOLUTE_OUTDOOR_AIR_PATH,
-    ),
-    PointSpec::real_alias(
-        EFFECTIVE_ABSOLUTE_NORMALIZED_SOURCE,
-        EFFECTIVE_ABSOLUTE_NORMALIZED_PATH,
-    ),
-    PointSpec::real_alias(
-        EFFECTIVE_DESIGN_OUTDOOR_AIR_SOURCE,
-        EFFECTIVE_DESIGN_OUTDOOR_AIR_PATH,
-    ),
-    PointSpec::real_alias(
-        EFFECTIVE_DESIGN_NORMALIZED_SOURCE,
-        EFFECTIVE_DESIGN_NORMALIZED_PATH,
-    ),
-    PointSpec::real_alias(
-        EFFECTIVE_OUTDOOR_AIR_NORMALIZED_SOURCE,
-        EFFECTIVE_OUTDOOR_AIR_NORMALIZED_PATH,
-    ),
-    PointSpec::real_alias(MEASURED_NORMALIZED_SOURCE, MEASURED_NORMALIZED_PATH),
+    PointSpec::real(EFFECTIVE_ABSOLUTE_OUTDOOR_AIR_SOURCE),
+    PointSpec::real(EFFECTIVE_ABSOLUTE_NORMALIZED_SOURCE),
+    PointSpec::real(EFFECTIVE_DESIGN_OUTDOOR_AIR_SOURCE),
+    PointSpec::real(EFFECTIVE_DESIGN_NORMALIZED_SOURCE),
+    PointSpec::real(EFFECTIVE_OUTDOOR_AIR_NORMALIZED_SOURCE),
+    PointSpec::real(MEASURED_NORMALIZED_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_outdoor_airflow_title24_ahu",

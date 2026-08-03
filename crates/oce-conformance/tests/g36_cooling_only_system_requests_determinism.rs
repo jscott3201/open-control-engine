@@ -33,10 +33,6 @@ const ZONE_TEMPERATURE_REQUEST_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_system_requests.yZonTemResReq";
 const ZONE_PRESSURE_REQUEST_SOURCE: &str =
     "http://example.org#g36.source.cooling_only_system_requests.yZonPreResReq";
-const ZONE_TEMPERATURE_REQUEST_PATH: &str =
-    "http://example.org#g36.source.cooling_only_system_requests.intSwi.y";
-const ZONE_PRESSURE_REQUEST_PATH: &str =
-    "http://example.org#g36.source.cooling_only_system_requests.swi4.y";
 
 #[derive(Clone, Copy)]
 struct Row {
@@ -112,11 +108,8 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(DAMPER_POSITION),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::integer_alias(
-        ZONE_TEMPERATURE_REQUEST_SOURCE,
-        ZONE_TEMPERATURE_REQUEST_PATH,
-    ),
-    PointSpec::integer_alias(ZONE_PRESSURE_REQUEST_SOURCE, ZONE_PRESSURE_REQUEST_PATH),
+    PointSpec::integer(ZONE_TEMPERATURE_REQUEST_SOURCE),
+    PointSpec::integer(ZONE_PRESSURE_REQUEST_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_system_requests",

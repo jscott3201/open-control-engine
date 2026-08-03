@@ -123,9 +123,14 @@ prefix bindings that are not absolute IRIs are refused at load as non-subset con
 than silently ignored, so the canonical-key guarantee holds for every document that loads at
 all.
 
-One caveat bounds that guarantee. The document's declared boundary-output names (root
-`S231:hasOutput`) are not facade-addressable: address the driving internal connector's path, or
-`get_output` returns `UnknownPoint`.
+The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
+identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named` as an alias for
+its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
+`(path, driver_path)` pairs. Declared names stay out of `point_list`, `to_map`, `IoSummary`,
+and the durable store batch — a declared name and its driver are two keys over one value, and
+only the driver's path carries samples. `set_input` never accepts a declared output name. An
+undriven declared output resolves nowhere; its load-time `undriven-boundary-output` warning is
+its only representation.
 
 A related contract for emitters and durable stores: array order is load-bearing wherever the
 resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and
