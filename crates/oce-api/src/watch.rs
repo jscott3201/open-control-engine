@@ -14,12 +14,15 @@ impl<S: Store> Engine<S> {
     /// Torn reads are impossible because `tick` takes `&mut self` and [`Engine`] is not `Clone`, so
     /// there is a single writer.
     ///
-    /// Keys are output point paths; every output connector, internal and boundary alike, is
-    /// addressable. A point path is the authored `@id` of the connector's host-visible identity
-    /// node, expanded against the document `@context` to canonical absolute form at ingest, so
-    /// the same key names the same point across loads of the same document — including a
-    /// document re-serialized between compact and expanded spellings. An instance path
-    /// identifies a block, not a connector, and is never a valid key.
+    /// Keys name either of two identity spaces: every **output connector path** (the authored
+    /// `@id` of the connector's host-visible identity node), and every **root-declared
+    /// boundary-output IRI** (the top composite's `S231:hasOutput` contract), which resolves as
+    /// a read alias to its driving connector's slot — a declared name and its driver are two
+    /// distinct keys returning bit-equal values. Both spellings are expanded against the
+    /// document `@context` to canonical absolute form at ingest, so the same key names the same
+    /// point across loads of the same document — including a document re-serialized between
+    /// compact and expanded spellings. An instance path identifies a block, not a connector,
+    /// and is never a valid key.
     ///
     /// Returned pairs echo the supplied keys, including duplicates; an empty `points` slice
     /// returns `Ok` with an empty vector. If duplicate output paths exist in the model, the

@@ -2,7 +2,8 @@
 
 The fixture files behind the published composite-subset contract
 (`docs/cxf-composite-subset.md`). An external CXF emitter can validate its output against exactly
-these documents: everything under `accepted/` imports warning-free, everything under `rejected/`
+these documents: everything under `accepted/` imports warning-free, everything under `warned/`
+imports successfully with exactly its pinned warning vector, and everything under `rejected/`
 fails with the pinned `(DiagCode, subject, message)` triple. The drivers live in
 `crates/oce-cxf/tests/composite_contract_corpus.rs` (resolver layer) and
 `crates/oce-api/tests/conformance.rs` (full `Engine::load_cxf` pipeline).
@@ -22,6 +23,12 @@ listing — adding, removing, or renaming a fixture without updating this file f
 | `accepted/two_level_nesting.jsonld` | 1, 3, 5, 6 | Two composite levels (`root → outer → inner → leaf`); the parameter scope chains across both levels (`kRoot → kOuter → kInner = kOuter + 1.0 → gain.k = 4.0`); boundary connectors elided at every level. | Imports warning-free; golden `composite_contract_two_level_nesting.modelgraph.txt`. |
 | `accepted/registered_leaf_carveout.jsonld` | 1 | The rule 1 carve-out: a registered `Constant` leaf carrying `containsBlock` (a protected implementation child) under a valid unregistered top composite. The leaf imports as a normal block; the protected child is elided. | Imports warning-free; golden `composite_contract_registered_leaf_carveout.modelgraph.txt`. |
 
+## Warned
+
+| Fixture | Rule | Demonstrates | Expected outcome |
+| --- | --- | --- | --- |
+| `warned/undriven_boundary_output.jsonld` | — | A root `hasOutput` declaring a node (`#M.y`) that exists but that no internal connector or boundary input drives. Untagged boundary-interface machinery, not a composite-shape rule. | Loads successfully with exactly one `undriven-boundary-output` **warning** (subject `#M.y`); the declared output enters no point surface. |
+
 ## Rejected
 
 | Fixture | Rule | Demonstrates | Expected outcome |
@@ -38,3 +45,6 @@ listing — adding, removing, or renaming a fixture without updating this file f
 | `rejected/array_connector.jsonld` | 7 | An active connector referenced by a block instance, carrying both array markers (`isArray: true` and `sizeOfDimensions`); either marker alone also rejects. | `composite/array-connector` (`non-subset-construct`); subject is the connector node `#M.c2.u`. |
 | `rejected/array_instance.jsonld` | 7 | An active `isArray` block instance in `containsBlock`. | `composite/array-instance` (`non-subset-construct`); subject is the instance node `#M.c2`. |
 | `rejected/replaceable.jsonld` | 7 | `S231:isReplaceable: true` on a child component. | `composite/replaceable` (`unresolved-polymorphism`); subject is the replaceable node `#M.c2`. |
+| `rejected/shadowed_output_child_connector.jsonld` | — | The root's `hasOutput` referencing a child instance's own port node (`#M.c1.y`), so the declared identity is an existing connector path. Untagged boundary-interface machinery. | `boundary-output-shadows-connector`; subject is the shadowing declared IRI `#M.c1.y`. |
+| `rejected/shadowed_output_input_output.jsonld` | — | One IRI (`#M.io`) listed in both the root's `hasInput` and `hasOutput`, so the "declared output" is an input path. Untagged boundary-interface machinery. | `boundary-output-shadows-connector`; subject is the dual-listed IRI `#M.io`. |
+| `rejected/multi_driven_boundary_output.jsonld` | — | Two child outputs both wired to one declared boundary output (`#M.y`). Untagged boundary-interface machinery. | `single-assignment`; subject is the multiply driven declared IRI `#M.y`. |

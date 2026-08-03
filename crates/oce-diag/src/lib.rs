@@ -110,6 +110,12 @@ pub enum DiagCode {
     PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
+    /// A root-declared boundary output's IRI is also an existing connector identity — the same
+    /// name would answer as two different points (subject = the declared IRI). Two authored
+    /// forms produce it: the root's `hasOutput` referencing a child instance's port node, and
+    /// one IRI listed in both the root's `hasInput` and `hasOutput`. Refused at load: the
+    /// identity-level analogue of [`DiagCode::SingleAssignment`]'s value-level refusal.
+    BoundaryOutputShadowsConnector,
     /// An identity token — a node `@id` or a followed structural reference — is a relative IRI
     /// reference (no scheme and no declared `@context` prefix), and the document declares no
     /// `@base` to resolve it against, so the token cannot be expanded to the canonical absolute
@@ -155,6 +161,12 @@ pub enum DiagCode {
     MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
+    /// A root-declared boundary output's node exists but no internal connector or boundary
+    /// input drives it (subject = the declared IRI). Advisory: CDL does not require a top
+    /// composite's declared output to be internally driven, but the undriven declaration is
+    /// otherwise invisible — it enters no point surface and vanishes from re-export — so the
+    /// warning is its only representation.
+    UndrivenBoundaryOutput,
 
     // --- Export-time `shall`-errors (oce-cxf exporter) ---
     /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
@@ -189,6 +201,7 @@ impl DiagCode {
             DiagCode::UnresolvedPolymorphism => "unresolved-polymorphism",
             DiagCode::NonSubsetConstruct => "non-subset-construct",
             DiagCode::MalformedDocument => "malformed-document",
+            DiagCode::BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
             DiagCode::RelativeIri => "relative-iri",
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
@@ -204,6 +217,7 @@ impl DiagCode {
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
+            DiagCode::UndrivenBoundaryOutput => "undriven-boundary-output",
             DiagCode::ExportUnsupported => "export-unsupported",
             DiagCode::ExportDeferred => "export-deferred",
         }
@@ -343,6 +357,7 @@ mod tests {
         NonSubsetConstruct => "non-subset-construct",
         PortNameMismatch => "port-name-mismatch",
         MalformedDocument => "malformed-document",
+        BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
         RelativeIri => "relative-iri",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",
@@ -357,6 +372,7 @@ mod tests {
         AnalogCoercedToReal => "analog-coerced-to-real",
         MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
+        UndrivenBoundaryOutput => "undriven-boundary-output",
         ExportUnsupported => "export-unsupported",
         ExportDeferred => "export-deferred",
     }

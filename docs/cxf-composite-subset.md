@@ -323,9 +323,11 @@ loads warning-free:
 The engine tests itself against a checked-in conformance corpus; point your emitter's output at
 the same files and drivers.
 
-- Corpus: `crates/oce-cxf/tests/fixtures/composite_contract/{accepted,rejected}/*.jsonld`, one
-  fixture per contract behavior, indexed in the corpus
-  [`README.md`](../crates/oce-cxf/tests/fixtures/composite_contract/README.md).
+- Corpus: `crates/oce-cxf/tests/fixtures/composite_contract/{accepted,warned,rejected}/*.jsonld`,
+  one fixture per contract behavior, indexed in the corpus
+  [`README.md`](../crates/oce-cxf/tests/fixtures/composite_contract/README.md). The `warned/`
+  category holds documents that load successfully with a pinned advisory vector — untagged
+  import machinery such as `undriven-boundary-output`, not a composite-shape rule.
 - Accepted-fixture goldens (byte-exact `ModelGraph` renders):
   `crates/oce-cxf/tests/fixtures/golden/composite_contract_*.modelgraph.txt`.
 - Resolver-layer drivers:

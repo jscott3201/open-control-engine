@@ -17,18 +17,21 @@ use std::path::PathBuf;
 use oce_api::oce_store::Store;
 use oce_api::{CollectSpec, Engine, InputSource, OcError, SimSpec, Value};
 
-/// Declared outputs resolve on the lookup surfaces only when a real connector carries the
-/// declared IRI — today that is exactly the pass-through class. The elided class returns
-/// `UnknownPoint` everywhere.
-const RESOLVABLE_DECLARED_OUTPUTS: usize = 2;
+/// Every declared boundary output resolves on the lookup surfaces: the pass-through class owns
+/// a real connector carrying the declared IRI, and the elided class resolves through the
+/// declared-output read alias (`_spec/18` R18-2). Before the alias landed, this split was
+/// 2 resolvable / 130 unresolvable — that base characterization is this branch's first commit.
+const RESOLVABLE_DECLARED_OUTPUTS: usize = 132;
 
-/// Declared outputs with no facade identity at all (the elided class).
-const UNRESOLVABLE_DECLARED_OUTPUTS: usize = 130;
+/// Declared outputs with no facade identity at all. Zero since R18-2: the alias map closed the
+/// elided class.
+const UNRESOLVABLE_DECLARED_OUTPUTS: usize = 0;
 
 /// Whether a declared boundary output is expected to resolve on the three lookup surfaces.
-/// Base behavior: only the pass-through declared outputs (which own a real connector) resolve.
-fn lookup_should_resolve(is_pass_through: bool) -> bool {
-    is_pass_through
+/// Since R18-2, every driven declared output resolves — pass-through or elided alike (every
+/// declared output in this corpus is driven).
+fn lookup_should_resolve(_is_pass_through: bool) -> bool {
+    true
 }
 
 /// Every `.jsonld` document in the G36 corpus, sorted for deterministic iteration order.

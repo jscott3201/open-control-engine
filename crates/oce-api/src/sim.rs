@@ -159,7 +159,9 @@ pub enum CollectSpec {
     },
     /// Record only the named outputs, every `stride` steps.
     Named {
-        /// The output point paths to record.
+        /// The output point paths to record: connector paths or root-declared boundary-output
+        /// IRIs (read aliases for their driving connectors). The recorded column echoes the
+        /// supplied name either way.
         points: Vec<String>,
         /// Recording stride (steps between recorded rows).
         stride: usize,
@@ -474,7 +476,8 @@ impl<S: Store> Engine<S> {
 
     /// Stage an external input value before the next tick (the host's view of a physical/logical
     /// input connector). Resolved by point path through the IO inventory; validated against the
-    /// connector type (no coercion, `01` §5 invariant 3).
+    /// connector type (no coercion, `01` §5 invariant 3). The declared boundary-output alias
+    /// space is output-only: a declared output name is never accepted here.
     ///
     /// # Errors
     /// [`OcError::UnknownPoint`] if `point` is not an input in the inventory; [`OcError::InputType`]
@@ -498,11 +501,13 @@ impl<S: Store> Engine<S> {
         Ok(())
     }
 
-    /// Read an output connector value by point path after a tick (host-facing).
+    /// Read an output value by point path after a tick (host-facing). `point` is an output
+    /// connector path or a root-declared boundary-output IRI; the declared spelling is a read
+    /// alias for its driving connector's slot, so both keys return bit-equal values.
     ///
     /// # Errors
-    /// [`OcError::UnknownPoint`] if `point` is not an OUTPUT connector in the inventory. Never
-    /// panics (R-ERR-1).
+    /// [`OcError::UnknownPoint`] if `point` resolves to no output point. Never panics
+    /// (R-ERR-1).
     pub fn get_output(&self, point: &str) -> Result<Value, OcError> {
         let cid = self
             .io

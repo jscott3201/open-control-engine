@@ -238,20 +238,21 @@ fn sorted_composite_listing(subdir: &str) -> Vec<String> {
     names
 }
 
-/// The end-to-end pin per rejected corpus fixture: its contract rule id plus the exact ordered
+/// The end-to-end pin per rejected corpus fixture: its contract rule id (`None` for untagged
+/// shared import machinery, whose messages carry no `composite/` tag) plus the exact ordered
 /// (code, subject, message) triples `Engine::load_cxf` must surface. Subjects appear only where
 /// the contract defines one — the pure-cycle zero-root rejection carries `None`. Most fixtures
 /// pin one triple; `diamond_cycle` pins two (one per cycle re-entry).
 type CompositeRejection = (
     &'static str,
-    &'static str,
+    Option<&'static str>,
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 15] = [
     (
         "multi_root.jsonld",
-        "root-count",
+        Some("root-count"),
         &[(
             DiagCode::MalformedDocument,
             Some("http://example.org#M"),
@@ -262,7 +263,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "pure_cycle.jsonld",
-        "root-count",
+        Some("root-count"),
         &[(
             DiagCode::MalformedDocument,
             None,
@@ -272,7 +273,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "reachable_cycle.jsonld",
-        "contains-cycle",
+        Some("contains-cycle"),
         &[(
             DiagCode::MalformedDocument,
             Some("http://example.org#A"),
@@ -283,7 +284,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "self_loop.jsonld",
-        "contains-cycle",
+        Some("contains-cycle"),
         &[(
             DiagCode::MalformedDocument,
             Some("http://example.org#A"),
@@ -296,7 +297,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
         // contract end-to-end — one truthful path-ordered diagnostic per re-entry, in
         // post-finalize_diags subject order.
         "diamond_cycle.jsonld",
-        "contains-cycle",
+        Some("contains-cycle"),
         &[
             (
                 DiagCode::MalformedDocument,
@@ -314,7 +315,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "banned_key_bare.jsonld",
-        "banned-modelica-key",
+        Some("banned-modelica-key"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
@@ -324,7 +325,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "banned_key_prefixed.jsonld",
-        "banned-modelica-key",
+        Some("banned-modelica-key"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
@@ -334,7 +335,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "banned_key_absolute_iri.jsonld",
-        "banned-modelica-key",
+        Some("banned-modelica-key"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
@@ -344,7 +345,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "array_parameter.jsonld",
-        "array-parameter",
+        Some("array-parameter"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.p"),
@@ -354,7 +355,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "array_connector.jsonld",
-        "array-connector",
+        Some("array-connector"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2.u"),
@@ -364,7 +365,7 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "array_instance.jsonld",
-        "array-instance",
+        Some("array-instance"),
         &[(
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.c2"),
@@ -374,11 +375,41 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
     ),
     (
         "replaceable.jsonld",
-        "replaceable",
+        Some("replaceable"),
         &[(
             DiagCode::UnresolvedPolymorphism,
             Some("http://example.org#M.c2"),
             "composite/replaceable: replaceable CXF components must be resolved before import",
+        )],
+    ),
+    // Boundary-interface machinery (untagged, `None` rule id — not composite-shape rules): a
+    // declared boundary output must not shadow an existing connector identity, and must not be
+    // multiply driven.
+    (
+        "shadowed_output_child_connector.jsonld",
+        None,
+        &[(
+            DiagCode::BoundaryOutputShadowsConnector,
+            Some("http://example.org#M.c1.y"),
+            "boundary output shadows an instance port connector",
+        )],
+    ),
+    (
+        "shadowed_output_input_output.jsonld",
+        None,
+        &[(
+            DiagCode::BoundaryOutputShadowsConnector,
+            Some("http://example.org#M.io"),
+            "boundary output IRI is also a boundary input",
+        )],
+    ),
+    (
+        "multi_driven_boundary_output.jsonld",
+        None,
+        &[(
+            DiagCode::SingleAssignment,
+            Some("http://example.org#M.y"),
+            "boundary output is multiply driven (distinct drivers 2)",
         )],
     ),
 ];
@@ -386,8 +417,10 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 12] = [
 #[test]
 fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() {
     // The published contract, proven through the FULL pipeline: every rejected corpus file
-    // surfaces exactly its ordered (code, subject, message) triples, and every message begins
-    // with the `composite/<rule-id>: ` tag the catalog publishes for that rule.
+    // surfaces exactly its ordered (code, subject, message) triples, and every tagged rule's
+    // message begins with the `composite/<rule-id>: ` tag the catalog publishes for it. An
+    // untagged (`None`) entry is shared import machinery: its message must NOT wear a contract
+    // tag it has no catalog row for.
     for (file, rule_id, expected) in COMPOSITE_REJECTIONS {
         let err = load_composite_fixture(&format!("rejected/{file}"))
             .expect_err("every rejected corpus fixture must fail to load");
@@ -402,12 +435,61 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
             signature, expected,
             "rejected/{file}: the end-to-end error signature must match its published pins"
         );
-        let prefix = format!("composite/{rule_id}: ");
-        assert!(
-            signature.iter().all(|(_, _, msg)| msg.starts_with(&prefix)),
-            "rejected/{file}: every contract rejection must start with {prefix:?}"
-        );
+        match rule_id {
+            Some(rule_id) => {
+                let prefix = format!("composite/{rule_id}: ");
+                assert!(
+                    signature.iter().all(|(_, _, msg)| msg.starts_with(&prefix)),
+                    "rejected/{file}: every contract rejection must start with {prefix:?}"
+                );
+            }
+            None => assert!(
+                signature
+                    .iter()
+                    .all(|(_, _, msg)| !msg.starts_with("composite/")),
+                "rejected/{file}: untagged machinery must not wear a composite/ contract tag"
+            ),
+        }
     }
+}
+
+#[test]
+fn composite_contract_warned_fixture_surfaces_exactly_its_pinned_warning_end_to_end() {
+    // The warned corpus through the FULL pipeline: the load succeeds and LoadReport.warnings
+    // carries exactly the published advisory — nothing upstream (resolver), midstream
+    // (validate), or downstream (semantics) adds to or reorders it.
+    let report = load_composite_fixture("warned/undriven_boundary_output.jsonld")
+        .expect("the warned fixture must load end-to-end");
+    let rendered: Vec<(DiagCode, bool, Option<String>, String)> = report
+        .warnings
+        .iter()
+        .map(|d| {
+            (
+                d.code,
+                d.is_error(),
+                d.subject.as_deref().map(str::to_owned),
+                d.message.clone(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        rendered,
+        vec![(
+            DiagCode::UndrivenBoundaryOutput,
+            false,
+            Some("http://example.org#M.y".to_owned()),
+            "declared boundary output has no internal driver".to_owned(),
+        )],
+        "warned/undriven_boundary_output.jsonld: exactly one advisory, nothing else"
+    );
+
+    let mut listing = sorted_composite_listing("warned");
+    listing.sort();
+    assert_eq!(
+        listing,
+        vec!["undriven_boundary_output.jsonld".to_owned()],
+        "the on-disk warned corpus and this pin must stay one-to-one"
+    );
 }
 
 #[test]
