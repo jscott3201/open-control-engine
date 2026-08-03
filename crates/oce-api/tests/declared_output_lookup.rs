@@ -209,9 +209,16 @@ fn set_input_refuses_every_declared_output_name() {
         let (fixture_name, bytes, mut engine) = load_fixture(&fixture);
         for expectation in declared_outputs(&bytes) {
             let iri = expectation.iri.as_str();
+            // Assert the error CLASS and subject, not merely `is_err()`: an implementation that
+            // admitted the alias into the input space but tripped on value type would fail with
+            // `InputType` — still an error, but the output-only contract would be gone.
             assert!(
-                engine.set_input(iri, Value::Real(1.0)).is_err(),
-                "{fixture_name}: set_input({iri}) must refuse a declared output name"
+                matches!(
+                    engine.set_input(iri, Value::Real(1.0)),
+                    Err(OcError::UnknownPoint(ref p)) if p == iri
+                ),
+                "{fixture_name}: set_input({iri}) must refuse a declared output name as \
+                 UnknownPoint naming the key"
             );
             probed += 1;
         }

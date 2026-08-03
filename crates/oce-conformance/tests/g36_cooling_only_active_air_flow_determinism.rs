@@ -40,8 +40,10 @@ const INPUTS: &[PointSpec] = &[
 // signal (lines 104-107), so both declared names alias one driver connector. The determinism
 // snapshot uses VActMin_flow as the canonical column; a VActHeaMax_flow declared-identity
 // column needs its own reviewed golden re-bless (_spec/18 §6) and is deliberately not added
-// here. The facade, Tier-A exact, and funnel suites still assert VActHeaMax_flow bit-exactly
-// under its own source name.
+// here. The VALUE is asserted bit-exactly by the Tier-A golden under the reference name
+// `active_heating_maximum_airflow`, keyed on the driver path actMin.y; the only place the
+// VActHeaMax_flow IRI itself is a lookup KEY is the facade boundary-output oracle's
+// shared-driver control. The declared-identity external-oracle column is the filed follow-up.
 const OUTPUTS: &[PointSpec] = &[
     PointSpec::real(ACTIVE_COOLING_MAXIMUM_AIRFLOW_SOURCE),
     PointSpec::real(ACTIVE_MINIMUM_AIRFLOW_SOURCE),

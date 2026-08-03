@@ -15,10 +15,11 @@ impl<S: Store> Engine<S> {
     /// there is a single writer.
     ///
     /// Keys name either of two identity spaces: every **output connector path** (the authored
-    /// `@id` of the connector's host-visible identity node), and every **root-declared
+    /// `@id` of the connector's host-visible identity node), and every **driven root-declared
     /// boundary-output IRI** (the top composite's `S231:hasOutput` contract), which resolves as
     /// a read alias to its driving connector's slot — a declared name and its driver are two
-    /// distinct keys returning bit-equal values. Both spellings are expanded against the
+    /// distinct keys returning bit-equal values. An undriven declared output resolves nowhere;
+    /// its load-time `UndrivenBoundaryOutput` warning is its only representation. Both spellings are expanded against the
     /// document `@context` to canonical absolute form at ingest, so the same key names the same
     /// point across loads of the same document — including a document re-serialized between
     /// compact and expanded spellings. An instance path identifies a block, not a connector,

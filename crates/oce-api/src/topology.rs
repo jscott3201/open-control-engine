@@ -6,7 +6,8 @@ use oce_store::Store;
 use crate::engine::Engine;
 use crate::io::connector_path;
 
-/// An owned snapshot of blocks, edges, boundary inputs, and lowered pass-through pairs.
+/// An owned snapshot of blocks, edges, boundary inputs, lowered pass-through pairs, and
+/// declared boundary outputs.
 ///
 /// Equality compares `Real` parameter values bit-exactly: NaNs with identical bits compare equal,
 /// while `+0.0` and `-0.0` compare unequal.
