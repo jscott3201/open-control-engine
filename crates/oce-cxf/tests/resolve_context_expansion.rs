@@ -201,6 +201,81 @@ fn relative_structural_reference_is_refused_naming_slot_owner_and_token() {
 }
 
 #[test]
+fn scheme_invalid_node_id_is_refused_like_a_colon_free_relative() {
+    // The old verbatim arm accepted ANY colon-containing @id: both spellings below loaded
+    // clean as durable point identities with zero diagnostics. The guard is now symmetric
+    // with the @context binding check, so ingest refuses — an error, not a warning — with
+    // the same diagnostic shape as `MinLoop` above.
+    for id in ["2024:MinLoop.con.y", ":MinLoop.con.y"] {
+        let document = json!({
+            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@graph": [ { "@id": id, "@type": "S231:Block" } ]
+        });
+        let diags = import_value(&document).expect_err("non-absolute @id must reject");
+        assert_eq!(diags.len(), 1, "{id}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::RelativeIri);
+        assert_eq!(diags[0].subject.as_deref(), Some(id));
+        assert!(
+            diags[0].message.contains(&format!("`{id}`")) && diags[0].message.contains("@base"),
+            "{}",
+            diags[0].message
+        );
+    }
+}
+
+#[test]
+fn scheme_invalid_structural_reference_is_refused_naming_slot_owner_and_token() {
+    let document = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [ {
+            "@id": "http://example.org#M",
+            "@type": "S231:Block",
+            "S231:hasInput": { "@id": "2024:M.u" }
+        } ]
+    });
+    let diags = import_value(&document).expect_err("non-absolute reference must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::RelativeIri);
+    assert_eq!(diags[0].subject.as_deref(), Some("http://example.org#M"));
+    assert!(
+        diags[0].message.contains("S231:hasInput")
+            && diags[0].message.contains("`2024:M.u`")
+            && diags[0].message.contains("http://example.org#M"),
+        "{}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn scheme_invalid_class_token_is_class_not_found_not_relative_iri() {
+    // Typing stays best-effort under the symmetric identity guard: the spelling that refuses
+    // as an @id (`2024:` is not an RFC 3986 scheme) passes through verbatim in a @type slot
+    // and fails class lookup downstream instead.
+    let document = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c1" } },
+            { "@id": "http://example.org#M.c1", "@type": "2024:NotAnIri",
+              "S231:hasOutput": { "@id": "http://example.org#M.c1.y" } },
+            { "@id": "http://example.org#M.c1.y", "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } }
+        ]
+    });
+    let diags = import_value(&document).expect_err("junk class token must reject downstream");
+    assert!(
+        diags
+            .iter()
+            .any(|diag| diag.code == DiagCode::ClassNotFound),
+        "expected ClassNotFound, got {diags:?}"
+    );
+    assert!(
+        diags.iter().all(|diag| diag.code != DiagCode::RelativeIri),
+        "typing must never take the identity refusal: {diags:?}"
+    );
+}
+
+#[test]
 fn non_string_context_term_is_refused_as_malformed_document() {
     let document = json!({
         "@context": {
