@@ -436,8 +436,9 @@ mod tests {
 
     #[test]
     fn a_spelling_refused_as_a_binding_is_refused_as_an_identity_when_its_prefix_is_undeclared() {
-        // The symmetry property itself: `is_absolute_iri` guards both sides, so no spelling
-        // is simultaneously an illegal `@context` binding value and a legal durable identity.
+        // The symmetry property itself: `is_absolute_iri` guards both sides, so no
+        // undeclared-prefix spelling is simultaneously an illegal `@context` binding value
+        // and a legal durable identity.
         for spelling in ["1st:x", "2024:x", ":x"] {
             let mut binding_diags = Vec::new();
             let context = Context::Map(
