@@ -162,17 +162,24 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 > composite and leaf. A binding's value may reference any binding grounded **earlier** in the
 > scope chain — parent-composite bindings and earlier siblings; forward references fail
 > grounding (a generic `grounding-failed`, see
-> [Generic diagnostics](#generic-diagnostics)). References resolve **nearest-wins**: the scope
-> is searched from the most recently grounded binding backwards, so a same-named binding
-> grounded later — a child composite's, or a later sibling's — shadows an earlier one, which
-> becomes unreachable for every binding grounded after it. An array-valued
+> [Generic diagnostics](#generic-diagnostics)). Reference resolution is split. A leaf member's
+> **value** reference resolves **enclosing-first**: when the name is bound both in the enclosing
+> scope chain and by an earlier sibling member, the enclosing binding wins, and within each
+> region the most recently grounded binding shadows earlier ones (issue #239). A leaf
+> **dimension** reference (`S231:sizeOfDimensions`) still resolves **nearest-wins** over the
+> undivided scope, so there a sibling binding shadows a same-named enclosing one. A composite's
+> **own** declarations remain nearest-wins pending issue #240. When the two readings of one name
+> disagree on an array's shape, the element-count divergence refuses with `grounding-failed`
+> (both counts in the message); a value divergence with a matching element count is silent,
+> exactly like the scalar path. An array-valued
 > (`S231:isArray: true`) active parameter or constant on a composite rejects with
 > `composite/array-parameter` (DiagCode `non-subset-construct`); the subject is the parameter
 > node.
 
 References use the local name — the segment after the last `.` of the binding's `@id` — so two
-bindings anywhere in a nesting chain with the same local name collide silently under
-nearest-wins. Give bindings distinct local names unless shadowing is intended; the corpus does.
+bindings anywhere in a nesting chain with the same local name collide silently (value references
+resolve enclosing-first, dimension references nearest-wins). Give bindings distinct local names
+unless shadowing is intended; the corpus does.
 
 ```json
 { "@id": "…#M", "@type": "S231:Block",

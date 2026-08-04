@@ -417,10 +417,15 @@ pub(crate) fn resolve(
     }
 
     // --- Step 7: ground parameters (Ground mode) in hasParameter/hasConstant array order. A later
-    // binding may reference an earlier one via the incrementally-built ParamScope.
+    // binding may reference an earlier one via the incrementally-built ParamScope. VALUE
+    // references resolve on the split view — the inherited (enclosing) region wins over a
+    // same-named sibling member (issue #239) — while array DIMENSION parsing keeps the undivided
+    // latest-wins view (see `arrays.rs`).
     for inst in &insts {
         let mut table: Vec<(Arc<str>, Value)> = Vec::new();
         let mut scope_entries: Vec<(Arc<str>, EvalResult)> = inst.inherited_scope.clone();
+        // The enclosing/sibling split for value lookups: every inherited entry is enclosing.
+        let split = inst.inherited_scope.len();
         // Collected (not lazily iterated) so the array branch can build the sibling-name set for its
         // collision check. Order = hasParameter array order, then hasConstant array order.
         let param_iris: Vec<&str> = inst
@@ -451,7 +456,7 @@ pub(crate) fn resolve(
             validate_g36_parameter_value(
                 pnode,
                 cxf_val,
-                &ParamScope::new(&scope_entries),
+                &ParamScope::with_enclosing(&scope_entries, split),
                 &mut diags,
             );
             if pnode.is_array == Some(true) {
@@ -461,6 +466,7 @@ pub(crate) fn resolve(
                     piri,
                     pnode,
                     cxf_val,
+                    split,
                     &param_iris,
                     &mut table,
                     &mut scope_entries,
@@ -469,7 +475,7 @@ pub(crate) fn resolve(
             } else {
                 // Scalar parameter.
                 let name: Arc<str> = Arc::from(local_name(piri));
-                match ground_value(cxf_val, &ParamScope::new(&scope_entries)) {
+                match ground_value(cxf_val, &ParamScope::with_enclosing(&scope_entries, split)) {
                     Ok(v) => {
                         scope_entries.push((Arc::clone(&name), EvalResult::Scalar(v.clone())));
                         table.push((name, v));
