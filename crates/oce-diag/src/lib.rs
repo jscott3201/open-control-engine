@@ -116,10 +116,12 @@ pub enum DiagCode {
     /// one IRI listed in both the root's `hasInput` and `hasOutput`. Refused at load: the
     /// identity-level analogue of [`DiagCode::SingleAssignment`]'s value-level refusal.
     BoundaryOutputShadowsConnector,
-    /// An identity token — a node `@id` or a followed structural reference — is a relative IRI
-    /// reference (no scheme and no declared `@context` prefix), and the document declares no
-    /// `@base` to resolve it against, so the token cannot be expanded to the canonical absolute
-    /// IRI that keys the model (doc 04 R-3). The no-`@base` clause holds by construction:
+    /// An identity token — a node `@id` or a followed structural reference — has no canonical
+    /// absolute form: it carries no declared `@context` prefix and no valid RFC 3986 scheme,
+    /// or a valid scheme whose remainder is empty or whitespace-bearing (`ab:`, `ab:c d`).
+    /// The document declares no `@base` to resolve it against, so the token cannot be
+    /// expanded to the canonical absolute IRI that keys the model (doc 04 R-3). The
+    /// no-`@base` clause holds by construction:
     /// context-shape validation runs before slot expansion, and a document declaring `@base`
     /// is refused there as [`DiagCode::NonSubsetConstruct`] before this code can fire. Typing
     /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
