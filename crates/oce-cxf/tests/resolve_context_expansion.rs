@@ -359,7 +359,8 @@ fn double_slash_class_token_without_a_valid_scheme_is_class_not_found_not_relati
 
 #[test]
 fn a_declared_prefix_never_rescues_a_double_slash_node_id() {
-    // JSON-LD §3.2 forbids a compact-IRI suffix beginning with `//`, so `2024://x` is not a
+    // Per JSON-LD 1.1 §4.1.5 (Compact IRIs) a value whose suffix begins with `//` is
+    // interpreted as an IRI instead of being CURIE-expanded, so `2024://x` is not a
     // CURIE even with `2024` declared: it must refuse, never expand to
     // `http://example.org#//x` through the prefix lookup. (Contrast
     // `declaring_the_prefix_rescues_a_scheme_invalid_compact_token` in the unit suite:
@@ -393,6 +394,53 @@ fn bare_scheme_node_id_is_refused_even_though_its_scheme_is_rfc_valid() {
         assert_eq!(diags[0].code, DiagCode::RelativeIri);
         assert_eq!(diags[0].subject.as_deref(), Some(id));
     }
+}
+
+#[test]
+fn whitespace_suffix_compact_token_and_its_expanded_twin_refuse_identically() {
+    // The declared-prefix arm's joined-expansion check, through real ingest. At the
+    // previous head the compact spelling below LOADED and minted the durable key
+    // `http://example.org#MinLoop.con x` while the expanded spelling of the same subject
+    // refused — compact/expanded twins of one subject diverged, the exact
+    // spelling-changes-identity hazard this pass exists to close. Both spellings now
+    // refuse with the same code, the authored token as subject, and the same message
+    // shape.
+    for id in ["ex:MinLoop.con x", "http://example.org#MinLoop.con x"] {
+        let document = json!({
+            "@context": { "ex": "http://example.org#" },
+            "@graph": [ { "@id": id } ]
+        });
+        let diags = import_value(&document).expect_err("whitespace-bearing @id must reject");
+        assert_eq!(diags.len(), 1, "{id:?}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::RelativeIri);
+        assert_eq!(diags[0].subject.as_deref(), Some(id));
+        assert!(
+            diags[0].message.contains(&format!("`{id}`")) && diags[0].message.contains("@base"),
+            "{}",
+            diags[0].message
+        );
+    }
+}
+
+#[test]
+fn a_whitespace_bearing_identity_stops_at_import_before_it_can_reach_export() {
+    // The executed roundtrip break at the previous head: the compact twin with a
+    // whitespace-bearing root @id imported clean, the exporter emitted
+    // `http://example.org#MinLoop x` verbatim, and re-importing the engine's OWN export
+    // refused with RelativeIri. Import→export→re-import agreement for this shape is now
+    // vacuously restored — nothing with this shape survives the import step — so the pin
+    // lives here, on the exact diagnostic the import refusal produces.
+    let mut document: Value = serde_json::from_slice(COMPACT_TWIN).expect("twin parses");
+    document["@graph"][0]["@id"] = json!("ex:MinLoop x");
+    let diags = import_value(&document).expect_err("whitespace-bearing identity must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::RelativeIri);
+    assert_eq!(diags[0].subject.as_deref(), Some("ex:MinLoop x"));
+    assert_eq!(
+        diags[0].message,
+        "@id `ex:MinLoop x` is a relative IRI reference and the document declares no @base \
+         to resolve it against"
+    );
 }
 
 #[test]

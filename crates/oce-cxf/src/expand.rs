@@ -7,13 +7,16 @@
 //!
 //! - **Identity slots** — every [`Node`] `@id` and every [`IriRef`] in `containsBlock`,
 //!   `hasInput`, `hasOutput`, `hasParameter`, `hasConstant`, `isConnectedTo`, and
-//!   `hasInstance`. A whole-token `@context` term match or a CURIE with a declared prefix
-//!   expands. A token whose first `:` is followed by `//` is never CURIE-split (JSON-LD
-//!   §3.2 forbids a compact-IRI suffix beginning with `//`, so such a token can never be
-//!   prefix-rescued); it and every undeclared-prefix token survive as written only when
-//!   they are themselves syntactically absolute IRIs — the same [`is_absolute_iri`]
-//!   predicate a `@context` binding value must pass, so an undeclared-prefix or
-//!   `//`-suffix spelling refused as a binding can never load as a durable identity.
+//!   `hasInstance`. A whole-token `@context` term match substitutes. A CURIE with a
+//!   declared prefix expands, and the JOINED result must itself pass [`is_absolute_iri`]
+//!   — a whitespace-bearing suffix (`ex:c d`) refuses even under a declared prefix, so
+//!   expansion never mints a key the engine's own importer would refuse. A token whose
+//!   first `:` is followed by `//` is never CURIE-split (per JSON-LD 1.1 §4.1.5, Compact
+//!   IRIs, such a value is interpreted as an IRI rather than CURIE-expanded, so it can
+//!   never be prefix-rescued); it and every undeclared-prefix token survive as written
+//!   only when they are themselves syntactically absolute IRIs — the same
+//!   [`is_absolute_iri`] predicate a `@context` binding value must pass, so a spelling
+//!   refused as a binding can never load as a durable identity on those arms.
 //!   Everything else — no `:` at all, a prefix that is not an RFC 3986 scheme on either
 //!   arm (`:x`, `2024:x`, `2024://x`), or a valid scheme whose remainder is empty or
 //!   carries whitespace (`ab:`, `ab:c d`) — has no canonical absolute form and — `@base`
@@ -192,15 +195,18 @@ fn merge_context_entries<'a>(
 
 /// Whether `value` has syntactically absolute-IRI form: everything before the FIRST colon is
 /// a nonempty ASCII scheme per RFC 3986 §3.1 — a letter, then letters, digits, `+`, `-`, or
-/// `.` — and the remainder after that colon is nonempty and free of whitespace. The
-/// whitespace half of the remainder rule is RFC fact (no RFC 3986/3987 production admits a
-/// whitespace character); the nonempty half is policy, not conformance — `ab:` is a legal
-/// URI (`path-empty`, RFC 3986 §3.3), but a bare scheme carries no name to key a durable
-/// identity on. The contract stays syntactic form, not semantic reachability: `S231:x`
-/// passes (`S231` is an RFC-valid scheme) — nested-CURIE expansion is deliberately not
-/// chased. The predicate guards both directions of the binding/identity symmetry: `@context`
-/// binding values (so the legal JSON-LD binding `{"ex": "urn:"}` refuses as
-/// `NonSubsetConstruct`) and the two keep-as-written identity arms of [`expand_token`].
+/// `.` — and the remainder after that colon is nonempty and free of whitespace. The whole
+/// remainder rule is engine policy, not conformance: a canonical durable key is nonempty and
+/// whitespace-free — ASCII and Unicode alike — by choice. RFC 3986 agrees on ASCII
+/// whitespace (no URI production admits one), but RFC 3987's `ucschar` (§2.2) admits
+/// U+00A0, U+2028, and other `char::is_whitespace` characters, so this predicate refuses
+/// some RFC 3987-conformant IRIs; and `ab:` is a legal URI (`path-empty`, RFC 3986 §3.3)
+/// that carries no name to key a durable identity on. The contract stays syntactic form,
+/// not semantic reachability: `S231:x` passes (`S231` is an RFC-valid scheme) —
+/// nested-CURIE expansion is deliberately not chased. The predicate guards both directions
+/// of the binding/identity symmetry: `@context` binding values (so the legal JSON-LD
+/// binding `{"ex": "urn:"}` refuses as `NonSubsetConstruct`), the two keep-as-written
+/// identity arms of [`expand_token`], and the declared-prefix arm's joined expansion.
 fn is_absolute_iri(value: &str) -> bool {
     match value.split_once(':') {
         Some((scheme, rest)) => {
@@ -219,27 +225,31 @@ fn is_absolute_iri(value: &str) -> bool {
 
 /// The outcome of expanding one token against the prefix table.
 enum Expansion {
-    /// A whole-token term match or a CURIE with a declared prefix: the canonical form.
+    /// A whole-token term match, or a CURIE with a declared prefix whose joined expansion
+    /// passes [`is_absolute_iri`]: the canonical form.
     Expanded(String),
     /// Kept as written: a `//`-suffix or undeclared-prefix token that is itself a
     /// syntactically absolute IRI ([`is_absolute_iri`]).
     Verbatim,
     /// No canonical absolute form: no `:` and no whole-token term match; a prefix that is
     /// not an RFC 3986 scheme (empty, or scheme-invalid like `2024`), whether or not the
-    /// suffix starts with `//`; or a valid scheme whose remainder is empty or carries
-    /// whitespace (`ab:`, `ab:c d`).
+    /// suffix starts with `//`; a valid scheme whose remainder is empty or carries
+    /// whitespace (`ab:`, `ab:c d`); or a declared-prefix CURIE whose joined expansion
+    /// fails the predicate (a whitespace-bearing suffix, `ex:c d` with `ex` bound).
     Relative,
 }
 
 /// Classify and expand one token. Pure; the caller decides what `Relative` means per slot.
 ///
-/// Both keep-as-written arms are symmetric with the `@context` binding check: a token
-/// survives verbatim only when [`is_absolute_iri`] accepts it, whether its suffix starts
-/// with `//` (never CURIE-split) or its prefix is simply undeclared — so an
-/// undeclared-prefix or `//`-suffix spelling refused as a binding value cannot become a
-/// durable key here. A DECLARED prefix still rescues a scheme-invalid CURIE spelling
-/// (`2024:x` with `2024` bound expands), which is why the symmetry claim is scoped to
-/// those two arms and never to expansion as a whole.
+/// [`is_absolute_iri`] gates the outcome of every arm. The two keep-as-written arms are
+/// symmetric with the `@context` binding check: a token survives verbatim only when the
+/// predicate accepts it, whether its suffix starts with `//` (never CURIE-split) or its
+/// prefix is simply undeclared — so a spelling refused as a binding value cannot become a
+/// durable key on those arms. The declared-prefix arm concatenates and then runs the same
+/// predicate on the JOINED result: a declared prefix rescues a scheme-invalid CURIE
+/// spelling (`2024:x` with `2024` bound expands, since the binding supplies the scheme)
+/// but never a whitespace-bearing suffix (`ex:c d` refuses with `ex` bound). No arm can
+/// produce a durable key the predicate refuses.
 fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
     // A whole-token term match wins over CURIE splitting (JSON-LD term semantics): a token
     // that IS a declared term substitutes even though it contains no `:`.
@@ -247,7 +257,8 @@ fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
         return Expansion::Expanded(iri.clone());
     }
     match token.split_once(':') {
-        // A compact-IRI suffix must not begin with `//` (JSON-LD §3.2), so this token is
+        // A value whose suffix begins with `//` is interpreted as an IRI, not
+        // CURIE-expanded (JSON-LD 1.1 §4.1.5, Compact IRIs), so this token is
         // never CURIE-split and never prefix-rescued: `http://…` stays absolute even when
         // its scheme collides with a declared prefix name, and a scheme-invalid spelling
         // (`2024://x`) has no canonical form at all. It must refuse here rather than fall
@@ -260,7 +271,19 @@ fn expand_token(token: &str, table: &PrefixTable) -> Expansion {
             }
         }
         Some((prefix, suffix)) => match table.get(prefix) {
-            Some(iri) => Expansion::Expanded(format!("{iri}{suffix}")),
+            // The JOINED expansion must pass the same predicate the other arms enforce.
+            // Every accepted binding contributes a valid scheme and a clean nonempty
+            // remainder head, so the join can only fail on an authored suffix carrying
+            // whitespace (`ex:c d`) — expanding that would mint a key the engine's own
+            // importer refuses, splitting compact/expanded twins of one subject.
+            Some(iri) => {
+                let joined = format!("{iri}{suffix}");
+                if is_absolute_iri(&joined) {
+                    Expansion::Expanded(joined)
+                } else {
+                    Expansion::Relative
+                }
+            }
             None if is_absolute_iri(token) => Expansion::Verbatim,
             // `2024:x` and `:x` (no RFC 3986 scheme) and `ab:` / `ab:c d` (valid scheme,
             // empty or whitespace-bearing remainder) expand against nothing and have no
@@ -505,9 +528,29 @@ mod tests {
     }
 
     #[test]
+    fn a_declared_prefix_never_rescues_a_whitespace_bearing_suffix() {
+        // The joined-expansion check on the declared-prefix arm: the binding supplies a
+        // valid scheme and a clean remainder head, so the join fails the absolute-form
+        // predicate exactly when the authored suffix carries whitespace — refusing beats
+        // minting a key the importer itself would refuse on re-ingest.
+        let table = table(&[("ex", "http://example.org#")]);
+        for token in ["ex:MinLoop.con x", "ex:c\nd"] {
+            let diags = identity(token, &table).unwrap_err();
+            assert_eq!(diags.len(), 1, "{token:?}: {diags:?}");
+            assert_eq!(diags[0].code, DiagCode::RelativeIri);
+            assert_eq!(diags[0].subject.as_deref(), Some(token));
+        }
+        // Control: a clean suffix expands exactly as before the check.
+        assert_eq!(
+            identity("ex:MinLoop.con", &table).unwrap(),
+            "http://example.org#MinLoop.con"
+        );
+    }
+
+    #[test]
     fn double_slash_suffix_without_a_valid_scheme_is_refused_as_relative_iri() {
         // The `//` arm runs the same absolute-form guard as the undeclared-prefix arm. A
-        // `//`-suffix token is never a CURIE (JSON-LD §3.2), so with no rescue possible a
+        // `//`-suffix token is never a CURIE (JSON-LD 1.1 §4.1.5), so with no rescue possible a
         // scheme-invalid spelling has no canonical form at all. The identical tokens stay
         // verbatim in a typing slot: typing is best-effort and the downstream no-match
         // diagnostics own junk there.
@@ -538,7 +581,8 @@ mod tests {
 
     #[test]
     fn a_declared_prefix_never_rescues_a_double_slash_token() {
-        // JSON-LD §3.2 forbids a compact-IRI suffix beginning with `//`, so `2024://x` is
+        // Per JSON-LD 1.1 §4.1.5 (Compact IRIs) a value whose suffix begins with `//` is
+        // interpreted as an IRI instead of being CURIE-expanded, so `2024://x` is
         // not a CURIE even with `2024` bound. A fall-through to the prefix lookup would
         // expand it to `http://example.org#//x` — a minted malformed durable key — instead
         // of refusing. (Contrast `2024:x`, which the same declaration turns into an
@@ -625,8 +669,8 @@ mod tests {
 
     #[test]
     fn double_slash_suffix_is_never_treated_as_a_curie() {
-        // `http` declared as a prefix must not capture `http://…` (JSON-LD: a compact-IRI
-        // suffix must not begin with `//`).
+        // `http` declared as a prefix must not capture `http://…` (JSON-LD 1.1 §4.1.5: a
+        // value whose suffix begins with `//` is interpreted as an IRI, not a compact IRI).
         let table = table(&[("http", "http://trap.example/")]);
         assert_eq!(
             identity("http://example.org#A", &table).unwrap(),
