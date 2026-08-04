@@ -276,6 +276,217 @@ fn scheme_invalid_class_token_is_class_not_found_not_relative_iri() {
 }
 
 #[test]
+fn double_slash_node_id_without_a_valid_scheme_is_refused_like_a_colon_free_relative() {
+    // Each spelling below is refused as a `@context` binding value yet loaded clean as a
+    // durable identity while the `//` arm went scheme-unchecked. The arm now runs the same
+    // absolute-form guard as the undeclared-prefix arm, and an expansion refusal returns
+    // alone before the resolver runs, so a one-node document yields exactly one diagnostic
+    // with the same shape as the colon-free `MinLoop` refusal above.
+    for id in [
+        "1st://x",
+        "://x",
+        "2024://x",
+        "éttp://x",
+        " http://x",
+        "http ://x",
+    ] {
+        let document = json!({
+            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@graph": [ { "@id": id, "@type": "S231:Block" } ]
+        });
+        let diags = import_value(&document).expect_err("scheme-invalid `//` @id must reject");
+        assert_eq!(diags.len(), 1, "{id:?}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::RelativeIri);
+        assert_eq!(diags[0].subject.as_deref(), Some(id));
+        assert!(
+            diags[0].message.contains(&format!("`{id}`")) && diags[0].message.contains("@base"),
+            "{}",
+            diags[0].message
+        );
+    }
+}
+
+#[test]
+fn double_slash_structural_reference_without_a_valid_scheme_names_slot_owner_and_token() {
+    let document = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [ {
+            "@id": "http://example.org#M",
+            "@type": "S231:Block",
+            "S231:hasInput": { "@id": "2024://M.u" }
+        } ]
+    });
+    let diags = import_value(&document).expect_err("scheme-invalid `//` reference must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::RelativeIri);
+    assert_eq!(diags[0].subject.as_deref(), Some("http://example.org#M"));
+    assert!(
+        diags[0].message.contains("S231:hasInput")
+            && diags[0].message.contains("`2024://M.u`")
+            && diags[0].message.contains("http://example.org#M"),
+        "{}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn double_slash_class_token_without_a_valid_scheme_is_class_not_found_not_relative_iri() {
+    // Typing stays best-effort under the guarded `//` arm: the spelling that refuses as an
+    // @id passes through verbatim in a @type slot and fails class lookup downstream.
+    let document = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c1" } },
+            { "@id": "http://example.org#M.c1", "@type": "2024://NotAnIri",
+              "S231:hasOutput": { "@id": "http://example.org#M.c1.y" } },
+            { "@id": "http://example.org#M.c1.y", "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } }
+        ]
+    });
+    let diags = import_value(&document).expect_err("junk class token must reject downstream");
+    assert!(
+        diags
+            .iter()
+            .any(|diag| diag.code == DiagCode::ClassNotFound),
+        "expected ClassNotFound, got {diags:?}"
+    );
+    assert!(
+        diags.iter().all(|diag| diag.code != DiagCode::RelativeIri),
+        "typing must never take the identity refusal: {diags:?}"
+    );
+}
+
+#[test]
+fn a_declared_prefix_never_rescues_a_double_slash_node_id() {
+    // Per JSON-LD 1.1 §4.1.5 (Compact IRIs) a value whose suffix begins with `//` is
+    // interpreted as an IRI instead of being CURIE-expanded, so `2024://x` is not a
+    // CURIE even with `2024` declared: it must refuse, never expand to
+    // `http://example.org#//x` through the prefix lookup. (Contrast
+    // `declaring_the_prefix_rescues_a_scheme_invalid_compact_token` in the unit suite:
+    // the same declaration DOES rescue `2024:x`, whose suffix is CURIE-legal.)
+    let document = json!({
+        "@context": { "2024": "http://example.org#" },
+        "@graph": [ { "@id": "2024://x" } ]
+    });
+    let diags = import_value(&document).expect_err("`//`-suffix token must never prefix-expand");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::RelativeIri);
+    assert_eq!(diags[0].subject.as_deref(), Some("2024://x"));
+    assert!(
+        diags[0].message.contains("`2024://x`") && diags[0].message.contains("@base"),
+        "{}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn bare_scheme_node_id_is_refused_even_though_its_scheme_is_rfc_valid() {
+    // The remainder tightening at ingest: `ab` is an RFC-valid scheme, so the refusal is
+    // about what follows the colon — nothing, or whitespace — never the scheme itself.
+    for id in ["ab:", "ab:c d", "ab:c\nd"] {
+        let document = json!({
+            "@context": { "S231": "http://data.ashrae.org/S231P#" },
+            "@graph": [ { "@id": id, "@type": "S231:Block" } ]
+        });
+        let diags = import_value(&document).expect_err("empty/whitespace remainder must reject");
+        assert_eq!(diags.len(), 1, "{id:?}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::RelativeIri);
+        assert_eq!(diags[0].subject.as_deref(), Some(id));
+    }
+}
+
+#[test]
+fn whitespace_suffix_compact_token_and_its_expanded_twin_refuse_identically() {
+    // The declared-prefix arm's joined-expansion check, through real ingest. At the
+    // previous head the compact spelling below LOADED and minted the durable key
+    // `http://example.org#MinLoop.con x` while the expanded spelling of the same subject
+    // refused — compact/expanded twins of one subject diverged, the exact
+    // spelling-changes-identity hazard this pass exists to close. Both spellings now
+    // refuse with the same code, the authored token as subject, and the same message
+    // shape.
+    for id in ["ex:MinLoop.con x", "http://example.org#MinLoop.con x"] {
+        let document = json!({
+            "@context": { "ex": "http://example.org#" },
+            "@graph": [ { "@id": id } ]
+        });
+        let diags = import_value(&document).expect_err("whitespace-bearing @id must reject");
+        assert_eq!(diags.len(), 1, "{id:?}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::RelativeIri);
+        assert_eq!(diags[0].subject.as_deref(), Some(id));
+        assert!(
+            diags[0].message.contains(&format!("`{id}`")) && diags[0].message.contains("@base"),
+            "{}",
+            diags[0].message
+        );
+    }
+}
+
+#[test]
+fn a_whitespace_bearing_identity_stops_at_import_before_it_can_reach_export() {
+    // The executed roundtrip break at the previous head: the compact twin with a
+    // whitespace-bearing root @id imported clean, the exporter emitted
+    // `http://example.org#MinLoop x` verbatim, and re-importing the engine's OWN export
+    // refused with RelativeIri. Import→export→re-import agreement for this shape is now
+    // vacuously restored — nothing with this shape survives the import step — so the pin
+    // lives here, on the exact diagnostic the import refusal produces.
+    let mut document: Value = serde_json::from_slice(COMPACT_TWIN).expect("twin parses");
+    document["@graph"][0]["@id"] = json!("ex:MinLoop x");
+    let diags = import_value(&document).expect_err("whitespace-bearing identity must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::RelativeIri);
+    assert_eq!(diags[0].subject.as_deref(), Some("ex:MinLoop x"));
+    assert_eq!(
+        diags[0].message,
+        "@id `ex:MinLoop x` is a relative IRI reference and the document declares no @base \
+         to resolve it against"
+    );
+}
+
+#[test]
+fn bare_scheme_binding_value_is_refused_as_non_subset_at_ingest() {
+    // The same predicate guards binding values, so the tightening narrows acceptance on
+    // that side too: `{"ex": "urn:"}` is legal JSON-LD, refused here by policy before any
+    // slot is read.
+    let document = json!({
+        "@context": { "ex": "urn:" },
+        "@graph": [ { "@id": "http://example.org#M" } ]
+    });
+    let diags = import_value(&document).expect_err("bare-scheme binding must reject");
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
+    assert_eq!(diags[0].subject.as_deref(), Some("ex"));
+    assert!(
+        diags[0].message.contains("absolute IRI"),
+        "{}",
+        diags[0].message
+    );
+}
+
+#[test]
+fn valid_scheme_double_slash_and_urn_root_ids_load_clean_and_verbatim() {
+    // Acceptance side of the guard through real ingest on a structurally valid document:
+    // the fixture's root @id is rewritten to the token under test while everything else
+    // keeps its canonical spelling, so an accepted form loads with five blocks and zero
+    // diagnostics and surfaces verbatim as the model IRI.
+    for id in [
+        "http://x",
+        "https://x/path",
+        "a2+b-c.d://x",
+        "urn:open-control:model:root",
+    ] {
+        let mut document: Value = serde_json::from_slice(ORIGINAL).expect("fixture parses");
+        document["@graph"][0]["@id"] = json!(id);
+        let bytes = serde_json::to_vec(&document).expect("serialize mutated fixture");
+        let (graph, report) =
+            import_cxf(&bytes, &ResolveOptions::default()).expect("accepted form loads");
+        assert!(report.diagnostics.is_empty(), "{id}: {report:?}");
+        assert_eq!(report.model_iri.as_deref(), Some(id));
+        assert_eq!(graph.blocks.len(), 5, "{id}");
+    }
+}
+
+#[test]
 fn non_string_context_term_is_refused_as_malformed_document() {
     let document = json!({
         "@context": {
