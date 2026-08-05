@@ -4,14 +4,21 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{BoundaryOutput, ConnectorId};
+use oce_model::{Attrs, BoundaryOutput, ConnectorId, NoAttrs, ValueType};
 
 use crate::dto::{CxfDocument, Node};
 
-/// Materialize outputs in their boundary nodes' source-document positions.
+use super::attrs::connector_attrs;
+
+/// Materialize outputs in their boundary nodes' source-document positions, parsing each declared
+/// node's §7.4.1 attributes through the same path instance-port connectors use. `boundary_types`
+/// is Step 9's derived boundary-type map; its outer lookup cannot miss here, because `sources`
+/// keys are a subset of `boundary_out` and `derive_boundary_types` keys every graph node in it.
 pub(super) fn materialize(
     doc: &CxfDocument,
     sources: &HashMap<String, ConnectorId>,
+    boundary_types: &HashMap<&str, Option<ValueType>>,
+    diags: &mut Vec<Diagnostic>,
 ) -> Vec<BoundaryOutput> {
     doc.graph
         .iter()
@@ -22,9 +29,26 @@ pub(super) fn materialize(
                 .map(|source| BoundaryOutput {
                     iri: Arc::from(node.id.as_str()),
                     source,
+                    attrs: declared_attrs(node, boundary_types, diags),
                 })
         })
         .collect()
+}
+
+/// The declared node's parsed §7.4.1 attributes, tagged by its derived boundary type. The
+/// `None` arm EXECUTES for a declared output whose type failed to derive — `materialize` runs
+/// before the Step-12 gate — but its result is WITHHELD: `try_derive_value_type` pushed an
+/// Error for every failure, so Step 12 returns `Err` and no graph carries the placeholder.
+/// Never invent a type tag here: on a surviving graph the tag must match the driver's type.
+fn declared_attrs(
+    node: &Node,
+    boundary_types: &HashMap<&str, Option<ValueType>>,
+    diags: &mut Vec<Diagnostic>,
+) -> Attrs {
+    match boundary_types.get(node.id.as_str()).copied().flatten() {
+        Some(vt) => connector_attrs(node, vt, diags),
+        None => Attrs::Boolean(NoAttrs),
+    }
 }
 
 /// Run the three declared-interface checks in one pass over the top composite's `hasOutput`

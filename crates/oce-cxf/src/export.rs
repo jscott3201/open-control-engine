@@ -29,8 +29,10 @@
 //!   `@id` between the root's and a child's port list re-imports as a rejection.
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
-//! The five in-subset §7.4.1 attrs live on the **child port node** (never the shared
-//! boundary node), each emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
+//! The five in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
+//! ruling (2026-08-05), on each **declared boundary-output node** — the declared node's own
+//! authored attrs, never its driver's. The shared boundary-INPUT node still carries none
+//! (#243). Each is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
 //! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
@@ -208,10 +210,12 @@ struct PlannedBoundary {
     targets: Vec<String>,
 }
 
-/// One boundary-output node emitted only for a reserved pass-through pair.
+/// One declared boundary-output node: authored IRI, datatype, and its classified §7.4.1
+/// attributes (the DECLARED node's own, never the driving connector's).
 struct PlannedBoundaryOutput {
     iri: String,
     datatype: &'static str,
+    attrs: PortAttrs,
 }
 
 fn is_pass_through_class(class_path: &str) -> bool {
@@ -608,9 +612,22 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         let iri = output.iri.as_ref();
         claim_emitted_id(&mut seen, iri, &owner_subject(g, source, idx), &mut diags);
         targets[idx].push(iri.to_owned());
+        // Same R5 tag guard as the Phase 4 connector scan: `BoundaryOutput.attrs` is a plain
+        // field, so a host can hand Real attrs to a Boolean output, and emitting that would
+        // produce bytes the import refuses. Subject = the declared node — the thing a host
+        // must fix — not the driving block. Import cannot produce a mismatch (`connector_attrs`
+        // tags by the type it is given, and import refuses a declared type that differs from
+        // its driver's), so this fires for host-constructed graphs only.
+        let attrs = if output.attrs.matches(source.value_type) {
+            classify_attrs(&output.attrs, iri, &mut diags)
+        } else {
+            diags.push(reject(MSG_STRUCTURE, iri));
+            PortAttrs::None
+        };
         boundary_outputs.push(PlannedBoundaryOutput {
             iri: iri.to_owned(),
             datatype: datatypes[idx],
+            attrs,
         });
     }
 
@@ -704,9 +721,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 continue;
             };
             claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
+            // Reuse the Phase 4 classification: the pass-through output IS a real connector,
+            // already classified AND tag-guarded there (pass-through blocks are never deferred,
+            // so the slot is never a placeholder). A second guard here would add a duplicate
+            // diagnostic naming the innocent input connector.
             boundary_outputs.push(PlannedBoundaryOutput {
                 iri: output_iri.to_owned(),
                 datatype,
+                attrs: classified[output_idx].clone(),
             });
             output_iri.to_owned()
         } else {
@@ -968,6 +990,7 @@ fn build(plan: Plan) -> CxfDocument {
     for output in plan.boundary_outputs {
         let mut node = blank_node(output.iri);
         node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
+        emit_port_attrs(&mut node, &output.attrs);
         graph.push(node);
     }
 

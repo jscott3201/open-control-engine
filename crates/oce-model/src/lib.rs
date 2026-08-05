@@ -476,12 +476,21 @@ pub struct Connection {
 }
 
 /// An authored top-composite boundary output and the child output connector that drives it.
-#[derive(Clone, PartialEq, Eq, Debug)]
+///
+/// No derived equality: `attrs` carries `f64` bounds, so a derived `PartialEq` would compare
+/// floats with `==` — the epsilon-class hazard `TESTING.md` forbids. Compare fields explicitly
+/// (bounds by `to_bits`), as [`Connector`] consumers already do.
+#[derive(Clone, Debug)]
 pub struct BoundaryOutput {
     /// The boundary output's authored full subject IRI, preserved verbatim for CXF export.
     pub iri: Arc<str>,
     /// The surviving child output connector whose value is exposed at the boundary.
     pub source: ConnectorId,
+    /// The declared node's authored §7.4.1 attributes (unit/quantity/displayUnit/min/max),
+    /// parsed by the same path connector attrs use. Its variant matches the declared node's
+    /// value type (R5), which import guarantees equals the driver's; export refuses a
+    /// host-constructed mismatch.
+    pub attrs: Attrs,
 }
 
 /// The flattened, monomorphic model the engine schedules and ticks (D1's executable truth).

@@ -1,0 +1,34 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#DriverUnitDivergence",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#DriverUnitDivergence.con" },
+      "S231:hasOutput": { "@id": "http://example.org#DriverUnitDivergence.yDecl" }
+    },
+    {
+      "@id": "http://example.org#DriverUnitDivergence.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#DriverUnitDivergence.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#DriverUnitDivergence.con.y" }
+    },
+    { "@id": "http://example.org#DriverUnitDivergence.con.k",
+      "S231:value": { "@value": "295.15", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    { "@id": "http://example.org#DriverUnitDivergence.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:isConnectedTo": { "@id": "http://example.org#DriverUnitDivergence.yDecl" } },
+
+    { "@id": "http://example.org#DriverUnitDivergence.yDecl",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference" }
+  ]
+}

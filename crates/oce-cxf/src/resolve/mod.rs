@@ -793,7 +793,8 @@ pub(crate) fn resolve(
         .enumerate()
         .map(|(i, n)| (n.id.as_str(), i))
         .collect();
-    let boundary_outputs = boundary_outputs::materialize(doc, &boundary_output_sources);
+    let boundary_outputs =
+        boundary_outputs::materialize(doc, &boundary_output_sources, &boundary_types, &mut diags);
     pass_through_pairs.sort_by_key(|(input, output)| {
         (
             graph_pos.get(input.as_str()).copied().unwrap_or(usize::MAX),
@@ -806,6 +807,7 @@ pub(crate) fn resolve(
     pass_through::materialize(
         pass_through_pairs,
         &boundary_types,
+        &by_id,
         &mut blocks,
         &mut connectors,
         &mut external_inputs,
