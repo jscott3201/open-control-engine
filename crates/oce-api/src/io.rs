@@ -328,7 +328,7 @@ impl IoInventory {
     }
 
     /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// key set for the per-tick durable store batch (`projected_output_batch`).
+    /// key set the load-time `sim::DurableOutputBatch` is minted from.
     ///
     /// Must contain connector-identity keys only, never declared boundary-output aliases: every
     /// existing host trend history is keyed by these paths, and an alias here would double-write

@@ -67,6 +67,8 @@ const NO_STORE_INPUTS: &str = r##"{
   ]
 }"##;
 
+const REALTIME_EPOCH: u64 = 1_700_000_000_000_000_000;
+
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
@@ -113,6 +115,44 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
     assert_simulate_uses_no_forbidden_store_methods();
     assert_manual_g36_tick_allocates_nothing();
     assert_real_mem_store_tick_allocates_snapshot_floor();
+}
+
+#[test]
+fn warm_step_realtime_allocates_only_the_snapshot_box() {
+    // The resolve-once durable batch (issue #242 slice 1): after load-time identity minting, a
+    // warm `step_realtime` must allocate exactly what a bare `tick` does — the one frozen
+    // `Box<dyn PointSnapshot>` — with the write path contributing zero heap traffic. The floor
+    // is re-measured per step (never a hardcoded literal), so the pin tracks the snapshot seam
+    // rather than restating it. Before the fix this asserted n_out + 3 allocations per step
+    // (one path String per durable row plus two fresh Vec collects on top of the Box).
+    for fixture in G36_FIXTURES {
+        let store = Arc::new(MemStore::new());
+        let mut engine = Engine::with_store(Arc::clone(&store));
+        engine
+            .load_cxf(fixture.cxf.as_bytes())
+            .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+        engine.set_realtime_epoch_unix_nanos(REALTIME_EPOCH);
+
+        // Warm step: first-write key insertion into MemStore lands here, not in the measurement.
+        write_inputs_to_store(store.as_ref(), (fixture.inputs)(0.0), 0);
+        engine
+            .step_realtime(0.0)
+            .unwrap_or_else(|e| panic!("{} fixture warms step_realtime: {e:?}", fixture.name));
+
+        for step in 1..=fixture.t_stop {
+            let t = step as f64;
+            write_inputs_to_store(store.as_ref(), (fixture.inputs)(t), step);
+
+            let snapshot_floor = snapshot_alloc_stats(store.as_ref(), fixture.name, t);
+            assert_box_snapshot_floor(snapshot_floor, fixture.name, t);
+
+            let region = Region::new(GLOBAL);
+            engine
+                .step_realtime(t)
+                .unwrap_or_else(|e| panic!("{} fixture steps at t={t}: {e:?}", fixture.name));
+            assert_same_alloc_stats(region.change(), snapshot_floor, fixture.name, t);
+        }
+    }
 }
 
 #[test]
