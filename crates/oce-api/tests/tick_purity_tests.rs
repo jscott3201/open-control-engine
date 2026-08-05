@@ -9,7 +9,7 @@ mod support;
 
 use std::alloc::System;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use oce_api::oce_store::{
     DomainKey, Durability, Durable, EquipmentDto, ModelStore, OcValue, PointHandle, PointListRow,
@@ -23,6 +23,11 @@ use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
+
+// The meter is process-global and plain `cargo test` runs tests thread-parallel in one process, so
+// every test serializes on this lock to keep concurrent heap traffic out of an open `Region`
+// (nextest, the gate's runner, is process-per-test and unaffected).
+static METER: Mutex<()> = Mutex::new(());
 
 const AHU_SAT_RESET: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -109,6 +114,9 @@ const G36_FIXTURES: &[G36Fixture] = &[
 
 #[test]
 fn g36_tick_path_stays_store_pure_and_alloc_free() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     assert_recording_store_guard_and_counters_are_live();
     assert_read_resolved_returns_none_for_missing_handles();
     assert_load_saves_model_once_and_tick_does_not_save_again();
@@ -119,6 +127,9 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
 
 #[test]
 fn warm_step_realtime_allocates_only_the_snapshot_box() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     // The resolve-once durable batch (issue #242 slice 1): after load-time identity minting, a
     // warm `step_realtime` must allocate exactly what a bare `tick` does — the one frozen
     // `Box<dyn PointSnapshot>` — with the write path contributing zero heap traffic. The floor
@@ -157,6 +168,9 @@ fn warm_step_realtime_allocates_only_the_snapshot_box() {
 
 #[test]
 fn watch_read_allocates_and_is_visible_to_the_meter() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let fixture = &G36_FIXTURES[0];
     let store = Arc::new(AllocationStore::default());
     let mut engine = Engine::with_store(store);
@@ -193,6 +207,9 @@ fn watch_read_allocates_and_is_visible_to_the_meter() {
 
 #[test]
 fn no_store_input_tick_path_skips_snapshot_and_reads() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let store = Arc::new(RecordingStore::default());
     let mut engine = Engine::with_store(Arc::clone(&store));
     let report = engine
