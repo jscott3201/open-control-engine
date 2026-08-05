@@ -145,9 +145,11 @@ fn ground_typed(lexical: &str, datatype: &str) -> Result<Value, GroundErr> {
 ///
 /// Split corollary (owner-ruled): a name bound BOTH by a sibling member and the enclosing scope
 /// has two readings inside one block — value expressions read the enclosing binding, dimension
-/// expressions read the sibling. That divergence is silent on the scalar path; on the array path
-/// an element-count divergence refuses (`GroundingFailed`, both counts in the message), while a
-/// value divergence with a matching count is silent, exactly like the scalar path.
+/// expressions read the sibling *when the sibling is grounded earlier*: member array order still
+/// decides the dimension reading (values are order-invariant under member order, dimensions are
+/// not). That divergence is silent on the scalar path; on the array path an element-count
+/// divergence refuses (`GroundingFailed`, both counts in the message), while a value divergence
+/// with a matching count is silent, exactly like the scalar path.
 pub(crate) struct ParamScope<'a> {
     entries: &'a [(Arc<str>, EvalResult)],
     /// Number of leading `entries` grounded by the enclosing scope chain; the rest are the
@@ -361,6 +363,26 @@ mod tests {
         assert!(
             sibling_only.bit_eq(&Value::Integer(7)),
             "a sibling-only name must still resolve, got {sibling_only:?}"
+        );
+    }
+
+    #[test]
+    fn innermost_enclosing_entry_wins_within_the_enclosing_region() {
+        // The enclosing region's OWN scan direction: with two enclosing entries of one name —
+        // outer composite first, inner composite last, chain order — the reverse scan must
+        // return the innermost (last-pushed) binding. A one-entry enclosing region cannot
+        // distinguish forward from reverse, so this is the case that pins the direction.
+        let entries = vec![
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(1))), // outer enclosing composite
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(2))), // inner enclosing composite
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(99))), // sibling
+        ];
+        let split = ParamScope::with_enclosing(&entries, 2);
+        let v = ground_value(&CxfValue::Expr("a".to_owned()), &split).unwrap();
+        assert!(
+            v.bit_eq(&Value::Integer(2)),
+            "the INNERMOST enclosing binding (last-pushed in the enclosing region) must win \
+             over the outer composite's, got {v:?}"
         );
     }
 

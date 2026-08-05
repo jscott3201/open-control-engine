@@ -33,8 +33,10 @@ fn strip_array_label(name: &str) -> &str {
 /// same forward-reference limitation Step 7 has for value bindings). Dimensions resolve on the
 /// **undivided** latest-wins view (`ParamScope::new`), not the enclosing-first split value
 /// expressions use (issue #239): an enclosing-only name still resolves for shape, and a sibling
-/// binding shadows a same-named enclosing one for shape purposes. Owner-ruled; the guard is the
-/// cross-scope count-divergence refusal pinned in `resolve_param_precedence.rs`. Returns the
+/// binding shadows a same-named enclosing one for shape purposes — when the sibling is already
+/// grounded; member array order decides which binding the dims read. Owner-ruled; the pin set is
+/// the count-divergence refusal, the one-name-two-readings corollary fixture, and the
+/// member-order characterization in `resolve_param_precedence.rs`. Returns the
 /// dimension sizes in declared order, or a human message for a `MalformedDocument`. Total; never
 /// panics (no `unwrap`/index on input text — the type-domain discipline).
 fn parse_size_dims(
@@ -243,9 +245,16 @@ fn mint_element(
 /// leading `scope_entries` came from the enclosing scope chain and win over a same-named sibling
 /// — while `sizeOfDimensions` parsing keeps the undivided latest-wins view. Corollary
 /// (owner-ruled): a name bound both by a sibling member and the enclosing scope is read twice —
-/// the sibling drives the SHAPE, the enclosing binding drives the VALUES. An element-count
-/// divergence between the two readings refuses (`GroundingFailed`, both counts in the message);
-/// a value divergence with a matching count is silent, exactly like the scalar path.
+/// the sibling drives the SHAPE when the sibling is grounded earlier (member array order still
+/// decides the dimension reading; values are order-invariant under member order, dimensions are
+/// not), the enclosing binding drives the VALUES. An element-count divergence between the two
+/// readings refuses (`GroundingFailed`, both counts in the message); a value divergence with a
+/// matching count is silent, exactly like the scalar path.
+///
+/// Minted element names (`k_1`..`k_n`) enter the scope as SIBLING entries, so a later member's
+/// value reference to one is shadowed by a same-named enclosing binding — `w = "k_1"` reads an
+/// enclosing `k_1` when one exists, not the minted element — while a same-named sibling
+/// parameter collides and refuses via `ArrayFlattenCollision`.
 ///
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
 #[allow(clippy::too_many_arguments)]
