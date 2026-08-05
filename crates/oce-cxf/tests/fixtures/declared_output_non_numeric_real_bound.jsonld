@@ -1,0 +1,32 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#NonNumericRealBound",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#NonNumericRealBound.con" },
+      "S231:hasOutput": { "@id": "http://example.org#NonNumericRealBound.yReal" }
+    },
+    {
+      "@id": "http://example.org#NonNumericRealBound.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#NonNumericRealBound.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#NonNumericRealBound.con.y" }
+    },
+    { "@id": "http://example.org#NonNumericRealBound.con.k",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    { "@id": "http://example.org#NonNumericRealBound.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#NonNumericRealBound.yReal" } },
+
+    { "@id": "http://example.org#NonNumericRealBound.yReal",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:min": true }
+  ]
+}

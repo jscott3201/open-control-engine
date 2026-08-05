@@ -115,6 +115,9 @@ pub(super) fn materialize(
         // `Connection`, and `unify`'s clusters are built exclusively from
         // `model.connections`), so these attrs reach no UnitQuantityMismatch cluster. Any
         // future change that wires a pass-through output onward must re-check that fence.
+        // The fence also has a false-NEGATIVE direction: a §7.10-divergent attr pair on a
+        // declared output and its driver is not caught either (`BoundaryOutput.attrs` joins
+        // no cluster) — see the characterization test in `export_declared_output_attrs.rs`.
         // A missing node cannot happen on a surviving graph (Step 2 refuses it); the default
         // attrs it would leave behind are withheld with the graph.
         if let Some(node) = by_id.get(output_iri.as_str()) {

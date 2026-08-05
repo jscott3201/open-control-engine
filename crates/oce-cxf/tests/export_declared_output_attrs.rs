@@ -53,10 +53,31 @@ const ATTR_KEYS: [&str; 5] = [
 /// The new top-level fixture: one elided and one pass-through declared Real output, both
 /// carrying authored §7.4.1 attributes; pinned separately from the corpus counts.
 const DECLARED_OUTPUT_ATTRS: &str = include_str!("fixtures/declared_output_attrs.jsonld");
-/// A declared Boolean output carrying `S231:unit` — newly reachable rejection arm 1.
+/// A declared Boolean output carrying `S231:unit` — the Boolean/String/Enum consistency-family
+/// refusal.
 const BOOLEAN_OUTPUT_ATTR: &str = include_str!("fixtures/declared_output_attr_on_boolean.jsonld");
-/// A declared Real output whose `S231:min` is an expression — newly reachable rejection arm 2.
+/// A declared Real output whose `S231:min` is an expression — the Real bound grounding-failure
+/// arm.
 const EXPRESSION_BOUND: &str = include_str!("fixtures/declared_output_expression_bound.jsonld");
+/// A declared Real output whose `S231:unit` is a bare number — the malformed-term arm.
+const NUMERIC_UNIT_LITERAL: &str =
+    include_str!("fixtures/declared_output_numeric_unit_literal.jsonld");
+/// A declared Real output whose `S231:min` is a boolean literal — the Real
+/// grounded-to-a-non-number arm.
+const NON_NUMERIC_REAL_BOUND: &str =
+    include_str!("fixtures/declared_output_non_numeric_real_bound.jsonld");
+/// A declared Integer output whose `S231:min` is an expression — the Integer bound
+/// grounding-failure arm.
+const INTEGER_EXPRESSION_BOUND: &str =
+    include_str!("fixtures/declared_output_integer_expression_bound.jsonld");
+/// A declared Integer output whose `S231:min` is a fractional literal — the Integer
+/// grounded-to-a-non-integer arm.
+const INTEGER_FRACTIONAL_BOUND: &str =
+    include_str!("fixtures/declared_output_integer_fractional_bound.jsonld");
+/// A declared elided output whose unit/quantity contradict its driver's unit — the §7.10
+/// exclusion witness.
+const DRIVER_UNIT_DIVERGENCE: &str =
+    include_str!("fixtures/declared_output_driver_unit_divergence.jsonld");
 
 fn g36_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
@@ -404,11 +425,20 @@ fn export_emits_declared_output_attrs_on_both_fill_sites() {
     );
 }
 
-// ---- the two newly reachable rejection arms ----------------------------------------------------
+// ---- the newly reachable rejection arms --------------------------------------------------------
+//
+// Reusing `connector_attrs` for declared boundary outputs (#233, owner ruling 2026-08-05) makes
+// EVERY refusal that helper can produce on an instance-port connector reachable from a declared
+// boundary-output node: five concrete arms — malformed term, Real bound grounded to a
+// non-number, Real bound grounding failure, Integer bound grounded to a non-integer, Integer
+// bound grounding failure — plus the one Boolean/String/Enum consistency family. All six are
+// pinned below, each with zero engine-G36-corpus occurrences (the corpus sweep above imports
+// every fixture diagnostic-free, so no corpus document reaches any of them).
 
-/// Newly reachable arm 1 (`resolve/attrs.rs` non-Real/Integer arm): a §7.4.1 attribute on a
-/// declared Boolean output was silently ACCEPTED before #233 and is REFUSED now, with the same
-/// diagnostic an instance-port Boolean connector already gets. 0 engine-G36-corpus occurrences.
+/// The Boolean/String/Enum consistency family (`resolve/attrs.rs` non-Real/Integer arm): a
+/// §7.4.1 attribute on a declared Boolean output was silently ACCEPTED before #233 and is
+/// REFUSED now, with the same diagnostic an instance-port Boolean connector already gets. 0
+/// engine-G36-corpus occurrences.
 #[test]
 fn declared_attr_on_a_boolean_output_is_refused() {
     match import_cxf(BOOLEAN_OUTPUT_ATTR.as_bytes(), &ResolveOptions::default()) {
@@ -428,11 +458,11 @@ fn declared_attr_on_a_boolean_output_is_refused() {
     }
 }
 
-/// Newly reachable arm 2 (`resolve/attrs.rs` bound-grounding arm): an expression bound on a
-/// declared Real output imported with zero diagnostics before #233 and is REFUSED now — the
-/// same refusal an instance-port connector's expression bound already gets (bounds ground
-/// against the empty scope), so this is consistency, not new policy. 0 corpus occurrences (all
-/// 36 corpus bounds are typed literals).
+/// The Real bound grounding-failure arm (`resolve/attrs.rs`, `real_connector_bound`'s `Err`
+/// arm): an expression bound on a declared Real output imported with zero diagnostics before
+/// #233 and is REFUSED now — the same refusal an instance-port connector's expression bound
+/// already gets (bounds ground against the empty scope), so this is consistency, not new
+/// policy. 0 corpus occurrences (all 36 corpus bounds are typed literals).
 #[test]
 fn expression_bound_on_a_declared_real_output_is_refused() {
     match import_cxf(EXPRESSION_BOUND.as_bytes(), &ResolveOptions::default()) {
@@ -450,6 +480,148 @@ fn expression_bound_on_a_declared_real_output_is_refused() {
         ),
         other => panic!("expected a validation rejection, got {other:?}"),
     }
+}
+
+/// The malformed-term arm (`resolve/attrs.rs`, `term_attr`): a unit authored as a bare NUMBER
+/// on a declared Real output deserializes to `TermAttr::Other` — no lexical term — and is
+/// REFUSED, exactly as on an instance-port connector. Before #233 the declared node's terms
+/// were never parsed, so this imported with zero diagnostics. 0 engine-G36-corpus occurrences
+/// (the corpus authors every term attribute as a bare string).
+#[test]
+fn numeric_attr_literal_on_a_declared_output_is_refused() {
+    match import_cxf(NUMERIC_UNIT_LITERAL.as_bytes(), &ResolveOptions::default()) {
+        Err(CxfError::Validation(diags)) => assert_eq!(
+            diags,
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    "S231:unit is not a string, typed literal, or IRI node — malformed term",
+                )
+                .with_subject("http://example.org#NumericUnitLiteral.yNum".to_owned()),
+            ],
+            "exactly the malformed-term refusal, subject = the declared node"
+        ),
+        other => panic!("expected a validation rejection, got {other:?}"),
+    }
+}
+
+/// The Real grounded-to-a-non-number arm (`resolve/attrs.rs`, `real_connector_bound`'s
+/// `Ok(non-number)` arm): a boolean literal in a declared Real output's `S231:min` grounds
+/// successfully — to a Boolean, not a number — and is REFUSED, exactly as on an instance-port
+/// connector. 0 engine-G36-corpus occurrences.
+#[test]
+fn non_numeric_bound_on_a_declared_real_output_is_refused() {
+    match import_cxf(
+        NON_NUMERIC_REAL_BOUND.as_bytes(),
+        &ResolveOptions::default(),
+    ) {
+        Err(CxfError::Validation(diags)) => assert_eq!(
+            diags,
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    "S231:min on a Real connector did not ground to a number",
+                )
+                .with_subject("http://example.org#NonNumericRealBound.yReal".to_owned()),
+            ],
+            "exactly the non-number refusal, subject = the declared node"
+        ),
+        other => panic!("expected a validation rejection, got {other:?}"),
+    }
+}
+
+/// The Integer bound grounding-failure arm (`resolve/attrs.rs`, `int_connector_bound`'s `Err`
+/// arm): an expression bound on a declared Integer output is REFUSED. The message coincides
+/// byte for byte with the Real arm's (one shared format), so the fixture's Integer typing is
+/// what pins the PATH — `int_connector_bound`, not `real_connector_bound`. 0 engine-G36-corpus
+/// occurrences.
+#[test]
+fn expression_bound_on_a_declared_integer_output_is_refused() {
+    match import_cxf(
+        INTEGER_EXPRESSION_BOUND.as_bytes(),
+        &ResolveOptions::default(),
+    ) {
+        Err(CxfError::Validation(diags)) => assert_eq!(
+            diags,
+            vec![
+                Diagnostic::error(
+                    DiagCode::GroundingFailed,
+                    "S231:min connector bound failed to ground: expression binding did not \
+                     ground: unknown identifier: k",
+                )
+                .with_subject("http://example.org#IntegerExpressionBound.yInt".to_owned()),
+            ],
+            "exactly the Integer expression-bound refusal, subject = the declared node"
+        ),
+        other => panic!("expected a validation rejection, got {other:?}"),
+    }
+}
+
+/// The Integer grounded-to-a-non-integer arm (`resolve/attrs.rs`, `int_connector_bound`'s
+/// `Ok(non-integer)` arm): a fractional bound on a declared Integer output grounds to a Real
+/// and is REFUSED. Both authored shapes reach this arm — a typed double literal and a bare
+/// JSON number (probed first-hand, 2026-08-05); the fixture pins the corpus-style typed-literal
+/// form. 0 engine-G36-corpus occurrences.
+#[test]
+fn fractional_bound_on_a_declared_integer_output_is_refused() {
+    match import_cxf(
+        INTEGER_FRACTIONAL_BOUND.as_bytes(),
+        &ResolveOptions::default(),
+    ) {
+        Err(CxfError::Validation(diags)) => assert_eq!(
+            diags,
+            vec![
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    "S231:min on an Integer connector did not ground to an integer",
+                )
+                .with_subject("http://example.org#IntegerFractionalBound.yInt".to_owned()),
+            ],
+            "exactly the non-integer refusal, subject = the declared node"
+        ),
+        other => panic!("expected a validation rejection, got {other:?}"),
+    }
+}
+
+// ---- the §7.10 exclusion: declared attrs never enter a unification cluster ---------------------
+
+/// CHARACTERIZATION, not endorsement: a declared ELIDED boundary output carrying unit `"Pa"` /
+/// quantity `"PressureDifference"` over a driver carrying unit `"K"`, joined by
+/// `isConnectedTo`, imports with ZERO diagnostics — and the export carries BOTH contradictory
+/// attribute sets verbatim. The acceptance is DELIBERATE and structural: §7.10 unification
+/// (`oce-validate`'s `unify_clusters`) builds its clusters exclusively from `model.connections`
+/// over `model.connectors`, and `BoundaryOutput.attrs` is neither, so the declared/driver pair
+/// can never enter a cluster. The equivalent conflict between two ordinary connectors IS
+/// refused (`oce-validate`'s unification tests); activating unification over declared attrs is
+/// a future owner ruling. This test makes the exclusion visible: the zero-diagnostic pin and
+/// the two byte pins red loudly the day that ruling lands, whether it refuses or propagates.
+#[test]
+fn declared_driver_unit_divergence_is_accepted_and_exported_on_both_nodes() {
+    let graph = import_ok(
+        "declared_output_driver_unit_divergence.jsonld",
+        DRIVER_UNIT_DIVERGENCE.as_bytes(),
+    );
+    let bytes = export(&graph).expect("fixture is inside the export subset");
+    let doc: JsonValue = serde_json::from_slice(&bytes).expect("export JSON");
+
+    let declared = node_by_id(&doc, "http://example.org#DriverUnitDivergence.yDecl")
+        .expect("exported declared output node");
+    assert_eq!(
+        (
+            declared["S231:unit"].as_str(),
+            declared["S231:quantity"].as_str(),
+        ),
+        (Some("Pa"), Some("PressureDifference")),
+        "the declared node keeps its own authored unit/quantity"
+    );
+
+    let driver = node_by_id(&doc, "http://example.org#DriverUnitDivergence.con.y")
+        .expect("exported driving connector node");
+    assert_eq!(
+        driver["S231:unit"].as_str(),
+        Some("K"),
+        "the driver keeps its own contradictory unit — the divergence survives on both nodes"
+    );
 }
 
 // ---- the host-constructed tag mismatch: refused at export, never emitted or dropped ------------
