@@ -1,0 +1,79 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference",
+      "@type": "S231:Block",
+      "S231:label": "forward_sibling_reference",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#cc.forward_sibling_reference.kDerived" },
+        { "@id": "http://example.org#cc.forward_sibling_reference.kBase" }
+      ],
+      "S231:hasConstant": [
+        { "@id": "http://example.org#cc.forward_sibling_reference.cShift" }
+      ],
+      "S231:containsBlock": [
+        { "@id": "http://example.org#cc.forward_sibling_reference.gain" }
+      ],
+      "S231:hasInput": { "@id": "http://example.org#cc.forward_sibling_reference.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.forward_sibling_reference.y" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.kDerived",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kBase + cShift"
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.kBase",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.cShift",
+      "@type": "S231:Constant",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": { "@value": "0.25", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.forward_sibling_reference.gain.u" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasParameter": { "@id": "http://example.org#cc.forward_sibling_reference.gain.k" },
+      "S231:hasInput": { "@id": "http://example.org#cc.forward_sibling_reference.gain.u" },
+      "S231:hasOutput": { "@id": "http://example.org#cc.forward_sibling_reference.gain.y" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": "kDerived"
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#cc.forward_sibling_reference.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#cc.forward_sibling_reference.y" }
+    }
+  ]
+}

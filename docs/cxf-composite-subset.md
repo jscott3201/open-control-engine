@@ -155,40 +155,94 @@ diagnostics). The degenerate self-loop (`A` contains `A`) reports the two-entry 
 rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A` (corpus fixture
 `rejected/reachable_cycle.jsonld`).
 
-## Rule 5 — Parameter-scope inheritance (rejects: `composite/array-parameter`)
+## Rule 5 — Parameter-scope inheritance (rejects: `composite/array-parameter`, `composite/declaration-cycle`, `composite/duplicate-declaration`)
 
-> A composite's active `S231:hasParameter` bindings ground in declaration order, then its
-> active `S231:hasConstant` bindings in declaration order, into a scope inherited by every child
-> composite and leaf. A binding's value may reference any binding grounded **earlier** in the
-> scope chain — parent-composite bindings and earlier siblings; forward references fail
-> grounding (a generic `grounding-failed`, see
-> [Generic diagnostics](#generic-diagnostics)). Reference resolution is split. A leaf member's
-> **value** reference resolves **enclosing-first**: when the name is bound both in the enclosing
-> scope chain and by an earlier sibling member, the enclosing binding wins, and within each
-> region the most recently grounded binding shadows earlier ones (issue #239). A leaf
+> A composite's active `S231:hasParameter` and `S231:hasConstant` bindings form **one mutual
+> scope**: every binding's value may reference any sibling of either kind, declared earlier or
+> later — declaration array order carries no meaning for the composite's own scope. A document
+> that loads does so with a byte-identical imported model and an identical diagnostic vector
+> under any permutation of the two arrays; a document these rules refuse refuses under every
+> permutation with the same rule ids and the same participant sets — only a diagnostic's
+> *subject* may relocate, because subjects follow the chained declaration order that
+> permutation changes. Inside an own
+> binding's value, an own local name always denotes the own sibling, shadowing a same-named
+> binding of an enclosing composite; only names with **no** own binding fall through to the
+> enclosing scope chain (innermost composite first). The grounded scope is inherited by every
+> child composite and leaf. Three shapes reject:
+>
+> - A reference **cycle** among a composite's own bindings — including the length-1
+>   self-reference `x = "x * 2"`, which is never an enclosing read — rejects with
+>   `composite/declaration-cycle` (DiagCode `malformed-document`): **one diagnostic per
+>   distinct cycle per chain evaluation**. Like `contains-cycle`, a composite reachable via
+>   multiple `containsBlock` paths is evaluated once per path (enclosing scopes can differ per
+>   path), so the same cycle can surface once per visit — consumers must not assume one
+>   diagnostic per structural cycle document-wide. Subject = the participant earliest in the
+>   params-then-constants chained declaration order; the message's arrow list is the
+>   participant **ring** in chained declaration order closing on the first
+>   (`…#M.a -> …#M.b -> …#M.a`) — not the discovered edge path. Bindings outside the cycle
+>   still ground (maximal progress); cycle members keep their own binding's name — masking a
+>   same-named enclosing binding — but are absent from the scope, so a reference to one fails
+>   with a generic `grounding-failed`.
+> - One local name declared **twice** in one composite's own chain rejects with
+>   `composite/duplicate-declaration` (DiagCode `malformed-document`): one diagnostic per
+>   occurrence beyond the first in chained order (three declarations of one name emit two),
+>   subject = that later occurrence, message naming it and the first occurrence's `@id`. The
+>   first occurrence stays a normal binding.
+> - An array-valued (`S231:isArray: true`) active parameter or constant on a composite rejects
+>   with `composite/array-parameter` (DiagCode `non-subset-construct`); the subject is the
+>   parameter node.
+>
+> **Leaf members are a different level** and keep their order-sensitive contract: a leaf
+> member's **value** reference resolves **enclosing-first** — when the name is bound both in
+> the enclosing scope chain and by an *earlier* sibling member, the enclosing binding wins, and
+> within each region the most recently grounded binding shadows earlier ones (issue #239) — so
+> a leaf member's forward reference to a sibling member still fails grounding. A leaf
 > **dimension** reference (`S231:sizeOfDimensions`) still resolves **nearest-wins** over the
 > undivided scope, so there a sibling binding shadows a same-named enclosing one — when the
 > sibling is grounded earlier; member array order still decides the dimension reading (values
-> are order-invariant under member order, dimensions are not). A composite's
-> **own** declarations remain nearest-wins pending issue #240. When the two readings of one name
-> disagree on an array's shape, the element-count divergence refuses with `grounding-failed`
-> (both counts in the message); a value divergence with a matching element count is silent,
-> exactly like the scalar path. An array-valued
-> (`S231:isArray: true`) active parameter or constant on a composite rejects with
-> `composite/array-parameter` (DiagCode `non-subset-construct`); the subject is the parameter
-> node.
+> are order-invariant under member order, dimensions are not). When the two readings of one
+> name disagree on an array's shape, the element-count divergence refuses with
+> `grounding-failed` (both counts in the message); a value divergence with a matching count is
+> silent, exactly like the scalar path.
+
+Conditional-guard specialization evaluates guards against the same own-scope semantics through
+the same mechanism, so guard decisions are equally order-independent. The specialization pass
+also grounds *leaf* declaration chains that carry conditional members; on that pass, generic
+grounding machinery is non-emitting, and the two tagged rules above apply to **composite**
+chains only — a leaf chain's bindings are member modifications (the leaf level described
+above), so a cycle or duplicate among them produces no tagged finding there: the participants
+simply fail to ground in the guard scope. A composite-chain defect visible to both passes is
+reported once, from the lowering view; a composite chain only the specialization pass grounds
+(for example one pruned by a false guard) still surfaces through the two tagged rules; and a
+guard that genuinely cannot evaluate refuses through the guard's own diagnostics — never as a
+bare `grounding-failed`. A leaf with a legal array parameter plus a conditional member
+therefore loads (corpus fixture `accepted/leaf_array_parameter_conditional_member.jsonld`),
+and so does the leaf identity-modification idiom — a leaf parameter
+`samplePeriod = "samplePeriod"` reading the same-named enclosing composite parameter, beside a
+conditional member (corpus fixture `accepted/leaf_identity_parameter_modification.jsonld`, the
+member value grounding enclosing-first per the leaf rules above); the specialization model
+itself — what a guard means and how pruning propagates — is unchanged.
 
 References use the local name — the segment after the last `.` of the binding's `@id` — so two
-bindings anywhere in a nesting chain with the same local name collide silently (value references
-resolve enclosing-first, dimension references nearest-wins). Give bindings distinct local names
-unless shadowing is intended; the corpus does. Element names minted by leaf array expansion
-(`k[2]` → `k_1`, `k_2`) shadow like any sibling binding: a later member's value reference to
-`k_1` reads a same-named enclosing binding when one exists, not the minted element, while a
-same-named sibling *parameter* collides and refuses (`ArrayFlattenCollision`). Because grounded
-values feed block construction, enclosing-first resolution can change a derived port arity, so a
-constructed document that imported before this rule can refuse under it — the 139 checked-in CXF
-documents (95 crate fixtures plus 44 vendored modelica-json translations) are measured
-byte-identical under the rule; the reach exists off-corpus.
+same-named bindings at *different* nesting levels shadow (own-scope-wins for the composite's
+own bindings, enclosing-first for leaf member values, nearest-wins for dimensions), while two
+same-named bindings in **one** composite's own chain reject under
+`composite/duplicate-declaration`. Give bindings distinct local names unless shadowing is
+intended; the corpus does. Element names minted by leaf array expansion (`k[2]` → `k_1`, `k_2`)
+shadow like any sibling binding: a later member's value reference to `k_1` reads a same-named
+enclosing binding when one exists, not the minted element, while a same-named sibling
+*parameter* collides and refuses (`ArrayFlattenCollision`). Because grounded values feed block
+construction, own-scope resolution can change what a document means, so a constructed document
+that imported under the older order-sensitive reading can refuse under this rule (a cycle or a
+duplicate) or ground differently (a forward or shadowed sibling reference). Measured against
+the pre-change base (`43d8a13`, which held 147 checked-in CXF documents: 103 crate fixtures
+plus 44 vendored modelica-json translations), all 103 crate documents are byte-identical in
+import outcome under the rule; 12 vendored documents — every one still refusing on unrelated
+grounds — shed 48 `grounding-failed` diagnostics in exactly the two ruled classes (forward
+sibling references now grounding, and specialization-pass generic machinery going
+non-emitting), with zero new diagnostics anywhere. The tree now holds 153 documents (109 crate
+plus 44 vendored; the growth is the conformance fixtures this rule added). The wider reach
+exists off-corpus.
 
 ```json
 { "@id": "…#M", "@type": "S231:Block",
@@ -298,6 +352,8 @@ rejections are generic diagnostics.
 | 5 | `array-parameter` | `non-subset-construct` | `composite/array-parameter: ` |
 | 7 | `array-connector` | `non-subset-construct` | `composite/array-connector: ` |
 | 7 | `array-instance` | `non-subset-construct` | `composite/array-instance: ` |
+| 5 | `declaration-cycle` | `malformed-document` | `composite/declaration-cycle: ` |
+| 5 | `duplicate-declaration` | `malformed-document` | `composite/duplicate-declaration: ` |
 
 Every message prefix is `composite/<rule-id>: ` — colon, then **one trailing space** (U+0020),
 which markdown table cells cannot render unambiguously. Match with
@@ -314,7 +370,9 @@ Two diagnostics that can accompany or replace a contract rejection are shared im
 - `unresolved-reference` — a `containsBlock` child, parameter node, or composite `@id` referenced
   but not present in `@graph`.
 - `grounding-failed` — a parameter value that cannot ground: a missing `S231:value` (values are
-  required — Ground mode), a forward or unknown identifier reference, or an expression error.
+  required — Ground mode), an unknown identifier (including a reference to a cycle-refused
+  sibling, or a leaf member's forward reference to a later sibling member), or an expression
+  error.
 
 They are not contract rules because they do not describe a composite *shape*; they fire anywhere
 in the import pipeline. Match them by DiagCode, not by message. The conditional-pruning

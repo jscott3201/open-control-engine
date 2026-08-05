@@ -95,9 +95,23 @@ pub(super) const ARRAY_INSTANCE: CompositeRule = CompositeRule {
     summary: "active array-valued block-instance nodes require per-element encoding",
 };
 
+/// `composite/declaration-cycle`: a block's own declaration references must be acyclic.
+pub(super) const DECLARATION_CYCLE: CompositeRule = CompositeRule {
+    id: "declaration-cycle",
+    code: DiagCode::MalformedDocument,
+    summary: "a block's own parameter/constant declaration references must be acyclic",
+};
+
+/// `composite/duplicate-declaration`: one local name must not be declared twice in one chain.
+pub(super) const DUPLICATE_DECLARATION: CompositeRule = CompositeRule {
+    id: "duplicate-declaration",
+    code: DiagCode::MalformedDocument,
+    summary: "a block's own declaration chain must not bind one local name twice",
+};
+
 /// Every CXF-lowering-subset contract rule, in catalog publication order.
 #[cfg(test)]
-pub(super) const COMPOSITE_RULES: [CompositeRule; 7] = [
+pub(super) const COMPOSITE_RULES: [CompositeRule; 9] = [
     ROOT_COUNT,
     CONTAINS_CYCLE,
     REPLACEABLE,
@@ -105,6 +119,8 @@ pub(super) const COMPOSITE_RULES: [CompositeRule; 7] = [
     ARRAY_PARAMETER,
     ARRAY_CONNECTOR,
     ARRAY_INSTANCE,
+    DECLARATION_CYCLE,
+    DUPLICATE_DECLARATION,
 ];
 
 /// Filesystem path of the checked-in catalog artifact, used by `UPDATE_EXPECT` re-blessing.

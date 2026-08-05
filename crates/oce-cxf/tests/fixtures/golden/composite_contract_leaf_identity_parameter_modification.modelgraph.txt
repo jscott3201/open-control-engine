@@ -1,0 +1,12 @@
+blocks: 1
+  B0 decl=0 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#cc.leaf_identity_parameter_modification.con")
+    inputs=[0] outputs=[1]
+    param samplePeriod=Real(0x405e000000000000)
+    param have_hol=Boolean(false)
+connectors: 2
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.leaf_identity_parameter_modification.u")
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.leaf_identity_parameter_modification.con.y")
+connections: 0
+external_inputs: [0]
+boundary_outputs: 1
+  http://example.org#cc.leaf_identity_parameter_modification.y <- C1 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

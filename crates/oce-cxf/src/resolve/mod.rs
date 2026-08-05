@@ -52,14 +52,20 @@ mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
 mod connection_orientation;
+mod declaration_scope;
+#[cfg(test)]
+mod declaration_scope_tests;
 mod diags;
 mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
+mod report;
 mod single_assignment;
 mod specialize;
 mod value_types;
+
+pub use report::ValidationReport;
 
 use attrs::connector_attrs;
 use composite::lower;
@@ -90,39 +96,6 @@ pub struct ResolveOptions {
     pub mode: ImportMode,
     /// If `true`, any `Warning` also fails the load (doc 04 §9). Default `false`.
     pub deny_warnings: bool,
-}
-
-/// The resolver's diagnostics in deterministic order. On the `Ok` path it carries `Warning`/`Info`
-/// only — any `Error` is returned inside [`CxfError::Validation`] instead, with the graph withheld
-/// (it may be structurally unsound). Invariant enforced by construction in the resolver. The report
-/// also carries the model identity side-channel for consumers that need durable identity without
-/// polluting [`ModelGraph`] execution state.
-#[derive(Clone, Debug, Default)]
-pub struct ValidationReport {
-    /// The top-composite `@id` that names the CXF model.
-    ///
-    /// This is the raw DTO [`Node::id`] value as authored in the document. The resolver currently
-    /// carries context entries losslessly but does not perform general JSON-LD `@id` expansion, so
-    /// callers that need a durable model key should treat this as the source CXF model IRI for M3.
-    /// It is `Some` on every successful resolver-owned import path and `None` only for manually
-    /// default-constructed reports.
-    pub model_iri: Option<String>,
-    /// The (sorted, error-free on the `Ok` path) diagnostics.
-    pub diagnostics: Vec<Diagnostic>,
-}
-
-impl ValidationReport {
-    /// Whether the report carries no diagnostics at all.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.diagnostics.is_empty()
-    }
-
-    /// Whether any diagnostic is an error (always `false` on the `Ok` path).
-    #[must_use]
-    pub fn has_errors(&self) -> bool {
-        has_errors(&self.diagnostics)
-    }
 }
 
 /// The local member name of a dotted instance-member `@id` — the segment after the **last `.`**,
@@ -191,9 +164,9 @@ pub(crate) fn resolve(
         .into_iter()
         .map(|(id, (_, node))| (id, node))
         .collect();
-    let specialization = specialize(doc, &by_id, &mut diags);
+    let (specialization, withheld) = specialize(doc, &by_id, &mut diags);
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
-    let lowered = lower(doc, &by_id, &specialization, &mut diags);
+    let lowered = lower(doc, &by_id, &specialization, withheld, &mut diags);
     let doc = &lowered.doc;
     let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
     for node in &doc.graph {
