@@ -11,9 +11,8 @@ use oce_model::{
 };
 
 use crate::dto::{CxfValue, Node};
-use crate::ground::{ParamScope, ground_value};
 
-use super::local_name;
+use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
 
 /// The result of pruning load-time conditional components/connectors.
 #[derive(Clone, Debug, Default)]
@@ -29,12 +28,17 @@ impl Specialization {
 }
 
 /// Evaluate source-profile conditional nodes and record the inactive subset.
+///
+/// Also returns the [`WithheldFindings`] this pass computed over the declaration chains it
+/// grounded for guard scopes: tagged contract findings that must surface once per import, from
+/// the lowering view when both passes visit a chain — `lower` reconciles and releases them.
 pub(super) fn specialize(
     doc: &crate::dto::CxfDocument,
     by_id: &HashMap<&str, &Node>,
     diags: &mut Vec<Diagnostic>,
-) -> Specialization {
+) -> (Specialization, WithheldFindings) {
     let mut specialization = Specialization::default();
+    let mut withheld = WithheldFindings::default();
     let mut decisions: HashMap<&str, bool> = HashMap::new();
 
     for parent in &doc.graph {
@@ -50,7 +54,7 @@ pub(super) fn specialize(
         if conditional_children.is_empty() {
             continue;
         }
-        let scope = complete_scope(parent, by_id, diags);
+        let scope = complete_scope(parent, by_id, &mut withheld);
         for child in conditional_children {
             let active = match decisions.get(child.id.as_str()).copied() {
                 Some(active) => active,
@@ -66,7 +70,7 @@ pub(super) fn specialize(
         }
     }
 
-    specialization
+    (specialization, withheld)
 }
 
 fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashSet<String>) {
@@ -95,45 +99,22 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
     }
 }
 
+/// Build the guard-evaluation scope from the parent's own declarations through the shared
+/// order-independent mechanism ([`super::declaration_scope`]) at its specialize invocation: no
+/// inactive filter (no final [`Specialization`] exists while this pass runs) and non-emitting
+/// generic machinery; the chain's tagged findings are recorded on `withheld` for post-lowering
+/// reconciliation. Guard-level contracts (`ConditionalGuardUnknownParameter` et al.) are
+/// unaffected — they emit from guard evaluation, not from scope construction.
 fn complete_scope(
     parent: &Node,
     by_id: &HashMap<&str, &Node>,
-    diags: &mut Vec<Diagnostic>,
+    withheld: &mut WithheldFindings,
 ) -> CompleteScope {
-    let mut entries: Vec<(Arc<str>, EvalResult)> = Vec::new();
-    for piri in parent
-        .has_parameter
-        .iter()
-        .chain(parent.has_constant.iter())
-        .map(|r| r.id.as_str())
-    {
-        let Some(pnode) = by_id.get(piri).copied() else {
-            diags.push(
-                Diagnostic::error(DiagCode::UnresolvedReference, "parameter node not found")
-                    .with_subject(piri.to_owned()),
-            );
-            continue;
-        };
-        let Some(cxf_val) = &pnode.value else {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::GroundingFailed,
-                    "parameter has no value (Ground mode)",
-                )
-                .with_subject(piri.to_owned()),
-            );
-            continue;
-        };
-        validate_g36_parameter_value(pnode, cxf_val, &ParamScope::new(&entries), diags);
-        match ground_value(cxf_val, &ParamScope::new(&entries)) {
-            Ok(value) => entries.push((Arc::from(local_name(piri)), EvalResult::Scalar(value))),
-            Err(e) => diags.push(
-                Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                    .with_subject(piri.to_owned()),
-            ),
-        }
+    let evaluation = evaluate_declarations(parent, Vec::new(), by_id, Pass::Specialize);
+    withheld.record(&parent.id, evaluation.withheld);
+    CompleteScope {
+        entries: evaluation.entries,
     }
-    CompleteScope { entries }
 }
 
 /// Emit source-profile diagnostics for G36 enum parameters before generic grounding.

@@ -34,7 +34,15 @@ fn read_fixture(rel: &str) -> String {
 }
 
 /// Accepted fixtures paired with their golden snapshots in the shared golden tree.
-const ACCEPTED: [(&str, &str); 3] = [
+const ACCEPTED: [(&str, &str); 5] = [
+    (
+        "accepted/forward_sibling_reference.jsonld",
+        "tests/fixtures/golden/composite_contract_forward_sibling_reference.modelgraph.txt",
+    ),
+    (
+        "accepted/leaf_array_parameter_conditional_member.jsonld",
+        "tests/fixtures/golden/composite_contract_leaf_array_parameter_conditional_member.modelgraph.txt",
+    ),
     (
         "accepted/minimal_nested.jsonld",
         "tests/fixtures/golden/composite_contract_minimal_nested.modelgraph.txt",
@@ -233,6 +241,41 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                      http://example.org#C -> http://example.org#A -> http://example.org#C",
                 ),
             ],
+        ),
+        (
+            // One reference cycle among the root's own declarations: one diagnostic per
+            // distinct cycle, subject = the participant earliest in chained declaration order,
+            // message naming every participant in chained order and closing on the first.
+            "rejected/declaration_cycle.jsonld",
+            vec![error_with_subject(
+                DiagCode::MalformedDocument,
+                "http://example.org#M.a",
+                "composite/declaration-cycle: cycle in the block's own declaration references: \
+                 http://example.org#M.a -> http://example.org#M.b -> http://example.org#M.a",
+            )],
+        ),
+        (
+            // Self-reference is a length-1 declaration cycle, never a read of the same-named
+            // enclosing binding — the root's own x=1.0 grounds and the inner chain refuses.
+            "rejected/self_reference.jsonld",
+            vec![error_with_subject(
+                DiagCode::MalformedDocument,
+                "http://example.org#M.sub.x",
+                "composite/declaration-cycle: cycle in the block's own declaration references: \
+                 http://example.org#M.sub.x -> http://example.org#M.sub.x",
+            )],
+        ),
+        (
+            // One local name bound twice in one chain (parameter then constant): the occurrence
+            // beyond the first refuses and names the first; the first stays a normal binding.
+            "rejected/duplicate_declaration.jsonld",
+            vec![error_with_subject(
+                DiagCode::MalformedDocument,
+                "http://example.org#M.settings.k",
+                "composite/duplicate-declaration: own declaration \
+                 http://example.org#M.settings.k re-binds local name `k` first declared at \
+                 http://example.org#M.k",
+            )],
         ),
         (
             "rejected/banned_key_bare.jsonld",

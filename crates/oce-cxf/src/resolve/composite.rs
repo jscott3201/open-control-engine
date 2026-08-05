@@ -3,17 +3,15 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
+use crate::bridge;
 use crate::dto::{CxfDocument, IriRef, Node, OneOrMany};
-use crate::ground::{ParamScope, ground_value};
-use crate::{bridge, resolve::local_name};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 
 use super::composite_orientation::CompositeOrientation;
-use super::composite_rules::{
-    ARRAY_PARAMETER, BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT,
-};
-use super::specialize::{Specialization, validate_g36_parameter_value};
+use super::composite_rules::{BANNED_MODELICA_KEY, CONTAINS_CYCLE, REPLACEABLE, ROOT_COUNT};
+use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
+use super::specialize::Specialization;
 
 /// Maximum supported composite depth during `containsBlock` lowering.
 ///
@@ -30,16 +28,23 @@ pub(super) struct LoweredCxf {
 }
 
 /// Lower the supported nested-composite subset before dense block/connector ids are assigned.
+///
+/// `withheld` carries the specialize pass's withheld tagged findings; the chains this pass
+/// evaluates itself report from the lowering view, and the rest are released here (R20-7
+/// reconciliation) — including on the no-root early return, where no chain is evaluated.
 pub(super) fn lower(
     doc: &CxfDocument,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
+    withheld: WithheldFindings,
     diags: &mut Vec<Diagnostic>,
 ) -> LoweredCxf {
     let mut lowered = doc.clone();
     let mut inherited_scope = HashMap::new();
+    let mut evaluated_chains: HashSet<String> = HashSet::new();
 
     let Some(root) = root_composite(doc, by_id, diags) else {
+        withheld.emit_unvisited(&evaluated_chains, diags);
         return LoweredCxf {
             doc: lowered,
             root_iri: None,
@@ -65,7 +70,9 @@ pub(super) fn lower(
         &mut path,
         &mut leaf_order,
         &mut inherited_scope,
+        &mut evaluated_chains,
     );
+    withheld.emit_unvisited(&evaluated_chains, diags);
 
     let rewritten = rewrite_connections(doc, by_id, root, specialization, &boundary);
     for node in &mut lowered.graph {
@@ -227,6 +234,7 @@ fn collect_leaves(
     path: &mut Vec<String>,
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
+    evaluated_chains: &mut HashSet<String>,
 ) {
     if depth > MAX_COMPOSITE_NESTING_DEPTH {
         diags.push(
@@ -274,6 +282,7 @@ fn collect_leaves(
         path.pop();
         return;
     };
+    evaluated_chains.insert(composite_id.to_owned());
     let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
     for child in composite.contains_block.iter().map(|r| r.id.as_str()) {
         if specialization.is_inactive(child) {
@@ -301,6 +310,7 @@ fn collect_leaves(
                 path,
                 leaf_order,
                 inherited_scope,
+                evaluated_chains,
             );
         } else {
             leaf_order.push(child.to_owned());
@@ -311,62 +321,27 @@ fn collect_leaves(
     path.pop();
 }
 
+/// Extend the inherited scope chain with the composite's own declarations through the shared
+/// order-independent mechanism ([`super::declaration_scope`]) at its lowering invocation:
+/// inactive declarations filtered through the completed [`Specialization`], array-flagged
+/// declarations refused (`composite/array-parameter`), and every finding emitted.
 fn composite_scope(
     composite: &Node,
-    mut scope: Vec<(Arc<str>, EvalResult)>,
+    scope: Vec<(Arc<str>, EvalResult)>,
     by_id: &HashMap<&str, &Node>,
     specialization: &Specialization,
     diags: &mut Vec<Diagnostic>,
 ) -> Vec<(Arc<str>, EvalResult)> {
-    for piri in composite
-        .has_parameter
-        .iter()
-        .chain(composite.has_constant.iter())
-        .map(|r| r.id.as_str())
-    {
-        if specialization.is_inactive(piri) {
-            continue;
-        }
-        let Some(pnode) = by_id.get(piri).copied() else {
-            diags.push(
-                Diagnostic::error(DiagCode::UnresolvedReference, "parameter node not found")
-                    .with_subject(piri.to_owned()),
-            );
-            continue;
-        };
-        if pnode.is_array == Some(true) {
-            diags.push(
-                Diagnostic::error(
-                    ARRAY_PARAMETER.code,
-                    ARRAY_PARAMETER.message(
-                        "array-valued composite parameters are not supported by this CXF \
-                         lowering subset",
-                    ),
-                )
-                .with_subject(piri.to_owned()),
-            );
-            continue;
-        }
-        let Some(cxf_val) = &pnode.value else {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::GroundingFailed,
-                    "parameter has no value (Ground mode)",
-                )
-                .with_subject(piri.to_owned()),
-            );
-            continue;
-        };
-        validate_g36_parameter_value(pnode, cxf_val, &ParamScope::new(&scope), diags);
-        match ground_value(cxf_val, &ParamScope::new(&scope)) {
-            Ok(value) => scope.push((Arc::from(local_name(piri)), EvalResult::Scalar(value))),
-            Err(e) => diags.push(
-                Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                    .with_subject(piri.to_owned()),
-            ),
-        }
-    }
-    scope
+    evaluate_declarations(
+        composite,
+        scope,
+        by_id,
+        Pass::Lowering {
+            specialization,
+            diags,
+        },
+    )
+    .entries
 }
 
 fn rewrite_connections(

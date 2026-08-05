@@ -249,7 +249,7 @@ type CompositeRejection = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
-const COMPOSITE_REJECTIONS: [CompositeRejection; 15] = [
+const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
     (
         "multi_root.jsonld",
         Some("root-count"),
@@ -312,6 +312,42 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 15] = [
                  http://example.org#C -> http://example.org#A -> http://example.org#C",
             ),
         ],
+    ),
+    (
+        // One reference cycle among the root's own declarations — one diagnostic per distinct
+        // cycle, subject = the earliest participant in chained declaration order.
+        "declaration_cycle.jsonld",
+        Some("declaration-cycle"),
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#M.a"),
+            "composite/declaration-cycle: cycle in the block's own declaration references: \
+             http://example.org#M.a -> http://example.org#M.b -> http://example.org#M.a",
+        )],
+    ),
+    (
+        // Self-reference is a length-1 declaration cycle, never an enclosing read.
+        "self_reference.jsonld",
+        Some("declaration-cycle"),
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#M.sub.x"),
+            "composite/declaration-cycle: cycle in the block's own declaration references: \
+             http://example.org#M.sub.x -> http://example.org#M.sub.x",
+        )],
+    ),
+    (
+        // One local name bound twice in one chain: the later occurrence refuses, naming the
+        // first; the first occurrence stays a normal binding.
+        "duplicate_declaration.jsonld",
+        Some("duplicate-declaration"),
+        &[(
+            DiagCode::MalformedDocument,
+            Some("http://example.org#M.settings.k"),
+            "composite/duplicate-declaration: own declaration \
+             http://example.org#M.settings.k re-binds local name `k` first declared at \
+             http://example.org#M.k",
+        )],
     ),
     (
         "banned_key_bare.jsonld",

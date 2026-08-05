@@ -6,10 +6,13 @@
 //!   variant. A bare `Int` feeding a Real-typed parameter with no `isOfDataType` is *not* re-typed
 //!   here; the block constructor owns any accepted Int→Real parameter promotion.
 //! - typed XSD literals (`{"@value","@type"}`) parse the lexical form per the datatype suffix.
-//! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`ParamScope`] of the
-//!   already-ground parameters visible to the binding — the enclosing scope chain plus
-//!   earlier-declared siblings. On the split view Step 7 uses for member values, an enclosing
-//!   binding wins over a same-named sibling (see [`ParamScope`]).
+//! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`Scope`] of the
+//!   already-ground parameters visible to the binding. For a leaf *member* binding that is
+//!   Step 7's incremental [`ParamScope`] — the enclosing scope chain plus earlier-declared
+//!   sibling members, enclosing-first for values (see [`ParamScope`]). A composite's *own*
+//!   declaration chain instead grounds as one mutual, order-independent scope in the
+//!   resolver's declaration-scope mechanism (issue #240), which supplies its own `Scope` impl
+//!   and hands the finished entries onward.
 //!
 //! Every failure path, including over-limit expression depth or size, is a typed [`GroundErr`] —
 //! **never a panic, never an `unwrap`** on input-derived text. The resolver maps a `GroundErr` to a
@@ -130,15 +133,18 @@ fn ground_typed(lexical: &str, datatype: &str) -> Result<Value, GroundErr> {
     }
 }
 
-/// A read-only [`Scope`] over an instance's already-ground parameters, for grounding `Expr`
-/// bindings that reference enclosing-scope or sibling parameters. Built incrementally by the
-/// resolver (a binding sees only the parameters grounded *before* it, in declaration order —
-/// forward references still fail). Pure and total (R11).
+/// A read-only [`Scope`] over an instance's already-ground parameters, for grounding a leaf
+/// *member* `Expr` binding that references enclosing-scope or sibling parameters. Built
+/// incrementally by the resolver's Step-7 member grounding (a member binding sees only the
+/// members grounded *before* it, in declaration order — a member's forward reference still
+/// fails). A composite's *own* declaration chain is a different level: it grounds as one
+/// mutual, order-independent scope in the resolver's declaration-scope mechanism (issue #240)
+/// and this type only carries the finished entries onward. Pure and total (R11).
 ///
 /// Two views exist over one entry slice:
 /// - [`ParamScope::new`] — the undivided latest-wins view: one reverse scan, so the most recently
 ///   grounded binding of a name wins. Array *dimension* expressions (`sizeOfDimensions`) resolve
-///   on this view, as do the pre-lowering composite scopes.
+///   on this view.
 /// - [`ParamScope::with_enclosing`] — the split view Step 7 uses for member *value* expressions:
 ///   the enclosing region is searched first, so an enclosing binding wins over a same-named
 ///   sibling (issue #239); sibling-only names keep resolving against earlier-declared siblings.
@@ -159,8 +165,8 @@ pub(crate) struct ParamScope<'a> {
 
 impl<'a> ParamScope<'a> {
     /// The undivided view over the given (name, value) entries: one reverse scan, latest-wins on
-    /// a duplicate name. Dimension parsing and the pre-lowering composite scopes use this view;
-    /// member value grounding uses [`ParamScope::with_enclosing`].
+    /// a duplicate name. Dimension parsing uses this view; member value grounding uses
+    /// [`ParamScope::with_enclosing`].
     pub(crate) fn new(entries: &'a [(Arc<str>, EvalResult)]) -> Self {
         Self {
             entries,

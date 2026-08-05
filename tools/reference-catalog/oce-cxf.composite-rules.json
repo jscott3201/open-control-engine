@@ -33,5 +33,15 @@
     "diag_code": "non-subset-construct",
     "message_prefix": "composite/array-instance: ",
     "summary": "active array-valued block-instance nodes require per-element encoding"
+  },
+  "declaration-cycle": {
+    "diag_code": "malformed-document",
+    "message_prefix": "composite/declaration-cycle: ",
+    "summary": "a block's own parameter/constant declaration references must be acyclic"
+  },
+  "duplicate-declaration": {
+    "diag_code": "malformed-document",
+    "message_prefix": "composite/duplicate-declaration: ",
+    "summary": "a block's own declaration chain must not bind one local name twice"
   }
 }
