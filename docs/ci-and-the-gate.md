@@ -89,7 +89,7 @@ release tip and adds four things:
 rather than passing, which catches tests that silently stop compiling or being found.
 
 The public-api baselines are the strongest stability evidence in this repo. They are checked-in
-text files — `crates/oce-api/tests/public-api.txt` (1150 lines) and
+text files — `crates/oce-api/tests/public-api.txt` (1228 lines) and
 `crates/oce-store/tests/public-api.txt` (1230 lines) — and the tests at
 `crates/oce-api/tests/public_api.rs` and `crates/oce-store/tests/public_api.rs` diff the crate's
 real surface against them, so any unintended addition, removal or signature change fails the gate
@@ -101,9 +101,11 @@ selectors would let one surviving crate hide the other's vanished test.
 
 ## What CI cannot observe
 
-- **Operating systems other than Linux.** Every `runs-on:` in all four workflows is `ubuntu-latest`
-  or `ubuntu-24.04-arm`. Cross-*architecture* is covered — x86_64 and arm64, debug and release. macOS
-  and Windows are not built or tested anywhere.
+- **Operating systems other than Linux.** Every `runs-on:` in all five workflows — `ci.yml`,
+  `release-gate.yml`, `advisories.yml`, `release.yml`, and `docs-pages.yml` (per-PR on `docs/**`,
+  `README.md`, `scripts/docs/**`, and `site/**`) — is `ubuntu-latest` or `ubuntu-24.04-arm`.
+  Cross-*architecture* is covered — x86_64 and arm64, debug and release. macOS and Windows are not
+  built or tested anywhere.
 - **Anything derived from git history.** No workflow sets `fetch-depth`, so `actions/checkout@v4`
   takes its default of a single commit. A check that needs history cannot run in CI. The visible
   consequence: golden provenance records bind to a content digest of the checked-in bytes rather

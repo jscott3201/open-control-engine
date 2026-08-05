@@ -75,12 +75,12 @@ document so that the enum-free remainder can still export. Each omission is repo
 near the front of a chain dooms everything downstream of it.
 
 How large does that get in practice? The G36 corpus pins two cases as tripwires
-(`crates/oce-cxf/tests/export_g36_roundtrip.rs:562-570`):
+(`crates/oce-cxf/tests/export_g36_roundtrip.rs:678-698`):
 
 | Fixture | Blocks in graph | Blocks deferred | Share |
 | --- | --- | --- | --- |
-| `cooling_only_controller` | 213 (`crates/oce-api/tests/g36_cooling_only_controller.rs:244`) | 83 | 39 % |
-| `multizone_vav_relief_fan_group` | 226 (`crates/oce-api/tests/g36_relief_fan_group.rs:94`) | 63 | 28 % |
+| `cooling_only_controller` | 213 (`crates/oce-api/tests/g36_cooling_only_controller.rs:252`) | 83 | 39 % |
+| `multizone_vav_relief_fan_group` | 226 (`crates/oce-api/tests/g36_relief_fan_group.rs:105`) | 63 | 28 % |
 
 Rejection fires only on **total** deferral — a graph with no emitted runtime block left after
 deferred and reserved lowering-only blocks are removed, which would be an unloadable root-only
@@ -97,7 +97,7 @@ that dropped 39 % of the graph. Both return `Ok(Vec<u8>)`.
 trip covered the whole input.** Treat a non-empty list as "this document is a subset of the model I
 asked you to write."
 
-Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:58`) always goes through
+Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:98`) always goes through
 `export_with_report` and keeps the warnings, so the facade route does not expose the trap. It is
 `oce_cxf::export()` specifically that drops them.
 

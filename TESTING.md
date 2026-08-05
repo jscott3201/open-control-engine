@@ -62,7 +62,12 @@ comparison that fails if even one bit differs.
   scrutinized change, not noise.
 - **Compare floats by bits, never with `==` or an epsilon.** Use `Value::bit_eq` (which compares
   `f64` via `to_bits`, so `NaN == NaN` and `+0.0 != -0.0` as determinism demands). An epsilon
-  comparison would mask exactly the drift a golden test exists to catch.
+  comparison would mask exactly the drift a golden test exists to catch. One named exception: the
+  21 transcendental, psychrometric, and solar Real signal goldens are compared under the documented
+  aligned-tolerance band (`crates/oce-conformance/src/aligned.rs:218-245`, tolerances pinned at
+  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`). That exception is a property of
+  their libm-dependent outputs, not a license for epsilon anywhere else — every other golden stays
+  bit-exact.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -155,7 +160,11 @@ case" is itself a finding to resolve, not a pass.
 - **Test location:** inline `#[cfg(test)] mod tests;` for unit tests; `crates/<crate>/tests/` for
   integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
-  in an engine assertion.
+  in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
+  signal goldens, whose libm-dependent outputs use the documented aligned-tolerance band
+  (`crates/oce-conformance/src/aligned.rs:218-245`,
+  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`) — not a license for epsilon
+  anywhere else.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.

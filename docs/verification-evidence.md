@@ -25,7 +25,7 @@ visible of them proves nothing about correctness at all.
 | Tier-2 determinism goldens | `crates/oce-conformance/tests/fixtures/golden/g36_traces/` | 46 traces + 46 `.prov.json` | **No** — engine self-output, by construction |
 | Tier-A oracles | `tools/golden-gen/goldens/` | 412 provenance records, 410 signal goldens | Yes — CI-enforced code-dependency firewall |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
-| Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 bit-exact CDL signal goldens | Yes — Tier-A generator is outside the engine workspace |
+| Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens (257 bit-exact, 21 aligned-tolerance) | Yes — Tier-A generator is outside the engine workspace |
 | Tier-3 cross-implementation differential | — | nothing | **Not wired at all** |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
@@ -72,11 +72,21 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
   `goldens/CDL/Constants/constants.prov.json`).
 - **132 G36 sequence signal goldens**, spanning all 46 fixtures.
 
-**410 of those are signal goldens compared bit-exactly.** The 278 CDL signals are compared by the
-15 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
-block through the frozen facade in `ComparisonMode::Exact` with zero tolerances, asserts the
-comparison is unmasked, and asserts `compared_points == reference.n_rows` so a zero-row comparison
-cannot pass vacuously (`crates/oce-conformance/tests/block_harness/mod.rs:106-140`). The 132 G36
+**410 of those are signal goldens — 389 compared bit-exactly, 21 under a documented
+aligned-tolerance band.** The 278 CDL signals are compared by the 15
+`crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
+block through the frozen facade, asserts the comparison is unmasked, and asserts
+`compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Twelve of
+the 15 suites run `ComparisonMode::Exact` with zero tolerances
+(`crates/oce-conformance/tests/block_harness/mod.rs:106-140`), and four run their 21
+libm-dependent Real goldens through `ComparisonMode::AlignedTolerance` at 1e-12
+(`block_harness/mod.rs:142-158`, tolerances pinned at `:323-332`):
+`per_block_reals_transcendental.rs`, `per_block_reals_sources_transcendental.rs`,
+`per_block_psychrometrics.rs`, and `per_block_utilities.rs` — with
+`per_block_reals_sources_transcendental.rs` counted in both, because its two `CalendarTime`
+cases compare exactly while its single `Sin` case is banded. Boolean outputs in the aligned
+suites still compare by bits even in that mode (`crates/oce-conformance/src/aligned.rs:214`), so
+257 of the 278 CDL goldens are bit-exact. The 132 G36
 signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
 directory. Their recorded comparison regimes tally exactly: 102 `Value::bit_eq` f64, 18 exact
 encoded integer, 12 exact 0.0/1.0.
@@ -108,7 +118,8 @@ ports, and compares instances and undirected edges — counting orientation flip
 CXF §8.2 admits either endpoint as the `isConnectedTo` subject.
 
 The verdict table is itself a committed golden
-(`crates/oce-cxf/tests/fixtures/golden/structural_oracle_verdicts.txt`), and its last line reads:
+(`crates/oce-cxf/tests/fixtures/golden/structural_oracle_verdicts.txt`), and its VERDICTS line
+reads:
 
 ```text
 VERDICTS: EXACT=30 EXACT-XFOLD=1   EXCLUDED=15
@@ -213,8 +224,9 @@ Read that in the direction that costs you something. **A change confined to `oce
 A green PR is not evidence that a change's own tests pass.
 
 That has a direct consequence for everything on this page. The Tier-A comparison suites live in
-`crates/oce-conformance/tests/` and `crates/oce-api/tests/`, so **the 410 bit-exact oracle
-comparisons do not run per PR.** They run on `development → main` release PRs, on a daily cron
+`crates/oce-conformance/tests/` and `crates/oce-api/tests/`, so **the 410 oracle
+comparisons — 389 bit-exact, 21 aligned-tolerance — do not run per PR.** They run on
+`development → main` release PRs, on a daily cron
 against the `development` tip, and on manual dispatch (`.github/workflows/release-gate.yml`). Two
 input-hygiene audits *do* run per PR, because `.agents/gate.sh` invokes them directly: the fixture
 port-order audit and the structural oracle, the latter also carrying the vendored-tree hash manifest
@@ -255,7 +267,8 @@ isolation, and no per-class edge cases are covered by an oracle. Which classes e
 If you are evaluating this engine, the defensible summary is:
 
 - Determinism is **tested**, on two architectures, per PR, against committed goldens.
-- Agreement with CDL / Buildings **source semantics** is bounded by 410 bit-exact comparisons
+- Agreement with CDL / Buildings **source semantics** is bounded by 410 oracle comparisons (389
+  bit-exact, 21 under the documented 1e-12 aligned-tolerance band)
   against references generated behind a mechanically enforced code-dependency firewall — covering
   128 of 133 classes, and running on the release gate rather than per PR.
 - Fixture fidelity is bounded structurally against an independent LBL translation of upstream
