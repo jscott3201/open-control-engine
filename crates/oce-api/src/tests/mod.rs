@@ -2,6 +2,7 @@
 
 mod boundary_alias_tests;
 mod common;
+mod durable_output_batch_tests;
 mod frozen_surface;
 mod load_build_tick;
 mod output_columns_tests;

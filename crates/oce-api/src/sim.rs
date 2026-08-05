@@ -284,7 +284,8 @@ fn model_time_to_unix_nanos(epoch_unix_nanos: u64, t_now: f64) -> Result<u64, Oc
 ///
 /// Unlike `projection::value_to_oc_value`, enum outputs use `OcValue::Int` so they round-trip
 /// through `engine::sample_to_value`. String is retained for totality, but is unreachable from
-/// [`projected_output_batch`] because `io::point_rows_at_load` excludes String points. Never panics.
+/// [`DurableOutputBatch::refresh`] because `io::point_rows_at_load` excludes String points. Never
+/// panics.
 pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     match value {
         Value::Real(value) => OcValue::Real(*value),
@@ -295,28 +296,82 @@ pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     }
 }
 
-/// Build the off-tick store batch for projected output columns.
+/// The pre-built durable store batch for [`Engine::step_realtime`]: point identity is resolved
+/// once at load, and each step rewrites only the value + timestamp of every row in place, so a
+/// warm step allocates nothing on the write path (issue #242 slice 1).
 ///
-/// `values` is indexed by `ConnectorId`, never column position. Load validation guarantees every
-/// projected connector is in bounds and point keys are unique. Samples use the supplied exact UNIX
-/// timestamp in nanoseconds, `Ok` status, and Telemetry durability. Never panics for a loaded model.
-pub(crate) fn projected_output_batch(
-    io: &IoInventory,
-    values: &[Value],
-    at_unix_nanos: u64,
-) -> Vec<PointWrite> {
-    io.durable_columns()
-        .into_iter()
-        .map(|(path, connector_id)| PointWrite {
-            key: DomainKey::new(path),
-            sample: PointSample {
+/// `writes` and `connectors` are parallel vectors aligned by index. Two vectors are forced by
+/// the [`DurableOutputBatch::writes`] `&[PointWrite]` signature (`write_points` takes that
+/// slice, so the rows must already be contiguous `PointWrite`s); both builders therefore assert
+/// the length invariant, mirroring the `Outputs::build` entries/paths assert.
+///
+/// # Invariants
+/// - Rows are minted from [`IoInventory::durable_columns`] semantics only — never from
+///   `trace_columns` and never from the declared boundary-output alias map (`_spec/18` D3:
+///   an alias in the durable batch would double-write each aliased sample).
+/// - Pre-refresh rows are placeholders (`OcValue::Bool(false)` at instant 0):
+///   [`DurableOutputBatch::writes`] is meaningful only after a [`DurableOutputBatch::refresh`].
+///   `step_realtime`, the only production caller, always refreshes first, so a placeholder is
+///   never committed.
+/// - The batch is valid only for the model whose [`IoInventory`] minted it: `refresh` indexes
+///   the live value arena by the cached connector ids, so `step_realtime`'s panic-freedom
+///   depends on `Engine::build_model_in_memory` re-minting this batch alongside `io` at every
+///   load. Samples carry the exact supplied UNIX-nanosecond timestamp, `Ok` status, and
+///   Telemetry durability.
+#[derive(Debug, Default)]
+pub(crate) struct DurableOutputBatch {
+    writes: Vec<PointWrite>,
+    connectors: Vec<ConnectorId>,
+}
+
+impl DurableOutputBatch {
+    /// Resolve the durable key set once, minting one placeholder row per output point.
+    pub(crate) fn build_at_load(io: &IoInventory) -> DurableOutputBatch {
+        let columns = io.durable_columns();
+        let mut writes = Vec::with_capacity(columns.len());
+        let mut connectors = Vec::with_capacity(columns.len());
+        for (path, connector_id) in columns {
+            writes.push(PointWrite {
+                key: DomainKey::new(path),
+                sample: PointSample {
+                    value: OcValue::Bool(false),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 0,
+                },
+                durability: Durability::Telemetry,
+            });
+            connectors.push(connector_id);
+        }
+        debug_assert_eq!(
+            writes.len(),
+            connectors.len(),
+            "DurableOutputBatch writes/connectors must align"
+        );
+        DurableOutputBatch { writes, connectors }
+    }
+
+    /// Rewrite every row's sample in place from the live connector values — identity (key,
+    /// durability, row order) is untouched. `values` is indexed by cached [`ConnectorId`],
+    /// never by column position; ids are inventory-sourced and in range for the loaded model.
+    pub(crate) fn refresh(&mut self, values: &[Value], at_unix_nanos: u64) {
+        debug_assert_eq!(
+            self.writes.len(),
+            self.connectors.len(),
+            "DurableOutputBatch writes/connectors must align"
+        );
+        for (write, connector_id) in self.writes.iter_mut().zip(&self.connectors) {
+            write.sample = PointSample {
                 value: output_value_to_oc_value(&values[connector_id.0 as usize]),
                 status: PointStatus::Ok,
                 at_unix_nanos,
-            },
-            durability: Durability::Telemetry,
-        })
-        .collect()
+            };
+        }
+    }
+
+    /// The batch rows in durable-column order — the exact `write_points` argument.
+    pub(crate) fn writes(&self) -> &[PointWrite] {
+        &self.writes
+    }
 }
 
 /// A single tripped CDL `Assert` block, surfaced for the verification report (`08` §5.2, R-RT-4).
@@ -465,8 +520,9 @@ impl<S: Store> Engine<S> {
         let collector = AssertCollector::default();
         self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-        let batch = projected_output_batch(&self.io, &self.state.values, at_unix_nanos);
-        let written = self.store.write_points(&batch)?;
+        self.durable_batch
+            .refresh(&self.state.values, at_unix_nanos);
+        let written = self.store.write_points(self.durable_batch.writes())?;
         Ok(StepReport {
             asserts: collector.events.into_inner(),
             written,
@@ -487,15 +543,14 @@ impl<S: Store> Engine<S> {
             .io
             .resolve_inputs(point)
             .ok_or_else(|| OcError::UnknownPoint(point.to_string()))?;
-        let connectors = connectors.to_vec();
-        for &cid in &connectors {
+        for &cid in connectors {
             // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
             let want = self.model.connectors[cid.0 as usize].value_type;
             if value.value_type() != want {
                 return Err(OcError::InputType(point.to_string()));
             }
         }
-        for cid in connectors {
+        for &cid in connectors {
             self.state.values[cid.0 as usize] = value.clone();
         }
         Ok(())

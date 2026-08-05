@@ -1,7 +1,7 @@
 //! Agreement between the trace and durable output-column sets.
 //!
 //! `IoInventory::trace_columns` (the `CollectSpec::All` recording set) and
-//! `IoInventory::durable_columns` (the `projected_output_batch` key set) are separate methods
+//! `IoInventory::durable_columns` (the `DurableOutputBatch` key set) are separate methods
 //! serving separate contracts (`_spec/18` D2/D3). Today they are required to be identical: this
 //! assertion is the artifact that legitimately flips if either fence is ever reopened, turning a
 //! store or trace decision into a red test instead of a silent divergence.
