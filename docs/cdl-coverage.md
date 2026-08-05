@@ -54,7 +54,8 @@ anywhere in `crates/oce-api/src/` — the `pub use` block at `crates/oce-api/src
 re-exports `Engine`, the error types, `ExportReport`, IO and sim types, `LoadReport`, the parameter
 table, the topology view (`Topology`, `TopologyBlock`, `TopologyConnection`, `DeclaredOutput`,
 `PassThroughPair`), `oce_diag::Diagnostic`, `oce_model::{ConnectorId, Value, ValueType}`, and
-`oce_store` (including `SemanticQuery`) — and nothing from `oce_blocks`. `oce-api` depends on `oce-blocks`
+`oce_store` (including `SemanticQuery`) — and nothing from `oce_blocks`. `oce-api` depends on
+`oce-blocks`
 (`crates/oce-api/Cargo.toml:29`) and uses it internally, but a consumer depending only on `oce-api`
 must add `oce-blocks` as its own dependency to call `catalog()`.
 

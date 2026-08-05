@@ -76,15 +76,17 @@ The layer contains **412 Tier-A provenance records**, every one of them recordin
 aligned-tolerance band.** The 278 CDL signals are compared by the 15
 `crates/oce-conformance/tests/per_block_*.rs` suites through a shared harness that drives each
 block through the frozen facade, asserts the comparison is unmasked, and asserts
-`compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Eleven of
+`compared_points == reference.n_rows` so a zero-row comparison cannot pass vacuously. Twelve of
 the 15 suites run `ComparisonMode::Exact` with zero tolerances
-(`crates/oce-conformance/tests/block_harness/mod.rs:106-140`); the four transcendental,
-psychrometric, and solar suites (`per_block_reals_transcendental.rs`,
-`per_block_reals_sources_transcendental.rs`, `per_block_psychrometrics.rs`,
-`per_block_utilities.rs`) run their 21 libm-dependent Real goldens through
-`ComparisonMode::AlignedTolerance` at 1e-12 (`block_harness/mod.rs:142-158`, tolerances pinned at
-`:323-332`) — Boolean outputs in those same suites still compare by bits even in that mode
-(`crates/oce-conformance/src/aligned.rs:214`), so 257 of the 278 CDL goldens are bit-exact. The 132 G36
+(`crates/oce-conformance/tests/block_harness/mod.rs:106-140`), and four run their 21
+libm-dependent Real goldens through `ComparisonMode::AlignedTolerance` at 1e-12
+(`block_harness/mod.rs:142-158`, tolerances pinned at `:323-332`):
+`per_block_reals_transcendental.rs`, `per_block_reals_sources_transcendental.rs`,
+`per_block_psychrometrics.rs`, and `per_block_utilities.rs` — with
+`per_block_reals_sources_transcendental.rs` counted in both, because its two `CalendarTime`
+cases compare exactly while its single `Sin` case is banded. Boolean outputs in the aligned
+suites still compare by bits even in that mode (`crates/oce-conformance/src/aligned.rs:214`), so
+257 of the 278 CDL goldens are bit-exact. The 132 G36
 signals are compared by 23 `*_funnel.rs` and four `*_oracle.rs` per-fixture suites in the same
 directory. Their recorded comparison regimes tally exactly: 102 `Value::bit_eq` f64, 18 exact
 encoded integer, 12 exact 0.0/1.0.
@@ -223,7 +225,8 @@ A green PR is not evidence that a change's own tests pass.
 
 That has a direct consequence for everything on this page. The Tier-A comparison suites live in
 `crates/oce-conformance/tests/` and `crates/oce-api/tests/`, so **the 410 oracle
-comparisons — 389 bit-exact, 21 aligned-tolerance — do not run per PR.** They run on `development → main` release PRs, on a daily cron
+comparisons — 389 bit-exact, 21 aligned-tolerance — do not run per PR.** They run on
+`development → main` release PRs, on a daily cron
 against the `development` tip, and on manual dispatch (`.github/workflows/release-gate.yml`). Two
 input-hygiene audits *do* run per PR, because `.agents/gate.sh` invokes them directly: the fixture
 port-order audit and the structural oracle, the latter also carrying the vendored-tree hash manifest
