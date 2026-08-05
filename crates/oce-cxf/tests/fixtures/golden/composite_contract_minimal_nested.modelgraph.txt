@@ -14,4 +14,4 @@ connections: 1
   C1 -> C2
 external_inputs: [0]
 boundary_outputs: 1
-  http://example.org#cc.minimal_nested.y <- C3
+  http://example.org#cc.minimal_nested.y <- C3 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

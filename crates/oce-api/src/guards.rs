@@ -21,10 +21,11 @@ use std::sync::Arc;
 use oce_store_mem::MemStore;
 
 use crate::{
-    AssertEvent, AssertLevel, ConnectorId, Diagnostic, Engine, IoClass, IoInventory, IoSummary,
-    LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable, PhysicalKind,
-    PointDirection, PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics, SimSpec,
-    StepReport, TemplateRef, TrendCfg, TrendInterval, Value, ValueType,
+    AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, IoClass,
+    IoInventory, IoSummary, LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable,
+    PassThroughPair, PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode,
+    SemanticQuery, SimMetrics, SimSpec, StepReport, TemplateRef, Topology, TopologyBlock,
+    TopologyConnection, TrendCfg, TrendInterval, Value, ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -95,6 +96,12 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<TrendInterval>();
     needs_clone::<ValueType>();
     needs_clone::<ConnectorId>();
+    // Every type reachable from the frozen `Engine::topology` return (absent here since #236).
+    needs_clone::<Topology>();
+    needs_clone::<TopologyBlock>();
+    needs_clone::<TopologyConnection>();
+    needs_clone::<PassThroughPair>();
+    needs_clone::<DeclaredOutput>();
 }
 
 // ---- R-API-PY-4a — owned-snapshot enumeration is first-class (no borrowed iterator crosses) ----

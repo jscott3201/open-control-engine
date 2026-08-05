@@ -8,4 +8,4 @@ connectors: 2
 connections: 0
 external_inputs: [0]
 boundary_outputs: 1
-  http://example.org#cc.two_level_nesting.y <- C1
+  http://example.org#cc.two_level_nesting.y <- C1 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

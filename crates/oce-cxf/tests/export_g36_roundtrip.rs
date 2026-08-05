@@ -575,6 +575,7 @@ fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     let mut deferring = 0usize;
     let mut authored_outputs = 0usize;
     let mut represented_outputs = 0usize;
+    let mut non_surviving_outputs = 0usize;
     let mut shared_output_drivers = Vec::new();
     let mut other_root_keys = BTreeSet::new();
     let mut lost_root_keys = BTreeSet::new();
@@ -602,6 +603,14 @@ fn every_g36_fixture_reaches_its_rt2_fixpoint() {
         assert_authored_boundary_output_contract(fixture, &bytes, &g1, &report);
         let export_doc: JsonValue = serde_json::from_slice(&report.bytes).expect("export JSON");
         let exported_root = top_composite(&export_doc);
+        // Volume companion to the per-fixture set equality above: each non-surviving declared
+        // output is already ATTRIBUTED to a resolved deferral owner there, so this aggregate is
+        // a corpus-drift pin only — deliberately not an "unattributed == 0" line, which could
+        // never fail beside the set equality. The per-key attr comparison over the 97 surviving
+        // (61 attr-carrying) lives in `export_declared_output_attrs.rs`.
+        non_surviving_outputs += reference_ids(top_composite(&source_doc).get("S231:hasOutput"))
+            .difference(&reference_ids(exported_root.get("S231:hasOutput")))
+            .count();
         for key in top_composite(&source_doc)
             .as_object()
             .expect("root object")
@@ -645,6 +654,10 @@ fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     assert_eq!(
         represented_outputs, 130,
         "child-output-driven boundary outputs"
+    );
+    assert_eq!(
+        non_surviving_outputs, 35,
+        "deferral-attributed declared outputs absent from the exported root hasOutput"
     );
     assert_eq!(
         shared_output_drivers.len(),

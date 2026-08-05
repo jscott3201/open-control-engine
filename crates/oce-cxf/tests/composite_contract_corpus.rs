@@ -101,9 +101,39 @@ fn render(graph: &ModelGraph) -> String {
     );
     let _ = writeln!(out, "boundary_outputs: {}", graph.boundary_outputs.len());
     for output in &graph.boundary_outputs {
-        let _ = writeln!(out, "  {} <- C{}", output.iri, output.source.0);
+        let _ = writeln!(
+            out,
+            "  {} <- C{} attrs={}",
+            output.iri,
+            output.source.0,
+            render_attrs(&output.attrs)
+        );
     }
     out
+}
+
+/// Bit-exact rendering of a declared boundary output's §7.4.1 attrs — printed unconditionally,
+/// so these goldens pin that no attribute leaks into the corpus fixtures (none authors any);
+/// Real bounds by `to_bits`, never `==`/epsilon (TESTING.md pillar 2).
+fn render_attrs(attrs: &oce_model::Attrs) -> String {
+    use oce_model::Attrs;
+    let bits = |bound: Option<f64>| {
+        bound.map_or_else(|| "-".to_owned(), |x| format!("0x{:016x}", x.to_bits()))
+    };
+    match attrs {
+        Attrs::Real(a) => format!(
+            "Real(unit={:?} quantity={:?} display_unit={:?} min={} max={})",
+            a.unit.as_deref(),
+            a.quantity.as_deref(),
+            a.display_unit.as_deref(),
+            bits(a.min),
+            bits(a.max),
+        ),
+        Attrs::Integer(a) => format!("Integer(min={:?} max={:?})", a.min, a.max),
+        Attrs::Boolean(_) => "Boolean".to_owned(),
+        Attrs::String(_) => "String".to_owned(),
+        Attrs::Enum(_) => "Enum".to_owned(),
+    }
 }
 
 fn render_value(value: &Value) -> String {

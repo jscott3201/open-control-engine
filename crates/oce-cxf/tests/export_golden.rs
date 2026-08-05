@@ -20,6 +20,7 @@
 //! | `g36_vav_single_zone.export.cxf.json`    | an enum-free G36-scale topology at full node count |
 //! | `enum_deferral_miniature.export.cxf.json`| the deferral survivor cone — what is emitted *and* what is absent |
 //! | `pass_through_miniature.export.cxf.json` | native boundary pass-through inputs, outputs, and bare edges |
+//! | `declared_output_attrs.export.cxf.json`  | §7.4.1 attrs on declared boundary-output nodes, both fill sites (#233) |
 //!
 //! To regenerate a golden after an **intentional** format change:
 //!
@@ -50,6 +51,8 @@ const G36_FIXTURE: &str = include_str!("fixtures/g36/vav_single_zone.jsonld");
 /// The enum-deferral miniature — exported down to its survivor cone.
 const DEFERRAL_FIXTURE: &str = include_str!("fixtures/enum_deferral_miniature.jsonld");
 const PASS_THROUGH_FIXTURE: &str = include_str!("fixtures/pass_through_miniature.jsonld");
+/// Declared boundary outputs carrying authored §7.4.1 attrs on both fill sites (#233).
+const DECLARED_OUTPUT_ATTRS_FIXTURE: &str = include_str!("fixtures/declared_output_attrs.jsonld");
 
 /// The synthesized root `@id` (`ModelGraph` does not record the source root IRI). Pinned here
 /// against the exporter's constant: changing it is a byte-format break.
@@ -194,6 +197,17 @@ fn attr_bearing_bytes_match_the_checked_in_golden() {
     assert_golden(
         &export_stable(ATTRS_FIXTURE),
         "connector_attrs.export.cxf.json",
+    );
+}
+
+#[test]
+fn declared_output_attr_bytes_match_the_checked_in_golden() {
+    // Declared boundary-output nodes carrying their authored §7.4.1 attrs on the wire — the
+    // elided fill site and the pass-through fill site both pinned, with the driver's own
+    // (different) attrs beside them so a declared/driver mix-up moves this file.
+    assert_golden(
+        &export_stable(DECLARED_OUTPUT_ATTRS_FIXTURE),
+        "declared_output_attrs.export.cxf.json",
     );
 }
 
