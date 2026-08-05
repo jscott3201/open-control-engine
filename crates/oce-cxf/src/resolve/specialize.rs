@@ -12,6 +12,7 @@ use oce_model::{
 
 use crate::dto::{CxfValue, Node};
 
+use super::composite::is_runtime_composite;
 use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
 
 /// The result of pruning load-time conditional components/connectors.
@@ -102,15 +103,24 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
 /// Build the guard-evaluation scope from the parent's own declarations through the shared
 /// order-independent mechanism ([`super::declaration_scope`]) at its specialize invocation: no
 /// inactive filter (no final [`Specialization`] exists while this pass runs) and non-emitting
-/// generic machinery; the chain's tagged findings are recorded on `withheld` for post-lowering
-/// reconciliation. Guard-level contracts (`ConditionalGuardUnknownParameter` et al.) are
-/// unaffected — they emit from guard evaluation, not from scope construction.
+/// generic machinery; a COMPOSITE chain's tagged findings are recorded on `withheld` for
+/// post-lowering reconciliation, while a leaf chain records none (R20-9 — its cycle/duplicate
+/// participants simply fail to ground). Guard-level contracts
+/// (`ConditionalGuardUnknownParameter` et al.) are unaffected — they emit from guard
+/// evaluation, not from scope construction.
 fn complete_scope(
     parent: &Node,
     by_id: &HashMap<&str, &Node>,
     withheld: &mut WithheldFindings,
 ) -> CompleteScope {
-    let evaluation = evaluate_declarations(parent, Vec::new(), by_id, Pass::Specialize);
+    let evaluation = evaluate_declarations(
+        parent,
+        Vec::new(),
+        by_id,
+        Pass::Specialize {
+            composite_chain: is_runtime_composite(parent),
+        },
+    );
     withheld.record(&parent.id, evaluation.withheld);
     CompleteScope {
         entries: evaluation.entries,

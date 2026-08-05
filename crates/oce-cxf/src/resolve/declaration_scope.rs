@@ -12,8 +12,12 @@
 //!
 //! Two refusal classes are contract rules ([`super::composite_rules`]):
 //! - `composite/declaration-cycle` — a reference cycle among siblings, self-loops included; one
-//!   diagnostic per distinct cycle, subject = the participant earliest in chained order, message
-//!   naming every participant in chained order and closing on the first. Cycle members are
+//!   diagnostic per distinct cycle **per chain evaluation**. A composite reachable via more
+//!   than one `containsBlock` path is evaluated once per path (enclosing scopes can differ per
+//!   path), so the same cycle can surface once per visit, exactly like `contains-cycle` — never
+//!   assume one diagnostic per structural cycle document-wide. Subject = the participant
+//!   earliest in chained order; the message's arrow list is the participant *ring* in chained
+//!   declaration order closing on the first — not the discovered edge path. Cycle members are
 //!   excluded from validation and grounding and absent from the produced scope; declarations
 //!   outside a cycle still ground (maximal progress), and a reference *to* a cycle member fails
 //!   with the ordinary untagged `GroundingFailed` machinery.
@@ -26,7 +30,11 @@
 //! parallel loops. Emission policy differs by pass (see [`Pass`]); the tagged findings the
 //! specialize pass computes are withheld in [`WithheldFindings`] and emit only for chains the
 //! lowering pass does not itself evaluate, so one import reports each chain's findings once,
-//! from the lowering view when both passes see it.
+//! from the lowering view when both passes see it. Tagged rules apply only to COMPOSITE
+//! own-chains at the specialize invocation (R20-9): a leaf's chain — whose values are member
+//! modifications, a different level — still evaluates there so guards can ground, but records
+//! no tagged findings; its cycle/duplicate participants simply fail to ground, and the leaf's
+//! members are grounded (and diagnosed) at the fenced member level.
 //!
 //! Dependency edges come from identifier tokens in `Expr` bindings (see [`identifier_heads`]);
 //! non-`Expr` values contribute no edges. Everything here is deterministic: iteration is always
@@ -57,7 +65,8 @@ use super::specialize::{Specialization, validate_g36_parameter_value};
 ///   filter and NO array refusal (an array binding simply fails to ground, silently), skips
 ///   validation, and emits nothing directly: generic machinery (`GroundingFailed`,
 ///   `UnresolvedReference`, value validation) is non-emitting here, and the two tagged contract
-///   rules are returned in [`Evaluation::withheld`] for post-lowering reconciliation.
+///   rules are returned in [`Evaluation::withheld`] for post-lowering reconciliation — for
+///   composite chains only (R20-9; a leaf chain records no tagged findings at all).
 pub(super) enum Pass<'a> {
     /// The pre-lowering composite walk (`collect_leaves` → `composite_scope`).
     Lowering {
@@ -67,7 +76,13 @@ pub(super) enum Pass<'a> {
         diags: &'a mut Vec<Diagnostic>,
     },
     /// The conditional-guard specialization pass (`complete_scope`).
-    Specialize,
+    Specialize {
+        /// Whether the evaluated chain belongs to a runtime composite. Tagged rules apply only
+        /// to composite own-chains at this invocation (R20-9): a leaf chain still evaluates —
+        /// guards must ground — but its cycle/duplicate participants are refused silently, so
+        /// they simply fail to ground and nothing lands in [`Evaluation::withheld`].
+        composite_chain: bool,
+    },
 }
 
 /// The outcome of one own-declaration chain evaluation.
@@ -182,10 +197,7 @@ pub(super) fn evaluate_declarations(
                     )),
                 )
                 .with_subject(chain[index].iri.to_owned());
-                match &mut pass {
-                    Pass::Lowering { diags, .. } => diags.push(diag),
-                    Pass::Specialize => withheld.push(diag),
-                }
+                record_tagged(&mut pass, &mut withheld, diag);
             }
         }
     }
@@ -238,24 +250,18 @@ pub(super) fn evaluate_declarations(
             )),
         )
         .with_subject(chain[participants[0]].iri.to_owned());
-        match &mut pass {
-            Pass::Lowering { diags, .. } => diags.push(diag),
-            Pass::Specialize => withheld.push(diag),
-        }
+        record_tagged(&mut pass, &mut withheld, diag);
         for index in participants {
             chain[index].refused = true;
         }
     }
 
     // 5. Evaluate the surviving declarations topologically, ties broken toward the smallest
-    // chained index. Every own name — grounded, pending, or failed — masks a same-named
-    // enclosing binding for sibling RHS resolution; grounded entries are keyed by chained index
-    // so the final scope region lies in chained declaration order.
-    let own_names: HashSet<&str> = chain
-        .iter()
-        .filter(|d| !d.refused)
-        .map(|d| d.name)
-        .collect();
+    // chained index. Every own name — grounded, pending, failed, or refused (a cycle member or
+    // duplicate) — masks a same-named enclosing binding for sibling RHS resolution; grounded
+    // entries are keyed by chained index so the final scope region lies in chained declaration
+    // order.
+    let own_names: HashSet<&str> = chain.iter().map(|d| d.name).collect();
     let mut grounded: Vec<(usize, Arc<str>, EvalResult)> = Vec::new();
     let mut remaining: Vec<usize> = Vec::new();
     let mut pending = vec![false; chain.len()];
@@ -293,6 +299,22 @@ pub(super) fn evaluate_declarations(
     let mut entries = enclosing;
     entries.extend(grounded.into_iter().map(|(_, name, value)| (name, value)));
     Evaluation { entries, withheld }
+}
+
+/// Record one tagged contract finding per the pass's emission policy: the lowering invocation
+/// emits directly; the specialize invocation withholds it for post-lowering reconciliation on a
+/// composite chain and records nothing for a leaf chain (R20-9 — the refused declarations still
+/// fail to ground there, silently).
+fn record_tagged(pass: &mut Pass<'_>, withheld: &mut Vec<Diagnostic>, diag: Diagnostic) {
+    match pass {
+        Pass::Lowering { diags, .. } => diags.push(diag),
+        Pass::Specialize {
+            composite_chain: true,
+        } => withheld.push(diag),
+        Pass::Specialize {
+            composite_chain: false,
+        } => {}
+    }
 }
 
 /// Push a generic (untagged) diagnostic — emitting at the lowering invocation only; the
@@ -408,12 +430,19 @@ impl Scope for OwnDeclarationScope<'_> {
 
 /// The identifier *head* tokens of an expression string — the census-family tokenizer.
 ///
-/// Criterion: identifiers tokenize after numeric literals, so an exponent suffix never yields a
-/// token (`1e-3` contributes nothing); a dotted path (`Types.Mode.occupied`) contributes only
-/// its head segment (`Types`); everything else is a candidate token. Known accepted
-/// false-positive mode: a sibling name inside a string literal in the expression is tokenized
-/// like code — the CXF profile has no string-literal parameter arithmetic, so no fixture
-/// exercises it. Total; never panics.
+/// Criterion — the tokens are the names the expression evaluator actually resolves through
+/// `Scope` lookup:
+/// - identifiers tokenize after numeric literals, so an exponent suffix never yields a token
+///   (`1e-3` contributes nothing);
+/// - a dotted path (`Types.Mode.occupied`) contributes only its head segment (`Types`);
+/// - a **call head** — an identifier or dotted path followed, after optional ASCII whitespace,
+///   by `(` — contributes nothing: `oce-expr` resolves call heads only against its builtin
+///   table, never through `Scope` lookup, so `max(1.0, 2.0)` yields no `max` token while
+///   `max + 1.0` yields `max` (call arguments still tokenize normally).
+///
+/// Known accepted false-positive mode: a sibling name inside a string literal in the
+/// expression is tokenized like code — the CXF profile has no string-literal parameter
+/// arithmetic, so no fixture exercises it. Total; never panics.
 pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
     let bytes = text.as_bytes();
     let mut heads = Vec::new();
@@ -456,7 +485,15 @@ pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
                     i += 1;
                 }
             }
-            heads.push(head);
+            // Call-head exclusion: `(` after optional ASCII whitespace makes this a call, which
+            // the evaluator resolves as a builtin, never via Scope lookup.
+            let mut next = i;
+            while next < bytes.len() && bytes[next].is_ascii_whitespace() {
+                next += 1;
+            }
+            if !(next < bytes.len() && bytes[next] == b'(') {
+                heads.push(head);
+            }
         } else {
             i += 1;
         }

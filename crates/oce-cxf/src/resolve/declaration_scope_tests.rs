@@ -283,7 +283,14 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
         ],
     }));
     let map = by_id(&nodes);
-    let evaluation = evaluate_declarations(&root, Vec::new(), &map, Pass::Specialize);
+    let evaluation = evaluate_declarations(
+        &root,
+        Vec::new(),
+        &map,
+        Pass::Specialize {
+            composite_chain: true,
+        },
+    );
     assert_eq!(
         evaluation.withheld.len(),
         1,
@@ -300,6 +307,58 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
         scalar(&evaluation.entries, "ok")
             .unwrap()
             .bit_eq(&Value::Real(4.0))
+    );
+}
+
+#[test]
+fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation() {
+    // R20-9: a leaf chain still evaluates at the specialize invocation (guards must ground),
+    // but its cycle and duplicate participants are refused with NO tagged finding — they simply
+    // fail to ground — while non-refused declarations still ground for guard evaluation.
+    let nodes = vec![
+        node(serde_json::json!({ "@id": "ex:M.con.a", "S231:value": "b" })),
+        node(serde_json::json!({ "@id": "ex:M.con.b", "S231:value": "a" })),
+        node(serde_json::json!({ "@id": "ex:M.con.k", "S231:value": 1.0 })),
+        node(serde_json::json!({ "@id": "ex:M.con.other.k", "S231:value": 2.0 })),
+        node(serde_json::json!({ "@id": "ex:M.con.have_hol", "S231:value": false })),
+    ];
+    let leaf = node(serde_json::json!({
+        "@id": "ex:M.con",
+        "S231:hasParameter": [
+            { "@id": "ex:M.con.a" }, { "@id": "ex:M.con.b" },
+            { "@id": "ex:M.con.k" }, { "@id": "ex:M.con.other.k" },
+            { "@id": "ex:M.con.have_hol" },
+        ],
+    }));
+    let map = by_id(&nodes);
+    let evaluation = evaluate_declarations(
+        &leaf,
+        Vec::new(),
+        &map,
+        Pass::Specialize {
+            composite_chain: false,
+        },
+    );
+    assert!(
+        evaluation.withheld.is_empty(),
+        "a leaf chain records no tagged finding for its cycle or its duplicate: {:?}",
+        evaluation.withheld
+    );
+    assert!(
+        scalar(&evaluation.entries, "a").is_none() && scalar(&evaluation.entries, "b").is_none(),
+        "the cycle participants still fail to ground"
+    );
+    assert!(
+        scalar(&evaluation.entries, "k")
+            .unwrap()
+            .bit_eq(&Value::Real(1.0)),
+        "the first duplicate occurrence still grounds; the later one is refused silently"
+    );
+    assert!(
+        scalar(&evaluation.entries, "have_hol")
+            .unwrap()
+            .bit_eq(&Value::Boolean(false)),
+        "guard parameters still ground so guard evaluation can proceed"
     );
 }
 
@@ -321,7 +380,22 @@ fn dotted_paths_contribute_only_their_head_segment() {
 fn plain_identifiers_tokenize_between_operators_and_literals() {
     assert_eq!(
         identifier_heads("0.01*VMin_flow + max(kA, _b2)"),
-        vec!["VMin_flow", "max", "kA", "_b2"]
+        vec!["VMin_flow", "kA", "_b2"],
+        "call arguments tokenize; the call head `max` does not"
+    );
+}
+
+#[test]
+fn call_heads_never_yield_identifier_tokens() {
+    // oce-expr resolves a name followed by `(` only against its builtin table, never through
+    // Scope lookup — so a call head is not a dependency edge, with or without whitespace
+    // before the parenthesis.
+    assert!(identifier_heads("max(1.0, 2.0)").is_empty());
+    assert_eq!(identifier_heads("max + 1.0"), vec!["max"]);
+    assert_eq!(
+        identifier_heads("max (x)"),
+        vec!["x"],
+        "interior ASCII whitespace still makes `max` a call head; the argument tokenizes"
     );
 }
 

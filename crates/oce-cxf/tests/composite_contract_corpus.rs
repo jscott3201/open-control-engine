@@ -34,7 +34,7 @@ fn read_fixture(rel: &str) -> String {
 }
 
 /// Accepted fixtures paired with their golden snapshots in the shared golden tree.
-const ACCEPTED: [(&str, &str); 5] = [
+const ACCEPTED: [(&str, &str); 6] = [
     (
         "accepted/forward_sibling_reference.jsonld",
         "tests/fixtures/golden/composite_contract_forward_sibling_reference.modelgraph.txt",
@@ -42,6 +42,10 @@ const ACCEPTED: [(&str, &str); 5] = [
     (
         "accepted/leaf_array_parameter_conditional_member.jsonld",
         "tests/fixtures/golden/composite_contract_leaf_array_parameter_conditional_member.modelgraph.txt",
+    ),
+    (
+        "accepted/leaf_identity_parameter_modification.jsonld",
+        "tests/fixtures/golden/composite_contract_leaf_identity_parameter_modification.modelgraph.txt",
     ),
     (
         "accepted/minimal_nested.jsonld",

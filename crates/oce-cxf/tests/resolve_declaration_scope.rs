@@ -8,9 +8,11 @@
 //! plus the shadowed-forward-reference probe document below. At this head the qualifying
 //! fixtures are `accepted/minimal_nested.jsonld` (root: `kBase`, `kTop`) and
 //! `accepted/forward_sibling_reference.jsonld` (root: `kDerived`, `kBase` + constant
-//! `cShift`); `two_level_nesting` carries one declaration per composite, and the declaring
-//! nodes of `registered_leaf_carveout` and `leaf_array_parameter_conditional_member` are
-//! registered leaves, whose member chains are a different (order-sensitive, fenced) level.
+//! `cShift`); `two_level_nesting` carries one declaration per composite,
+//! `leaf_identity_parameter_modification`'s composite declares only `samplePeriod`, and the
+//! declaring nodes of `registered_leaf_carveout`, `leaf_array_parameter_conditional_member`,
+//! and `leaf_identity_parameter_modification` are registered leaves, whose member chains are a
+//! different (order-sensitive, fenced) level.
 //! The qualification scan below is generic, so a future fixture qualifies itself.
 
 use std::collections::BTreeSet;
@@ -200,6 +202,7 @@ fn qualifying_accepted_fixtures_load_byte_identically_under_declaration_permutat
     for fixture in [
         "accepted/forward_sibling_reference.jsonld",
         "accepted/leaf_array_parameter_conditional_member.jsonld",
+        "accepted/leaf_identity_parameter_modification.jsonld",
         "accepted/minimal_nested.jsonld",
         "accepted/registered_leaf_carveout.jsonld",
         "accepted/two_level_nesting.jsonld",
@@ -388,6 +391,10 @@ fn shadowed_forward_reference_doc(param_order: [&str; 2]) -> Json {
 
 #[test]
 fn own_declaration_shadows_enclosing_binding_for_sibling_references_in_both_orders() {
+    // The §5.1 permutation obligation for the probe-(a) document: byte-identical rendered
+    // ModelGraph AND identical diagnostic vectors across the orders (`import_clean` pins both
+    // vectors to empty), plus the graduated value itself.
+    let mut renders = Vec::new();
     for order in [["g", "k"], ["k", "g"]] {
         let graph = import_clean(&shadowed_forward_reference_doc(order));
         let k = leaf_param(&graph, ".sub.con", "k");
@@ -395,7 +402,12 @@ fn own_declaration_shadows_enclosing_binding_for_sibling_references_in_both_orde
             k.bit_eq(&Value::Real(9.0)),
             "own k=9.0 must win over enclosing k=1.0 under order {order:?}, got {k:?}"
         );
+        renders.push(render(&graph));
     }
+    assert_eq!(
+        renders[0], renders[1],
+        "the rendered ModelGraph must be byte-identical across the two declaration orders"
+    );
 }
 
 /// Probe (b): a reference to a name bound nowhere stays a loud grounding failure, and a
@@ -481,41 +493,39 @@ fn sibling_cycle_and_self_reference_refuse_through_the_corpus_fixtures() {
     }
 }
 
-/// A LEAF declaration cycle visited only by the specialize pass (the leaf carries a
-/// conditional member, so guard evaluation grounds its chain; the lowering pass only grounds
-/// composite chains): the tagged finding must still surface — withheld by the specialize pass
-/// and released after lowering — while the fenced member-level Step-7 machinery keeps firing
-/// its own untagged grounding failures for the same subjects (the ruled leaf double-fire
-/// shape; an import never reports one-diagnostic-per-refused-declaration here).
+/// A cycle-refused own name still MASKS a same-named enclosing binding: the non-cycle sibling
+/// `c` referencing the refused `a` must fail loud through the untagged machinery, never
+/// silently ground from the enclosing `a=1.0` (R20-2 — an own name denotes the own
+/// declaration, everywhere).
 #[test]
-fn leaf_chain_cycle_surfaces_through_the_specialize_pass_alongside_member_grounding_failures() {
+fn cycle_refused_own_name_still_masks_the_enclosing_binding() {
     let doc = json!({
         "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
         "@graph": [
             { "@id": "http://example.org#M", "@type": "S231:Block",
-              "S231:containsBlock": [ { "@id": "http://example.org#M.con" } ] },
-            { "@id": "http://example.org#M.con",
-              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:hasParameter": { "@id": "http://example.org#M.a" },
+              "S231:containsBlock": [ { "@id": "http://example.org#M.sub" } ] },
+            { "@id": "http://example.org#M.a", "S231:value": 1.0 },
+            { "@id": "http://example.org#M.sub",
+              "@type": "http://example.org#Vendor.Sequences.Inner",
               "S231:hasParameter": [
-                  { "@id": "http://example.org#M.con.k" },
-                  { "@id": "http://example.org#M.con.a" },
-                  { "@id": "http://example.org#M.con.b" },
-                  { "@id": "http://example.org#M.con.have_hol" } ],
-              "S231:hasInput": [ { "@id": "http://example.org#M.con.uHol" } ],
-              "S231:hasOutput": { "@id": "http://example.org#M.con.y" } },
-            { "@id": "http://example.org#M.con.k", "S231:value": 1.0 },
-            { "@id": "http://example.org#M.con.a", "S231:value": "b" },
-            { "@id": "http://example.org#M.con.b", "S231:value": "a" },
-            { "@id": "http://example.org#M.con.have_hol", "S231:value": false },
-            { "@id": "http://example.org#M.con.uHol", "@type": "S231:RealInput",
-              "S231:isOfDataType": { "@id": "S231:Real" },
-              "S231:isConditionalComponent": true,
-              "S231:conditionalExpression": "have_hol" },
-            { "@id": "http://example.org#M.con.y", "@type": "S231:RealOutput",
+                  { "@id": "http://example.org#M.sub.a" },
+                  { "@id": "http://example.org#M.sub.b" },
+                  { "@id": "http://example.org#M.sub.c" } ],
+              "S231:containsBlock": [ { "@id": "http://example.org#M.sub.con" } ] },
+            { "@id": "http://example.org#M.sub.a", "S231:value": "b" },
+            { "@id": "http://example.org#M.sub.b", "S231:value": "a" },
+            { "@id": "http://example.org#M.sub.c", "S231:value": "a + 1.0" },
+            { "@id": "http://example.org#M.sub.con",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:hasParameter": { "@id": "http://example.org#M.sub.con.k" },
+              "S231:hasOutput": { "@id": "http://example.org#M.sub.con.y" } },
+            { "@id": "http://example.org#M.sub.con.k", "S231:value": 1.0 },
+            { "@id": "http://example.org#M.sub.con.y", "@type": "S231:RealOutput",
               "S231:isOfDataType": { "@id": "S231:Real" } }
         ]
     });
-    let diags = import_json(&doc).expect_err("the leaf chain cycle refuses the import");
+    let diags = import_json(&doc).expect_err("the cycle and c's loud failure refuse the import");
     let rendered: Vec<(DiagCode, Option<&str>, &str)> = diags
         .iter()
         .map(|d| (d.code, d.subject.as_deref(), d.message.as_str()))
@@ -524,66 +534,58 @@ fn leaf_chain_cycle_surfaces_through_the_specialize_pass_alongside_member_ground
         rendered,
         vec![
             (
-                DiagCode::GroundingFailed,
-                Some("http://example.org#M.con.a"),
-                "expression binding did not ground: unknown identifier: b",
-            ),
-            (
                 DiagCode::MalformedDocument,
-                Some("http://example.org#M.con.a"),
+                Some("http://example.org#M.sub.a"),
                 "composite/declaration-cycle: cycle in the block's own declaration references: \
-                 http://example.org#M.con.a -> http://example.org#M.con.b -> \
-                 http://example.org#M.con.a",
+                 http://example.org#M.sub.a -> http://example.org#M.sub.b -> \
+                 http://example.org#M.sub.a",
             ),
             (
                 DiagCode::GroundingFailed,
-                Some("http://example.org#M.con.b"),
+                Some("http://example.org#M.sub.c"),
                 "expression binding did not ground: unknown identifier: a",
             ),
         ],
-        "the withheld tagged finding is released once and Step 7's member-level machinery \
-         still fires for the same subjects"
+        "c must fail loud on the masked own `a` — a silent ground from the enclosing a=1.0 \
+         would shrink this vector to the cycle diagnostic alone"
     );
 }
 
-/// Withheld findings survive a root-classification failure (here: two candidate roots): the
-/// lowering pass evaluates no chain at all, so every specialize-pass tagged finding releases.
+/// A builtin call head is not a dependency edge: `p = "max(1.0, 2.0)"` beside a sibling
+/// literally NAMED `max` must not manufacture a `p -> max` edge (oce-expr resolves call heads
+/// only as builtins, never through the scope), so the document loads clean — with zero
+/// diagnostics and one grounded value — under both declaration-array orders.
 #[test]
-fn withheld_findings_release_when_root_classification_leaves_no_chain_evaluated() {
-    let doc = json!({
-        "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
-        "@graph": [
-            { "@id": "http://example.org#M", "@type": "S231:Block",
-              "S231:hasParameter": { "@id": "http://example.org#M.x" },
-              "S231:containsBlock": [ { "@id": "http://example.org#M.condblk" } ] },
-            { "@id": "http://example.org#M2", "@type": "S231:Block",
-              "S231:containsBlock": [ { "@id": "http://example.org#M.condblk" } ] },
-            { "@id": "http://example.org#M.x", "S231:value": "x" },
-            { "@id": "http://example.org#M.condblk",
-              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-              "S231:isConditionalComponent": true,
-              "S231:conditionalExpression": "have_x",
-              "S231:hasParameter": { "@id": "http://example.org#M.condblk.k" },
-              "S231:hasOutput": { "@id": "http://example.org#M.condblk.y" } },
-            { "@id": "http://example.org#M.condblk.k", "S231:value": 1.0 },
-            { "@id": "http://example.org#M.condblk.y", "@type": "S231:RealOutput",
-              "S231:isOfDataType": { "@id": "S231:Real" } }
-        ]
-    });
-    let diags = import_json(&doc).expect_err("refuses");
-    assert!(
-        diags
+fn builtin_call_head_beside_a_same_named_sibling_grounds_clean_in_both_orders() {
+    for order in [["p", "max"], ["max", "p"]] {
+        let refs: Vec<Json> = order
             .iter()
-            .any(|d| d.message.starts_with("composite/root-count: ")),
-        "root classification fails first: {diags:#?}"
-    );
-    assert!(
-        diags.iter().any(|d| d.message
-            == "composite/declaration-cycle: cycle in the block's own declaration references: \
-                http://example.org#M.x -> http://example.org#M.x"),
-        "the self-reference finding the specialize pass computed for M's chain must not vanish \
-         on the no-root path: {diags:#?}"
-    );
+            .map(|name| json!({ "@id": format!("http://example.org#M.{name}") }))
+            .collect();
+        let doc = json!({
+            "@context": { "S231": "http://data.ashrae.org/S231P#", "base": "http://example.org#" },
+            "@graph": [
+                { "@id": "http://example.org#M", "@type": "S231:Block",
+                  "S231:hasParameter": refs,
+                  "S231:containsBlock": [ { "@id": "http://example.org#M.con" } ] },
+                { "@id": "http://example.org#M.p", "S231:value": "max(1.0, 2.0)" },
+                { "@id": "http://example.org#M.max", "S231:value": "p" },
+                { "@id": "http://example.org#M.con",
+                  "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                  "S231:hasParameter": { "@id": "http://example.org#M.con.k" },
+                  "S231:hasOutput": { "@id": "http://example.org#M.con.y" } },
+                { "@id": "http://example.org#M.con.k", "S231:value": "p" },
+                { "@id": "http://example.org#M.con.y", "@type": "S231:RealOutput",
+                  "S231:isOfDataType": { "@id": "S231:Real" } }
+            ]
+        });
+        let graph = import_clean(&doc);
+        let k = leaf_param(&graph, ".con", "k");
+        assert!(
+            k.bit_eq(&Value::Real(2.0)),
+            "p grounds through the builtin under order {order:?}, got {k:?}"
+        );
+    }
 }
 
 /// Probe (e): a parameter reads a later-declared sibling constant — the fixed

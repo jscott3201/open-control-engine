@@ -159,8 +159,12 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 
 > A composite's active `S231:hasParameter` and `S231:hasConstant` bindings form **one mutual
 > scope**: every binding's value may reference any sibling of either kind, declared earlier or
-> later — declaration array order carries no meaning for the composite's own scope, and grounded
-> values and diagnostics are invariant under any permutation of the two arrays. Inside an own
+> later — declaration array order carries no meaning for the composite's own scope. A document
+> that loads does so with a byte-identical imported model and an identical diagnostic vector
+> under any permutation of the two arrays; a document these rules refuse refuses under every
+> permutation with the same rule ids and the same participant sets — only a diagnostic's
+> *subject* may relocate, because subjects follow the chained declaration order that
+> permutation changes. Inside an own
 > binding's value, an own local name always denotes the own sibling, shadowing a same-named
 > binding of an enclosing composite; only names with **no** own binding fall through to the
 > enclosing scope chain (innermost composite first). The grounded scope is inherited by every
@@ -169,11 +173,16 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 > - A reference **cycle** among a composite's own bindings — including the length-1
 >   self-reference `x = "x * 2"`, which is never an enclosing read — rejects with
 >   `composite/declaration-cycle` (DiagCode `malformed-document`): **one diagnostic per
->   distinct cycle**, subject = the participant earliest in the params-then-constants chained
->   declaration order, message naming every participant in chained order and closing on the
->   first (`…#M.a -> …#M.b -> …#M.a`). Bindings outside the cycle still ground (maximal
->   progress); cycle members are absent from the scope, so a reference to one fails with a
->   generic `grounding-failed`.
+>   distinct cycle per chain evaluation**. Like `contains-cycle`, a composite reachable via
+>   multiple `containsBlock` paths is evaluated once per path (enclosing scopes can differ per
+>   path), so the same cycle can surface once per visit — consumers must not assume one
+>   diagnostic per structural cycle document-wide. Subject = the participant earliest in the
+>   params-then-constants chained declaration order; the message's arrow list is the
+>   participant **ring** in chained declaration order closing on the first
+>   (`…#M.a -> …#M.b -> …#M.a`) — not the discovered edge path. Bindings outside the cycle
+>   still ground (maximal progress); cycle members keep their own binding's name — masking a
+>   same-named enclosing binding — but are absent from the scope, so a reference to one fails
+>   with a generic `grounding-failed`.
 > - One local name declared **twice** in one composite's own chain rejects with
 >   `composite/duplicate-declaration` (DiagCode `malformed-document`): one diagnostic per
 >   occurrence beyond the first in chained order (three declarations of one name emit two),
@@ -199,13 +208,20 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 Conditional-guard specialization evaluates guards against the same own-scope semantics through
 the same mechanism, so guard decisions are equally order-independent. The specialization pass
 also grounds *leaf* declaration chains that carry conditional members; on that pass, generic
-grounding machinery is non-emitting — a chain defect visible to both passes is reported once,
-from the lowering view, and a chain only the specialization pass grounds surfaces through the
-two tagged rules above (or, for a guard that genuinely cannot evaluate, through the guard's own
-diagnostics), never as a bare `grounding-failed`. A leaf with a legal array parameter plus a
-conditional member therefore loads (corpus fixture
-`accepted/leaf_array_parameter_conditional_member.jsonld`); the specialization model itself —
-what a guard means and how pruning propagates — is unchanged.
+grounding machinery is non-emitting, and the two tagged rules above apply to **composite**
+chains only — a leaf chain's bindings are member modifications (the leaf level described
+above), so a cycle or duplicate among them produces no tagged finding there: the participants
+simply fail to ground in the guard scope. A composite-chain defect visible to both passes is
+reported once, from the lowering view; a composite chain only the specialization pass grounds
+(for example one pruned by a false guard) still surfaces through the two tagged rules; and a
+guard that genuinely cannot evaluate refuses through the guard's own diagnostics — never as a
+bare `grounding-failed`. A leaf with a legal array parameter plus a conditional member
+therefore loads (corpus fixture `accepted/leaf_array_parameter_conditional_member.jsonld`),
+and so does the leaf identity-modification idiom — a leaf parameter
+`samplePeriod = "samplePeriod"` reading the same-named enclosing composite parameter, beside a
+conditional member (corpus fixture `accepted/leaf_identity_parameter_modification.jsonld`, the
+member value grounding enclosing-first per the leaf rules above); the specialization model
+itself — what a guard means and how pruning propagates — is unchanged.
 
 References use the local name — the segment after the last `.` of the binding's `@id` — so two
 same-named bindings at *different* nesting levels shadow (own-scope-wins for the composite's
@@ -218,13 +234,15 @@ enclosing binding when one exists, not the minted element, while a same-named si
 *parameter* collides and refuses (`ArrayFlattenCollision`). Because grounded values feed block
 construction, own-scope resolution can change what a document means, so a constructed document
 that imported under the older order-sensitive reading can refuse under this rule (a cycle or a
-duplicate) or ground differently (a forward or shadowed sibling reference). Of the 147
-checked-in CXF documents at the change (103 crate fixtures plus 44 vendored modelica-json
-translations), all 103 crate documents are measured byte-identical in import outcome under the
-rule; 12 vendored documents — every one still refusing on unrelated grounds — shed diagnostics
-in exactly the two ruled classes (forward sibling references now grounding, and
-specialization-pass generic machinery going non-emitting), with zero new diagnostics anywhere.
-The wider reach exists off-corpus.
+duplicate) or ground differently (a forward or shadowed sibling reference). Measured against
+the pre-change base (`43d8a13`, which held 147 checked-in CXF documents: 103 crate fixtures
+plus 44 vendored modelica-json translations), all 103 crate documents are byte-identical in
+import outcome under the rule; 12 vendored documents — every one still refusing on unrelated
+grounds — shed 48 `grounding-failed` diagnostics in exactly the two ruled classes (forward
+sibling references now grounding, and specialization-pass generic machinery going
+non-emitting), with zero new diagnostics anywhere. The tree now holds 153 documents (109 crate
+plus 44 vendored; the growth is the conformance fixtures this rule added). The wider reach
+exists off-corpus.
 
 ```json
 { "@id": "…#M", "@type": "S231:Block",
