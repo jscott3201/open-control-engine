@@ -6,8 +6,10 @@
 //!   variant. A bare `Int` feeding a Real-typed parameter with no `isOfDataType` is *not* re-typed
 //!   here; the block constructor owns any accepted Int→Real parameter promotion.
 //! - typed XSD literals (`{"@value","@type"}`) parse the lexical form per the datatype suffix.
-//! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`ParamScope`] of the instance's
-//!   already-ground parameters (so a later binding may reference an earlier one).
+//! - `Expr(string)` is handed to [`oce_expr::eval_str`] against a [`ParamScope`] of the
+//!   already-ground parameters visible to the binding — the enclosing scope chain plus
+//!   earlier-declared siblings. On the split view Step 7 uses for member values, an enclosing
+//!   binding wins over a same-named sibling (see [`ParamScope`]).
 //!
 //! Every failure path, including over-limit expression depth or size, is a typed [`GroundErr`] —
 //! **never a panic, never an `unwrap`** on input-derived text. The resolver maps a `GroundErr` to a
@@ -129,26 +131,67 @@ fn ground_typed(lexical: &str, datatype: &str) -> Result<Value, GroundErr> {
 }
 
 /// A read-only [`Scope`] over an instance's already-ground parameters, for grounding `Expr`
-/// bindings that reference sibling parameters. Built incrementally by the resolver (a binding sees
-/// only the parameters grounded *before* it, in declaration order). Pure and total (R11).
+/// bindings that reference enclosing-scope or sibling parameters. Built incrementally by the
+/// resolver (a binding sees only the parameters grounded *before* it, in declaration order —
+/// forward references still fail). Pure and total (R11).
+///
+/// Two views exist over one entry slice:
+/// - [`ParamScope::new`] — the undivided latest-wins view: one reverse scan, so the most recently
+///   grounded binding of a name wins. Array *dimension* expressions (`sizeOfDimensions`) resolve
+///   on this view, as do the pre-lowering composite scopes.
+/// - [`ParamScope::with_enclosing`] — the split view Step 7 uses for member *value* expressions:
+///   the enclosing region is searched first, so an enclosing binding wins over a same-named
+///   sibling (issue #239); sibling-only names keep resolving against earlier-declared siblings.
+///
+/// Split corollary (owner-ruled): a name bound BOTH by a sibling member and the enclosing scope
+/// has two readings inside one block — value expressions read the enclosing binding, dimension
+/// expressions read the sibling *when the sibling is grounded earlier*: member array order still
+/// decides the dimension reading (values are order-invariant under member order, dimensions are
+/// not). That divergence is silent on the scalar path; on the array path an element-count
+/// divergence refuses (`GroundingFailed`, both counts in the message), while a value divergence
+/// with a matching count is silent, exactly like the scalar path.
 pub(crate) struct ParamScope<'a> {
     entries: &'a [(Arc<str>, EvalResult)],
+    /// Number of leading `entries` grounded by the enclosing scope chain; the rest are the
+    /// instance's own already-ground members. `0` is the undivided view.
+    enclosing: usize,
 }
 
 impl<'a> ParamScope<'a> {
-    /// A scope over the given (name, value) entries (latest-wins on a duplicate name).
+    /// The undivided view over the given (name, value) entries: one reverse scan, latest-wins on
+    /// a duplicate name. Dimension parsing and the pre-lowering composite scopes use this view;
+    /// member value grounding uses [`ParamScope::with_enclosing`].
     pub(crate) fn new(entries: &'a [(Arc<str>, EvalResult)]) -> Self {
-        Self { entries }
+        Self {
+            entries,
+            enclosing: 0,
+        }
+    }
+
+    /// The split view: `entries[..enclosing]` came from the enclosing scope chain and is searched
+    /// first, so an enclosing binding wins over a same-named sibling in `entries[enclosing..]`.
+    /// Each region is scanned in reverse (its most recently grounded binding wins). Total: an
+    /// `enclosing` past the slice end is clamped at lookup, never a panic.
+    pub(crate) fn with_enclosing(entries: &'a [(Arc<str>, EvalResult)], enclosing: usize) -> Self {
+        Self { entries, enclosing }
     }
 }
 
 impl Scope for ParamScope<'_> {
     fn lookup(&self, name: &str) -> Option<&EvalResult> {
-        // Reverse so a later binding of the same name shadows an earlier one. Lookup-only; the
-        // iteration order here never affects model id/connection ordering (it returns a value, not order).
-        self.entries
+        // Enclosing region first, then siblings — an enclosing binding wins over a same-named
+        // sibling (issue #239). Each region is scanned in reverse so its own most recently
+        // grounded binding wins (innermost enclosing composite; latest earlier sibling). With
+        // `enclosing == 0` this degenerates to one reverse scan over the whole slice — the
+        // undivided latest-wins view `new` constructs. Lookup-only; the iteration order here
+        // never affects model id/connection ordering (it returns a value, not order).
+        let (enclosing, siblings) = self
+            .entries
+            .split_at(self.enclosing.min(self.entries.len()));
+        enclosing
             .iter()
             .rev()
+            .chain(siblings.iter().rev())
             .find(|(n, _)| n.as_ref() == name)
             .map(|(_, v)| v)
     }
@@ -299,6 +342,70 @@ mod tests {
             &no_scope(),
         );
         assert!(matches!(r, Err(GroundErr::Expr(_))));
+    }
+
+    #[test]
+    fn split_view_reads_enclosing_binding_over_same_named_sibling() {
+        // Issue #239: on the split view the enclosing region wins on a name bound in both
+        // regions, while a sibling-only name keeps resolving against the sibling region.
+        let entries = vec![
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(10))), // enclosing
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(99))), // sibling
+            (Arc::from("b"), EvalResult::Scalar(Value::Integer(7))),  // sibling-only
+        ];
+        let split = ParamScope::with_enclosing(&entries, 1);
+        let both = ground_value(&CxfValue::Expr("a".to_owned()), &split).unwrap();
+        assert!(
+            both.bit_eq(&Value::Integer(10)),
+            "the enclosing binding of `a` must win over the sibling, got {both:?}"
+        );
+        let sibling_only = ground_value(&CxfValue::Expr("b".to_owned()), &split).unwrap();
+        assert!(
+            sibling_only.bit_eq(&Value::Integer(7)),
+            "a sibling-only name must still resolve, got {sibling_only:?}"
+        );
+    }
+
+    #[test]
+    fn innermost_enclosing_entry_wins_within_the_enclosing_region() {
+        // The enclosing region's OWN scan direction: with two enclosing entries of one name —
+        // outer composite first, inner composite last, chain order — the reverse scan must
+        // return the innermost (last-pushed) binding. A one-entry enclosing region cannot
+        // distinguish forward from reverse, so this is the case that pins the direction.
+        let entries = vec![
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(1))), // outer enclosing composite
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(2))), // inner enclosing composite
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(99))), // sibling
+        ];
+        let split = ParamScope::with_enclosing(&entries, 2);
+        let v = ground_value(&CxfValue::Expr("a".to_owned()), &split).unwrap();
+        assert!(
+            v.bit_eq(&Value::Integer(2)),
+            "the INNERMOST enclosing binding (last-pushed in the enclosing region) must win \
+             over the outer composite's, got {v:?}"
+        );
+    }
+
+    #[test]
+    fn undivided_view_keeps_latest_wins_on_a_duplicate_name() {
+        // `new` is the undivided view dimension parsing uses: one reverse scan, latest-wins.
+        let entries = vec![
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(10))),
+            (Arc::from("a"), EvalResult::Scalar(Value::Integer(99))),
+        ];
+        let v = ground_value(&CxfValue::Expr("a".to_owned()), &ParamScope::new(&entries)).unwrap();
+        assert!(
+            v.bit_eq(&Value::Integer(99)),
+            "the undivided view must stay latest-wins, got {v:?}"
+        );
+    }
+
+    #[test]
+    fn enclosing_split_past_the_slice_end_is_clamped_not_a_panic() {
+        let entries = vec![(Arc::from("a"), EvalResult::Scalar(Value::Integer(3)))];
+        let scope = ParamScope::with_enclosing(&entries, 5);
+        let v = ground_value(&CxfValue::Expr("a".to_owned()), &scope).unwrap();
+        assert!(v.bit_eq(&Value::Integer(3)));
     }
 
     #[test]

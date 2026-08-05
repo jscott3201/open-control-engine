@@ -4,9 +4,9 @@
 //! hysteresis blocks classify heating demand, cooling demand, and the asymmetric
 //! `uHea - uCoo` tie-break. The latter has `uLow=-0.01` and `uHigh=0.01`; both source expressions
 //! are pre-grounded in the fixture. `ZoneStates.mo` lines 58-62 bind `uHigh=uLow` in the enclosing
-//! scope, but the resolver's latest-wins parameter scope would otherwise shadow that top-level
-//! `uLow=+0.01` with the earlier sibling `hysU.uLow=-0.01`. Resolver-design follow-up
-//! `019f5431-047a` tracks the general representation gap. The combinational priority ladder then
+//! scope, and the resolver grounds member value references enclosing-first (issue #239, which
+//! closes resolver-design follow-up `019f5431-047a`), so the authored form would read the
+//! top-level `uLow=+0.01` regardless of member order. The combinational priority ladder then
 //! selects exactly one Integer-valued zone state on every tick.
 
 use crate::oracle::{Golden, InputSeries, ValueKind};

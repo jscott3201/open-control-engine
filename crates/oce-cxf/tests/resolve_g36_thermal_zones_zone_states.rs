@@ -1,11 +1,11 @@
 //! Source-verified G36 ThermalZones.ZoneStates composite import tests.
 //!
 //! Upstream `ZoneStates.mo` lines 58-62 bind `hysU.uLow=-uLow` and
-//! `hysU.uHigh=uLow`. The fixture pre-grounds these expressions to `-0.01` and `+0.01`.
-//! Pre-grounding the upper threshold preserves Modelica's enclosing-scope meaning: the resolver's
-//! latest-wins `ParamScope` would otherwise shadow the top-level
-//! `uLow=+0.01` with the earlier sibling `hysU.uLow=-0.01`. Resolver-design follow-up
-//! `019f5431-047a` tracks an explicit enclosing-scope representation. The three enum literals
+//! `hysU.uHigh=uLow` against the enclosing `uLow=+0.01`. The fixture pre-grounds these
+//! expressions to `-0.01` and `+0.01` — a dodge that is no longer necessary: member value
+//! references resolve enclosing-first (issue #239, which closes resolver-design follow-up
+//! `019f5431-047a`), so the authored `uHigh=uLow` grounds to the top-level `+0.01` regardless of
+//! member array order. The fixture keeps its pre-grounded form. The three enum literals
 //! bound at `BooleanToInteger.integerTrue` must ground position-independently to Integer values
 //! 1, 2, and 3.
 

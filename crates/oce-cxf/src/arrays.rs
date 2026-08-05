@@ -30,7 +30,13 @@ fn strip_array_label(name: &str) -> &str {
 /// Parse a CXF `S231:sizeOfDimensions` string `"(d1, d2, …)"` into per-dimension sizes (doc 04
 /// §3.6.1). Each `di` is a non-negative integer literal, or a symbolic expression evaluated against
 /// `scope` to an `Integer` (so `"(nin)"` resolves when `nin` is a ground *earlier* parameter — the
-/// same forward-reference limitation Step 7 already has for scalar `Expr` bindings). Returns the
+/// same forward-reference limitation Step 7 has for value bindings). Dimensions resolve on the
+/// **undivided** latest-wins view (`ParamScope::new`), not the enclosing-first split value
+/// expressions use (issue #239): an enclosing-only name still resolves for shape, and a sibling
+/// binding shadows a same-named enclosing one for shape purposes — when the sibling is already
+/// grounded; member array order decides which binding the dims read. Owner-ruled; the pin set is
+/// the count-divergence refusal, the one-name-two-readings corollary fixture, and the
+/// member-order characterization in `resolve_param_precedence.rs`. Returns the
 /// dimension sizes in declared order, or a human message for a `MalformedDocument`. Total; never
 /// panics (no `unwrap`/index on input text — the type-domain discipline).
 fn parse_size_dims(
@@ -235,12 +241,28 @@ fn mint_element(
 ///   minted exactly as list elements are, already canonicalized by `oce-expr`.
 /// - Any other shape (a bare/typed scalar literal) is `GroundingFailed`.
 ///
+/// Scope split (issue #239): both value paths above ground on the split view — `enclosing`
+/// leading `scope_entries` came from the enclosing scope chain and win over a same-named sibling
+/// — while `sizeOfDimensions` parsing keeps the undivided latest-wins view. Corollary
+/// (owner-ruled): a name bound both by a sibling member and the enclosing scope is read twice —
+/// the sibling drives the SHAPE when the sibling is grounded earlier (member array order still
+/// decides the dimension reading; values are order-invariant under member order, dimensions are
+/// not), the enclosing binding drives the VALUES. An element-count divergence between the two
+/// readings refuses (`GroundingFailed`, both counts in the message); a value divergence with a
+/// matching count is silent, exactly like the scalar path.
+///
+/// Minted element names (`k_1`..`k_n`) enter the scope as SIBLING entries, so a later member's
+/// value reference to one is shadowed by a same-named enclosing binding — `w = "k_1"` reads an
+/// enclosing `k_1` when one exists, not the minted element — while a same-named sibling
+/// parameter collides and refuses via `ArrayFlattenCollision`.
+///
 /// Every failure is a typed diagnostic; never panics (no `unwrap`/index on input-derived data).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn expand_array_param(
     piri: &str,
     pnode: &Node,
     cxf_val: &CxfValue,
+    enclosing: usize,
     param_iris: &[&str],
     table: &mut Vec<(Arc<str>, Value)>,
     scope_entries: &mut Vec<(Arc<str>, EvalResult)>,
@@ -257,6 +279,8 @@ pub(crate) fn expand_array_param(
         );
         return;
     };
+    // Dimensions parse on the UNDIVIDED latest-wins view — deliberately not the split view the
+    // value paths below use (issue #239 ruling; see `parse_size_dims`).
     let dims = match parse_size_dims(size, pnode.n_dims, &ParamScope::new(&scope_entries[..])) {
         Ok(d) => d,
         Err(msg) => {
@@ -310,7 +334,8 @@ pub(crate) fn expand_array_param(
                     continue;
                 }
                 let elem = if m == 1 { &elems[0] } else { &elems[k] };
-                match ground_value(elem, &ParamScope::new(&scope_entries[..])) {
+                let scope = ParamScope::with_enclosing(&scope_entries[..], enclosing);
+                match ground_value(elem, &scope) {
                     Ok(v) => mint_element(ename, v, table, scope_entries),
                     Err(e) => diags.push(
                         Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
@@ -319,14 +344,15 @@ pub(crate) fn expand_array_param(
                 }
             }
         }
-        // An array *expression* string, evaluated through oce-expr against the incremental scope.
-        // Bound first so the immutable scope borrow ends before elements are minted. Note the G36
+        // An array *expression* string, evaluated through oce-expr against the incremental
+        // scope's split view (enclosing-first for values, issue #239). Evaluated before the match
+        // so the immutable scope borrow ends before elements are minted. Note the G36
         // integer-constant shim lives only in scalar `ground_value`, so a G36 constant path inside
         // an array expression fails as an unknown identifier (documented asymmetry, tracked
         // separately).
         CxfValue::Expr(text) => {
-            let evaluated =
-                eval_array_expression(text, &dims, n, &ParamScope::new(&scope_entries[..]));
+            let scope = ParamScope::with_enclosing(&scope_entries[..], enclosing);
+            let evaluated = eval_array_expression(text, &dims, n, &scope);
             match evaluated {
                 Ok(av) => {
                     // av.len() == names.len() (shape-checked above); elements are already
