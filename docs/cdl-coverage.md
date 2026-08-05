@@ -50,9 +50,10 @@ whole reason the type exists.
 
 **The caveat that will cost you ten minutes:** `catalog()` lives in `oce-blocks`, and **`oce-api`
 does not re-export it**. Reading `crates/oce-api/src/lib.rs`, the string `catalog` does not appear
-anywhere in `crates/oce-api/src/` — the `pub use` block at `crates/oce-api/src/lib.rs:49-76`
+anywhere in `crates/oce-api/src/` — the `pub use` block at `crates/oce-api/src/lib.rs:50-77`
 re-exports `Engine`, the error types, `ExportReport`, IO and sim types, `LoadReport`, the parameter
-table, `Topology`, `oce_diag::Diagnostic`, `oce_model::{ConnectorId, Value, ValueType}`, and
+table, `DeclaredOutput`, `PassThroughPair`, `Topology`, `oce_diag::Diagnostic`,
+`oce_model::{ConnectorId, Value, ValueType}`, and
 `oce_store` — and nothing from `oce_blocks`. `oce-api` depends on `oce-blocks`
 (`crates/oce-api/Cargo.toml:29`) and uses it internally, but a consumer depending only on `oce-api`
 must add `oce-blocks` as its own dependency to call `catalog()`.

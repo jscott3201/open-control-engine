@@ -108,7 +108,8 @@ ports, and compares instances and undirected edges — counting orientation flip
 CXF §8.2 admits either endpoint as the `isConnectedTo` subject.
 
 The verdict table is itself a committed golden
-(`crates/oce-cxf/tests/fixtures/golden/structural_oracle_verdicts.txt`), and its last line reads:
+(`crates/oce-cxf/tests/fixtures/golden/structural_oracle_verdicts.txt`), and its VERDICTS line
+reads:
 
 ```text
 VERDICTS: EXACT=30 EXACT-XFOLD=1   EXCLUDED=15

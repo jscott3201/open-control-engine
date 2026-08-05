@@ -63,7 +63,7 @@ layer. At minimum, implement all of the following:
    and nothing else; a sequence that omits an interlock has no interlock.
 6. **Write-failure handling.** `Engine::step_realtime` is not transactional: if the batched store
    write fails, the tick has already completed and model time and outputs have advanced, and they
-   are not rolled back (`crates/oce-api/src/sim.rs:455-456`).
+   are not rolled back (`crates/oce-api/src/sim.rs:457-458`).
 
 ## Time is host-supplied
 
