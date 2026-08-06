@@ -30,7 +30,7 @@ fn corpus_fixtures() -> Vec<PathBuf> {
         })
         .collect::<Vec<_>>();
     fixtures.sort();
-    assert_eq!(fixtures.len(), 46, "G36 corpus size moved");
+    assert_eq!(fixtures.len(), 47, "G36 corpus size moved");
     fixtures
 }
 

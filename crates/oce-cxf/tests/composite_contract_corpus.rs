@@ -14,6 +14,7 @@
 //! ```
 
 mod bless;
+mod composite_contract_member_pins;
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -33,7 +34,9 @@ fn read_fixture(rel: &str) -> String {
         .unwrap_or_else(|e| panic!("corpus fixture {} must be readable: {e}", path.display()))
 }
 
-/// Accepted fixtures paired with their golden snapshots in the shared golden tree.
+/// Base accepted fixtures paired with their golden snapshots in the shared golden tree; the
+/// drivers consume [`accepted_fixtures`], the one assembled table (base rows plus the
+/// `hasInstance` member-interface slice rows).
 const ACCEPTED: [(&str, &str); 6] = [
     (
         "accepted/forward_sibling_reference.jsonld",
@@ -60,6 +63,16 @@ const ACCEPTED: [(&str, &str); 6] = [
         "tests/fixtures/golden/composite_contract_registered_leaf_carveout.modelgraph.txt",
     ),
 ];
+
+/// Every accepted fixture with its golden — the single assembled table every accepted-corpus
+/// guard consumes.
+fn accepted_fixtures() -> Vec<(String, String)> {
+    ACCEPTED
+        .iter()
+        .map(|(fixture, golden)| ((*fixture).to_owned(), (*golden).to_owned()))
+        .chain(composite_contract_member_pins::accepted())
+        .collect()
+}
 
 // ---- bit-exact deterministic render (mirrors resolve_composite.rs / resolve_golden.rs) -------
 
@@ -188,7 +201,7 @@ fn error_with_subject(code: DiagCode, subject: &str, message: &str) -> Diagnosti
 /// import returns. Subjects are present only where the contract defines one — the pure-cycle
 /// zero-root rejection deliberately carries none.
 fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
-    vec![
+    let mut rows = vec![
         (
             "rejected/multi_root.jsonld",
             vec![error_with_subject(
@@ -371,13 +384,15 @@ fn expected_rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                 "boundary output is multiply driven (distinct drivers 2)",
             )],
         ),
-    ]
+    ];
+    rows.extend(composite_contract_member_pins::rejections());
+    rows
 }
 
 /// The published pin per warned fixture file: the exact, complete warning vector its import
 /// returns alongside a successful load.
 fn expected_warnings() -> Vec<(&'static str, Vec<Diagnostic>)> {
-    vec![(
+    let mut rows = vec![(
         "warned/undriven_boundary_output.jsonld",
         vec![
             Diagnostic::warning(
@@ -386,7 +401,9 @@ fn expected_warnings() -> Vec<(&'static str, Vec<Diagnostic>)> {
             )
             .with_subject("http://example.org#M.y".to_owned()),
         ],
-    )]
+    )];
+    rows.extend(composite_contract_member_pins::warnings());
+    rows
 }
 
 /// Deterministically sorted `<subdir>/<name>.jsonld` listing of one corpus subdirectory.
@@ -409,9 +426,9 @@ fn sorted_fixture_listing(subdir: &str) -> Vec<String> {
 
 #[test]
 fn accepted_fixtures_match_their_blessed_modelgraph_goldens_byte_exactly() {
-    for (fixture, golden_rel) in ACCEPTED {
-        let actual = render(&import_ok(&read_fixture(fixture)));
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(golden_rel);
+    for (fixture, golden_rel) in accepted_fixtures() {
+        let actual = render(&import_ok(&read_fixture(&fixture)));
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(&golden_rel);
         if bless::enabled() {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, &actual).unwrap();
@@ -428,8 +445,8 @@ fn accepted_fixtures_match_their_blessed_modelgraph_goldens_byte_exactly() {
 
 #[test]
 fn accepted_fixture_imports_are_byte_identical_across_repeated_imports() {
-    for (fixture, _) in ACCEPTED {
-        let src = read_fixture(fixture);
+    for (fixture, _) in accepted_fixtures() {
+        let src = read_fixture(&fixture);
         assert_eq!(
             render(&import_ok(&src)),
             render(&import_ok(&src)),
@@ -575,9 +592,9 @@ fn every_corpus_fixture_file_is_driven_by_a_pin_and_every_pin_has_a_file() {
         "the rejected corpus on disk and the pinned expectation table must stay one-to-one"
     );
 
-    let mut accepted: Vec<String> = ACCEPTED
-        .iter()
-        .map(|(fixture, _)| (*fixture).to_owned())
+    let mut accepted: Vec<String> = accepted_fixtures()
+        .into_iter()
+        .map(|(fixture, _)| fixture)
         .collect();
     accepted.sort();
     assert_eq!(
@@ -595,6 +612,55 @@ fn every_corpus_fixture_file_is_driven_by_a_pin_and_every_pin_has_a_file() {
         sorted_fixture_listing("warned"),
         warned,
         "the warned corpus on disk and the pinned warning table must stay one-to-one"
+    );
+}
+
+// ---- hasInstance member-interface scenario pins ------------------------------------------------
+
+#[test]
+fn permuting_member_arrays_leaves_the_modelgraph_byte_identical() {
+    // R19-13: `hasInstance` array order is load-bearing for nothing — the permutation control
+    // shares every `@id` with the mixed fixture and reorders every member array, and the two
+    // renders (connectors AND param rows) must be byte-equal.
+    assert_eq!(
+        render(&import_ok(&read_fixture(
+            "accepted/mixed_member_interface.jsonld"
+        ))),
+        render(&import_ok(&read_fixture(
+            "accepted/member_array_permutation.jsonld"
+        ))),
+        "permuting hasInstance arrays must not move a ConnectorId, a decl_order, or a param row"
+    );
+}
+
+#[test]
+fn carveout_array_pair_rejects_identically_across_dialects() {
+    // R19-11's reachability agreement: on a registered leaf's carve-out child — an active
+    // containsBlock referent lowering never reaches — the array marker refuses under BOTH
+    // spellings with byte-equal vectors. The unreferenced control loads clean, which is what
+    // proves the scan is reference-based rather than position-based.
+    assert_eq!(
+        reject(&read_fixture(
+            "rejected/carveout_member_array_hasinstance.jsonld"
+        )),
+        reject(&read_fixture(
+            "rejected/carveout_member_array_hasinput.jsonld"
+        )),
+        "the carve-out pair's complete vectors must agree across dialects"
+    );
+}
+
+#[test]
+fn inactive_member_pair_rejects_identically_across_dialects() {
+    // R19-3's inactive row: a listed member marked inactive by a pruned sibling's authored
+    // reference derives no connector and enters neither ConnectorId block, so the hasInstance
+    // spelling takes exactly the arity refusal the authored spelling takes — deriving the
+    // member, or dropping it without withdrawing it from block 1, breaks this equality with a
+    // second diagnostic ("connector owned by no instance").
+    assert_eq!(
+        reject(&read_fixture("rejected/inactive_member_hasinstance.jsonld")),
+        reject(&read_fixture("rejected/inactive_member_hasinput.jsonld")),
+        "the inactive-member pair's complete vectors must agree across dialects"
     );
 }
 

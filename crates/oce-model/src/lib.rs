@@ -371,11 +371,14 @@ pub struct Connector {
     pub attrs: Attrs,
     /// Position in the source declaration — the tie-break key for the deterministic sort (D6).
     pub decl_order: u32,
-    /// Authored `@id`, as written in the originating CXF document, of this connector's
-    /// host-visible identity node — the declared boundary input's node when a composite boundary
-    /// drives this connector, its own node otherwise. The durable point identity on every host
-    /// surface. `None` only for hand-built models; CXF ingest rejects a connector node without an
-    /// `@id`.
+    /// Document-derived `@id` of this connector's host-visible identity: the declared boundary
+    /// input's node when a composite boundary drives this connector; otherwise the connector's
+    /// own authored node `@id`, or — for a `hasInstance`-derived connector with no node — the
+    /// member IRI as authored or the padded `<owner @id>.<declared port name>`, minted from the
+    /// owner's authored identity and the class signature, never from a position. The durable
+    /// point identity on every host surface. `None` only for hand-built models; CXF ingest
+    /// rejects a connector node without an `@id` and refuses a minted identity that collides
+    /// with one.
     pub iri: Option<Arc<str>>,
 }
 

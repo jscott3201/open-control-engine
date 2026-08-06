@@ -302,8 +302,9 @@ pub(crate) fn expand_array_param(
     let n = names.len();
     // Sibling local-names (every OTHER param node on this instance) for the minted-name collision
     // check. Lookup-only set — never iterated into a model id/vector order (determinism contract).
-    // Current scope: flat single-level instances (no hasInstance nesting); revisit name scoping when
-    // nested instances are lowered here.
+    // Scope: flat single-level instances. `param_iris` carries the authored chain plus the
+    // instance's classified `hasInstance` parameter members (R19-13), all direct members of one
+    // owner; nested instances are refused upstream, so no deeper scoping is reachable here.
     let siblings: HashSet<&str> = param_iris
         .iter()
         .filter(|&&p| p != piri)

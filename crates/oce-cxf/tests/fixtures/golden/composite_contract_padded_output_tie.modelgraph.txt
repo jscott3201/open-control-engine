@@ -1,0 +1,16 @@
+blocks: 2
+  B0 decl=0 class=CDL.Logical.Pre instance_iri=Some("http://example.org#cc.padded_output_tie.pre")
+    inputs=[0] outputs=[1]
+  B1 decl=1 class=CDL.Logical.And instance_iri=Some("http://example.org#cc.padded_output_tie.and3")
+    inputs=[2, 3] outputs=[4]
+connectors: 5
+  C0 block=B0 dir=In type=Boolean decl=0 iri=Some("http://example.org#cc.padded_output_tie.u")
+  C1 block=B0 dir=Out type=Boolean decl=1 iri=Some("http://example.org#cc.padded_output_tie.pre.y")
+  C2 block=B1 dir=In type=Boolean decl=2 iri=Some("http://example.org#cc.padded_output_tie.and3.u1")
+  C3 block=B1 dir=In type=Boolean decl=3 iri=Some("http://example.org#cc.padded_output_tie.and3.u2")
+  C4 block=B1 dir=Out type=Boolean decl=4 iri=Some("http://example.org#cc.padded_output_tie.and3.y")
+connections: 2
+  C1 -> C2
+  C1 -> C3
+external_inputs: [0]
+boundary_outputs: 0

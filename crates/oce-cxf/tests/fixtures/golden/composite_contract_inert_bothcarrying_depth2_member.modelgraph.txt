@@ -1,0 +1,9 @@
+blocks: 1
+  B0 decl=0 class=CDL.Logical.Not instance_iri=Some("http://example.org#cc.inert_bothcarrying_depth2_member.n")
+    inputs=[0] outputs=[1]
+connectors: 2
+  C0 block=B0 dir=In type=Boolean decl=0 iri=Some("http://example.org#cc.inert_bothcarrying_depth2_member.u")
+  C1 block=B0 dir=Out type=Boolean decl=1 iri=Some("http://example.org#cc.inert_bothcarrying_depth2_member.n.y")
+connections: 0
+external_inputs: [0]
+boundary_outputs: 0

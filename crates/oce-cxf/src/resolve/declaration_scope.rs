@@ -147,23 +147,32 @@ struct Declaration<'a> {
 
 /// Evaluate `node`'s own declaration chain against `enclosing`, per the module contract.
 ///
+/// `appended` joins the chain after `hasParameter` ⧺ `hasConstant` as full members — subject
+/// to the same duplicate refusal, dependency edges, and cycle refusal — and exists for one
+/// caller: a derivation-shaped parent's value-carrying `hasInstance` members at the specialize
+/// invocation (`_spec/19` R19-15 site 3), pre-sorted by the caller. Every other caller passes
+/// an empty slice.
+///
 /// Returns the extended scope entries plus (for the specialize pass) the withheld tagged
 /// findings. Total and panic-free on any input document.
 pub(super) fn evaluate_declarations(
     node: &Node,
+    appended: &[&str],
     enclosing: Vec<(Arc<str>, EvalResult)>,
     by_id: &HashMap<&str, &Node>,
     mut pass: Pass<'_>,
 ) -> Evaluation {
     let mut withheld: Vec<Diagnostic> = Vec::new();
 
-    // 1. Collect the active chain in chained declaration order (parameters, then constants).
+    // 1. Collect the active chain in chained declaration order (parameters, then constants,
+    // then the caller's appendix).
     let mut chain: Vec<Declaration<'_>> = Vec::new();
     for piri in node
         .has_parameter
         .iter()
         .chain(node.has_constant.iter())
         .map(|r| r.id.as_str())
+        .chain(appended.iter().copied())
     {
         if let Pass::Lowering { specialization, .. } = &pass
             && specialization.is_inactive(piri)

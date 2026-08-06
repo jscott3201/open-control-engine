@@ -6,7 +6,9 @@
 //! measured against the corpus — our exporter keeps composite boundary connectors as
 //! real nodes, so inlining is pure prefix substitution; the child document's root
 //! connectors are the authoritative boundary-port inventory (the parent's
-//! `hasInstance` lists only *referenced* ports); and no array-valued composite
+//! `hasInstance` is an unpartitioned *member* inventory — ports and parameters mixed —
+//! consumed here only as a membership test on connection endpoints, an independent
+//! reading deliberately shared with no resolver helper); and no array-valued composite
 //! instance exists in the corpus (asserted here, loudly, in case one ever appears).
 //!
 //! Class canonicalization never suffix-matches: modelica-json copies `.mo` type
@@ -28,7 +30,8 @@ pub struct ParsedDoc {
     pub inst: BTreeMap<String, (String, bool)>,
     /// Root connector name → connector type term.
     pub conn: BTreeMap<String, String>,
-    /// Container path → declared port set (from `S231:hasInstance`).
+    /// Container path → declared member set (from `S231:hasInstance` — ports and parameters
+    /// mixed; consumed only as a membership test on connection endpoints).
     pub inv: BTreeMap<String, BTreeSet<String>>,
     /// Directed edges as written (`S231:isConnectedTo`).
     pub edges: BTreeSet<(String, String)>,

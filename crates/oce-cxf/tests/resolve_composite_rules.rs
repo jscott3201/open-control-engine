@@ -330,6 +330,104 @@ fn array_valued_instance_rejection_is_tagged_with_the_instance_subject() {
     );
 }
 
+/// A root containing one derivation-shaped instance of a class that publishes no declared
+/// port names (`CDL.Routing.RealScalarReplicator` — its port count tracks `nout`): the
+/// scalar-only slice refuses the whole derivation, one diagnostic per instance.
+fn vector_port_instance_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.rep" } },
+            { "@id": "http://example.org#M.rep",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Routing.RealScalarReplicator",
+              "S231:hasInstance": [ { "@id": "http://example.org#M.rep.u" } ] }
+        ]
+    })
+}
+
+/// A derivation-shaped `CDL.Logical.Not` instance whose list carries a member naming neither a
+/// declared port nor a declared parameter of the class.
+fn unsupported_instance_member_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c" } },
+            { "@id": "http://example.org#M.c",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInstance": [
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.y" },
+                  { "@id": "http://example.org#M.c.zzz" }
+              ] }
+        ]
+    })
+}
+
+/// A derivation-shaped `CDL.Logical.Not` instance listing one node-less port member twice —
+/// the identity would be minted twice for one owner.
+fn colliding_member_identity_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c" } },
+            { "@id": "http://example.org#M.c",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInstance": [
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.y" }
+              ] }
+        ]
+    })
+}
+
+#[test]
+fn vector_port_class_derivation_rejection_is_tagged_with_the_instance_subject() {
+    assert_eq!(
+        reject(&vector_port_instance_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.rep",
+            "composite/vector-port-instance: instance of class \
+             `CDL.Routing.RealScalarReplicator` derives its port count from a parameter; this \
+             subset derives scalar interfaces only",
+        )],
+        "one diagnostic per instance, replacing - not doubling - the arity mismatch"
+    );
+}
+
+#[test]
+fn unclassifiable_member_rejection_is_tagged_with_the_member_subject() {
+    assert_eq!(
+        reject(&unsupported_instance_member_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c.zzz",
+            "composite/unsupported-instance-member: `zzz` is neither a declared port nor a \
+             declared parameter of `CDL.Logical.Not`",
+        )],
+        "the offending member is the subject and the instance derives no interface"
+    );
+}
+
+#[test]
+fn twice_listed_nodeless_member_rejection_is_tagged_with_the_repeated_identity() {
+    assert_eq!(
+        reject(&colliding_member_identity_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c.u",
+            "composite/colliding-member-identity: connector identity \
+             `http://example.org#M.c.u` is minted twice by `http://example.org#M.c`",
+        )],
+        "a node-less member listed twice mints one identity twice; the colliding IRI is the \
+         subject"
+    );
+}
+
 #[test]
 fn declaration_reference_cycle_rejection_names_participants_in_chained_order() {
     assert_eq!(
@@ -382,7 +480,7 @@ fn contract_rejection_enumerations_are_byte_identical_across_repeated_imports() 
 fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
     let catalog: JsonValue = serde_json::from_str(CATALOG_JSON).expect("catalog parses as JSON");
     let catalog = catalog.as_object().expect("catalog top-level object");
-    let fixtures: [(&str, JsonValue); 9] = [
+    let fixtures: [(&str, JsonValue); 12] = [
         ("root-count", multi_root_doc()),
         ("contains-cycle", reachable_cycle_doc()),
         ("replaceable", replaceable_doc()),
@@ -392,6 +490,12 @@ fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
         ("array-instance", array_instance_doc()),
         ("declaration-cycle", declaration_cycle_doc()),
         ("duplicate-declaration", duplicate_declaration_doc()),
+        ("vector-port-instance", vector_port_instance_doc()),
+        (
+            "unsupported-instance-member",
+            unsupported_instance_member_doc(),
+        ),
+        ("colliding-member-identity", colliding_member_identity_doc()),
     ];
     assert_eq!(
         catalog.len(),

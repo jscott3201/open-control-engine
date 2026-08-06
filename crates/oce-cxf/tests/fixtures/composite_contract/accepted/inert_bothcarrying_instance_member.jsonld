@@ -1,0 +1,59 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inert_bothcarrying_instance_member",
+      "@type": "S231:Block",
+      "S231:label": "inert_bothcarrying_instance_member",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_bothcarrying_instance_member.u"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_bothcarrying_instance_member.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "n",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n.y"
+      },
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_bothcarrying_instance_member.n.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.padded_output_tie",
+      "@type": "S231:Block",
+      "S231:label": "padded_output_tie",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.padded_output_tie.u"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.padded_output_tie.pre"
+        },
+        {
+          "@id": "http://example.org#cc.padded_output_tie.and3"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.padded_output_tie.pre.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.pre",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Pre",
+      "S231:label": "pre",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.padded_output_tie.pre.u"
+        },
+        {
+          "@id": "http://example.org#cc.padded_output_tie.pre.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.pre.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.pre.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": [
+        {
+          "@id": "http://example.org#cc.padded_output_tie.and3.u1"
+        },
+        {
+          "@id": "http://example.org#cc.padded_output_tie.and3.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.and3",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.And",
+      "S231:label": "and3",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.padded_output_tie.and3.u1"
+        },
+        {
+          "@id": "http://example.org#cc.padded_output_tie.and3.u2"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.padded_output_tie.and3.u1",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      }
+    }
+  ]
+}

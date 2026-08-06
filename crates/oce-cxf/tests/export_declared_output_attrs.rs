@@ -83,7 +83,7 @@ fn g36_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
 }
 
-/// Sorted `*.jsonld` paths of the engine G36 corpus (46 fixtures; the count is pinned by the
+/// Sorted `*.jsonld` paths of the engine G36 corpus (47 fixtures; the count is pinned by the
 /// comparator's own per-fixture counter, not by this listing).
 fn sorted_fixture_paths() -> Vec<PathBuf> {
     let dir = g36_dir();
@@ -275,7 +275,7 @@ fn corpus_declared_outputs_export_their_authored_attrs_key_by_key() {
         mismatches.len(),
         mismatches.join("\n")
     );
-    assert_eq!(fixtures, 46, "engine G36 corpus size moved");
+    assert_eq!(fixtures, 47, "engine G36 corpus size moved");
     // One assertion carrying BOTH counters: written as two assert_eq! calls, the first panic
     // would hide the second, and mutation control 7 needs either red observable.
     assert_eq!(

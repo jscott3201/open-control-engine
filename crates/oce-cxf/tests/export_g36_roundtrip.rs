@@ -63,6 +63,7 @@ const EXPECTED_G36_FIXTURES: &[&str] = &[
     "generic_air_economizer_high_limits_title24_fixed_23.jsonld",
     "generic_air_economizer_high_limits_title24_fixed_24.jsonld",
     "generic_time_suppression.jsonld",
+    "member_list_interface.jsonld",
     "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld",
     "multizone_vav_economizer_enable.jsonld",
     "multizone_vav_economizer_limits_common.jsonld",

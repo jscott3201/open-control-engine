@@ -43,5 +43,20 @@
     "diag_code": "malformed-document",
     "message_prefix": "composite/duplicate-declaration: ",
     "summary": "a block's own declaration chain must not bind one local name twice"
+  },
+  "vector-port-instance": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/vector-port-instance: ",
+    "summary": "a hasInstance-derived instance's class must publish declared scalar port names"
+  },
+  "unsupported-instance-member": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/unsupported-instance-member: ",
+    "summary": "a hasInstance member must be a direct member naming a declared port or parameter of its instance's class"
+  },
+  "colliding-member-identity": {
+    "diag_code": "non-subset-construct",
+    "message_prefix": "composite/colliding-member-identity: ",
+    "summary": "a derived connector or parameter identity must be unique in its document and within its instance"
   }
 }

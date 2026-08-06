@@ -9,6 +9,8 @@
 //! they are driven here. Determinism (#4) is re-affirmed end-to-end: identical input ⇒ bit-identical
 //! trace and byte-identical diagnostic stream.
 
+mod conformance_member_pins;
+
 use oce_api::{Engine, LoadReport, OcError, PointDirection};
 use oce_cxf::CxfError;
 use oce_diag::DiagCode;
@@ -249,6 +251,15 @@ type CompositeRejection = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
+/// The end-to-end pin per warned corpus fixture: the file plus the exact ordered
+/// (code, subject, message) triples a SUCCESSFUL `Engine::load_cxf` must surface. It carries no
+/// rule id, unlike [`CompositeRejection`] — a warning is a diagnostic on a document that loads,
+/// not a contract refusal, so there is no `composite/<rule-id>` tag to assert against.
+type CompositeWarning = (
+    &'static str,
+    &'static [(DiagCode, Option<&'static str>, &'static str)],
+);
+
 const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
     (
         "multi_root.jsonld",
@@ -450,6 +461,31 @@ const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
     ),
 ];
 
+/// Every rejected corpus fixture — the base rows plus the `hasInstance` member-interface slice
+/// rows — the one assembled table the rejection drivers consume.
+fn composite_rejections() -> Vec<CompositeRejection> {
+    COMPOSITE_REJECTIONS
+        .iter()
+        .chain(conformance_member_pins::MEMBER_REJECTIONS.iter())
+        .copied()
+        .collect()
+}
+
+/// Every warned corpus fixture with its exact ordered warning triples — the generalized
+/// end-to-end warned driver's table, keyed by file the way `COMPOSITE_REJECTIONS` is.
+fn composite_warnings() -> Vec<CompositeWarning> {
+    let mut rows: Vec<CompositeWarning> = vec![(
+        "undriven_boundary_output.jsonld",
+        &[(
+            DiagCode::UndrivenBoundaryOutput,
+            Some("http://example.org#M.y"),
+            "declared boundary output has no internal driver",
+        )],
+    )];
+    rows.extend(conformance_member_pins::MEMBER_WARNINGS);
+    rows
+}
+
 #[test]
 fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() {
     // The published contract, proven through the FULL pipeline: every rejected corpus file
@@ -457,7 +493,7 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
     // message begins with the `composite/<rule-id>: ` tag the catalog publishes for it. An
     // untagged (`None`) entry is shared import machinery: its message must NOT wear a contract
     // tag it has no catalog row for.
-    for (file, rule_id, expected) in COMPOSITE_REJECTIONS {
+    for (file, rule_id, expected) in composite_rejections() {
         let err = load_composite_fixture(&format!("rejected/{file}"))
             .expect_err("every rejected corpus fixture must fail to load");
         let signature = error_signature(&err);
@@ -490,41 +526,53 @@ fn composite_contract_rejections_carry_their_pinned_tagged_triples_end_to_end() 
 }
 
 #[test]
-fn composite_contract_warned_fixture_surfaces_exactly_its_pinned_warning_end_to_end() {
-    // The warned corpus through the FULL pipeline: the load succeeds and LoadReport.warnings
-    // carries exactly the published advisory — nothing upstream (resolver), midstream
-    // (validate), or downstream (semantics) adds to or reorders it.
-    let report = load_composite_fixture("warned/undriven_boundary_output.jsonld")
-        .expect("the warned fixture must load end-to-end");
-    let rendered: Vec<(DiagCode, bool, Option<String>, String)> = report
-        .warnings
-        .iter()
-        .map(|d| {
-            (
-                d.code,
-                d.is_error(),
-                d.subject.as_deref().map(str::to_owned),
-                d.message.clone(),
-            )
-        })
-        .collect();
-    assert_eq!(
-        rendered,
-        vec![(
-            DiagCode::UndrivenBoundaryOutput,
-            false,
-            Some("http://example.org#M.y".to_owned()),
-            "declared boundary output has no internal driver".to_owned(),
-        )],
-        "warned/undriven_boundary_output.jsonld: exactly one advisory, nothing else"
-    );
+fn composite_contract_warned_fixtures_surface_exactly_their_pinned_warnings_end_to_end() {
+    // The warned corpus through the FULL pipeline: every load succeeds and LoadReport.warnings
+    // carries exactly the published advisories — nothing upstream (resolver), midstream
+    // (validate), or downstream (semantics) adds to or reorders them. The table is keyed by
+    // file like COMPOSITE_REJECTIONS, and the on-disk listing pin is taken over the table, so
+    // a new warned fixture cannot land half-wired.
+    for (file, expected) in composite_warnings() {
+        let report = load_composite_fixture(&format!("warned/{file}"))
+            .unwrap_or_else(|e| panic!("warned/{file} must load end-to-end: {e:?}"));
+        let rendered: Vec<(DiagCode, bool, Option<String>, String)> = report
+            .warnings
+            .iter()
+            .map(|d| {
+                (
+                    d.code,
+                    d.is_error(),
+                    d.subject.as_deref().map(str::to_owned),
+                    d.message.clone(),
+                )
+            })
+            .collect();
+        let expected: Vec<(DiagCode, bool, Option<String>, String)> = expected
+            .iter()
+            .map(|(code, subject, message)| {
+                (
+                    *code,
+                    false,
+                    subject.map(str::to_owned),
+                    (*message).to_owned(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            rendered, expected,
+            "warned/{file}: exactly the pinned advisories, nothing else"
+        );
+    }
 
-    let mut listing = sorted_composite_listing("warned");
-    listing.sort();
+    let mut pinned: Vec<String> = composite_warnings()
+        .iter()
+        .map(|(file, _)| (*file).to_owned())
+        .collect();
+    pinned.sort();
     assert_eq!(
-        listing,
-        vec!["undriven_boundary_output.jsonld".to_owned()],
-        "the on-disk warned corpus and this pin must stay one-to-one"
+        sorted_composite_listing("warned"),
+        pinned,
+        "the on-disk warned corpus and the pinned warning table must stay one-to-one"
     );
 }
 
@@ -532,7 +580,7 @@ fn composite_contract_warned_fixture_surfaces_exactly_its_pinned_warning_end_to_
 fn composite_contract_rejected_listing_matches_the_pinned_table() {
     // No unpinned fixture, no phantom pin: the on-disk rejected corpus and the expectation
     // table stay one-to-one, so a new emitter-facing fixture cannot land silently untested.
-    let mut pinned: Vec<String> = COMPOSITE_REJECTIONS
+    let mut pinned: Vec<String> = composite_rejections()
         .iter()
         .map(|(file, ..)| (*file).to_owned())
         .collect();

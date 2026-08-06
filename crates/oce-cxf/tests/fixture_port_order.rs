@@ -327,7 +327,7 @@ fn every_fixture_lists_ports_in_upstream_declaration_order() {
         }
     }
 
-    assert_eq!(fixtures, 46, "fixture corpus changed size");
+    assert_eq!(fixtures, 47, "fixture corpus changed size");
 
     // Pin the volume. Without this, a change that stops discovering ports would leave the
     // comparison vacuously green — the failure mode this whole audit exists to prevent.

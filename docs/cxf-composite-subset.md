@@ -122,11 +122,15 @@ keep that order stable across exports of the same source.
 
 The full order contract: array order is load-bearing wherever the resolver reads an array —
 `@graph` node position, `containsBlock` order, each instance's port and parameter lists,
-`isConnectedTo` order. The one carve-out is the boundary-input elision vector
-(`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's own
-`@graph` node position instead of inheriting the order of that port's `isConnectedTo` array
-(`crates/oce-cxf/src/resolve/mod.rs`, Step 9). Neither array order nor node position is a stable
-identity: key by authored name, never by position.
+`isConnectedTo` order. Two carve-outs: the boundary-input elision vector (`external_inputs`)
+and the pass-through pair list are re-keyed on the boundary port's own `@graph` node position
+instead of inheriting the order of that port's `isConnectedTo` array
+(`crates/oce-cxf/src/resolve/mod.rs`, Step 9); and a `S231:hasInstance` member array's order is
+load-bearing for **nothing** — derived ports bind by name against the class signature,
+synthesized connectors order by `(owner @graph position, class-signature position)`, and
+classified parameter members append in class-signature order, so permuting the array moves no
+`ConnectorId`, no `decl_order`, and no `param` row. Neither array order nor node position is a
+stable identity: key by authored name, never by position.
 
 ```json
 "S231:containsBlock": [ { "@id": "…#M.sub" }, { "@id": "…#M.post" } ]
@@ -240,8 +244,9 @@ plus 44 vendored modelica-json translations), all 103 crate documents are byte-i
 import outcome under the rule; 12 vendored documents — every one still refusing on unrelated
 grounds — shed 48 `grounding-failed` diagnostics in exactly the two ruled classes (forward
 sibling references now grounding, and specialization-pass generic machinery going
-non-emitting), with zero new diagnostics anywhere. The tree now holds 153 documents (109 crate
-plus 44 vendored; the growth is the conformance fixtures this rule added). The wider reach
+non-emitting), with zero new diagnostics anywhere. The tree now holds 197 documents (153 crate
+plus 44 vendored; the growth is the conformance fixtures the declaration-scope and
+`hasInstance`-interface rules added). The wider reach
 exists off-corpus.
 
 ```json
@@ -297,7 +302,7 @@ will always "fail"; compare imported models instead.
 ```
 imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u` is gone.
 
-## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`, `composite/array-connector`, `composite/array-instance`)
+## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`, `composite/array-connector`, `composite/array-instance`, `composite/vector-port-instance`, `composite/unsupported-instance-member`, `composite/colliding-member-identity`)
 
 > Six Modelica construct keys are banned on any active node: `redeclare`, `constrainedby`,
 > `extends`, `extendsFrom`, `moSource`, `modelicaSource`. Matching is on the term after the last
@@ -312,7 +317,13 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 >
 > An active connector — any node referenced by an active node's `S231:hasInput` or
 > `S231:hasOutput` list, anywhere in the document, whether or not the referencing node is
-> reachable from the top-level root — rejects when it carries an array marker:
+> reachable from the top-level root, or any member of an active **derivation-shaped** node's
+> `S231:hasInstance` list (a `containsBlock` referent that is not a runtime composite,
+> declares neither port list, and carries a member list) — rejects when it carries an array
+> marker. The member source matches the existing sources on reachability and is narrower only
+> in shape: an orphan node's list and a runtime composite's list contribute nothing, where the
+> existing sources take any active node's list at all; the scan stays reference-based and
+> class-independent on both. The markers:
 > `S231:isArray: true` or any `S231:sizeOfDimensions`. Marker keys match on the term after the
 > last `:`, `#`, or `/`, like the banned-key matching above, so absolute-IRI spellings reject
 > too. The rejection is `composite/array-connector` (DiagCode `non-subset-construct`) with the
@@ -326,6 +337,27 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 > **on a composite** are governed by Rule 5; an array-valued parameter on a leaf block is
 > preserved and expanded, not rejected. Inactive conditional subtrees are invisible to these
 > checks.
+>
+> Three rules govern the `hasInstance` interface derivation (an instance declaring neither
+> `hasInput` nor `hasOutput` and carrying a `S231:hasInstance` list derives its interface from
+> the list; a node declaring either port list keeps its own interface). Each refusal skips the
+> instance's derivation whole — the tagged rejection **replaces** the generic arity mismatch
+> rather than doubling it:
+>
+> - `composite/vector-port-instance` (DiagCode `non-subset-construct`, subject the instance
+>   node, one per instance): the resolved class publishes no declared port names — its port
+>   count is a function of a parameter, so one member stands for N scalar connectors and this
+>   subset derives scalar interfaces only. A document declaring the same class's ports
+>   explicitly through `hasInput`/`hasOutput` is untouched.
+> - `composite/unsupported-instance-member` (DiagCode `non-subset-construct`, subject the
+>   member IRI, one per offending member): a member outside its owner's namespace (not
+>   `<owner>.<oneSegment>`), a member that is itself a block instance, or a member whose local
+>   name is neither a declared port nor a declared parameter of the class.
+> - `composite/colliding-member-identity` (DiagCode `non-subset-construct`, subject the
+>   colliding IRI, one per collision): a synthesized connector identity that is already an
+>   `@graph` node or is minted twice for one owner, or a parameter name declared twice for one
+>   instance — across its classified members or against its own `hasParameter`/`hasConstant`
+>   list.
 
 ```json
 { "@id": "…#M.c2", "@type": "…MultiplyByParameter",
@@ -354,6 +386,9 @@ rejections are generic diagnostics.
 | 7 | `array-instance` | `non-subset-construct` | `composite/array-instance: ` |
 | 5 | `declaration-cycle` | `malformed-document` | `composite/declaration-cycle: ` |
 | 5 | `duplicate-declaration` | `malformed-document` | `composite/duplicate-declaration: ` |
+| 7 | `vector-port-instance` | `non-subset-construct` | `composite/vector-port-instance: ` |
+| 7 | `unsupported-instance-member` | `non-subset-construct` | `composite/unsupported-instance-member: ` |
+| 7 | `colliding-member-identity` | `non-subset-construct` | `composite/colliding-member-identity: ` |
 
 Every message prefix is `composite/<rule-id>: ` — colon, then **one trailing space** (U+0020),
 which markdown table cells cannot render unambiguously. Match with
@@ -364,15 +399,24 @@ column above is display-only.
 
 ## Generic diagnostics
 
-Two diagnostics that can accompany or replace a contract rejection are shared import machinery,
-**deliberately untagged** (no `composite/` prefix, no catalog entry):
+Three diagnostics that can accompany or replace a contract rejection are shared import
+machinery, **deliberately untagged** (no `composite/` prefix, no catalog entry):
 
-- `unresolved-reference` — a `containsBlock` child, parameter node, or composite `@id` referenced
-  but not present in `@graph`.
+- `unresolved-reference` — a `containsBlock` child, parameter node, composite `@id`, or a
+  connection/boundary reference naming a `hasInstance` member of an instance whose interface
+  was not derived (an unregistered class, or a `composite/vector-port-instance` refusal),
+  referenced but not resolvable. A classifiable member itself is never reported under this
+  code: a node-less port member becomes a synthesized connector and a node-less parameter
+  member refuses as `grounding-failed` at derivation.
 - `grounding-failed` — a parameter value that cannot ground: a missing `S231:value` (values are
-  required — Ground mode), an unknown identifier (including a reference to a cycle-refused
+  required — Ground mode, on the `hasParameter`/`hasConstant` route and the `hasInstance`
+  member route alike), an unknown identifier (including a reference to a cycle-refused
   sibling, or a leaf member's forward reference to a later sibling member), or an expression
   error.
+- `conflicting-interface-declaration` — an instance declaring `hasInput`/`hasOutput` beside a
+  `hasInstance` list whose class-declared names its own routes do not carry (a **warning**;
+  compared one-directional, list minus own), or one parameter name valued differently on the
+  two routes (an **error** — two values for one name state a contradiction).
 
 They are not contract rules because they do not describe a composite *shape*; they fire anywhere
 in the import pipeline. Match them by DiagCode, not by message. The conditional-pruning
@@ -388,6 +432,8 @@ loads warning-free:
    registered leaf standing alone — even one with `containsBlock` — classifies as zero composites
    and rejects under rule 2 with zero candidates.
 2. Every parameter and constant carries a `S231:value` (missing values are `grounding-failed`).
+   A parameter declared through a `S231:hasInstance` member is covered too: a valueless or
+   node-less member named after a declared parameter refuses the same way.
 3. Every leaf `@type` resolves to a registered block class (else `class-not-found`).
 4. Accepted means **warning-free**: the corpus drivers assert an empty diagnostic report, not
    merely a non-error one.
@@ -417,6 +463,11 @@ To check a document your tool produced:
   `(DiagCode, subject, message)` triples to the pin tables in both drivers
   (`expected_rejections()` in `composite_contract_corpus.rs`, `COMPOSITE_REJECTIONS` in
   `crates/oce-api/tests/conformance.rs`).
+- **Warned**: drop it under `warned/`, add a README index row, add its exact complete warning
+  vector to `expected_warnings()` in `composite_contract_corpus.rs`, and add its ordered
+  warning triples to the `composite_warnings()` table in
+  `crates/oce-api/tests/conformance.rs` — the end-to-end warned driver is table-driven and its
+  on-disk listing pin is taken over that table, so a warned fixture cannot land half-wired.
 - **Accepted**: drop it under `accepted/`, add a README index row, add the pair to the
   `ACCEPTED` table in `composite_contract_corpus.rs` — the golden filename convention is
   `tests/fixtures/golden/composite_contract_<fixture-stem>.modelgraph.txt` — then bless the
@@ -427,3 +478,17 @@ To check a document your tool produced:
 
 The corpus completeness tests fail on any unindexed or unpinned fixture, so a fixture cannot
 land half-wired.
+
+The 44 vendored modelica-json translations under `third_party/modelica-buildings-cdl/cxf/` are
+additionally held to a per-document characterization capture
+(`crates/oce-cxf/tests/vendored_corpus_delta.rs`): per-`DiagCode` counts, severities, and
+duplicate diagnostic triples, re-blessed only deliberately. The `hasInstance` interface
+derivation moved that capture in both directions, every increase declared: 904 arity
+mismatches and 2,579 unresolved references removed, 30 arity mismatches replaced by
+`composite/vector-port-instance`, `single-assignment` arriving at 57 (31 undriven and 8
+multiply-driven derived inputs, plus 18 multiply-driven declared boundary outputs assessed for
+this dialect for the first time), `grounding-failed` rising 62 → 204 as member values and
+member connector bounds ground for the first time on class-translation documents, and
+`inactive-conditional-node` rising 11 → 44 because pruning now reaches a conditional instance's
+listed members as well as its `@graph` nodes (32 members still carrying active connections, 12
+connection targets).

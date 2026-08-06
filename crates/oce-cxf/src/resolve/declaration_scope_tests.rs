@@ -74,6 +74,7 @@ fn evaluate_root(
     let mut diags = Vec::new();
     let evaluation = evaluate_declarations(
         &root,
+        &[],
         Vec::new(),
         &map,
         Pass::Lowering {
@@ -155,6 +156,7 @@ fn own_name_masks_enclosing_binding_even_when_the_own_declaration_cannot_ground(
     let mut diags = Vec::new();
     let evaluation = evaluate_declarations(
         &root,
+        &[],
         enclosing,
         &map,
         Pass::Lowering {
@@ -245,6 +247,7 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
     let mut diags = Vec::new();
     let evaluation = evaluate_declarations(
         &root,
+        &[],
         enclosing,
         &map,
         Pass::Lowering {
@@ -285,6 +288,7 @@ fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machiner
     let map = by_id(&nodes);
     let evaluation = evaluate_declarations(
         &root,
+        &[],
         Vec::new(),
         &map,
         Pass::Specialize {
@@ -333,6 +337,7 @@ fn leaf_chain_cycle_and_duplicate_refuse_silently_at_the_specialize_invocation()
     let map = by_id(&nodes);
     let evaluation = evaluate_declarations(
         &leaf,
+        &[],
         Vec::new(),
         &map,
         Pass::Specialize {
