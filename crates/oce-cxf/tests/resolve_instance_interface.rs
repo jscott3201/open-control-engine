@@ -134,6 +134,53 @@ fn member_guard_naming_an_undeclared_identifier_refuses_with_the_member_subject(
     );
 }
 
+/// A ROOT whose `hasInstance` list carries a valued `gate`, with a conditional `containsBlock`
+/// child guarded by `gate`. The root declares `hasInput`/`hasOutput`, so it is not
+/// derivation-shaped and R19-2 rules its list inert on every path — never the subject and never
+/// the cause of a diagnostic. This document discriminates site 3's SCOPE, which the narrowing
+/// direction alone cannot: widen the site to every parent and the inert list binds `gate = false`,
+/// silently pruning the child.
+fn root_list_guard_doc() -> JsonValue {
+    json!({ "@context": ctx(), "@graph": [
+        { "@id": iri("M"), "@type": "S231:Block",
+          "S231:hasInstance": [ r("M.gate") ],
+          "S231:containsBlock": [ r("M.n") ],
+          "S231:hasInput": [ r("M.u") ], "S231:hasOutput": [ r("M.y") ] },
+        { "@id": iri("M.gate"), "@type": "S231:Parameter",
+          "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:value": false },
+        { "@id": iri("M.u"), "@type": "S231:BooleanInput",
+          "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": r("M.n.u") },
+        { "@id": iri("M.y"), "@type": "S231:BooleanOutput",
+          "S231:isOfDataType": { "@id": "S231:Boolean" } },
+        { "@id": iri("M.n"), "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+          "S231:isConditionalComponent": true, "S231:conditionalExpression": "gate",
+          "S231:hasInput": [ r("M.n.u") ], "S231:hasOutput": [ r("M.n.y") ] },
+        { "@id": iri("M.n.u"), "@type": "S231:BooleanInput",
+          "S231:isOfDataType": { "@id": "S231:Boolean" } },
+        { "@id": iri("M.n.y"), "@type": "S231:BooleanOutput",
+          "S231:isOfDataType": { "@id": "S231:Boolean" }, "S231:isConnectedTo": r("M.y") }
+    ]})
+}
+
+#[test]
+fn a_roots_inert_member_list_never_reaches_a_conditional_guard() {
+    // Site 3's scope restriction, pinned in the WIDENING direction. The narrowing probe (delete
+    // the site) is already covered by the two tests above; nothing pinned the other side, so
+    // widening the site to every parent passed the whole suite. Under the widening this document
+    // stops refusing and instead prunes: InactiveConditionalNode on both child ports plus
+    // UndrivenBoundaryOutput on the root's output — an ACCEPTANCE change caused by a list R19-2
+    // rules inert on every path.
+    assert_eq!(
+        import(&root_list_guard_doc()),
+        Err(vec![error_with_subject(
+            DiagCode::ConditionalGuardUnknownParameter,
+            "M.n",
+            "conditional guard references unknown parameter `gate`",
+        )]),
+        "a root's inert member list must not bind its conditional child's guard"
+    );
+}
+
 // ---- guard-scope duplication set (R19-15, the §5 six-document set) ----------------------------
 
 /// The authored pair's base document: child `gain` declares `hasInput`/`hasOutput` and a

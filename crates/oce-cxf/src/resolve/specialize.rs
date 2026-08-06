@@ -105,7 +105,11 @@ pub(super) fn specialize(
 /// the extra declarations its guard scope evaluates (R19-15 site 3). Value presence, not
 /// classification, is the criterion: the class resolves after this pass runs. Sorted rather
 /// than in array order because `hasInstance` array order must decide no value; under the
-/// mutual scope the order decides refusal attribution only.
+/// mutual scope the order decides refusal attribution only. Bounded honestly: this sort is
+/// stable, so two members sharing one `local_name` tie and fall back to array order. Such a
+/// pair is never owner-legal — both members refuse under `colliding-member-identity` — so what
+/// array order can still move there is the attribution on an already-refused import, never
+/// whether a document is accepted and never a grounded value on one that is.
 fn valued_member_declarations<'a>(
     parent: &'a Node,
     by_id: &HashMap<&str, &'a Node>,
