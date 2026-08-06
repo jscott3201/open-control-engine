@@ -10,7 +10,7 @@
 //!   specialization over all of them ([`is_derivation_shaped`]).
 //! - the **derivation domain** — the post-lowering instance population (`child_iris`: active
 //!   leaves) restricted to nodes that declare neither port list and carry a list. Those, and
-//!   only those, derive an interface ([`derive`]). The post-lowering domain is `child_iris`
+//!   only those, derive an interface ([`derive()`]). The post-lowering domain is `child_iris`
 //!   and nothing else — an implementation MUST NOT cache a pre-lowering referent set and apply
 //!   the [`is_runtime_composite`] predicate to it after lowering, because `lower` clears every
 //!   non-root composite's `contains_block` and the predicate then answers false for a nested
@@ -253,7 +253,7 @@ pub(super) fn derive(
         );
     }
 
-    synth_keyed.sort_by(|a, b| a.0.cmp(&b.0));
+    synth_keyed.sort_by_key(|a| a.0);
     out.synthesized = synth_keyed.into_iter().map(|(_, s)| s).collect();
     out
 }
