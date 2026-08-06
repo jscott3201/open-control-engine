@@ -56,6 +56,7 @@ mod declaration_scope;
 #[cfg(test)]
 mod declaration_scope_tests;
 mod diags;
+mod instance_interface;
 mod pass_through;
 mod port_binding;
 #[cfg(test)]

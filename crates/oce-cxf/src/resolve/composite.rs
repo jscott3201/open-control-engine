@@ -334,6 +334,7 @@ fn composite_scope(
 ) -> Vec<(Arc<str>, EvalResult)> {
     evaluate_declarations(
         composite,
+        &[],
         scope,
         by_id,
         Pass::Lowering {

@@ -10,10 +10,12 @@ use oce_model::{
     g36_integer_constant, is_g36_integer_constant_package, is_g36_type_path,
 };
 
-use crate::dto::{CxfValue, Node};
+use crate::dto::{CxfValue, IriRef, Node};
 
 use super::composite::is_runtime_composite;
 use super::declaration_scope::{Pass, WithheldFindings, evaluate_declarations};
+use super::instance_interface::{contains_block_referents, is_derivation_shaped};
+use super::local_name;
 
 /// The result of pruning load-time conditional components/connectors.
 #[derive(Clone, Debug, Default)]
@@ -33,6 +35,16 @@ impl Specialization {
 /// Also returns the [`WithheldFindings`] this pass computed over the declaration chains it
 /// grounded for guard scopes: tagged contract findings that must surface once per import, from
 /// the lowering view when both passes visit a chain — `lower` reconciles and releases them.
+///
+/// Three sites read `S231:hasInstance`, each scoped to the **derivation-shaped** structural
+/// shape and to nothing wider (`_spec/19` R19-15) — a root's list, a runtime composite's list,
+/// an orphan's list and a both-carrying node's list are never read here:
+/// - the conditional-child scan chains a derivation-shaped parent's member list, so a
+///   conditional member is a candidate and its guard is evaluated like any other;
+/// - a derivation-shaped parent's value-carrying members join its guard scope through the
+///   shared declaration chain ([`complete_scope`]);
+/// - a **pruned** derivation-shaped instance's members are marked inactive in a second pass
+///   after the propagation loop completes ([`mark_pruned_instance_members`]).
 pub(super) fn specialize(
     doc: &crate::dto::CxfDocument,
     by_id: &HashMap<&str, &Node>,
@@ -41,13 +53,21 @@ pub(super) fn specialize(
     let mut specialization = Specialization::default();
     let mut withheld = WithheldFindings::default();
     let mut decisions: HashMap<&str, bool> = HashMap::new();
+    let contains_referents = contains_block_referents(doc);
 
     for parent in &doc.graph {
+        let derivation_shaped = is_derivation_shaped(parent, &contains_referents);
+        let member_list: &[IriRef] = if derivation_shaped {
+            parent.has_instance.as_slice()
+        } else {
+            &[]
+        };
         let conditional_children: Vec<&Node> = parent
             .contains_block
             .iter()
             .chain(parent.has_input.iter())
             .chain(parent.has_output.iter())
+            .chain(member_list.iter())
             .map(|r| r.id.as_str())
             .filter_map(|child_id| by_id.get(child_id).copied())
             .filter(|child| child.is_conditional == Some(true))
@@ -55,7 +75,12 @@ pub(super) fn specialize(
         if conditional_children.is_empty() {
             continue;
         }
-        let scope = complete_scope(parent, by_id, &mut withheld);
+        let members = if derivation_shaped {
+            valued_member_declarations(parent, by_id)
+        } else {
+            Vec::new()
+        };
+        let scope = complete_scope(parent, &members, by_id, &mut withheld);
         for child in conditional_children {
             let active = match decisions.get(child.id.as_str()).copied() {
                 Some(active) => active,
@@ -71,7 +96,72 @@ pub(super) fn specialize(
         }
     }
 
+    mark_pruned_instance_members(doc, &contains_referents, &mut specialization);
+
     (specialization, withheld)
+}
+
+/// A derivation-shaped parent's value-carrying members in ASCII-sorted `local_name` order —
+/// the extra declarations its guard scope evaluates (R19-15 site 3). Value presence, not
+/// classification, is the criterion: the class resolves after this pass runs. Sorted rather
+/// than in array order because `hasInstance` array order must decide no value; under the
+/// mutual scope the order decides refusal attribution only.
+fn valued_member_declarations<'a>(
+    parent: &'a Node,
+    by_id: &HashMap<&str, &'a Node>,
+) -> Vec<&'a str> {
+    let mut members: Vec<&str> = parent
+        .has_instance
+        .iter()
+        .map(|r| r.id.as_str())
+        .filter(|iri| by_id.get(iri).is_some_and(|node| node.value.is_some()))
+        .collect();
+    members.sort_by_key(|iri| local_name(iri));
+    members
+}
+
+/// Mark a pruned derivation-shaped instance's `hasInstance` members inactive, under reference
+/// exclusivity against the FINAL active set (R19-15 site 2): a member is marked only when no
+/// node that remains active references it — through a `hasInput`/`hasOutput` list, through
+/// `containsBlock`, or as a member of an active derivation-shaped list. An `isConnectedTo`
+/// edge is deliberately NOT a reference: connection is not ownership, and counting it would
+/// silence the inactive-node checks this traversal feeds. Runs as a second pass after the
+/// propagation loop completes, because "remains active" is ambiguous mid-loop; one pass
+/// suffices — it marks members, never instances, so no marking can prune another instance and
+/// reopen the set.
+fn mark_pruned_instance_members(
+    doc: &crate::dto::CxfDocument,
+    contains_referents: &std::collections::HashSet<&str>,
+    specialization: &mut Specialization,
+) {
+    let mut active_referenced: HashSet<&str> = HashSet::new();
+    for node in &doc.graph {
+        if specialization.is_inactive(&node.id) {
+            continue;
+        }
+        for r in node
+            .has_input
+            .iter()
+            .chain(node.has_output.iter())
+            .chain(node.contains_block.iter())
+        {
+            active_referenced.insert(r.id.as_str());
+        }
+        if is_derivation_shaped(node, contains_referents) {
+            active_referenced.extend(node.has_instance.iter().map(|r| r.id.as_str()));
+        }
+    }
+    let marks: Vec<String> = doc
+        .graph
+        .iter()
+        .filter(|node| {
+            specialization.is_inactive(&node.id) && is_derivation_shaped(node, contains_referents)
+        })
+        .flat_map(|node| node.has_instance.iter().map(|r| r.id.as_str()))
+        .filter(|member| !active_referenced.contains(member))
+        .map(str::to_owned)
+        .collect();
+    specialization.inactive.extend(marks);
 }
 
 fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashSet<String>) {
@@ -107,14 +197,17 @@ fn mark_inactive(node: &Node, by_id: &HashMap<&str, &Node>, inactive: &mut HashS
 /// post-lowering reconciliation, while a leaf chain records none (R20-9 — its cycle/duplicate
 /// participants simply fail to ground). Guard-level contracts
 /// (`ConditionalGuardUnknownParameter` et al.) are unaffected — they emit from guard
-/// evaluation, not from scope construction.
+/// evaluation, not from scope construction. `members` is a derivation-shaped parent's
+/// value-carrying member appendix (R19-15 site 3), empty everywhere else.
 fn complete_scope(
     parent: &Node,
+    members: &[&str],
     by_id: &HashMap<&str, &Node>,
     withheld: &mut WithheldFindings,
 ) -> CompleteScope {
     let evaluation = evaluate_declarations(
         parent,
+        members,
         Vec::new(),
         by_id,
         Pass::Specialize {
