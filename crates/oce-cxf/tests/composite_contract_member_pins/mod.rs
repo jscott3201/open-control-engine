@@ -14,9 +14,10 @@ fn warning_with_subject(code: DiagCode, subject: &str, message: &str) -> Diagnos
 
 /// The slice's accepted fixtures paired with their goldens: the mixed member interface, the
 /// padded-output tie exemplar, the permutation control (same `@id`s as the mixed fixture,
-/// arrays reordered — its golden is byte-identical by construction), the refusal controls,
-/// and the thirteen inert-discard documents whose clean loads pin that a `hasInstance` list
-/// outside the three ruled domains is read by nothing.
+/// arrays reordered — its golden is byte-identical by construction), the cross-owner ordering
+/// exemplar (R19-5's key COMPOSITION, not just its direction — see that document), the refusal
+/// controls, and the thirteen inert-discard documents whose clean loads pin that a
+/// `hasInstance` list outside the three ruled domains is read by nothing.
 pub(crate) fn accepted() -> Vec<(String, String)> {
     [
         "agreeing_parameter_values",
@@ -36,6 +37,7 @@ pub(crate) fn accepted() -> Vec<(String, String)> {
         "member_array_permutation",
         "mixed_member_interface",
         "padded_output_tie",
+        "synthesized_order_across_owners",
         "two_level_nesting_inner_list",
         "unclassifiable_member_control",
     ]

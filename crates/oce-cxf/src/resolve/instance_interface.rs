@@ -253,6 +253,14 @@ pub(super) fn derive(
         );
     }
 
+    // R19-5's one total order over block 2, keyed `(owner @graph position, class-signature
+    // concat index)`. `synthesized_order_across_owners.jsonld` pins the key's COMPOSITION and
+    // not merely its direction: transposing the tuple or dropping the owner component reorders
+    // that document's golden. A CONSTANT key does not, and that is correct rather than a hole —
+    // this sort is stable and owners are visited in `@graph` order, so insertion order already
+    // equals sorted order on every document that loads (measured: 49 of 49 carrying two or more
+    // synthesized connectors). The owner component is what keeps the order total if that
+    // visitation order ever stops being positional.
     synth_keyed.sort_by_key(|a| a.0);
     out.synthesized = synth_keyed.into_iter().map(|(_, s)| s).collect();
     out
@@ -471,6 +479,15 @@ fn derive_one(
                     .with_subject(identity.clone()),
                 );
                 skip = true;
+            // UNREACHABLE, and declared so deliberately rather than left to read as covered.
+            // A padded identity is `{owner}.{output_name}`; `minted` at this point holds only
+            // identities this same owner minted from its own members, and the padding loop runs
+            // after them. Reaching this arm needs one class carrying one name in BOTH its input
+            // and output lists, and no catalog class does (census over `oce_blocks::catalog()`:
+            // 136 classes, 108 with port names, zero overlapping). The `minted_identity_twice`
+            // fixture does NOT cover it — that document exercises the twice-listed node-less
+            // member site above, which emits a byte-identical message. Keep the arm: it is the
+            // cheap guard that keeps R19-8's invariant true if a future class ever collides.
             } else if minted.contains(identity.as_str()) {
                 diags.push(
                     Diagnostic::error(
