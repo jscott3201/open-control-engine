@@ -747,3 +747,53 @@ fn vav_inputs(t: f64) -> Vec<(String, Value)> {
         pair(VAV_HEATING_SETPOINT, Value::Real(20.0)),
     ]
 }
+
+#[test]
+fn constant_staging_allocation_cost_is_per_run_not_per_tick() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    // A FLOOR, and only a floor. Resolve-once `Constant` staging (issue #242) is a CPU
+    // improvement: staging allocated nothing per tick before the change and allocates nothing per
+    // tick after it, so no allocation figure here measures that win and none is claimed. What this
+    // pins is that staging never *becomes* per-tick heap traffic — the gap between a staged run and
+    // an unstaged one is a per-run constant (the resolved plan `Vec`), the same at 100 ticks as at
+    // 1000. Were the plan rebuilt per step, the long run's gap would outgrow the short one's.
+    let gap = |ticks: u64| -> i64 {
+        let staged = simulate_allocations(InputSource::Constant(sat_reset_pairs()), ticks);
+        let bare = simulate_allocations(InputSource::None, ticks);
+        staged as i64 - bare as i64
+    };
+    let short = gap(100);
+    let long = gap(1_000);
+    assert_eq!(
+        short, long,
+        "Constant staging must cost a fixed number of allocations per run, not per tick: \
+         {short} over 100 ticks vs {long} over 1000"
+    );
+}
+
+fn sat_reset_pairs() -> Vec<(String, Value)> {
+    vec![
+        pair(SAT_ZONE_TEMP, Value::Real(22.0)),
+        pair(SAT_COOLING_SETPOINT, Value::Real(24.0)),
+    ]
+}
+
+/// Allocations charged to one `simulate` over `ticks` steps, trace collection off.
+fn simulate_allocations(inputs: InputSource, ticks: u64) -> usize {
+    let mut engine = Engine::with_store(Arc::new(AllocationStore::default()));
+    engine
+        .load_cxf(AHU_SAT_RESET.as_bytes())
+        .expect("sat_reset fixture loads");
+    let spec = SimSpec {
+        t_start: 0.0,
+        t_stop: (ticks - 1) as f64,
+        step: 1.0,
+        inputs,
+        collect: CollectSpec::None,
+    };
+    let region = Region::new(GLOBAL);
+    engine.simulate(&spec).expect("horizon runs");
+    region.change().allocations
+}
