@@ -11,9 +11,9 @@ library you embed in your own application.**
 
 You hand it a control sequence as a CXF document (CDL's JSON-LD exchange format). It parses,
 validates, and compiles that sequence into a frozen topological schedule, then ticks the schedule
-deterministically — identical inputs and parameters produce bit-identical outputs, run to run and
-across x86_64 and arm64, checked against committed goldens on both architectures on every pull
-request.
+deterministically — the same document, parameters and input sequence produce bit-identical outputs,
+run to run and across x86_64 and arm64, checked against committed goldens on both architectures on
+every pull request.
 
 It is a library and nothing else: no `main`, no daemon, no network listener, no async runtime, and
 no database. Everything non-computational — points, trends, tags, durability — sits behind a
