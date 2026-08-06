@@ -1,11 +1,10 @@
 //! What `simulate` resets between horizons, what it deliberately does not, and what that costs.
 //!
 //! `simulate` used to clear only the run clock. Every `[S]` block kept the words the previous run
-//! left behind, so a second identical horizon on the same engine started mid-run. On
-//! `g36/cooling_only_controller` that moved 25 of 210 recorded columns — including a cooling-loop
-//! PID command — while two freshly loaded engines agreed exactly. It now re-seeds the state words
-//! as well, which makes each call a run **restart**. The tests here pin the reset, the two places
-//! it deliberately stops, and the two consequences of restart semantics.
+//! left behind, so a second identical horizon on the same engine started mid-run, while two freshly
+//! loaded engines agreed exactly. It now re-seeds the state words as well, which makes each call a
+//! run **restart**. The tests here pin the reset, the two places it deliberately stops, and one
+//! consequence of restart semantics.
 //!
 //! Three ways to write a test here that stays green over the live defect, all of which were real:
 //!
@@ -13,19 +12,27 @@
 //!   (`input_staging_tests::a_constant_run_is_bit_reproducible_across_engines`) builds its engine
 //!   inside the closure, so it compares fresh against fresh and passed throughout. Every test below
 //!   reuses one engine, because that is the only arrangement in which carryover is observable.
-//! - **An undriven model is blind.** Measured on the G36 controller: with no inputs staged, the
-//!   same comparisons return 0 differing cells out of 1,260, and with all 282 inputs driven they
-//!   return 42. A stateful block that is not being driven has nothing to carry.
+//! - **An undriven model is blind.** A stateful block nothing is driving has nothing to carry, so
+//!   the whole defect is invisible on a fixture whose inputs are never staged. Every test below
+//!   drives its inputs.
 //! - **A `y_start` of zero is blind.** `IntegratorWithReset::init_state` seeds
-//!   `[y_start.to_bits(), PREV_T_UNSET, 0]`. At `y_start = 0.0` that is `[0, u64::MAX, 0]`, and at
-//!   `t_start = 0.0` the `PREV_T_UNSET`-versus-`0` difference cancels through `tick_dt` — so a
-//!   re-seed replaced by `words.fill(0)` is indistinguishable. An earlier revision of this file had
-//!   exactly that hole: the zero-fill mutant kept all four tests and the whole `oce-api` lib suite
-//!   green, and only an out-of-crate G36 golden caught it. The fixture below therefore uses two
+//!   `[y_start.to_bits(), PREV_T_UNSET, 0]` (`reals_integrator.rs`). At `y_start = 0.0` that is
+//!   `[0, u64::MAX, 0]`, and at `t_start = 0.0` the `PREV_T_UNSET`-versus-`0` difference cancels
+//!   through `tick_dt` — so a re-seed replaced by `words.fill(0)` is indistinguishable. An earlier
+//!   revision of this file had exactly that hole: the zero-fill mutant kept all four tests and the
+//!   entire `oce-api` lib target green, and only `tests/g36_cooling_only_controller.rs` — outside
+//!   the lib target, and outside the per-PR gate — caught it. A one-block fixture had the same
+//!   problem for a re-seed covering only the first `[S]` slot. The fixture below therefore uses two
 //!   `[S]` blocks with *different, non-zero* seeds, and pins the seeded value absolutely.
 //!
 //! So equality is never the whole assertion. Each equality is paired with a perturbation that must
 //! move the same trace, and the seed is pinned by value rather than by agreement.
+//!
+//! The `prev_t` asymmetry between the two refusal gates — a refused collect leaves the run clock
+//! intact, a refused input name clears it — is *not* pinned here. It is already owned by
+//! `input_staging_tests::a_backwards_tick_still_succeeds_after_a_failed_constant_staging` and
+//! `a_failed_collect_still_refuses_a_backwards_tick`, both of which predate this file; a test added
+//! here was redundant with them under every mutation and was removed.
 
 use super::common::*;
 use oce_graph::allocate_state;
@@ -335,35 +342,90 @@ fn a_refused_horizon_does_not_reseed_state_words() {
     );
 }
 
-#[test]
-fn the_two_refusal_gates_differ_on_the_run_clock() {
-    // Pre-existing and deliberate, previously pinned nowhere: the collect gate sits ABOVE the
-    // `prev_t` reset and the input-name gate BELOW it, so a refused input name clears the run clock
-    // and a refused column does not. That asymmetry decides whether a later backwards `tick`
-    // returns `Ok` or `TimeRegression`, which is public error surface.
-    let refuse = |spec: SimSpec| {
-        let mut eng = loaded();
-        eng.simulate(&driven_spec(0.0, 10.0)).expect("prime");
-        assert!(eng.simulate(&spec).is_err(), "the spec must be refused");
-        // backwards relative to the primed horizon end at t = 10
-        eng.tick(1.0).is_ok()
-    };
+/// The store interaction the rustdoc claims, in both directions. It is here because an earlier
+/// revision of that rustdoc asserted the opposite — that a store-bound point can never be
+/// hand-staged — which is true only when the snapshot has a sample for it.
+mod store_bound_staging {
+    use super::*;
+    use crate::PointValueType;
+    use oce_store::{Durability, OcValue, PointSample, PointStatus, PointStore, PointWrite};
+    use std::sync::Arc;
 
-    assert!(
-        !refuse(SimSpec {
-            collect: CollectSpec::Named {
-                points: vec!["nope".to_string()],
-                stride: 1
-            },
-            ..driven_spec(0.0, 10.0)
-        }),
-        "a refused COLLECT leaves prev_t intact, so a backwards tick is still TimeRegression"
-    );
-    assert!(
-        refuse(SimSpec {
-            inputs: InputSource::Constant(vec![("nope".to_string(), Value::Real(1.0))]),
-            ..driven_spec(0.0, 10.0)
-        }),
-        "a refused INPUT NAME has already cleared prev_t, so a backwards tick succeeds"
-    );
+    const FIXTURE: &[u8] =
+        include_bytes!("../../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
+
+    fn trace_with(store: &Arc<MemStore>, point: &str, staged: f64) -> Vec<Vec<u64>> {
+        let mut eng = Engine::with_store(Arc::clone(store));
+        eng.load_cxf(FIXTURE).expect("load");
+        eng.set_input(point, Value::Real(staged)).expect("stage");
+        let spec = SimSpec {
+            t_start: 0.0,
+            t_stop: 3.0,
+            step: 1.0,
+            inputs: InputSource::None,
+            collect: CollectSpec::All { stride: 1 },
+        };
+        let m = eng.simulate(&spec).expect("horizon");
+        (0..m.trace.columns().len())
+            .map(|j| {
+                m.trace
+                    .column(j)
+                    .expect("column")
+                    .iter()
+                    .map(|v| match v {
+                        Value::Real(r) => r.to_bits(),
+                        Value::Integer(i) => *i as u64,
+                        Value::Boolean(b) => u64::from(*b),
+                        other => panic!("unexpected {other:?}"),
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    fn an_input_point(store: &Arc<MemStore>) -> String {
+        let mut eng = Engine::with_store(Arc::clone(store));
+        eng.load_cxf(FIXTURE).expect("load");
+        eng.io()
+            .iter()
+            .find(|p| {
+                p.direction == PointDirection::In && matches!(p.value_type, PointValueType::Real)
+            })
+            .expect("a Real input")
+            .path
+            .clone()
+    }
+
+    #[test]
+    fn a_store_bound_point_with_no_sample_keeps_the_hand_staged_value() {
+        let store = Arc::new(MemStore::new());
+        let point = an_input_point(&store);
+        assert_ne!(
+            trace_with(&store, &point, 19.5),
+            trace_with(&store, &point, 30.0),
+            "with nothing in the store the slot holds last, so set_input drives the horizon"
+        );
+    }
+
+    #[test]
+    fn a_store_sample_overrides_the_hand_staged_value() {
+        let store = Arc::new(MemStore::new());
+        let point = an_input_point(&store);
+        store
+            .write_points(&[PointWrite {
+                key: oce_store::DomainKey::new(point.clone()),
+                sample: PointSample {
+                    value: OcValue::Real(22.0),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 1,
+                },
+                durability: Durability::Telemetry,
+            }])
+            .expect("off-tick write");
+        assert_eq!(
+            trace_with(&store, &point, 19.5),
+            trace_with(&store, &point, 30.0),
+            "once the store carries a sample it is re-staged every tick and set_input is overridden"
+        );
+    }
 }

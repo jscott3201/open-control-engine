@@ -453,12 +453,12 @@ impl<S: Store> Engine<S> {
     ///
     /// The entry image is a third determinant and is not derivable from the other two. It is every
     /// value sitting in the connector arena when the call begins — whatever [`Engine::set_input`]
-    /// staged, *and* whatever a previous `simulate`'s own [`InputSource`] wrote, since `Constant`
-    /// and `Closure` write connector slots directly rather than through `set_input`. A run only
-    /// reproduces a freshly loaded engine's when its `InputSource` drives every external input the
-    /// model reads; leave one undriven and it inherits whatever was there. Measured on
-    /// `g36/cooling_only_controller`: a fully driven spec reproduces a fresh engine exactly, while
-    /// a driven run followed by an `InputSource::None` run diverges in 46 of 210 columns.
+    /// staged, *and* whatever a previous `simulate` left there, since `InputSource::Constant`
+    /// writes connector slots directly and `InputSource::Closure` stages through `set_input`, which
+    /// writes the same arena. Driving every external input the model reads is what *guarantees* a
+    /// run reproduces a freshly loaded engine's; leave one undriven and it inherits whatever was
+    /// there. Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`,
+    /// which asserts both directions.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
@@ -468,17 +468,17 @@ impl<S: Store> Engine<S> {
     /// **Each call is a run restart, not a continuation.** Entry resets the run clock
     /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, and re-seeds every
     /// `[S]` block's state words so a reused engine starts where a freshly loaded one would.
-    /// Without the second reset, integrators, timers, latches and filters carried the previous run:
-    /// on `g36/cooling_only_controller` a second identical `simulate` moved 25 of 210 recorded
-    /// columns, including a cooling-loop PID command. Two consequences a host must plan for:
-    /// splitting one horizon across two calls does **not** continue the trajectory (chunking
-    /// `0..10` then `11..20` diverged from a single `0..20` in 18 of 210 columns), and a what-if
-    /// interleaved into a live run re-seeds the live engine's held and sampled values — see
-    /// `docs/host-responsibilities.md`.
+    /// Without the second reset, integrators, timers, latches and filters carried the previous run.
+    /// Two consequences a host must plan for: splitting one horizon across two calls does **not**
+    /// continue the trajectory (`tests::sim_tests::a_horizon_is_a_restart_so_chunking_one_run_into_two_does_not_continue_it`),
+    /// and a what-if interleaved into a live run re-seeds that engine's held and sampled values —
+    /// see `docs/host-responsibilities.md`.
     ///
-    /// A value staged by `set_input` reaches the horizon only for inputs the spec's `InputSource`
-    /// does not drive and the store does not own: a store-owned point is re-staged from the
-    /// snapshot on every tick, so staging it here has no effect.
+    /// A value staged by `set_input` reaches the horizon for any input the spec's `InputSource`
+    /// does not drive, including a store-bound one for which the store snapshot carries no sample:
+    /// `stage_store_inputs` overwrites a store-bound slot only when a sample exists and otherwise
+    /// deliberately holds last. Staging is overridden only where the spec drives that input or the
+    /// store has a sample for it.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;

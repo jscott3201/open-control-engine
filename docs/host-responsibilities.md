@@ -90,23 +90,24 @@ following `step_realtime` cannot detect regression relative to a real-time step 
 before the simulation.
 
 `simulate` is a run restart, not a continuation. On entry it clears the prior tick time *and*
-re-seeds every stateful block—integrators, latches, timers, filters—to its authored start value,
-the same re-seeding `resume` performs below. Three consequences to plan for:
+re-seeds every stateful block — integrators, latches, timers, filters — to its authored start
+value. This is narrower than the `resume` re-seed described below in two ways: it replaces state
+words only, leaving staged connector values alone, and it happens on every call rather than only
+when parameters are dirty. Three consequences to plan for:
 
 - A what-if interleaved into a live run disturbs the live engine, and disturbs it in a way that
-  resets held and sampled values rather than merely advancing them. On
-  `g36/cooling_only_controller`, a `simulate` dropped into a live tick sequence moved 6 of 210
-  outputs, including a sampled supply-air setpoint that jumped 1.5 K. Snapshot-and-restore around
-  a what-if is the surface that would make this safe; it does not exist yet
+  resets held and sampled values rather than merely advancing them. Snapshot-and-restore around a
+  what-if is the surface that would make this safe; it does not exist yet
   ([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
 - Splitting one horizon across two calls does not continue the trajectory. Simulating `0..10` then
   `11..20` is not the same as simulating `0..20`; the second call restarts from the seed. Run a
   horizon in one call, or accept that each call is its own run.
-- Two runs reproduce each other only when the spec drives every external input the model reads.
-  Undriven inputs inherit whatever is in the connector arena at entry—values from `set_input`, and
-  values a previous run's own `InputSource` wrote. A store-owned point is the exception in the
-  other direction: it is re-staged from the store snapshot on every tick, so staging it by hand has
-  no effect.
+- Driving every external input the model reads is what guarantees two runs reproduce each other.
+  Undriven inputs inherit whatever is in the connector arena at entry — values from `set_input`,
+  and values a previous run's own `InputSource` left there. A store-bound point is the one place
+  hand-staging can be overridden: it is re-staged from the store snapshot on every tick *for which
+  the snapshot carries a sample*. With no sample the slot deliberately holds last, so a hand-staged
+  value stands.
 
 ## Lifecycle names are not equipment controls
 
