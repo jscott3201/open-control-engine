@@ -1376,6 +1376,18 @@ to_map: 25
   http://example.org#g36.source.generic_time_suppression.truDel.y
   http://example.org#g36.source.generic_time_suppression.con1.y
 step_realtime_written: 25
+fixture: member_list_interface
+io_summary: ai=0 ao=0 di=3 do=2 network=0 total=5
+point_list: 5
+  http://example.org#g36.member_list_interface.u In Bool DigitalInput
+  http://example.org#g36.member_list_interface.pre.y Out Bool DigitalOutput
+  http://example.org#g36.member_list_interface.and2.u1 In Bool DigitalInput
+  http://example.org#g36.member_list_interface.and2.u2 In Bool DigitalInput
+  http://example.org#g36.member_list_interface.and2.y Out Bool DigitalOutput
+to_map: 2
+  http://example.org#g36.member_list_interface.pre.y
+  http://example.org#g36.member_list_interface.and2.y
+step_realtime_written: 2
 fixture: multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21
 io_summary: ai=44 ao=28 di=23 do=16 network=0 total=111
 point_list: 111

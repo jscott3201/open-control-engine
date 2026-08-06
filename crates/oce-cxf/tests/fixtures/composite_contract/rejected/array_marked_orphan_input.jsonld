@@ -1,0 +1,57 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#M",
+      "@type": "S231:Block",
+      "S231:containsBlock": {
+        "@id": "http://example.org#M.con"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": {
+        "@id": "http://example.org#M.con.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#M.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#M.orphan",
+      "S231:hasInput": {
+        "@id": "http://example.org#M.orphan.arr"
+      }
+    },
+    {
+      "@id": "http://example.org#M.orphan.arr",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true
+    }
+  ]
+}

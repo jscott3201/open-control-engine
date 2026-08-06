@@ -1,0 +1,24 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#M",
+      "@type": "S231:Block",
+      "S231:containsBlock": {
+        "@id": "http://example.org#M.rep"
+      }
+    },
+    {
+      "@id": "http://example.org#M.rep",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Routing.RealScalarReplicator",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#M.rep.u"
+        }
+      ]
+    }
+  ]
+}

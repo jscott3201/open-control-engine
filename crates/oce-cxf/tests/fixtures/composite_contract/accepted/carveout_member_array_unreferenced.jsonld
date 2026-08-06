@@ -1,0 +1,120 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced",
+      "@type": "S231:Block",
+      "S231:label": "carveout_member_array_unreferenced",
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.carveout_member_array_unreferenced.con"
+        },
+        {
+          "@id": "http://example.org#cc.carveout_member_array_unreferenced.post"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.k"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.protected"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.protected",
+      "S231:label": "protected"
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.protected.arr",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.post",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "post",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "4.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.carveout_member_array_unreferenced.post.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.carveout_member_array_unreferenced.y"
+      }
+    }
+  ]
+}

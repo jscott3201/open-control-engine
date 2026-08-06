@@ -86,8 +86,8 @@ fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
         .into_iter()
         .map(|(fixture, direction, path)| (fixture.to_owned(), direction, path.to_owned()))
         .collect::<BTreeSet<_>>();
-    assert_eq!(total_points, 2_895, "development corpus point count moved");
-    assert_eq!(actual.len(), 2_895, "authored point inventory count moved");
+    assert_eq!(total_points, 2_900, "development corpus point count moved");
+    assert_eq!(actual.len(), 2_900, "authored point inventory count moved");
     assert_eq!(
         actual, expected,
         "host-visible authored points must remain byte-identical to the checked-in inventory"

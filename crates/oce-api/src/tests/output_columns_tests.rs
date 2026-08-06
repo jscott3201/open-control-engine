@@ -25,7 +25,7 @@ fn trace_and_durable_output_columns_agree_over_the_g36_corpus() {
         })
         .collect::<Vec<_>>();
     fixtures.sort();
-    assert_eq!(fixtures.len(), 46, "G36 corpus size moved");
+    assert_eq!(fixtures.len(), 47, "G36 corpus size moved");
 
     for fixture in fixtures {
         let bytes = fs::read(&fixture).expect("read G36 fixture");

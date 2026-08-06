@@ -1,0 +1,9 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#cc.inert_root_dangling_member.con")
+    inputs=[] outputs=[0]
+    param k=Real(0x3ff0000000000000)
+connectors: 1
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#cc.inert_root_dangling_member.con.y")
+connections: 0
+external_inputs: []
+boundary_outputs: 0

@@ -1,13 +1,19 @@
-//! Corpus guard: a document-loaded point's identity is an authored `@id` from the document.
+//! Corpus guard: a document-loaded point's identity is document-derived — an authored `@id`
+//! from the document, or a `hasInstance`-derived member identity minted from one.
 //!
 //! JSON-LD `@graph` is an unordered set, so a positional connector-index path renumbers under
 //! semantically identical re-serializations; a durable store keyed on one can graft a point's
 //! samples onto another point's history with no error. CXF ingest rejects any connector node
-//! without an `@id`, so every facade surface of a CXF-loaded model must carry authored
+//! without an `@id`, so every facade surface of a CXF-loaded model must carry document-derived
 //! identities in canonical `@context`-expanded form, and the positional spelling survives only
 //! as the in-crate fallback for hand-built, IRI-less models. Expansion is identity on this
 //! corpus — every G36 identity slot is written absolute — which is why the membership oracle
-//! below can keep comparing facade paths against the raw document's `@id` values.
+//! below can keep comparing facade paths against the raw document's `@id` values. A
+//! `hasInstance`-derived instance's node-less and padded connectors carry
+//! `<owner @id>.<declared port name>` (`_spec/19` R19-5) — derived from an authored `@id` and
+//! the class signature, never from a position, so the identity is exactly as durable — and the
+//! oracle admits that one shape for `hasInstance`-carrying owners only; the authored dialect
+//! keeps the strict authored-membership check.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -35,7 +41,7 @@ fn corpus_fixtures() -> Vec<PathBuf> {
         })
         .collect::<Vec<_>>();
     fixtures.sort();
-    assert_eq!(fixtures.len(), 46, "G36 corpus size moved");
+    assert_eq!(fixtures.len(), 47, "G36 corpus size moved");
     fixtures
 }
 
@@ -83,6 +89,32 @@ fn document_id_values(bytes: &[u8]) -> BTreeSet<String> {
     let mut ids = BTreeSet::new();
     collect(&document, &mut ids);
     ids
+}
+
+/// The `@id` values of `@graph` nodes carrying `S231:hasInstance` — the owners whose derived
+/// member identities (`<owner @id>.<one segment>`) the membership oracle admits.
+fn has_instance_owner_ids(bytes: &[u8]) -> BTreeSet<String> {
+    let document: serde_json::Value = serde_json::from_slice(bytes).expect("fixture is JSON");
+    document["@graph"]
+        .as_array()
+        .map(|graph| {
+            graph
+                .iter()
+                .filter(|node| node.get("S231:hasInstance").is_some())
+                .filter_map(|node| node["@id"].as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Whether `path` is a derived member identity of one of `owners`: the owner's `@id`, one `.`,
+/// one further segment — the R19-5 mint shape, and nothing else.
+fn is_derived_member_identity(path: &str, owners: &BTreeSet<String>) -> bool {
+    owners.iter().any(|owner| {
+        path.strip_prefix(owner.as_str())
+            .and_then(|rest| rest.strip_prefix('.'))
+            .is_some_and(|segment| !segment.is_empty() && !segment.contains('.'))
+    })
 }
 
 /// Every point path visible on the seven facade surfaces: point_list, topology block ports,
@@ -208,9 +240,12 @@ fn every_facade_path_is_an_id_authored_in_the_source_document() {
     for fixture in corpus_fixtures() {
         let (fixture_name, bytes, engine) = load_fixture(&fixture);
         let authored_ids = document_id_values(&bytes);
+        let member_owners = has_instance_owner_ids(&bytes);
         let foreign: Vec<(&str, String)> = facade_surface_paths(&engine)
             .into_iter()
-            .filter(|(_, path)| !authored_ids.contains(path))
+            .filter(|(_, path)| {
+                !authored_ids.contains(path) && !is_derived_member_identity(path, &member_owners)
+            })
             .collect();
         if !foreign.is_empty() {
             offending_fixtures.push((fixture_name, foreign.len(), foreign));
@@ -221,7 +256,7 @@ fn every_facade_path_is_an_id_authored_in_the_source_document() {
     // through the resolver.
     assert!(
         offending_fixtures.is_empty(),
-        "{}/46 fixtures emit facade paths that are not authored `@id` values: {:?}",
+        "{}/47 fixtures emit facade paths that are not document-derived identities: {:?}",
         offending_fixtures.len(),
         offending_fixtures
             .iter()

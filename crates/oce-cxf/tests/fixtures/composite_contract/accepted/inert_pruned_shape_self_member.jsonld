@@ -1,0 +1,96 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member",
+      "@type": "S231:Block",
+      "S231:label": "inert_pruned_shape_self_member",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.flag"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.u"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond"
+        },
+        {
+          "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.flag",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "cond",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "flag",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.cond.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain.y"
+      },
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain.k"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_shape_self_member.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "2.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    }
+  ]
+}
