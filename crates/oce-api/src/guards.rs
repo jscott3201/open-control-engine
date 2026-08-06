@@ -178,6 +178,53 @@ fn _assert_frozen_signatures() {
     let _: Option<Diagnostic> = None;
 }
 
+// ---- R-API-PY-5/6 — the accessor surface the frozen-method set above does not reach ----
+
+/// The public inherent methods left unpinned by [`_assert_frozen_signatures`]: the engine's
+/// borrowed-state accessors and the enumerable snapshot types' readers. Same fn-pointer idiom, same
+/// failure mode — a return-type or arity drift stops coercing and the build fails.
+///
+/// Pinning these here rather than leaving them to `cargo public-api` is deliberate: that baseline
+/// runs only in the release gate (PRs into `main` and a daily cron), never on a PR into
+/// `development`, so a drift landed mid-cycle would go unseen until release. This module is a
+/// non-test module, so the per-PR `cargo build` catches it instead.
+///
+/// Two pins are narrower than the method they cover, stated so neither is overclaimed:
+/// `Engine::store` is pinned at `MemStore` like its neighbours, so it would not catch a newly added
+/// `where` bound on `S`; and `TemplateRef::new` is pinned at `&'static str`, one of the concrete
+/// types its `impl Into<Arc<str>>` parameter accepts, so it would not catch a narrowing of that
+/// parameter to `&'static str` itself. The generic form cannot take the neighbouring idiom at all —
+/// a late-bound lifetime cannot be inferred through `impl Into<_>`, so `fn(&str) -> TemplateRef`
+/// fails to coerce with `E0308: one type is more general than the other`.
+///
+/// `ExportReport::content_id` is **deliberately not pinned**, and its absence is a decision rather
+/// than an oversight. It is `#[deprecated]`, and this is a non-test module compiled under the gate's
+/// `-D warnings`, so naming it here is a hard error (`-D deprecated`). Suppressing that with an
+/// `#[allow]` would be worse than the gap: the only change anyone should now make to a deprecated
+/// method is deleting it, and a deletion is public-surface removal, which the release-gate baseline
+/// is the right review to adjudicate. A per-PR pin would make this gate fight that removal.
+fn _assert_accessor_signatures() {
+    let _: fn(&Engine<MemStore>) -> &Outputs = Engine::<MemStore>::outputs;
+    let _: fn(&Engine<MemStore>) -> &oce_graph::Schedule = Engine::<MemStore>::schedule;
+    let _: fn(&Engine<MemStore>) -> &MemStore = Engine::<MemStore>::store;
+    let _: fn(&Outputs, ConnectorId) -> Option<&Value> = Outputs::get;
+    let _: fn(&Outputs) -> usize = Outputs::len;
+    let _: fn(&Outputs) -> bool = Outputs::is_empty;
+    let _: fn(&IoInventory, usize) -> Option<&PointInfo> = IoInventory::get;
+    let _: fn(&IoInventory) -> usize = IoInventory::len;
+    let _: fn(&IoInventory) -> bool = IoInventory::is_empty;
+    let _: fn(&ParamTable) -> usize = ParamTable::len;
+    let _: fn(&ParamTable) -> bool = ParamTable::is_empty;
+    let _: fn(&OutputTrace) -> &[String] = OutputTrace::columns;
+    let _: fn(&OutputTrace) -> &[f64] = OutputTrace::times;
+    let _: fn(&OutputTrace, usize) -> Option<&[Value]> = OutputTrace::column;
+    let _: fn(&OutputTrace) -> usize = OutputTrace::rows;
+    let _: fn(&crate::ExportReport) -> Result<String, crate::ContentIdError> =
+        crate::ExportReport::content_id_complete;
+    let _: fn(&TemplateRef) -> &str = TemplateRef::iri;
+    let _: fn(&'static str) -> TemplateRef = TemplateRef::new;
+}
+
 // ---- R-API-PY-7 — `OcError` is `Error + Send + Sync + 'static` (mappable to a PyErr) ----
 
 /// R-API-PY-7: `OcError` is a `std::error::Error` that is `Send + Sync + 'static`, so the binding's
