@@ -123,7 +123,7 @@ pub(crate) fn rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
                 DiagCode::NonSubsetConstruct,
                 "http://example.org#M.del.samplePeriod",
                 "composite/colliding-member-identity: parameter `samplePeriod` is declared by \
-                 both hasParameter and hasInstance on `http://example.org#M.del`",
+                 both `hasParameter` and `hasInstance` on `http://example.org#M.del`",
             )],
         ),
         (

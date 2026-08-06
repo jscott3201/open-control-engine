@@ -444,8 +444,8 @@ fn derive_one(
                 Diagnostic::error(
                     COLLIDING_MEMBER_IDENTITY.code,
                     COLLIDING_MEMBER_IDENTITY.message(format!(
-                        "parameter `{name}` is declared by both hasParameter and hasInstance \
-                         on `{owner}`"
+                        "parameter `{name}` is declared by both `hasParameter` and \
+                         `hasInstance` on `{owner}`"
                     )),
                 )
                 .with_subject((*member).to_owned()),

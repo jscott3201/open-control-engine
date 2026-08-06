@@ -78,7 +78,7 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
             DiagCode::NonSubsetConstruct,
             Some("http://example.org#M.del.samplePeriod"),
             "composite/colliding-member-identity: parameter `samplePeriod` is declared by both \
-             hasParameter and hasInstance on `http://example.org#M.del`",
+             `hasParameter` and `hasInstance` on `http://example.org#M.del`",
         )],
     ),
     (

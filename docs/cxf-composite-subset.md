@@ -487,5 +487,8 @@ derivation moved that capture in both directions, every increase declared: 904 a
 mismatches and 2,579 unresolved references removed, 30 arity mismatches replaced by
 `composite/vector-port-instance`, `single-assignment` arriving at 57 (31 undriven and 8
 multiply-driven derived inputs, plus 18 multiply-driven declared boundary outputs assessed for
-this dialect for the first time), and `grounding-failed` rising 62 → 204 as member values and
-member connector bounds ground for the first time on class-translation documents.
+this dialect for the first time), `grounding-failed` rising 62 → 204 as member values and
+member connector bounds ground for the first time on class-translation documents, and
+`inactive-conditional-node` rising 11 → 44 because pruning now reaches a conditional instance's
+listed members as well as its `@graph` nodes (32 members still carrying active connections, 12
+connection targets).
