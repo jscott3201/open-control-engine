@@ -152,16 +152,48 @@ fn run_arm(width: usize, expected: &[&str], output: &mut [Value]) -> BTreeMap<&'
             if stats == Stats::default() {
                 continue;
             }
-            add_stats(allocating.entry(entry.class_path).or_default(), stats);
+            // Confirm before accusing (#231). `GLOBAL` is a `#[global_allocator]`, so the meter is
+            // process-global: anything allocating on ANY thread during the window is billed to
+            // whichever block happens to be mid-tick. That the attribution is arbitrary rather than
+            // real is settled by evidence, not assumed — two CI reds named different blocks with
+            // different sizes, and one of them, `CDL.Reals.Line`, is `struct Line { limit_below:
+            // bool, limit_above: bool }` in a file containing zero allocation-capable constructs.
+            //
+            // A second measurement separates the two cases without loosening the pin. A block that
+            // genuinely allocates does so on every tick, so it survives the retry; an ambient event
+            // is uncorrelated with this block and does not recur here. Note this is NOT justified by
+            // the ambient burst being once-per-process — a replica measured a second blocking recv
+            // allocating too, so that argument does not hold.
+            //
+            // The retry cannot hide a real allocator, and that is pinned rather than argued:
+            // `EXPECTED_POSITIVE_CONTROL` requires `CDL.Reals.Sort` to be DETECTED at the wide
+            // width, where it allocates above `SORT_STACK_WIDTH`. A retry that suppressed persistent
+            // allocators would drop it from `measured` and red the wide arm.
+            let confirm_block = (lookup(entry.class_path).unwrap().make)(&params);
+            let confirmed = tick(confirm_block.as_ref(), &params, value, output);
+            if confirmed == Stats::default() {
+                continue;
+            }
+            add_stats(allocating.entry(entry.class_path).or_default(), confirmed);
         }
     }
     let measured = allocating.keys().copied().collect::<BTreeSet<_>>();
     let differences = measured
         .symmetric_difference(&expected)
         .map(|class_path| match allocating.get(class_path) {
+            // All six fields, because all six decide the verdict: the purity check is
+            // `stats == Stats::default()`, which compares the whole struct. Printing only the two
+            // allocation fields meant an event landing on the dealloc side alone reported
+            // `allocs=0 bytes=0`, which reads as a broken harness rather than as evidence.
             Some(stats) => format!(
-                "{class_path}: allocs={} bytes={}",
-                stats.allocations, stats.bytes_allocated
+                "{class_path}: allocs={} deallocs={} reallocs={} bytes_alloc={} \
+                 bytes_dealloc={} bytes_realloc={}",
+                stats.allocations,
+                stats.deallocations,
+                stats.reallocations,
+                stats.bytes_allocated,
+                stats.bytes_deallocated,
+                stats.bytes_reallocated
             ),
             None => format!("{class_path}: expected but absent"),
         })

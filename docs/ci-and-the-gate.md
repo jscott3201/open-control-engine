@@ -17,10 +17,13 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-`.github/workflows/ci.yml:256-270` and `gate (full)` at `.github/workflows/release-gate.yml:314-329`.
+`.github/workflows/ci.yml:256-272` and `gate (full)` at `.github/workflows/release-gate.yml:314-329`.
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
-job. Read that as coverage, not as parity: nothing verifies mechanically that the two files still
-list the same commands. That check was attempted and withdrawn, and `ci.yml:227-238` records why —
+job. Read that as coverage, not as parity, and note that the implication does not run the other way:
+`gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
+was exactly that for a while — a required check no local run of the script performed — and an
+earlier revision of this paragraph cited the job as `ci.yml:256-270`, stopping one line short of it.
+Nothing verifies mechanically that the two files still list the same commands. That check was attempted and withdrawn, and `ci.yml:227-238` records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
 while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
 become its own untested gate.

@@ -118,7 +118,8 @@ To run the engine's own tests from a clone:
 git clone https://github.com/jscott3201/open-control-engine
 cd open-control-engine
 cargo nextest run -p oce-blocks -p oce-expr    # the per-PR engine subset
-bash .agents/gate.sh                            # the full per-PR gate, as CI runs it
+bash .agents/gate.sh                            # the gate script CI runs; see its closing report
+                                                # for the per-PR checks it cannot cover locally
 ```
 
 ---
