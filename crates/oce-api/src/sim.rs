@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::time::Instant;
 
 use oce_blocks::Diagnostics;
-use oce_graph::RunState;
+use oce_graph::{RunState, allocate_state};
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::{DomainKey, Durability, OcValue, PointSample, PointStatus, PointWrite, Store};
 
@@ -448,14 +448,22 @@ impl<S: Store> Engine<S> {
     }
 
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
-    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params ⇒ identical
-    /// [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + staged input image
+    /// ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2). The staged image is named
+    /// because it is a third determinant: values left by [`Engine::set_input`] survive into the
+    /// horizon, so two runs agreeing on `SimSpec` and params can still diverge if they disagree on
+    /// what the host staged.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
-    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine's run clock is
-    /// reset (`prev_t = None`) at entry so a prior real-time tick never poisons the horizon, and the
-    /// engine is left at the horizon end on return.
+    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine is left at
+    /// the horizon end on return.
+    ///
+    /// Entry resets the run clock (`prev_t = None`) so a prior real-time tick never poisons the
+    /// horizon, and re-seeds every `[S]` block's state words so a reused engine starts the horizon
+    /// where a freshly loaded one would. Without the second reset, integrators, timers, latches and
+    /// filters carried the previous run: on `g36/cooling_only_controller` a second identical
+    /// `simulate` moved 25 of 210 recorded columns, including a cooling-loop PID command.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
@@ -498,6 +506,22 @@ impl<S: Store> Engine<S> {
         // succeeds; resolving above the reset would preserve a prior tick's `prev_t` and flip that
         // `tick` from `Ok` to `Err(TimeRegression)`, a public error-surface change.
         let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
+        // Fresh `[S]` state (R-SIM-2): re-seed every stateful block so a reused engine runs the
+        // horizon from the same start as a freshly loaded one. Clearing `prev_t` alone left
+        // integrators, timers, latches and filters carrying the prior run — on
+        // `g36/cooling_only_controller` a second identical `simulate` moved 25 of 210 recorded
+        // columns, including a cooling-loop PID command, while two fresh engines agreed exactly.
+        //
+        // `words` ONLY, deliberately: `allocate_state` also re-seeds `values`, which would discard
+        // the host's staged input image and contradict [`Engine::set_input`]'s "before the next
+        // tick" contract. Nothing else in `values` survives to matter — block-output slots are
+        // recomputed in pass 1 of every tick and store-bound slots are overwritten by
+        // `stage_store_inputs` — so the undriven host-staged slots are the only carry, and they
+        // are meant to carry.
+        //
+        // Placed below both fail-fast gates above so an unresolvable column or input name still
+        // returns with the caller's state untouched.
+        self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
         let run_start = Instant::now();

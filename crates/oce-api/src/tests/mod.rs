@@ -11,5 +11,6 @@ mod outputs_lookup_tests;
 mod params_tests;
 mod projection_tests;
 mod realtime_write_back_tests;
+mod sim_tests;
 mod store_backed_inputs;
 mod watch_tests;
