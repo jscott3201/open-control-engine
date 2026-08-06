@@ -1,38 +1,26 @@
 //! What `simulate` resets between horizons, what it deliberately does not, and what that costs.
 //!
-//! `simulate` used to clear only the run clock. Every `[S]` block kept the words the previous run
-//! left behind, so a second identical horizon on the same engine started mid-run, while two freshly
-//! loaded engines agreed exactly. It now re-seeds the state words as well, which makes each call a
-//! run **restart**. The tests here pin the reset, the two places it deliberately stops, and one
-//! consequence of restart semantics.
+//! `simulate` used to clear only the run clock, so a reused engine started the horizon from the
+//! words the previous run left behind. It now re-seeds those words, which makes each call a run
+//! restart.
 //!
-//! Three ways to write a test here that stays green over the live defect, all of which were real:
+//! Three shapes that leave a test green over that defect:
 //!
-//! - **A fresh engine per run is blind.** The existing R-SIM-2 pin
-//!   (`input_staging_tests::a_constant_run_is_bit_reproducible_across_engines`) builds its engine
-//!   inside the closure, so it compares fresh against fresh and passed throughout. Every test below
-//!   reuses one engine, because that is the only arrangement in which carryover is observable.
-//! - **An undriven model is blind.** A stateful block nothing is driving has nothing to carry, so
-//!   the whole defect is invisible on a fixture whose inputs are never staged. Every test below
-//!   drives its inputs.
-//! - **A `y_start` of zero is blind.** `IntegratorWithReset::init_state` seeds
-//!   `[y_start.to_bits(), PREV_T_UNSET, 0]` (`reals_integrator.rs`). At `y_start = 0.0` that is
-//!   `[0, u64::MAX, 0]`, and at `t_start = 0.0` the `PREV_T_UNSET`-versus-`0` difference cancels
-//!   through `tick_dt` — so a re-seed replaced by `words.fill(0)` is indistinguishable. An earlier
-//!   revision of this file had exactly that hole: the zero-fill mutant kept all four tests and the
-//!   entire `oce-api` lib target green, and only `tests/g36_cooling_only_controller.rs` — outside
-//!   the lib target, and outside the per-PR gate — caught it. A one-block fixture had the same
-//!   problem for a re-seed covering only the first `[S]` slot. The fixture below therefore uses two
-//!   `[S]` blocks with *different, non-zero* seeds, and pins the seeded value absolutely.
+//! - **Fresh engine per run.** `input_staging_tests::a_constant_run_is_bit_reproducible_across_engines`
+//!   asserts R-SIM-2 and builds its engine inside its closure, so it compares fresh against fresh
+//!   and passed throughout. The carryover tests below reuse one engine.
+//! - **Undriven inputs.** A stateful block nothing drives has nothing to carry. The carryover tests
+//!   below stage every input of their fixture.
+//! - **`y_start = 0.0`.** `IntegratorWithReset::init_state` seeds `[y_start.to_bits(),
+//!   PREV_T_UNSET, 0]` (`reals_integrator.rs`), which at `y_start = 0.0` is `[0, u64::MAX, 0]`; at
+//!   `t_start = 0.0` the `PREV_T_UNSET`-versus-`0` difference cancels through `tick_dt`. A re-seed
+//!   replaced by `words.fill(0)` was therefore invisible to the whole `oce-api` lib target, and a
+//!   one-block fixture could not see a re-seed covering only the first `[S]` slot. The fixture
+//!   below uses two `[S]` blocks with different non-zero seeds and pins the seeded values by value.
 //!
-//! So equality is never the whole assertion. Each equality is paired with a perturbation that must
-//! move the same trace, and the seed is pinned by value rather than by agreement.
-//!
-//! The `prev_t` asymmetry between the two refusal gates — a refused collect leaves the run clock
-//! intact, a refused input name clears it — is *not* pinned here. It is already owned by
+//! The `prev_t` asymmetry between the two refusal gates is owned by
 //! `input_staging_tests::a_backwards_tick_still_succeeds_after_a_failed_constant_staging` and
-//! `a_failed_collect_still_refuses_a_backwards_tick`, both of which predate this file; a test added
-//! here was redundant with them under every mutation and was removed.
+//! `a_failed_collect_still_refuses_a_backwards_tick`, which predate this file.
 
 use super::common::*;
 use oce_graph::allocate_state;
@@ -296,10 +284,10 @@ fn a_horizon_is_a_restart_so_chunking_one_run_into_two_does_not_continue_it() {
 }
 
 #[test]
-fn a_refused_horizon_does_not_reseed_state_words() {
-    // Both fail-fast gates sit above the re-seed, so a spec that never ticks leaves the state arena
-    // alone. `prev_t` is a different matter and is pinned separately below — the earlier name for
-    // this test claimed the whole engine state was untouched, which is false.
+fn a_refused_name_resolution_does_not_reseed_state_words() {
+    // The two name-resolution gates sit above the re-seed. A `Closure` spec resolves its names
+    // inside the loop and is a different case, not covered here; `prev_t` is a different case
+    // again, owned by the two `input_staging_tests` named in the module header.
     let mut eng = loaded();
     eng.simulate(&driven_spec(0.0, 10.0))
         .expect("a real horizon");

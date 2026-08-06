@@ -451,14 +451,10 @@ impl<S: Store> Engine<S> {
     /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + **entry connector
     /// image** ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
     ///
-    /// The entry image is a third determinant and is not derivable from the other two. It is every
-    /// value sitting in the connector arena when the call begins — whatever [`Engine::set_input`]
-    /// staged, *and* whatever a previous `simulate` left there, since `InputSource::Constant`
-    /// writes connector slots directly and `InputSource::Closure` stages through `set_input`, which
-    /// writes the same arena. Driving every external input the model reads is what *guarantees* a
-    /// run reproduces a freshly loaded engine's; leave one undriven and it inherits whatever was
-    /// there. Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`,
-    /// which asserts both directions.
+    /// The entry connector image is a third determinant, not derivable from the other two: the
+    /// values in the connector arena when the call begins carry into the horizon. `InputSource`
+    /// overwrites the slots it names on every step; the rest are whatever the arena already held.
+    /// Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
@@ -466,19 +462,11 @@ impl<S: Store> Engine<S> {
     /// the horizon end on return.
     ///
     /// **Each call is a run restart, not a continuation.** Entry resets the run clock
-    /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, and re-seeds every
-    /// `[S]` block's state words so a reused engine starts where a freshly loaded one would.
-    /// Without the second reset, integrators, timers, latches and filters carried the previous run.
-    /// Two consequences a host must plan for: splitting one horizon across two calls does **not**
-    /// continue the trajectory (`tests::sim_tests::a_horizon_is_a_restart_so_chunking_one_run_into_two_does_not_continue_it`),
-    /// and a what-if interleaved into a live run re-seeds that engine's held and sampled values —
+    /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, then re-seeds the
+    /// `[S]` state words via [`allocate_state`]. `values` is left alone, so staged inputs survive
+    /// (`tests::sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`) while
+    /// integrators, timers, latches and filters do not. Restarting has consequences for a host:
     /// see `docs/host-responsibilities.md`.
-    ///
-    /// A value staged by `set_input` reaches the horizon for any input the spec's `InputSource`
-    /// does not drive, including a store-bound one for which the store snapshot carries no sample:
-    /// `stage_store_inputs` overwrites a store-bound slot only when a sample exists and otherwise
-    /// deliberately holds last. Staging is overridden only where the spec drives that input or the
-    /// store has a sample for it.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
@@ -521,26 +509,17 @@ impl<S: Store> Engine<S> {
         // succeeds; resolving above the reset would preserve a prior tick's `prev_t` and flip that
         // `tick` from `Ok` to `Err(TimeRegression)`, a public error-surface change.
         let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
-        // Fresh `[S]` state (R-SIM-2): re-seed every stateful block so a reused engine runs the
-        // horizon from the same start as a freshly loaded one. Clearing `prev_t` alone left
-        // integrators, timers, latches and filters carrying the prior run — on
-        // `g36/cooling_only_controller` a second identical `simulate` moved 25 of 210 recorded
-        // columns, including a cooling-loop PID command, while two fresh engines agreed exactly.
+        // Fresh `[S]` state (R-SIM-2): without this, a reused engine started the horizon from the
+        // words the previous run left behind.
         //
-        // `words` ONLY, deliberately: `allocate_state` also re-seeds `values`, which would discard
-        // the host's staged input image and contradict [`Engine::set_input`]'s "before the next
-        // tick" contract. Block-output slots do not need it — pass 1 recomputes them every tick.
-        // The rest of `values` DOES carry, and that is the documented limit rather than an
-        // oversight: an undriven external input keeps whatever `set_input` or a previous run's
-        // `InputSource` left there, and a store-bound point is overwritten by `stage_store_inputs`
-        // only when the snapshot carries a sample for it — with no sample it deliberately holds
-        // last (see the hold-last arm in `engine.rs`, pinned by
-        // `store_backed_inputs::missing_store_sample_holds_prior_input_value`), so it carries
-        // across horizons too.
+        // `words` only. `allocate_state` also re-seeds `values`, which would discard the host's
+        // staged input image and contradict [`Engine::set_input`]'s "before the next tick" contract
+        // (`sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`). What carries in
+        // `values` is the documented limit, not an oversight — see the rustdoc above.
         //
-        // Placed below both fail-fast gates above so a spec that never ticks returns with the state
-        // arena untouched. `prev_t` is cleared either way — the input-name gate sits below that
-        // reset, deliberately, for the error-surface reason given above.
+        // Below the two name-resolution gates, so an unresolvable collect or `Constant` name returns
+        // without re-seeding (`sim_tests::a_refused_name_resolution_does_not_reseed_state_words`). A
+        // `Closure` spec resolves its names inside the loop instead and so re-seeds before failing.
         self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();

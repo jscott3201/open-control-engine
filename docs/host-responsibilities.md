@@ -89,25 +89,23 @@ guard across that boundary. `simulate` deliberately clears the prior tick time o
 following `step_realtime` cannot detect regression relative to a real-time step that happened
 before the simulation.
 
-`simulate` is a run restart, not a continuation. On entry it clears the prior tick time *and*
-re-seeds every stateful block — integrators, latches, timers, filters — to its authored start
-value. This is narrower than the `resume` re-seed described below in two ways: it replaces state
-words only, leaving staged connector values alone, and it happens on every call rather than only
-when parameters are dirty. Three consequences to plan for:
+`simulate` is a run restart, not a continuation. On entry it clears the prior tick time and re-seeds
+the stateful blocks' state words to their authored start values. It leaves connector values alone,
+so it is narrower than the `resume` re-seed described below, which replaces the whole run state and
+only when parameters are dirty.
 
-- A what-if interleaved into a live run disturbs the live engine, and disturbs it in a way that
-  resets held and sampled values rather than merely advancing them. Snapshot-and-restore around a
-  what-if is the surface that would make this safe; it does not exist yet
-  ([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
-- Splitting one horizon across two calls does not continue the trajectory. Simulating `0..10` then
-  `11..20` is not the same as simulating `0..20`; the second call restarts from the seed. Run a
-  horizon in one call, or accept that each call is its own run.
-- Driving every external input the model reads is what guarantees two runs reproduce each other.
-  Undriven inputs inherit whatever is in the connector arena at entry — values from `set_input`,
-  and values a previous run's own `InputSource` left there. A store-bound point is the one place
-  hand-staging can be overridden: it is re-staged from the store snapshot on every tick *for which
-  the snapshot carries a sample*. With no sample the slot deliberately holds last, so a hand-staged
-  value stands.
+Two consequences to plan for. Splitting a horizon across two calls does not continue the
+trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the
+second call restarts from the seed. And a what-if interleaved into a live run resets that engine's
+stateful blocks, which for held and sampled values means a jump rather than an advance —
+snapshot-and-restore is the surface that would make this safe, and it does not exist yet
+([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
+
+Connector values that `simulate` does not overwrite carry into the horizon: `InputSource` writes
+the slots it names on every step, and the rest hold whatever was there. Whether a value staged
+through `set_input` reaches a given block depends on how that input is fed — a store-bound point is
+re-staged from the snapshot on any tick the snapshot has a sample for, and an input driven by
+another block inside the model is read from its driver rather than from its own slot.
 
 ## Lifecycle names are not equipment controls
 
