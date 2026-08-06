@@ -4,7 +4,7 @@
 
 use oce_diag::DiagCode;
 
-use super::CompositeRejection;
+use super::{CompositeRejection, CompositeWarning};
 
 /// The slice's rejected fixtures: contract rule id (`None` for untagged shared machinery) and
 /// the exact ordered (code, subject, message) triples `Engine::load_cxf` must surface. The
@@ -241,7 +241,7 @@ pub(crate) const MEMBER_REJECTIONS: [CompositeRejection; 22] = [
 
 /// The slice's warned fixtures: the exact ordered warning triples a successful
 /// `Engine::load_cxf` must surface.
-pub(crate) const MEMBER_WARNINGS: [(&str, &[(DiagCode, Option<&str>, &str)]); 2] = [
+pub(crate) const MEMBER_WARNINGS: [CompositeWarning; 2] = [
     (
         "analog_coerced_member.jsonld",
         &[(

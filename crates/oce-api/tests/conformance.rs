@@ -251,6 +251,15 @@ type CompositeRejection = (
     &'static [(DiagCode, Option<&'static str>, &'static str)],
 );
 
+/// The end-to-end pin per warned corpus fixture: the file plus the exact ordered
+/// (code, subject, message) triples a SUCCESSFUL `Engine::load_cxf` must surface. It carries no
+/// rule id, unlike [`CompositeRejection`] — a warning is a diagnostic on a document that loads,
+/// not a contract refusal, so there is no `composite/<rule-id>` tag to assert against.
+type CompositeWarning = (
+    &'static str,
+    &'static [(DiagCode, Option<&'static str>, &'static str)],
+);
+
 const COMPOSITE_REJECTIONS: [CompositeRejection; 18] = [
     (
         "multi_root.jsonld",
@@ -464,14 +473,8 @@ fn composite_rejections() -> Vec<CompositeRejection> {
 
 /// Every warned corpus fixture with its exact ordered warning triples — the generalized
 /// end-to-end warned driver's table, keyed by file the way `COMPOSITE_REJECTIONS` is.
-fn composite_warnings() -> Vec<(
-    &'static str,
-    &'static [(DiagCode, Option<&'static str>, &'static str)],
-)> {
-    let mut rows: Vec<(
-        &'static str,
-        &'static [(DiagCode, Option<&'static str>, &'static str)],
-    )> = vec![(
+fn composite_warnings() -> Vec<CompositeWarning> {
+    let mut rows: Vec<CompositeWarning> = vec![(
         "undriven_boundary_output.jsonld",
         &[(
             DiagCode::UndrivenBoundaryOutput,
