@@ -45,6 +45,14 @@ impl Outputs {
             paths.len(),
             "Outputs entries/paths must align"
         );
+        // The ordering `Outputs::get`'s binary search depends on. A development-only net: the
+        // workspace release profile leaves `debug-assertions` off, so this does not fire under the
+        // `--release` codegen the gate's second test pass uses. The load-bearing guard is
+        // `entries_are_strictly_ascending_by_connector_id`, which runs under both profiles.
+        debug_assert!(
+            entries.windows(2).all(|w| w[0].0 < w[1].0),
+            "Outputs entries must be strictly ascending by ConnectorId"
+        );
         Outputs { entries, paths }
     }
 
@@ -57,9 +65,19 @@ impl Outputs {
     }
 
     /// The current value of output connector `c`, if it is an output of the loaded model.
+    ///
+    /// `O(log n)` in the number of outputs, so a host reading many connectors in a loop does not
+    /// pay a scan per read. This relies on the entries being ascending by [`ConnectorId`]: they are
+    /// built by an in-order `connectors.filter(Out)` walk, and the connector arena is minted by
+    /// index at resolve time. Nothing in the type system enforces it — `ModelGraph::connectors` is
+    /// a plain `Vec` a hand-built model could disorder — so the ordering is pinned by test
+    /// (`entries_are_strictly_ascending_by_connector_id`) under both build profiles.
     #[must_use]
     pub fn get(&self, c: ConnectorId) -> Option<&Value> {
-        self.entries.iter().find(|(id, _)| *id == c).map(|(_, v)| v)
+        self.entries
+            .binary_search_by_key(&c, |(id, _)| *id)
+            .ok()
+            .map(|i| &self.entries[i].1)
     }
 
     /// Iterate `(connector, value)` for every output connector, in declaration order.
@@ -475,13 +493,18 @@ impl<S: Store> Engine<S> {
         let stride = collect_stride(&spec.collect).max(1) as u64;
         // Fresh time axis (R-SIM-2): isolate from any prior real-time tick's prev_t.
         self.prev_t = None;
+        // Resolve `Constant` input names ONCE, after the reset above — the order is load-bearing.
+        // A staging failure has always left `prev_t` cleared, so a later backwards `tick` still
+        // succeeds; resolving above the reset would preserve a prior tick's `prev_t` and flip that
+        // `tick` from `Ok` to `Err(TimeRegression)`, a public error-surface change.
+        let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
         let run_start = Instant::now();
         let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
         for k in 0..=n {
             let t = spec.t_start + (k as f64) * spec.step; // fresh multiply — no float accumulator
-            self.stage_inputs(&spec.inputs, t)?;
+            self.stage_inputs(&spec.inputs, &staged_inputs, t)?;
             let t0 = Instant::now();
             self.tick(t)?;
             let dt = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
@@ -571,13 +594,66 @@ impl<S: Store> Engine<S> {
         Ok(self.state.values[cid.0 as usize].clone())
     }
 
+    /// Resolve an [`InputSource`]'s staging targets once, before the horizon runs (the `simulate`
+    /// helper). Every other variant resolves nothing and yields an empty plan.
+    ///
+    /// Only [`InputSource::Constant`] can be pre-resolved: its `(point, value)` pairs are fixed for
+    /// the whole run, so the per-step point-path hash lookup and type check they used to cost are
+    /// hoisted here. [`InputSource::Closure`] may name different points at each `t`, so its names
+    /// are not resolvable ahead of the run.
+    ///
+    /// Each name flattens to **every** connector it stages — a composite boundary input fans one
+    /// host point out to several internal connectors — in list order, so two pairs naming the same
+    /// point stay last-wins when the plan is written.
+    ///
+    /// # Errors
+    /// [`OcError::UnknownPoint`] if a `Constant` name is not an input in the inventory;
+    /// [`OcError::InputType`] if a value's type does not match the connector it would stage. Either
+    /// refusal discards the whole plan, so a run that fails here stages nothing at all — including
+    /// the pairs preceding the failing one, which per-name staging used to write before refusing.
+    /// Never panics (R-ERR-1).
+    pub(crate) fn resolve_constant_inputs(
+        &self,
+        inputs: &InputSource,
+    ) -> Result<Vec<(ConnectorId, Value)>, OcError> {
+        let InputSource::Constant(pairs) = inputs else {
+            return Ok(Vec::new());
+        };
+        let mut staged = Vec::with_capacity(pairs.len());
+        for (name, value) in pairs {
+            let connectors = self
+                .io
+                .resolve_inputs(name)
+                .ok_or_else(|| OcError::UnknownPoint(name.to_string()))?;
+            for &cid in connectors {
+                // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
+                if value.value_type() != self.model.connectors[cid.0 as usize].value_type {
+                    return Err(OcError::InputType(name.to_string()));
+                }
+                staged.push((cid, value.clone()));
+            }
+        }
+        Ok(staged)
+    }
+
     /// Stage the inputs for one simulation step from an [`InputSource`] (the `simulate` helper).
-    pub(crate) fn stage_inputs(&mut self, inputs: &InputSource, t: f64) -> Result<(), OcError> {
+    ///
+    /// `staged` is the [`Engine::resolve_constant_inputs`] plan for `inputs`, resolved once per
+    /// run. It is written on **every** step, at the same cadence as the per-name staging it
+    /// replaces: only the resolution is hoisted, never the write.
+    pub(crate) fn stage_inputs(
+        &mut self,
+        inputs: &InputSource,
+        staged: &[(ConnectorId, Value)],
+        t: f64,
+    ) -> Result<(), OcError> {
         match inputs {
             InputSource::None => Ok(()),
-            InputSource::Constant(pairs) => {
-                for (name, v) in pairs {
-                    self.set_input(name, v.clone())?;
+            InputSource::Constant(_) => {
+                for (cid, value) in staged {
+                    // `cid` was inventory-sourced at resolution time, so it indexes in range, and
+                    // its type was checked against the connector there.
+                    self.state.values[cid.0 as usize] = value.clone();
                 }
                 Ok(())
             }
