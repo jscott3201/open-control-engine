@@ -7,6 +7,16 @@
 //! does not exempt a node — an array marker on anything wired as a connector or instance is a
 //! silent-scalar-collapse hazard and rejects; preserved array parameters are never referenced
 //! as connectors or instances, so they never reach these rules.
+//!
+//! An active **derivation-shaped** node's `S231:hasInstance` members are a connector source
+//! too (`_spec/19` R19-11) — reference-based and class-independent exactly like the existing
+//! sources, because this scan runs before class resolution and gating the new source on
+//! member classification would make a class-independent guard class-dependent. The new source
+//! matches the existing ones on reachability and is **narrower on shape**: an orphan node (a
+//! node no `containsBlock` edge points at) and a runtime composite contribute nothing, where
+//! the existing sources take any active node's list at all. An array-marked member whose kind
+//! would have been *parameter* rejects here too — a `hasInstance` listing exempts nothing,
+//! mirroring the `hasParameter` ruling above.
 
 use std::collections::HashSet;
 
@@ -15,6 +25,7 @@ use oce_diag::{Diagnostic, Severity};
 use crate::dto::{CxfDocument, Node};
 
 use super::composite_rules::{ARRAY_CONNECTOR, ARRAY_INSTANCE};
+use super::instance_interface::{contains_block_referents, is_derivation_shaped};
 use super::specialize::Specialization;
 use super::value_types::term_of;
 
@@ -24,12 +35,14 @@ use super::value_types::term_of;
 /// Marker keys match on the term after the last `:`, `#`, or `/` — the same convention as the
 /// banned-Modelica-key rule — so absolute-IRI and re-prefixed spellings reject too. Nodes
 /// removed by specialization are invisible to this check, as are markers on inactive
-/// references.
+/// references — a pruned derivation-shaped instance's members are not scanned, the same
+/// existing filter and not an exception to it.
 pub(super) fn reject_unsupported(
     doc: &CxfDocument,
     specialization: &Specialization,
     diags: &mut Vec<Diagnostic>,
 ) {
+    let contains_referents = contains_block_referents(doc);
     let mut connector_ids = HashSet::new();
     let mut instance_ids = HashSet::new();
 
@@ -45,6 +58,15 @@ pub(super) fn reject_unsupported(
                 .map(|reference| reference.id.as_str())
                 .filter(|id| !specialization.is_inactive(id)),
         );
+        if is_derivation_shaped(parent, &contains_referents) {
+            connector_ids.extend(
+                parent
+                    .has_instance
+                    .iter()
+                    .map(|reference| reference.id.as_str())
+                    .filter(|id| !specialization.is_inactive(id)),
+            );
+        }
         instance_ids.extend(
             parent
                 .contains_block

@@ -297,7 +297,7 @@ will always "fail"; compare imported models instead.
 ```
 imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u` is gone.
 
-## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`, `composite/array-connector`, `composite/array-instance`)
+## Rule 7 — Rejected constructs (rejects: `composite/banned-modelica-key`, `composite/replaceable`, `composite/array-connector`, `composite/array-instance`, `composite/vector-port-instance`, `composite/unsupported-instance-member`, `composite/colliding-member-identity`)
 
 > Six Modelica construct keys are banned on any active node: `redeclare`, `constrainedby`,
 > `extends`, `extendsFrom`, `moSource`, `modelicaSource`. Matching is on the term after the last
@@ -326,6 +326,27 @@ imports as one external input feeding `…#M.sub.gain.u` directly; `…#M.sub.u`
 > **on a composite** are governed by Rule 5; an array-valued parameter on a leaf block is
 > preserved and expanded, not rejected. Inactive conditional subtrees are invisible to these
 > checks.
+>
+> Three rules govern the `hasInstance` interface derivation (an instance declaring neither
+> `hasInput` nor `hasOutput` and carrying a `S231:hasInstance` list derives its interface from
+> the list; a node declaring either port list keeps its own interface). Each refusal skips the
+> instance's derivation whole — the tagged rejection **replaces** the generic arity mismatch
+> rather than doubling it:
+>
+> - `composite/vector-port-instance` (DiagCode `non-subset-construct`, subject the instance
+>   node, one per instance): the resolved class publishes no declared port names — its port
+>   count is a function of a parameter, so one member stands for N scalar connectors and this
+>   subset derives scalar interfaces only. A document declaring the same class's ports
+>   explicitly through `hasInput`/`hasOutput` is untouched.
+> - `composite/unsupported-instance-member` (DiagCode `non-subset-construct`, subject the
+>   member IRI, one per offending member): a member outside its owner's namespace (not
+>   `<owner>.<oneSegment>`), a member that is itself a block instance, or a member whose local
+>   name is neither a declared port nor a declared parameter of the class.
+> - `composite/colliding-member-identity` (DiagCode `non-subset-construct`, subject the
+>   colliding IRI, one per collision): a synthesized connector identity that is already an
+>   `@graph` node or is minted twice for one owner, or a parameter name declared twice for one
+>   instance — across its classified members or against its own `hasParameter`/`hasConstant`
+>   list.
 
 ```json
 { "@id": "…#M.c2", "@type": "…MultiplyByParameter",
@@ -354,6 +375,9 @@ rejections are generic diagnostics.
 | 7 | `array-instance` | `non-subset-construct` | `composite/array-instance: ` |
 | 5 | `declaration-cycle` | `malformed-document` | `composite/declaration-cycle: ` |
 | 5 | `duplicate-declaration` | `malformed-document` | `composite/duplicate-declaration: ` |
+| 7 | `vector-port-instance` | `non-subset-construct` | `composite/vector-port-instance: ` |
+| 7 | `unsupported-instance-member` | `non-subset-construct` | `composite/unsupported-instance-member: ` |
+| 7 | `colliding-member-identity` | `non-subset-construct` | `composite/colliding-member-identity: ` |
 
 Every message prefix is `composite/<rule-id>: ` — colon, then **one trailing space** (U+0020),
 which markdown table cells cannot render unambiguously. Match with

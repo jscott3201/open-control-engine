@@ -110,6 +110,13 @@ pub enum DiagCode {
     PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
+    /// An instance's `S231:hasInstance` member list disagrees with the node's own declared
+    /// interface routes: a class-declared name rides the list while no
+    /// `hasInput`/`hasOutput`/`hasParameter`/`hasConstant` route of the node declares it
+    /// (Warning — the shape is legal CXF), or one parameter name carries different values on
+    /// the two routes (Error — two values for one name state a contradiction). Compared
+    /// one-directional, list minus own, over names the resolved class declares.
+    ConflictingInterfaceDeclaration,
     /// A root-declared boundary output's IRI is also an existing connector identity — the same
     /// name would answer as two different points (subject = the declared IRI). Two authored
     /// forms produce it: the root's `hasOutput` referencing a child instance's port node, and
@@ -207,6 +214,7 @@ impl DiagCode {
             DiagCode::UnresolvedPolymorphism => "unresolved-polymorphism",
             DiagCode::NonSubsetConstruct => "non-subset-construct",
             DiagCode::MalformedDocument => "malformed-document",
+            DiagCode::ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
             DiagCode::BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
             DiagCode::RelativeIri => "relative-iri",
             DiagCode::SingleAssignment => "single-assignment",
@@ -363,6 +371,7 @@ mod tests {
         NonSubsetConstruct => "non-subset-construct",
         PortNameMismatch => "port-name-mismatch",
         MalformedDocument => "malformed-document",
+        ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
         BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
         RelativeIri => "relative-iri",
         SingleAssignment => "single-assignment",

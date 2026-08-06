@@ -24,6 +24,9 @@ use std::collections::{HashMap, HashSet};
 use crate::dto::{CxfDocument, Node};
 
 use super::composite::is_runtime_composite;
+use super::instance_interface::{
+    classified_port_members, contains_block_referents, is_derivation_shaped,
+};
 use super::specialize::Specialization;
 
 #[derive(Clone, Debug)]
@@ -79,6 +82,7 @@ impl CompositeOrientation {
             tree: true,
             ..Self::default()
         };
+        let contains_referents = contains_block_referents(doc);
         for (position, node) in doc.graph.iter().enumerate() {
             index.positions.insert(node.id.clone(), position);
             if specialization.is_inactive(&node.id) {
@@ -104,6 +108,15 @@ impl CompositeOrientation {
                     if node.id == root {
                         index.top_outputs.insert(output.to_owned());
                     }
+                }
+            }
+            // A derivation-shaped node's port-classified members claim leaf ownership the
+            // same way its authored lists would (`_spec/19` R19-14): `hasInstance` encodes no
+            // side, so the side comes from the class's declared name lists — never composite
+            // boundary membership, a derivation-shaped node being a leaf by definition.
+            if is_derivation_shaped(node, &contains_referents) {
+                for (member, input) in classified_port_members(node) {
+                    index.claim(member, &node.id, input);
                 }
             }
             for child in node.contains_block.iter().map(|child| child.id.as_str()) {

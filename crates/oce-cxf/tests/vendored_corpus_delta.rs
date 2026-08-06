@@ -15,6 +15,27 @@
 //! capture is a red, never a vacuous green. Deterministic and offline: files are read from the
 //! vendored tree, never fetched.
 //!
+//! The pinned post-state carries the `_spec/19` interface derivation's declared movement, both
+//! directions stated in advance (an undeclared increase is a defect, not noise):
+//! - `malformed-document` 944 → 10: 904 arity mismatches removed by derived interfaces, 30
+//!   replaced by `composite/vector-port-instance` (the 10 `composite/root-count` refusals on
+//!   the enumeration-only `Types/*.jsonld` documents remain);
+//! - `non-subset-construct` 81 → 111: +30 `composite/vector-port-instance`, the scalar-only
+//!   refusal on the three documents whose classes publish no port names;
+//! - `unresolved-reference` 2,816 → 237: every surviving subject sits on the 18
+//!   `class-not-found` or 30 vector-port instances, which derive no interface;
+//! - `single-assignment` 0 → 57 (declared INCREASE): 31 undriven + 8 multiply-driven derived
+//!   inputs, plus 18 multiply-driven declared boundary outputs — the `_spec/18` R19-16
+//!   migration off the wrong `unresolved-reference` code, `refuse_multiply_driven` assessing
+//!   this dialect for the first time;
+//! - `grounding-failed` 62 → 204 (declared INCREASE): member values and member connector
+//!   bounds ground for the first time, so the class-translation corpus's valueless-parameter
+//!   references, its upstream-corrupt `undefined` value strings, and its out-of-subset value
+//!   expressions now fail loudly at the member level instead of never being read;
+//! - `undriven-boundary-output` warnings 131 → 27: derived interfaces supply the drivers;
+//! - `inactive-conditional-node` stays 44 (the R19-15 traversal's own movement, taken at the
+//!   traversal-only capture) and `class-not-found` / `conditional-guard-*` stay put.
+//!
 //! Regenerate the expectation table after an intentional resolver change (the writer emits
 //! mechanical layout, so follow it with `cargo fmt --all`):
 //! ```text
