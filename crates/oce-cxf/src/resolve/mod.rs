@@ -4,6 +4,9 @@
 //! emits the flat `oce_model::ModelGraph` (D1's executable truth) directly. Only the elementary
 //! instances named by the top composite's `containsBlock` become [`oce_model::BlockInstance`]s; the
 //! composite itself contributes only its boundary ports (`hasInput`/`hasOutput`) and child list.
+//! An instance's interface comes from its own `hasInput`/`hasOutput` lists, or — for an instance
+//! declaring neither — from its `S231:hasInstance` member list, classified against the resolved
+//! class signature (`instance_interface`, `_spec/19`).
 //!
 //! ## Determinism
 //! Every assignment of a `BlockId`, `ConnectorId`, vector position, or sort key is driven by an
@@ -16,11 +19,14 @@
 //!
 //! The order contract, stated once: array order is load-bearing wherever the resolver reads an
 //! array — `@graph` node position, `containsBlock` order, each instance's port and parameter
-//! lists, `isConnectedTo` order. The one carve-out is the boundary-input elision vector
-//! (`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's
+//! lists, `isConnectedTo` order. Two carve-outs: the boundary-input elision vector
+//! (`external_inputs`) and the pass-through pair list are re-keyed on the boundary port's
 //! own `@graph` node position instead of inheriting the order of that port's `isConnectedTo`
-//! array (Step 9's re-key below). Neither array order nor node position is a stable identity:
-//! key by authored name, never by position.
+//! array (Step 9's re-key below); and a `S231:hasInstance` member array's order is load-bearing
+//! for nothing — derived ports bind by name, synthesized connectors key on
+//! `(owner @graph position, class-signature position)`, and classified parameter members append
+//! in class-signature order (R19-13). Neither array order nor node position is a stable
+//! identity: key by authored name, never by position.
 //!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input

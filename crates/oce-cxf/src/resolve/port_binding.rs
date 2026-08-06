@@ -36,6 +36,12 @@
 //!   `Sources.TimeTable` classes;
 //! - hand-built models never went through a document.
 //!
+//! The `hasInstance` dialect never binds positionally: its derived port vectors are already
+//! signature-ordered and every identity — a member IRI or a padded `<owner>.<name>` — carries
+//! the declared port name as its local segment, so [`match_names`] answers
+//! [`Binding::Permuted`] (the identity permutation) and a scalar-only refusal upstream keeps
+//! the no-port-name classes off this path entirely (`_spec/19` R19-1/R19-13).
+//!
 //! The exporter may mix authored names with its unambiguous positional markers (`in0`, `out1`)
 //! when boundary elision has replaced one child port's own IRI. Those markers bind only to their
 //! matching signature position. Any other partial match still earns [`DiagCode::PortNameMismatch`]
