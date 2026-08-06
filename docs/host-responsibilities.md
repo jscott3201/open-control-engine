@@ -89,6 +89,25 @@ guard across that boundary. `simulate` deliberately clears the prior tick time o
 following `step_realtime` cannot detect regression relative to a real-time step that happened
 before the simulation.
 
+`simulate` is a run restart, not a continuation. On entry it clears the prior tick time *and*
+re-seeds every stateful block—integrators, latches, timers, filters—to its authored start value,
+the same re-seeding `resume` performs below. Three consequences to plan for:
+
+- A what-if interleaved into a live run disturbs the live engine, and disturbs it in a way that
+  resets held and sampled values rather than merely advancing them. On
+  `g36/cooling_only_controller`, a `simulate` dropped into a live tick sequence moved 6 of 210
+  outputs, including a sampled supply-air setpoint that jumped 1.5 K. Snapshot-and-restore around
+  a what-if is the surface that would make this safe; it does not exist yet
+  ([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
+- Splitting one horizon across two calls does not continue the trajectory. Simulating `0..10` then
+  `11..20` is not the same as simulating `0..20`; the second call restarts from the seed. Run a
+  horizon in one call, or accept that each call is its own run.
+- Two runs reproduce each other only when the spec drives every external input the model reads.
+  Undriven inputs inherit whatever is in the connector arena at entry—values from `set_input`, and
+  values a previous run's own `InputSource` wrote. A store-owned point is the exception in the
+  other direction: it is re-staged from the store snapshot on every tick, so staging it by hand has
+  no effect.
+
 ## Lifecycle names are not equipment controls
 
 `Engine::halt()` does not stop ticks, real-time steps, simulations, or output writes. It changes

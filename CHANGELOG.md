@@ -77,6 +77,18 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
 
 ### Host facade
 
+- **`simulate` is a run restart, and was not one** (#257, fixes #256). It cleared the run clock and
+  nothing else, so every stateful block carried the words the previous run left behind and a second
+  identical horizon on the same engine started mid-run — 25 of 210 recorded columns moved on
+  `g36/cooling_only_controller`, including a cooling-loop PID command, falsifying the method's own
+  rustdoc and R-SIM-2. Entry now re-seeds the state words. Three behaviour changes ride with that,
+  all documented in `docs/host-responsibilities.md`: chunking one horizon across two calls no
+  longer continues the trajectory, a what-if interleaved into a live run now resets that engine's
+  held and sampled values rather than merely advancing them, and a reused engine reproduces a fresh
+  one only when the spec drives every external input — an undriven input still inherits the
+  connector image at entry, including values a previous run's own `InputSource` wrote. Values
+  staged by `set_input` are deliberately preserved; the reset covers state words only.
+
 - **The durable point path is an authored `@id`** (#229). Every facade surface — `point_list`,
   topology block ports and edges, `external_inputs`, pass-through pairs, `Outputs::to_map` keys —
   and the durable `PointDto` projection now name a point by the authored `@id`, as written in the

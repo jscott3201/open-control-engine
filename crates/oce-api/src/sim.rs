@@ -448,22 +448,37 @@ impl<S: Store> Engine<S> {
     }
 
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
-    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + staged input image
-    /// ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2). The staged image is named
-    /// because it is a third determinant: values left by [`Engine::set_input`] survive into the
-    /// horizon, so two runs agreeing on `SimSpec` and params can still diverge if they disagree on
-    /// what the host staged.
+    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + **entry connector
+    /// image** ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    ///
+    /// The entry image is a third determinant and is not derivable from the other two. It is every
+    /// value sitting in the connector arena when the call begins — whatever [`Engine::set_input`]
+    /// staged, *and* whatever a previous `simulate`'s own [`InputSource`] wrote, since `Constant`
+    /// and `Closure` write connector slots directly rather than through `set_input`. A run only
+    /// reproduces a freshly loaded engine's when its `InputSource` drives every external input the
+    /// model reads; leave one undriven and it inherits whatever was there. Measured on
+    /// `g36/cooling_only_controller`: a fully driven spec reproduces a fresh engine exactly, while
+    /// a driven run followed by an `InputSource::None` run diverges in 46 of 210 columns.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
     /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine is left at
     /// the horizon end on return.
     ///
-    /// Entry resets the run clock (`prev_t = None`) so a prior real-time tick never poisons the
-    /// horizon, and re-seeds every `[S]` block's state words so a reused engine starts the horizon
-    /// where a freshly loaded one would. Without the second reset, integrators, timers, latches and
-    /// filters carried the previous run: on `g36/cooling_only_controller` a second identical
-    /// `simulate` moved 25 of 210 recorded columns, including a cooling-loop PID command.
+    /// **Each call is a run restart, not a continuation.** Entry resets the run clock
+    /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, and re-seeds every
+    /// `[S]` block's state words so a reused engine starts where a freshly loaded one would.
+    /// Without the second reset, integrators, timers, latches and filters carried the previous run:
+    /// on `g36/cooling_only_controller` a second identical `simulate` moved 25 of 210 recorded
+    /// columns, including a cooling-loop PID command. Two consequences a host must plan for:
+    /// splitting one horizon across two calls does **not** continue the trajectory (chunking
+    /// `0..10` then `11..20` diverged from a single `0..20` in 18 of 210 columns), and a what-if
+    /// interleaved into a live run re-seeds the live engine's held and sampled values — see
+    /// `docs/host-responsibilities.md`.
+    ///
+    /// A value staged by `set_input` reaches the horizon only for inputs the spec's `InputSource`
+    /// does not drive and the store does not own: a store-owned point is re-staged from the
+    /// snapshot on every tick, so staging it here has no effect.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
@@ -514,13 +529,18 @@ impl<S: Store> Engine<S> {
         //
         // `words` ONLY, deliberately: `allocate_state` also re-seeds `values`, which would discard
         // the host's staged input image and contradict [`Engine::set_input`]'s "before the next
-        // tick" contract. Nothing else in `values` survives to matter — block-output slots are
-        // recomputed in pass 1 of every tick and store-bound slots are overwritten by
-        // `stage_store_inputs` — so the undriven host-staged slots are the only carry, and they
-        // are meant to carry.
+        // tick" contract. Block-output slots do not need it — pass 1 recomputes them every tick.
+        // The rest of `values` DOES carry, and that is the documented limit rather than an
+        // oversight: an undriven external input keeps whatever `set_input` or a previous run's
+        // `InputSource` left there, and a store-bound point is overwritten by `stage_store_inputs`
+        // only when the snapshot carries a sample for it — with no sample it deliberately holds
+        // last (see the hold-last arm in `engine.rs`, pinned by
+        // `store_backed_inputs::missing_store_sample_holds_prior_input_value`), so it carries
+        // across horizons too.
         //
-        // Placed below both fail-fast gates above so an unresolvable column or input name still
-        // returns with the caller's state untouched.
+        // Placed below both fail-fast gates above so a spec that never ticks returns with the state
+        // arena untouched. `prev_t` is cleared either way — the input-name gate sits below that
+        // reset, deliberately, for the error-surface reason given above.
         self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
