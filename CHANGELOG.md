@@ -9,9 +9,21 @@ read in full.
 An entry is expected from every PR that changes behaviour, the public surface, or a published
 claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
 what mattered, so no check can derive one, and a check that merely required *some* text would pass
-on a placeholder. It has therefore fallen behind twice (#215 recovered 64 commits; this file
-recovered seven PRs). The cheapest place to notice is a `development` → `main` promotion, where
-`git log main..development -- CHANGELOG.md` returning nothing means the release is undocumented.
+on a placeholder. It has therefore fallen behind three times: #215 recovered 64 commits, #228
+recovered seven PRs, and #259 recovered ten.
+
+The third recovery discredits the check the second one wrote down here. That check was
+`git log main..development -- CHANGELOG.md`, on the reading that returning nothing means the
+release is undocumented — but the converse does not hold, and the converse is how it was used.
+Run against the ten-PR gap, it returned three commits and passed: three earlier PRs had each
+added an entry, which is all the predicate ever asked. It answers "was this file touched in the
+range", never "is it current". Reading currency off it is what let the gap reach ten.
+
+What actually establishes currency is a comparison, run at promotion: list the PRs merged into
+`development` since the last release, and check that each number appears below.
+`gh pr list --state merged --base development` against a grep of this file is enough.
+Deliberately not a CI gate — judging whether a change was notable is the part no check can do,
+and a gate that accepted any text would restore exactly the false assurance described above.
 
 ## Unreleased
 
@@ -74,6 +86,71 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
   in order, later bindings winning); a remote context reference, `@base`, `@vocab`, and prefix
   bindings that are not absolute IRIs are refused at load as non-subset constructs rather than
   silently ignored, so the same-identity guarantee holds for every document that loads at all.
+- **An identity token must be an absolute IRI on both verbatim arms** (#234, #238). `expand_token`
+  had two arms returning a token unchanged without checking it was absolute, so a malformed `@id`
+  like `2024:MinLoop.con.y`, `:x` or `1st://x` became a durable point key with zero diagnostics —
+  while the identical spelling was refused as a `@context` prefix binding. Both arms now classify a
+  non-absolute token as `Expansion::Relative` and refuse it through `DiagCode::RelativeIri`,
+  symmetric with the binding check; `is_absolute_iri` additionally requires a nonempty,
+  whitespace-free remainder after the scheme, because `ab:` and `ab:c d` are legal URI syntax that
+  carry no name to key a durable identity on. Declared-prefix rescue of compact tokens is
+  untouched — term names are legitimately not scheme-checked, per JSON-LD 1.1 compact IRIs — and a
+  `'//'` token is never CURIE-split, so `2024://x` refuses rather than minting `<bound-iri>//x`.
+  This is an acceptance change: what newly refuses is invalid JSON-LD no conforming emitter writes.
+  Each arm was swept by execution before landing — 142 CXF-shaped documents for the first, 290 for
+  the second, spanning the checked-in corpus and the research reference set — and neither sweep
+  found a document that would newly refuse.
+- **Member value references resolve enclosing-first** (#241). Step-7 leaf grounding was
+  latest-wins, so a member expression naming an identifier bound *both* in the enclosing scope and
+  by a sibling member took whichever the document happened to push later: member array order
+  decided a Hysteresis threshold, the two orders diverging in sign with no diagnostic either way.
+  Value lookups now search the enclosing region before the sibling region, and sibling-only names
+  still resolve against earlier-declared siblings. Dimension references (`sizeOfDimensions`)
+  deliberately keep the undivided latest-wins view, so a name bound in both regions is read twice —
+  sibling drives shape, enclosing drives values. An element-count divergence between the two
+  readings refuses with both counts in the message; a value divergence at a matching count stays
+  silent, like the scalar path. Pinned by
+  `hysteresis_thresholds_are_invariant_under_member_array_order`, and the split is stated in
+  `docs/cxf-composite-subset.md` Rule 5.
+- **A block's own declarations are one order-independent mutual scope** (#247). A block's
+  `hasParameter`-then-`hasConstant` chain is evaluated as a single mutual scope by
+  dependency-ordered topological evaluation rather than in array order. An own name masks a
+  same-named enclosing binding whether or not it was declared first; a forward reference to a later
+  sibling grounds; a declaration cycle — including a self-reference that previously ground silently
+  against an enclosing binding — refuses as `composite/declaration-cycle` naming its participant
+  ring; and duplicate local names in one scope refuse as `composite/duplicate-declaration`. For an
+  emitter this means permuting a declaration array can no longer change a loading document's
+  imported model, and a refusing document keeps its rule ids and participant sets under permutation
+  though diagnostic subjects may relocate. Measured across the change: twelve of the 44 vendored
+  modelica-json documents shed `grounding-failed` diagnostics that forward sibling references now
+  resolve, and no document among the 44 flipped between accepting and refusing.
+- **Child-instance interfaces derive from `S231:hasInstance`** (#251). A child node declaring no
+  `hasInput`/`hasOutput` of its own now takes its interface from the instance declaration —
+  fallback-only, so a node that declares its own interface keeps it, and scalar-only for this
+  slice, so a width-parameterized member list refuses by rule id on the derivation path instead of
+  deriving a wrong width. Synthesised connectors mint into one total `ConnectorId` order; an output
+  short of its declaration is padded and an input short of its declaration refuses; a node carrying
+  both an own interface and a conflicting derived one raises the new
+  `ConflictingInterfaceDeclaration`. The 44 vendored modelica-json translations gained a
+  per-document characterization capture that asserts the corpus size before comparing anything, so
+  a document appearing or disappearing fails the test rather than quietly moving the baseline.
+- **Declared boundary outputs carry and export their authored §7.4.1 attributes** (#245). A root
+  `S231:hasOutput` node's `{unit, quantity, displayUnit, min, max}` were dropped *symmetrically* —
+  ingest never read them, because a root boundary node is never in `conn_nodes`, and export never
+  emitted them — so every existing round-trip guard stayed green while the metadata vanished. This
+  is the #227 failure shape repeating: a loss identical on both sides of a comparison is invisible
+  to that comparison. A per-node authored-vs-exported comparator now runs key by key over the G36
+  corpus, pinning the population from its own counters at 97 surviving declared outputs of which 61
+  carry attributes (`export_declared_output_attrs.rs:283`). Boundary **inputs** stay out of scope
+  by ruling (#243). Two consequences are worth knowing before you emit: reusing the connector-attr
+  path makes six refusal shapes reachable from a declared output node that were previously
+  reachable only from an instance port — each pinned with its own rejected fixture and exact
+  message, none occurring in the G36 corpus — and the declared/driver attr pair sits structurally
+  outside §7.10 unification, because `unify_clusters` builds clusters from `model.connections` over
+  `model.connectors` and `BoundaryOutput.attrs` is neither. So a declared output claiming
+  `unit: "Pa"` over a driver carrying `unit: "K"` imports with zero diagnostics and both units
+  export. A characterization test pins that acceptance so the exclusion is visible rather than
+  silent; activating declared-attr unification is a future ruling.
 
 ### Host facade
 
@@ -81,15 +158,15 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
   topology block ports and edges, `external_inputs`, pass-through pairs, `Outputs::to_map` keys —
   and the durable `PointDto` projection now name a point by the authored `@id`, as written in the
   source CXF document, of its host-visible identity node: the declared boundary input's node for a
-  composite-boundary-driven connector, the connector's own node otherwise. The `@id` is not
-  `@context`-expanded — a known gap, so a document re-serialized between compact and expanded
-  spellings renames its points until expansion lands. The positional `conn#<N>` form survives only
-  as the fallback for hand-built, IRI-less models, which no public API can construct: JSON-LD
-  `@graph` is an unordered set, so a semantically identical document could renumber every point,
-  and a store keyed on `conn#4` could graft one point's samples onto a different point's history
-  with no error. Migration note for hosts: histories persisted under `conn#<N>` keys are
-  disposable, not migratable — an index is not traceable to an authored connector once the
-  document changes.
+  composite-boundary-driven connector, the connector's own node otherwise. The `@id` was not
+  `@context`-expanded when this landed, so a document re-serialized between compact and expanded
+  spellings renamed its points; #230 below closed that gap. The positional `conn#<N>` form
+  survives only as the fallback for hand-built, IRI-less models, which no public API can
+  construct: JSON-LD `@graph` is an unordered set, so a semantically identical document could
+  renumber every point, and a store keyed on `conn#4` could graft one point's samples onto a
+  different point's history with no error. Migration note for hosts: histories persisted under
+  `conn#<N>` keys are disposable, not migratable — an index is not traceable to an authored
+  connector once the document changes.
 - **`Engine::step_realtime` commits computed outputs through the `PointStore` port** (#212).
   It previously advanced a tick and then wrote a hardcoded *empty* batch, while its own
   rustdoc claimed it wrote point state through the store. Sample timestamps come from a
@@ -102,8 +179,50 @@ recovered seven PRs). The cheapest place to notice is a `development` → `main`
   `ExportReport::content_id()` (`cxf:fnv1a128:`), and `Engine::topology()`.
   Catalog introspection is available separately through `oce_blocks::catalog()` and is not
   re-exported by `oce-api`.
-- `Engine::get_output` and `CollectSpec::Named` resolve **output** connectors only; naming
-  an input point returns `OcError::UnknownPoint` rather than reading the staged input value.
+- `Engine::get_output` and `CollectSpec::Named` resolve **output** identities only — output
+  connectors, and since #236 the declared boundary-output names that alias them; naming an input
+  point returns `OcError::UnknownPoint` rather than reading the staged input value.
+- **Declared boundary outputs are addressable facade point identities** (#236). A CXF root's
+  `S231:hasOutput` declares the composite's output contract, but no facade surface exposed those
+  names, so hosts addressed outputs by internal driver IRIs. `watch`, `get_output` and
+  `simulate(CollectSpec::Named)` now accept a declared boundary-output IRI as a read alias for its
+  driving connector's slot, and `Topology` gains
+  `boundary_outputs: Vec<DeclaredOutput { path, driver_path }>` enumerating the declared interface
+  in `@graph` position order — keyed by name, never by index. `set_input` refuses declared names:
+  the alias space is output-only. Two diagnostics arrive with it: `UndrivenBoundaryOutput`
+  (Warning — a declared-but-undriven output previously imported silently and then vanished from
+  re-export, the #227 class one level down) and `BoundaryOutputShadowsConnector` (Error — a
+  document double-booking one IRI as both declared output and live connector previously loaded
+  clean, carrying two conflicting truths about one name). The change is additive: `point_list`,
+  `Outputs::to_map`, `CollectSpec::All`, `StepReport.written` and every pre-existing point key are
+  bit-identical, and no durable key moves. It is the change in this range that moves a public-API
+  baseline — `crates/oce-api/tests/public-api.txt`, +40/−0, of which the load-bearing lines are the
+  `DeclaredOutput` type, its two `String` fields, and `Topology::boundary_outputs`; the remainder
+  are derived and blanket impls the baseline enumerates in full.
+- **`Engine::step_realtime` resolves its durable batch once at load** (#246). It re-derived the
+  batch's key identity on every step — one path-`String` clone per output point, plus two `Vec`
+  collections — where `simulate` had always resolved its identity once before ticking. The batch is
+  now minted at load and refreshed in place, taking a warm `step_realtime` down to the pre-existing
+  snapshot-`Box` allocation floor (`warm_step_realtime_allocates_only_the_snapshot_box`, which
+  asserts against the harness's own floor snapshot rather than a literal). No public API change.
+  The guard matters more than the saving: a cache never invalidated on reload passed the entire
+  workspace suite undetected, because no test had loaded a second model into one `Engine`.
+  `reloading_a_second_model_swaps_the_committed_key_set` closes that, alongside a corpus-wide
+  golden over captured `write_points` batches that records count, ordered key digest and ordered
+  value digest as three separate fields — a combined digest cannot distinguish index drift from a
+  key rename.
+- **Input staging is all-or-nothing, and `InputSource::Constant` names resolve once per run**
+  (#255). `simulate` resolves a `Constant` list into connector ids once before ticking instead of
+  hashing the names every step; the write itself still happens every step, at the same cadence as
+  before. `InputSource::Closure` is untouched — a closure may name different points at each `t`, so
+  its names cannot be pre-resolved. The acceptance change rides along and is host-visible: a bad
+  name or wrong-typed value now refuses without writing the pairs that precede it, where per-name
+  staging wrote them first. That matches what the sibling collect path already documented for
+  itself, and is characterized by test rather than left to a reader. Separately, `Outputs::get`
+  binary-searches rather than scanning linearly; the in-tree caller count is one and it is a test,
+  so no in-tree win is claimed — the point is that a `ConnectorId`-keyed read a host may call in a
+  loop should not be O(n). Nothing in the type system holds the ascending order the search needs,
+  so a test pins it under both build profiles.
 - **Export completeness is enforceable** (#217). `ExportReport::content_id()` would mint a
   well-formed `cxf:fnv1a128:…` identity for a *partially* exported document. Its rustdoc already
   said hosts must require an empty warning list; nothing made them, and because deferral warnings
@@ -180,6 +299,16 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   transcribed was an open question nothing could answer. This is **not** Tier 3: this repository
   defines Tier 3 as cross-implementation differential testing, and analytical re-derivation adds
   no independence. What it shows is that clean-room adjudication is executable here at all.
+- **Eighteen public methods are pinned by a compile-time guard** (#255). The two `cargo public-api`
+  baselines run in `release-gate.yml` only, never on a PR into `development`, so a signature drift
+  in a method the frozen set does not otherwise reach could ride a fully green PR. `guards.rs` is a
+  non-test module, so a drift there now fails the ordinary `cargo build` that per-PR CI does run.
+  Two pins are narrower than the method they cover and say so rather than overclaim.
+  `ExportReport::content_id` is deliberately excluded with the reason recorded beside the
+  `content_id_complete` pin: it is `#[deprecated]`, so naming it in a non-test module is a hard
+  error under `-D warnings`, and an `#[allow]` would be worse than the gap — the only change left
+  to make to a deprecated method is deleting it, and a deletion is public-surface removal, which
+  the release-gate baseline is the right review to adjudicate.
 
 ### Hardening
 
@@ -208,8 +337,8 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   produced it (#205), with a later correction to the load figure, which was a cold-process
   artifact (#207). The file moved from `BENCHMARKS.md` to
   [`docs/benchmarks.md`](docs/benchmarks.md) in the documentation restructure.
-- **Documentation restructured.** The README is a front door of ~220 lines rather than a
-  366-line dossier, with its deep material extracted into `docs/` behind an index; a new
+- **Documentation restructured.** The README became a front door rather than the 366-line dossier
+  it had grown into, with its deep material extracted into `docs/` behind an index; a new
   `SECURITY.md` states the threat model and names the one known hardening limit; and the
   README's Quickstart is now a compiled example (`crates/oce-api/examples/quickstart.rs`)
   with a drift guard, so it cannot rot silently.
@@ -230,6 +359,18 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   fix. Found by fetching the page and diffing it, not by anything going red. `TESTING.md` and
   `SECURITY.md` are repository-only and the README now says so, because the site's page list is a
   hardcoded summary that does not include them.
+- **A documentation currency pass corrected twelve measured drifts** (#244), the first under the
+  standing currency directive. The substantive one: the README claimed all 410 signal goldens were
+  compared bit-exactly, and 21 transcendental, psychrometric and solar Real goldens in fact run
+  under the documented 1e-12 aligned-tolerance band. `docs/verification-evidence.md` — the page the
+  README cites *for* the honest accounting — carried the same false claim in four more places.
+  Both now state the measured split, and `TESTING.md`'s "never epsilon" rule names its one
+  exception, scoped to those 21 goldens rather than left as a general license. Three tracked
+  scripts were committed `100644` while `scripts/install-hooks.sh` chmods them to `755`, so the
+  documented onboarding step left every contributor with three spurious mode diffs; the committed
+  modes now match, verified blob-identical on both sides. Nine stale line citations across five
+  `docs/` pages were refreshed — each was exact when written and shifted under #217–#241, which is
+  the ordinary failure mode of citing a line number at all.
 - A read-only revendor reporter sits behind the pin-advance policy (#203).
 - The gate is single-sourced in `.agents/gate.sh` (#178), and CI runs that script as a
   coverage backstop rather than a parity check (#180).
