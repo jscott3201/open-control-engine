@@ -217,7 +217,7 @@ the per-PR gate does not run them either.
 CI is dev-light and release-heavy. The per-PR gate into `development` runs engine tests for
 **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job
 (`.github/workflows/ci.yml:148-166`) and the identical step inside the gate script
-(`.agents/gate.sh:118-122`), on two architectures in debug and release codegen.
+(`.agents/gate.sh:120-124`), on two architectures in debug and release codegen.
 
 Read that in the direction that costs you something. **A change confined to `oce-cxf`,
 `oce-store`, `oce-api` or `oce-diag` can show every check green having run none of its own tests.**

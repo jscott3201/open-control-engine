@@ -224,7 +224,7 @@ which is what preserves vanish-to-RED for the re-exported port surface.
 
 One gate step tests **no shipping code at all**, and it is worth understanding why it still gates.
 
-`oce-cxf::fixture_port_order` checks that the 46 G36 fixture documents list their block ports in
+`oce-cxf::fixture_port_order` checks that the 47 G36 fixture documents list their block ports in
 upstream CDL **declaration order**. It derives that order at test time by parsing 132 vendored
 upstream Modelica sources in
 [`third_party/modelica-buildings-cdl/`](third_party/modelica-buildings-cdl/README.md), copied
