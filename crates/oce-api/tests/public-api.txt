@@ -322,6 +322,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
 impl oce_api::Engine<oce_store_mem::MemStore>
 impl oce_api::ExportReport
 impl oce_api::IoInventory
+impl oce_api::OcError
 impl oce_api::OutputTrace
 impl oce_api::Outputs
 impl oce_api::ParamTable
@@ -763,6 +764,7 @@ pub fn oce_api::LoadReport::try_into(self) -> core::result::Result<U, <U as core
 pub fn oce_api::LoadReport::type_id(&self) -> core::any::TypeId
 pub fn oce_api::OcError::borrow(&self) -> &T
 pub fn oce_api::OcError::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::OcError::diagnostics(&self) -> &[oce_diag::Diagnostic]
 pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::OcError::from(T) -> T

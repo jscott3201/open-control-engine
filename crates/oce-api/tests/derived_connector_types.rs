@@ -66,12 +66,7 @@ fn load(doc: &JsonValue) -> Result<oce_api::LoadReport, OcError> {
 
 /// The `(code, subject, message)` triples of a load refusal's errors.
 fn refusal_signature(e: &OcError) -> Vec<(DiagCode, Option<String>, String)> {
-    let diags = match e {
-        OcError::Cxf(oce_cxf::CxfError::Validation(d)) => d.as_slice(),
-        OcError::Validate(ve) => ve.diagnostics.as_slice(),
-        _ => &[],
-    };
-    diags
+    e.diagnostics()
         .iter()
         .filter(|d| d.is_error())
         .map(|d| {

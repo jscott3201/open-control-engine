@@ -2,6 +2,7 @@
 
 mod boundary_alias_tests;
 mod common;
+mod diagnostics_access;
 mod durable_output_batch_tests;
 mod frozen_surface;
 mod input_staging_tests;

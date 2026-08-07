@@ -237,6 +237,19 @@ fn _assert_ocerror_shape() {
     needs_error::<OcError>();
 }
 
+// ---- the failed-load diagnostics accessor keeps its signature (satisfies R-PUB-7) ----
+
+/// Satisfies R-PUB-7 (`_spec/08` §11.1 — each frozen item carries a compile-shaped assertion) for
+/// `OcError::diagnostics`. It is the only route to the resolver seam's diagnostics for a consumer
+/// depending on `oce-api` alone; the deep-gate seam is separately reachable through
+/// `OcError::Validate`'s public field, which needs no accessor and no nameable type.
+///
+/// Borrowing is the load-bearing part of the signature: returning owned diagnostics would oblige a
+/// clone on a path a host may take per failed document, and `Diagnostic` is not `Copy`.
+fn _assert_ocerror_diagnostics_shape() {
+    let _: fn(&OcError) -> &[Diagnostic] = OcError::diagnostics;
+}
+
 // ---- R-API-PY-8 — every public method returns `Result<_, OcError>` or is an infallible accessor.
 // Enforced at runtime by the non-panicking minimal bodies (exit #6) + the `clippy::todo`/`panic`
 // deny lints + the file-size/no-secret gates; the signature freeze above pins the `Result` shape.

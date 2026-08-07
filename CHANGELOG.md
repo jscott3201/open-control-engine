@@ -157,6 +157,25 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **A refused load says why, through `oce-api` alone.** `OcError::diagnostics()` returns the
+  structured diagnostics behind a failure — stable code, severity, subject, message — where before
+  a consumer depending only on this crate could read them off one of the two rejection seams and
+  not the other. `OcError::Validate`'s payload is a struct field, which Rust reaches through a type
+  the caller cannot name; `OcError::Cxf`'s sits in a tuple variant, which needs the variant path and
+  so a dependency on `oce-cxf`. That asymmetry was an accident of how the two errors are shaped, and
+  it fell on the wrong side: of the 198 checked-in CXF documents 97 are refused, and 90 of those
+  take the resolver seam, including all 40 composite-contract rejection fixtures. Its `Display`
+  renders a count, so an unresolved reference and a duplicate `@id` printed the same sentence.
+  Nothing new is computed and no diagnostic changed — the data was always on the error.
+  **The two seams filter differently.** `Validate` is errors-only; `Cxf` carries the whole finalized
+  stream in its pinned order, so its first element can be a warning with the causing errors behind
+  it. Filter on `is_error()` rather than indexing. An empty slice means the failure carried no
+  diagnostics (malformed JSON, a build failure, host misuse), not that it passed; both
+  diagnostic-bearing variants are built only from a non-empty vector. `DiagCode` is deliberately
+  still not re-exported: `code.as_str()` already resolves without naming the type, and the enum is
+  `#[non_exhaustive]`, so matching it exhaustively is impossible anyway. Two gaps found alongside it
+  are tracked rather than folded in — #261 (resolver warnings discarded when a later stage fails)
+  and #262 (a composite rejection's rule id is reachable only as a message-text prefix).
 - **`simulate` is a run restart, and was not one** (#257, fixes #256). It cleared the run clock and
   nothing else, so a reused engine started a horizon from the state words the previous run left
   behind, falsifying the method's own rustdoc and R-SIM-2. Entry now re-seeds those words. The
