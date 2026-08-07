@@ -29,6 +29,10 @@ const EXPECTED_ALLOCATING: [&str; 0] = [];
 const EXPECTED_POSITIVE_CONTROL: [&str; 1] = ["CDL.Reals.Sort"];
 const NARROW_WIDTH: usize = 3;
 const WIDE_WIDTH: usize = 65;
+/// Ticks in the confirmation window. Long enough to contain a periodic allocator's duty cycle and
+/// several rounds of amortized growth; short enough that an uncorrelated ambient event is still
+/// unlikely to land in it after already landing in the first measurement.
+const CONFIRM_TICKS: usize = 8;
 // Tracks the `nin * nout` maximum of `CDL.Routing.*VectorReplicator` at the wide width.
 const MAX_OUTPUT_ARITY: usize = WIDE_WIDTH * WIDE_WIDTH;
 
@@ -97,13 +101,34 @@ fn typed_inputs(block: &dyn Block, value: f64) -> Vec<Value> {
         .collect()
 }
 
-fn tick(block: &dyn Block, params: &ParamTable, value: f64, output: &mut [Value]) -> Stats {
+/// Measure `ticks` consecutive iterations of `step` as a single allocator region.
+///
+/// The confirmation pass measures a WINDOW rather than one tick. An allocator need not run on every
+/// tick: a buffer that grows amortized allocates only when it outgrows capacity, and a flush every
+/// Nth tick allocates on one tick in N. A single-tick confirmation dropped exactly those, so the
+/// pin went blind to the shape it most needs to catch. Pinned by
+/// `a_periodic_allocator_survives_the_confirmation_window`, which also shows a one-tick window
+/// missing the same allocator.
+fn measure_window(ticks: usize, step: &mut dyn FnMut(usize)) -> Stats {
+    let region = Region::new(GLOBAL);
+    for index in 0..ticks {
+        step(index);
+    }
+    region.change()
+}
+
+fn tick(
+    block: &dyn Block,
+    params: &ParamTable,
+    value: f64,
+    output: &mut [Value],
+    ticks: usize,
+) -> Stats {
     let inputs = typed_inputs(block, value);
     let mut state = vec![0; block.state_len()];
     block.init_state(&mut state, params);
     let diagnostics = NoopDiagnostics;
     let warmup = Ctx::new(0.0, &diagnostics);
-    let measured = Ctx::new(1.0, &diagnostics);
     let output_arity = block.resolved_signature().outputs.len();
     assert!(
         output_arity <= output.len(),
@@ -111,24 +136,32 @@ fn tick(block: &dyn Block, params: &ParamTable, value: f64, output: &mut [Value]
         block.signature().class_path
     );
 
-    let mut emit = |index, value| output[index] = value;
-    match block.kind() {
-        BlockKind::Algebraic => block.step_algebraic(&warmup, &inputs, &mut emit),
-        BlockKind::Stateful => {
-            block.emit_from_state(&warmup, &inputs, &state, &mut emit);
-            block.update_state(&warmup, &inputs, &mut state);
+    {
+        let mut emit = |index, value| output[index] = value;
+        match block.kind() {
+            BlockKind::Algebraic => block.step_algebraic(&warmup, &inputs, &mut emit),
+            BlockKind::Stateful => {
+                block.emit_from_state(&warmup, &inputs, &state, &mut emit);
+                block.update_state(&warmup, &inputs, &mut state);
+            }
         }
     }
 
-    let region = Region::new(GLOBAL);
-    match block.kind() {
-        BlockKind::Algebraic => block.step_algebraic(&measured, &inputs, &mut emit),
-        BlockKind::Stateful => {
-            block.emit_from_state(&measured, &inputs, &state, &mut emit);
-            block.update_state(&measured, &inputs, &mut state);
+    // Model time advances across the window. Holding it at one instant would re-evaluate the block
+    // at the same `t` repeatedly, which the blocks carrying a prior-time state word reject as
+    // non-monotonic; `ticks == 1` still measures exactly `t = 1.0`, as this census always has.
+    let mut step = |index: usize| {
+        let measured = Ctx::new(1.0 + index as f64, &diagnostics);
+        let mut emit = |port, value| output[port] = value;
+        match block.kind() {
+            BlockKind::Algebraic => block.step_algebraic(&measured, &inputs, &mut emit),
+            BlockKind::Stateful => {
+                block.emit_from_state(&measured, &inputs, &state, &mut emit);
+                block.update_state(&measured, &inputs, &mut state);
+            }
         }
-    }
-    region.change()
+    };
+    measure_window(ticks, &mut step)
 }
 
 fn add_stats(total: &mut Stats, measured: Stats) {
@@ -147,21 +180,59 @@ fn run_arm(width: usize, expected: &[&str], output: &mut [Value]) -> BTreeMap<&'
         let params = force_params(entry.param_rules, width);
         for value in SWEEP {
             let block = (lookup(entry.class_path).unwrap().make)(&params);
-            let stats = tick(block.as_ref(), &params, value, output);
+            let stats = tick(block.as_ref(), &params, value, output, 1);
             // `Stats == default` is the six-field purity check: the type derives both over 6 fields.
             if stats == Stats::default() {
                 continue;
             }
-            add_stats(allocating.entry(entry.class_path).or_default(), stats);
+            // Confirm before accusing (#231). `GLOBAL` is a `#[global_allocator]`, so the meter is
+            // process-global: anything allocating on ANY thread during the window is billed to
+            // whichever block happens to be mid-tick. That the attribution is arbitrary rather than
+            // real is settled by evidence, not assumed — two CI reds named different blocks with
+            // different sizes, and one of them, `CDL.Reals.Line`, is `struct Line { limit_below:
+            // bool, limit_above: bool }` in a file containing zero allocation-capable constructs.
+            //
+            // A second measurement over `CONFIRM_TICKS` separates the two cases. What it rests on is
+            // that an ambient event is uncorrelated with this block, so accusing requires it to land
+            // twice on the same block and sweep value — not on the block allocating every tick,
+            // which is false of amortized growth and of a periodic flush. A one-tick confirmation
+            // asserted exactly that and dropped both shapes; `a_periodic_allocator_survives_the_
+            // confirmation_window` now pins the difference instead of arguing it.
+            //
+            // The window is the reason this is not a loosening. `EXPECTED_POSITIVE_CONTROL` still
+            // requires `CDL.Reals.Sort` to be DETECTED at the wide width, but that only ever
+            // covered a per-tick-persistent allocator; it passed while the retry hid a real one.
+            let confirm_block = (lookup(entry.class_path).unwrap().make)(&params);
+            let confirmed = tick(
+                confirm_block.as_ref(),
+                &params,
+                value,
+                output,
+                CONFIRM_TICKS,
+            );
+            if confirmed == Stats::default() {
+                continue;
+            }
+            add_stats(allocating.entry(entry.class_path).or_default(), confirmed);
         }
     }
     let measured = allocating.keys().copied().collect::<BTreeSet<_>>();
     let differences = measured
         .symmetric_difference(&expected)
         .map(|class_path| match allocating.get(class_path) {
+            // All six fields, because all six decide the verdict: the purity check is
+            // `stats == Stats::default()`, which compares the whole struct. Printing only the two
+            // allocation fields meant an event landing on the dealloc side alone reported
+            // `allocs=0 bytes=0`, which reads as a broken harness rather than as evidence.
             Some(stats) => format!(
-                "{class_path}: allocs={} bytes={}",
-                stats.allocations, stats.bytes_allocated
+                "{class_path}: allocs={} deallocs={} reallocs={} bytes_alloc={} \
+                 bytes_dealloc={} bytes_realloc={}",
+                stats.allocations,
+                stats.deallocations,
+                stats.reallocations,
+                stats.bytes_allocated,
+                stats.bytes_deallocated,
+                stats.bytes_reallocated
             ),
             None => format!("{class_path}: expected but absent"),
         })
@@ -172,6 +243,50 @@ fn run_arm(width: usize, expected: &[&str], output: &mut [Value]) -> BTreeMap<&'
          differences={differences:?}"
     );
     allocating
+}
+
+/// The confirmation pass must not hide an allocator that skips ticks.
+///
+/// This is the claim the previous one-tick confirmation asserted in a comment and did not hold: a
+/// real allocator was dropped whenever it did not happen to run on the single confirming tick. The
+/// `CDL.Reals.Sort` positive control could not catch that — it allocates on every tick, so it
+/// survived a retry that was busy discarding the shapes that do not.
+#[test]
+fn a_periodic_allocator_survives_the_confirmation_window() {
+    // One tick in three, the duty cycle a single-tick confirmation drops.
+    let periodic = |index: usize| {
+        if index.is_multiple_of(3) {
+            let grown: Vec<u64> = Vec::with_capacity(64);
+            std::hint::black_box(&grown);
+        }
+    };
+
+    let windowed = measure_window(CONFIRM_TICKS, &mut { periodic });
+    assert_ne!(
+        windowed,
+        Stats::default(),
+        "the confirmation window must detect an allocator that runs on one tick in three"
+    );
+
+    // Control: the same allocator, offset off tick 0, is invisible to a one-tick window. Without
+    // this the test could pass against a confirmation that never widened at all.
+    let offset = |index: usize| periodic(index + 1);
+    assert_eq!(
+        measure_window(1, &mut { offset }),
+        Stats::default(),
+        "a one-tick window must miss this allocator — otherwise it does not demonstrate the gap"
+    );
+
+    // Control: a genuinely pure step stays clean across the whole window, so the window is not
+    // simply accusing everything put through it.
+    let pure = |index: usize| {
+        std::hint::black_box(index);
+    };
+    assert_eq!(
+        measure_window(CONFIRM_TICKS, &mut { pure }),
+        Stats::default(),
+        "a pure step must stay clean across the confirmation window"
+    );
 }
 
 #[test]

@@ -17,10 +17,13 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-`.github/workflows/ci.yml:256-270` and `gate (full)` at `.github/workflows/release-gate.yml:314-329`.
+`.github/workflows/ci.yml:256-272` and `gate (full)` at `.github/workflows/release-gate.yml:314-329`.
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
-job. Read that as coverage, not as parity: nothing verifies mechanically that the two files still
-list the same commands. That check was attempted and withdrawn, and `ci.yml:227-238` records why —
+job. Read that as coverage, not as parity, and note that the implication does not run the other way:
+`gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
+was exactly that for a while — a required check no local run of the script performed — and an
+earlier revision of this paragraph cited the job as `ci.yml:256-270`, stopping one line short of it.
+Nothing verifies mechanically that the two files still list the same commands. That check was attempted and withdrawn, and `ci.yml:227-238` records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
 while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
 become its own untested gate.
@@ -41,9 +44,9 @@ is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-
 (`ci.yml:148-156`), each running that two-crate subset twice — once under debug codegen, once under
 release codegen (`ci.yml:163-166`). No other crate's test suite runs. The gate script additionally
 runs two named `oce-cxf` test binaries, and it is explicit that they are input hygiene rather than
-engine coverage: they check that the 46 Guideline 36 fixtures list ports in upstream CDL declaration
+engine coverage: they check that the 47 Guideline 36 fixtures list ports in upstream CDL declaration
 order, and that each fixture matches the vendored modelica-json structural oracle
-(`.agents/gate.sh:124-152`). That oracle compares document structure — instances and undirected
+(`.agents/gate.sh:126-154`). That oracle compares document structure — instances and undirected
 edges — not simulated behavior.
 
 Everything else waits for the release gate. A change confined to `oce-api`, `oce-cxf`, `oce-store`,
@@ -62,7 +65,7 @@ checks. Confirm the checks actually ran.
 The standalone `cargo-deny` job in `ci.yml:212-225` is conditional on a manifest change, computed by
 the paths filter at `ci.yml:64-69`. That conditional does not make the check skippable: the gate
 script runs cargo-deny's bans, licenses and sources checks unconditionally
-(`.agents/gate.sh:108-112`), and CI runs the script. Leaving manifests alone does not dodge it.
+(`.agents/gate.sh:110-114`), and CI runs the script. Leaving manifests alone does not dodge it.
 
 `advisories` is a different story, and the carve-out belongs next to the claim. It is deliberately
 excluded from the script — it needs network access and a writable advisory database, neither of
@@ -116,7 +119,7 @@ selectors would let one surviving crate hide the other's vanished test.
   exercised by no test. Goldens here are compared bit-exactly, which is precisely where a stray
   `\r` would show up.
 
-The script says the rest itself, in its closing report (`.agents/gate.sh:166-193`): a green local run
+The script says the rest itself, in its closing report (`.agents/gate.sh:180-207`): a green local run
 does **not** prove the cross-arch determinism matrix passes (one machine cannot reproduce it), does
 not prove the two `cargo public-api` surface gates pass (they need the gate-only nightly), does not
 prove `cargo deny check advisories` passes, and does not prove that the script and `ci.yml` still

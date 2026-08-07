@@ -90,6 +90,8 @@ step 'no-db gate fixtures' bash .github/scripts/test-check-default-no-db.sh
 step 'golden-gen firewall fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
 step 'stale crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
 step 'stale crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
+step 'gate-script coverage' bash .github/scripts/check-gate-script-coverage.sh
+step 'gate-script coverage fixtures' bash .github/scripts/test-check-gate-script-coverage.sh
 step 'workflow gate fixtures' bash .github/scripts/test-workflow-gates.sh
 step 'real workflow smoke' bash .github/scripts/check-workflow-gates.sh
 
@@ -122,7 +124,7 @@ step 'determinism subset (release codegen)' \
   --cargo-profile release --no-tests=fail
 
 # ── Fixture input hygiene ────────────────────────────────────────────────────
-# NOT engine coverage — it exercises no shipping code path. It checks that the 46 G36 fixture
+# NOT engine coverage — it exercises no shipping code path. It checks that the G36 fixture
 # documents list their block ports in upstream CDL declaration order.
 #
 # It gates because the fixtures are the INPUTS to every conformance test in the workspace: a
@@ -150,6 +152,18 @@ step 'fixture port order (input hygiene)' \
 step 'structural oracle (input hygiene)' \
   cargo nextest run -p oce-cxf --locked --profile ci \
   -E 'binary(fixture_structural_oracle)' --no-tests=fail
+
+# The published Quickstart, EXECUTED. A byte-pin proves the README and the example agree; it does
+# not prove either one runs, and this repo once shipped a Quickstart that compiled, was byte-pinned,
+# and had never been executed by anything.
+#
+# This step existed in ci.yml as its own `gate (light)` step and NOT here, which made it the one
+# command out of eleven that gated a pull request while being invisible to anyone running this
+# script. `bash .agents/gate.sh` could pass locally and CI still go red on a check the contributor
+# had no way to run. Adding it closes that gap in the direction the rule requires: ci.yml already
+# demanded it, so this is the script catching up to CI rather than the script growing a
+# local-only requirement.
+step 'quickstart executes' bash .github/scripts/check-quickstart-runs.sh
 
 # ── Full suite (release-gate.yml) ────────────────────────────────────────────
 if [ "$MODE" = full ]; then
