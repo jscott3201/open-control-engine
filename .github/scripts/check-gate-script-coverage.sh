@@ -10,13 +10,16 @@
 # WHY THIS SHAPE. A general gate.sh/ci.yml parity check was attempted and withdrawn; `ci.yml`
 # records why. Every design either compared argv strings — which `RUSTFLAGS=--cap-lints=allow`
 # leaves byte-identical while neutering clippy — or reimplemented enough of GitHub's `if:`/`needs:`/
-# matrix semantics to become its own untested gate. This check does neither. It compares a set of
-# FILENAMES, so no flag can defeat it, and it models no workflow semantics at all.
+# matrix semantics to become its own untested gate. This check does neither. It asks only whether
+# each path under `.github/scripts/` appears in `.agents/gate.sh`, so no flag can defeat it, and it
+# models no workflow semantics at all.
 #
-# WHAT IT DOES NOT CATCH, stated so nobody reads more into a green run than it earns: an inline
-# `run:` step in `ci.yml` that invokes no script at all is invisible here. This catches the
-# divergence that actually happened — a script CI runs and the gate script does not — and nothing
-# wider.
+# WHAT IT DOES NOT CATCH, stated so nobody reads more into a green run than it earns. An inline
+# `run:` step in `ci.yml` that invokes no script at all is invisible here, as is a script CI runs
+# from outside `.github/scripts/`. Appearing in `gate.sh` is not the same as running there: a name
+# inside a disabled branch or a dead function would still satisfy this. It catches the divergence
+# that actually happened — a script sitting in the CI script directory that the gate script does not
+# invoke — and nothing wider.
 
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -29,6 +32,10 @@ SCRIPT_DIR=".github/scripts"
 # what covers it if not.
 EXCLUDED=()
 
+# Comments are stripped before matching, so a name that survives only in prose does not read as an
+# invocation.
+gate_code="$(sed 's/#.*//' "$GATE")"
+
 missing=()
 total=0
 for path in "$SCRIPT_DIR"/*.sh; do
@@ -39,7 +46,13 @@ for path in "$SCRIPT_DIR"/*.sh; do
     [ "$name" = "$excluded" ] && skip=1
   done
   [ -n "$skip" ] && continue
-  grep -q -- "$name" "$GATE" || missing+=("$name")
+  # Match the PATH, not the bare basename. Every check here ships a `test-<name>` fixture beside it,
+  # so `check-foo.sh` is a substring of `test-check-foo.sh`: matching the basename let the fixture's
+  # line vouch for the real script, and deleting the real invocation kept the guard green. Four of
+  # the thirteen scripts sat in that blind spot, this one included. The `$SCRIPT_DIR/` prefix
+  # separates the pair, because the fixture is invoked as `.github/scripts/test-check-foo.sh` and
+  # never contains `.github/scripts/check-foo.sh`.
+  printf '%s\n' "$gate_code" | grep -q -F -- "$SCRIPT_DIR/$name" || missing+=("$name")
 done
 
 if [ "${#missing[@]}" -ne 0 ]; then
