@@ -122,8 +122,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   emitter this means permuting a declaration array can no longer change a loading document's
   imported model, and a refusing document keeps its rule ids and participant sets under permutation
   though diagnostic subjects may relocate. Measured across the change: twelve of the 44 vendored
-  modelica-json documents shed `grounding-failed` diagnostics that forward sibling references now
-  resolve, and no document among the 44 flipped between accepting and refusing.
+  modelica-json documents shed 48 `grounding-failed` diagnostics in the two ruled classes — forward
+  sibling references that now ground, and specialization-pass generic machinery that went
+  non-emitting — and no document among the 44 flipped between accepting and refusing. Most of the
+  48 are the second class, so attributing them to sibling references alone reads the change
+  backwards; `docs/cxf-composite-subset.md` states the same split.
 - **Child-instance interfaces derive from `S231:hasInstance`** (#251). A child node declaring no
   `hasInput`/`hasOutput` of its own now takes its interface from the instance declaration —
   fallback-only, so a node that declares its own interface keeps it, and scalar-only for this
@@ -188,7 +191,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `simulate(CollectSpec::Named)` now accept a declared boundary-output IRI as a read alias for its
   driving connector's slot, and `Topology` gains
   `boundary_outputs: Vec<DeclaredOutput { path, driver_path }>` enumerating the declared interface
-  in `@graph` position order — keyed by name, never by index. `set_input` refuses declared names:
+  in an order that is deterministic per document but is **not** the authored `hasOutput` array
+  order — elided entries follow their declared nodes' `@graph` positions, then pass-throughs are
+  appended after them — so key by name, never by index. `set_input` refuses declared names:
   the alias space is output-only. Two diagnostics arrive with it: `UndrivenBoundaryOutput`
   (Warning — a declared-but-undriven output previously imported silently and then vanished from
   re-export, the #227 class one level down) and `BoundaryOutputShadowsConnector` (Error — a
