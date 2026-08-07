@@ -12,7 +12,6 @@
 mod conformance_member_pins;
 
 use oce_api::{Engine, LoadReport, OcError, PointDirection};
-use oce_cxf::CxfError;
 use oce_diag::DiagCode;
 
 const MINIMAL_LOOP: &str = include_str!("../../oce-cxf/tests/fixtures/minimal_loop.jsonld");
@@ -36,12 +35,7 @@ fn load(src: &str) -> Result<LoadReport, OcError> {
 /// The error-severity `DiagCode`s an `OcError` carries — across both the resolver (`OcError::Cxf`)
 /// and the deep-gate (`OcError::Validate`) seams, the two paths a load rejection can take.
 fn error_codes(e: &OcError) -> Vec<DiagCode> {
-    let diags = match e {
-        OcError::Cxf(CxfError::Validation(d)) => d.as_slice(),
-        OcError::Validate(ve) => ve.diagnostics.as_slice(),
-        _ => &[],
-    };
-    diags
+    e.diagnostics()
         .iter()
         .filter(|d| d.is_error())
         .map(|d| d.code)
@@ -52,12 +46,7 @@ fn error_codes(e: &OcError) -> Vec<DiagCode> {
 /// order the pipeline returns them. Comparing this (not just the code set) is what actually pins the
 /// determinism contract: a reordering, a changed subject, or a changed message all show up here.
 fn error_signature(e: &OcError) -> Vec<(DiagCode, Option<String>, String)> {
-    let diags = match e {
-        OcError::Cxf(CxfError::Validation(d)) => d.as_slice(),
-        OcError::Validate(ve) => ve.diagnostics.as_slice(),
-        _ => &[],
-    };
-    diags
+    e.diagnostics()
         .iter()
         .filter(|d| d.is_error())
         .map(|d| {

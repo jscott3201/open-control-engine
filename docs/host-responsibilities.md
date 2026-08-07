@@ -70,12 +70,12 @@ layer. At minimum, implement all of the following:
 The engine never reads a wall clock. `std::time::Instant` appears only as a monotonic timer for
 latency metrics, never as a time source for the model (`crates/oce-api/src/sim.rs:6`). Model time
 arrives as a `f64` argument you pass in, and it must be monotonic — a decrease returns
-`OcError::TimeRegression` (`crates/oce-api/src/error.rs:62-69`).
+`OcError::TimeRegression` (`crates/oce-api/src/error.rs:64-71`).
 
 For real-time stepping you must first configure the UNIX epoch corresponding to model `t = 0`, via
 `Engine::set_realtime_epoch_unix_nanos` (`crates/oce-api/src/sim.rs:360-373`). If you never do,
 `step_realtime` returns `OcError::RealtimeEpochUnset` before ticking rather than silently stamping
-samples at 1970 (`crates/oce-api/src/sim.rs:457-461`, variant at `crates/oce-api/src/error.rs:70-72`,
+samples at 1970 (`crates/oce-api/src/sim.rs:457-461`, variant at `crates/oce-api/src/error.rs:72-74`,
 pinned by `host_epoch_is_required_and_exact_mapping_handles_signed_model_time` at
 `crates/oce-api/src/tests/realtime_write_back_tests.rs:79`). The epoch-plus-offset mapping is
 explicitly range-checked, so a non-finite or out-of-range instant fails with
