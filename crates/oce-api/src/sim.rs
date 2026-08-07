@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::time::Instant;
 
 use oce_blocks::Diagnostics;
-use oce_graph::RunState;
+use oce_graph::{RunState, allocate_state};
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::{DomainKey, Durability, OcValue, PointSample, PointStatus, PointWrite, Store};
 
@@ -448,14 +448,35 @@ impl<S: Store> Engine<S> {
     }
 
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
-    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params ⇒ identical
-    /// [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + **entry connector
+    /// image** ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    ///
+    /// The entry connector image is a determinant not derivable from the spec or the params: the
+    /// values in the connector arena when the call begins carry into the horizon. `InputSource`
+    /// overwrites the slots it names on every step; the rest are whatever the arena already held.
+    /// Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`.
+    ///
+    /// A model with store-bound inputs takes one more. [`Engine::tick`] re-stages those points from
+    /// the store on every tick (`engine.rs:251`), so two runs agreeing on spec, params and entry
+    /// image still diverge when the store's samples differ — see `tests::sim_tests::
+    /// store_bound_staging`. The list above is not the whole determinant set for such a model.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
-    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine's run clock is
-    /// reset (`prev_t = None`) at entry so a prior real-time tick never poisons the horizon, and the
-    /// engine is left at the horizon end on return.
+    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine is left at
+    /// the horizon end on return.
+    ///
+    /// **A call that returns `Ok` is a run restart, not a continuation.** Entry resets the run clock
+    /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, then re-seeds the
+    /// `[S]` state words via [`allocate_state`]. `values` is left alone, so staged inputs survive
+    /// (`tests::sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`) while
+    /// integrators, timers, latches and filters do not. Restarting has consequences for a host:
+    /// see `docs/host-responsibilities.md`.
+    ///
+    /// A call that returns `Err` restarts nothing, and is not a no-op either. The clock reset sits
+    /// above the name-resolution gate and the re-seed below it, so a refused call leaves the guard
+    /// disarmed while the previous run's `[S]` words stand. That predates this behaviour and is
+    /// tracked as issue #260, not fixed here.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
@@ -498,6 +519,18 @@ impl<S: Store> Engine<S> {
         // succeeds; resolving above the reset would preserve a prior tick's `prev_t` and flip that
         // `tick` from `Ok` to `Err(TimeRegression)`, a public error-surface change.
         let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
+        // Fresh `[S]` state (R-SIM-2): without this, a reused engine started the horizon from the
+        // words the previous run left behind.
+        //
+        // `words` only. `allocate_state` also re-seeds `values`, which would discard the host's
+        // staged input image and contradict [`Engine::set_input`]'s "before the next tick" contract
+        // (`sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`). What carries in
+        // `values` is the documented limit, not an oversight — see the rustdoc above.
+        //
+        // Below the two name-resolution gates, so an unresolvable collect or `Constant` name returns
+        // without re-seeding (`sim_tests::a_refused_name_resolution_does_not_reseed_state_words`). A
+        // `Closure` spec resolves its names inside the loop instead and so re-seeds before failing.
+        self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
         let run_start = Instant::now();
