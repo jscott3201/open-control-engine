@@ -413,7 +413,11 @@ mod store_bound_staging {
         assert_eq!(
             trace_with(&store, &point, 19.5),
             trace_with(&store, &point, 30.0),
-            "once the store carries a sample it is re-staged every tick and set_input is overridden"
+            // Two different `set_input` values reaching one trace shows the override holds across
+            // the horizon. It does not separate re-staging on every tick from staging once at
+            // entry; `store_backed_inputs::store_backed_inputs_match_host_staged_output_trace_for_\
+            // stateful_g36_fixtures` is the test that owns the per-tick property.
+            "once the store carries a sample it overrides set_input for the whole horizon"
         );
     }
 }

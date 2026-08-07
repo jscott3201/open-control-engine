@@ -451,22 +451,32 @@ impl<S: Store> Engine<S> {
     /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + **entry connector
     /// image** ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
     ///
-    /// The entry connector image is a third determinant, not derivable from the other two: the
+    /// The entry connector image is a determinant not derivable from the spec or the params: the
     /// values in the connector arena when the call begins carry into the horizon. `InputSource`
     /// overwrites the slots it names on every step; the rest are whatever the arena already held.
     /// Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`.
+    ///
+    /// A model with store-bound inputs takes one more. [`Engine::tick`] re-stages those points from
+    /// the store on every tick (`engine.rs:251`), so two runs agreeing on spec, params and entry
+    /// image still diverge when the store's samples differ — see `tests::sim_tests::
+    /// store_bound_staging`. The list above is not the whole determinant set for such a model.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
     /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine is left at
     /// the horizon end on return.
     ///
-    /// **Each call is a run restart, not a continuation.** Entry resets the run clock
+    /// **A call that returns `Ok` is a run restart, not a continuation.** Entry resets the run clock
     /// (`prev_t = None`) so a prior real-time tick never poisons the horizon, then re-seeds the
     /// `[S]` state words via [`allocate_state`]. `values` is left alone, so staged inputs survive
     /// (`tests::sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`) while
     /// integrators, timers, latches and filters do not. Restarting has consequences for a host:
     /// see `docs/host-responsibilities.md`.
+    ///
+    /// A call that returns `Err` restarts nothing, and is not a no-op either. The clock reset sits
+    /// above the name-resolution gate and the re-seed below it, so a refused call leaves the guard
+    /// disarmed while the previous run's `[S]` words stand. That predates this behaviour and is
+    /// tracked as issue #260, not fixed here.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
