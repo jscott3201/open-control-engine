@@ -321,6 +321,10 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
+- **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
+  repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
+  zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
+  for 14 days after clearing any cached copies.
 - **A registry-wide tick-allocation census runs per-PR**, with a permanent positive control
   (#195). The same change made `Log`/`Log10` warnings static strings and made `Sort`
   stack-backed through 64 inputs, so the tick allocates for fewer reasons than before —
