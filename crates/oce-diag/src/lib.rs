@@ -143,7 +143,7 @@ pub enum DiagCode {
     /// An input's in-degree was not exactly 1 and it is not an external boundary input
     /// (§9.1.5 / §7.10).
     SingleAssignment,
-    /// A connection's `from` was not an output, or its `to` not an input (§9.1.6).
+    /// A connection endpoint or declared boundary-output source has the wrong direction (§9.1.6).
     DirectionMismatch,
     /// A connection joined connectors of different value types — no implicit coercion (§9.1.6).
     TypeMismatch,
@@ -152,9 +152,9 @@ pub enum DiagCode {
     /// scoped): this is a connector-vs-block-signature mismatch the resolver cannot catch because
     /// it derives the connector type independently of the class.
     PortKindMismatch,
-    /// Two connected connectors both declared a unit/quantity and they differ — §7.10 hard error.
+    /// Connected cluster members declared different units or quantities — §7.10 hard error.
     UnitQuantityMismatch,
-    /// Two connected connectors both declared a `min`/`max` bound and they differ — §7.10 R13.1
+    /// Connected cluster members declared different `min`/`max` bounds — §7.10 R13.1
     /// hard error (the bound analogue of [`DiagCode::UnitQuantityMismatch`]).
     BoundMismatch,
     /// A block instance omitted a parameter that the class requires at build time.
@@ -165,7 +165,7 @@ pub enum DiagCode {
     ParameterOutOfRange,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
-    /// Connected connectors declared divergent `displayUnit`s — non-computational, warning only
+    /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
     /// (§7.17).
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.

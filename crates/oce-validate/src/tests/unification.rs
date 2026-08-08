@@ -509,7 +509,7 @@ fn boundary_alias_and_connector_attrs_propagate_across_the_whole_cluster() {
 }
 
 #[test]
-fn boundary_alias_unification_scales_with_a_large_linear_graph() {
+fn boundary_alias_unification_scales_linearly_with_alias_count() {
     const COUNT: u32 = 50_000;
     let mut model = ModelGraph {
         connectors: (0..COUNT)

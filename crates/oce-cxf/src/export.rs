@@ -30,9 +30,11 @@
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
 //! The five in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
-//! ruling (2026-08-05), on each **declared boundary-output node** — the declared node's own
-//! authored attrs, never its driver's. The shared boundary-INPUT node still carries none
-//! (#243). Each is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
+//! ruling (2026-08-05), on each **declared boundary-output node**. The exporter emits each node's
+//! stored attrs. In an engine-loaded graph, §7.10 unification may have filled an unset child or
+//! boundary-output value from its peer; directly exporting an imported, pre-unification graph
+//! preserves the two authored sets independently. The shared boundary-INPUT node still carries
+//! none (#243). Each attr is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
 //! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
