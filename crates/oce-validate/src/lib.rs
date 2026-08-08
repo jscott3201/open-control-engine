@@ -24,9 +24,10 @@
 //!    class signature — the reason this crate depends on `oce-blocks`. Without it a malformed graph
 //!    could reach the hot-path readers/emitters and panic or silently coerce to a type-zero.
 //! 5. **§7.10 attribute unification** (doc 02 §9 R13.1–R13.4): the unified attributes
-//!    (`quantity`, `unit`, `min`, `max`) must agree across a connected cluster (`shall`-error on
-//!    conflict — [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`]
-//!    — and propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
+//!    (`quantity`, `unit`, `min`, `max`) must agree across a connected cluster, including declared
+//!    boundary outputs that alias a source connector (`shall`-error on conflict —
+//!    [`oce_diag::DiagCode::UnitQuantityMismatch`] / [`oce_diag::DiagCode::BoundMismatch`] — and
+//!    propagation when one-sided, R13.1/R13.2); divergent `displayUnit` is an advisory
 //!    `should`-warning (R13.3); `nominal`/`unbounded` are the only attributes not unified (R13.4).
 //!
 //! It reports problems in the **shared `oce-diag` vocabulary** (AD-4) — the same
@@ -38,8 +39,9 @@
 //!
 //! - [`validate`] — a **pure** checker: reads the graph, returns `should`-warnings on success or a
 //!   [`ValidationError`] of `shall`-errors on failure. Never mutates.
-//! - [`unify_attributes`] — runs §7.10 unification, which **mutates** the graph (R13.2 propagates a
-//!   one-sided unit/quantity to its unset peers). Returns warnings / [`ValidationError`] likewise.
+//! - [`unify_attributes`] — runs §7.10 unification, which **mutates** the graph (R13.2 propagates
+//!   one-sided unified attributes to unset connector and boundary-alias peers). Returns warnings /
+//!   [`ValidationError`] likewise.
 //! - [`unify_and_validate`] — the `oce-api` entry point: unify (so propagation lands before the
 //!   structural checks read the graph), then validate, concatenating the warning streams.
 //!
@@ -80,15 +82,16 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
     finish(model, diags)
 }
 
-/// Run §7.10 unit/quantity attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to
-/// propagate a one-sided unit/quantity to its unset cluster peers (R13.2).
+/// Run §7.10 attribute unification (doc 02 §9 R13.1–R13.3), **mutating** the graph to propagate a
+/// one-sided unit, quantity, or bound to its unset connector and boundary-output peers (R13.2).
 ///
 /// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
-/// [`ValidationError`] of unit/quantity conflicts (R13.1) on failure. Order-independent (a
+/// [`ValidationError`] of unit, quantity, or bound conflicts (R13.1) on failure. Order-independent (a
 /// gather-then-decide cluster algorithm) and panic-free on any graph.
 ///
 /// # Errors
-/// Returns [`ValidationError`] if any cluster declares conflicting unit/quantity values (R13.1).
+/// Returns [`ValidationError`] if any cluster declares conflicting unit, quantity, or bound values
+/// (R13.1).
 pub fn unify_attributes(model: &mut ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> {
     let mut diags = Vec::new();
     rules::unify_clusters(model, &mut diags);

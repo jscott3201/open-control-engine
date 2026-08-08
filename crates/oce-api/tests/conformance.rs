@@ -25,6 +25,8 @@ const DOUBLE_DRIVEN: &str =
 const NON_SUBSET: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/non_subset.jsonld");
 const BOUND_MISMATCH: &str =
     include_str!("../../oce-cxf/tests/fixtures/invalid/bound_mismatch.jsonld");
+const BOUNDARY_OUTPUT_UNIT_MISMATCH: &str =
+    include_str!("../../oce-cxf/tests/fixtures/declared_output_driver_unit_divergence.jsonld");
 const TWO_UNDRIVEN: &str = include_str!("../../oce-cxf/tests/fixtures/invalid/two_undriven.jsonld");
 
 fn load(src: &str) -> Result<LoadReport, OcError> {
@@ -94,6 +96,22 @@ fn unit_mismatch_is_rejected_end_to_end() {
     // con.y(unit K) → add.u1(unit degC): both declared and divergent ⇒ §7.10 R13.1 hard error.
     // Fires only in oce-validate, reached through the whole load_cxf pipeline.
     assert_rejected_with(UNIT_MISMATCH, DiagCode::UnitQuantityMismatch);
+}
+
+#[test]
+fn boundary_output_unit_mismatch_is_rejected_end_to_end() {
+    let error = load(BOUNDARY_OUTPUT_UNIT_MISMATCH)
+        .expect_err("a declared boundary output must agree with its source connector");
+    assert_eq!(
+        error_signature(&error),
+        vec![(
+            DiagCode::UnitQuantityMismatch,
+            Some("http://example.org#DriverUnitDivergence.con.y".to_owned()),
+            "connected connectors declare conflicting unit values [\"K\", \"Pa\"]; §7.10 \
+             (R13.1) requires agreement"
+                .to_owned(),
+        )]
+    );
 }
 
 #[test]

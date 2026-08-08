@@ -158,7 +158,9 @@ identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named`
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
 `(path, driver_path)` pairs. Declared names stay out of `point_list`, `to_map`, `IoSummary`,
 and the durable store batch — a declared name and its driver are two keys over one value, and
-only the driver's path carries samples. `set_input` never accepts a declared output name. An
+only the driver's path carries samples. Their unit, quantity, and bounds are one §7.10 contract:
+conflicts refuse at load and one-sided values propagate to the unset peer. `set_input` never accepts
+a declared output name. An
 undriven declared output resolves nowhere; its load-time `undriven-boundary-output` warning is
 its only representation.
 

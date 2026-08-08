@@ -228,6 +228,7 @@ dependencies = [
  "oce-diag",
  "oce-expr",
  "oce-model",
+ "oce-validate",
  "serde",
  "serde_json",
  "sha1",
