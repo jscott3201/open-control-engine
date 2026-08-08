@@ -38,8 +38,9 @@
 //!
 //! `@context` handling: the supported form is an **inline prefix map** — a single map, or a
 //! list of maps merged in order with later bindings overriding earlier ones (JSON-LD context
-//! processing order). Within a map, `@base` and `@vocab` are refused as `NonSubsetConstruct`:
-//! both change identity semantics this engine does not implement, and skipping them silently
+//! processing order). Within a map, `@base`, `@import`, and `@vocab` are refused as
+//! `NonSubsetConstruct`: all change identity semantics this engine does not implement, and
+//! skipping them silently
 //! would reintroduce the exact spelling-dependent-identity hazard this pass exists to close.
 //! Every other `@`-keyword entry (`@version`, `@protected`, …) is skipped; a non-`@` key with
 //! a simple-string value declares a prefix term, and that value must itself be a syntactically
@@ -88,9 +89,9 @@ pub(crate) fn expand_document(doc: &CxfDocument) -> Result<CxfDocument, Vec<Diag
 }
 
 /// Build the prefix/term table from the document `@context`: a single inline map, or a list of
-/// inline maps merged in order (later bindings win). Remote references, `@base`, `@vocab`, and
-/// malformed term values are refused — see the module docs for why each is a refusal rather
-/// than a skip.
+/// inline maps merged in order (later bindings win). Remote references, `@base`, `@import`,
+/// `@vocab`, and malformed term values are refused — see the module docs for why each is a
+/// refusal rather than a skip.
 fn prefix_table(context: &Context, diags: &mut Vec<Diagnostic>) -> PrefixTable {
     let mut table = PrefixTable::new();
     match context {
@@ -138,8 +139,8 @@ fn merge_context_entries<'a>(
     diags: &mut Vec<Diagnostic>,
 ) {
     for (term, value) in entries {
-        if term == "@base" || term == "@vocab" {
-            // Both keywords change identity semantics this engine does not implement.
+        if term == "@base" || term == "@import" || term == "@vocab" {
+            // These keywords change identity semantics this engine does not implement.
             // Skipping them silently would be the spelling-dependent-identity hazard again:
             // the document means one set of subject IRIs, the engine would key another.
             diags.push(
@@ -752,8 +753,8 @@ mod tests {
     }
 
     #[test]
-    fn base_and_vocab_context_keywords_are_refused_naming_the_keyword() {
-        for keyword in ["@base", "@vocab"] {
+    fn identity_changing_context_keywords_are_refused_naming_the_keyword() {
+        for keyword in ["@base", "@import", "@vocab"] {
             let mut diags = Vec::new();
             let context = Context::Map(
                 [
