@@ -44,7 +44,7 @@ every problem instead of the first (`.agents/gate.sh:41-56`).
 The per-PR gate into `development` runs engine tests for **`oce-blocks` and `oce-expr` only**. That
 is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
 (`ci.yml:148-156`), each running that two-crate subset twice — once under debug codegen, once under
-release codegen (`ci.yml:163-168`). No other crate's test suite runs. The gate script additionally
+release codegen (`ci.yml:165-168`). No other crate's test suite runs. The gate script additionally
 runs two named `oce-cxf` test binaries, and it is explicit that they are input hygiene rather than
 engine coverage: they check that the 47 Guideline 36 fixtures list ports in upstream CDL declaration
 order, and that each fixture matches the vendored modelica-json structural oracle
