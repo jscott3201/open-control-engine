@@ -509,6 +509,39 @@ fn boundary_alias_and_connector_attrs_propagate_across_the_whole_cluster() {
 }
 
 #[test]
+fn boundary_alias_unification_scales_with_a_large_linear_graph() {
+    const COUNT: u32 = 50_000;
+    let mut model = ModelGraph {
+        connectors: (0..COUNT)
+            .map(|id| real_unit(id, id, Dir::Out, Some("K")))
+            .collect(),
+        boundary_outputs: (0..COUNT)
+            .map(|id| {
+                boundary_output(
+                    &format!("urn:test:boundary:{id}"),
+                    id,
+                    Attrs::Real(RealAttrs::default()),
+                )
+            })
+            .collect(),
+        ..ModelGraph::new()
+    };
+
+    unify_attributes(&mut model).expect("large boundary alias graph unifies");
+    assert_eq!(model.boundary_outputs.len(), COUNT as usize);
+    for index in [0, COUNT as usize / 2, COUNT as usize - 1] {
+        assert_eq!(
+            model.boundary_outputs[index]
+                .attrs
+                .as_real()
+                .unwrap()
+                .unit(),
+            "K"
+        );
+    }
+}
+
+#[test]
 fn boundary_alias_conflict_is_hard_error_without_partial_rewrite() {
     let mut model = ModelGraph {
         connectors: vec![real_unit(0, 0, Dir::Out, Some("K"))],
