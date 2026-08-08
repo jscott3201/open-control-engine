@@ -87,6 +87,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   in order, later bindings winning); a remote context reference, `@base`, `@vocab`, and prefix
   bindings that are not absolute IRIs are refused at load as non-subset constructs rather than
   silently ignored, so the same-identity guarantee holds for every document that loads at all.
+- **JSON-LD `@import` fails closed** (#269). An `@import` entry inside an inline context map
+  previously fell through the generic keyword skip, so the engine ignored identity bindings the
+  document required. It now refuses as `non-subset-construct` before any identity slot is expanded,
+  for every payload shape and for each occurrence in a context list.
 - **An identity token must be an absolute IRI on both verbatim arms** (#234, #238). `expand_token`
   had two arms returning a token unchanged without checking it was absolute, so a malformed `@id`
   like `2024:MinLoop.con.y`, `:x` or `1st://x` became a durable point key with zero diagnostics —
