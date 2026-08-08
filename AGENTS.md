@@ -81,9 +81,9 @@ you cloned this repo, you will not find them, and that is expected.
   release codegen). Every other crate's tests run only on `development` -> `main` release PRs via
   `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
   run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
-  (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = the release gate); it cannot
-  run doctests, which is why they are a separate step. The git hooks run no tests — keep commits
-  and pushes fast.
+  (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = automated debug runs,
+  `ci-release` = inherited release-codegen policy); it cannot run doctests, which is why they are a
+  separate step. The git hooks run no tests — keep commits and pushes fast.
 - **Project facts:** what this repo expects of a change, beyond what the code says, lives in
   `.agents/project-facts.md` — the gate, the CI split, the clippy feature rule, the gitignored
   working directories, and disk hygiene. Read it before your first PR.

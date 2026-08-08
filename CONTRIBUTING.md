@@ -49,10 +49,18 @@ The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.
 each step fails with "no such command" on a fresh clone:
 
 ```bash
-cargo install cargo-nextest --locked --version 0.9.133   # pinned; see TESTING.md
+cargo install cargo-nextest --locked --version 0.9.143   # pinned; see TESTING.md
 cargo install cargo-machete --locked
 cargo install cargo-deny --locked
+cargo nextest show-config version                         # must report required/recommended: ok
 ```
+
+The installed version matches CI; [`.config/nextest.toml`](.config/nextest.toml) rejects older
+versions while allowing a newer compatible local runner.
+The command above builds nextest from source; CI uses its pre-built binary through
+`taiki-e/install-action`. On macOS, if even trivial nextest cases take more than about 0.2 seconds,
+follow nextest's [XProtect guidance](https://nexte.st/docs/installation/macos/): enable your terminal
+under Developer Tools, restart it, and run `cargo clean` once.
 
 Install the git hooks once after cloning:
 

@@ -99,27 +99,30 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: nextest@0.9.133
+          tool: nextest@0.9.143
+      - name: Clear cached nextest reports
+        run: rm -f target/nextest/{ci,ci-release,public-api-oce-api,public-api-oce-store}/junit.xml
       # Unit + integration tests. `--no-tests=fail` makes the hard-fail-on-empty intent
       # explicit (nextest's default is `auto`, which only *happens* to resolve to fail for a
       # whole-workspace run — pinning it keeps the gate correct if the invocation ever narrows).
       # The public-api snapshot test SKIPS here (unarmed) — it gets its own step below.
       - name: cargo nextest run (unit + integration)
         run: cargo nextest run --workspace --locked --profile ci --no-tests=fail
-      # Same suite under release codegen. The `ci` nextest profile is only a runner profile; this
-      # explicit cargo profile is what strips debug_assert paths and exercises release panic-freedom.
+      # Same suite under release codegen. `ci-release` inherits the `ci` runner policy and writes a
+      # separate JUnit report; the explicit cargo profile is what strips debug_assert paths and
+      # exercises release panic-freedom.
       - name: cargo nextest run --release (unit + integration)
-        run: cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail
+        run: cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
       # Doctests — the second mandatory step, since nextest does not run doctests.
       - name: cargo test --doc (doctests)
         run: cargo test --workspace --doc --locked
       # Public-API surface gates (exit #7 surface-enumeration). Each crate runs as its OWN step under
-      # the dedicated `public-api` nextest profile (.config/nextest.toml) — a long slow-timeout so the
-      # nested cold `cargo +nightly rustdoc` build is not killed by the `ci` profile's 120s
-      # terminate-after, while `--no-tests=fail` HARD-FAILS if that crate's test ever vanishes
-      # (rename / delete / #[ignore] / filter-miss), which a raw `cargo test` would let pass silently
-      # green. Do NOT merge the two package selectors into one step: one surviving crate would hide
-      # the other vanished test and turn a B3 false-green.
+      # a dedicated child of the `public-api` nextest profile (.config/nextest.toml). The base profile
+      # gives the nested cold `cargo +nightly rustdoc` build a longer timeout; the children preserve
+      # separate JUnit reports. `--no-tests=fail` HARD-FAILS if either test vanishes (rename / delete /
+      # #[ignore] / filter-miss), which raw `cargo test` would let pass silently green. Do NOT merge
+      # the two package selectors: one surviving crate would hide the other vanished test and turn a
+      # B3 false-green.
       #
       # ARMING (B3 — the gate's highest-stakes property), two interlocking env vars, DO NOT REMOVE:
       #   * OCE_PUBLIC_API_NIGHTLY — names the nightly to shell out to (= the single-source `$NIGHTLY`
@@ -137,7 +140,7 @@ jobs:
         run: >-
           cargo nextest run -p oce-api
           -E 'test(public_api_surface_matches_blessed_baseline)'
-          --profile public-api --locked --no-tests=fail
+          --profile public-api-oce-api --locked --no-tests=fail
       # Separate step for oce-store's own baseline. Keeping the package selector isolated preserves
       # vanish->RED for this re-exported port surface.
       - name: cargo public-api surface gate (oce-store)
@@ -147,7 +150,19 @@ jobs:
         run: >-
           cargo nextest run -p oce-store
           -E 'test(public_api_surface_matches_blessed_baseline)'
-          --profile public-api --locked --no-tests=fail
+          --profile public-api-oce-store --locked --no-tests=fail
+      - name: Upload nextest JUnit reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: nextest-release-suite
+          path: |
+            target/nextest/ci/junit.xml
+            target/nextest/ci-release/junit.xml
+            target/nextest/public-api-oce-api/junit.xml
+            target/nextest/public-api-oce-store/junit.xml
+          if-no-files-found: error
+          retention-days: 14
 
   fmt:
     name: fmt
@@ -325,5 +340,5 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: nextest@0.9.133,cargo-deny,cargo-machete
+          tool: nextest@0.9.143,cargo-deny,cargo-machete
       - run: bash .agents/gate.sh full

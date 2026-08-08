@@ -192,14 +192,22 @@ pass on such a change, run the suite yourself:
 bash .agents/gate.sh full
 ```
 
-**Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
+**Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.143`; the repository config rejects an
+older binary).
 
 ```bash
-cargo nextest run --workspace            # unit + integration tests (the whole workspace)
-cargo nextest run --profile ci           # reproduce the release gate's profile locally
-cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
-cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
+cargo nextest show-config version         # verify the installed runner satisfies the repository
+cargo nextest run --workspace --locked --no-tests=fail
+cargo nextest run --workspace --locked --profile ci --no-tests=fail
+cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
+cargo test --workspace --doc --locked     # doctests — nextest CANNOT run these (separate step)
 ```
+
+The default profile is fail-fast for local feedback. Automated profiles run every selected test,
+retry none, fail on leaked child processes, terminate one test after 120 seconds, and bound a whole
+run to 15 minutes. `ci-release` inherits `ci` so runner semantics cannot drift between debug and
+release codegen. Both write JUnit under `target/nextest/<profile>/junit.xml`; CI uploads those files
+for 14 days.
 
 The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
 in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
@@ -208,14 +216,14 @@ block, so read it from there rather than copying the date:
 ```bash
 OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
   cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-  --profile public-api --locked --no-tests=fail
+  --profile public-api-oce-api --locked --no-tests=fail
 ```
 
 `--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
 deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
-`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. Swap `-p oce-api`
-for `-p oce-store` for the other baseline — keep the package selectors in separate invocations,
-which is what preserves vanish-to-RED for the re-exported port surface.
+`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. For the other baseline,
+swap both `-p oce-api` → `-p oce-store` and `--profile public-api-oce-api` →
+`--profile public-api-oce-store`. Separate invocations preserve vanish-to-RED and separate reports.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.

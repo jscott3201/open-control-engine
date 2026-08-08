@@ -203,7 +203,7 @@ run here does not prove these pass`, listing:
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
   runs in `advisories.yml` and in the release gate's cargo-deny job instead.
 - **That these commands still match `ci.yml`.** Nothing verifies that mechanically. An attempt was
-  made and withdrawn; `.github/workflows/ci.yml:227-255` records why — every design either compared
+  made and withdrawn; `.github/workflows/ci.yml:239-262` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
   does *execute* the script (`gate (light)`), so every command in it gates a PR; the script says
@@ -216,7 +216,7 @@ the per-PR gate does not run them either.
 
 CI is dev-light and release-heavy. The per-PR gate into `development` runs engine tests for
 **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job
-(`.github/workflows/ci.yml:148-166`) and the identical step inside the gate script
+(`.github/workflows/ci.yml:148-168`) and the identical step inside the gate script
 (`.agents/gate.sh:120-124`), on two architectures in debug and release codegen.
 
 Read that in the direction that costs you something. **A change confined to `oce-cxf`,

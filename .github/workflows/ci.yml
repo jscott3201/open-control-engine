@@ -159,11 +159,23 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: nextest@0.9.133
+          tool: nextest@0.9.143
+      - name: Clear cached nextest reports
+        run: rm -f target/nextest/{ci,ci-release}/junit.xml
       - name: cargo nextest determinism subset
         run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
       - name: cargo nextest determinism subset --release
-        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail
+        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - name: Upload nextest JUnit reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: nextest-determinism-${{ matrix.runner }}
+          path: |
+            target/nextest/ci/junit.xml
+            target/nextest/ci-release/junit.xml
+          if-no-files-found: error
+          retention-days: 14
 
   clippy:
     name: clippy (-D warnings)
@@ -265,7 +277,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@v2
         with:
-          tool: nextest@0.9.133,cargo-deny,cargo-machete
+          tool: nextest@0.9.143,cargo-deny,cargo-machete
       # No `--` arguments: `light` is the default mode and the one this job exists to cover.
       - run: bash .agents/gate.sh
       - name: Quickstart executes successfully
