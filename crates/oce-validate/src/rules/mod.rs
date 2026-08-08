@@ -22,7 +22,8 @@ mod unify;
 
 pub(crate) use params::check_block_params;
 pub(crate) use structural::{
-    check_arena_ids, check_connections, check_port_types, check_single_assignment,
+    check_arena_ids, check_boundary_outputs, check_connections, check_port_types,
+    check_single_assignment,
 };
 pub(crate) use unify::unify_clusters;
 

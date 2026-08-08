@@ -167,8 +167,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
   Boundary aliases now join the existing deterministic gather-then-decide cluster rooted at their
   source. Conflicting unit, quantity, and bounds refuse; one-sided values propagate to unset
   connector and alias members; `displayUnit` divergence remains advisory. A conflict rolls back all
-  propagation, permuted aliases produce identical diagnostics, and malformed hand-built indices or
-  attribute tags remain panic-free.
+  propagation, permuted aliases produce identical diagnostics, and the full validator refuses
+  malformed hand-built aliases without a panic. Across the 47 G36 fixtures, 33 exported byte streams
+  change and none flips between accepting and refusing. The 27 complete exports among those changes
+  receive new `content_id_complete` values; the other six remain incomplete before and after the
+  change. A declared alias can now supply a previously unset driver connector's unit, quantity, or
+  bounds, so `IoInventory` and `point_list(None)` metadata can change for an unchanged input
+  document. Unit and quantity also reach the durable `PointDto`; `IoSummary` remains unchanged
+  because it contains counts rather than point metadata.
 
 ### Host facade
 

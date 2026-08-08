@@ -74,10 +74,6 @@ const INTEGER_EXPRESSION_BOUND: &str =
 /// grounded-to-a-non-integer arm.
 const INTEGER_FRACTIONAL_BOUND: &str =
     include_str!("fixtures/declared_output_integer_fractional_bound.jsonld");
-/// A declared elided output whose unit/quantity contradict its driver's unit.
-const DRIVER_UNIT_DIVERGENCE: &str =
-    include_str!("fixtures/declared_output_driver_unit_divergence.jsonld");
-
 fn g36_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
 }
@@ -580,27 +576,6 @@ fn fractional_bound_on_a_declared_integer_output_is_refused() {
         ),
         other => panic!("expected a validation rejection, got {other:?}"),
     }
-}
-
-#[test]
-fn declared_driver_unit_divergence_reaches_unification_refusal() {
-    let (mut graph, report) = import_cxf(
-        DRIVER_UNIT_DIVERGENCE.as_bytes(),
-        &ResolveOptions::default(),
-    )
-    .expect("CXF resolution precedes §7.10 validation");
-    assert!(report.is_empty());
-    let error = oce_validate::unify_attributes(&mut graph)
-        .expect_err("declared/driver unit conflict must fail validation");
-    assert_eq!(error.diagnostics.len(), 1);
-    let diagnostic = &error.diagnostics[0];
-    assert_eq!(diagnostic.code, DiagCode::UnitQuantityMismatch);
-    assert_eq!(diagnostic.severity, oce_diag::Severity::Error);
-    assert_eq!(
-        diagnostic.subject.as_deref(),
-        Some("http://example.org#DriverUnitDivergence.con.y")
-    );
-    assert!(diagnostic.message.contains("[\"K\", \"Pa\"]"));
 }
 
 // ---- the host-constructed tag mismatch: refused at export, never emitted or dropped ------------

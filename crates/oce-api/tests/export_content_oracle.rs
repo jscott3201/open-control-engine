@@ -15,9 +15,10 @@
 //! code existed. It was regenerated under the #233 ruling when declared boundary outputs began
 //! exporting their authored attributes, then under #273 when §7.10 propagation began joining those
 //! attributes to their source connectors. The checked-in file is therefore a post-#273
-//! current-engine snapshot; direct validator tests independently pin the propagation and conflict
-//! rules. Regenerating the file (`OCE_BLESS=1`) replaces its evidence with another current-engine
-//! snapshot, so do so only for a ratified behavior change and record why.
+//! current-engine snapshot. Direct validator tests pin the propagation and conflict rules;
+//! `boundary_output_attrs.rs` independently pins the direction of one corpus document's exported,
+//! host-visible, and durable projection. Regenerating the file (`OCE_BLESS=1`) replaces its evidence
+//! with another current-engine snapshot, so do so only for a ratified behavior change and record why.
 
 use std::fmt::Write as _;
 use std::fs;
@@ -34,7 +35,8 @@ const FILE_HEADER: &str = "\
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10
 # propagation joined those attrs to their source connectors. This is a post-#273 current-engine
-# snapshot; direct oce-validate tests independently pin the propagation and conflict rules.
+# snapshot; direct validator tests pin the rules and boundary_output_attrs.rs pins one directional
+# document, host-visible, and durable projection independently.
 # Format: <fixture stem> <fnv1a128 hex over ExportReport::bytes> ok|incomplete:<warnings>
 ";
 

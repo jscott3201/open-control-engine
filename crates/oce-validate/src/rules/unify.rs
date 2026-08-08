@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{Attrs, ModelGraph};
+use oce_model::{Attrs, Dir, ModelGraph};
 
 // ---- shared helpers -------------------------------------------------------------------------
 
@@ -123,10 +123,12 @@ fn read_display_unit(attrs: &Attrs) -> Option<Arc<str>> {
 /// graph an `In` connector is never a connection *source* (using one as a `from` is a
 /// [`super::structural::check_connections`] `DirectionMismatch` that fails the load). So a connected
 /// component is a disjoint **star**: one output connector, the inputs it drives, and any declared
-/// boundary outputs that alias its value. No connector or boundary alias belongs to two clusters,
-/// so the result is genuinely order-independent. (We cluster only inputs whose in-degree is exactly
-/// 1; a multiply-driven input is a [`super::structural::check_single_assignment`] error, excluded so
-/// a cluster never double-*writes* a connector.) For each star, each `Real` attribute in
+/// boundary outputs that alias its value. Structurally valid aliases reference an `Out` connector
+/// with a matching attribute variant; malformed aliases are excluded here and refused by
+/// [`super::structural::check_boundary_outputs`]. No member then belongs to two clusters, so the
+/// result is genuinely order-independent. (We cluster only inputs whose in-degree is exactly 1; a
+/// multiply-driven input is a [`super::structural::check_single_assignment`] error, excluded so a
+/// cluster never double-*writes* a connector.) For each star, each `Real` attribute in
 /// `{unit, quantity, min, max}` and each `Integer` bound in `{min, max}` is *gathered* (the set of
 /// declared, non-default values across all members) then *decided*:
 /// - **R13.1** ≥ 2 distinct values → a `shall`-error ([`DiagCode::UnitQuantityMismatch`] for
@@ -178,13 +180,17 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
             .push(c.to.0);
     }
     for (index, output) in model.boundary_outputs.iter().enumerate() {
-        if output.source.0 < n {
-            clusters
-                .entry(output.source.0)
-                .or_default()
-                .boundary_outputs
-                .push(index);
+        let Some(source) = model.connectors.get(output.source.0 as usize) else {
+            continue;
+        };
+        if source.dir != Dir::Out || !output.attrs.matches(source.value_type) {
+            continue;
         }
+        clusters
+            .entry(output.source.0)
+            .or_default()
+            .boundary_outputs
+            .push(index);
     }
     let mut roots: Vec<u32> = clusters.keys().copied().collect();
     roots.sort_unstable();
@@ -194,15 +200,9 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
         let mut members: Vec<u32> = Vec::with_capacity(cluster.connectors.len() + 1);
         members.push(root);
         members.extend(cluster.connectors.iter().copied());
-        let mut boundary_members = cluster.boundary_outputs.clone();
-        boundary_members.sort_unstable_by(|&a, &b| {
-            model.boundary_outputs[a]
-                .iri
-                .cmp(&model.boundary_outputs[b].iri)
-        });
         let cluster_members = ClusterMembers {
             connectors: &members,
-            boundary_outputs: &boundary_members,
+            boundary_outputs: &cluster.boundary_outputs,
         };
         for attr in [
             RealAttr::Unit,

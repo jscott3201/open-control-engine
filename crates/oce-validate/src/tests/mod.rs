@@ -7,6 +7,7 @@
 //!
 //! Split across submodules to honor the 700-LOC/file cap; shared builders live in [`common`].
 
+mod boundary_outputs;
 mod common;
 mod determinism;
 mod params;

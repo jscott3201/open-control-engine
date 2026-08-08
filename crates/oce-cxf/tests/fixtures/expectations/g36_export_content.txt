@@ -3,7 +3,8 @@
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10
 # propagation joined those attrs to their source connectors. This is a post-#273 current-engine
-# snapshot; direct oce-validate tests independently pin the propagation and conflict rules.
+# snapshot; direct validator tests pin the rules and boundary_output_attrs.rs pins one directional
+# document, host-visible, and durable projection independently.
 # Format: <fixture stem> <fnv1a128 hex over ExportReport::bytes> ok|incomplete:<warnings>
 ahu_economizer b29d7a3dba44418987cd19f0ccd194d8 ok
 ahu_supply_air_temp_reset 9bf255c97a152f9883d2143415661d25 ok
