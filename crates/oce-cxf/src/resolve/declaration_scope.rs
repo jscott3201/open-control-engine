@@ -444,21 +444,42 @@ impl Scope for OwnDeclarationScope<'_> {
 /// - identifiers tokenize after numeric literals, so an exponent suffix never yields a token
 ///   (`1e-3` contributes nothing);
 /// - a dotted path (`Types.Mode.occupied`) contributes only its head segment (`Types`);
+/// - a string literal contributes nothing, including identifier-shaped text and escaped quotes;
 /// - a **call head** — an identifier or dotted path followed, after optional ASCII whitespace,
 ///   by `(` — contributes nothing: `oce-expr` resolves call heads only against its builtin
 ///   table, never through `Scope` lookup, so `max(1.0, 2.0)` yields no `max` token while
 ///   `max + 1.0` yields `max` (call arguments still tokenize normally).
 ///
-/// Known accepted false-positive mode: a sibling name inside a string literal in the
-/// expression is tokenized like code — the CXF profile has no string-literal parameter
-/// arithmetic, so no fixture exercises it. Total; never panics.
+/// An unterminated literal consumes the remainder and contributes no trailing heads. That
+/// under-approximation is safe because the expression cannot parse and never reaches evaluation
+/// ordering. Total; never panics.
 pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
     let bytes = text.as_bytes();
     let mut heads = Vec::new();
     let mut i = 0;
     while i < bytes.len() {
         let b = bytes[i];
-        if b.is_ascii_digit() {
+        if b == b'"' {
+            // Keep this boundary aligned with oce-expr's lex_string: string bodies are one token
+            // and never consult Scope. Consume escapes with their following byte so an escaped
+            // quote cannot end the literal early.
+            i += 1;
+            while i < bytes.len() {
+                match bytes[i] {
+                    b'\\' => {
+                        i += 1;
+                        if i < bytes.len() {
+                            i += 1;
+                        }
+                    }
+                    b'"' => {
+                        i += 1;
+                        break;
+                    }
+                    _ => i += 1,
+                }
+            }
+        } else if b.is_ascii_digit() {
             // Numeric literal: digits and dots, then an optional signed exponent — consumed
             // whole so `1e-3` never yields an `e` token.
             i += 1;

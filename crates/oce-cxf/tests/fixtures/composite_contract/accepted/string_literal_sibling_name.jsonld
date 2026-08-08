@@ -1,0 +1,51 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name",
+      "@type": "S231:Block",
+      "S231:hasParameter": [
+        { "@id": "http://example.org#cc.string_literal_sibling_name.a" },
+        { "@id": "http://example.org#cc.string_literal_sibling_name.b" }
+      ],
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.string_literal_sibling_name.con"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name.a",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:String" },
+      "S231:value": "\"b\""
+    },
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name.b",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:String" },
+      "S231:value": "a"
+    },
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.string_literal_sibling_name.con.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.string_literal_sibling_name.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:value": 1.0
+    },
+    {
+      "@id": "http://example.org#cc.string_literal_sibling_name.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}
