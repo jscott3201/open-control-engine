@@ -103,7 +103,8 @@ staged. A simulation is not transactional after execution begins.
 Store-backed inputs are staged inside each tick, not during simulation preflight. A snapshot error
 or wrong-typed store sample on the first tick therefore returns after the run clock and state words
 have reset, even though no block evaluated. Model time and the output snapshot still describe the
-prior run, while any store inputs staged before the failing sample remain in the connector image.
+prior run. A snapshot error stages no store input; a wrong-typed sample leaves any valid store
+samples staged before it in the connector image.
 
 Two consequences to plan for. Splitting a horizon across two calls does not continue the
 trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the

@@ -363,7 +363,11 @@ fn first_closure_refusal_preserves_run(invalid: (String, Value)) -> OcError {
 
     assert_eq!(eng.state.words, before_words, "[S] words changed");
     assert_eq!(eng.state.t.to_bits(), before_t, "model time changed");
-    assert_eq!(eng.prev_t, before_prev_t, "time guard changed");
+    assert_eq!(
+        eng.prev_t.map(f64::to_bits),
+        before_prev_t.map(f64::to_bits),
+        "time guard changed"
+    );
     assert_eq!(eng.state.values.len(), before_values.len());
     for (index, (got, want)) in eng.state.values.iter().zip(&before_values).enumerate() {
         assert!(got.bit_eq(want), "connector value {index} changed");

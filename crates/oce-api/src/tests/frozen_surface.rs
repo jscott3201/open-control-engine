@@ -587,10 +587,10 @@ fn get_output_on_valid_output_returns_bit_exact_value() {
 }
 
 #[test]
-fn simulate_resets_run_clock_at_entry() {
+fn a_valid_horizon_resets_the_prior_run_clock() {
     let mut eng = loaded_accumulator();
     eng.tick(100.0).unwrap(); // prev_t = 100
-    // simulate over [0,3] resets prev_t at entry, so ticking at t=0 does NOT regress.
+    // Preflight succeeds before the [0,3] horizon resets `prev_t`, so t=0 does not regress.
     let m = eng
         .simulate(&sim_spec(0.0, 3.0, 1.0, CollectSpec::None))
         .unwrap();

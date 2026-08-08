@@ -257,7 +257,9 @@ impl OutputTrace {
 pub struct SimMetrics {
     /// Number of ticks evaluated over the horizon.
     pub ticks: u64,
-    /// Total wall time over the run (nanoseconds; monotonic `Instant` elapsed, saturating).
+    /// Wall time from input preflight through the state re-seed, final tick and any final trace row
+    /// (nanoseconds; monotonic `Instant` elapsed, saturating). Recorded-column resolution is
+    /// excluded.
     pub wall_nanos: u64,
     /// Worst single-tick latency over the run (nanoseconds) — the jitter signal (perf §8, R-SIM-4).
     pub max_tick_nanos: u64,
@@ -457,9 +459,9 @@ impl<S: Store> Engine<S> {
     /// Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`.
     ///
     /// A model with store-bound inputs takes one more. [`Engine::tick`] re-stages those points from
-    /// the store on every tick (`engine.rs:251`), so two runs agreeing on spec, params and entry
-    /// image still diverge when the store's samples differ — see `tests::sim_tests::
-    /// store_bound_staging`. The list above is not the whole determinant set for such a model.
+    /// the store on every tick, so two runs agreeing on spec, params and entry image still diverge
+    /// when the store's samples differ — see `tests::sim_tests::store_bound_staging`. The list above
+    /// is not the whole determinant set for such a model.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
@@ -519,14 +521,14 @@ impl<S: Store> Engine<S> {
         let cols = self.resolve_collect(&spec.collect)?;
         let stride = collect_stride(&spec.collect).max(1) as u64;
         let run_start = Instant::now();
-        // Preflight every input list known before the first tick. Nothing below this point may fail
-        // before the restart until a later Closure invocation supplies a new dynamic list.
         let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
         let first_t = spec.t_start + 0.0 * spec.step;
         let mut first_closure_inputs = match &spec.inputs {
             InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(first_t))?),
-            _ => None,
+            InputSource::None | InputSource::Constant(_) | InputSource::Csv { .. } => None,
         };
+        // All input lists available before the first tick have now passed whole-list validation.
+        // Nothing else can refuse before the restart.
         // Fresh time axis (R-SIM-2): isolate from any prior real-time tick's prev_t.
         self.prev_t = None;
         // Fresh `[S]` state (R-SIM-2): without this, a reused engine started the horizon from the
