@@ -157,7 +157,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
-- **A refused load says why, through `oce-api` alone.** `OcError::diagnostics()` returns the
+- **A refused load says why, through `oce-api` alone** (#263). `OcError::diagnostics()` returns the
   structured diagnostics behind a failure — stable code, severity, subject, message — where before
   a consumer depending only on this crate could read them off one of the two rejection seams and
   not the other. `OcError::Validate`'s payload is a struct field, which Rust reaches through a type
@@ -315,6 +315,13 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   (#195). The same change made `Log`/`Log10` warnings static strings and made `Sort`
   stack-backed through 64 inputs, so the tick allocates for fewer reasons than before —
   though not zero, and the census is what keeps that claim honest.
+- **The local gate runs every script-backed check in CI's `gate (light)` job** (#258).
+  `check-quickstart-runs.sh` had run only as a separate required CI step, so
+  `bash .agents/gate.sh` could pass locally while CI still ran more. A narrow coverage check now
+  catches any script under `.github/scripts/` that is absent from the gate. The same change stopped
+  the process-global allocation meter from blaming one ambient allocation burst on the block under
+  test: a nonempty result is confirmed over a second window, while the existing `Sort` positive
+  control keeps a real allocator visible. Issue #231 remains open for the underlying mechanism.
 - **G36 provenance records are bound to their golden bytes by content digest** (#204). The
   previous `engine_rev` field was deleted as unverifiable: CI checks out at depth 1, so no
   history-based check can run there at all.
