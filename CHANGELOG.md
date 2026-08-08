@@ -363,9 +363,10 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   worker threads; a future block that does needs a companion worker-allocation guard.
 - **Facade allocation guards now measure only the calling thread** (#272). The previous
   process-global allocator could charge libtest or worker-thread traffic to a tick or simulation
-  region despite the integration test's mutex. The replacement preserves the exact manual-tick,
-  snapshot-floor, realtime-step, and per-run simulation assertions; watch remains the positive
-  meter control, and a synchronized worker allocation proves off-thread traffic is excluded.
+  region despite the integration test's mutex. The replacement preserves the manual-tick,
+  snapshot-floor, realtime-step, and fixed-per-run simulation contracts; watch remains the positive
+  meter control, and a synchronized worker allocation proves off-thread traffic is excluded. The
+  guards cover the calling thread; future facade worker delegation needs its own allocation guard.
 - **G36 provenance records are bound to their golden bytes by content digest** (#204). The
   previous `engine_rev` field was deleted as unverifiable: CI checks out at depth 1, so no
   history-based check can run there at all.

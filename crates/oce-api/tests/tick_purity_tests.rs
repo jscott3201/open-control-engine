@@ -5,8 +5,9 @@
 //! stateful/control surface: integrators, filters, latches, timers, hysteresis,
 //! discrete blocks, integers, and conversions.
 //!
-//! Allocation regions count only the measured thread. The facade operations exercised here do not
-//! delegate work to worker threads; any future delegation needs a companion worker-allocation guard.
+//! `allocation-counter` installs this test binary's global allocator, but each region counts only
+//! the measured thread. The facade operations exercised here do not delegate work to worker threads;
+//! any future delegation needs a companion worker-allocation guard.
 
 mod support;
 
@@ -210,6 +211,8 @@ fn off_thread_allocations_do_not_enter_facade_measurements() {
                 std::hint::spin_loop();
             }
         });
+        // The flags place the worker allocation strictly inside the current-thread region. The
+        // worker body cannot unwind before setting `done`, so the measured spin always terminates.
         worker.join().expect("allocation worker");
         assert_eq!(
             info,
@@ -753,7 +756,8 @@ fn sat_reset_pairs() -> Vec<(String, Value)> {
     ]
 }
 
-/// Allocations charged to one `simulate` over `ticks` steps, trace collection off.
+/// Allocation events, including reallocations, charged to one `simulate` over `ticks` steps with
+/// trace collection off.
 fn simulate_allocations(inputs: InputSource, ticks: u64) -> usize {
     let mut engine = Engine::with_store(Arc::new(AllocationStore::default()));
     engine
