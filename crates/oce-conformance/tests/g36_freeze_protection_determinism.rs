@@ -61,18 +61,6 @@ const HOT_WATER_PLANT_REQUEST_SOURCE: &str =
 const ALARM_LEVEL_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_freeze_protection.yAla";
 
-const FREEZE_PROTECTION_STAGE_RUNTIME: &str = "conn#137";
-const CHILLED_WATER_PUMP_ENABLE_RUNTIME: &str = "conn#72";
-const RETURN_DAMPER_COMMAND_RUNTIME: &str = "conn#132";
-const OUTDOOR_DAMPER_COMMAND_RUNTIME: &str = "conn#81";
-const MINIMUM_OUTDOOR_DAMPER_COMMAND_RUNTIME: &str = "conn#119";
-const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#153";
-const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#76";
-const COOLING_COIL_COMMAND_RUNTIME: &str = "conn#85";
-const HEATING_COIL_COMMAND_RUNTIME: &str = "conn#101";
-const HOT_WATER_PLANT_REQUEST_RUNTIME: &str = "conn#89";
-const ALARM_LEVEL_RUNTIME: &str = "conn#105";
-
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(OUTDOOR_DAMPER_MIN_POSITION),
     PointSpec::real(OUTDOOR_DAMPER),
@@ -87,32 +75,17 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(MIXED_AIR_TEMPERATURE),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::integer_alias(
-        FREEZE_PROTECTION_STAGE_SOURCE,
-        FREEZE_PROTECTION_STAGE_RUNTIME,
-    ),
-    PointSpec::boolean_alias(
-        CHILLED_WATER_PUMP_ENABLE_SOURCE,
-        CHILLED_WATER_PUMP_ENABLE_RUNTIME,
-    ),
-    PointSpec::real_alias(RETURN_DAMPER_COMMAND_SOURCE, RETURN_DAMPER_COMMAND_RUNTIME),
-    PointSpec::real_alias(
-        OUTDOOR_DAMPER_COMMAND_SOURCE,
-        OUTDOOR_DAMPER_COMMAND_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        MINIMUM_OUTDOOR_DAMPER_COMMAND_SOURCE,
-        MINIMUM_OUTDOOR_DAMPER_COMMAND_RUNTIME,
-    ),
-    PointSpec::boolean_alias(SUPPLY_FAN_STATUS_SOURCE, SUPPLY_FAN_STATUS_RUNTIME),
-    PointSpec::real_alias(SUPPLY_FAN_SPEED_SOURCE, SUPPLY_FAN_SPEED_RUNTIME),
-    PointSpec::real_alias(COOLING_COIL_COMMAND_SOURCE, COOLING_COIL_COMMAND_RUNTIME),
-    PointSpec::real_alias(HEATING_COIL_COMMAND_SOURCE, HEATING_COIL_COMMAND_RUNTIME),
-    PointSpec::integer_alias(
-        HOT_WATER_PLANT_REQUEST_SOURCE,
-        HOT_WATER_PLANT_REQUEST_RUNTIME,
-    ),
-    PointSpec::integer_alias(ALARM_LEVEL_SOURCE, ALARM_LEVEL_RUNTIME),
+    PointSpec::integer(FREEZE_PROTECTION_STAGE_SOURCE),
+    PointSpec::boolean(CHILLED_WATER_PUMP_ENABLE_SOURCE),
+    PointSpec::real(RETURN_DAMPER_COMMAND_SOURCE),
+    PointSpec::real(OUTDOOR_DAMPER_COMMAND_SOURCE),
+    PointSpec::real(MINIMUM_OUTDOOR_DAMPER_COMMAND_SOURCE),
+    PointSpec::boolean(SUPPLY_FAN_STATUS_SOURCE),
+    PointSpec::real(SUPPLY_FAN_SPEED_SOURCE),
+    PointSpec::real(COOLING_COIL_COMMAND_SOURCE),
+    PointSpec::real(HEATING_COIL_COMMAND_SOURCE),
+    PointSpec::integer(HOT_WATER_PLANT_REQUEST_SOURCE),
+    PointSpec::integer(ALARM_LEVEL_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_freeze_protection",

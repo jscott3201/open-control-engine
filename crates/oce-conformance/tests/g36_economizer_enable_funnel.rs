@@ -35,9 +35,12 @@ const SUPPLY_FAN_ON: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.u1SupFan";
 const FREEZE_PROTECTION_STAGE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta";
-const OUTDOOR_DAMPER_MAX_OUTPUT: &str = "conn#13";
-const RETURN_DAMPER_MAX_OUTPUT: &str = "conn#21";
-const RETURN_DAMPER_MIN_OUTPUT: &str = "conn#25";
+const OUTDOOR_DAMPER_MAX_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y";
+const RETURN_DAMPER_MAX_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y";
+const RETURN_DAMPER_MIN_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_air_temperature", OUTDOOR_AIR_TEMPERATURE),

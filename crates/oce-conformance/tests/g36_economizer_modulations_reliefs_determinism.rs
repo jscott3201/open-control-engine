@@ -34,8 +34,6 @@ const OUTDOOR_DAMPER_COMMAND_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yOutDam";
 const RETURN_DAMPER_COMMAND_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_modulations_reliefs.yRetDam";
-const OUTDOOR_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
-const RETURN_DAMPER_COMMAND_RUNTIME: &str = "conn#21";
 
 const SUPPLY_TEMPERATURE_SIGNAL_VALUES: [f64; 7] = [-0.5, -0.25, -0.125, 0.0, 0.125, 0.25, 0.5];
 
@@ -47,11 +45,8 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::real(RETURN_DAMPER_MAX),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        OUTDOOR_DAMPER_COMMAND_SOURCE,
-        OUTDOOR_DAMPER_COMMAND_RUNTIME,
-    ),
-    PointSpec::real_alias(RETURN_DAMPER_COMMAND_SOURCE, RETURN_DAMPER_COMMAND_RUNTIME),
+    PointSpec::real(OUTDOOR_DAMPER_COMMAND_SOURCE),
+    PointSpec::real(RETURN_DAMPER_COMMAND_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_economizer_modulations_reliefs",

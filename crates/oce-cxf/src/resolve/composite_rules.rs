@@ -95,9 +95,46 @@ pub(super) const ARRAY_INSTANCE: CompositeRule = CompositeRule {
     summary: "active array-valued block-instance nodes require per-element encoding",
 };
 
+/// `composite/declaration-cycle`: a block's own declaration references must be acyclic.
+pub(super) const DECLARATION_CYCLE: CompositeRule = CompositeRule {
+    id: "declaration-cycle",
+    code: DiagCode::MalformedDocument,
+    summary: "a block's own parameter/constant declaration references must be acyclic",
+};
+
+/// `composite/duplicate-declaration`: one local name must not be declared twice in one chain.
+pub(super) const DUPLICATE_DECLARATION: CompositeRule = CompositeRule {
+    id: "duplicate-declaration",
+    code: DiagCode::MalformedDocument,
+    summary: "a block's own declaration chain must not bind one local name twice",
+};
+
+/// `composite/vector-port-instance`: a `hasInstance`-derived interface is scalar-only.
+pub(super) const VECTOR_PORT_INSTANCE: CompositeRule = CompositeRule {
+    id: "vector-port-instance",
+    code: DiagCode::NonSubsetConstruct,
+    summary: "a hasInstance-derived instance's class must publish declared scalar port names",
+};
+
+/// `composite/unsupported-instance-member`: a member must classify against its owner's class.
+pub(super) const UNSUPPORTED_INSTANCE_MEMBER: CompositeRule = CompositeRule {
+    id: "unsupported-instance-member",
+    code: DiagCode::NonSubsetConstruct,
+    summary: "a hasInstance member must be a direct member naming a declared port or parameter \
+              of its instance's class",
+};
+
+/// `composite/colliding-member-identity`: derived member identities must be unique.
+pub(super) const COLLIDING_MEMBER_IDENTITY: CompositeRule = CompositeRule {
+    id: "colliding-member-identity",
+    code: DiagCode::NonSubsetConstruct,
+    summary: "a derived connector or parameter identity must be unique in its document and \
+              within its instance",
+};
+
 /// Every CXF-lowering-subset contract rule, in catalog publication order.
 #[cfg(test)]
-pub(super) const COMPOSITE_RULES: [CompositeRule; 7] = [
+pub(super) const COMPOSITE_RULES: [CompositeRule; 12] = [
     ROOT_COUNT,
     CONTAINS_CYCLE,
     REPLACEABLE,
@@ -105,6 +142,11 @@ pub(super) const COMPOSITE_RULES: [CompositeRule; 7] = [
     ARRAY_PARAMETER,
     ARRAY_CONNECTOR,
     ARRAY_INSTANCE,
+    DECLARATION_CYCLE,
+    DUPLICATE_DECLARATION,
+    VECTOR_PORT_INSTANCE,
+    UNSUPPORTED_INSTANCE_MEMBER,
+    COLLIDING_MEMBER_IDENTITY,
 ];
 
 /// Filesystem path of the checked-in catalog artifact, used by `UPDATE_EXPECT` re-blessing.

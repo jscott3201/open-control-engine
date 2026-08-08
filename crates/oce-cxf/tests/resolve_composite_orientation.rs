@@ -324,7 +324,23 @@ fn entered_boundary_ring_names_the_revisited_input() {
 /// must not invent an entry, so this control imports cleanly.
 #[test]
 fn entryless_boundary_ring_is_not_walked() {
-    import(&boundary_ring(false)).expect("entryless ring imports");
+    // Without the entry edge the root's declared output `#boundary_ring.y` has no internal
+    // driver, so the import succeeds carrying exactly the R18-5 advisory — the ring itself is
+    // still not walked, which is this test's subject.
+    let bytes = serde_json::to_vec(&boundary_ring(false)).expect("serialize");
+    let (_, report) =
+        import_cxf(&bytes, &ResolveOptions::default()).expect("entryless ring imports");
+    assert_eq!(
+        report.diagnostics,
+        vec![
+            Diagnostic::warning(
+                DiagCode::UndrivenBoundaryOutput,
+                "declared boundary output has no internal driver",
+            )
+            .with_subject("http://example.org#boundary_ring.y".to_owned())
+        ],
+        "the undriven declared output is the only diagnostic"
+    );
 }
 
 fn gain_composite(model: &str, name: &str) -> Vec<Value> {
@@ -567,9 +583,10 @@ fn unwired_sibling_boundary_cannot_fabricate_a_leaf_connection() {
     assert!(
         diagnostics.iter().any(|diagnostic| {
             diagnostic.code == DiagCode::SingleAssignment
-                && diagnostic.subject.as_deref() == Some("connector#3")
+                && diagnostic.subject.as_deref()
+                    == Some("http://example.org#fabrication.subD.gain.u")
         }),
-        "undriven subject must be subD's leaf input (lowered connector#3): {diagnostics:?}"
+        "undriven subject must be subD's authored leaf input: {diagnostics:?}"
     );
 }
 

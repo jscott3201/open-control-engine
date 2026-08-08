@@ -19,7 +19,7 @@ IEEE-754 bit patterns, never by an epsilon
 (`crates/oce-cxf/src/lib.rs:120-134`; the fixpoint test is
 `crates/oce-cxf/tests/export_roundtrip.rs`, which compares through a hand-written renderer using
 `f64::to_bits`). Emission order derives from the `ModelGraph` vectors alone, so repeated exports of
-the same graph are byte-identical (`crates/oce-cxf/src/export.rs:42-47`).
+the same graph are byte-identical (`crates/oce-cxf/src/export.rs:45-50`).
 
 The carve-out belongs right here rather than in a footnote: **bit-identity holds over the survivor
 cone, not necessarily over the whole input graph.** When nothing is deferred the survivor cone *is*
@@ -36,10 +36,12 @@ composite is emitted under the fixed synthetic IRI `urn:open-control:cxf-export:
 Export accepts the **flat, ground, single-root, scalar-parameter** subset — the shape the resolver
 produces (`crates/oce-cxf/src/lib.rs:114-117`). Everything outside it is a typed
 `CxfError::Validation` carrying `DiagCode::ExportUnsupported` error diagnostics whose `subject` is
-the owning block's `instance_iri`. Never a panic (`crates/oce-cxf/src/export.rs:56-59`).
+the owning block's `instance_iri`. Never a panic (`crates/oce-cxf/src/export.rs:59-62`).
 
 Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON scalar on the minted
-child port node (`crates/oce-cxf/src/export.rs:31-40`):
+child port node and on each declared boundary-**output** node — the declared node's own authored
+values, not its driver's. Boundary-input nodes still carry none; that side is tracked as issue
+#243 (`crates/oce-cxf/src/export.rs:31-43`):
 
 | Attribute | Emitted as | Applies to |
 | --- | --- | --- |
@@ -51,10 +53,10 @@ is byte-identical to an attribute-free port node.
 
 Two attributes are rejected rather than dropped — and the distinction between *rejected* and
 *dropped* is the point. On a **surviving** block, a connector carrying `nominal` or `unbounded`
-fails the export (`crates/oce-cxf/src/export.rs:122-130`), because the importer hardcodes both to
+fails the export (`crates/oce-cxf/src/export.rs:124-132`), because the importer hardcodes both to
 `None` and the value would vanish silently. A non-finite Real `min`/`max` bound is rejected for the
 same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
-(`crates/oce-cxf/src/export.rs:131-135`).
+(`crates/oce-cxf/src/export.rs:133-137`).
 
 On a **deferred** block, none of that runs. A deferred block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from
@@ -75,16 +77,16 @@ document so that the enum-free remainder can still export. Each omission is repo
 near the front of a chain dooms everything downstream of it.
 
 How large does that get in practice? The G36 corpus pins two cases as tripwires
-(`crates/oce-cxf/tests/export_g36_roundtrip.rs:562-570`):
+(`crates/oce-cxf/tests/export_g36_roundtrip.rs:678-698`):
 
 | Fixture | Blocks in graph | Blocks deferred | Share |
 | --- | --- | --- | --- |
-| `cooling_only_controller` | 213 (`crates/oce-api/tests/g36_cooling_only_controller.rs:244`) | 83 | 39 % |
-| `multizone_vav_relief_fan_group` | 226 (`crates/oce-api/tests/g36_relief_fan_group.rs:94`) | 63 | 28 % |
+| `cooling_only_controller` | 213 (`crates/oce-api/tests/g36_cooling_only_controller.rs:252`) | 83 | 39 % |
+| `multizone_vav_relief_fan_group` | 226 (`crates/oce-api/tests/g36_relief_fan_group.rs:105`) | 63 | 28 % |
 
 Rejection fires only on **total** deferral — a graph with no emitted runtime block left after
 deferred and reserved lowering-only blocks are removed, which would be an unloadable root-only
-shell (`crates/oce-cxf/src/export.rs:105-109`). In principle, then, all but one block can vanish
+shell (`crates/oce-cxf/src/export.rs:107-111`). In principle, then, all but one block can vanish
 from an export that returns `Ok`.
 
 And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:191-194` — it destructures them
@@ -97,7 +99,7 @@ that dropped 39 % of the graph. Both return `Ok(Vec<u8>)`.
 trip covered the whole input.** Treat a non-empty list as "this document is a subset of the model I
 asked you to write."
 
-Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:58`) always goes through
+Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:98`) always goes through
 `export_with_report` and keeps the warnings, so the facade route does not expose the trap. It is
 `oce_cxf::export()` specifically that drops them.
 
@@ -106,7 +108,7 @@ Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:58`) a
 CDL allows a boundary input wired straight to a boundary output. Import lowers each such connect to
 a reserved internal identity block — `urn:oce:lowering#PassThrough.Real`, `.Integer`, or `.Boolean`
 (`crates/oce-blocks/src/lowering.rs:66-78`) — and export elides those blocks back to the bare
-boundary edge (`crates/oce-cxf/src/export.rs:217-224`). Re-import re-synthesizes them, so RT-2 holds
+boundary edge (`crates/oce-cxf/src/export.rs:221-228`). Re-import re-synthesizes them, so RT-2 holds
 by render identity.
 
 The visible consequence: the emitted document lists **fewer `containsBlock` entries than the graph

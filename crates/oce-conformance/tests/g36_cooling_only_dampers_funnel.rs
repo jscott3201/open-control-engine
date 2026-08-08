@@ -33,8 +33,8 @@ const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.cooling_only_damp
 const DISCHARGE_AIRFLOW: &str = "http://example.org#g36.source.cooling_only_dampers.VDis_flow";
 const DAMPER_OVERRIDE_INDEX: &str = "http://example.org#g36.source.cooling_only_dampers.oveDamPos";
 
-const AIRFLOW_SETPOINT: &str = "conn#61";
-const DAMPER_COMMAND: &str = "conn#86";
+const AIRFLOW_SETPOINT: &str = "http://example.org#g36.source.cooling_only_dampers.swi1.y";
+const DAMPER_COMMAND: &str = "http://example.org#g36.source.cooling_only_dampers.swi2.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("active_minimum_airflow", ACTIVE_MINIMUM_AIRFLOW),

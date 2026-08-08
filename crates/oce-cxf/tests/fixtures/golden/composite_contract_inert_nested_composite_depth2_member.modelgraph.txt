@@ -1,0 +1,10 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#cc.inert_nested_composite_depth2_member.sub.gain")
+    inputs=[0] outputs=[1]
+    param k=Real(0x4008000000000000)
+connectors: 2
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.inert_nested_composite_depth2_member.u")
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.inert_nested_composite_depth2_member.sub.gain.y")
+connections: 0
+external_inputs: [0]
+boundary_outputs: 0

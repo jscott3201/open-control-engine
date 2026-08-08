@@ -1,0 +1,16 @@
+blocks: 2
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#cc.carveout_member_array_unreferenced.con")
+    inputs=[] outputs=[0]
+    param k=Real(0x3ff8000000000000)
+  B1 decl=1 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#cc.carveout_member_array_unreferenced.post")
+    inputs=[1] outputs=[2]
+    param k=Real(0x4010000000000000)
+connectors: 3
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#cc.carveout_member_array_unreferenced.con.y")
+  C1 block=B1 dir=In type=Real decl=1 iri=Some("http://example.org#cc.carveout_member_array_unreferenced.post.u")
+  C2 block=B1 dir=Out type=Real decl=2 iri=Some("http://example.org#cc.carveout_member_array_unreferenced.post.y")
+connections: 1
+  C0 -> C1
+external_inputs: []
+boundary_outputs: 1
+  http://example.org#cc.carveout_member_array_unreferenced.y <- C2 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

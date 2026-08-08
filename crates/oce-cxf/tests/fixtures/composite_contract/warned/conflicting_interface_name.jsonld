@@ -1,0 +1,92 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name",
+      "@type": "S231:Block",
+      "S231:label": "conflicting_interface_name",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.conflicting_interface_name.u"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.conflicting_interface_name.del"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.conflicting_interface_name.del.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "del",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.conflicting_interface_name.del.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.conflicting_interface_name.del.y"
+      },
+      "S231:hasParameter": [
+        {
+          "@id": "http://example.org#cc.conflicting_interface_name.del.samplePeriod"
+        }
+      ],
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.conflicting_interface_name.del.u"
+        },
+        {
+          "@id": "http://example.org#cc.conflicting_interface_name.del.y"
+        },
+        {
+          "@id": "http://example.org#cc.conflicting_interface_name.del.y_start"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.del.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.del.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.del.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.conflicting_interface_name.del.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "7.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    }
+  ]
+}

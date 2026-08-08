@@ -4,6 +4,9 @@
 //! emits the flat `oce_model::ModelGraph` (D1's executable truth) directly. Only the elementary
 //! instances named by the top composite's `containsBlock` become [`oce_model::BlockInstance`]s; the
 //! composite itself contributes only its boundary ports (`hasInput`/`hasOutput`) and child list.
+//! An instance's interface comes from its own `hasInput`/`hasOutput` lists, or — for an instance
+//! declaring neither — from its `S231:hasInstance` member list, classified against the resolved
+//! class signature (`instance_interface`, `_spec/19`).
 //!
 //! ## Determinism
 //! Every assignment of a `BlockId`, `ConnectorId`, vector position, or sort key is driven by an
@@ -13,6 +16,17 @@
 //! model id, a vector position, or a diagnostic order. The resolver's determinism tests re-import
 //! twice and byte-compare the whole `ModelGraph`, so any `HashMap`-iteration-order leak here is a
 //! defect.
+//!
+//! The order contract, stated once: array order is load-bearing wherever the resolver reads an
+//! array — `@graph` node position, `containsBlock` order, each instance's port and parameter
+//! lists, `isConnectedTo` order. Two carve-outs: the boundary-input elision vector
+//! (`external_inputs`) and the pass-through pair list are re-keyed on the boundary port's
+//! own `@graph` node position instead of inheriting the order of that port's `isConnectedTo`
+//! array (Step 9's re-key below); and a `S231:hasInstance` member array's order is load-bearing
+//! for nothing — derived ports bind by name, synthesized connectors key on
+//! `(owner @graph position, class-signature position)`, and classified parameter members append
+//! in class-signature order (R19-13). Neither array order nor node position is a stable
+//! identity: key by authored name, never by position.
 //!
 //! ## Boundary-input elision (AD-2)
 //! A flat `Connection` is output→input only. A composite boundary **input** wired to a child input
@@ -25,37 +39,45 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, has_errors};
-use oce_expr::EvalResult;
 use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable, Value,
+    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ModelGraph, ParamTable,
 };
 
-use crate::arrays::expand_array_param;
 use crate::dto::{CxfDocument, Node};
-use crate::ground::{ParamScope, ground_value};
 use crate::{CxfError, bridge};
 
 mod array_nodes;
 mod attrs;
+mod boundary_outputs;
 mod composite;
 mod composite_orientation;
 mod composite_rules;
 #[cfg(test)]
 mod composite_rules_tests;
 mod connection_orientation;
+mod declaration_scope;
+#[cfg(test)]
+mod declaration_scope_tests;
 mod diags;
+mod instance_interface;
+mod instance_params;
 mod pass_through;
 mod port_binding;
 #[cfg(test)]
 mod port_binding_tests;
+mod report;
+mod single_assignment;
 mod specialize;
 mod value_types;
+
+pub use report::ValidationReport;
 
 use attrs::connector_attrs;
 use composite::lower;
 use connection_orientation::orient_edge;
 use diags::{finalize_diags, subject_of};
-use specialize::{specialize, validate_g36_parameter_value};
+use instance_params::{Inst, ground_instance_params};
+use specialize::specialize;
 use value_types::{derive_value_type, first_type};
 
 /// The Ground-mode import mode. Only `Ground` exists today: `oce_model::Value` has no symbolic
@@ -82,39 +104,6 @@ pub struct ResolveOptions {
     pub deny_warnings: bool,
 }
 
-/// The resolver's diagnostics in deterministic order. On the `Ok` path it carries `Warning`/`Info`
-/// only — any `Error` is returned inside [`CxfError::Validation`] instead, with the graph withheld
-/// (it may be structurally unsound). Invariant enforced by construction in the resolver. The report
-/// also carries the model identity side-channel for consumers that need durable identity without
-/// polluting [`ModelGraph`] execution state.
-#[derive(Clone, Debug, Default)]
-pub struct ValidationReport {
-    /// The top-composite `@id` that names the CXF model.
-    ///
-    /// This is the raw DTO [`Node::id`] value as authored in the document. The resolver currently
-    /// carries context entries losslessly but does not perform general JSON-LD `@id` expansion, so
-    /// callers that need a durable model key should treat this as the source CXF model IRI for M3.
-    /// It is `Some` on every successful resolver-owned import path and `None` only for manually
-    /// default-constructed reports.
-    pub model_iri: Option<String>,
-    /// The (sorted, error-free on the `Ok` path) diagnostics.
-    pub diagnostics: Vec<Diagnostic>,
-}
-
-impl ValidationReport {
-    /// Whether the report carries no diagnostics at all.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.diagnostics.is_empty()
-    }
-
-    /// Whether any diagnostic is an error (always `false` on the `Ok` path).
-    #[must_use]
-    pub fn has_errors(&self) -> bool {
-        has_errors(&self.diagnostics)
-    }
-}
-
 /// The local member name of a dotted instance-member `@id` — the segment after the **last `.`**,
 /// e.g. `http://example.org#MinLoop.con.k` → `k`. This is the parameter key the block registry
 /// looks up (`oce_blocks` reads `real_param(p, "k", …)`), so it MUST be the bare member name, not
@@ -122,12 +111,36 @@ impl ValidationReport {
 pub(crate) fn local_name(iri: &str) -> &str {
     iri.rsplit('.').next().unwrap_or(iri)
 }
+
+/// An instance's effective port IRI views: the derived signature-ordered vectors where an
+/// interface was derived (`hasInstance` dialect), the authored array-ordered lists otherwise.
+fn port_views<'a>(
+    derivation: &'a instance_interface::InstanceDerivation,
+    inst: &'a Inst<'_>,
+) -> (Vec<&'a str>, Vec<&'a str>) {
+    match derivation.interface(&inst.node.id) {
+        Some(d) => (
+            d.inputs.iter().map(String::as_str).collect(),
+            d.outputs.iter().map(String::as_str).collect(),
+        ),
+        None => (inst.input_iris.clone(), inst.output_iris.clone()),
+    }
+}
 /// Resolve a CXF document into the flat [`ModelGraph`] (doc 04 §7.1). See the module docs for the
 /// determinism and boundary-elision contracts.
 pub(crate) fn resolve(
     doc: &CxfDocument,
     opts: &ResolveOptions,
 ) -> Result<(ModelGraph, ValidationReport), CxfError> {
+    // --- Step 0: expand identity and typing tokens against `@context` on a working clone
+    // (doc 04 R-3), BEFORE any `@id` index exists — expansion must precede the by_id build or
+    // `ex:A` and its absolute spelling become two nodes instead of a `DuplicateId`. A document
+    // whose identity tokens cannot be canonicalized is refused here with typed diagnostics.
+    let expanded = match crate::expand::expand_document(doc) {
+        Ok(expanded) => expanded,
+        Err(diags) => return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new()))),
+    };
+    let doc = &expanded;
     let mut diags: Vec<Diagnostic> = Vec::new();
 
     // --- Step 1: @graph presence + index by @id (DuplicateId / MalformedDocument). by_id is
@@ -138,12 +151,29 @@ pub(crate) fn resolve(
             "CXF @graph is empty — nothing to resolve",
         )]));
     }
-    let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
-    for node in &doc.graph {
-        if by_id.insert(node.id.as_str(), node).is_some() {
+    let mut by_id: HashMap<&str, (usize, &Node)> = HashMap::with_capacity(doc.graph.len());
+    for (index, node) in doc.graph.iter().enumerate() {
+        if node.id.is_empty() {
+            let subject = format!("connector at @graph[{index}]");
             diags.push(
-                Diagnostic::error(DiagCode::DuplicateId, "duplicate @id in @graph")
-                    .with_subject(node.id.clone()),
+                Diagnostic::error(
+                    DiagCode::MissingConnectorId,
+                    format!("{subject} is missing its authored @id"),
+                )
+                .with_subject(subject),
+            );
+            continue;
+        }
+        if let Some((first_index, _)) = by_id.insert(node.id.as_str(), (index, node)) {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::DuplicateId,
+                    format!(
+                        "duplicate @id `{}` on @graph nodes {first_index} and {index}",
+                        node.id
+                    ),
+                )
+                .with_subject(node.id.clone()),
             );
         }
     }
@@ -151,9 +181,13 @@ pub(crate) fn resolve(
         return Err(CxfError::Validation(finalize_diags(diags, &HashMap::new())));
     }
 
-    let specialization = specialize(doc, &by_id, &mut diags);
+    let by_id: HashMap<&str, &Node> = by_id
+        .into_iter()
+        .map(|(id, (_, node))| (id, node))
+        .collect();
+    let (specialization, withheld) = specialize(doc, &by_id, &mut diags);
     array_nodes::reject_unsupported(doc, &specialization, &mut diags);
-    let lowered = lower(doc, &by_id, &specialization, &mut diags);
+    let lowered = lower(doc, &by_id, &specialization, withheld, &mut diags);
     let doc = &lowered.doc;
     let mut by_id: HashMap<&str, &Node> = HashMap::with_capacity(doc.graph.len());
     for node in &doc.graph {
@@ -215,14 +249,6 @@ pub(crate) fn resolve(
     // the registry (Step 4 folded in). block_of_iri is lookup-only.
     let mut block_of_iri: HashMap<&str, BlockId> = HashMap::with_capacity(child_iris.len());
     let mut blocks: Vec<BlockInstance> = Vec::with_capacity(child_iris.len());
-    // Remember each instance's node + port/param IRIs (in array order) for wiring/grounding.
-    struct Inst<'a> {
-        id: BlockId,
-        node: &'a Node,
-        input_iris: Vec<&'a str>,
-        output_iris: Vec<&'a str>,
-        inherited_scope: Vec<(Arc<str>, EvalResult)>,
-    }
     let mut insts: Vec<Inst> = Vec::with_capacity(child_iris.len());
     for (k, &child) in child_iris.iter().enumerate() {
         let Some(node) = by_id.get(child).copied() else {
@@ -292,13 +318,45 @@ pub(crate) fn resolve(
         });
     }
 
+    // Positions of every lowered `@graph` node — block-2 ordering below and Step 9's re-key
+    // both read it. Lookup-only.
+    let graph_pos: HashMap<&str, usize> = doc
+        .graph
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (n.id.as_str(), i))
+        .collect();
+
+    // --- Step 4b: derive `hasInstance` child interfaces and compare both-carrying instances
+    // (`_spec/19`; see `instance_interface`). Everything the derivation consumes is readable
+    // here (R19-4), and every skip verdict is reached before Step 5a numbers anything.
+    let derivation = {
+        let inst_meta: Vec<(BlockId, &Node, &str)> = insts
+            .iter()
+            .map(|i| (i.id, i.node, blocks[i.id.0 as usize].class_iri.as_ref()))
+            .collect();
+        instance_interface::derive(
+            &expanded,
+            &inst_meta,
+            &by_id,
+            &graph_pos,
+            &specialization,
+            &mut diags,
+        )
+    };
+
     // --- Step 5a: assign ConnectorId in @graph array order to every node referenced by an
     // instance port (boundary ports are referenced by the COMPOSITE, never an instance, so they are
-    // naturally excluded → no ConnectorId). conn_of_iri is lookup-only.
-    let instance_port_ids: HashSet<&str> = insts
+    // naturally excluded → no ConnectorId), the union taken over both dialects — authored
+    // references and derived member identities alike (node-less and padded identities are inert
+    // here, matching no `@graph` node). Synthesized connectors then number as one appended
+    // block, ordered by `(owner @graph position, class-signature concatenation position)` —
+    // the one total ConnectorId order of R19-5. conn_of_iri is lookup-only.
+    let mut instance_port_ids: HashSet<&str> = insts
         .iter()
         .flat_map(|i| i.input_iris.iter().chain(i.output_iris.iter()).copied())
         .collect();
+    instance_port_ids.extend(derivation.derived_port_identities());
     let mut conn_nodes: Vec<&Node> = Vec::new();
     let mut conn_of_iri: HashMap<&str, ConnectorId> = HashMap::new();
     for node in &doc.graph {
@@ -310,14 +368,23 @@ pub(crate) fn resolve(
             conn_nodes.push(node);
         }
     }
+    for (k, synth) in derivation.synthesized.iter().enumerate() {
+        conn_of_iri.insert(
+            synth.identity.as_str(),
+            ConnectorId((conn_nodes.len() + k) as u32),
+        );
+    }
 
     // --- Step 5b: wiring — direction + owner come authoritatively from the instance port lists
-    // (the side a connector is referenced on). Fill instance.inputs/outputs in array order.
-    let mut owner_dir: Vec<Option<(BlockId, Dir)>> = vec![None; conn_nodes.len()];
+    // (the side a connector is referenced on; a derived instance's signature-ordered vectors
+    // stand in for its absent authored lists). Fill instance.inputs/outputs in array order.
+    let mut owner_dir: Vec<Option<(BlockId, Dir)>> =
+        vec![None; conn_nodes.len() + derivation.synthesized.len()];
     for inst in &insts {
+        let (derived_in, derived_out) = port_views(&derivation, inst);
         for (slot, iris, dir) in [
-            (true, &inst.input_iris, Dir::In),
-            (false, &inst.output_iris, Dir::Out),
+            (true, &derived_in, Dir::In),
+            (false, &derived_out, Dir::Out),
         ] {
             for &iri in iris {
                 match conn_of_iri.get(iri).copied() {
@@ -357,9 +424,17 @@ pub(crate) fn resolve(
     // §7.4.1 attributes (unit/quantity/displayUnit/min/max) onto `Connector.attrs` so the §7.10 deep
     // gate (oce-validate) has something to *unify* — unification is oce-validate's job (AD-8), but the
     // declared attrs must flow from CXF first or the gate is dead on real input.
-    let mut connectors: Vec<Connector> = Vec::with_capacity(conn_nodes.len());
+    let mut connectors: Vec<Connector> =
+        Vec::with_capacity(conn_nodes.len() + derivation.synthesized.len());
     for (i, &node) in conn_nodes.iter().enumerate() {
-        let vt = derive_value_type(node, &mut diags);
+        // A derived member node types by R19-6's precedence — the signature `PortKind` with a
+        // resolvable declared type winning — and absence of a type is not a diagnostic there.
+        let vt = match derivation.member_value_fallback(node.id.as_str()) {
+            Some(fallback) => {
+                instance_interface::derive_member_value_type(node, fallback, &mut diags)
+            }
+            None => derive_value_type(node, &mut diags),
+        };
         let (block, dir) = owner_dir[i].unwrap_or_else(|| {
             diags.push(
                 Diagnostic::error(
@@ -371,77 +446,23 @@ pub(crate) fn resolve(
             (BlockId(0), Dir::In)
         });
         let mut c = Connector::new(ConnectorId(i as u32), block, dir, vt, i as u32);
+        c.iri = Some(Arc::from(node.id.as_str()));
         c.attrs = connector_attrs(node, vt, &mut diags);
         connectors.push(c);
     }
-
-    // --- Step 7: ground parameters (Ground mode) in hasParameter/hasConstant array order. A later
-    // binding may reference an earlier one via the incrementally-built ParamScope.
-    for inst in &insts {
-        let mut table: Vec<(Arc<str>, Value)> = Vec::new();
-        let mut scope_entries: Vec<(Arc<str>, EvalResult)> = inst.inherited_scope.clone();
-        // Collected (not lazily iterated) so the array branch can build the sibling-name set for its
-        // collision check. Order = hasParameter array order, then hasConstant array order.
-        let param_iris: Vec<&str> = inst
-            .node
-            .has_parameter
-            .iter()
-            .chain(inst.node.has_constant.iter())
-            .map(|r| r.id.as_str())
-            .collect();
-        for &piri in &param_iris {
-            let Some(pnode) = by_id.get(piri).copied() else {
-                diags.push(
-                    Diagnostic::error(DiagCode::UnresolvedReference, "parameter node not found")
-                        .with_subject(piri.to_owned()),
-                );
-                continue;
-            };
-            let Some(cxf_val) = &pnode.value else {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::GroundingFailed,
-                        "parameter has no value (Ground mode)",
-                    )
-                    .with_subject(piri.to_owned()),
-                );
-                continue;
-            };
-            validate_g36_parameter_value(
-                pnode,
-                cxf_val,
-                &ParamScope::new(&scope_entries),
-                &mut diags,
-            );
-            if pnode.is_array == Some(true) {
-                // A preserved array parameter expands to per-element scalar entries (doc 04 §3.6.1).
-                // Both CXF encodings (this, and pre-flattened k_1/k_2 scalars) converge here.
-                expand_array_param(
-                    piri,
-                    pnode,
-                    cxf_val,
-                    &param_iris,
-                    &mut table,
-                    &mut scope_entries,
-                    &mut diags,
-                );
-            } else {
-                // Scalar parameter.
-                let name: Arc<str> = Arc::from(local_name(piri));
-                match ground_value(cxf_val, &ParamScope::new(&scope_entries)) {
-                    Ok(v) => {
-                        scope_entries.push((Arc::clone(&name), EvalResult::Scalar(v.clone())));
-                        table.push((name, v));
-                    }
-                    Err(e) => diags.push(
-                        Diagnostic::error(DiagCode::GroundingFailed, e.to_string())
-                            .with_subject(piri.to_owned()),
-                    ),
-                }
-            }
-        }
-        blocks[inst.id.0 as usize].params = ParamTable { values: table };
+    // Block 2: synthesized connectors, in the ruled order, `decl_order` following the same
+    // total ConnectorId order (R19-5). Owner and direction come from the derivation — every
+    // synthesized identity is referenced by exactly the instance that derived it.
+    for (k, synth) in derivation.synthesized.iter().enumerate() {
+        let id = ConnectorId((conn_nodes.len() + k) as u32);
+        let mut c = Connector::new(id, synth.owner, synth.dir, synth.value_type, id.0);
+        c.iri = Some(Arc::from(synth.identity.as_str()));
+        connectors.push(c);
     }
+
+    // --- Step 7: ground parameters (Ground mode) — see `instance_params` for the order and
+    // the #239 enclosing-wins split.
+    ground_instance_params(&insts, &derivation, &by_id, &mut blocks, &mut diags);
 
     // --- Step 8: interface agreement — arity, then port identity. Arity must match or the
     // engine's emit-by-port-index would later index past `inputs`/`outputs` and PANIC on the tick.
@@ -451,6 +472,12 @@ pub(crate) fn resolve(
     // same-kind transposition is invisible to every other guard. See `port_binding`.
     for inst in &insts {
         let idx = inst.id.0 as usize;
+        // A derivation-refused instance never reaches the agreement check: its tagged refusal
+        // REPLACES the arity diagnostic — the same carve-out an unregistered class takes
+        // (R19-10) — and its members were withdrawn before anything was numbered.
+        if derivation.is_skipped(&inst.node.id) {
+            continue;
+        }
         let class_path = blocks[idx].class_iri.clone();
         if class_path.is_empty() {
             continue;
@@ -463,12 +490,13 @@ pub(crate) fn resolve(
             let sig = probe.resolved_signature();
             (sig.inputs.len(), sig.outputs.len())
         };
+        let (derived_in, derived_out) = port_views(&derivation, inst);
         port_binding::check_and_bind(
             &mut blocks[idx],
             &class_path,
             &inst.node.id,
             want,
-            (&inst.input_iris, &inst.output_iris),
+            (&derived_in, &derived_out),
             &mut diags,
         );
     }
@@ -480,6 +508,7 @@ pub(crate) fn resolve(
     let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
     let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
     let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut boundary_output_sources: HashMap<String, ConnectorId> = HashMap::new();
     // Boundary nodes never enter Step 6, so derive their types separately in deterministic graph
     // order. Keep failed derivations as `None`: the helper has already diagnosed the declaration,
     // and the elision arms must not add a placeholder-based TypeMismatch.
@@ -668,6 +697,9 @@ pub(crate) fn resolve(
                             .entry(target.to_owned())
                             .or_default()
                             .insert(format!("connector:{}", from.0));
+                        boundary_output_sources
+                            .entry(target.to_owned())
+                            .or_insert(from);
                     }
                     None => diags.push(
                         Diagnostic::error(
@@ -708,20 +740,18 @@ pub(crate) fn resolve(
         }
     }
 
-    for (output, drivers) in &boundary_output_drivers {
-        if drivers.len() > 1 {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::SingleAssignment,
-                    format!(
-                        "boundary output is multiply driven (distinct drivers {})",
-                        drivers.len()
-                    ),
-                )
-                .with_subject(output.clone()),
-            );
-        }
-    }
+    // Declared-interface checks (`boundary_outputs`): refuse a declared output whose IRI
+    // shadows an existing connector identity, refuse one with multiple distinct drivers, and
+    // warn for one whose node exists but that nothing drives.
+    boundary_outputs::check_declared_interface(
+        top,
+        &boundary_in,
+        &boundary_out,
+        &conn_of_iri,
+        &by_id,
+        &boundary_output_drivers,
+        &mut diags,
+    );
 
     // `external_inputs` was filled by walking `@graph`, appending each boundary target as it was
     // met — so within one boundary port the vector inherited the order of that port's
@@ -734,16 +764,12 @@ pub(crate) fn resolve(
     // is a same-kind port swap — the hazard `port_binding` exists to prevent, and one no arity or
     // kind check can see, because the count and the kinds are unchanged.
     //
-    // Re-key on the boundary port's own node position. Note the scope of the claim: `@graph` is an
-    // unordered set in JSON-LD, so this makes the order independent of the *array* spelling, not of
-    // node order — node order remains load-bearing here exactly as `resolve_golden` already records
-    // for the rest of the resolver.
-    let graph_pos: HashMap<&str, usize> = doc
-        .graph
-        .iter()
-        .enumerate()
-        .map(|(i, n)| (n.id.as_str(), i))
-        .collect();
+    // Re-key on the boundary port's own node position (`graph_pos`, built before Step 4b). Note
+    // the scope of the claim: `@graph` is an unordered set in JSON-LD, so this makes the order
+    // independent of the *array* spelling, not of node order — node order remains load-bearing
+    // here exactly as `resolve_golden` already records for the rest of the resolver.
+    let boundary_outputs =
+        boundary_outputs::materialize(doc, &boundary_output_sources, &boundary_types, &mut diags);
     pass_through_pairs.sort_by_key(|(input, output)| {
         (
             graph_pos.get(input.as_str()).copied().unwrap_or(usize::MAX),
@@ -756,6 +782,7 @@ pub(crate) fn resolve(
     pass_through::materialize(
         pass_through_pairs,
         &boundary_types,
+        &by_id,
         &mut blocks,
         &mut connectors,
         &mut external_inputs,
@@ -804,43 +831,7 @@ pub(crate) fn resolve(
 
     // --- Step 11: boundary-aware single-assignment pre-check (AD-2). in-degree per input over the
     // emitted connections; in-degree 0 is legal iff the input is an external boundary input.
-    let mut in_degree: HashMap<ConnectorId, u32> = HashMap::new();
-    for c in &connections {
-        *in_degree.entry(c.to).or_insert(0) += 1;
-    }
-    for conn in &connectors {
-        if conn.dir != Dir::In {
-            continue;
-        }
-        // A boundary input is elided into `external_inputs` rather than counted here, so a
-        // connector that is both an external entry and the target of one wire scores in-degree 1
-        // and is accepted. That is deliberate, not an oversight: it is the shape export/re-import
-        // produces, and folding boundary targets into this count would false-reject a graph that
-        // round-trips. `export_single_assignment.rs` pins it as the false-reject guard.
-        let deg = in_degree.get(&conn.id).copied().unwrap_or(0);
-        if deg == 1 {
-            continue;
-        }
-        if deg == 0 {
-            if !external_inputs.contains(&conn.id) {
-                diags.push(
-                    Diagnostic::error(
-                        DiagCode::SingleAssignment,
-                        "input is undriven (in-degree 0)",
-                    )
-                    .with_subject(subject_of(conn)),
-                );
-            }
-        } else {
-            diags.push(
-                Diagnostic::error(
-                    DiagCode::SingleAssignment,
-                    format!("input is multiply driven (in-degree {deg})"),
-                )
-                .with_subject(subject_of(conn)),
-            );
-        }
-    }
+    single_assignment::check(&connectors, &connections, &external_inputs, &mut diags);
 
     // --- Step 12: deterministic sort + return. On any Error (or any Warning under deny_warnings),
     // withhold the graph and return Err(CxfError::Validation).
@@ -853,6 +844,7 @@ pub(crate) fn resolve(
         connectors,
         connections,
         external_inputs,
+        boundary_outputs,
     };
     Ok((
         graph,

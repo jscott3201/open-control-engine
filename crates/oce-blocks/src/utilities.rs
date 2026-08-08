@@ -306,9 +306,18 @@ fn declination_angle(t: Time) -> f64 {
 }
 
 pub(crate) const SUN_RISE_SET_PARAM_RULES: &[crate::ParamRule] = &[
-    crate::ParamRule::Required { name: "lat" },
-    crate::ParamRule::Required { name: "lon" },
-    crate::ParamRule::Required { name: "timZon" },
+    crate::ParamRule::Required {
+        name: "lat",
+        kind: oce_model::ValueType::Real,
+    },
+    crate::ParamRule::Required {
+        name: "lon",
+        kind: oce_model::ValueType::Real,
+    },
+    crate::ParamRule::Required {
+        name: "timZon",
+        kind: oce_model::ValueType::Real,
+    },
     crate::ParamRule::RealGreaterOrEqual {
         name: "lat",
         min: LAT_MIN,

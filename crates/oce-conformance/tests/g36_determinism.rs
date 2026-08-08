@@ -2,16 +2,22 @@
 //!
 //! These fixtures are engine self-output snapshots, not independent correctness oracles.
 
-use oce_api::Value;
 use oce_conformance::drive_trace_with_options;
 
+#[path = "g36_determinism/sequence_inputs.rs"]
+mod sequence_inputs;
 #[path = "g36_determinism/support.rs"]
 mod support;
 
+use sequence_inputs::{
+    economizer_inputs, outdoor_airflow_inputs, plant_requests_inputs, relief_damper_inputs,
+    relief_fan_inputs, return_fan_airflow_inputs, return_fan_direct_pressure_inputs, sat_inputs,
+    supply_fan_inputs, supply_signals_inputs, supply_temperature_inputs, vav_inputs,
+};
 use support::{
     PointSpec, SequenceSpec, assert_exact_comparisons_pass, assert_output_table_shape,
     assert_provenance_matches_outputs, bless_enabled, bless_sequence, captured_output_table,
-    config_for, driver_reference_from_output_golden, options_for, pair, read_output_golden,
+    config_for, driver_reference_from_output_golden, options_for, read_output_golden,
 };
 
 const AHU_SAT_RESET: &str =
@@ -47,8 +53,6 @@ const SAT_COOLING_SETPOINT: &str =
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
 const SAT_SETPOINT: &str = "http://example.org#g36.ahu_supply_air_temp_reset.sat_setpoint";
 const SAT_COOLING_DEMAND: &str = "http://example.org#g36.ahu_supply_air_temp_reset.cooling_demand";
-const SAT_SETPOINT_RUNTIME: &str = "conn#14";
-const SAT_COOLING_DEMAND_RUNTIME: &str = "conn#4";
 
 const ECON_RETURN_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.return_air_temp";
 const ECON_OUTDOOR_AIR_TEMP: &str = "http://example.org#g36.ahu_economizer.outdoor_air_temp";
@@ -57,10 +61,6 @@ const ECON_ENABLED: &str = "http://example.org#g36.ahu_economizer.economizer_ena
 const ECON_DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damper_command";
 const ECON_OPERATING_MODE_REAL: &str = "http://example.org#g36.ahu_economizer.operating_mode_real";
 const ECON_OA_TEMP_DELTA: &str = "http://example.org#g36.ahu_economizer.oa_temperature_delta";
-const ECON_ENABLED_RUNTIME: &str = "conn#20";
-const ECON_DAMPER_COMMAND_RUNTIME: &str = "conn#26";
-const ECON_OPERATING_MODE_REAL_RUNTIME: &str = "conn#10";
-const ECON_OA_TEMP_DELTA_RUNTIME: &str = "conn#2";
 
 const VAV_ZONE_TEMP: &str = "http://example.org#g36.vav_single_zone.zone_temp";
 const VAV_COOLING_SETPOINT: &str = "http://example.org#g36.vav_single_zone.cooling_setpoint";
@@ -69,10 +69,6 @@ const VAV_DAMPER_COMMAND: &str = "http://example.org#g36.vav_single_zone.damper_
 const VAV_AIRFLOW_SETPOINT: &str = "http://example.org#g36.vav_single_zone.airflow_setpoint";
 const VAV_COOLING_SIGNAL: &str = "http://example.org#g36.vav_single_zone.cooling_signal";
 const VAV_HEATING_ENABLED: &str = "http://example.org#g36.vav_single_zone.heating_enabled";
-const VAV_DAMPER_COMMAND_RUNTIME: &str = "conn#18";
-const VAV_AIRFLOW_SETPOINT_RUNTIME: &str = "conn#16";
-const VAV_COOLING_SIGNAL_RUNTIME: &str = "conn#4";
-const VAV_HEATING_ENABLED_RUNTIME: &str = "conn#11";
 const SUPPLY_TEMPERATURE_OUTDOOR_AIR: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.TOut";
 const SUPPLY_TEMPERATURE_FAN_STATUS: &str =
@@ -83,7 +79,6 @@ const SUPPLY_TEMPERATURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.uZonTemResReq";
 const SUPPLY_TEMPERATURE_SETPOINT: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature.TAirSupSet";
-const SUPPLY_TEMPERATURE_SETPOINT_RUNTIME: &str = "conn#123";
 const SUPPLY_FAN_OPERATING_MODE: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uOpeMod";
 const SUPPLY_FAN_DUCT_PRESSURE: &str =
@@ -92,8 +87,6 @@ const SUPPLY_FAN_PRESSURE_REQUESTS: &str =
     "http://example.org#g36.source.multizone_vav_supply_fan.uZonPreResReq";
 const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_supply_fan.y1SupFan";
 const SUPPLY_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_supply_fan.ySupFan";
-const SUPPLY_FAN_STATUS_RUNTIME: &str = "conn#110";
-const SUPPLY_FAN_SPEED_RUNTIME: &str = "conn#107";
 const SUPPLY_SIGNALS_MEASURED_TEMP: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.TAirSup";
 const SUPPLY_SIGNALS_SETPOINT: &str =
@@ -106,9 +99,6 @@ const SUPPLY_SIGNALS_COOLING: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.yCooCoi";
 const SUPPLY_SIGNALS_HEATING: &str =
     "http://example.org#g36.source.multizone_vav_supply_signals.yHeaCoi";
-const SUPPLY_SIGNALS_U_T_SUP_RUNTIME: &str = "conn#7";
-const SUPPLY_SIGNALS_COOLING_RUNTIME: &str = "conn#18";
-const SUPPLY_SIGNALS_HEATING_RUNTIME: &str = "conn#24";
 const PLANT_REQUESTS_SUPPLY_AIR: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.TAirSup";
 const PLANT_REQUESTS_SETPOINT: &str =
@@ -125,10 +115,6 @@ const PLANT_REQUESTS_HOT_RESET: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatResReq";
 const PLANT_REQUESTS_HOT_PLANT: &str =
     "http://example.org#g36.source.multizone_vav_plant_requests.yHotWatPlaReq";
-const PLANT_REQUESTS_CHILLED_RESET_RUNTIME: &str = "conn#17";
-const PLANT_REQUESTS_CHILLER_RUNTIME: &str = "conn#42";
-const PLANT_REQUESTS_HOT_RESET_RUNTIME: &str = "conn#57";
-const PLANT_REQUESTS_HOT_PLANT_RUNTIME: &str = "conn#81";
 const OUTDOOR_AIRFLOW_POPULATION_FLOW: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.VSumAdjPopBreZon_flow";
 const OUTDOOR_AIRFLOW_AREA_FLOW: &str =
@@ -147,17 +133,12 @@ const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.effOutAir_normalized";
 const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED: &str =
     "http://example.org#g36.source.multizone_vav_outdoor_airflow_ahu.outAir_normalized";
-const OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME: &str = "conn#6";
-const OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME: &str = "conn#24";
-const OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME: &str = "conn#29";
-const OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME: &str = "conn#32";
 const RELIEF_DAMPER_BUILDING_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_relief_damper.dpBui";
 const RELIEF_DAMPER_SUPPLY_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_relief_damper.u1SupFan";
 const RELIEF_DAMPER_COMMAND: &str =
     "http://example.org#g36.source.multizone_vav_relief_damper.yRelDam";
-const RELIEF_DAMPER_COMMAND_RUNTIME: &str = "conn#3";
 const RELIEF_FAN_BUILDING_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_relief_fan.dpBui";
 const RELIEF_FAN_SUPPLY_FAN_STATUS: &str =
@@ -169,10 +150,6 @@ const RELIEF_FAN_DAMPER_STATUS: &str =
 const RELIEF_FAN_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_relief_fan.yRelFan";
 const RELIEF_FAN_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_relief_fan.y1RelFan";
-const RELIEF_FAN_AVERAGED_PRESSURE_RUNTIME: &str = "conn#1";
-const RELIEF_FAN_DAMPER_STATUS_RUNTIME: &str = "conn#38";
-const RELIEF_FAN_FAN_SPEED_RUNTIME: &str = "conn#46";
-const RELIEF_FAN_FAN_STATUS_RUNTIME: &str = "conn#41";
 const RETURN_FAN_AIRFLOW_SUPPLY: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.VAirSup_flow";
 const RETURN_FAN_AIRFLOW_RETURN: &str =
@@ -182,9 +159,6 @@ const RETURN_FAN_AIRFLOW_SUPPLY_FAN: &str =
 const RETURN_FAN_AIRFLOW_SPEED: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.yRetFan";
 const RETURN_FAN_AIRFLOW_STATUS: &str =
-    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
-const RETURN_FAN_AIRFLOW_SPEED_RUNTIME: &str = "conn#6";
-const RETURN_FAN_AIRFLOW_STATUS_RUNTIME: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 const RETURN_FAN_DIRECT_PRESSURE_BUILDING_PRESSURE: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.dpBui";
@@ -202,20 +176,14 @@ const RETURN_FAN_DIRECT_PRESSURE_SPEED: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.yRetFan";
 const RETURN_FAN_DIRECT_PRESSURE_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
-const RETURN_FAN_DIRECT_PRESSURE_AVERAGED_PRESSURE_RUNTIME: &str = "conn#1";
-const RETURN_FAN_DIRECT_PRESSURE_RELIEF_DAMPER_RUNTIME: &str = "conn#20";
-const RETURN_FAN_DIRECT_PRESSURE_DISCHARGE_PRESSURE_RUNTIME: &str = "conn#24";
-const RETURN_FAN_DIRECT_PRESSURE_SPEED_RUNTIME: &str = "conn#37";
-const RETURN_FAN_DIRECT_PRESSURE_STATUS_RUNTIME: &str =
-    "http://example.org#g36.source.multizone_vav_return_fan_direct_pressure.y1RetFan";
 
 const SAT_INPUTS: &[PointSpec] = &[
     PointSpec::real(SAT_ZONE_TEMP),
     PointSpec::real(SAT_COOLING_SETPOINT),
 ];
 const SAT_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(SAT_SETPOINT, SAT_SETPOINT_RUNTIME),
-    PointSpec::real_alias(SAT_COOLING_DEMAND, SAT_COOLING_DEMAND_RUNTIME),
+    PointSpec::real(SAT_SETPOINT),
+    PointSpec::real(SAT_COOLING_DEMAND),
 ];
 
 const ECON_INPUTS: &[PointSpec] = &[
@@ -224,10 +192,10 @@ const ECON_INPUTS: &[PointSpec] = &[
     PointSpec::integer(ECON_OPERATING_MODE),
 ];
 const ECON_OUTPUTS: &[PointSpec] = &[
-    PointSpec::boolean_alias(ECON_ENABLED, ECON_ENABLED_RUNTIME),
-    PointSpec::real_alias(ECON_DAMPER_COMMAND, ECON_DAMPER_COMMAND_RUNTIME),
-    PointSpec::real_alias(ECON_OPERATING_MODE_REAL, ECON_OPERATING_MODE_REAL_RUNTIME),
-    PointSpec::real_alias(ECON_OA_TEMP_DELTA, ECON_OA_TEMP_DELTA_RUNTIME),
+    PointSpec::boolean(ECON_ENABLED),
+    PointSpec::real(ECON_DAMPER_COMMAND),
+    PointSpec::real(ECON_OPERATING_MODE_REAL),
+    PointSpec::real(ECON_OA_TEMP_DELTA),
 ];
 
 const VAV_INPUTS: &[PointSpec] = &[
@@ -236,10 +204,10 @@ const VAV_INPUTS: &[PointSpec] = &[
     PointSpec::real(VAV_HEATING_SETPOINT),
 ];
 const VAV_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(VAV_DAMPER_COMMAND, VAV_DAMPER_COMMAND_RUNTIME),
-    PointSpec::real_alias(VAV_AIRFLOW_SETPOINT, VAV_AIRFLOW_SETPOINT_RUNTIME),
-    PointSpec::real_alias(VAV_COOLING_SIGNAL, VAV_COOLING_SIGNAL_RUNTIME),
-    PointSpec::boolean_alias(VAV_HEATING_ENABLED, VAV_HEATING_ENABLED_RUNTIME),
+    PointSpec::real(VAV_DAMPER_COMMAND),
+    PointSpec::real(VAV_AIRFLOW_SETPOINT),
+    PointSpec::real(VAV_COOLING_SIGNAL),
+    PointSpec::boolean(VAV_HEATING_ENABLED),
 ];
 const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
     PointSpec::real(SUPPLY_TEMPERATURE_OUTDOOR_AIR),
@@ -247,18 +215,15 @@ const SUPPLY_TEMPERATURE_INPUTS: &[PointSpec] = &[
     PointSpec::integer(SUPPLY_TEMPERATURE_OPERATING_MODE),
     PointSpec::integer(SUPPLY_TEMPERATURE_REQUESTS),
 ];
-const SUPPLY_TEMPERATURE_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
-    SUPPLY_TEMPERATURE_SETPOINT,
-    SUPPLY_TEMPERATURE_SETPOINT_RUNTIME,
-)];
+const SUPPLY_TEMPERATURE_OUTPUTS: &[PointSpec] = &[PointSpec::real(SUPPLY_TEMPERATURE_SETPOINT)];
 const SUPPLY_FAN_INPUTS: &[PointSpec] = &[
     PointSpec::integer(SUPPLY_FAN_OPERATING_MODE),
     PointSpec::real(SUPPLY_FAN_DUCT_PRESSURE),
     PointSpec::integer(SUPPLY_FAN_PRESSURE_REQUESTS),
 ];
 const SUPPLY_FAN_OUTPUTS: &[PointSpec] = &[
-    PointSpec::boolean_alias(SUPPLY_FAN_STATUS, SUPPLY_FAN_STATUS_RUNTIME),
-    PointSpec::real_alias(SUPPLY_FAN_SPEED, SUPPLY_FAN_SPEED_RUNTIME),
+    PointSpec::boolean(SUPPLY_FAN_STATUS),
+    PointSpec::real(SUPPLY_FAN_SPEED),
 ];
 const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
     PointSpec::real(SUPPLY_SIGNALS_MEASURED_TEMP),
@@ -266,9 +231,9 @@ const SUPPLY_SIGNALS_INPUTS: &[PointSpec] = &[
     PointSpec::boolean(SUPPLY_SIGNALS_FAN_STATUS),
 ];
 const SUPPLY_SIGNALS_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(SUPPLY_SIGNALS_U_T_SUP, SUPPLY_SIGNALS_U_T_SUP_RUNTIME),
-    PointSpec::real_alias(SUPPLY_SIGNALS_HEATING, SUPPLY_SIGNALS_HEATING_RUNTIME),
-    PointSpec::real_alias(SUPPLY_SIGNALS_COOLING, SUPPLY_SIGNALS_COOLING_RUNTIME),
+    PointSpec::real(SUPPLY_SIGNALS_U_T_SUP),
+    PointSpec::real(SUPPLY_SIGNALS_HEATING),
+    PointSpec::real(SUPPLY_SIGNALS_COOLING),
 ];
 const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
     PointSpec::real(PLANT_REQUESTS_SUPPLY_AIR),
@@ -277,13 +242,10 @@ const PLANT_REQUESTS_INPUTS: &[PointSpec] = &[
     PointSpec::real(PLANT_REQUESTS_HEATING_VALVE),
 ];
 const PLANT_REQUESTS_OUTPUTS: &[PointSpec] = &[
-    PointSpec::integer_alias(
-        PLANT_REQUESTS_CHILLED_RESET,
-        PLANT_REQUESTS_CHILLED_RESET_RUNTIME,
-    ),
-    PointSpec::integer_alias(PLANT_REQUESTS_CHILLER, PLANT_REQUESTS_CHILLER_RUNTIME),
-    PointSpec::integer_alias(PLANT_REQUESTS_HOT_RESET, PLANT_REQUESTS_HOT_RESET_RUNTIME),
-    PointSpec::integer_alias(PLANT_REQUESTS_HOT_PLANT, PLANT_REQUESTS_HOT_PLANT_RUNTIME),
+    PointSpec::integer(PLANT_REQUESTS_CHILLED_RESET),
+    PointSpec::integer(PLANT_REQUESTS_CHILLER),
+    PointSpec::integer(PLANT_REQUESTS_HOT_RESET),
+    PointSpec::integer(PLANT_REQUESTS_HOT_PLANT),
 ];
 const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
     PointSpec::real(OUTDOOR_AIRFLOW_POPULATION_FLOW),
@@ -293,40 +255,25 @@ const OUTDOOR_AIRFLOW_INPUTS: &[PointSpec] = &[
     PointSpec::real(OUTDOOR_AIRFLOW_MEASURED_FLOW),
 ];
 const OUTDOOR_AIRFLOW_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        OUTDOOR_AIRFLOW_UNCORRECTED,
-        OUTDOOR_AIRFLOW_UNCORRECTED_RUNTIME,
-    ),
-    PointSpec::real_alias(OUTDOOR_AIRFLOW_EFFECTIVE, OUTDOOR_AIRFLOW_EFFECTIVE_RUNTIME),
-    PointSpec::real_alias(
-        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED,
-        OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED,
-        OUTDOOR_AIRFLOW_MEASURED_NORMALIZED_RUNTIME,
-    ),
+    PointSpec::real(OUTDOOR_AIRFLOW_UNCORRECTED),
+    PointSpec::real(OUTDOOR_AIRFLOW_EFFECTIVE),
+    PointSpec::real(OUTDOOR_AIRFLOW_EFFECTIVE_NORMALIZED),
+    PointSpec::real(OUTDOOR_AIRFLOW_MEASURED_NORMALIZED),
 ];
 const RELIEF_DAMPER_INPUTS: &[PointSpec] = &[
     PointSpec::real(RELIEF_DAMPER_BUILDING_PRESSURE),
     PointSpec::boolean(RELIEF_DAMPER_SUPPLY_FAN_STATUS),
 ];
-const RELIEF_DAMPER_OUTPUTS: &[PointSpec] = &[PointSpec::real_alias(
-    RELIEF_DAMPER_COMMAND,
-    RELIEF_DAMPER_COMMAND_RUNTIME,
-)];
+const RELIEF_DAMPER_OUTPUTS: &[PointSpec] = &[PointSpec::real(RELIEF_DAMPER_COMMAND)];
 const RELIEF_FAN_INPUTS: &[PointSpec] = &[
     PointSpec::real(RELIEF_FAN_BUILDING_PRESSURE),
     PointSpec::boolean(RELIEF_FAN_SUPPLY_FAN_STATUS),
 ];
 const RELIEF_FAN_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        RELIEF_FAN_AVERAGED_PRESSURE,
-        RELIEF_FAN_AVERAGED_PRESSURE_RUNTIME,
-    ),
-    PointSpec::boolean_alias(RELIEF_FAN_DAMPER_STATUS, RELIEF_FAN_DAMPER_STATUS_RUNTIME),
-    PointSpec::boolean_alias(RELIEF_FAN_FAN_STATUS, RELIEF_FAN_FAN_STATUS_RUNTIME),
-    PointSpec::real_alias(RELIEF_FAN_FAN_SPEED, RELIEF_FAN_FAN_SPEED_RUNTIME),
+    PointSpec::real(RELIEF_FAN_AVERAGED_PRESSURE),
+    PointSpec::boolean(RELIEF_FAN_DAMPER_STATUS),
+    PointSpec::boolean(RELIEF_FAN_FAN_STATUS),
+    PointSpec::real(RELIEF_FAN_FAN_SPEED),
 ];
 const RETURN_FAN_AIRFLOW_INPUTS: &[PointSpec] = &[
     PointSpec::real(RETURN_FAN_AIRFLOW_SUPPLY),
@@ -334,8 +281,8 @@ const RETURN_FAN_AIRFLOW_INPUTS: &[PointSpec] = &[
     PointSpec::boolean(RETURN_FAN_AIRFLOW_SUPPLY_FAN),
 ];
 const RETURN_FAN_AIRFLOW_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(RETURN_FAN_AIRFLOW_SPEED, RETURN_FAN_AIRFLOW_SPEED_RUNTIME),
-    PointSpec::boolean_alias(RETURN_FAN_AIRFLOW_STATUS, RETURN_FAN_AIRFLOW_STATUS_RUNTIME),
+    PointSpec::real(RETURN_FAN_AIRFLOW_SPEED),
+    PointSpec::boolean(RETURN_FAN_AIRFLOW_STATUS),
 ];
 const RETURN_FAN_DIRECT_PRESSURE_INPUTS: &[PointSpec] = &[
     PointSpec::real(RETURN_FAN_DIRECT_PRESSURE_BUILDING_PRESSURE),
@@ -343,26 +290,11 @@ const RETURN_FAN_DIRECT_PRESSURE_INPUTS: &[PointSpec] = &[
     PointSpec::boolean(RETURN_FAN_DIRECT_PRESSURE_SUPPLY_FAN),
 ];
 const RETURN_FAN_DIRECT_PRESSURE_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        RETURN_FAN_DIRECT_PRESSURE_AVERAGED_PRESSURE,
-        RETURN_FAN_DIRECT_PRESSURE_AVERAGED_PRESSURE_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        RETURN_FAN_DIRECT_PRESSURE_RELIEF_DAMPER,
-        RETURN_FAN_DIRECT_PRESSURE_RELIEF_DAMPER_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        RETURN_FAN_DIRECT_PRESSURE_DISCHARGE_PRESSURE,
-        RETURN_FAN_DIRECT_PRESSURE_DISCHARGE_PRESSURE_RUNTIME,
-    ),
-    PointSpec::real_alias(
-        RETURN_FAN_DIRECT_PRESSURE_SPEED,
-        RETURN_FAN_DIRECT_PRESSURE_SPEED_RUNTIME,
-    ),
-    PointSpec::boolean_alias(
-        RETURN_FAN_DIRECT_PRESSURE_STATUS,
-        RETURN_FAN_DIRECT_PRESSURE_STATUS_RUNTIME,
-    ),
+    PointSpec::real(RETURN_FAN_DIRECT_PRESSURE_AVERAGED_PRESSURE),
+    PointSpec::real(RETURN_FAN_DIRECT_PRESSURE_RELIEF_DAMPER),
+    PointSpec::real(RETURN_FAN_DIRECT_PRESSURE_DISCHARGE_PRESSURE),
+    PointSpec::real(RETURN_FAN_DIRECT_PRESSURE_SPEED),
+    PointSpec::boolean(RETURN_FAN_DIRECT_PRESSURE_STATUS),
 ];
 
 const SEQUENCES: &[SequenceSpec] = &[
@@ -503,235 +435,4 @@ fn g36_whole_sequence_outputs_match_determinism_goldens() {
         );
         assert_exact_comparisons_pass(spec, golden.n_rows, &run.comparisons);
     }
-}
-
-fn sat_inputs(t: f64) -> Vec<(String, Value)> {
-    let zone_temp = match t as u32 {
-        0 => 22.0,
-        1 => 24.0,
-        2 => 24.5,
-        _ => 25.5,
-    };
-    vec![
-        pair(SAT_ZONE_TEMP, Value::Real(zone_temp)),
-        pair(SAT_COOLING_SETPOINT, Value::Real(24.0)),
-    ]
-}
-
-fn economizer_inputs(t: f64) -> Vec<(String, Value)> {
-    let (return_temp, outdoor_temp, operating_mode) = match t as u32 {
-        0 => (24.0, 23.0, 1),
-        1..=3 => (24.0, 19.0, 1),
-        4 => (24.0, 24.0, 1),
-        _ => (24.0, 19.0, 0),
-    };
-    vec![
-        pair(ECON_RETURN_AIR_TEMP, Value::Real(return_temp)),
-        pair(ECON_OUTDOOR_AIR_TEMP, Value::Real(outdoor_temp)),
-        pair(ECON_OPERATING_MODE, Value::Integer(operating_mode)),
-    ]
-}
-
-fn vav_inputs(t: f64) -> Vec<(String, Value)> {
-    let zone_temp = match t as u32 {
-        0 => 22.0,
-        1 => 27.0,
-        2 => 27.5,
-        3 => 19.0,
-        4 => 19.3,
-        _ => 21.0,
-    };
-    vec![
-        pair(VAV_ZONE_TEMP, Value::Real(zone_temp)),
-        pair(VAV_COOLING_SETPOINT, Value::Real(24.0)),
-        pair(VAV_HEATING_SETPOINT, Value::Real(20.0)),
-    ]
-}
-
-fn supply_temperature_inputs(t: f64) -> Vec<(String, Value)> {
-    let requests = if t >= 840.0 {
-        6
-    } else if t >= 720.0 {
-        3
-    } else {
-        0
-    };
-    vec![
-        pair(SUPPLY_TEMPERATURE_OUTDOOR_AIR, Value::Real(289.15)),
-        pair(SUPPLY_TEMPERATURE_FAN_STATUS, Value::Boolean(true)),
-        pair(SUPPLY_TEMPERATURE_OPERATING_MODE, Value::Integer(1)),
-        pair(SUPPLY_TEMPERATURE_REQUESTS, Value::Integer(requests)),
-    ]
-}
-
-fn supply_fan_inputs(t: f64) -> Vec<(String, Value)> {
-    let operating_mode = match t as u32 {
-        300..=359 => 4,
-        _ => 1,
-    };
-    let pressure_requests = if t >= 840.0 {
-        5
-    } else if t >= 720.0 {
-        3
-    } else {
-        0
-    };
-    let duct_pressure = if t >= 720.0 { 80.0 } else { 120.0 };
-    vec![
-        pair(SUPPLY_FAN_OPERATING_MODE, Value::Integer(operating_mode)),
-        pair(SUPPLY_FAN_DUCT_PRESSURE, Value::Real(duct_pressure)),
-        pair(
-            SUPPLY_FAN_PRESSURE_REQUESTS,
-            Value::Integer(pressure_requests),
-        ),
-    ]
-}
-
-fn supply_signals_inputs(t: f64) -> Vec<(String, Value)> {
-    let row = t as usize;
-    let setpoint = [
-        295.0, 295.0, 295.0, 300.0, 295.0, 295.0, 320.0, 320.0, 320.0, 320.0,
-    ][row.min(9)];
-    let measured = [
-        300.0, 300.0, 300.0, 295.0, 310.0, 320.0, 295.0, 295.0, 295.0, 295.0,
-    ][row.min(9)];
-    let fan_status = [false, true, true, true, true, true, true, false, true, true][row.min(9)];
-    vec![
-        pair(SUPPLY_SIGNALS_MEASURED_TEMP, Value::Real(measured)),
-        pair(SUPPLY_SIGNALS_SETPOINT, Value::Real(setpoint)),
-        pair(SUPPLY_SIGNALS_FAN_STATUS, Value::Boolean(fan_status)),
-    ]
-}
-
-fn plant_requests_inputs(t: f64) -> Vec<(String, Value)> {
-    let row = ((t / 60.0).round() as usize).min(19);
-    let supply_air_setpoint = [
-        300.0, 295.0, 295.0, 295.0, 295.0, 300.0, 300.0, 300.0, 300.0, 320.0, 320.0, 320.0, 320.0,
-        320.0, 320.0, 310.0, 300.0, 300.0, 300.0, 300.0,
-    ][row];
-    let supply_air_temperature = [
-        300.0, 299.0, 299.0, 299.0, 297.5, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
-        300.0, 300.0, 300.0, 300.0, 300.0, 300.0, 300.0,
-    ][row];
-    let cooling_coil_valve = [
-        0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9, 0.8, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
-        0.05, 0.05, 0.05, 0.05,
-    ][row];
-    let heating_coil_valve = [
-        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.9,
-        0.8, 0.05,
-    ][row];
-
-    vec![
-        pair(
-            PLANT_REQUESTS_SUPPLY_AIR,
-            Value::Real(supply_air_temperature),
-        ),
-        pair(PLANT_REQUESTS_SETPOINT, Value::Real(supply_air_setpoint)),
-        pair(
-            PLANT_REQUESTS_COOLING_VALVE,
-            Value::Real(cooling_coil_valve),
-        ),
-        pair(
-            PLANT_REQUESTS_HEATING_VALVE,
-            Value::Real(heating_coil_valve),
-        ),
-    ]
-}
-
-fn outdoor_airflow_inputs(t: f64) -> Vec<(String, Value)> {
-    let (population, area, primary, fraction, measured) = match t as u32 {
-        0 => (1.0, 1.0, 5.0, 0.2, 4.0),
-        1 => (4.0, 5.0, 2.0, 0.2, 6.0),
-        2 => (0.002, 0.001, 0.0, 0.4, 0.1),
-        3 => (0.0, 0.0, 1.0, 1.5, 9.0),
-        _ => (5.0, 5.0, 100.0, 0.99, 8.8),
-    };
-
-    vec![
-        pair(OUTDOOR_AIRFLOW_POPULATION_FLOW, Value::Real(population)),
-        pair(OUTDOOR_AIRFLOW_AREA_FLOW, Value::Real(area)),
-        pair(OUTDOOR_AIRFLOW_PRIMARY_FLOW, Value::Real(primary)),
-        pair(OUTDOOR_AIRFLOW_MAX_FRACTION, Value::Real(fraction)),
-        pair(OUTDOOR_AIRFLOW_MEASURED_FLOW, Value::Real(measured)),
-    ]
-}
-
-fn relief_damper_inputs(t: f64) -> Vec<(String, Value)> {
-    let (pressure, fan_status) = match t as u32 {
-        0 => (10.0, false),
-        1 => (12.0, true),
-        2 => (13.0, true),
-        3 => (14.0, true),
-        4 => (15.0, true),
-        _ => (20.0, false),
-    };
-
-    vec![
-        pair(RELIEF_DAMPER_BUILDING_PRESSURE, Value::Real(pressure)),
-        pair(RELIEF_DAMPER_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
-    ]
-}
-
-fn relief_fan_inputs(t: f64) -> Vec<(String, Value)> {
-    let pressure = if t < 300.0 {
-        12.0
-    } else if t <= 1020.0 {
-        18.0
-    } else {
-        12.0
-    };
-    let fan_status = t >= 300.0;
-
-    vec![
-        pair(RELIEF_FAN_BUILDING_PRESSURE, Value::Real(pressure)),
-        pair(RELIEF_FAN_SUPPLY_FAN_STATUS, Value::Boolean(fan_status)),
-    ]
-}
-
-fn return_fan_airflow_inputs(t: f64) -> Vec<(String, Value)> {
-    let (supply_airflow, return_airflow, supply_fan_status) = match t as u32 {
-        0 => (5.0, 4.0, false),
-        1 => (5.25, 4.0, true),
-        2 => (5.0, 4.0, true),
-        3 => (4.75, 4.0, true),
-        4 => (5.5, 4.0, false),
-        5 => (5.0, 4.0, true),
-        _ => (4.5, 4.0, true),
-    };
-
-    vec![
-        pair(RETURN_FAN_AIRFLOW_SUPPLY, Value::Real(supply_airflow)),
-        pair(RETURN_FAN_AIRFLOW_RETURN, Value::Real(return_airflow)),
-        pair(
-            RETURN_FAN_AIRFLOW_SUPPLY_FAN,
-            Value::Boolean(supply_fan_status),
-        ),
-    ]
-}
-
-fn return_fan_direct_pressure_inputs(t: f64) -> Vec<(String, Value)> {
-    let (building_pressure, min_outdoor_air_damper, supply_fan_status) = match t as u32 {
-        0 => (12.0, true, false),
-        1 => (9.009, false, true),
-        2 => (21.006, true, true),
-        3 => (-21.012, true, true),
-        4 => (135.033, true, true),
-        _ => (-264.06, true, true),
-    };
-
-    vec![
-        pair(
-            RETURN_FAN_DIRECT_PRESSURE_BUILDING_PRESSURE,
-            Value::Real(building_pressure),
-        ),
-        pair(
-            RETURN_FAN_DIRECT_PRESSURE_MIN_OUTDOOR_AIR_DAMPER,
-            Value::Boolean(min_outdoor_air_damper),
-        ),
-        pair(
-            RETURN_FAN_DIRECT_PRESSURE_SUPPLY_FAN,
-            Value::Boolean(supply_fan_status),
-        ),
-    ]
 }

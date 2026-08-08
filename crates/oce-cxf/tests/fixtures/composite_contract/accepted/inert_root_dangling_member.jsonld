@@ -1,0 +1,50 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inert_root_dangling_member",
+      "@type": "S231:Block",
+      "S231:label": "inert_root_dangling_member",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.inert_root_dangling_member.ghost"
+        }
+      ],
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.inert_root_dangling_member.con"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_root_dangling_member.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_root_dangling_member.con.k"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_root_dangling_member.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_root_dangling_member.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_root_dangling_member.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

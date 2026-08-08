@@ -66,15 +66,24 @@ pub(super) const INTEGER_STAGE_PARAM_DEFAULTS: &[ParamDefault] = &[
 /// Upstream declares these parameters with NO default value (pin `a131864`):
 /// `Integers/Sources/Constant.k` and `Integers/AddParameter.p`. Omitting one previously fell
 /// through to a silent engine default (k=0 / p=0).
-pub(super) const INTEGER_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required { name: "k" }];
+pub(super) const INTEGER_CONSTANT_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "k",
+    kind: oce_model::ValueType::Integer,
+}];
 
-pub(super) const INTEGER_ADD_PARAMETER_PARAM_RULES: &[ParamRule] =
-    &[ParamRule::Required { name: "p" }];
+pub(super) const INTEGER_ADD_PARAMETER_PARAM_RULES: &[ParamRule] = &[ParamRule::Required {
+    name: "p",
+    kind: oce_model::ValueType::Integer,
+}];
 
 pub(super) const STAGE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "n" },
+    ParamRule::Required {
+        name: "n",
+        kind: oce_model::ValueType::Integer,
+    },
     ParamRule::Required {
         name: "holdDuration",
+        kind: oce_model::ValueType::Real,
     },
     ParamRule::IntegerGreaterOrEqual { name: "n", min: 1 },
     ParamRule::RealGreaterOrEqual {
@@ -106,7 +115,10 @@ pub(super) const MULTI_SUM_PARAM_RULES: &[ParamRule] = &[
 ];
 
 pub(super) const TIME_TABLE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "period" },
+    ParamRule::Required {
+        name: "period",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::TimeTableMatrix {
         base: "table",
         values: TimeTableValues::Integer,

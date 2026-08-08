@@ -1,0 +1,123 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#M",
+      "@type": "S231:Block",
+      "S231:label": "M",
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#M.con"
+        },
+        {
+          "@id": "http://example.org#M.post"
+        }
+      ],
+      "S231:hasOutput": {
+        "@id": "http://example.org#M.y"
+      }
+    },
+    {
+      "@id": "http://example.org#M.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": {
+        "@id": "http://example.org#M.con.k"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#M.con.protected"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#M.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con.protected",
+      "S231:label": "protected",
+      "S231:hasInput": {
+        "@id": "http://example.org#M.con.protected.arr"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con.protected.arr",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true
+    },
+    {
+      "@id": "http://example.org#M.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#M.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#M.post.u"
+      }
+    },
+    {
+      "@id": "http://example.org#M.post",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "post",
+      "S231:hasParameter": {
+        "@id": "http://example.org#M.post.k"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#M.post.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#M.post.y"
+      }
+    },
+    {
+      "@id": "http://example.org#M.post.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "4.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#M.post.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#M.post.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#M.y"
+      }
+    }
+  ]
+}

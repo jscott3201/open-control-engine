@@ -9,7 +9,7 @@ mod support;
 
 use std::alloc::System;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use oce_api::oce_store::{
     DomainKey, Durability, Durable, EquipmentDto, ModelStore, OcValue, PointHandle, PointListRow,
@@ -23,6 +23,11 @@ use support::recording_store::{RecordingStore, StoreCallSnapshot};
 
 #[global_allocator]
 static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
+
+// The meter is process-global and plain `cargo test` runs tests thread-parallel in one process, so
+// every test serializes on this lock to keep concurrent heap traffic out of an open `Region`
+// (nextest, the gate's runner, is process-per-test and unaffected).
+static METER: Mutex<()> = Mutex::new(());
 
 const AHU_SAT_RESET: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -67,6 +72,8 @@ const NO_STORE_INPUTS: &str = r##"{
   ]
 }"##;
 
+const REALTIME_EPOCH: u64 = 1_700_000_000_000_000_000;
+
 const SAT_ZONE_TEMP: &str = "http://example.org#g36.ahu_supply_air_temp_reset.zone_temp";
 const SAT_COOLING_SETPOINT: &str =
     "http://example.org#g36.ahu_supply_air_temp_reset.cooling_setpoint";
@@ -107,6 +114,9 @@ const G36_FIXTURES: &[G36Fixture] = &[
 
 #[test]
 fn g36_tick_path_stays_store_pure_and_alloc_free() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     assert_recording_store_guard_and_counters_are_live();
     assert_read_resolved_returns_none_for_missing_handles();
     assert_load_saves_model_once_and_tick_does_not_save_again();
@@ -116,7 +126,51 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
 }
 
 #[test]
+fn warm_step_realtime_allocates_only_the_snapshot_box() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    // The resolve-once durable batch (issue #242 slice 1): after load-time identity minting, a
+    // warm `step_realtime` must allocate exactly what a bare `tick` does — the one frozen
+    // `Box<dyn PointSnapshot>` — with the write path contributing zero heap traffic. The floor
+    // is re-measured per step (never a hardcoded literal), so the pin tracks the snapshot seam
+    // rather than restating it. Before the fix this asserted n_out + 3 allocations per step
+    // (one path String per durable row plus two fresh Vec collects on top of the Box).
+    for fixture in G36_FIXTURES {
+        let store = Arc::new(MemStore::new());
+        let mut engine = Engine::with_store(Arc::clone(&store));
+        engine
+            .load_cxf(fixture.cxf.as_bytes())
+            .unwrap_or_else(|e| panic!("{} fixture loads: {e:?}", fixture.name));
+        engine.set_realtime_epoch_unix_nanos(REALTIME_EPOCH);
+
+        // Warm step: first-write key insertion into MemStore lands here, not in the measurement.
+        write_inputs_to_store(store.as_ref(), (fixture.inputs)(0.0), 0);
+        engine
+            .step_realtime(0.0)
+            .unwrap_or_else(|e| panic!("{} fixture warms step_realtime: {e:?}", fixture.name));
+
+        for step in 1..=fixture.t_stop {
+            let t = step as f64;
+            write_inputs_to_store(store.as_ref(), (fixture.inputs)(t), step);
+
+            let snapshot_floor = snapshot_alloc_stats(store.as_ref(), fixture.name, t);
+            assert_box_snapshot_floor(snapshot_floor, fixture.name, t);
+
+            let region = Region::new(GLOBAL);
+            engine
+                .step_realtime(t)
+                .unwrap_or_else(|e| panic!("{} fixture steps at t={t}: {e:?}", fixture.name));
+            assert_same_alloc_stats(region.change(), snapshot_floor, fixture.name, t);
+        }
+    }
+}
+
+#[test]
 fn watch_read_allocates_and_is_visible_to_the_meter() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let fixture = &G36_FIXTURES[0];
     let store = Arc::new(AllocationStore::default());
     let mut engine = Engine::with_store(store);
@@ -153,6 +207,9 @@ fn watch_read_allocates_and_is_visible_to_the_meter() {
 
 #[test]
 fn no_store_input_tick_path_skips_snapshot_and_reads() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let store = Arc::new(RecordingStore::default());
     let mut engine = Engine::with_store(Arc::clone(&store));
     let report = engine
@@ -689,4 +746,54 @@ fn vav_inputs(t: f64) -> Vec<(String, Value)> {
         pair(VAV_COOLING_SETPOINT, Value::Real(24.0)),
         pair(VAV_HEATING_SETPOINT, Value::Real(20.0)),
     ]
+}
+
+#[test]
+fn constant_staging_allocation_cost_is_per_run_not_per_tick() {
+    let _meter = METER
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    // A FLOOR, and only a floor. Resolve-once `Constant` staging (issue #242) is a CPU
+    // improvement: staging allocated nothing per tick before the change and allocates nothing per
+    // tick after it, so no allocation figure here measures that win and none is claimed. What this
+    // pins is that staging never *becomes* per-tick heap traffic — the gap between a staged run and
+    // an unstaged one is a per-run constant (the resolved plan `Vec`), the same at 100 ticks as at
+    // 1000. Were the plan rebuilt per step, the long run's gap would outgrow the short one's.
+    let gap = |ticks: u64| -> i64 {
+        let staged = simulate_allocations(InputSource::Constant(sat_reset_pairs()), ticks);
+        let bare = simulate_allocations(InputSource::None, ticks);
+        staged as i64 - bare as i64
+    };
+    let short = gap(100);
+    let long = gap(1_000);
+    assert_eq!(
+        short, long,
+        "Constant staging must cost a fixed number of allocations per run, not per tick: \
+         {short} over 100 ticks vs {long} over 1000"
+    );
+}
+
+fn sat_reset_pairs() -> Vec<(String, Value)> {
+    vec![
+        pair(SAT_ZONE_TEMP, Value::Real(22.0)),
+        pair(SAT_COOLING_SETPOINT, Value::Real(24.0)),
+    ]
+}
+
+/// Allocations charged to one `simulate` over `ticks` steps, trace collection off.
+fn simulate_allocations(inputs: InputSource, ticks: u64) -> usize {
+    let mut engine = Engine::with_store(Arc::new(AllocationStore::default()));
+    engine
+        .load_cxf(AHU_SAT_RESET.as_bytes())
+        .expect("sat_reset fixture loads");
+    let spec = SimSpec {
+        t_start: 0.0,
+        t_stop: (ticks - 1) as f64,
+        step: 1.0,
+        inputs,
+        collect: CollectSpec::None,
+    };
+    let region = Region::new(GLOBAL);
+    engine.simulate(&spec).expect("horizon runs");
+    region.change().allocations
 }

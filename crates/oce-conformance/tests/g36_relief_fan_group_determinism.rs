@@ -52,16 +52,6 @@ const RELIEF_DAMPER_3_SOURCE: &str =
 const RELIEF_DAMPER_4_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_relief_fan_group.yDam_4";
 
-const AVERAGED_PRESSURE_RUNTIME: &str = "conn#19";
-const RELIEF_FAN_1_SPEED_RUNTIME: &str = "conn#417";
-const RELIEF_FAN_2_SPEED_RUNTIME: &str = "conn#420";
-const RELIEF_FAN_3_SPEED_RUNTIME: &str = "conn#423";
-const RELIEF_FAN_4_SPEED_RUNTIME: &str = "conn#426";
-const RELIEF_DAMPER_1_RUNTIME: &str = "conn#519";
-const RELIEF_DAMPER_2_RUNTIME: &str = "conn#522";
-const RELIEF_DAMPER_3_RUNTIME: &str = "conn#525";
-const RELIEF_DAMPER_4_RUNTIME: &str = "conn#528";
-
 const INPUTS: &[PointSpec] = &[
     PointSpec::boolean(SUPPLY_FAN_1),
     PointSpec::boolean(SUPPLY_FAN_2),
@@ -76,15 +66,15 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::boolean(PROOF_4),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(AVERAGED_PRESSURE_SOURCE, AVERAGED_PRESSURE_RUNTIME),
-    PointSpec::real_alias(RELIEF_FAN_1_SPEED_SOURCE, RELIEF_FAN_1_SPEED_RUNTIME),
-    PointSpec::real_alias(RELIEF_FAN_2_SPEED_SOURCE, RELIEF_FAN_2_SPEED_RUNTIME),
-    PointSpec::real_alias(RELIEF_FAN_3_SPEED_SOURCE, RELIEF_FAN_3_SPEED_RUNTIME),
-    PointSpec::real_alias(RELIEF_FAN_4_SPEED_SOURCE, RELIEF_FAN_4_SPEED_RUNTIME),
-    PointSpec::real_alias(RELIEF_DAMPER_1_SOURCE, RELIEF_DAMPER_1_RUNTIME),
-    PointSpec::real_alias(RELIEF_DAMPER_2_SOURCE, RELIEF_DAMPER_2_RUNTIME),
-    PointSpec::real_alias(RELIEF_DAMPER_3_SOURCE, RELIEF_DAMPER_3_RUNTIME),
-    PointSpec::real_alias(RELIEF_DAMPER_4_SOURCE, RELIEF_DAMPER_4_RUNTIME),
+    PointSpec::real(AVERAGED_PRESSURE_SOURCE),
+    PointSpec::real(RELIEF_FAN_1_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_2_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_3_SPEED_SOURCE),
+    PointSpec::real(RELIEF_FAN_4_SPEED_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_1_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_2_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_3_SOURCE),
+    PointSpec::real(RELIEF_DAMPER_4_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_relief_fan_group",

@@ -27,7 +27,7 @@ pub use clean_room::{
 };
 pub use config::{
     ConfigError, IndicatorPattern, OutputPattern, PartialTolerances, PointEnd, PointMapEntry,
-    ReferenceSpec, VerifyConfig,
+    ReferenceSpec, VerifyConfig, escape_regex,
 };
 pub use csv::{CombiTimeTable, CsvError, ValueKind, format_f64};
 pub use driver::{

@@ -7,10 +7,11 @@ const RELIEF_FAN: &str =
 
 const BUILDING_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_fan.dpBui";
 const SUPPLY_FAN_ON: &str = "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan";
-const AVERAGED_PRESSURE: &str = "conn#1";
-const RELIEF_DAMPER_STATUS: &str = "conn#38";
-const RELIEF_FAN_STATUS: &str = "conn#41";
-const RELIEF_FAN_SPEED: &str = "conn#46";
+const AVERAGED_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_fan.movMea.y";
+const RELIEF_DAMPER_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.relDam.y";
+const RELIEF_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_relief_fan.relFan.y";
+const RELIEF_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_relief_fan.pro1.y";
 
 const EXPECTED_TIMES: [f64; 30] = [
     0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0, 420.0, 480.0, 540.0, 600.0, 660.0, 720.0, 780.0,

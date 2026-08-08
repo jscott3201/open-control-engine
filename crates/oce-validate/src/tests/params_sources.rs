@@ -64,13 +64,22 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
     assert_eq!(err.diagnostics[0].severity, Severity::Error);
     assert!(err.diagnostics[0].message.contains("`zerTim`"));
 
-    for value in [
-        Value::Integer(0),
-        Value::Integer(45),
-        Value::String(Arc::from(
-            "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2051",
-        )),
-        Value::Boolean(true),
+    for (value, expected_codes) in [
+        (Value::Integer(0), vec![DiagCode::ParameterOutOfRange]),
+        (Value::Integer(45), vec![DiagCode::ParameterOutOfRange]),
+        (
+            Value::String(Arc::from(
+                "Buildings.Controls.OBC.CDL.Types.ZeroTime.NY2051",
+            )),
+            vec![DiagCode::ParameterOutOfRange],
+        ),
+        (
+            Value::Boolean(true),
+            vec![
+                DiagCode::ParameterKindMismatch,
+                DiagCode::ParameterOutOfRange,
+            ],
+        ),
     ] {
         let invalid = one_block_model(
             "CDL.Reals.Sources.CalendarTime",
@@ -79,9 +88,17 @@ fn calendar_time_parameters_bind_zero_time_and_source_year_bounds() {
             vec![(Arc::from("zerTim"), value)],
         );
         let err = validate(&invalid).expect_err("invalid ZeroTime value must fail");
-        assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
-        assert_eq!(err.diagnostics[0].severity, Severity::Error);
-        assert!(err.diagnostics[0].message.contains("`zerTim`"));
+        assert_eq!(codes(&err.diagnostics), expected_codes);
+        assert!(
+            err.diagnostics
+                .iter()
+                .all(|diag| diag.severity == Severity::Error)
+        );
+        assert!(
+            err.diagnostics
+                .iter()
+                .all(|diag| diag.message.contains("`zerTim`"))
+        );
     }
 
     for value in [
@@ -182,9 +199,23 @@ fn real_source_sin_frequency_is_required() {
         vec![(Arc::from("freqHz"), Value::Boolean(false))],
     );
     let err = validate(&wrong_frequency_type).expect_err("Sources.Sin freqHz must be Real");
-    assert_eq!(codes(&err.diagnostics), vec![DiagCode::ParameterOutOfRange]);
-    assert_eq!(err.diagnostics[0].severity, Severity::Error);
-    assert!(err.diagnostics[0].message.contains("`freqHz`"));
+    assert_eq!(
+        codes(&err.diagnostics),
+        vec![
+            DiagCode::ParameterKindMismatch,
+            DiagCode::ParameterOutOfRange,
+        ]
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.severity == Severity::Error)
+    );
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.message.contains("`freqHz`"))
+    );
     assert!(
         err.diagnostics[0]
             .message

@@ -6,7 +6,8 @@ use oce_store::Store;
 use crate::engine::Engine;
 use crate::io::connector_path;
 
-/// An owned snapshot of blocks, edges, boundary inputs, and lowered pass-through pairs.
+/// An owned snapshot of blocks, edges, boundary inputs, lowered pass-through pairs, and
+/// declared boundary outputs.
 ///
 /// Equality compares `Real` parameter values bit-exactly: NaNs with identical bits compare equal,
 /// while `+0.0` and `-0.0` compare unequal.
@@ -24,6 +25,18 @@ pub struct Topology {
     pub external_inputs: Vec<String>,
     /// Authored boundary pass-throughs represented by reserved lowering blocks internally.
     pub pass_through: Vec<PassThroughPair>,
+    /// The **top** composite's root-declared boundary outputs — its authored output contract.
+    ///
+    /// Order is deterministic for a given document but is NOT the authored `hasOutput` array
+    /// order: elided entries follow their declared nodes' source-document `@graph` positions,
+    /// and pass-through entries (`path == driver_path`) are appended after them in their
+    /// existing graph-position order. Key by [`DeclaredOutput::path`], never by index.
+    ///
+    /// A pass-through declared output also appears in [`Topology::pass_through`]; the two views
+    /// are deliberately not deduplicated. An undriven declared output is absent here — the
+    /// load-time `UndrivenBoundaryOutput` warning is its only representation. Nested
+    /// composites' declared interfaces do not survive flattening and are not represented.
+    pub boundary_outputs: Vec<DeclaredOutput>,
 }
 
 /// One authored elementary block in a [`Topology`] snapshot.
@@ -68,6 +81,22 @@ pub struct PassThroughPair {
     pub output: String,
 }
 
+/// One root-declared boundary output: the authored declared identity and the internal driver
+/// whose value it exposes (`_spec/18` R18-3).
+///
+/// Both paths are valid, distinct `get_output`/`watch`/`CollectSpec::Named` keys resolving to
+/// the same value slot — neither name replaces the other. Driving is many-to-one: one driver
+/// may serve several declared outputs, so `driver_path` values may repeat across entries. For a
+/// pass-through declared output the two fields are equal.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct DeclaredOutput {
+    /// The declared output's authored subject IRI in expanded canonical form — its point path.
+    pub path: String,
+    /// The driving connector's point path (equal to `path` for a pass-through).
+    pub driver_path: String,
+}
+
 fn path(model: &ModelGraph, id: ConnectorId) -> String {
     connector_path(
         model
@@ -102,14 +131,17 @@ impl PartialEq for Topology {
             && self.connections == other.connections
             && self.external_inputs == other.external_inputs
             && self.pass_through == other.pass_through
+            && self.boundary_outputs == other.boundary_outputs
     }
 }
 
 impl<S: Store> Engine<S> {
     /// Build an owned, read-only topology snapshot.
     ///
-    /// This off-tick-path accessor allocates for the snapshot. It never panics for any loaded or
-    /// unloaded model; malformed connector indices degrade to their synthetic `conn#<id>` paths.
+    /// Every connector path is the authored `@id` of its host-visible identity node, as written
+    /// in the source document. This off-tick-path accessor allocates for the snapshot and never
+    /// panics for any loaded or unloaded model; only a malformed (out-of-range) connector index,
+    /// or an IRI-less hand-built connector, degrades to the synthetic `conn#<id>` fallback.
     #[must_use]
     pub fn topology(&self) -> Topology {
         let mut blocks = Vec::with_capacity(self.model.blocks.len());
@@ -149,6 +181,22 @@ impl<S: Store> Engine<S> {
                     .collect(),
             });
         }
+        // R18-3: the union of the two boundary-output representations — elided entries in
+        // `ModelGraph.boundary_outputs` order, then the pass-through entries (which the model
+        // deliberately keeps disjoint) in their existing graph-position order.
+        let mut boundary_outputs: Vec<DeclaredOutput> = self
+            .model
+            .boundary_outputs
+            .iter()
+            .map(|output| DeclaredOutput {
+                path: output.iri.to_string(),
+                driver_path: path(&self.model, output.source),
+            })
+            .collect();
+        boundary_outputs.extend(pass_through.iter().map(|pair| DeclaredOutput {
+            path: pair.output.clone(),
+            driver_path: pair.output.clone(),
+        }));
         Topology {
             blocks,
             connections: self
@@ -167,6 +215,7 @@ impl<S: Store> Engine<S> {
                 .map(|id| path(&self.model, *id))
                 .collect(),
             pass_through,
+            boundary_outputs,
         }
     }
 }

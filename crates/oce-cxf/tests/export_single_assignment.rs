@@ -189,7 +189,7 @@ fn two_surviving_drivers_on_one_input_are_rejected() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     assert_eq!(
@@ -216,7 +216,7 @@ fn the_same_edge_listed_twice_is_rejected() {
             conn(2, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 1), wire(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     assert_eq!(
@@ -239,7 +239,7 @@ fn self_loop_driven_twice() -> ModelGraph {
             conn(1, 0, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(1, 0), wire(1, 0)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 
@@ -293,7 +293,7 @@ fn a_triply_driven_input_yields_exactly_one_diagnostic() {
             conn(4, 3, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 3), wire(1, 3), wire(2, 3)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     assert_eq!(
@@ -327,7 +327,7 @@ fn offenders_are_reported_in_connector_position_order() {
             conn(7, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 4), wire(1, 4), wire(2, 5), wire(3, 5)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let subjects: Vec<String> = multiply_driven(&export_rejection(&g))
@@ -371,7 +371,7 @@ fn a_deferred_driver_does_not_count_toward_a_survivors_in_degree() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_ok(&g);
@@ -402,7 +402,7 @@ fn a_multiply_driven_input_on_a_deferred_block_does_not_abort_the_export() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_ok(&g);
@@ -439,6 +439,7 @@ fn a_boundary_input_that_is_also_driven_by_one_output_is_accepted() {
         ],
         connections: vec![wire(0, 1)],
         external_inputs: vec![ConnectorId(1)],
+        boundary_outputs: vec![],
     };
 
     let report = export_ok(&g);
@@ -474,7 +475,7 @@ fn an_accepted_export_never_re_imports_with_a_single_assignment_error() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let duplicated_edge = ModelGraph {
         connections: vec![wire(0, 2), wire(0, 2)],
@@ -565,7 +566,7 @@ fn multi_input_singly_driven() -> ModelGraph {
             conn(4, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 3)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 
@@ -610,7 +611,7 @@ fn fan_in(n: u32) -> ModelGraph {
         blocks,
         connectors,
         connections: (0..n).map(|i| wire(i, sink_in)).collect(),
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 

@@ -150,7 +150,7 @@ fn param_default_json(default: &crate::ParamDefault) -> String {
 /// The match is deliberately exhaustive with no wildcard arm — the compile-forced drift guard.
 fn param_rule_json(rule: &ParamRule) -> String {
     match rule {
-        ParamRule::Required { name } => object("Required", &[("name", json_str(name))]),
+        ParamRule::Required { name, .. } => object("Required", &[("name", json_str(name))]),
         ParamRule::Structural { name } => object("Structural", &[("name", json_str(name))]),
         ParamRule::StructuralArrayElements { base } => {
             object("StructuralArrayElements", &[("base", json_str(base))])

@@ -12,9 +12,9 @@
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 
 const ECONOMIZER: &str = "http://example.org#g36.ahu_economizer";
-const ECONOMIZER_ENABLED: &str = "conn#20";
-const DAMPER_COMMAND: &str = "conn#26";
-const OA_TEMPERATURE_DELTA: &str = "conn#2";
+const ECONOMIZER_ENABLED: &str = "http://example.org#g36.ahu_economizer.enableLatch.y";
+const DAMPER_COMMAND: &str = "http://example.org#g36.ahu_economizer.damperSwitch.y";
+const OA_TEMPERATURE_DELTA: &str = "http://example.org#g36.ahu_economizer.returnMinusOutdoor.y";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // An engine with the default in-memory store — no database.

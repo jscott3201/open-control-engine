@@ -10,6 +10,12 @@ const RETURN_FAN: &str = include_str!(
 const RETURN_FAN_GOLDEN: &str = include_str!(
     "../../oce-cxf/tests/fixtures/golden/g36_multizone_vav_return_fan_airflow_tracking.modelgraph.txt"
 );
+/// The authored boundary-input IRI shared by a child input (C4) and the pass-through input (C12):
+/// one host point staged into two internal connectors, so it appears twice in `external_inputs`.
+const SUPPLY_FAN_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
+const RETURN_FAN_COMMAND: &str =
+    "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan";
 
 #[derive(Debug)]
 enum GoldenValue {
@@ -60,7 +66,7 @@ fn parse_golden() -> GoldenTopology {
             .strip_prefix('B')
             .filter(|_| trimmed.contains(" decl="))
         {
-            let (id, rest) = rest.split_once(' ').unwrap();
+            let (id, _) = rest.split_once(' ').unwrap();
             let class_iri = rest
                 .split_whitespace()
                 .find_map(|part| part.strip_prefix("class="))
@@ -111,13 +117,18 @@ fn parse_golden() -> GoldenTopology {
             .strip_prefix('C')
             .filter(|_| trimmed.contains(" block="))
         {
-            let (id, rest) = rest.split_once(' ').unwrap();
+            let (id, _) = rest.split_once(' ').unwrap();
             let id: u32 = id.parse().unwrap();
-            let iri = rest.split_once(" iri=").unwrap().1;
-            let path = iri
+            // Every connector in a CXF-resolved golden carries its authored identity IRI —
+            // ingest rejects an `@id`-less connector node, so a missing IRI is a golden defect.
+            let path = rest
+                .split_once("iri=")
+                .unwrap()
+                .1
                 .strip_prefix("Some(\"")
                 .and_then(|value| value.strip_suffix("\")"))
-                .map_or_else(|| format!("conn#{id}"), str::to_string);
+                .unwrap_or_else(|| panic!("golden connector C{id} must carry an authored IRI"))
+                .to_string();
             connector_paths.insert(id, path);
         } else if let Some((from, to)) = trimmed.split_once(" -> ") {
             connections.push((
@@ -227,23 +238,18 @@ fn topology_matches_checked_in_resolver_golden() {
         .map(|id| golden.connector_paths[id].clone())
         .collect();
     assert_eq!(topology.external_inputs, expected_external);
-    let supply_fan =
-        "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.u1SupFan";
     assert_eq!(
         topology
             .external_inputs
             .iter()
-            .filter(|path| path.as_str() == supply_fan)
+            .filter(|path| path.as_str() == SUPPLY_FAN_STATUS)
             .count(),
         2,
-        "shared child/pass-through boundary paths retain golden multiplicity"
+        "a shared boundary IRI keeps one entry per consuming internal connector"
     );
     assert_eq!(topology.pass_through.len(), 1);
-    assert_eq!(topology.pass_through[0].input, supply_fan);
-    assert_eq!(
-        topology.pass_through[0].output,
-        "http://example.org#g36.source.multizone_vav_return_fan_airflow_tracking.y1RetFan"
-    );
+    assert_eq!(topology.pass_through[0].input, SUPPLY_FAN_STATUS);
+    assert_eq!(topology.pass_through[0].output, RETURN_FAN_COMMAND);
     assert!(
         topology
             .blocks
@@ -274,18 +280,13 @@ fn independent_loads_produce_equal_reconstructable_topologies() {
     assert!(
         left.pass_through
             .iter()
-            .any(|pair| { pair.input.ends_with("u1SupFan") && pair.output.ends_with("y1RetFan") })
+            .any(|pair| pair.input == SUPPLY_FAN_STATUS && pair.output == RETURN_FAN_COMMAND)
     );
-    let input = left
-        .pass_through
-        .iter()
-        .find(|pair| pair.input.ends_with("u1SupFan"))
-        .unwrap();
-    assert!(left.external_inputs.contains(&input.input));
+    assert!(left.external_inputs.contains(&SUPPLY_FAN_STATUS.to_owned()));
     assert!(
         left.blocks
             .iter()
-            .any(|block| block.inputs.contains(&input.input))
+            .any(|block| block.inputs.contains(&SUPPLY_FAN_STATUS.to_owned()))
     );
     for edge in &left.connections {
         assert!(

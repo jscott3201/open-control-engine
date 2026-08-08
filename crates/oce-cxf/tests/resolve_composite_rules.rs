@@ -167,6 +167,38 @@ fn array_instance_doc() -> JsonValue {
     doc
 }
 
+/// BASE with a reference cycle between two of the top composite's own parameters.
+fn declaration_cycle_doc() -> JsonValue {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasParameter"] = json!([
+        { "@id": "http://example.org#M.a" },
+        { "@id": "http://example.org#M.b" }
+    ]);
+    let graph = doc["@graph"].as_array_mut().expect("@graph array");
+    graph.push(json!({ "@id": "http://example.org#M.a", "S231:value": "b + 1.0" }));
+    graph.push(json!({ "@id": "http://example.org#M.b", "S231:value": "a + 1.0" }));
+    doc
+}
+
+/// BASE with one local name (`k`) declared twice in the top composite's own chain — once under
+/// `hasParameter`, once under `hasConstant`.
+fn duplicate_declaration_doc() -> JsonValue {
+    let mut doc = base();
+    node_mut(&mut doc, "#M")["S231:hasParameter"] = json!({ "@id": "http://example.org#M.k" });
+    node_mut(&mut doc, "#M")["S231:hasConstant"] =
+        json!({ "@id": "http://example.org#M.settings.k" });
+    let graph = doc["@graph"].as_array_mut().expect("@graph array");
+    graph.push(json!({
+        "@id": "http://example.org#M.k",
+        "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    }));
+    graph.push(json!({
+        "@id": "http://example.org#M.settings.k",
+        "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    }));
+    doc
+}
+
 #[test]
 fn multi_root_rejection_enumerates_candidates_in_document_order_with_first_as_subject() {
     assert_eq!(
@@ -298,11 +330,144 @@ fn array_valued_instance_rejection_is_tagged_with_the_instance_subject() {
     );
 }
 
+/// A root containing one derivation-shaped instance of a class that publishes no declared
+/// port names (`CDL.Routing.RealScalarReplicator` — its port count tracks `nout`): the
+/// scalar-only slice refuses the whole derivation, one diagnostic per instance.
+fn vector_port_instance_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.rep" } },
+            { "@id": "http://example.org#M.rep",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Routing.RealScalarReplicator",
+              "S231:hasInstance": [ { "@id": "http://example.org#M.rep.u" } ] }
+        ]
+    })
+}
+
+/// A derivation-shaped `CDL.Logical.Not` instance whose list carries a member naming neither a
+/// declared port nor a declared parameter of the class.
+fn unsupported_instance_member_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c" } },
+            { "@id": "http://example.org#M.c",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInstance": [
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.y" },
+                  { "@id": "http://example.org#M.c.zzz" }
+              ] }
+        ]
+    })
+}
+
+/// A derivation-shaped `CDL.Logical.Not` instance listing one node-less port member twice —
+/// the identity would be minted twice for one owner.
+fn colliding_member_identity_doc() -> JsonValue {
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:containsBlock": { "@id": "http://example.org#M.c" } },
+            { "@id": "http://example.org#M.c",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+              "S231:hasInstance": [
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.u" },
+                  { "@id": "http://example.org#M.c.y" }
+              ] }
+        ]
+    })
+}
+
+#[test]
+fn vector_port_class_derivation_rejection_is_tagged_with_the_instance_subject() {
+    assert_eq!(
+        reject(&vector_port_instance_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.rep",
+            "composite/vector-port-instance: instance of class \
+             `CDL.Routing.RealScalarReplicator` derives its port count from a parameter; this \
+             subset derives scalar interfaces only",
+        )],
+        "one diagnostic per instance, replacing - not doubling - the arity mismatch"
+    );
+}
+
+#[test]
+fn unclassifiable_member_rejection_is_tagged_with_the_member_subject() {
+    assert_eq!(
+        reject(&unsupported_instance_member_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c.zzz",
+            "composite/unsupported-instance-member: `zzz` is neither a declared port nor a \
+             declared parameter of `CDL.Logical.Not`",
+        )],
+        "the offending member is the subject and the instance derives no interface"
+    );
+}
+
+#[test]
+fn twice_listed_nodeless_member_rejection_is_tagged_with_the_repeated_identity() {
+    assert_eq!(
+        reject(&colliding_member_identity_doc()),
+        vec![error_with_subject(
+            DiagCode::NonSubsetConstruct,
+            "http://example.org#M.c.u",
+            "composite/colliding-member-identity: connector identity \
+             `http://example.org#M.c.u` is minted twice by `http://example.org#M.c`",
+        )],
+        "a node-less member listed twice mints one identity twice; the colliding IRI is the \
+         subject"
+    );
+}
+
+#[test]
+fn declaration_reference_cycle_rejection_names_participants_in_chained_order() {
+    assert_eq!(
+        reject(&declaration_cycle_doc()),
+        vec![error_with_subject(
+            DiagCode::MalformedDocument,
+            "http://example.org#M.a",
+            "composite/declaration-cycle: cycle in the block's own declaration references: \
+             http://example.org#M.a -> http://example.org#M.b -> http://example.org#M.a",
+        )],
+        "one diagnostic per distinct cycle; the subject is the participant earliest in chained \
+         declaration order and the message closes on it"
+    );
+}
+
+#[test]
+fn duplicate_local_declaration_rejection_names_the_first_occurrence() {
+    assert_eq!(
+        reject(&duplicate_declaration_doc()),
+        vec![error_with_subject(
+            DiagCode::MalformedDocument,
+            "http://example.org#M.settings.k",
+            "composite/duplicate-declaration: own declaration http://example.org#M.settings.k \
+             re-binds local name `k` first declared at http://example.org#M.k",
+        )],
+        "the occurrence beyond the first is the subject; the first occurrence stays a normal \
+         binding"
+    );
+}
+
 #[test]
 fn contract_rejection_enumerations_are_byte_identical_across_repeated_imports() {
-    // The two multi-offender enumerations (candidate roots, cycle participants) must not leak
-    // any map-iteration order: repeated imports yield identical full messages.
-    for doc in [multi_root_doc(), reachable_cycle_doc()] {
+    // The multi-offender enumerations (candidate roots, cycle participants — containsBlock and
+    // declaration cycles alike) must not leak any map-iteration order: repeated imports yield
+    // identical full messages.
+    for doc in [
+        multi_root_doc(),
+        reachable_cycle_doc(),
+        declaration_cycle_doc(),
+    ] {
         assert_eq!(
             reject(&doc),
             reject(&doc),
@@ -315,7 +480,7 @@ fn contract_rejection_enumerations_are_byte_identical_across_repeated_imports() 
 fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
     let catalog: JsonValue = serde_json::from_str(CATALOG_JSON).expect("catalog parses as JSON");
     let catalog = catalog.as_object().expect("catalog top-level object");
-    let fixtures: [(&str, JsonValue); 7] = [
+    let fixtures: [(&str, JsonValue); 12] = [
         ("root-count", multi_root_doc()),
         ("contains-cycle", reachable_cycle_doc()),
         ("replaceable", replaceable_doc()),
@@ -323,6 +488,14 @@ fn every_contract_rejection_starts_with_its_published_catalog_prefix() {
         ("array-parameter", array_parameter_doc()),
         ("array-connector", array_connector_doc()),
         ("array-instance", array_instance_doc()),
+        ("declaration-cycle", declaration_cycle_doc()),
+        ("duplicate-declaration", duplicate_declaration_doc()),
+        ("vector-port-instance", vector_port_instance_doc()),
+        (
+            "unsupported-instance-member",
+            unsupported_instance_member_doc(),
+        ),
+        ("colliding-member-identity", colliding_member_identity_doc()),
     ];
     assert_eq!(
         catalog.len(),

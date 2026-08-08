@@ -1,0 +1,119 @@
+{
+  "comment": "Compact-spelling twin of minimal_loop.jsonld: the same graph written the way real emitters write — CURIE subjects and references, compact @type, compact isOfDataType. Construction requirement: every prefix binding expands to a byte-identical IRI to the original's (ex -> http://example.org# WITH the trailing #), so import must produce a bit-identical ModelGraph render to minimal_loop.jsonld. Consumed by resolve_context_expansion.rs and oce-api's context_expansion_identity.rs.",
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:MinLoop",
+      "@type": "S231:Block",
+      "S231:label": "MinLoop",
+      "S231:containsBlock": [
+        { "@id": "ex:MinLoop.con" },
+        { "@id": "ex:MinLoop.add" },
+        { "@id": "ex:MinLoop.del" },
+        { "@id": "ex:MinLoop.gain" },
+        { "@id": "ex:MinLoop.gt" }
+      ],
+      "S231:hasInput": { "@id": "ex:MinLoop.uSet" },
+      "S231:hasOutput": { "@id": "ex:MinLoop.yAlarm" },
+      "cdlLineNumStart": 1
+    },
+
+    {
+      "@id": "ex:MinLoop.con",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": { "@id": "ex:MinLoop.con.k" },
+      "S231:hasOutput": { "@id": "ex:MinLoop.con.y" }
+    },
+    { "@id": "ex:MinLoop.con.k",
+      "S231:value": { "@value": "2.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "ex:MinLoop.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "ex:MinLoop.add.u1" } },
+
+    {
+      "@id": "ex:MinLoop.add",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:label": "add",
+      "S231:hasInput": [
+        { "@id": "ex:MinLoop.add.u1" },
+        { "@id": "ex:MinLoop.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "ex:MinLoop.add.y" }
+    },
+    { "@id": "ex:MinLoop.add.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.add.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "ex:MinLoop.del.u" } },
+
+    {
+      "@id": "ex:MinLoop.del",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "del",
+      "S231:hasParameter": [
+        { "@id": "ex:MinLoop.del.y_start" },
+        { "@id": "ex:MinLoop.del.samplePeriod" }
+      ],
+      "S231:hasInput": { "@id": "ex:MinLoop.del.u" },
+      "S231:hasOutput": { "@id": "ex:MinLoop.del.y" }
+    },
+    { "@id": "ex:MinLoop.del.y_start", "S231:value": 0 },
+    { "@id": "ex:MinLoop.del.samplePeriod",
+      "S231:value": { "@value": "1.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "ex:MinLoop.del.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.del.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": [
+        { "@id": "ex:MinLoop.gain.u" },
+        { "@id": "ex:MinLoop.gt.u1" }
+      ] },
+
+    {
+      "@id": "ex:MinLoop.gain",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasParameter": { "@id": "ex:MinLoop.gain.k" },
+      "S231:hasInput": { "@id": "ex:MinLoop.gain.u" },
+      "S231:hasOutput": { "@id": "ex:MinLoop.gain.y" }
+    },
+    { "@id": "ex:MinLoop.gain.k",
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+    { "@id": "ex:MinLoop.gain.u", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "ex:MinLoop.add.u2" } },
+
+    {
+      "@id": "ex:MinLoop.gt",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.Greater",
+      "S231:label": "gt",
+      "S231:hasInput": [
+        { "@id": "ex:MinLoop.gt.u1" },
+        { "@id": "ex:MinLoop.gt.u2" }
+      ],
+      "S231:hasOutput": { "@id": "ex:MinLoop.gt.y" }
+    },
+    { "@id": "ex:MinLoop.gt.u1", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.gt.u2", "@type": "S231:RealInput", "S231:isOfDataType": { "@id": "S231:Real" } },
+    { "@id": "ex:MinLoop.gt.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "ex:MinLoop.yAlarm" } },
+
+    { "@id": "ex:MinLoop.uSet",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "ex:MinLoop.gt.u2" } },
+    { "@id": "ex:MinLoop.yAlarm",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" } }
+  ]
+}

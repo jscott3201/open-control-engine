@@ -25,7 +25,8 @@ const SAMPLE_STEP: f64 = 60.0;
 
 const SETPOINT_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_suppression.TSet";
 const ZONE_TEMPERATURE: &str = "http://example.org#g36.source.generic_time_suppression.TZon";
-const AFTER_SUPPRESSION: &str = "conn#42";
+const AFTER_SUPPRESSION: &str =
+    "http://example.org#g36.source.generic_time_suppression.pasSupTim.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("setpoint_temperature", SETPOINT_TEMPERATURE),

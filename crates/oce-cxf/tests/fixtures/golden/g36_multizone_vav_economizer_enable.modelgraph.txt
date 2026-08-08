@@ -46,57 +46,57 @@ blocks: 19
   B18 decl=18 class=CDL.Logical.Or instance_iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.or2")
     inputs=[48, 49] outputs=[50]
 connectors: 51
-  C0 block=B0 dir=In type=Boolean decl=0 iri=None
-  C1 block=B0 dir=Out type=Boolean decl=1 iri=None
-  C2 block=B1 dir=In type=Boolean decl=2 iri=None
-  C3 block=B1 dir=In type=Boolean decl=3 iri=None
-  C4 block=B1 dir=Out type=Boolean decl=4 iri=None
+  C0 block=B0 dir=In type=Boolean decl=0 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.u")
+  C1 block=B0 dir=Out type=Boolean decl=1 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.truFalHol.y")
+  C2 block=B1 dir=In type=Boolean decl=2 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u1")
+  C3 block=B1 dir=In type=Boolean decl=3 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.u2")
+  C4 block=B1 dir=Out type=Boolean decl=4 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.andEnaDis.y")
   C5 block=B2 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.TOut")
   C6 block=B2 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.TOutCut")
-  C7 block=B2 dir=Out type=Real decl=7 iri=None
-  C8 block=B3 dir=In type=Real decl=8 iri=None
-  C9 block=B3 dir=Out type=Boolean decl=9 iri=None
+  C7 block=B2 dir=Out type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.sub1.y")
+  C8 block=B3 dir=In type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.u")
+  C9 block=B3 dir=Out type=Boolean decl=9 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.hysOutTem.y")
   C10 block=B4 dir=In type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_min")
-  C11 block=B4 dir=In type=Boolean decl=11 iri=None
+  C11 block=B4 dir=In type=Boolean decl=11 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.u2")
   C12 block=B4 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uOutDam_max")
-  C13 block=B4 dir=Out type=Real decl=13 iri=None
+  C13 block=B4 dir=Out type=Real decl=13 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y")
   C14 block=B5 dir=In type=Real decl=14 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_max")
-  C15 block=B5 dir=In type=Boolean decl=15 iri=None
+  C15 block=B5 dir=In type=Boolean decl=15 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.u2")
   C16 block=B5 dir=In type=Real decl=16 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_min")
-  C17 block=B5 dir=Out type=Real decl=17 iri=None
+  C17 block=B5 dir=Out type=Real decl=17 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.retDamSwitch.y")
   C18 block=B6 dir=In type=Real decl=18 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uRetDamPhy_max")
-  C19 block=B6 dir=In type=Boolean decl=19 iri=None
+  C19 block=B6 dir=In type=Boolean decl=19 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.u2")
   C20 block=B6 dir=In type=Real decl=20 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uRetDam_max")
-  C21 block=B6 dir=Out type=Real decl=21 iri=None
+  C21 block=B6 dir=Out type=Real decl=21 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y")
   C22 block=B7 dir=In type=Real decl=22 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uRetDamPhy_max")
-  C23 block=B7 dir=In type=Boolean decl=23 iri=None
-  C24 block=B7 dir=In type=Real decl=24 iri=None
-  C25 block=B7 dir=Out type=Real decl=25 iri=None
-  C26 block=B8 dir=In type=Boolean decl=26 iri=None
-  C27 block=B8 dir=Out type=Boolean decl=27 iri=None
-  C28 block=B9 dir=In type=Boolean decl=28 iri=None
-  C29 block=B9 dir=In type=Boolean decl=29 iri=None
-  C30 block=B9 dir=Out type=Boolean decl=30 iri=None
-  C31 block=B10 dir=In type=Boolean decl=31 iri=None
+  C23 block=B7 dir=In type=Boolean decl=23 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u2")
+  C24 block=B7 dir=In type=Real decl=24 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.u3")
+  C25 block=B7 dir=Out type=Real decl=25 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y")
+  C26 block=B8 dir=In type=Boolean decl=26 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.not2.u")
+  C27 block=B8 dir=Out type=Boolean decl=27 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.not2.y")
+  C28 block=B9 dir=In type=Boolean decl=28 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and2.u1")
+  C29 block=B9 dir=In type=Boolean decl=29 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and2.u2")
+  C30 block=B9 dir=Out type=Boolean decl=30 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and2.y")
+  C31 block=B10 dir=In type=Boolean decl=31 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and1.u1")
   C32 block=B10 dir=In type=Boolean decl=32 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.u1SupFan")
-  C33 block=B10 dir=Out type=Boolean decl=33 iri=None
-  C34 block=B11 dir=In type=Boolean decl=34 iri=None
-  C35 block=B11 dir=In type=Boolean decl=35 iri=None
-  C36 block=B11 dir=Out type=Boolean decl=36 iri=None
+  C33 block=B10 dir=Out type=Boolean decl=33 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and1.y")
+  C34 block=B11 dir=In type=Boolean decl=34 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and3.u1")
+  C35 block=B11 dir=In type=Boolean decl=35 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and3.u2")
+  C36 block=B11 dir=Out type=Boolean decl=36 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.and3.y")
   C37 block=B12 dir=In type=Integer decl=37 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta")
-  C38 block=B12 dir=In type=Integer decl=38 iri=None
-  C39 block=B12 dir=Out type=Boolean decl=39 iri=None
-  C40 block=B13 dir=In type=Boolean decl=40 iri=None
-  C41 block=B13 dir=Out type=Boolean decl=41 iri=None
-  C42 block=B14 dir=In type=Boolean decl=42 iri=None
-  C43 block=B14 dir=Out type=Boolean decl=43 iri=None
-  C44 block=B15 dir=In type=Boolean decl=44 iri=None
-  C45 block=B15 dir=Out type=Boolean decl=45 iri=None
-  C46 block=B16 dir=Out type=Integer decl=46 iri=None
-  C47 block=B17 dir=Out type=Boolean decl=47 iri=None
-  C48 block=B18 dir=In type=Boolean decl=48 iri=None
-  C49 block=B18 dir=In type=Boolean decl=49 iri=None
-  C50 block=B18 dir=Out type=Boolean decl=50 iri=None
+  C38 block=B12 dir=In type=Integer decl=38 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.u2")
+  C39 block=B12 dir=Out type=Boolean decl=39 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.intEqu.y")
+  C40 block=B13 dir=In type=Boolean decl=40 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.u")
+  C41 block=B13 dir=Out type=Boolean decl=41 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.delOutDamOsc.y")
+  C42 block=B14 dir=In type=Boolean decl=42 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.u")
+  C43 block=B14 dir=Out type=Boolean decl=43 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.delRetDam.y")
+  C44 block=B15 dir=In type=Boolean decl=44 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.not1.u")
+  C45 block=B15 dir=Out type=Boolean decl=45 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.not1.y")
+  C46 block=B16 dir=Out type=Integer decl=46 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.conInt.y")
+  C47 block=B17 dir=Out type=Boolean decl=47 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.entSubst1.y")
+  C48 block=B18 dir=In type=Boolean decl=48 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.or2.u1")
+  C49 block=B18 dir=In type=Boolean decl=49 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.or2.u2")
+  C50 block=B18 dir=Out type=Boolean decl=50 iri=Some("http://example.org#g36.source.multizone_vav_economizer_enable.or2.y")
 connections: 21
   C1 -> C31
   C4 -> C26

@@ -67,11 +67,15 @@ you cloned this repo, you will not find them, and that is expected.
   PR ships **extensive edge-case tests, golden tests (checked-in expected outputs compared
   bit-exactly), oracle cross-checks, and determinism goldens** per `TESTING.md`. Thin coverage
   is a **blocking review defect**. See `TESTING.md` for the full standard.
-- **The gate:** `bash .agents/gate.sh` mirrors the per-PR gate; `bash .agents/gate.sh full` adds
-  the workspace suite and doctests. That script is the single source of truth for gate commands —
+- **The gate:** `bash .agents/gate.sh` runs the per-PR gate's commands; `bash .agents/gate.sh full`
+  adds the workspace suite and doctests. It is not the whole per-PR gate — the script's own closing
+  report names what it cannot cover locally (cross-arch matrix, public-api surface, cargo-deny), and
+  a green local run is not a green CI. That script is the single source of truth for gate commands —
   do not restate them here or anywhere else, and change one only by changing `ci.yml` first. Nine
   divergent copies of the command list existed before it was written, two of them materially
-  weaker than CI.
+  weaker than CI. A tenth divergence appeared later and in the other direction: `ci.yml` grew a
+  `gate (light)` step the script did not have, so the required check existed but no local run
+  performed it. When they disagree, check which one is behind before assuming it is the script.
 - **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
   **`oce-blocks` and `oce-expr` only** (the `determinism-matrix` job, x86_64 and arm64, debug and
   release codegen). Every other crate's tests run only on `development` -> `main` release PRs via

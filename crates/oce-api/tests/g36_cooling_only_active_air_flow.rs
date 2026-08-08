@@ -15,9 +15,12 @@ const OPERATING_MODE: &str = "http://example.org#g36.source.cooling_only_active_
 const OCCUPIED_MINIMUM_AIRFLOW: &str =
     "http://example.org#g36.source.cooling_only_active_air_flow.VOccMin_flow";
 
-const ACTIVE_COOLING_MAXIMUM_AIRFLOW: &str = "conn#1";
-const ACTIVE_MINIMUM_AIRFLOW: &str = "conn#9";
-const ACTIVE_HEATING_MAXIMUM_AIRFLOW: &str = "conn#9";
+const ACTIVE_COOLING_MAXIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.actCooMax.y";
+const ACTIVE_MINIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y";
+const ACTIVE_HEATING_MAXIMUM_AIRFLOW: &str =
+    "http://example.org#g36.source.cooling_only_active_air_flow.actMin.y";
 
 const T_STOP: f64 = 13.0;
 const SAMPLE_STEP: f64 = 1.0;

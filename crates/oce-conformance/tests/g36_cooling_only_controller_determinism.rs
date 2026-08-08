@@ -41,46 +41,16 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::boolean("http://example.org#g36.source.cooling_only_controller.u1Fan"),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VSet_flow",
-        "conn#460",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.yDam",
-        "conn#485",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VAdjPopBreZon_flow",
-        "conn#352",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VAdjAreBreZon_flow",
-        "conn#356",
-    ),
-    PointSpec::real_alias(
-        "http://example.org#g36.source.cooling_only_controller.VMinOA_flow",
-        "conn#388",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yZonTemResReq",
-        "conn#68",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yZonPreResReq",
-        "conn#76",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yLowFloAla",
-        "conn#182",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yFloSenAla",
-        "conn#212",
-    ),
-    PointSpec::integer_alias(
-        "http://example.org#g36.source.cooling_only_controller.yLeaDamAla",
-        "conn#227",
-    ),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VSet_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.yDam"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VAdjPopBreZon_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VAdjAreBreZon_flow"),
+    PointSpec::real("http://example.org#g36.source.cooling_only_controller.VMinOA_flow"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yZonTemResReq"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yZonPreResReq"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yLowFloAla"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yFloSenAla"),
+    PointSpec::integer("http://example.org#g36.source.cooling_only_controller.yLeaDamAla"),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "cooling_only_controller",

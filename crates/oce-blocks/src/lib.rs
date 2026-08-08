@@ -20,7 +20,7 @@
 
 use std::borrow::Cow;
 
-use oce_model::{ParamTable, Value, determinism::canonicalize_real};
+use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
 mod conversions;
@@ -360,10 +360,15 @@ pub enum TimeTableValues {
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ParamRule {
-    /// The named parameter must appear in the resolved [`ParamTable`].
+    /// The named parameter must appear in the resolved [`ParamTable`] with the declared semantic
+    /// kind. `Real` accepts both [`Value::Real`] and [`Value::Integer`] because CDL widens Integer
+    /// literals to Real parameters. Enumeration parameters retain their resolver-supported enum,
+    /// integer-ordinal, and qualified-string representations.
     Required {
         /// Parameter name as it appears in CDL / the resolved model.
         name: &'static str,
+        /// Semantic kind consumed by the block constructor.
+        kind: ValueType,
     },
     /// The named parameter changes the block's resolved structure and cannot be edited at rest.
     ///

@@ -24,7 +24,7 @@ const SAMPLE_STEP: f64 = 60.0;
 
 const HEATING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uHea";
 const COOLING_CONTROL: &str = "http://example.org#g36.source.thermal_zones_zone_states.uCoo";
-const ZONE_STATE: &str = "conn#31";
+const ZONE_STATE: &str = "http://example.org#g36.source.thermal_zones_zone_states.addInt1.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("heating_control", HEATING_CONTROL),

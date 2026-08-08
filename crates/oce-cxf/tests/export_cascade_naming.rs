@@ -150,7 +150,7 @@ fn misowned_connector_graph() -> ModelGraph {
             conn(4, 2, Dir::Out),
         ],
         connections: vec![wire(0, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     }
 }
 
@@ -320,6 +320,7 @@ fn staggered_cascade_graph() -> ModelGraph {
         ],
         connections: vec![wire(0, 2), wire(3, 4)],
         external_inputs: vec![ConnectorId(1)],
+        boundary_outputs: vec![],
     }
 }
 
@@ -360,6 +361,7 @@ fn deep_position_cascade_graph() -> ModelGraph {
         ],
         connections: vec![wire(0, 3)],
         external_inputs: vec![ConnectorId(1), ConnectorId(2)],
+        boundary_outputs: vec![],
     }
 }
 

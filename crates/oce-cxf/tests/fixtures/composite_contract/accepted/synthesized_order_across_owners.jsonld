@@ -1,0 +1,153 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners",
+      "@type": "S231:Block",
+      "S231:label": "synthesized_order_across_owners",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.synthesized_order_across_owners.u"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.gain"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.con"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.del"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.synthesized_order_across_owners.gain.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.gain.u"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.gain.k"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.gain.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "4.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.con.k"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.con.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "2.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.synthesized_order_across_owners.del.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "del",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.del.u"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.del.samplePeriod"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.del.y_start"
+        },
+        {
+          "@id": "http://example.org#cc.synthesized_order_across_owners.del.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.del.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.del.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.synthesized_order_across_owners.del.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

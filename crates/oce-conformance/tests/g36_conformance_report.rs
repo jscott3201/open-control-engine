@@ -59,9 +59,12 @@ const RETURN_DAMPER_MAX_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_max";
 const RETURN_DAMPER_MIN_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_min";
-const OUTDOOR_DAMPER_MAX_RUNTIME: &str = "conn#13";
-const RETURN_DAMPER_MAX_RUNTIME: &str = "conn#21";
-const RETURN_DAMPER_MIN_RUNTIME: &str = "conn#25";
+const OUTDOOR_DAMPER_MAX_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y";
+const RETURN_DAMPER_MAX_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y";
+const RETURN_DAMPER_MIN_PATH: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y";
 
 // ---- Tier 2 (determinism / bit-exact regression) spec -------------------------------------------
 
@@ -77,9 +80,9 @@ const DETERMINISM_INPUTS: &[PointSpec] = &[
     PointSpec::integer(FREEZE_PROTECTION_STAGE),
 ];
 const DETERMINISM_OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(OUTDOOR_DAMPER_MAX_SOURCE, OUTDOOR_DAMPER_MAX_RUNTIME),
-    PointSpec::real_alias(RETURN_DAMPER_MAX_SOURCE, RETURN_DAMPER_MAX_RUNTIME),
-    PointSpec::real_alias(RETURN_DAMPER_MIN_SOURCE, RETURN_DAMPER_MIN_RUNTIME),
+    PointSpec::real(OUTDOOR_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MIN_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: SEQUENCE,
@@ -147,9 +150,9 @@ const FUNNEL_INPUTS: &[(&str, &str, ValueKind)] = &[
     ),
 ];
 const FUNNEL_OUTPUTS: &[(&str, &str)] = &[
-    ("outdoor_damper_max_limit", OUTDOOR_DAMPER_MAX_RUNTIME),
-    ("return_damper_max_limit", RETURN_DAMPER_MAX_RUNTIME),
-    ("return_damper_min_limit", RETURN_DAMPER_MIN_RUNTIME),
+    ("outdoor_damper_max_limit", OUTDOOR_DAMPER_MAX_PATH),
+    ("return_damper_max_limit", RETURN_DAMPER_MAX_PATH),
+    ("return_damper_min_limit", RETURN_DAMPER_MIN_PATH),
 ];
 
 fn kind_str(kind: ValueKind) -> &'static str {
