@@ -85,14 +85,26 @@ explicitly range-checked, so a non-finite or out-of-range instant fails with
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
 Do not interleave horizon simulation with real-time stepping if you rely on the monotonic-time
-guard across that boundary. `simulate` deliberately clears the prior tick time on entry, so a
-following `step_realtime` cannot detect regression relative to a real-time step that happened
-before the simulation.
+guard across that boundary. After preflight succeeds, `simulate` deliberately clears the prior tick
+time, so a following `step_realtime` cannot detect regression relative to a real-time step that
+happened before the simulation.
 
-`simulate` is a run restart, not a continuation. On entry it clears the prior tick time and re-seeds
-the stateful blocks' state words to their authored start values. It leaves connector values alone,
-so it is narrower than the `resume` re-seed described below, which replaces the whole run state and
-only when parameters are dirty.
+`simulate` is a run restart, not a continuation. Before restarting, it resolves recorded columns,
+fixed inputs, and the first list returned by an input closure. A refusal there leaves the prior run
+unchanged, including its monotonic-time guard and state words. After preflight succeeds, the engine
+clears the prior tick time and re-seeds stateful blocks to their authored start values. It leaves
+connector values alone, so it is narrower than the `resume` re-seed described below, which replaces
+the whole run state and only when parameters are dirty.
+
+An input closure remains dynamic after the first tick. If a later call returns an unknown point or
+a wrong-typed value, completed ticks stay in effect and any valid pairs before the failing pair stay
+staged. A simulation is not transactional after execution begins.
+
+Store-backed inputs are staged inside each tick, not during simulation preflight. A snapshot error
+or wrong-typed store sample on the first tick therefore returns after the run clock and state words
+have reset, even though no block evaluated. Model time and the output snapshot still describe the
+prior run. A snapshot error stages no store input; a wrong-typed sample leaves any valid store
+samples staged before it in the connector image.
 
 Two consequences to plan for. Splitting a horizon across two calls does not continue the
 trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the

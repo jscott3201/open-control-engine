@@ -158,6 +158,15 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **A simulation preflight refusal preserves the prior run** (#266, fixes #260). `simulate` now
+  resolves fixed inputs and the first list returned by an input closure before clearing the run
+  clock or re-seeding state words. An unknown or wrong-typed preflight input therefore leaves model
+  time, connector values, outputs, state words and the monotonic-time guard unchanged. The first
+  closure result is cached and staged without invoking the closure twice. Later closure failures
+  remain partial-run errors: completed ticks and valid pairs before the failing pair stay in effect.
+  Store-backed input staging remains inside the tick and is not part of this guarantee. Simulation
+  `wall_nanos` now includes input preflight and the state re-seed; recorded-column resolution remains
+  outside that interval.
 - **A refused load says why, through `oce-api` alone** (#263). `OcError::diagnostics()` returns the
   structured diagnostics behind a failure — stable code, severity, subject, message — where before
   a consumer depending only on this crate could read them off one of the two rejection seams and
