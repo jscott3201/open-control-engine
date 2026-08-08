@@ -120,7 +120,7 @@ step 'cargo-deny (bans licenses sources)' cargo deny check bans licenses sources
 step 'determinism subset' \
   cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
 step 'determinism subset (release codegen)' \
-  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci \
+  cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release \
   --cargo-profile release --no-tests=fail
 
 # ── Fixture input hygiene ────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ if [ "$MODE" = full ]; then
   step 'nextest — workspace' \
     cargo nextest run --workspace --locked --profile ci --no-tests=fail
   step 'nextest — workspace (release codegen)' \
-    cargo nextest run --workspace --locked --profile ci \
+    cargo nextest run --workspace --locked --profile ci-release \
     --cargo-profile release --no-tests=fail
   # nextest cannot run doctests; this step is not optional.
   step 'doctests' cargo test --workspace --doc --locked

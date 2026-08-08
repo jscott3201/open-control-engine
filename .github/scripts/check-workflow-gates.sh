@@ -107,10 +107,23 @@ require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smo
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
 require_pattern "$ci" 'ubuntu-24\.04-arm' 'arm64 determinism matrix runner'
+require_pattern "$ci" 'nextest@0\.9\.143' 'pinned cargo-nextest 0.9.143 install'
 require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
   'debug determinism subset with hard-fail-on-zero-tests'
-require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --cargo-profile release --no-tests=fail' \
+require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
+require_pattern "$ci" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
+  'clear cached nextest JUnit reports'
+require_pattern "$ci" 'actions/upload-artifact@v7\.0\.1' 'upload nextest JUnit report artifacts'
+require_pattern "$ci" '![[:space:]]*cancelled\(\)' 'upload nextest reports after test failures'
+require_pattern "$ci" 'target/nextest/ci/junit\.xml' 'collect nextest debug JUnit report'
+require_pattern "$ci" 'target/nextest/ci-release/junit\.xml' 'collect nextest release JUnit report'
+require_pattern "$ci" 'for profile in ci ci-release;' \
+  'require the complete nextest determinism report set'
+require_pattern "$ci" 'test -s "target/nextest/\$profile/junit\.xml"' \
+  'refuse an absent or empty nextest determinism report'
+require_pattern "$ci" 'if-no-files-found:[[:space:]]*error' 'fail when nextest reports are absent'
+require_pattern "$ci" 'retention-days:[[:space:]]*14' 'retain nextest reports for 14 days'
 
 # Heavy gate runs on release PRs, manual dispatch, and scheduled development-tip checks.
 require_pattern "$release" 'schedule:' 'scheduled heavy gate'
@@ -118,16 +131,41 @@ require_pattern "$release" 'cron:' 'cron entry'
 require_pattern "$release" 'workflow_dispatch:' 'manual heavy gate'
 require_pattern "$release" '(CHECKOUT_REF:.*development|ref:.*development)' 'scheduled checkout targets development tip'
 require_pattern "$release" 'ref:.*(CHECKOUT_REF|development)' 'checkout uses the scheduled development ref'
+require_pattern "$release" 'nextest@0\.9\.143' 'release gate pinned cargo-nextest 0.9.143 install'
 require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci --no-tests=fail' \
   'debug nextest with hard-fail-on-zero-tests'
-require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci --cargo-profile release --no-tests=fail' \
+require_pattern "$release" 'cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail' \
   'release-codegen nextest with hard-fail-on-zero-tests'
+require_pattern "$release" 'target/nextest/\{ci,ci-release,public-api-oce-api,public-api-oce-store\}/junit\.xml' \
+  'release gate clears cached nextest JUnit reports'
+require_pattern "$release" 'actions/upload-artifact@v7\.0\.1' \
+  'release gate uploads nextest JUnit reports'
+require_pattern "$release" '![[:space:]]*cancelled\(\)' \
+  'release gate uploads nextest reports after test failures'
+require_pattern "$release" 'target/nextest/ci/junit\.xml' \
+  'release gate collects debug nextest JUnit report'
+require_pattern "$release" 'target/nextest/ci-release/junit\.xml' \
+  'release gate collects release-codegen nextest JUnit report'
+require_pattern "$release" 'target/nextest/public-api-oce-api/junit\.xml' \
+  'release gate collects oce-api surface nextest JUnit report'
+require_pattern "$release" 'target/nextest/public-api-oce-store/junit\.xml' \
+  'release gate collects oce-store surface nextest JUnit report'
+require_pattern "$release" 'for profile in ci ci-release public-api-oce-api public-api-oce-store;' \
+  'release gate requires the complete nextest report set'
+require_pattern "$release" 'test -s "target/nextest/\$profile/junit\.xml"' \
+  'release gate refuses an absent or empty nextest report'
+require_pattern "$release" 'if-no-files-found:[[:space:]]*error' \
+  'release gate fails when nextest reports are absent'
+require_pattern "$release" 'retention-days:[[:space:]]*14' \
+  'release gate retains nextest reports for 14 days'
 require_pattern "$release" 'cargo test --workspace --doc --locked' 'doctest gate'
 require_pattern "$release" 'OCE_REQUIRE_SURFACE_CHECK:[[:space:]]*"1"' 'armed public-api surface gate'
 require_pattern "$release" 'cargo public-api surface gate \(oce-store\)' \
   'dedicated oce-store public-api surface gate step'
 require_pattern "$release" 'cargo nextest run -p oce-store' \
   'oce-store public-api surface gate package selector'
+require_pattern "$release" 'profile public-api-oce-api' 'oce-api surface report profile'
+require_pattern "$release" 'profile public-api-oce-store' 'oce-store surface report profile'
 require_pattern "$release" 'cargo-machete' 'release gate installs cargo-machete'
 require_pattern "$release" 'cargo machete' 'release gate runs cargo machete'
 require_pattern "$release" 'check-default-no-db\.sh' 'release gate runs default-no-db smoke'

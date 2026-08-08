@@ -1,34 +1,44 @@
 # .config/nextest.toml — cargo-nextest configuration for the open-control workspace.
 #
-# Schema verified against nextest 0.9.133 (the pinned CI + local version). nextest is the
+# Schema verified against nextest 0.9.143 (the pinned CI + local version). nextest is the
 # test runner for unit + integration tests, locally and in CI. Doctests run SEPARATELY via
 # `cargo test --doc` — nextest cannot run doctests (a stable-Rust limitation, not a config
 # switch), so any CI/local test pass is two commands, never one.
 #
 # Profiles:
 #   default — local dev: fast, fail-fast feedback (`cargo nextest run`).
-#   ci      — the `development` -> `main` release gate
-#             (`cargo nextest run --workspace --locked --profile ci --no-tests=fail`):
-#             no fail-fast (one run reports every failure), no retries (never mask a flake),
-#             immediate+final failure output, and a slow-test guard that kills hung tests.
+#   ci      — local gate + CI debug-codegen runs: no fail-fast, no retries, JUnit output.
+#   ci-release — inherits `ci` for release-codegen runs and writes a separate JUnit report.
+#   public-api* — inherit `ci` with a longer timeout for the nested nightly rustdoc builds.
 #
 # For a deterministic, safety-critical control engine the gate must be reproducible: no
 # retries, no flake-tolerance, hard-fail if zero tests are discovered (see release-gate.yml's
 # explicit `--no-tests=fail`, which catches "tests silently stopped compiling / being found").
 
+nextest-version = { required = "0.9.143", recommended = "0.9.143" }
+
 [profile.default]
-# These match nextest's built-in defaults; stated explicitly to document the local-dev
-# contract (a tight, fail-fast loop) rather than to change behavior.
+# Local runs stop scheduling after the first failure, but wait for already-running tests so their
+# cleanup logic completes.
 fail-fast = true
+
+# Never hide a flaky test. `flaky-result` also protects a future per-test retry override: a retry
+# may gather evidence, but a later pass still leaves the run red.
+retries = 0
+flaky-result = "fail"
+
+# Flag at 60s and terminate at 120s. Child processes that retain output handles for more than 2s
+# after their test exits are failures rather than advisory LEAK statuses.
+slow-timeout = { period = "60s", terminate-after = 2, on-timeout = "fail" }
+leak-timeout = { period = "2s", result = "fail" }
+
+# Bounds a pathological run even when no one test reaches its individual timeout.
+global-timeout = "15m"
 
 [profile.ci]
 # Run the whole suite even when something fails, so a single run reports every failure
 # instead of stopping at the first.
 fail-fast = false
-
-# Deterministic gate: no retries. The release gate must never hide a flaky test behind a
-# silent re-run — a flake on a control engine is a defect to surface, not to paper over.
-retries = 0
 
 # Show each failure's output inline as it happens, then a consolidated block at the end.
 # Valid values: immediate | immediate-final | final | never  (default: immediate).
@@ -48,15 +58,26 @@ status-level = "fail"
 # "slow" includes fail + flaky and also surfaces slow tests in the summary.
 final-status-level = "slow"
 
-# Flag any test slower than 60s; terminate a test still running after 2 periods (120s) so a
-# hung test cannot burn the whole CI timeout. grace-period defaults to 10s.
-slow-timeout = { period = "60s", terminate-after = 2 }
+[profile.ci.junit]
+path = "junit.xml"
+report-name = "open-control-ci"
+store-success-output = false
+store-failure-output = true
+report-skipped = "ignored"
+flaky-fail-status = "failure"
+
+[profile.ci-release]
+inherits = "ci"
+
+[profile.ci-release.junit]
+report-name = "open-control-ci-release"
 
 [profile.public-api]
+inherits = "ci"
 # Gate-only profile for the `cargo public-api` surface snapshot (crates/oce-api/tests/public_api.rs,
 # exit #7), run as its OWN release-gate step:
 #   cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-#     --profile public-api --locked --no-tests=fail
+#     --profile public-api-oce-api --locked --no-tests=fail
 #
 # Running it under nextest (not raw `cargo test`) is what gives `--no-tests=fail` its teeth: if the
 # test is ever renamed, deleted, `#[ignore]`'d, or filtered out, the run discovers zero tests and
@@ -66,9 +87,16 @@ slow-timeout = { period = "60s", terminate-after = 2 }
 # (rustc segregates artifacts by toolchain, so nothing is cached from the stable steps). That
 # routinely exceeds the `ci` profile's 60s×2 = 120s terminate-after, which would KILL the gate. So
 # this profile gives it a generous window: flag-slow at 120s, terminate only after 5 periods (10m).
-fail-fast = false
-retries = 0
-failure-output = "immediate-final"
-status-level = "fail"
-final-status-level = "slow"
-slow-timeout = { period = "120s", terminate-after = 5 }
+slow-timeout = { period = "120s", terminate-after = 5, on-timeout = "fail" }
+
+[profile.public-api-oce-api]
+inherits = "public-api"
+
+[profile.public-api-oce-api.junit]
+report-name = "open-control-public-api-oce-api"
+
+[profile.public-api-oce-store]
+inherits = "public-api"
+
+[profile.public-api-oce-store.junit]
+report-name = "open-control-public-api-oce-store"
