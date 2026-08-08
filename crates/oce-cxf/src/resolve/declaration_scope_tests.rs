@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use oce_diag::Diagnostic;
+use oce_diag::{DiagCode, Diagnostic};
 use oce_expr::EvalResult;
 use oce_model::Value;
 
@@ -405,8 +405,77 @@ fn call_heads_never_yield_identifier_tokens() {
 }
 
 #[test]
-fn sibling_name_inside_a_string_literal_is_the_accepted_false_positive_mode() {
-    // Documented accepted mode: string-literal contents tokenize like code. This pin exists so
-    // a future tokenizer change that alters the mode is a deliberate decision, not drift.
-    assert_eq!(identifier_heads("\"kBase\""), vec!["kBase"]);
+fn string_literal_bodies_never_contribute_declaration_heads() {
+    for expression in [
+        r#""kBase""#,
+        r#""Types.Mode.occupied max(x) sibling""#,
+        r#""quoted \"sibling\" and \\other""#,
+        r#""non-ASCII sibling: Δ""#,
+    ] {
+        assert!(
+            identifier_heads(expression).is_empty(),
+            "string contents are not scope lookups: {expression:?}"
+        );
+    }
+    assert_eq!(identifier_heads(r#""shadow" + actual"#), vec!["actual"]);
+}
+
+#[test]
+fn malformed_string_literals_do_not_manufacture_declaration_heads() {
+    for expression in ["\"sibling", "\"sibling\\"] {
+        assert!(
+            identifier_heads(expression).is_empty(),
+            "the expression parser, not the dependency census, diagnoses {expression:?}"
+        );
+    }
+}
+
+#[test]
+fn string_literals_named_for_siblings_ground_without_false_cycles_in_both_orders() {
+    let nodes = vec![
+        node(serde_json::json!({ "@id": "ex:M.a", "S231:value": "\"b\"" })),
+        node(serde_json::json!({ "@id": "ex:M.b", "S231:value": "a" })),
+    ];
+    for order in [["ex:M.a", "ex:M.b"], ["ex:M.b", "ex:M.a"]] {
+        let (entries, diags) = evaluate_root(&nodes, &order);
+        assert!(diags.is_empty(), "{order:?}: {diags:?}");
+        for name in ["a", "b"] {
+            assert!(
+                scalar(&entries, name)
+                    .unwrap_or_else(|| panic!("{name} must ground under {order:?}"))
+                    .bit_eq(&Value::String(Arc::from("b"))),
+                "{name} must preserve the string value under {order:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn self_named_string_literal_is_not_a_self_reference() {
+    let nodes = vec![node(
+        serde_json::json!({ "@id": "ex:M.a", "S231:value": "\"a\"" }),
+    )];
+    let (entries, diags) = evaluate_root(&nodes, &["ex:M.a"]);
+    assert!(diags.is_empty(), "{diags:?}");
+    assert!(
+        scalar(&entries, "a")
+            .unwrap()
+            .bit_eq(&Value::String(Arc::from("a")))
+    );
+}
+
+#[test]
+fn unterminated_self_named_literal_reports_the_expression_error_not_a_cycle() {
+    let nodes = vec![node(
+        serde_json::json!({ "@id": "ex:M.a", "S231:value": "\"a" }),
+    )];
+    let (entries, diags) = evaluate_root(&nodes, &["ex:M.a"]);
+    assert!(entries.is_empty());
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::GroundingFailed);
+    assert_eq!(diags[0].subject.as_deref(), Some("ex:M.a"));
+    assert_eq!(
+        diags[0].message,
+        "expression binding did not ground: expression parse error: unterminated string literal"
+    );
 }
