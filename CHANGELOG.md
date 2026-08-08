@@ -361,6 +361,11 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   inputs. Controls pin first-tick-only and periodic allocation detection, the known wide `Sort`
   allocation, and exclusion of off-thread traffic. Current catalog blocks do not delegate work to
   worker threads; a future block that does needs a companion worker-allocation guard.
+- **Facade allocation guards now measure only the calling thread** (#272). The previous
+  process-global allocator could charge libtest or worker-thread traffic to a tick or simulation
+  region despite the integration test's mutex. The replacement preserves the exact manual-tick,
+  snapshot-floor, realtime-step, and per-run simulation assertions; watch remains the positive
+  meter control, and a synchronized worker allocation proves off-thread traffic is excluded.
 - **G36 provenance records are bound to their golden bytes by content digest** (#204). The
   previous `engine_rev` field was deleted as unverifiable: CI checks out at depth 1, so no
   history-based check can run there at all.

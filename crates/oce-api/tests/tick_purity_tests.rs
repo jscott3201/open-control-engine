@@ -4,13 +4,17 @@
 //! `ahu_economizer`, and `vav_single_zone`) so the eval path covers the current
 //! stateful/control surface: integrators, filters, latches, timers, hysteresis,
 //! discrete blocks, integers, and conversions.
+//!
+//! Allocation regions count only the measured thread. The facade operations exercised here do not
+//! delegate work to worker threads; any future delegation needs a companion worker-allocation guard.
 
 mod support;
 
-use std::alloc::System;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
+use allocation_counter::{AllocationInfo, measure};
 use oce_api::oce_store::{
     DomainKey, Durability, Durable, EquipmentDto, ModelStore, OcValue, PointHandle, PointListRow,
     PointSample, PointSnapshot, PointStatus, PointStore, PointWrite, RelationDto, ResolvedModel,
@@ -18,16 +22,7 @@ use oce_api::oce_store::{
 };
 use oce_api::{CollectSpec, Engine, InputSource, SimSpec, Value};
 use oce_store_mem::MemStore;
-use stats_alloc::{INSTRUMENTED_SYSTEM, Region, Stats, StatsAlloc};
 use support::recording_store::{RecordingStore, StoreCallSnapshot};
-
-#[global_allocator]
-static GLOBAL: &StatsAlloc<System> = &INSTRUMENTED_SYSTEM;
-
-// The meter is process-global and plain `cargo test` runs tests thread-parallel in one process, so
-// every test serializes on this lock to keep concurrent heap traffic out of an open `Region`
-// (nextest, the gate's runner, is process-per-test and unaffected).
-static METER: Mutex<()> = Mutex::new(());
 
 const AHU_SAT_RESET: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -114,9 +109,6 @@ const G36_FIXTURES: &[G36Fixture] = &[
 
 #[test]
 fn g36_tick_path_stays_store_pure_and_alloc_free() {
-    let _meter = METER
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
     assert_recording_store_guard_and_counters_are_live();
     assert_read_resolved_returns_none_for_missing_handles();
     assert_load_saves_model_once_and_tick_does_not_save_again();
@@ -127,9 +119,6 @@ fn g36_tick_path_stays_store_pure_and_alloc_free() {
 
 #[test]
 fn warm_step_realtime_allocates_only_the_snapshot_box() {
-    let _meter = METER
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
     // The resolve-once durable batch (issue #242 slice 1): after load-time identity minting, a
     // warm `step_realtime` must allocate exactly what a bare `tick` does — the one frozen
     // `Box<dyn PointSnapshot>` — with the write path contributing zero heap traffic. The floor
@@ -157,20 +146,18 @@ fn warm_step_realtime_allocates_only_the_snapshot_box() {
             let snapshot_floor = snapshot_alloc_stats(store.as_ref(), fixture.name, t);
             assert_box_snapshot_floor(snapshot_floor, fixture.name, t);
 
-            let region = Region::new(GLOBAL);
-            engine
-                .step_realtime(t)
-                .unwrap_or_else(|e| panic!("{} fixture steps at t={t}: {e:?}", fixture.name));
-            assert_same_alloc_stats(region.change(), snapshot_floor, fixture.name, t);
+            let stats = measure(|| {
+                engine
+                    .step_realtime(t)
+                    .unwrap_or_else(|e| panic!("{} fixture steps at t={t}: {e:?}", fixture.name));
+            });
+            assert_same_alloc_stats(stats, snapshot_floor, fixture.name, t);
         }
     }
 }
 
 #[test]
 fn watch_read_allocates_and_is_visible_to_the_meter() {
-    let _meter = METER
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let fixture = &G36_FIXTURES[0];
     let store = Arc::new(AllocationStore::default());
     let mut engine = Engine::with_store(store);
@@ -190,26 +177,50 @@ fn watch_read_allocates_and_is_visible_to_the_meter() {
     // signature pin, not from this arm. The key slice is built before the region opens so the
     // measured traffic is attributable to `watch` itself.
     let paths = vec![output_path.as_str()];
-    let region = Region::new(GLOBAL);
-    {
+    let stats = measure(|| {
         let watched = engine
             .watch(paths.as_slice())
             .unwrap_or_else(|e| panic!("{} output is watchable: {e:?}", fixture.name));
         assert_eq!(watched.len(), 1);
         drop(watched);
-    }
-    let stats = region.change();
+    });
     assert!(
-        stats.allocations > 0 && stats.bytes_allocated > 0,
+        stats.count_total > 0 && stats.bytes_total > 0,
         "watch's owned result must register allocation traffic: {stats:?}"
     );
 }
 
 #[test]
+fn off_thread_allocations_do_not_enter_facade_measurements() {
+    let start = AtomicBool::new(false);
+    let done = AtomicBool::new(false);
+    std::thread::scope(|scope| {
+        let worker = scope.spawn(|| {
+            while !start.load(Ordering::Acquire) {
+                std::hint::spin_loop();
+            }
+            let allocated: Vec<u64> = Vec::with_capacity(64);
+            std::hint::black_box(&allocated);
+            drop(allocated);
+            done.store(true, Ordering::Release);
+        });
+        let info = measure(|| {
+            start.store(true, Ordering::Release);
+            while !done.load(Ordering::Acquire) {
+                std::hint::spin_loop();
+            }
+        });
+        worker.join().expect("allocation worker");
+        assert_eq!(
+            info,
+            AllocationInfo::default(),
+            "facade measurements must not attribute another thread's allocation"
+        );
+    });
+}
+
+#[test]
 fn no_store_input_tick_path_skips_snapshot_and_reads() {
-    let _meter = METER
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let store = Arc::new(RecordingStore::default());
     let mut engine = Engine::with_store(Arc::clone(&store));
     let report = engine
@@ -388,11 +399,12 @@ fn assert_manual_g36_tick_allocates_nothing() {
                 });
             }
 
-            let region = Region::new(GLOBAL);
-            engine
-                .tick(t)
-                .unwrap_or_else(|e| panic!("{} fixture ticks at t={t}: {e:?}", fixture.name));
-            assert_no_heap_traffic(region.change(), fixture.name, t);
+            let stats = measure(|| {
+                engine
+                    .tick(t)
+                    .unwrap_or_else(|e| panic!("{} fixture ticks at t={t}: {e:?}", fixture.name));
+            });
+            assert_no_heap_traffic(stats, fixture.name, t);
         }
     }
 }
@@ -412,14 +424,14 @@ fn assert_real_mem_store_tick_allocates_snapshot_floor() {
             let snapshot_floor = snapshot_alloc_stats(store.as_ref(), fixture.name, t);
             assert_box_snapshot_floor(snapshot_floor, fixture.name, t);
 
-            let region = Region::new(GLOBAL);
-            engine.tick(t).unwrap_or_else(|e| {
-                panic!(
-                    "{} real MemStore fixture ticks at t={t}: {e:?}",
-                    fixture.name
-                )
+            let tick_stats = measure(|| {
+                engine.tick(t).unwrap_or_else(|e| {
+                    panic!(
+                        "{} real MemStore fixture ticks at t={t}: {e:?}",
+                        fixture.name
+                    )
+                });
             });
-            let tick_stats = region.change();
             assert_same_alloc_stats(tick_stats, snapshot_floor, fixture.name, t);
         }
     }
@@ -483,96 +495,60 @@ fn assert_store_backed_read_counts(
     );
 }
 
-fn assert_no_heap_traffic(stats: Stats, fixture: &str, t: f64) {
+fn assert_no_heap_traffic(info: AllocationInfo, fixture: &str, t: f64) {
     assert_eq!(
-        stats.allocations, 0,
-        "{fixture} tick at t={t} allocated: {stats:?}"
-    );
-    assert_eq!(
-        stats.reallocations, 0,
-        "{fixture} tick at t={t} reallocated: {stats:?}"
-    );
-    assert_eq!(
-        stats.deallocations, 0,
-        "{fixture} tick at t={t} deallocated: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_allocated, 0,
-        "{fixture} tick at t={t} allocated bytes: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_reallocated, 0,
-        "{fixture} tick at t={t} reallocated bytes: {stats:?}"
-    );
-    assert_eq!(
-        stats.bytes_deallocated, 0,
-        "{fixture} tick at t={t} deallocated bytes: {stats:?}"
+        info,
+        AllocationInfo::default(),
+        "{fixture} tick at t={t} changed the measured thread's heap: {info:?}"
     );
 }
 
-fn snapshot_alloc_stats(store: &MemStore, fixture: &str, t: f64) -> Stats {
-    let region = Region::new(GLOBAL);
-    {
+fn snapshot_alloc_stats(store: &MemStore, fixture: &str, t: f64) -> AllocationInfo {
+    measure(|| {
         let _snapshot = store
             .snapshot()
             .unwrap_or_else(|e| panic!("{fixture} snapshot floor at t={t}: {e:?}"));
-    }
-    region.change()
+    })
 }
 
-fn assert_box_snapshot_floor(stats: Stats, fixture: &str, t: f64) {
+fn assert_box_snapshot_floor(info: AllocationInfo, fixture: &str, t: f64) {
     // The frozen `Box<dyn PointSnapshot>` seam leaves one small Box allocation per tick. The point
     // state itself is Arc-backed, so this bound is O(1) and independent of point count.
     assert_eq!(
-        stats.allocations, 1,
-        "{fixture} snapshot floor at t={t} must allocate exactly one Box: {stats:?}"
+        info.count_total, 1,
+        "{fixture} snapshot floor at t={t} must allocate exactly one Box: {info:?}"
     );
     assert_eq!(
-        stats.reallocations, 0,
-        "{fixture} snapshot floor at t={t} must not reallocate: {stats:?}"
+        info.count_current, 0,
+        "{fixture} snapshot floor at t={t} must release its Box: {info:?}"
     );
     assert_eq!(
-        stats.deallocations, 1,
-        "{fixture} snapshot floor at t={t} must deallocate exactly one Box: {stats:?}"
+        info.count_max, 1,
+        "{fixture} snapshot floor at t={t} must hold exactly one allocation: {info:?}"
     );
     assert!(
-        stats.bytes_allocated <= 128,
-        "{fixture} snapshot floor at t={t} allocated too many bytes: {stats:?}"
+        info.bytes_total <= 128,
+        "{fixture} snapshot floor at t={t} allocated too many bytes: {info:?}"
     );
     assert_eq!(
-        stats.bytes_reallocated, 0,
-        "{fixture} snapshot floor at t={t} must not reallocate bytes: {stats:?}"
+        info.bytes_current, 0,
+        "{fixture} snapshot floor at t={t} must release all bytes: {info:?}"
     );
     assert!(
-        stats.bytes_deallocated <= 128,
-        "{fixture} snapshot floor at t={t} deallocated too many bytes: {stats:?}"
+        info.bytes_max <= 128,
+        "{fixture} snapshot floor at t={t} held too many bytes: {info:?}"
     );
 }
 
-fn assert_same_alloc_stats(actual: Stats, expected: Stats, fixture: &str, t: f64) {
+fn assert_same_alloc_stats(
+    actual: AllocationInfo,
+    expected: AllocationInfo,
+    fixture: &str,
+    t: f64,
+) {
     assert_eq!(
-        actual.allocations, expected.allocations,
-        "{fixture} real MemStore tick at t={t} allocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
-    );
-    assert_eq!(
-        actual.reallocations, expected.reallocations,
-        "{fixture} real MemStore tick at t={t} reallocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
-    );
-    assert_eq!(
-        actual.deallocations, expected.deallocations,
-        "{fixture} real MemStore tick at t={t} deallocations must match snapshot floor: actual={actual:?}, expected={expected:?}"
-    );
-    assert_eq!(
-        actual.bytes_allocated, expected.bytes_allocated,
-        "{fixture} real MemStore tick at t={t} allocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
-    );
-    assert_eq!(
-        actual.bytes_reallocated, expected.bytes_reallocated,
-        "{fixture} real MemStore tick at t={t} reallocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
-    );
-    assert_eq!(
-        actual.bytes_deallocated, expected.bytes_deallocated,
-        "{fixture} real MemStore tick at t={t} deallocated bytes must match snapshot floor: actual={actual:?}, expected={expected:?}"
+        actual, expected,
+        "{fixture} real MemStore tick at t={t} must match the exact snapshot floor: actual={actual:?}, expected={expected:?}"
     );
 }
 
@@ -750,9 +726,6 @@ fn vav_inputs(t: f64) -> Vec<(String, Value)> {
 
 #[test]
 fn constant_staging_allocation_cost_is_per_run_not_per_tick() {
-    let _meter = METER
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
     // A FLOOR, and only a floor. Resolve-once `Constant` staging (issue #242) is a CPU
     // improvement: staging allocated nothing per tick before the change and allocates nothing per
     // tick after it, so no allocation figure here measures that win and none is claimed. What this
@@ -793,7 +766,8 @@ fn simulate_allocations(inputs: InputSource, ticks: u64) -> usize {
         inputs,
         collect: CollectSpec::None,
     };
-    let region = Region::new(GLOBAL);
-    engine.simulate(&spec).expect("horizon runs");
-    region.change().allocations
+    let info = measure(|| {
+        engine.simulate(&spec).expect("horizon runs");
+    });
+    usize::try_from(info.count_total).expect("test allocation count fits usize")
 }
