@@ -89,10 +89,16 @@ guard across that boundary. `simulate` deliberately clears the prior tick time o
 following `step_realtime` cannot detect regression relative to a real-time step that happened
 before the simulation.
 
-`simulate` is a run restart, not a continuation. On entry it clears the prior tick time and re-seeds
-the stateful blocks' state words to their authored start values. It leaves connector values alone,
-so it is narrower than the `resume` re-seed described below, which replaces the whole run state and
-only when parameters are dirty.
+`simulate` is a run restart, not a continuation. Before restarting, it resolves recorded columns,
+fixed inputs, and the first list returned by an input closure. A refusal there leaves the prior run
+unchanged, including its monotonic-time guard and state words. After preflight succeeds, the engine
+clears the prior tick time and re-seeds stateful blocks to their authored start values. It leaves
+connector values alone, so it is narrower than the `resume` re-seed described below, which replaces
+the whole run state and only when parameters are dirty.
+
+An input closure remains dynamic after the first tick. If a later call returns an unknown point or
+a wrong-typed value, completed ticks stay in effect and any valid pairs before the failing pair stay
+staged. A simulation is not transactional after execution begins.
 
 Two consequences to plan for. Splitting a horizon across two calls does not continue the
 trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the

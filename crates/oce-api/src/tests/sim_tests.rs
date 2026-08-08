@@ -18,9 +18,9 @@
 //!   one-block fixture could not see a re-seed covering only the first `[S]` slot. The fixture
 //!   below uses two `[S]` blocks with different non-zero seeds and pins the seeded values by value.
 //!
-//! The `prev_t` asymmetry between the two refusal gates is owned by
-//! `input_staging_tests::a_backwards_tick_still_succeeds_after_a_failed_constant_staging` and
-//! `a_failed_collect_still_refuses_a_backwards_tick`, which predate this file.
+//! Preflight refusal preserving `prev_t` is owned by
+//! `input_staging_tests::a_failed_constant_preflight_preserves_the_time_guard` and
+//! `a_failed_collect_still_refuses_a_backwards_tick`.
 
 use super::common::*;
 use oce_graph::allocate_state;
@@ -285,9 +285,8 @@ fn a_horizon_is_a_restart_so_chunking_one_run_into_two_does_not_continue_it() {
 
 #[test]
 fn a_refused_name_resolution_does_not_reseed_state_words() {
-    // The two name-resolution gates sit above the re-seed. A `Closure` spec resolves its names
-    // inside the loop and is a different case, not covered here; `prev_t` is a different case
-    // again, owned by the two `input_staging_tests` named in the module header.
+    // The name-resolution gates sit above the re-seed; `prev_t` is owned by the two
+    // `input_staging_tests` named in the module header.
     let mut eng = loaded();
     eng.simulate(&driven_spec(0.0, 10.0))
         .expect("a real horizon");
@@ -328,6 +327,72 @@ fn a_refused_name_resolution_does_not_reseed_state_words() {
         eng.state.words, before,
         "a refused input resolution must not re-seed state either"
     );
+}
+
+fn first_closure_refusal_preserves_run(invalid: (String, Value)) -> OcError {
+    let mut eng = loaded();
+    eng.simulate(&driven_spec(0.0, 10.0))
+        .expect("prime a real run");
+    let before_words = eng.state.words.clone();
+    assert_ne!(
+        before_words,
+        allocate_state(&eng.model, &eng.blocks).words,
+        "the primed words must differ from fresh seeds or a destructive re-seed stays invisible"
+    );
+    let before_values = eng.state.values.clone();
+    let before_t = eng.state.t.to_bits();
+    let before_prev_t = eng.prev_t;
+    let before_outputs = eng.outputs.to_map();
+
+    let mut pairs = driven_pairs();
+    pairs.push(invalid);
+    let refused = SimSpec {
+        t_start: 0.0,
+        t_stop: 10.0,
+        step: 1.0,
+        inputs: InputSource::Closure(Box::new(move |_| pairs.clone())),
+        collect: both_columns(),
+    };
+    let error = eng
+        .simulate(&refused)
+        .expect_err("the invalid first closure list must refuse");
+
+    assert_eq!(eng.state.words, before_words, "[S] words changed");
+    assert_eq!(eng.state.t.to_bits(), before_t, "model time changed");
+    assert_eq!(eng.prev_t, before_prev_t, "time guard changed");
+    assert_eq!(eng.state.values.len(), before_values.len());
+    for (index, (got, want)) in eng.state.values.iter().zip(&before_values).enumerate() {
+        assert!(got.bit_eq(want), "connector value {index} changed");
+    }
+    let after_outputs = eng.outputs.to_map();
+    assert_eq!(after_outputs.len(), before_outputs.len());
+    for (index, ((got_path, got), (want_path, want))) in
+        after_outputs.iter().zip(&before_outputs).enumerate()
+    {
+        assert_eq!(got_path, want_path, "output path {index} changed");
+        assert!(got.bit_eq(want), "output value {index} changed");
+    }
+    assert!(
+        matches!(eng.tick(5.0), Err(OcError::TimeRegression { .. })),
+        "the preserved time guard must still refuse a backwards tick"
+    );
+    error
+}
+
+#[test]
+fn an_unknown_point_in_the_first_closure_list_preserves_the_prior_run() {
+    assert!(matches!(
+        first_closure_refusal_preserves_run(("nope".to_string(), Value::Real(1.0))),
+        OcError::UnknownPoint(point) if point == "nope"
+    ));
+}
+
+#[test]
+fn a_wrong_type_in_the_first_closure_list_preserves_the_prior_run() {
+    assert!(matches!(
+        first_closure_refusal_preserves_run(("conn#0".to_string(), Value::Boolean(true))),
+        OcError::InputType(point) if point == "conn#0"
+    ));
 }
 
 /// The store interaction the rustdoc claims, in both directions. It is here because an earlier

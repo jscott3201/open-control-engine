@@ -10,10 +10,9 @@
 //!   preceding a bad one before refusing; the resolved plan writes nothing at all. This matches
 //!   what `simulate`'s sibling collect path already documents for itself — an unknown name fails
 //!   fast with no partial trace and no advanced model state.
-//! - the resolution sits immediately *after* `simulate`'s `prev_t` reset. A failed staging has
-//!   always left `prev_t` cleared, so a later backwards `tick` still succeeds; resolving above the
-//!   reset would preserve the prior tick's `prev_t` and turn that `tick` into
-//!   `Err(OcError::TimeRegression)` — a public error-surface change.
+//! - resolution now sits before `simulate` resets the run. A failed preflight preserves `prev_t`,
+//!   so a later backwards `tick` remains an `Err(OcError::TimeRegression)` instead of running with
+//!   the old state words under a disarmed time guard.
 //!
 //! Two *distinct* names sharing one connector is absent here because it cannot be built, not
 //! because the corpus happens not to contain it: `IoInventory::build_at_load` fills `input_by_path`
@@ -160,14 +159,10 @@ fn a_refusal_leaves_no_tick_run_and_no_trace() {
     );
 }
 
-// ---- placement: the resolution sits after simulate's prev_t reset ----
+// ---- placement: preflight sits before simulate resets the run ----
 
 #[test]
-fn a_backwards_tick_still_succeeds_after_a_failed_constant_staging() {
-    // THE PLACEMENT PIN. `simulate` clears `prev_t` (the fresh-time-axis reset, R-SIM-2) and only
-    // then resolves the Constant names. Move that resolution above the reset and this test reds
-    // with `Err(OcError::TimeRegression)`: the failed run would return with the prior tick's
-    // `prev_t` still in place, and the backwards tick below would be refused.
+fn a_failed_constant_preflight_preserves_the_time_guard() {
     let mut eng = loaded(free_add_model());
     eng.tick(10.0).expect("a forward tick sets prev_t");
     let spec = constant_spec(
@@ -177,17 +172,14 @@ fn a_backwards_tick_still_succeeds_after_a_failed_constant_staging() {
     );
     assert!(matches!(eng.simulate(&spec), Err(OcError::UnknownPoint(_))));
     assert!(
-        eng.tick(5.0).is_ok(),
-        "prev_t must have been cleared before the staging failure, so a backwards tick is allowed"
+        matches!(eng.tick(5.0), Err(OcError::TimeRegression { .. })),
+        "preflight refusal must preserve prev_t, so a backwards tick remains refused"
     );
 }
 
 #[test]
 fn a_failed_collect_still_refuses_a_backwards_tick() {
-    // The control for the pin above, and the asymmetry that makes it worth pinning: collect
-    // resolution runs *before* the `prev_t` reset, so a failed collect leaves `prev_t` intact and
-    // the same backwards tick is refused. The two paths legitimately sit on opposite sides of the
-    // reset; this test is what stops someone "fixing" the asymmetry by moving either one.
+    // The sibling preflight path: an unknown recorded column also leaves `prev_t` intact.
     let mut eng = loaded(free_add_model());
     eng.tick(10.0).expect("a forward tick sets prev_t");
     let spec = SimSpec {
@@ -387,11 +379,14 @@ fn closure_inputs_still_resolve_at_every_step() {
     // and it still goes through `set_input` per step. This model has two independent inputs; the
     // closure stages only one of them at a time, and switches which one halfway through.
     let mut eng = loaded(free_add_model());
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let closure_calls = std::sync::Arc::clone(&calls);
     let spec = SimSpec {
         t_start: 0.0,
         t_stop: 3.0,
         step: 1.0,
-        inputs: InputSource::Closure(Box::new(|t| {
+        inputs: InputSource::Closure(Box::new(move |t| {
+            closure_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             if t < 1.5 {
                 vec![("conn#0".to_string(), Value::Real(2.0))]
             } else {
@@ -401,6 +396,11 @@ fn closure_inputs_still_resolve_at_every_step() {
         collect: named(&["conn#2"]),
     };
     let metrics = eng.simulate(&spec).expect("the closure run must succeed");
+    assert_eq!(
+        calls.load(std::sync::atomic::Ordering::Relaxed),
+        4,
+        "the preflighted first list must be reused, not obtained by calling the closure twice"
+    );
     let col = metrics.trace.column(0).expect("one recorded column");
     // conn#0 is staged for t ∈ {0, 1} (sum 2.0), then conn#1 joins it for t ∈ {2, 3} (sum 7.0) —
     // conn#0 keeps its last staged value because nothing overwrites it.
