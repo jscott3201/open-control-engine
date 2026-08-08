@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{Attrs, Connector, ModelGraph};
+use oce_model::{Attrs, Dir, ModelGraph};
 
 // ---- shared helpers -------------------------------------------------------------------------
 
@@ -59,6 +59,18 @@ enum IntAttr {
     Max,
 }
 
+#[derive(Clone, Copy)]
+struct ClusterMembers<'a> {
+    connectors: &'a [u32],
+    boundary_outputs: &'a [usize],
+}
+
+#[derive(Default)]
+struct ClusterEntries {
+    connectors: Vec<u32>,
+    boundary_outputs: Vec<usize>,
+}
+
 impl IntAttr {
     fn label(self) -> &'static str {
         match self {
@@ -98,9 +110,9 @@ impl AttrVal {
     }
 }
 
-/// Read a connector's `displayUnit` (R13.3) — `None` if not `Real` or unset.
-fn read_display_unit(c: &Connector) -> Option<Arc<str>> {
-    c.attrs.as_real().and_then(|ra| ra.display_unit.clone())
+/// Read an attribute set's `displayUnit` (R13.3) — `None` if not `Real` or unset.
+fn read_display_unit(attrs: &Attrs) -> Option<Arc<str>> {
+    attrs.as_real().and_then(|ra| ra.display_unit.clone())
 }
 
 /// §7.10 attribute unification (doc 02 §9 R13.1–R13.4), as a **gather-then-decide cluster
@@ -109,11 +121,14 @@ fn read_display_unit(c: &Connector) -> Option<Arc<str>> {
 ///
 /// Under single assignment every `In` connector has in-degree ≤ 1, and in a *structurally-valid*
 /// graph an `In` connector is never a connection *source* (using one as a `from` is a
-/// [`super::structural::check_connections`] `DirectionMismatch` that fails the load). So a connected component is a
-/// disjoint **star**: one output connector and the inputs it drives, and no connector belongs to two
-/// clusters — the result is then genuinely order-independent. (We cluster only inputs whose
-/// in-degree is exactly 1; a multiply-driven input is a [`super::structural::check_single_assignment`] error, excluded
-/// so a cluster never double-*writes* a connector.) For each star, each `Real` attribute in
+/// [`super::structural::check_connections`] `DirectionMismatch` that fails the load). So a connected
+/// component is a disjoint **star**: one output connector, the inputs it drives, and any declared
+/// boundary outputs that alias its value. Structurally valid aliases reference an `Out` connector
+/// with a matching attribute variant; malformed aliases are excluded here and refused by
+/// [`super::structural::check_boundary_outputs`]. No member then belongs to two clusters, so the
+/// result is genuinely order-independent. (We cluster only inputs whose in-degree is exactly 1; a
+/// multiply-driven input is a [`super::structural::check_single_assignment`] error, excluded so a
+/// cluster never double-*writes* a connector.) For each star, each `Real` attribute in
 /// `{unit, quantity, min, max}` and each `Integer` bound in `{min, max}` is *gathered* (the set of
 /// declared, non-default values across all members) then *decided*:
 /// - **R13.1** ≥ 2 distinct values → a `shall`-error ([`DiagCode::UnitQuantityMismatch`] for
@@ -133,14 +148,24 @@ fn read_display_unit(c: &Connector) -> Option<Arc<str>> {
 /// never propagated). `nominal`/`unbounded` are **not** unified (R13.4) — those are the *only* two
 /// §7.10 attributes excluded; `min`/`max` are NOT in R13.4 and ARE unified here.
 pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>) {
+    let connector_attrs = model
+        .connectors
+        .iter()
+        .map(|connector| connector.attrs.clone())
+        .collect::<Vec<_>>();
+    let boundary_attrs = model
+        .boundary_outputs
+        .iter()
+        .map(|output| output.attrs.clone())
+        .collect::<Vec<_>>();
     let deg = in_degrees(model);
     let n = model.connectors.len() as u32;
 
-    // Accumulate star clusters: output-connector id → driven (single-assignment) input ids.
+    // Accumulate star clusters by output-connector id.
     // HashMap is used only to accumulate; iteration is over a sorted key list so the emission is
     // deterministic regardless of graph shape (order-independent outright for the valid disjoint-star
     // case; see the type-doc above for the malformed-chain caveat).
-    let mut clusters: HashMap<u32, Vec<u32>> = HashMap::new();
+    let mut clusters: HashMap<u32, ClusterEntries> = HashMap::new();
     for c in &model.connections {
         if c.from.0 >= n || c.to.0 >= n {
             continue; // out-of-range — check_connections reports it
@@ -148,34 +173,65 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
         if deg.get(c.to.0 as usize).copied().unwrap_or(0) != 1 {
             continue; // multiply-driven input — excluded for confluence (check_single_assignment errors)
         }
-        clusters.entry(c.from.0).or_default().push(c.to.0);
+        clusters
+            .entry(c.from.0)
+            .or_default()
+            .connectors
+            .push(c.to.0);
+    }
+    for (index, output) in model.boundary_outputs.iter().enumerate() {
+        let Some(source) = model.connectors.get(output.source.0 as usize) else {
+            continue;
+        };
+        if source.dir != Dir::Out || !output.attrs.matches(source.value_type) {
+            continue;
+        }
+        clusters
+            .entry(output.source.0)
+            .or_default()
+            .boundary_outputs
+            .push(index);
     }
     let mut roots: Vec<u32> = clusters.keys().copied().collect();
     roots.sort_unstable();
 
     for root in roots {
-        let mut members: Vec<u32> = Vec::with_capacity(clusters[&root].len() + 1);
+        let cluster = &clusters[&root];
+        let mut members: Vec<u32> = Vec::with_capacity(cluster.connectors.len() + 1);
         members.push(root);
-        members.extend(clusters[&root].iter().copied());
+        members.extend(cluster.connectors.iter().copied());
+        let cluster_members = ClusterMembers {
+            connectors: &members,
+            boundary_outputs: &cluster.boundary_outputs,
+        };
         for attr in [
             RealAttr::Unit,
             RealAttr::Quantity,
             RealAttr::Min,
             RealAttr::Max,
         ] {
-            unify_real(model, &members, attr, diags);
+            unify_real(model, cluster_members, attr, diags);
         }
         for attr in [IntAttr::Min, IntAttr::Max] {
-            unify_int(model, &members, attr, diags);
+            unify_int(model, cluster_members, attr, diags);
         }
-        warn_display_unit_divergence(model, &members, diags);
+        warn_display_unit_divergence(model, cluster_members, diags);
+    }
+
+    if diags.iter().any(Diagnostic::is_error) {
+        for (connector, attrs) in model.connectors.iter_mut().zip(connector_attrs) {
+            connector.attrs = attrs;
+        }
+        for (output, attrs) in model.boundary_outputs.iter_mut().zip(boundary_attrs) {
+            output.attrs = attrs;
+        }
     }
 }
 
-/// Read a `Real` attribute off a connector — `None` if the connector is not a `Real` (the
+/// Read a `Real` attribute from an attribute set — `None` if the set is not `Real` (the
 /// `as_real()` guard also tolerates a tag-invariant-violating hand-built connector) or it is unset.
-fn read_real(c: &Connector, attr: RealAttr) -> Option<AttrVal> {
-    let ra = c.attrs.as_real()?;
+fn read_real(attrs: &Attrs, attr: RealAttr) -> Option<AttrVal> {
+    let ra = attrs.as_real()?;
     match attr {
         RealAttr::Unit => ra.unit.clone().map(AttrVal::Text),
         RealAttr::Quantity => ra.quantity.clone().map(AttrVal::Text),
@@ -184,9 +240,9 @@ fn read_real(c: &Connector, attr: RealAttr) -> Option<AttrVal> {
     }
 }
 
-/// Write a unified `Real` attribute into a connector, **only if** its slot is currently unset.
-fn write_real(c: &mut Connector, attr: RealAttr, value: &AttrVal) {
-    let Attrs::Real(ra) = &mut c.attrs else {
+/// Write a unified `Real` attribute into a matching set, only when its slot is unset.
+fn write_real(attrs: &mut Attrs, attr: RealAttr, value: &AttrVal) {
+    let Attrs::Real(ra) = attrs else {
         return;
     };
     match (attr, value) {
@@ -203,16 +259,23 @@ fn write_real(c: &mut Connector, attr: RealAttr, value: &AttrVal) {
 /// Gather-then-decide one `Real` attribute over one star cluster (R13.1 conflict / R13.2 propagate).
 fn unify_real(
     model: &mut ModelGraph,
-    members: &[u32],
+    members: ClusterMembers<'_>,
     attr: RealAttr,
     diags: &mut Vec<Diagnostic>,
 ) {
     let mut declared: Vec<AttrVal> = Vec::new();
-    for &m in members {
+    for &m in members.connectors {
         if let Some(c) = model.connectors.get(m as usize)
-            && let Some(v) = read_real(c, attr)
+            && let Some(v) = read_real(&c.attrs, attr)
         {
             declared.push(v);
+        }
+    }
+    for &index in members.boundary_outputs {
+        if let Some(output) = model.boundary_outputs.get(index)
+            && let Some(value) = read_real(&output.attrs, attr)
+        {
+            declared.push(value);
         }
     }
     decide_and_apply(
@@ -222,14 +285,19 @@ fn unify_real(
         attr.label(),
         attr.conflict_code(),
         diags,
-        |c, v| write_real(c, attr, v),
+        |attrs, value| write_real(attrs, attr, value),
     );
 }
 
 /// Gather-then-decide one `Integer` bound over one star cluster.
-fn unify_int(model: &mut ModelGraph, members: &[u32], attr: IntAttr, diags: &mut Vec<Diagnostic>) {
+fn unify_int(
+    model: &mut ModelGraph,
+    members: ClusterMembers<'_>,
+    attr: IntAttr,
+    diags: &mut Vec<Diagnostic>,
+) {
     let mut declared: Vec<AttrVal> = Vec::new();
-    for &m in members {
+    for &m in members.connectors {
         if let Some(c) = model.connectors.get(m as usize)
             && let Some(ia) = c.attrs.as_integer()
         {
@@ -242,6 +310,19 @@ fn unify_int(model: &mut ModelGraph, members: &[u32], attr: IntAttr, diags: &mut
             }
         }
     }
+    for &index in members.boundary_outputs {
+        if let Some(output) = model.boundary_outputs.get(index)
+            && let Some(ia) = output.attrs.as_integer()
+        {
+            let value = match attr {
+                IntAttr::Min => ia.min,
+                IntAttr::Max => ia.max,
+            };
+            if let Some(value) = value {
+                declared.push(AttrVal::Int(value));
+            }
+        }
+    }
     decide_and_apply(
         model,
         members,
@@ -249,8 +330,8 @@ fn unify_int(model: &mut ModelGraph, members: &[u32], attr: IntAttr, diags: &mut
         attr.label(),
         DiagCode::BoundMismatch,
         diags,
-        |c, value| {
-            if let (Attrs::Integer(ia), AttrVal::Int(i)) = (&mut c.attrs, value) {
+        |attrs, value| {
+            if let (Attrs::Integer(ia), AttrVal::Int(i)) = (attrs, value) {
                 match attr {
                     IntAttr::Min if ia.min.is_none() => ia.min = Some(*i),
                     IntAttr::Max if ia.max.is_none() => ia.max = Some(*i),
@@ -265,12 +346,12 @@ fn unify_int(model: &mut ModelGraph, members: &[u32], attr: IntAttr, diags: &mut
 /// → propagate to every member via `apply` (which itself no-ops on already-set slots).
 fn decide_and_apply(
     model: &mut ModelGraph,
-    members: &[u32],
+    members: ClusterMembers<'_>,
     declared: &[AttrVal],
     label: &str,
     conflict_code: DiagCode,
     diags: &mut Vec<Diagnostic>,
-    apply: impl Fn(&mut Connector, &AttrVal),
+    apply: impl Fn(&mut Attrs, &AttrVal),
 ) {
     let Some(first) = declared.first() else {
         return; // 0 declared — nothing to unify
@@ -279,9 +360,14 @@ fn decide_and_apply(
         // R13.2: propagate the single agreed value to every unset member. Order-independent — the
         // value is identical regardless of which member it came from.
         let value = first.clone();
-        for &m in members {
+        for &m in members.connectors {
             if let Some(c) = model.connectors.get_mut(m as usize) {
-                apply(c, &value);
+                apply(&mut c.attrs, &value);
+            }
+        }
+        for &index in members.boundary_outputs {
+            if let Some(output) = model.boundary_outputs.get_mut(index) {
+                apply(&mut output.attrs, &value);
             }
         }
     } else {
@@ -293,11 +379,12 @@ fn decide_and_apply(
         let mut d = Diagnostic::error(
             conflict_code,
             format!(
-                "connected connectors declare conflicting {label} values {distinct:?}; \
+                "connected cluster members declare conflicting {label} values {distinct:?}; \
                  §7.10 (R13.1) requires agreement"
             ),
         );
         if let Some(c) = members
+            .connectors
             .first()
             .and_then(|&r| model.connectors.get(r as usize))
         {
@@ -309,13 +396,24 @@ fn decide_and_apply(
 
 /// R13.3: divergent `displayUnit`s across a star are an advisory warning — non-computational, never
 /// an error, never propagated.
-fn warn_display_unit_divergence(model: &ModelGraph, members: &[u32], diags: &mut Vec<Diagnostic>) {
+fn warn_display_unit_divergence(
+    model: &ModelGraph,
+    members: ClusterMembers<'_>,
+    diags: &mut Vec<Diagnostic>,
+) {
     let mut declared: Vec<Arc<str>> = Vec::new();
-    for &m in members {
+    for &m in members.connectors {
         if let Some(c) = model.connectors.get(m as usize)
-            && let Some(du) = read_display_unit(c)
+            && let Some(du) = read_display_unit(&c.attrs)
         {
             declared.push(du);
+        }
+    }
+    for &index in members.boundary_outputs {
+        if let Some(output) = model.boundary_outputs.get(index)
+            && let Some(display_unit) = read_display_unit(&output.attrs)
+        {
+            declared.push(display_unit);
         }
     }
     if declared.len() < 2 || declared.iter().all(|v| v.as_ref() == declared[0].as_ref()) {
@@ -327,11 +425,12 @@ fn warn_display_unit_divergence(model: &ModelGraph, members: &[u32], diags: &mut
     let mut d = Diagnostic::warning(
         DiagCode::DisplayUnitDivergence,
         format!(
-            "connected connectors declare divergent displayUnit values {distinct:?}; \
+            "connected cluster members declare divergent displayUnit values {distinct:?}; \
              non-computational, advisory only (§7.17, R13.3)"
         ),
     );
     if let Some(c) = members
+        .connectors
         .first()
         .and_then(|&r| model.connectors.get(r as usize))
     {

@@ -158,9 +158,15 @@ identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named`
 its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
 `(path, driver_path)` pairs. Declared names stay out of `point_list`, `to_map`, `IoSummary`,
 and the durable store batch — a declared name and its driver are two keys over one value, and
-only the driver's path carries samples. `set_input` never accepts a declared output name. An
-undriven declared output resolves nowhere; its load-time `undriven-boundary-output` warning is
-its only representation.
+only the driver's path carries samples. Their unit, quantity, and bounds are one §7.10 contract:
+conflicts refuse at load and one-sided values propagate to the unset peer. `set_input` never accepts
+a declared output name. Because the driver's connector supplies host point metadata, a declared
+alias can supply a previously unset driver unit, quantity, or bound. That changes the driver's
+`IoInventory` and `point_list(None)` row for an unchanged input document; propagated unit and
+quantity also reach the durable `PointDto`. `IoSummary` remains a count-only surface and does not
+change when metadata propagates. Hosts that retain point metadata outside the store port must
+refresh it after loading with this rule. An undriven declared output resolves nowhere; its load-time
+`undriven-boundary-output` warning is its only representation.
 
 A related contract for emitters and durable stores: array order is load-bearing wherever the
 resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and

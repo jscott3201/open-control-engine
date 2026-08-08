@@ -9,8 +9,8 @@ pub(super) use std::sync::Arc;
 
 pub(super) use oce_diag::{DiagCode, Severity};
 pub(super) use oce_model::{
-    Attrs, BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, IntAttrs, ModelGraph,
-    ParamTable, RealAttrs, Value, ValueType,
+    Attrs, BlockId, BlockInstance, BoundaryOutput, Connection, Connector, ConnectorId, Dir,
+    IntAttrs, ModelGraph, ParamTable, RealAttrs, Value, ValueType,
 };
 
 pub(super) use crate::{unify_and_validate, unify_attributes, validate};
@@ -126,6 +126,14 @@ pub(super) fn conn_edge(from: u32, to: u32) -> Connection {
     Connection {
         from: ConnectorId(from),
         to: ConnectorId(to),
+    }
+}
+
+pub(super) fn boundary_output(iri: &str, source: u32, attrs: Attrs) -> BoundaryOutput {
+    BoundaryOutput {
+        iri: Arc::from(iri),
+        source: ConnectorId(source),
+        attrs,
     }
 }
 

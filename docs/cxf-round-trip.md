@@ -39,9 +39,12 @@ produces (`crates/oce-cxf/src/lib.rs:114-117`). Everything outside it is a typed
 the owning block's `instance_iri`. Never a panic (`crates/oce-cxf/src/export.rs:59-62`).
 
 Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON scalar on the minted
-child port node and on each declared boundary-**output** node — the declared node's own authored
-values, not its driver's. Boundary-input nodes still carry none; that side is tracked as issue
-#243 (`crates/oce-cxf/src/export.rs:31-43`):
+child port node and on each declared boundary-**output** node. `Engine::load_cxf` joins a declared
+output and its source in the same §7.10 cluster: conflicting values refuse the load, while a value
+declared on only one side propagates to the unset peer before export. Low-level callers that compose
+`oce_cxf::import_cxf` and `export` directly must run the graph through `oce_validate` to apply that
+load contract. Boundary-input nodes still carry none; that side is tracked as issue #243
+(`crates/oce-cxf/src/export.rs:31-43`):
 
 | Attribute | Emitted as | Applies to |
 | --- | --- | --- |

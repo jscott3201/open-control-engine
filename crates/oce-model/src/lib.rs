@@ -489,8 +489,9 @@ pub struct BoundaryOutput {
     pub iri: Arc<str>,
     /// The surviving child output connector whose value is exposed at the boundary.
     pub source: ConnectorId,
-    /// The declared node's authored §7.4.1 attributes (unit/quantity/displayUnit/min/max),
-    /// parsed by the same path connector attrs use. Its variant matches the declared node's
+    /// The declared node's §7.4.1 attributes (unit/quantity/displayUnit/min/max), parsed by the same
+    /// path connector attrs use. §7.10 unification preserves authored values and propagates
+    /// one-sided values between this alias and `source`. Its variant matches the declared node's
     /// value type (R5), which import guarantees equals the driver's; export refuses a
     /// host-constructed mismatch.
     pub attrs: Attrs,

@@ -74,11 +74,6 @@ const INTEGER_EXPRESSION_BOUND: &str =
 /// grounded-to-a-non-integer arm.
 const INTEGER_FRACTIONAL_BOUND: &str =
     include_str!("fixtures/declared_output_integer_fractional_bound.jsonld");
-/// A declared elided output whose unit/quantity contradict its driver's unit — the §7.10
-/// exclusion witness.
-const DRIVER_UNIT_DIVERGENCE: &str =
-    include_str!("fixtures/declared_output_driver_unit_divergence.jsonld");
-
 fn g36_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
 }
@@ -581,47 +576,6 @@ fn fractional_bound_on_a_declared_integer_output_is_refused() {
         ),
         other => panic!("expected a validation rejection, got {other:?}"),
     }
-}
-
-// ---- the §7.10 exclusion: declared attrs never enter a unification cluster ---------------------
-
-/// CHARACTERIZATION, not endorsement: a declared ELIDED boundary output carrying unit `"Pa"` /
-/// quantity `"PressureDifference"` over a driver carrying unit `"K"`, joined by
-/// `isConnectedTo`, imports with ZERO diagnostics — and the export carries BOTH contradictory
-/// attribute sets verbatim. The acceptance is DELIBERATE and structural: §7.10 unification
-/// (`oce-validate`'s `unify_clusters`) builds its clusters exclusively from `model.connections`
-/// over `model.connectors`, and `BoundaryOutput.attrs` is neither, so the declared/driver pair
-/// can never enter a cluster. The equivalent conflict between two ordinary connectors IS
-/// refused (`oce-validate`'s unification tests); activating unification over declared attrs is
-/// a future owner ruling. This test makes the exclusion visible: the zero-diagnostic pin and
-/// the two byte pins red loudly the day that ruling lands, whether it refuses or propagates.
-#[test]
-fn declared_driver_unit_divergence_is_accepted_and_exported_on_both_nodes() {
-    let graph = import_ok(
-        "declared_output_driver_unit_divergence.jsonld",
-        DRIVER_UNIT_DIVERGENCE.as_bytes(),
-    );
-    let bytes = export(&graph).expect("fixture is inside the export subset");
-    let doc: JsonValue = serde_json::from_slice(&bytes).expect("export JSON");
-
-    let declared = node_by_id(&doc, "http://example.org#DriverUnitDivergence.yDecl")
-        .expect("exported declared output node");
-    assert_eq!(
-        (
-            declared["S231:unit"].as_str(),
-            declared["S231:quantity"].as_str(),
-        ),
-        (Some("Pa"), Some("PressureDifference")),
-        "the declared node keeps its own authored unit/quantity"
-    );
-
-    let driver = node_by_id(&doc, "http://example.org#DriverUnitDivergence.con.y")
-        .expect("exported driving connector node");
-    assert_eq!(
-        driver["S231:unit"].as_str(),
-        Some("K"),
-        "the driver keeps its own contradictory unit — the divergence survives on both nodes"
-    );
 }
 
 // ---- the host-constructed tag mismatch: refused at export, never emitted or dropped ------------

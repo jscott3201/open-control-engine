@@ -160,12 +160,21 @@ and a gate that accepted any text would restore exactly the false assurance desc
   by ruling (#243). Two consequences are worth knowing before you emit: reusing the connector-attr
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
-  message, none occurring in the G36 corpus — and the declared/driver attr pair sits structurally
-  outside §7.10 unification, because `unify_clusters` builds clusters from `model.connections` over
-  `model.connectors` and `BoundaryOutput.attrs` is neither. So a declared output claiming
-  `unit: "Pa"` over a driver carrying `unit: "K"` imports with zero diagnostics and both units
-  export. A characterization test pins that acceptance so the exclusion is visible rather than
-  silent; activating declared-attr unification is a future ruling.
+  message, none occurring in the G36 corpus.
+- **Declared boundary-output attributes now unify with their source connector** (#273). The
+  `BoundaryOutput.attrs` alias previously sat outside every §7.10 cluster, so a declared output
+  claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.
+  Boundary aliases now join the existing deterministic gather-then-decide cluster rooted at their
+  source. Conflicting unit, quantity, and bounds refuse; one-sided values propagate to unset
+  connector and alias members; `displayUnit` divergence remains advisory. A conflict rolls back all
+  propagation, permuted aliases produce identical diagnostics, and the full validator refuses
+  malformed hand-built aliases without a panic. Across the 47 G36 fixtures, 33 exported byte streams
+  change and none flips between accepting and refusing. The 27 complete exports among those changes
+  receive new `content_id_complete` values; the other six remain incomplete before and after the
+  change. A declared alias can now supply a previously unset driver connector's unit, quantity, or
+  bounds, so `IoInventory` and `point_list(None)` metadata can change for an unchanged input
+  document. Unit and quantity also reach the durable `PointDto`; `IoSummary` remains unchanged
+  because it contains counts rather than point metadata.
 
 ### Host facade
 

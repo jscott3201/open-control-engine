@@ -460,3 +460,305 @@ fn t37_integer_bounds_conflict_and_propagate() {
     );
     assert_eq!(prop.connectors[1].attrs.as_integer().unwrap().max(), 10);
 }
+
+#[test]
+fn boundary_alias_and_connector_attrs_propagate_across_the_whole_cluster() {
+    let mut model = ModelGraph {
+        connectors: vec![
+            real_conn(
+                0,
+                0,
+                Dir::Out,
+                RealAttrs {
+                    unit: Some(Arc::from("K")),
+                    min: Some(200.0),
+                    ..RealAttrs::default()
+                },
+            ),
+            real_conn(1, 1, Dir::In, RealAttrs::default()),
+        ],
+        connections: vec![conn_edge(0, 1)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                quantity: Some(Arc::from("ThermodynamicTemperature")),
+                max: Some(330.0),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        unify_attributes(&mut model)
+            .expect("boundary alias cluster unifies")
+            .is_empty()
+    );
+    for attrs in [
+        &model.connectors[0].attrs,
+        &model.connectors[1].attrs,
+        &model.boundary_outputs[0].attrs,
+    ] {
+        let real = attrs.as_real().expect("Real cluster member");
+        assert_eq!(real.unit(), "K");
+        assert_eq!(real.quantity(), "ThermodynamicTemperature");
+        assert_eq!(real.min().to_bits(), 200.0_f64.to_bits());
+        assert_eq!(real.max().to_bits(), 330.0_f64.to_bits());
+    }
+}
+
+#[test]
+fn boundary_alias_unification_scales_linearly_with_alias_count() {
+    const COUNT: u32 = 50_000;
+    let mut model = ModelGraph {
+        connectors: (0..COUNT)
+            .map(|id| real_unit(id, id, Dir::Out, Some("K")))
+            .collect(),
+        boundary_outputs: (0..COUNT)
+            .map(|id| {
+                boundary_output(
+                    &format!("urn:test:boundary:{id}"),
+                    id,
+                    Attrs::Real(RealAttrs::default()),
+                )
+            })
+            .collect(),
+        ..ModelGraph::new()
+    };
+
+    unify_attributes(&mut model).expect("large boundary alias graph unifies");
+    assert_eq!(model.boundary_outputs.len(), COUNT as usize);
+    for index in [0, COUNT as usize / 2, COUNT as usize - 1] {
+        assert_eq!(
+            model.boundary_outputs[index]
+                .attrs
+                .as_real()
+                .unwrap()
+                .unit(),
+            "K"
+        );
+    }
+}
+
+#[test]
+fn boundary_alias_conflict_is_hard_error_without_partial_rewrite() {
+    let mut model = ModelGraph {
+        connectors: vec![real_unit(0, 0, Dir::Out, Some("K"))],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("Pa")),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = unify_attributes(&mut model).expect_err("boundary unit conflict must fail");
+    assert_eq!(
+        codes(&error.diagnostics),
+        vec![DiagCode::UnitQuantityMismatch]
+    );
+    assert!(error.diagnostics[0].message.contains("[\"K\", \"Pa\"]"));
+    assert_eq!(model.connectors[0].attrs.as_real().unwrap().unit(), "K");
+    assert_eq!(
+        model.boundary_outputs[0].attrs.as_real().unwrap().unit(),
+        "Pa"
+    );
+}
+
+#[test]
+fn later_attribute_conflict_rolls_back_earlier_propagation() {
+    let mut model = ModelGraph {
+        connectors: vec![real_conn(
+            0,
+            0,
+            Dir::Out,
+            RealAttrs {
+                quantity: Some(Arc::from("ThermodynamicTemperature")),
+                ..RealAttrs::default()
+            },
+        )],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("K")),
+                quantity: Some(Arc::from("Pressure")),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = unify_attributes(&mut model).expect_err("quantity conflict must fail");
+    assert_eq!(
+        codes(&error.diagnostics),
+        vec![DiagCode::UnitQuantityMismatch]
+    );
+    assert!(model.connectors[0].attrs.as_real().unwrap().unit.is_none());
+}
+
+#[test]
+fn later_cluster_conflict_rolls_back_earlier_cluster_propagation() {
+    let mut model = ModelGraph {
+        connectors: vec![
+            real_unit(0, 0, Dir::Out, Some("K")),
+            real_unit(1, 1, Dir::Out, Some("K")),
+        ],
+        boundary_outputs: vec![
+            boundary_output(
+                "urn:test:propagated-first",
+                0,
+                Attrs::Real(RealAttrs::default()),
+            ),
+            boundary_output(
+                "urn:test:conflict-second",
+                1,
+                Attrs::Real(RealAttrs {
+                    unit: Some(Arc::from("Pa")),
+                    ..RealAttrs::default()
+                }),
+            ),
+        ],
+        ..ModelGraph::new()
+    };
+
+    unify_attributes(&mut model).expect_err("later cluster conflict must fail");
+    assert!(
+        model.boundary_outputs[0]
+            .attrs
+            .as_real()
+            .unwrap()
+            .unit
+            .is_none()
+    );
+}
+
+#[test]
+fn integer_bounds_propagate_between_source_and_boundary_alias() {
+    let mut model = ModelGraph {
+        connectors: vec![int_conn(
+            0,
+            0,
+            Dir::Out,
+            IntAttrs {
+                min: Some(1),
+                max: None,
+            },
+        )],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:integer-boundary",
+            0,
+            Attrs::Integer(IntAttrs {
+                min: None,
+                max: Some(10),
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    unify_attributes(&mut model).expect("Integer boundary bounds unify");
+    let source = model.connectors[0].attrs.as_integer().unwrap();
+    let boundary = model.boundary_outputs[0].attrs.as_integer().unwrap();
+    assert_eq!((source.min(), source.max()), (1, 10));
+    assert_eq!((boundary.min(), boundary.max()), (1, 10));
+}
+
+#[test]
+fn boundary_display_unit_divergence_is_advisory() {
+    let mut model = ModelGraph {
+        connectors: vec![real_conn(
+            0,
+            0,
+            Dir::Out,
+            RealAttrs {
+                display_unit: Some(Arc::from("K")),
+                ..RealAttrs::default()
+            },
+        )],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                display_unit: Some(Arc::from("degC")),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let warnings = unify_attributes(&mut model).expect("displayUnit remains advisory");
+    assert_eq!(codes(&warnings), vec![DiagCode::DisplayUnitDivergence]);
+    assert_eq!(warnings[0].severity, Severity::Warning);
+}
+
+#[test]
+fn boundary_alias_order_does_not_change_conflict_diagnostics() {
+    let aliases = || {
+        vec![
+            boundary_output(
+                "urn:test:z",
+                0,
+                Attrs::Real(RealAttrs {
+                    unit: Some(Arc::from("K")),
+                    ..RealAttrs::default()
+                }),
+            ),
+            boundary_output(
+                "urn:test:a",
+                0,
+                Attrs::Real(RealAttrs {
+                    unit: Some(Arc::from("Pa")),
+                    ..RealAttrs::default()
+                }),
+            ),
+        ]
+    };
+    let mut first = ModelGraph {
+        connectors: vec![real_unit(0, 0, Dir::Out, None)],
+        boundary_outputs: aliases(),
+        ..ModelGraph::new()
+    };
+    let mut second = first.clone();
+    second.boundary_outputs.reverse();
+
+    let first_error = unify_attributes(&mut first).expect_err("alias conflict");
+    let second_error = unify_attributes(&mut second).expect_err("permuted alias conflict");
+    assert_eq!(first_error.diagnostics, second_error.diagnostics);
+}
+
+#[test]
+fn malformed_boundary_aliases_are_panic_free() {
+    let mut model = ModelGraph {
+        connectors: vec![real_unit(0, 0, Dir::Out, Some("K"))],
+        boundary_outputs: vec![
+            boundary_output(
+                "urn:test:out-of-range",
+                99,
+                Attrs::Real(RealAttrs {
+                    unit: Some(Arc::from("Pa")),
+                    ..RealAttrs::default()
+                }),
+            ),
+            boundary_output(
+                "urn:test:tag-mismatch",
+                0,
+                Attrs::Integer(IntAttrs {
+                    min: Some(1),
+                    max: None,
+                }),
+            ),
+        ],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        unify_attributes(&mut model)
+            .expect("malformed aliases remain total")
+            .is_empty()
+    );
+    assert!(matches!(model.boundary_outputs[1].attrs, Attrs::Integer(_)));
+}
