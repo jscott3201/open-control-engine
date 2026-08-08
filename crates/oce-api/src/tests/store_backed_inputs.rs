@@ -6,11 +6,12 @@
 
 use std::sync::Arc;
 
-use oce_model::Value;
+use oce_graph::allocate_state;
+use oce_model::{Value, ValueType};
 use oce_store::{Durability, OcValue, PointSample, PointStatus, PointStore, PointWrite};
 use oce_store_mem::MemStore;
 
-use crate::{CollectSpec, Engine, InputSource, OutputTrace, SimSpec};
+use crate::{CollectSpec, Engine, InputSource, OcError, OutputTrace, SimSpec};
 
 const AHU_SAT_RESET: &str =
     include_str!("../../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -142,6 +143,125 @@ fn missing_store_sample_holds_prior_input_value() {
     );
 }
 
+#[test]
+fn a_first_tick_store_type_error_leaves_the_restart_reset_in_effect() {
+    let store = Arc::new(MemStore::new());
+    let mut engine = Engine::with_store(Arc::clone(&store));
+    engine
+        .load_cxf(AHU_ECONOMIZER.as_bytes())
+        .expect("ahu_economizer loads");
+    engine
+        .simulate(&SimSpec {
+            t_start: 0.0,
+            t_stop: 5.0,
+            step: 1.0,
+            inputs: InputSource::Closure(Box::new(economizer_inputs)),
+            collect: CollectSpec::None,
+        })
+        .expect("the priming horizon runs");
+
+    let seeded_words = allocate_state(&engine.model, &engine.blocks).words;
+    assert_ne!(
+        engine.state.words, seeded_words,
+        "the priming horizon must change state or a restart reset stays invisible"
+    );
+    let prior_t = engine.state.t.to_bits();
+    let prior_outputs = engine.outputs.to_map();
+
+    let real_inputs: Vec<_> = engine
+        .io
+        .input_bindings()
+        .into_iter()
+        .filter(|binding| {
+            binding.connector_ids.first().is_some_and(|id| {
+                engine.model.connectors[id.0 as usize].value_type == ValueType::Real
+            })
+        })
+        .take(2)
+        .collect();
+    assert_eq!(
+        real_inputs.len(),
+        2,
+        "fixture must expose two Real store inputs"
+    );
+    let staged = &real_inputs[0];
+    let rejected = &real_inputs[1];
+    let rejected_before: Vec<_> = rejected
+        .connector_ids
+        .iter()
+        .map(|connector| engine.state.values[connector.0 as usize].clone())
+        .collect();
+    for &connector in &staged.connector_ids {
+        assert!(
+            !engine.state.values[connector.0 as usize].bit_eq(&Value::Real(-91.25)),
+            "the valid prefix must change its connector or partial staging stays invisible"
+        );
+    }
+    store
+        .write_points(&[
+            PointWrite {
+                key: oce_store::DomainKey::new(staged.path.clone()),
+                sample: PointSample {
+                    value: OcValue::Real(-91.25),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 6,
+                },
+                durability: Durability::Telemetry,
+            },
+            PointWrite {
+                key: oce_store::DomainKey::new(rejected.path.clone()),
+                sample: PointSample {
+                    value: OcValue::Bool(true),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 6,
+                },
+                durability: Durability::Telemetry,
+            },
+        ])
+        .expect("MemStore accepts the off-tick samples");
+
+    let error = engine
+        .simulate(&SimSpec {
+            t_start: 0.0,
+            t_stop: 0.0,
+            step: 1.0,
+            inputs: InputSource::None,
+            collect: CollectSpec::None,
+        })
+        .expect_err("the wrong-typed store sample refuses the first tick");
+    assert!(
+        matches!(error, OcError::InputType(ref path) if path == &rejected.path),
+        "the refusal must name the wrong-typed store point, got {error:?}"
+    );
+
+    assert_eq!(
+        engine.prev_t, None,
+        "the simulation restart cleared the time guard"
+    );
+    assert_eq!(
+        engine.state.words, seeded_words,
+        "the restart re-seeded [S] words"
+    );
+    assert_eq!(
+        engine.state.t.to_bits(),
+        prior_t,
+        "no block evaluated, so model time stays at the prior run"
+    );
+    assert_outputs_bit_eq(&engine.outputs.to_map(), &prior_outputs);
+    for &connector in &staged.connector_ids {
+        assert!(
+            engine.state.values[connector.0 as usize].bit_eq(&Value::Real(-91.25)),
+            "the valid store sample before the bad one remains staged"
+        );
+    }
+    for (&connector, before) in rejected.connector_ids.iter().zip(&rejected_before) {
+        assert!(
+            engine.state.values[connector.0 as usize].bit_eq(before),
+            "the wrong-typed sample must not overwrite its connector"
+        );
+    }
+}
+
 fn host_staged_trace(fixture: &StoreFixture) -> OutputTrace {
     let mut engine = Engine::in_memory();
     engine
@@ -264,6 +384,19 @@ fn assert_trace_bit_eq(expected: &OutputTrace, actual: &OutputTrace, fixture: &s
                 expected.columns()[col]
             );
         }
+    }
+}
+
+fn assert_outputs_bit_eq(actual: &[(String, Value)], expected: &[(String, Value)]) {
+    assert_eq!(actual.len(), expected.len(), "output count");
+    for (index, ((actual_path, actual_value), (expected_path, expected_value))) in
+        actual.iter().zip(expected).enumerate()
+    {
+        assert_eq!(actual_path, expected_path, "output path {index}");
+        assert!(
+            actual_value.bit_eq(expected_value),
+            "output value {index}: expected {expected_value:?}, got {actual_value:?}"
+        );
     }
 }
 

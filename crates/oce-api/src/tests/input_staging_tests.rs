@@ -371,13 +371,13 @@ fn a_constant_run_is_bit_reproducible_across_engines() {
     assert_eq!(run(), run(), "identical spec ⇒ identical bits (R-SIM-2)");
 }
 
-// ---- out of scope: Closure keeps resolving per step ----
+// ---- Closure first-list preflight and later per-step resolution ----
 
 #[test]
 fn closure_inputs_still_resolve_at_every_step() {
-    // A closure may name *different* points at different `t`, so its names cannot be pre-resolved
-    // and it still goes through `set_input` per step. This model has two independent inputs; the
-    // closure stages only one of them at a time, and switches which one halfway through.
+    // A closure may name *different* points at different `t`, so only its first returned list can be
+    // preflighted. Later lists still go through `set_input` per step. This model has two independent
+    // inputs; the closure stages only one at a time, and switches which one halfway through.
     let mut eng = loaded(free_add_model());
     let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let closure_calls = std::sync::Arc::clone(&calls);
@@ -416,16 +416,21 @@ fn closure_inputs_still_resolve_at_every_step() {
 
 #[test]
 fn a_closure_naming_an_unknown_point_still_refuses_mid_run() {
-    // Unchanged from before the pre-resolution: a closure's names are only known at `t`, so its
-    // refusal necessarily happens mid-run, after earlier steps have already ticked.
+    // This closure introduces the invalid name only after earlier steps have ticked.
     let mut eng = loaded(free_add_model());
     let spec = SimSpec {
         t_start: 0.0,
         t_stop: 5.0,
         step: 1.0,
         inputs: InputSource::Closure(Box::new(|t| {
-            let name = if t < 2.5 { "conn#0" } else { "nope" };
-            vec![(name.to_string(), Value::Real(1.0))]
+            if t < 2.5 {
+                vec![("conn#0".to_string(), Value::Real(1.0))]
+            } else {
+                vec![
+                    ("conn#1".to_string(), Value::Real(7.0)),
+                    ("nope".to_string(), Value::Real(1.0)),
+                ]
+            }
         })),
         collect: CollectSpec::None,
     };
@@ -435,6 +440,32 @@ fn a_closure_naming_an_unknown_point_still_refuses_mid_run() {
         "the steps before the bad one did run and did stage, got {:?}",
         eng.state.values[0]
     );
+    assert!(
+        eng.state.values[1].bit_eq(&Value::Real(7.0)),
+        "a valid pair before the later bad pair stays staged, got {:?}",
+        eng.state.values[1]
+    );
+}
+
+#[test]
+fn the_first_closure_list_uses_the_first_grid_time_including_zero_sign() {
+    let mut eng = loaded(free_add_model());
+    let spec = SimSpec {
+        t_start: -0.0,
+        t_stop: -0.0,
+        step: 1.0,
+        inputs: InputSource::Closure(Box::new(|t| {
+            if t.is_sign_negative() {
+                vec![("nope".to_string(), Value::Real(1.0))]
+            } else {
+                Vec::new()
+            }
+        })),
+        collect: CollectSpec::None,
+    };
+    eng.simulate(&spec)
+        .expect("the first grid time is +0.0, matching the loop expression");
+    assert_eq!(eng.state.t.to_bits(), 0.0_f64.to_bits());
 }
 
 #[test]

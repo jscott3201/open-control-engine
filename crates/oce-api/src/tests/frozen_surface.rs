@@ -658,7 +658,6 @@ fn simulate_constant_input_source_flows_through() {
 
 #[test]
 fn constant_input_source_propagates_type_error() {
-    // A wrong-typed Constant pair surfaces as OcError::InputType through stage_inputs -> set_input.
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(free_add_model(), None).unwrap();
     let spec = SimSpec {

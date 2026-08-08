@@ -469,23 +469,25 @@ impl<S: Store> Engine<S> {
     /// **A call that returns `Ok` is a run restart, not a continuation.** After preflight succeeds,
     /// entry resets the run clock (`prev_t = None`) so a prior real-time tick never poisons the
     /// horizon, then re-seeds the `[S]` state words via [`allocate_state`]. `values` is left alone,
-    /// so staged inputs survive
-    /// (`tests::sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`) while
-    /// integrators, timers, latches and filters do not. Restarting has consequences for a host:
-    /// see `docs/host-responsibilities.md`.
+    /// so staged inputs survive (`tests::sim_tests::
+    /// a_staged_input_still_reaches_the_horizon_after_the_reseed`) while integrators, timers,
+    /// latches and filters do not. Restarting has consequences for a host: see
+    /// `docs/host-responsibilities.md`.
     ///
     /// **A preflight refusal preserves the prior run.** Recorded columns, a `Constant` list, and the
     /// first list returned by a `Closure` are resolved and type-checked before the clock or state
-    /// words reset. The closure is called exactly once at `t_start`; its validated plan is reused
-    /// for the first tick. A closure refusal after completed ticks leaves those ticks in effect, so
-    /// `simulate` is not transactional once execution has begun.
+    /// words reset. The closure is called exactly once at the first computed grid time; its
+    /// validated plan is reused for the first tick. A closure refusal after completed ticks leaves
+    /// those ticks in effect, so `simulate` is not transactional once execution has begun.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
     /// [`OcError::NonFiniteTime`] if `t_start`/`t_stop` is non-finite; [`OcError::TimeRegression`] if
     /// `t_stop < t_start`; [`OcError::UnknownPoint`] if `CollectSpec::Named` or an input source names
-    /// an unknown point; [`OcError::InputType`] if an input value has the wrong type. Collection,
-    /// `Constant`, and first-closure-list failures are fail-fast — no tick runs. Never panics
+    /// an unknown point; [`OcError::InputType`] if an input value has the wrong type; and
+    /// [`OcError::Store`] if store-backed input staging fails. Collection, `Constant`, and
+    /// first-closure-list failures are preflight refusals — no restart or tick occurs. Store-backed
+    /// input failures occur after the restart but before that tick evaluates. Never panics
     /// (R-ERR-1).
     pub fn simulate(&mut self, spec: &SimSpec) -> Result<SimMetrics, OcError> {
         if !spec.step.is_finite() || spec.step <= 0.0 {
@@ -516,11 +518,13 @@ impl<S: Store> Engine<S> {
         // partial trace and no advanced model state.
         let cols = self.resolve_collect(&spec.collect)?;
         let stride = collect_stride(&spec.collect).max(1) as u64;
+        let run_start = Instant::now();
         // Preflight every input list known before the first tick. Nothing below this point may fail
         // before the restart until a later Closure invocation supplies a new dynamic list.
         let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
-        let first_closure_inputs = match &spec.inputs {
-            InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(spec.t_start))?),
+        let first_t = spec.t_start + 0.0 * spec.step;
+        let mut first_closure_inputs = match &spec.inputs {
+            InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(first_t))?),
             _ => None,
         };
         // Fresh time axis (R-SIM-2): isolate from any prior real-time tick's prev_t.
@@ -538,14 +542,15 @@ impl<S: Store> Engine<S> {
         self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
-        let run_start = Instant::now();
         let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
         for k in 0..=n {
-            let t = spec.t_start + (k as f64) * spec.step; // fresh multiply — no float accumulator
-            if k == 0
-                && let Some(first) = &first_closure_inputs
-            {
-                self.stage_resolved_inputs(first);
+            let t = if k == 0 {
+                first_t
+            } else {
+                spec.t_start + (k as f64) * spec.step // fresh multiply — no float accumulator
+            };
+            if let Some(first) = first_closure_inputs.take() {
+                self.stage_resolved_inputs(&first);
             } else {
                 self.stage_inputs(&spec.inputs, &staged_inputs, t)?;
             }
@@ -688,7 +693,9 @@ impl<S: Store> Engine<S> {
         Ok(staged)
     }
 
-    /// Stage a plan whose names and types were checked as one complete list.
+    /// Stage a plan whose names and types were checked as one complete list. `staged` must come from
+    /// [`Engine::resolve_input_pairs`], which guarantees every connector id indexes the loaded value
+    /// arena and every value matches its connector type.
     fn stage_resolved_inputs(&mut self, staged: &[(ConnectorId, Value)]) {
         for (cid, value) in staged {
             self.state.values[cid.0 as usize] = value.clone();

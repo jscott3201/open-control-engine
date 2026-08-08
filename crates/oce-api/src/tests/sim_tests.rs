@@ -18,9 +18,8 @@
 //!   one-block fixture could not see a re-seed covering only the first `[S]` slot. The fixture
 //!   below uses two `[S]` blocks with different non-zero seeds and pins the seeded values by value.
 //!
-//! Preflight refusal preserving `prev_t` is owned by
-//! `input_staging_tests::a_failed_constant_preflight_preserves_the_time_guard` and
-//! `a_failed_collect_still_refuses_a_backwards_tick`.
+//! Collect and `Constant` preflight refusal preserving `prev_t` is owned by
+//! `input_staging_tests`; first-`Closure` refusal is pinned below.
 
 use super::common::*;
 use oce_graph::allocate_state;
@@ -345,6 +344,11 @@ fn first_closure_refusal_preserves_run(invalid: (String, Value)) -> OcError {
     let before_outputs = eng.outputs.to_map();
 
     let mut pairs = driven_pairs();
+    pairs[0].1 = Value::Real(-91.25);
+    assert!(
+        !pairs[0].1.bit_eq(&before_values[0]),
+        "the valid prefix must differ from the entry image or partial staging stays invisible"
+    );
     pairs.push(invalid);
     let refused = SimSpec {
         t_start: 0.0,

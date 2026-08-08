@@ -226,8 +226,11 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// [`OcError::NonFiniteTime`] if `t_now` is NaN or infinite; [`OcError::TimeRegression`] if
-    /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time). A rejected tick
-    /// does not advance the model. Never panics (R-ERR-1).
+    /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time);
+    /// [`OcError::Store`] if the input snapshot fails; or [`OcError::InputType`] if a store sample
+    /// does not match its connector. A time refusal changes nothing. A store-input refusal runs no
+    /// block and does not advance model time or outputs, but valid samples staged before the bad
+    /// sample remain in the connector image. Never panics (R-ERR-1).
     pub fn tick(&mut self, t_now: f64) -> Result<&Outputs, OcError> {
         let diag = NoopDiagnostics;
         self.tick_with(t_now, &diag)
