@@ -344,12 +344,14 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   `check-quickstart-runs.sh` had run only as a separate required CI step, so
   `bash .agents/gate.sh` could pass locally while CI still ran more. A narrow coverage check now
   requires a textual path reference in the gate for each `*.sh` under `.github/scripts/`; it does
-  not claim general parity with inline workflow steps or scripts elsewhere. The same change stopped
-  the process-global allocation meter from blaming one ambient allocation burst on the block under
-  test: a nonempty result is remeasured over an eight-tick window, with a separate test pinning an
-  allocator that fires one tick in three. The existing `Sort` positive control covers only the
-  per-tick-persistent case. Issue #231 remains open for the underlying mechanism and first-tick-only
-  allocation coverage.
+  not claim general parity with inline workflow steps or scripts elsewhere.
+- **The registry-wide allocation census now measures the evaluator thread without probabilistic
+  retries** (#271). The process-global meter could attribute unrelated thread traffic to whichever
+  block was ticking (#231); its replacement counts only the measured thread. Each block now runs
+  separate initial and post-warm-up eight-tick windows over signed zero, finite, NaN, and infinite
+  inputs. Controls pin first-tick-only and periodic allocation detection, the known wide `Sort`
+  allocation, and exclusion of off-thread traffic. Current catalog blocks do not delegate work to
+  worker threads; a future block that does needs a companion worker-allocation guard.
 - **G36 provenance records are bound to their golden bytes by content digest** (#204). The
   previous `engine_rev` field was deleted as unverifiable: CI checks out at depth 1, so no
   history-based check can run there at all.
