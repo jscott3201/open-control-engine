@@ -65,6 +65,12 @@ struct ClusterMembers<'a> {
     boundary_outputs: &'a [usize],
 }
 
+#[derive(Default)]
+struct ClusterEntries {
+    connectors: Vec<u32>,
+    boundary_outputs: Vec<usize>,
+}
+
 impl IntAttr {
     fn label(self) -> &'static str {
         match self {
@@ -140,14 +146,24 @@ fn read_display_unit(attrs: &Attrs) -> Option<Arc<str>> {
 /// never propagated). `nominal`/`unbounded` are **not** unified (R13.4) — those are the *only* two
 /// §7.10 attributes excluded; `min`/`max` are NOT in R13.4 and ARE unified here.
 pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>) {
+    let connector_attrs = model
+        .connectors
+        .iter()
+        .map(|connector| connector.attrs.clone())
+        .collect::<Vec<_>>();
+    let boundary_attrs = model
+        .boundary_outputs
+        .iter()
+        .map(|output| output.attrs.clone())
+        .collect::<Vec<_>>();
     let deg = in_degrees(model);
     let n = model.connectors.len() as u32;
 
-    // Accumulate star clusters: output-connector id → driven (single-assignment) input ids.
+    // Accumulate star clusters by output-connector id.
     // HashMap is used only to accumulate; iteration is over a sorted key list so the emission is
     // deterministic regardless of graph shape (order-independent outright for the valid disjoint-star
     // case; see the type-doc above for the malformed-chain caveat).
-    let mut clusters: HashMap<u32, Vec<u32>> = HashMap::new();
+    let mut clusters: HashMap<u32, ClusterEntries> = HashMap::new();
     for c in &model.connections {
         if c.from.0 >= n || c.to.0 >= n {
             continue; // out-of-range — check_connections reports it
@@ -155,27 +171,30 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
         if deg.get(c.to.0 as usize).copied().unwrap_or(0) != 1 {
             continue; // multiply-driven input — excluded for confluence (check_single_assignment errors)
         }
-        clusters.entry(c.from.0).or_default().push(c.to.0);
+        clusters
+            .entry(c.from.0)
+            .or_default()
+            .connectors
+            .push(c.to.0);
     }
-    for output in &model.boundary_outputs {
+    for (index, output) in model.boundary_outputs.iter().enumerate() {
         if output.source.0 < n {
-            clusters.entry(output.source.0).or_default();
+            clusters
+                .entry(output.source.0)
+                .or_default()
+                .boundary_outputs
+                .push(index);
         }
     }
     let mut roots: Vec<u32> = clusters.keys().copied().collect();
     roots.sort_unstable();
 
     for root in roots {
-        let mut members: Vec<u32> = Vec::with_capacity(clusters[&root].len() + 1);
+        let cluster = &clusters[&root];
+        let mut members: Vec<u32> = Vec::with_capacity(cluster.connectors.len() + 1);
         members.push(root);
-        members.extend(clusters[&root].iter().copied());
-        let mut boundary_members = model
-            .boundary_outputs
-            .iter()
-            .enumerate()
-            .filter(|(_, output)| output.source.0 == root)
-            .map(|(index, _)| index)
-            .collect::<Vec<_>>();
+        members.extend(cluster.connectors.iter().copied());
+        let mut boundary_members = cluster.boundary_outputs.clone();
         boundary_members.sort_unstable_by(|&a, &b| {
             model.boundary_outputs[a]
                 .iri
@@ -197,6 +216,15 @@ pub(crate) fn unify_clusters(model: &mut ModelGraph, diags: &mut Vec<Diagnostic>
             unify_int(model, cluster_members, attr, diags);
         }
         warn_display_unit_divergence(model, cluster_members, diags);
+    }
+
+    if diags.iter().any(Diagnostic::is_error) {
+        for (connector, attrs) in model.connectors.iter_mut().zip(connector_attrs) {
+            connector.attrs = attrs;
+        }
+        for (output, attrs) in model.boundary_outputs.iter_mut().zip(boundary_attrs) {
+            output.attrs = attrs;
+        }
     }
 }
 
@@ -351,7 +379,7 @@ fn decide_and_apply(
         let mut d = Diagnostic::error(
             conflict_code,
             format!(
-                "connected connectors declare conflicting {label} values {distinct:?}; \
+                "connected cluster members declare conflicting {label} values {distinct:?}; \
                  §7.10 (R13.1) requires agreement"
             ),
         );
@@ -397,7 +425,7 @@ fn warn_display_unit_divergence(
     let mut d = Diagnostic::warning(
         DiagCode::DisplayUnitDivergence,
         format!(
-            "connected connectors declare divergent displayUnit values {distinct:?}; \
+            "connected cluster members declare divergent displayUnit values {distinct:?}; \
              non-computational, advisory only (§7.17, R13.3)"
         ),
     );

@@ -107,7 +107,7 @@ fn boundary_output_unit_mismatch_is_rejected_end_to_end() {
         vec![(
             DiagCode::UnitQuantityMismatch,
             Some("http://example.org#DriverUnitDivergence.con.y".to_owned()),
-            "connected connectors declare conflicting unit values [\"K\", \"Pa\"]; §7.10 \
+            "connected cluster members declare conflicting unit values [\"K\", \"Pa\"]; §7.10 \
              (R13.1) requires agreement"
                 .to_owned(),
         )]

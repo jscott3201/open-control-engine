@@ -537,6 +537,74 @@ fn boundary_alias_conflict_is_hard_error_without_partial_rewrite() {
 }
 
 #[test]
+fn later_attribute_conflict_rolls_back_earlier_propagation() {
+    let mut model = ModelGraph {
+        connectors: vec![real_conn(
+            0,
+            0,
+            Dir::Out,
+            RealAttrs {
+                quantity: Some(Arc::from("ThermodynamicTemperature")),
+                ..RealAttrs::default()
+            },
+        )],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("K")),
+                quantity: Some(Arc::from("Pressure")),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = unify_attributes(&mut model).expect_err("quantity conflict must fail");
+    assert_eq!(
+        codes(&error.diagnostics),
+        vec![DiagCode::UnitQuantityMismatch]
+    );
+    assert!(model.connectors[0].attrs.as_real().unwrap().unit.is_none());
+}
+
+#[test]
+fn later_cluster_conflict_rolls_back_earlier_cluster_propagation() {
+    let mut model = ModelGraph {
+        connectors: vec![
+            real_unit(0, 0, Dir::Out, Some("K")),
+            real_unit(1, 1, Dir::Out, Some("K")),
+        ],
+        boundary_outputs: vec![
+            boundary_output(
+                "urn:test:propagated-first",
+                0,
+                Attrs::Real(RealAttrs::default()),
+            ),
+            boundary_output(
+                "urn:test:conflict-second",
+                1,
+                Attrs::Real(RealAttrs {
+                    unit: Some(Arc::from("Pa")),
+                    ..RealAttrs::default()
+                }),
+            ),
+        ],
+        ..ModelGraph::new()
+    };
+
+    unify_attributes(&mut model).expect_err("later cluster conflict must fail");
+    assert!(
+        model.boundary_outputs[0]
+            .attrs
+            .as_real()
+            .unwrap()
+            .unit
+            .is_none()
+    );
+}
+
+#[test]
 fn integer_bounds_propagate_between_source_and_boundary_alias() {
     let mut model = ModelGraph {
         connectors: vec![int_conn(

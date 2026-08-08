@@ -166,8 +166,9 @@ and a gate that accepted any text would restore exactly the false assurance desc
   claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.
   Boundary aliases now join the existing deterministic gather-then-decide cluster rooted at their
   source. Conflicting unit, quantity, and bounds refuse; one-sided values propagate to unset
-  connector and alias members; `displayUnit` divergence remains advisory. Multiple aliases are
-  ordered by IRI, and malformed hand-built indices or attribute tags remain panic-free.
+  connector and alias members; `displayUnit` divergence remains advisory. A conflict rolls back all
+  propagation, permuted aliases produce identical diagnostics, and malformed hand-built indices or
+  attribute tags remain panic-free.
 
 ### Host facade
 

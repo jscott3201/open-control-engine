@@ -1,4 +1,4 @@
-//! Corpus-wide CXF export content oracle over the 46 G36 fixtures.
+//! Corpus-wide CXF export content oracle over the 47 G36 fixtures.
 //!
 //! For every fixture this pins two things against a checked-in expectation file:
 //! the FNV-1a-128 digest of [`oce_api::ExportReport::bytes`], and the completeness state of

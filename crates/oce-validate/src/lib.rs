@@ -41,7 +41,7 @@
 //!   [`ValidationError`] of `shall`-errors on failure. Never mutates.
 //! - [`unify_attributes`] — runs §7.10 unification, which **mutates** the graph (R13.2 propagates
 //!   one-sided unified attributes to unset connector and boundary-alias peers). Returns warnings /
-//!   [`ValidationError`] likewise.
+//!   [`ValidationError`] likewise. A failing unification leaves all attributes unchanged.
 //! - [`unify_and_validate`] — the `oce-api` entry point: unify (so propagation lands before the
 //!   structural checks read the graph), then validate, concatenating the warning streams.
 //!
@@ -87,7 +87,8 @@ pub fn validate(model: &ModelGraph) -> Result<Vec<Diagnostic>, ValidationError> 
 ///
 /// Returns the `should`-level warnings (e.g. divergent `displayUnit`, R13.3) on success, or a
 /// [`ValidationError`] of unit, quantity, or bound conflicts (R13.1) on failure. Order-independent (a
-/// gather-then-decide cluster algorithm) and panic-free on any graph.
+/// gather-then-decide cluster algorithm) and panic-free on any graph. Failure is transactional: no
+/// connector or boundary-output attribute propagation remains applied.
 ///
 /// # Errors
 /// Returns [`ValidationError`] if any cluster declares conflicting unit, quantity, or bound values
