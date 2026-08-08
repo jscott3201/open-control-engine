@@ -10,8 +10,8 @@ An entry is expected from every PR that changes behaviour, the public surface, o
 claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
 what mattered, so no check can derive one, and a check that merely required *some* text would pass
 on a placeholder. It has therefore fallen behind four times: #215 recovered 64 commits, #228
-recovered seven PRs, #259 recovered ten, and #264 repaired two missing PR references before the
-next promotion.
+recovered seven PRs, #259 recovered ten, and #264 recovered one PR and one missing citation before
+the next promotion.
 
 The third recovery discredits the check the second one wrote down here. That check was
 `git log main..development -- CHANGELOG.md`, on the reading that returning nothing means the
@@ -323,9 +323,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   not claim general parity with inline workflow steps or scripts elsewhere. The same change stopped
   the process-global allocation meter from blaming one ambient allocation burst on the block under
   test: a nonempty result is remeasured over an eight-tick window, with a separate test pinning an
-  allocator that fires one tick in three. The existing `Sort` positive control
-  covers only the per-tick-persistent case. Issue #231 remains open for the underlying mechanism
-  and first-tick-only allocation coverage.
+  allocator that fires one tick in three. The existing `Sort` positive control covers only the
+  per-tick-persistent case. Issue #231 remains open for the underlying mechanism and first-tick-only
+  allocation coverage.
 - **G36 provenance records are bound to their golden bytes by content digest** (#204). The
   previous `engine_rev` field was deleted as unverifiable: CI checks out at depth 1, so no
   history-based check can run there at all.
