@@ -37,10 +37,14 @@ fn read_fixture(rel: &str) -> String {
 /// Base accepted fixtures paired with their golden snapshots in the shared golden tree; the
 /// drivers consume [`accepted_fixtures`], the one assembled table (base rows plus the
 /// `hasInstance` member-interface slice rows).
-const ACCEPTED: [(&str, &str); 6] = [
+const ACCEPTED: [(&str, &str); 7] = [
     (
         "accepted/forward_sibling_reference.jsonld",
         "tests/fixtures/golden/composite_contract_forward_sibling_reference.modelgraph.txt",
+    ),
+    (
+        "accepted/string_literal_sibling_name.jsonld",
+        "tests/fixtures/golden/composite_contract_string_literal_sibling_name.modelgraph.txt",
     ),
     (
         "accepted/leaf_array_parameter_conditional_member.jsonld",

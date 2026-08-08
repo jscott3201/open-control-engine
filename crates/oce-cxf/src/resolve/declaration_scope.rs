@@ -450,7 +450,9 @@ impl Scope for OwnDeclarationScope<'_> {
 ///   table, never through `Scope` lookup, so `max(1.0, 2.0)` yields no `max` token while
 ///   `max + 1.0` yields `max` (call arguments still tokenize normally).
 ///
-/// Total; never panics, including on malformed or unterminated string literals.
+/// An unterminated literal consumes the remainder and contributes no trailing heads. That
+/// under-approximation is safe because the expression cannot parse and never reaches evaluation
+/// ordering. Total; never panics.
 pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
     let bytes = text.as_bytes();
     let mut heads = Vec::new();
@@ -458,8 +460,9 @@ pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
     while i < bytes.len() {
         let b = bytes[i];
         if b == b'"' {
-            // String bodies are one evaluator token and never consult Scope. Consume escapes
-            // with their following byte so an escaped quote cannot end the literal early.
+            // Keep this boundary aligned with oce-expr's lex_string: string bodies are one token
+            // and never consult Scope. Consume escapes with their following byte so an escaped
+            // quote cannot end the literal early.
             i += 1;
             while i < bytes.len() {
                 match bytes[i] {

@@ -411,6 +411,7 @@ fn string_literal_bodies_never_contribute_declaration_heads() {
         r#""Types.Mode.occupied max(x) sibling""#,
         r#""quoted \"sibling\" and \\other""#,
         r#""non-ASCII sibling: Δ""#,
+        r#""Trim amount \"triAmo\" and respond amount \"resAmo\" must have opposite signs.""#,
     ] {
         assert!(
             identifier_heads(expression).is_empty(),
@@ -418,6 +419,11 @@ fn string_literal_bodies_never_contribute_declaration_heads() {
         );
     }
     assert_eq!(identifier_heads(r#""shadow" + actual"#), vec!["actual"]);
+    assert_eq!(identifier_heads("\"\" + actual"), vec!["actual"]);
+    assert_eq!(
+        identifier_heads(r#""escaped multibyte \Δ then" + actual"#),
+        vec!["actual"]
+    );
 }
 
 #[test]
@@ -448,6 +454,28 @@ fn string_literals_named_for_siblings_ground_without_false_cycles_in_both_orders
             );
         }
     }
+}
+
+#[test]
+fn string_literals_do_not_hide_a_real_sibling_cycle() {
+    let nodes = vec![
+        node(serde_json::json!({ "@id": "ex:M.msg", "S231:value": "\"a\"" })),
+        node(serde_json::json!({ "@id": "ex:M.a", "S231:value": "b" })),
+        node(serde_json::json!({ "@id": "ex:M.b", "S231:value": "a" })),
+    ];
+    let (entries, diags) = evaluate_root(&nodes, &["ex:M.msg", "ex:M.a", "ex:M.b"]);
+    assert!(
+        scalar(&entries, "msg")
+            .unwrap()
+            .bit_eq(&Value::String(Arc::from("a")))
+    );
+    assert!(scalar(&entries, "a").is_none() && scalar(&entries, "b").is_none());
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(
+        diags[0].message,
+        "composite/declaration-cycle: cycle in the block's own declaration references: \
+         ex:M.a -> ex:M.b -> ex:M.a"
+    );
 }
 
 #[test]

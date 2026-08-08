@@ -172,7 +172,9 @@ rejects with subject `…#A` and message tail `…#A -> …#B -> …#C -> …#A`
 > binding's value, an own local name always denotes the own sibling, shadowing a same-named
 > binding of an enclosing composite; only names with **no** own binding fall through to the
 > enclosing scope chain (innermost composite first). The grounded scope is inherited by every
-> child composite and leaf. Three shapes reject:
+> child composite and leaf. Identifier-shaped text inside an expression String literal is data,
+> not a sibling reference: `S231:value: "\"b\""` creates no dependency on an own declaration
+> named `b`. Three shapes reject:
 >
 > - A reference **cycle** among a composite's own bindings — including the length-1
 >   self-reference `x = "x * 2"`, which is never an enclosing read — rejects with

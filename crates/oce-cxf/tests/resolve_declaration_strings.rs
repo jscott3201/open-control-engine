@@ -56,7 +56,6 @@ fn document(declarations: &[(&str, &str)]) -> Json {
 
 #[test]
 fn sibling_named_string_literal_loads_without_a_cycle_in_both_orders() {
-    let mut baseline = None;
     for declarations in [[("a", "\"b\""), ("b", "a")], [("b", "a"), ("a", "\"b\"")]] {
         let graph = import(&document(&declarations))
             .unwrap_or_else(|diags| panic!("{declarations:?} must load: {diags:#?}"));
@@ -65,15 +64,6 @@ fn sibling_named_string_literal_loads_without_a_cycle_in_both_orders() {
             graph.blocks[0].class_iri.as_ref(),
             "CDL.Reals.Sources.Constant"
         );
-        let rendered = format!("{graph:#?}");
-        if let Some(expected) = &baseline {
-            assert_eq!(
-                &rendered, expected,
-                "declaration order must not alter the flattened graph"
-            );
-        } else {
-            baseline = Some(rendered);
-        }
     }
 }
 
@@ -86,5 +76,52 @@ fn unterminated_self_named_literal_reaches_the_expression_diagnostic() {
     assert_eq!(
         diags[0].message,
         "expression binding did not ground: expression parse error: unterminated string literal"
+    );
+}
+
+#[test]
+fn malformed_literal_in_a_specialize_only_pruned_chain_is_silent() {
+    let doc = json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            { "@id": "http://example.org#M", "@type": "S231:Block",
+              "S231:hasParameter": { "@id": "http://example.org#M.flag" },
+              "S231:containsBlock": [
+                  { "@id": "http://example.org#M.pruned" },
+                  { "@id": "http://example.org#M.pass" } ] },
+            { "@id": "http://example.org#M.flag", "S231:value": false },
+            { "@id": "http://example.org#M.pruned",
+              "@type": "http://example.org#Vendor.Sequences.Pruned",
+              "S231:isConditionalComponent": true,
+              "S231:conditionalExpression": "flag",
+              "S231:hasParameter": [
+                  { "@id": "http://example.org#M.pruned.a" },
+                  { "@id": "http://example.org#M.pruned.have" } ],
+              "S231:containsBlock": { "@id": "http://example.org#M.pruned.con" } },
+            { "@id": "http://example.org#M.pruned.a", "S231:value": "\"a" },
+            { "@id": "http://example.org#M.pruned.have", "S231:value": true },
+            { "@id": "http://example.org#M.pruned.con",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:isConditionalComponent": true,
+              "S231:conditionalExpression": "have",
+              "S231:hasParameter": { "@id": "http://example.org#M.pruned.con.k" },
+              "S231:hasOutput": { "@id": "http://example.org#M.pruned.con.y" } },
+            { "@id": "http://example.org#M.pruned.con.k", "S231:value": 2.0 },
+            { "@id": "http://example.org#M.pruned.con.y", "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } },
+            { "@id": "http://example.org#M.pass",
+              "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+              "S231:hasParameter": { "@id": "http://example.org#M.pass.k" },
+              "S231:hasOutput": { "@id": "http://example.org#M.pass.y" } },
+            { "@id": "http://example.org#M.pass.k", "S231:value": 1.0 },
+            { "@id": "http://example.org#M.pass.y", "@type": "S231:RealOutput",
+              "S231:isOfDataType": { "@id": "S231:Real" } }
+        ]
+    });
+    let graph = import(&doc).expect("specialize-only grounding verdicts are non-emitting");
+    assert_eq!(graph.blocks.len(), 1, "only the unpruned Constant survives");
+    assert_eq!(
+        graph.blocks[0].instance_iri.as_deref(),
+        Some("http://example.org#M.pass")
     );
 }

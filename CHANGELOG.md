@@ -131,8 +131,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
 - **String literal contents do not create declaration dependencies** (#268). The own-scope census
   previously scanned identifier-shaped text inside quotes as code, so `a = "a"` formed a false
   self-cycle and `a = "b"; b = a` formed a false mutual cycle. Quoted bodies and escaped quotes are
-  now opaque to dependency analysis; malformed literals still refuse through the expression
-  parser's `grounding-failed` diagnostic.
+  now opaque to dependency analysis. Malformed literals refuse through the expression parser's
+  `grounding-failed` diagnostic where grounding verdicts emit; a pruned chain reached only during
+  specialization stays silent, matching the existing specialize-pass policy. This widens acceptance
+  for malformed documents that previously refused only because of the fabricated tagged cycle.
 - **Child-instance interfaces derive from `S231:hasInstance`** (#251). A child node declaring no
   `hasInput`/`hasOutput` of its own now takes its interface from the instance declaration —
   fallback-only, so a node that declares its own interface keeps it, and scalar-only for this

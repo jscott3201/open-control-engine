@@ -6,9 +6,10 @@
 //! Permutation pin over LOADING documents — criterion, not enumeration: every accepted
 //! `composite_contract` fixture with two or more own declarations in any composite qualifies,
 //! plus the shadowed-forward-reference probe document below. At this head the qualifying
-//! fixtures are `accepted/minimal_nested.jsonld` (root: `kBase`, `kTop`) and
+//! fixtures are `accepted/minimal_nested.jsonld` (root: `kBase`, `kTop`),
 //! `accepted/forward_sibling_reference.jsonld` (root: `kDerived`, `kBase` + constant
-//! `cShift`); `two_level_nesting` carries one declaration per composite,
+//! `cShift`), and `accepted/string_literal_sibling_name.jsonld` (root: `a`, `b`);
+//! `two_level_nesting` carries one declaration per composite,
 //! `leaf_identity_parameter_modification`'s composite declares only `samplePeriod`, and the
 //! declaring nodes of `registered_leaf_carveout`, `leaf_array_parameter_conditional_member`,
 //! and `leaf_identity_parameter_modification` are registered leaves, whose member chains are a
@@ -205,6 +206,7 @@ fn qualifying_accepted_fixtures_load_byte_identically_under_declaration_permutat
         "accepted/leaf_identity_parameter_modification.jsonld",
         "accepted/minimal_nested.jsonld",
         "accepted/registered_leaf_carveout.jsonld",
+        "accepted/string_literal_sibling_name.jsonld",
         "accepted/two_level_nesting.jsonld",
     ] {
         let doc = corpus_fixture(fixture);
@@ -228,8 +230,8 @@ fn qualifying_accepted_fixtures_load_byte_identically_under_declaration_permutat
         }
     }
     assert_eq!(
-        qualified, 2,
-        "the qualification criterion must select exactly the two composites enumerated in the \
+        qualified, 3,
+        "the qualification criterion must select exactly the three composites enumerated in the \
          module doc; a new qualifying fixture belongs in the fixture list above"
     );
 }
