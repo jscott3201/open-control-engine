@@ -37,8 +37,8 @@ conclusion would come from.
 
 - **Load / parse / resolve throughput** beyond the single `load_ms` column.
 - **Tail latency.** These are means over millions of ticks. For equipment control the tail
-  usually matters more than the mean, and the property that governs it — whether a tick allocates
-  at all — is gated separately and much more strictly, by
+  usually matters more than the mean, and one property that governs it — whether the evaluator
+  thread allocates during a block tick — is gated separately and much more strictly, by
   `crates/oce-blocks/tests/tick_allocation_census.rs` (registry-wide, with a positive control),
   which runs per-PR. The narrower facade guard in `crates/oce-api/tests/tick_purity_tests.rs`
   runs on the release gate, as every `oce-api` test does. This file is not gated at all.

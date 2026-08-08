@@ -3,14 +3,18 @@
 //! Each current-thread allocator region contains eight consecutive ticks. For every sweep value,
 //! each block is measured from its initial tick and again after a warm-up tick; construction,
 //! parameter forcing, input and state allocation, initialization, and output sizing occur outside
-//! the regions. The census prints its two-arm measurement table for gate evidence.
+//! the regions. `allocation-counter` installs this test binary's global allocator, but its counters
+//! are local to the measured thread, excluding unrelated process-thread traffic that a
+//! process-global meter can misattribute (#231). The printed totals are detection evidence, not
+//! production-allocator benchmarks.
 //!
 //! Scope limits: the three `Sources.TimeTable` classes exercise their 1x1 fallback tables because
 //! they have no Structural rule, and PID exercises its default controller type. Both paths were
 //! verified free of allocation sites when this census was introduced. Boolean-typed structural
 //! parameters are forced to `true`, matching every affected catalog default (`rowMax`, `rowMin`,
 //! and `msk_i`); column-wise reductions and non-all-true masks are outside this census, and their
-//! branches were verified free of allocation sites.
+//! branches were verified free of allocation sites. No catalog block delegates work to another
+//! thread; this census would not observe allocations on such a worker if that contract changes.
 
 #![allow(clippy::print_stdout)] // The work-order capture command requires passing-test evidence.
 
@@ -40,13 +44,9 @@ const NARROW_WIDTH: usize = 3;
 const WIDE_WIDTH: usize = 65;
 /// Long enough to expose short periodic duty cycles and several rounds of amortized growth.
 const MEASURED_TICKS: usize = 8;
-
-static FIRST_TICK_SIGNATURE: BlockSignature = BlockSignature {
-    class_path: "Test.FirstTickAllocation",
-    inputs: &[],
-    outputs: &[],
-    stateful: false,
-};
+const WINDOW_MODES: [(bool, &str); 2] = [(false, "initial"), (true, "warmed")];
+// Tracks the `nin * nout` maximum of `CDL.Routing.*VectorReplicator` at the wide width.
+const MAX_OUTPUT_ARITY: usize = WIDE_WIDTH * WIDE_WIDTH;
 
 struct FirstTickAllocation {
     pending: AtomicBool,
@@ -62,7 +62,13 @@ impl FirstTickAllocation {
 
 impl Block for FirstTickAllocation {
     fn signature(&self) -> &'static BlockSignature {
-        &FIRST_TICK_SIGNATURE
+        static SIGNATURE: BlockSignature = BlockSignature {
+            class_path: "Test.FirstTickAllocation",
+            inputs: &[],
+            outputs: &[],
+            stateful: false,
+        };
+        &SIGNATURE
     }
 
     fn kind(&self) -> BlockKind {
@@ -85,8 +91,6 @@ impl Block for FirstTickAllocation {
         }
     }
 }
-// Tracks the `nin * nout` maximum of `CDL.Routing.*VectorReplicator` at the wide width.
-const MAX_OUTPUT_ARITY: usize = WIDE_WIDTH * WIDE_WIDTH;
 
 fn force_params(rules: &[ParamRule], width: usize) -> ParamTable {
     #[derive(Clone, Copy)]
@@ -209,9 +213,28 @@ fn tick(
     measure_window(ticks, &mut step)
 }
 
-fn render_info(class_path: &str, info: &AllocationInfo) -> String {
+fn measure_block_windows(
+    mut make_block: impl FnMut() -> Box<dyn Block>,
+    params: &ParamTable,
+    value: f64,
+    output: &mut [Value],
+) -> [AllocationInfo; 2] {
+    WINDOW_MODES.map(|(warm_up, _)| {
+        let block = make_block();
+        tick(
+            block.as_ref(),
+            params,
+            value,
+            output,
+            MEASURED_TICKS,
+            warm_up,
+        )
+    })
+}
+
+fn render_info(class_path: &str, mode: &str, info: &AllocationInfo) -> String {
     format!(
-        "{class_path}: allocs={} net_allocs={} peak_allocs_sum={} bytes_alloc={} \
+        "{class_path} ({mode}): allocs={} net_allocs={} peak_allocs_sum={} bytes_alloc={} \
          net_bytes={} peak_bytes_sum={}",
         info.count_total,
         info.count_current,
@@ -226,26 +249,19 @@ fn run_arm(
     width: usize,
     expected: &[&str],
     output: &mut [Value],
-) -> BTreeMap<&'static str, AllocationInfo> {
+) -> BTreeMap<&'static str, [AllocationInfo; 2]> {
     let expected = expected.iter().copied().collect::<BTreeSet<_>>();
-    let mut allocating = BTreeMap::new();
+    let mut allocating: BTreeMap<&'static str, [AllocationInfo; 2]> = BTreeMap::new();
     for entry in catalog() {
         let params = force_params(entry.param_rules, width);
         for value in SWEEP {
-            for warm_up in [false, true] {
-                let block = (lookup(entry.class_path).unwrap().make)(&params);
-                let info = tick(
-                    block.as_ref(),
-                    &params,
-                    value,
-                    output,
-                    MEASURED_TICKS,
-                    warm_up,
-                );
+            let make = lookup(entry.class_path).unwrap().make;
+            let windows = measure_block_windows(|| make(&params), &params, value, output);
+            for (mode_index, info) in windows.into_iter().enumerate() {
                 // All six fields decide purity, so deallocation of memory created before the
                 // region remains visible through a negative current count even with zero allocs.
                 if info != AllocationInfo::default() {
-                    *allocating.entry(entry.class_path).or_default() += info;
+                    allocating.entry(entry.class_path).or_default()[mode_index] += info;
                 }
             }
         }
@@ -254,7 +270,13 @@ fn run_arm(
     let differences = measured
         .symmetric_difference(&expected)
         .map(|class_path| match allocating.get(class_path) {
-            Some(info) => render_info(class_path, info),
+            Some(windows) => windows
+                .iter()
+                .zip(WINDOW_MODES)
+                .filter(|(info, _)| **info != AllocationInfo::default())
+                .map(|(info, (_, mode))| render_info(class_path, mode, info))
+                .collect::<Vec<_>>()
+                .join("; "),
             None => format!("{class_path}: expected but absent"),
         })
         .collect::<Vec<_>>();
@@ -268,25 +290,23 @@ fn run_arm(
 
 #[test]
 fn periodic_allocations_are_visible_in_the_measured_window() {
-    let periodic = |index: usize| {
-        if index.is_multiple_of(3) {
+    let mut periodic = |index: usize| {
+        if index % 3 == 2 {
             let grown: Vec<u64> = Vec::with_capacity(64);
             std::hint::black_box(&grown);
         }
     };
 
-    let windowed = measure_window(MEASURED_TICKS, &mut { periodic });
+    let windowed = measure_window(MEASURED_TICKS, &mut periodic);
     assert_ne!(
         windowed,
         AllocationInfo::default(),
         "the measured window must detect an allocator that runs on one tick in three"
     );
 
-    // Control: the same allocator, offset off tick 0, is invisible to a one-tick window. Without
-    // this the test could pass against a confirmation that never widened at all.
-    let offset = |index: usize| periodic(index + 1);
+    // The allocator first fires on tick 2, so this control fails if the measured window shrinks.
     assert_eq!(
-        measure_window(1, &mut { offset }),
+        measure_window(1, &mut periodic),
         AllocationInfo::default(),
         "a one-tick window must miss this allocator; otherwise it does not demonstrate the gap"
     );
@@ -307,28 +327,16 @@ fn periodic_allocations_are_visible_in_the_measured_window() {
 fn initial_tick_allocations_are_visible_without_warm_up() {
     let params = ParamTable::default();
     let mut output = [];
-
-    let initial = tick(
-        &FirstTickAllocation::new(),
+    let [initial, warmed] = measure_block_windows(
+        || Box::new(FirstTickAllocation::new()),
         &params,
         0.0,
         &mut output,
-        MEASURED_TICKS,
-        false,
     );
     assert_ne!(
         initial,
         AllocationInfo::default(),
         "the initial window must detect an allocation made only on the first tick"
-    );
-
-    let warmed = tick(
-        &FirstTickAllocation::new(),
-        &params,
-        0.0,
-        &mut output,
-        MEASURED_TICKS,
-        true,
     );
     assert_eq!(
         warmed,
@@ -351,6 +359,8 @@ fn allocations_on_another_thread_do_not_enter_the_measurement() {
             drop(grown);
             done.store(true, Ordering::Release);
         });
+        // The flags place the worker allocation strictly inside the current-thread region. The
+        // worker body is infallible before setting `done`, so neither spin can outlive the worker.
         let info = measure(|| {
             start.store(true, Ordering::Release);
             while !done.load(Ordering::Acquire) {
@@ -426,14 +436,22 @@ fn tick_allocation_census() {
     if narrow.is_empty() {
         println!("(none)");
     }
-    for (class_path, info) in narrow {
-        println!("{}", render_info(class_path, &info));
+    for (class_path, windows) in narrow {
+        for (info, (_, mode)) in windows.iter().zip(WINDOW_MODES) {
+            if *info != AllocationInfo::default() {
+                println!("{}", render_info(class_path, mode, info));
+            }
+        }
     }
     println!("arm width={WIDE_WIDTH}");
     if wide.is_empty() {
         println!("(none)");
     }
-    for (class_path, info) in wide {
-        println!("{}", render_info(class_path, &info));
+    for (class_path, windows) in wide {
+        for (info, (_, mode)) in windows.iter().zip(WINDOW_MODES) {
+            if *info != AllocationInfo::default() {
+                println!("{}", render_info(class_path, mode, info));
+            }
+        }
     }
 }

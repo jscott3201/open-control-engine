@@ -106,11 +106,12 @@ that snapshot is exactly one boxed allocation (`crates/oce-store-mem/src/lib.rs:
 `Box<dyn PointSnapshot>` over an `Arc` clone); the `PointStore` trait places **no** allocation bound
 on a third-party backend's `snapshot()`.
 
-Whether a tick allocates at all is gated per-PR, registry-wide and with a positive control, by
-`crates/oce-blocks/tests/tick_allocation_census.rs`. The facade has a narrower guard in
-`crates/oce-api/tests/tick_purity_tests.rs`. Throughput figures live in
-[`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced them,
-because nothing re-measures them in CI.
+Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
+positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
+work to a worker thread; such an implementation would need a companion guard for worker allocation.
+The facade has a narrower guard in `crates/oce-api/tests/tick_purity_tests.rs`. Throughput figures
+live in [`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced
+them, because nothing re-measures them in CI.
 
 ## The crate map
 
