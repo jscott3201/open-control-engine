@@ -48,17 +48,7 @@ const WINDOW_MODES: [(bool, &str); 2] = [(false, "initial"), (true, "warmed")];
 // Tracks the `nin * nout` maximum of `CDL.Routing.*VectorReplicator` at the wide width.
 const MAX_OUTPUT_ARITY: usize = WIDE_WIDTH * WIDE_WIDTH;
 
-struct FirstTickAllocation {
-    pending: AtomicBool,
-}
-
-impl FirstTickAllocation {
-    fn new() -> Self {
-        Self {
-            pending: AtomicBool::new(true),
-        }
-    }
-}
+struct FirstTickAllocation;
 
 impl Block for FirstTickAllocation {
     fn signature(&self) -> &'static BlockSignature {
@@ -66,28 +56,28 @@ impl Block for FirstTickAllocation {
             class_path: "Test.FirstTickAllocation",
             inputs: &[],
             outputs: &[],
-            stateful: false,
+            stateful: true,
         };
         &SIGNATURE
     }
 
     fn kind(&self) -> BlockKind {
-        BlockKind::Algebraic
+        BlockKind::Stateful
     }
 
     fn feeds_through(&self, _in_idx: usize, _out_idx: usize) -> bool {
         false
     }
 
-    fn step_algebraic(
-        &self,
-        _ctx: &Ctx<'_>,
-        _inputs: &[Value],
-        _emit: &mut dyn FnMut(usize, Value),
-    ) {
-        if self.pending.swap(false, Ordering::Relaxed) {
+    fn state_len(&self) -> usize {
+        1
+    }
+
+    fn update_state(&self, _ctx: &Ctx<'_>, _inputs: &[Value], region: &mut [u64]) {
+        if region[0] == 0 {
             let allocated: Vec<u64> = Vec::with_capacity(64);
             std::hint::black_box(&allocated);
+            region[0] = 1;
         }
     }
 }
@@ -290,6 +280,7 @@ fn run_arm(
 
 #[test]
 fn periodic_allocations_are_visible_in_the_measured_window() {
+    assert_eq!(MEASURED_TICKS, 8, "the census window size is a tripwire");
     let mut periodic = |index: usize| {
         if index % 3 == 2 {
             let grown: Vec<u64> = Vec::with_capacity(64);
@@ -304,7 +295,8 @@ fn periodic_allocations_are_visible_in_the_measured_window() {
         "the measured window must detect an allocator that runs on one tick in three"
     );
 
-    // The allocator first fires on tick 2, so this control fails if the measured window shrinks.
+    // This proves the allocator does not fire on tick 0; the full-window assertion above therefore
+    // fails if the measured window shrinks below the first allocation at tick 2.
     assert_eq!(
         measure_window(1, &mut periodic),
         AllocationInfo::default(),
@@ -327,12 +319,8 @@ fn periodic_allocations_are_visible_in_the_measured_window() {
 fn initial_tick_allocations_are_visible_without_warm_up() {
     let params = ParamTable::default();
     let mut output = [];
-    let [initial, warmed] = measure_block_windows(
-        || Box::new(FirstTickAllocation::new()),
-        &params,
-        0.0,
-        &mut output,
-    );
+    let [initial, warmed] =
+        measure_block_windows(|| Box::new(FirstTickAllocation), &params, 0.0, &mut output);
     assert_ne!(
         initial,
         AllocationInfo::default(),
