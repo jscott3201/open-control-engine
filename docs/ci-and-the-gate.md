@@ -17,15 +17,15 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-`.github/workflows/ci.yml:268-284` and `gate (full)` at
-`.github/workflows/release-gate.yml:329-344`.
+`.github/workflows/ci.yml:273-289` and `gate (full)` at
+`.github/workflows/release-gate.yml:334-349`.
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
 job. Read that as coverage, not as parity, and note that the implication does not run the other way:
 `gate (light)` is `bash .agents/gate.sh` **plus** any steps of its own. The Quickstart-executes step
 was exactly that for a while — a required check no local run of the script performed — and an
 earlier revision of this paragraph cited the job as `ci.yml:256-270`, stopping one line short of it.
 Nothing verifies mechanically that the two files still list the same commands. That check was
-attempted and withdrawn, and `ci.yml:239-262` records why —
+attempted and withdrawn, and `ci.yml:244-267` records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
 while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
 become its own untested gate.
@@ -59,12 +59,12 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 Not a reduced subset — nothing. All fourteen jobs in `ci.yml` are conditioned on
 `github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`, from
-`ci.yml:55` through `ci.yml:270`. A draft PR with no checks looks a lot like a PR with no failing
+`ci.yml:55` through `ci.yml:275`. A draft PR with no checks looks a lot like a PR with no failing
 checks. Confirm the checks actually ran.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
-The standalone `cargo-deny` job in `ci.yml:224-237` is conditional on a manifest change, computed by
+The standalone `cargo-deny` job in `ci.yml:229-242` is conditional on a manifest change, computed by
 the paths filter at `ci.yml:64-69`. That conditional does not make the check skippable: the gate
 script runs cargo-deny's bans, licenses and sources checks unconditionally
 (`.agents/gate.sh:110-114`), and CI runs the script. Leaving manifests alone does not dodge it.
@@ -72,7 +72,7 @@ script runs cargo-deny's bans, licenses and sources checks unconditionally
 `advisories` is a different story, and the carve-out belongs next to the claim. It is deliberately
 excluded from the script — it needs network access and a writable advisory database, neither of
 which a sandboxed lane has. It runs daily in `advisories.yml` (`advisories.yml:11-14, 38`) and on
-release PRs (`release-gate.yml:305-317`). `advisories.yml` has no `pull_request` trigger at all, so
+release PRs (`release-gate.yml:310-322`). `advisories.yml` has no `pull_request` trigger at all, so
 a PR into `development` that introduces a dependency with a known RustSec advisory merges green and
 is caught by the next scheduled run, not by its own gate.
 
@@ -102,11 +102,12 @@ the same retries, timeout, leak, and reporter policy instead of copying it. The 
 inherit that policy through separate child profiles because their nested nightly builds need a
 longer per-test timeout and separate reports.
 
-Retries are zero and a flaky pass is still a failure. A test is terminated after 120 seconds, a
-run after 15 minutes, and a child process retaining output handles for more than two seconds fails
-as a leak. CI writes Jenkins-compatible JUnit XML to `target/nextest/<profile>/junit.xml` and uploads
-the determinism-matrix and release-suite reports for 14 days, including failure output and ignored
-tests.
+Retries are zero and a flaky pass is still a failure. Ordinary tests terminate after 120 seconds;
+the public-API surface tests allow 10 minutes for their nested nightly rustdoc builds. A run stops
+after 15 minutes, and a child process retaining inherited output handles for more than two seconds
+fails as a leak. CI writes Jenkins-compatible JUnit XML to `target/nextest/<profile>/junit.xml` and
+uploads the determinism-matrix and release-suite reports for 14 days, including failure output and
+ignored tests.
 
 Partitioning and build archives are deliberately off: the full test execution takes seconds while
 compilation dominates, and each determinism runner must execute the complete selected set under its

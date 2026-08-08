@@ -151,6 +151,11 @@ jobs:
           cargo nextest run -p oce-store
           -E 'test(public_api_surface_matches_blessed_baseline)'
           --profile public-api-oce-store --locked --no-tests=fail
+      - name: Require complete nextest JUnit report set
+        run: >-
+          for profile in ci ci-release public-api-oce-api public-api-oce-store;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
       - name: Upload nextest JUnit reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.1

@@ -50,6 +50,10 @@ jobs:
         run: rm -f target/nextest/{ci,ci-release}/junit.xml
       - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
       - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - run: >-
+          for profile in ci ci-release;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
       - uses: actions/upload-artifact@v7.0.1
         if: ${{ !cancelled() }}
         with:
@@ -85,6 +89,10 @@ jobs:
         env:
           OCE_REQUIRE_SURFACE_CHECK: "1"
         run: cargo nextest run -p oce-store -E 'test(public_api_surface_matches_blessed_baseline)' --profile public-api-oce-store --locked --no-tests=fail
+      - run: >-
+          for profile in ci ci-release public-api-oce-api public-api-oce-store;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
       - uses: actions/upload-artifact@v7.0.1
         if: ${{ !cancelled() }}
         with:
@@ -348,11 +356,29 @@ remove_nextest_junit_artifacts() {
   done
 }
 
+remove_one_nextest_junit_artifact() {
+  dir="$1"
+  _deny="$2"
+  grep -v '^[[:space:]]*target/nextest/ci-release/junit\.xml' \
+    "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
 remove_nextest_report_cleanup() {
   dir="$1"
   _deny="$2"
   for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
     grep -v 'target/nextest/{' "$workflow" > "$workflow.tmp"
+    mv "$workflow.tmp" "$workflow"
+  done
+}
+
+remove_nextest_report_requirements() {
+  dir="$1"
+  _deny="$2"
+  for workflow in "$dir/ci.yml" "$dir/release-gate.yml"; do
+    grep -v -E 'for profile in|test -s.*\$profile|^[[:space:]]*done[[:space:]]*$' \
+      "$workflow" > "$workflow.tmp"
     mv "$workflow.tmp" "$workflow"
   done
 }
@@ -418,8 +444,12 @@ run_case missing-determinism-matrix fail remove_determinism_matrix \
   "debug determinism subset with hard-fail-on-zero-tests"
 run_case missing-nextest-junit-artifacts fail remove_nextest_junit_artifacts \
   "upload nextest JUnit report artifacts"
+run_case partial-nextest-junit-artifacts fail remove_one_nextest_junit_artifact \
+  "collect nextest release JUnit report"
 run_case missing-nextest-report-cleanup fail remove_nextest_report_cleanup \
   "clear cached nextest JUnit reports"
+run_case missing-nextest-report-requirements fail remove_nextest_report_requirements \
+  "require the complete nextest determinism report set"
 run_case stale-nextest-pin fail downgrade_nextest_pin \
   "pinned cargo-nextest 0.9.143 install"
 run_case empty-crate-dir-only fail empty_crate_dir_only \

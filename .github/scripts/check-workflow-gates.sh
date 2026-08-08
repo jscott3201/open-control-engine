@@ -118,6 +118,10 @@ require_pattern "$ci" 'actions/upload-artifact@v7\.0\.1' 'upload nextest JUnit r
 require_pattern "$ci" '![[:space:]]*cancelled\(\)' 'upload nextest reports after test failures'
 require_pattern "$ci" 'target/nextest/ci/junit\.xml' 'collect nextest debug JUnit report'
 require_pattern "$ci" 'target/nextest/ci-release/junit\.xml' 'collect nextest release JUnit report'
+require_pattern "$ci" 'for profile in ci ci-release;' \
+  'require the complete nextest determinism report set'
+require_pattern "$ci" 'test -s "target/nextest/\$profile/junit\.xml"' \
+  'refuse an absent or empty nextest determinism report'
 require_pattern "$ci" 'if-no-files-found:[[:space:]]*error' 'fail when nextest reports are absent'
 require_pattern "$ci" 'retention-days:[[:space:]]*14' 'retain nextest reports for 14 days'
 
@@ -146,6 +150,10 @@ require_pattern "$release" 'target/nextest/public-api-oce-api/junit\.xml' \
   'release gate collects oce-api surface nextest JUnit report'
 require_pattern "$release" 'target/nextest/public-api-oce-store/junit\.xml' \
   'release gate collects oce-store surface nextest JUnit report'
+require_pattern "$release" 'for profile in ci ci-release public-api-oce-api public-api-oce-store;' \
+  'release gate requires the complete nextest report set'
+require_pattern "$release" 'test -s "target/nextest/\$profile/junit\.xml"' \
+  'release gate refuses an absent or empty nextest report'
 require_pattern "$release" 'if-no-files-found:[[:space:]]*error' \
   'release gate fails when nextest reports are absent'
 require_pattern "$release" 'retention-days:[[:space:]]*14' \

@@ -203,11 +203,12 @@ cargo nextest run --workspace --locked --profile ci-release --cargo-profile rele
 cargo test --workspace --doc --locked     # doctests — nextest CANNOT run these (separate step)
 ```
 
-The default profile is fail-fast for local feedback. Automated profiles run every selected test,
-retry none, fail on leaked child processes, terminate one test after 120 seconds, and bound a whole
-run to 15 minutes. `ci-release` inherits `ci` so runner semantics cannot drift between debug and
-release codegen. Both write JUnit under `target/nextest/<profile>/junit.xml`; CI uploads those files
-for 14 days.
+The default profile is fail-fast for local feedback. Automated profiles run every selected test and
+retry none. Ordinary tests terminate after 120 seconds; the public-API profiles allow 10 minutes for
+their nested nightly rustdoc builds. All profiles fail when a child process retains inherited output
+handles for more than two seconds, and bound a whole run to 15 minutes. `ci-release` inherits `ci` so
+runner semantics cannot drift between debug and release codegen. Both write JUnit under
+`target/nextest/<profile>/junit.xml`; CI uploads those files for 14 days.
 
 The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
 in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`

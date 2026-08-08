@@ -166,6 +166,11 @@ jobs:
         run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
       - name: cargo nextest determinism subset --release
         run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - name: Require complete nextest JUnit report set
+        run: >-
+          for profile in ci ci-release;
+          do test -s "target/nextest/$profile/junit.xml";
+          done
       - name: Upload nextest JUnit reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7.0.1
