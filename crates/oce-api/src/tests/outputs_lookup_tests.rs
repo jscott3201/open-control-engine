@@ -1,10 +1,10 @@
 //! The `Outputs::get` lookup contract: the entry ordering its binary search rests on, and its
 //! agreement with independent oracles across the whole connector-id space.
 //!
-//! `Outputs::get` is `O(log n)` only because `entries` is ascending by `ConnectorId`, and nothing in
-//! the type system holds it there. `Outputs::build` inherits the order of `ModelGraph::connectors`,
-//! a plain `pub Vec` whose ids a hand-built model is free to scramble, so the ordering pin below is
-//! what stands in for the missing type.
+//! `Outputs::get` is `O(log n)` only because `entries` is ascending by `ConnectorId`.
+//! `oce-validate` rejects any connector whose id differs from its arena index at load;
+//! `Engine::resume` changes parameters only and preserves that arena. The ordering pin below guards
+//! the validated invariant at the consumer.
 //!
 //! The `debug_assert` in `Outputs::build` does **not** stand in for it. The workspace release
 //! profile leaves `debug-assertions` off, so that assert is absent from the `--release` codegen the
@@ -15,7 +15,7 @@
 //! ordering nor the search. The ordering is therefore asserted directly, on top of the oracles.
 
 use super::common::*;
-use crate::Outputs;
+use crate::{OcError, Outputs};
 
 /// A composite G36 sequence — 30+ output connectors across many blocks, so the ordering assertion
 /// runs against a resolver-minted arena rather than a three-connector toy.
@@ -89,6 +89,29 @@ fn entries_are_strictly_ascending_by_connector_id() {
              binary-searches them), got {ids:?}"
         );
     }
+}
+
+#[test]
+fn scrambled_connector_ids_refuse_before_output_lookup_is_built() {
+    let mut model = free_add_model();
+    model.connectors[0].id = ConnectorId(1);
+    model.connectors[1].id = ConnectorId(0);
+
+    let mut engine = Engine::in_memory();
+    let err = engine
+        .build_model_in_memory(model, None)
+        .expect_err("connector ids that differ from arena positions must refuse");
+    let OcError::Validate(err) = err else {
+        panic!("expected the structural validation seam, got {err:?}");
+    };
+    assert_eq!(err.diagnostics.len(), 2, "both displaced ids are named");
+    assert!(
+        err.diagnostics
+            .iter()
+            .all(|diag| diag.message.contains("connector id invariant")),
+        "unexpected diagnostics: {:?}",
+        err.diagnostics
+    );
 }
 
 #[test]

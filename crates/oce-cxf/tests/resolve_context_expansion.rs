@@ -91,6 +91,30 @@ fn list_shaped_context_with_the_same_bindings_loads_identically_to_the_map_shape
 }
 
 #[test]
+fn nested_compact_term_definition_refuses_before_it_can_split_identity() {
+    let mut document: Value = serde_json::from_slice(COMPACT_TWIN).expect("twin parses");
+    document["@context"]
+        .as_object_mut()
+        .expect("map context")
+        .insert("alias".to_owned(), json!("ex:MinLoop"));
+
+    let diags = import_value(&document).expect_err("nested compact term must refuse");
+    assert_eq!(
+        diags.len(),
+        1,
+        "context refusal must return alone: {diags:?}"
+    );
+    assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
+    assert_eq!(diags[0].subject.as_deref(), Some("alias"));
+    assert_eq!(
+        diags[0].message,
+        "@context term `alias` binds the nested compact IRI `ex:MinLoop` through prefix `ex`; \
+         nested compact-IRI term definitions are not supported — bind the expanded absolute IRI \
+         instead"
+    );
+}
+
+#[test]
 fn modelica_json_style_document_loads_clean_with_expanded_identities() {
     let (graph, report) =
         import_cxf(MODELICA_JSON_STYLE, &ResolveOptions::default()).expect("style fixture loads");

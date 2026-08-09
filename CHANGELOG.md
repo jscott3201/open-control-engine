@@ -191,6 +191,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   connector attributes, undeclared owned connectors, and duplicate or misdirected external-input
   membership instead of hiding those defects through cascade omission. Resolver-produced
   pass-through graphs and their exported bytes are unchanged.
+- **Context bindings and declaration dependencies no longer admit false identities or cycles**
+  (#281). A context term whose value is a compact IRI through another active prefix now refuses as
+  non-subset; retaining that spelling made the term and its expanded twin key different points.
+  Composite declaration dependencies now come from the parsed expression AST rather than a raw
+  identifier scan, so comprehension iterators shadow their bodies and qualified enum references do
+  not become sibling edges.
 
 ### Host facade
 
@@ -273,10 +279,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   document double-booking one IRI as both declared output and live connector previously loaded
   clean, carrying two conflicting truths about one name). The change is additive: `point_list`,
   `Outputs::to_map`, `CollectSpec::All`, `StepReport.written` and every pre-existing point key are
-  bit-identical, and no durable key moves. It is the change in this range that moves a public-API
-  baseline — `crates/oce-api/tests/public-api.txt`, +40/−0, of which the load-bearing lines are the
+  bit-identical, and no durable key moves. It is one of two changes in this range that move the
+  `oce-api` public-API baseline: this change adds 40 lines, of which the load-bearing lines are the
   `DeclaredOutput` type, its two `String` fields, and `Topology::boundary_outputs`; the remainder
-  are derived and blanket impls the baseline enumerates in full.
+  are derived and blanket impls the baseline enumerates in full. #263 later adds two lines for
+  `OcError::diagnostics` and the type's inherent implementation row.
 - **`Engine::step_realtime` resolves its durable batch once at load** (#246). It re-derived the
   batch's key identity on every step — one path-`String` clone per output point, plus two `Vec`
   collections — where `simulate` had always resolved its identity once before ticking. The batch is
@@ -299,8 +306,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
   itself, and is characterized by test rather than left to a reader. Separately, `Outputs::get`
   binary-searches rather than scanning linearly; the in-tree caller count is one and it is a test,
   so no in-tree win is claimed — the point is that a `ConnectorId`-keyed read a host may call in a
-  loop should not be O(n). Nothing in the type system holds the ascending order the search needs,
-  so a test pins it under both build profiles.
+  loop should not be O(n). The ascending-order dependency is pinned under both build profiles.
+- **Connector IDs must equal their arena positions before a model reaches BUILD** (#281).
+  `ConnectorId` is documented and consumed as a dense arena index, but the structural gate enforced
+  that invariant only for blocks. An in-crate hand-built graph could therefore reach `Outputs::get`
+  with an unsorted snapshot and miss an existing output under binary search; current public loaders
+  already mint dense ids. The validated in-crate load tail now returns a typed `malformed-document`
+  diagnostic before allocating state or building the snapshot, protecting future non-CXF loaders
+  at the same seam.
 - **Export completeness is enforceable** (#217). `ExportReport::content_id()` would mint a
   well-formed `cxf:fnv1a128:…` identity for a *partially* exported document. Its rustdoc already
   said hosts must require an empty warning list; nothing made them, and because deferral warnings

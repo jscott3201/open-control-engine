@@ -36,16 +36,16 @@
 //! no tagged findings; its cycle/duplicate participants simply fail to ground, and the leaf's
 //! members are grounded (and diagnosed) at the fenced member level.
 //!
-//! Dependency edges come from identifier tokens in `Expr` bindings (see [`identifier_heads`]);
-//! non-`Expr` values contribute no edges. Everything here is deterministic: iteration is always
-//! in chained declaration order, topological ties break toward the smallest chained index, and
-//! no map iteration order feeds an output.
+//! Dependency edges come from outer-scope identifier references in parsed `Expr` bindings (see
+//! [`identifier_heads`]); non-`Expr` values contribute no edges. Everything here is deterministic:
+//! iteration is always in chained declaration order, topological ties break toward the smallest
+//! chained index, and no map iteration order feeds an output.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_expr::{EvalResult, Scope};
+use oce_expr::{EvalResult, ExprAst, Scope};
 use oce_model::{EnumClassId, enum_class_id, enum_member_ordinal};
 
 use crate::dto::{CxfValue, Node};
@@ -211,9 +211,9 @@ pub(super) fn evaluate_declarations(
         }
     }
 
-    // 3. Dependency edges: identifier head tokens of an `Expr` RHS that exactly match a sibling
-    // local name. A declaration that can never ground contributes no outgoing edges — at the
-    // lowering invocation that includes array-flagged declarations, which the array-parameter
+    // 3. Dependency edges: parsed outer-scope identifiers in an `Expr` RHS that exactly match a
+    // sibling local name. A declaration that can never ground contributes no outgoing edges — at
+    // the lowering invocation that includes array-flagged declarations, which the array-parameter
     // rule refuses before grounding (the specialize invocation grounds them as it always has).
     let lowering = matches!(pass, Pass::Lowering { .. });
     for declaration in &mut chain {
@@ -231,7 +231,7 @@ pub(super) fn evaluate_declarations(
         };
         let mut references: Vec<usize> = identifier_heads(text)
             .into_iter()
-            .filter_map(|head| first_of_name.get(head).copied())
+            .filter_map(|head| first_of_name.get(head.as_str()).copied())
             .collect();
         references.sort_unstable();
         references.dedup();
@@ -437,98 +437,77 @@ impl Scope for OwnDeclarationScope<'_> {
     }
 }
 
-/// The identifier *head* tokens of an expression string — the census-family tokenizer.
+/// The outer-scope identifier references of an expression string.
 ///
-/// Criterion — the tokens are the names the expression evaluator actually resolves through
-/// `Scope` lookup:
-/// - identifiers tokenize after numeric literals, so an exponent suffix never yields a token
-///   (`1e-3` contributes nothing);
-/// - a dotted path (`Types.Mode.occupied`) contributes only its head segment (`Types`);
-/// - a string literal contributes nothing, including identifier-shaped text and escaped quotes;
-/// - a **call head** — an identifier or dotted path followed, after optional ASCII whitespace,
-///   by `(` — contributes nothing: `oce-expr` resolves call heads only against its builtin
-///   table, never through `Scope` lookup, so `max(1.0, 2.0)` yields no `max` token while
-///   `max + 1.0` yields `max` (call arguments still tokenize normally).
-///
-/// An unterminated literal consumes the remainder and contributes no trailing heads. That
-/// under-approximation is safe because the expression cannot parse and never reaches evaluation
-/// ordering. Total; never panics.
-pub(super) fn identifier_heads(text: &str) -> Vec<&str> {
-    let bytes = text.as_bytes();
+/// Parsing applies the evaluator's real classification: literals, builtins, named constants, and
+/// qualified enum references never become dependencies. A comprehension source uses the enclosing
+/// scope; its iterator shadows the body. A multi-iterator comprehension contributes no edges because
+/// evaluation rejects its clause count before reading any source or body. An expression that cannot
+/// parse also contributes no edges because it cannot reach evaluation. Total; never panics.
+pub(super) fn identifier_heads(text: &str) -> Vec<String> {
+    let Ok(expression) = oce_expr::parse(text) else {
+        return Vec::new();
+    };
     let mut heads = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        let b = bytes[i];
-        if b == b'"' {
-            // Keep this boundary aligned with oce-expr's lex_string: string bodies are one token
-            // and never consult Scope. Consume escapes with their following byte so an escaped
-            // quote cannot end the literal early.
-            i += 1;
-            while i < bytes.len() {
-                match bytes[i] {
-                    b'\\' => {
-                        i += 1;
-                        if i < bytes.len() {
-                            i += 1;
-                        }
-                    }
-                    b'"' => {
-                        i += 1;
-                        break;
-                    }
-                    _ => i += 1,
-                }
-            }
-        } else if b.is_ascii_digit() {
-            // Numeric literal: digits and dots, then an optional signed exponent — consumed
-            // whole so `1e-3` never yields an `e` token.
-            i += 1;
-            while i < bytes.len() && (bytes[i].is_ascii_digit() || bytes[i] == b'.') {
-                i += 1;
-            }
-            if i < bytes.len() && (bytes[i] == b'e' || bytes[i] == b'E') {
-                let mut j = i + 1;
-                if j < bytes.len() && (bytes[j] == b'+' || bytes[j] == b'-') {
-                    j += 1;
-                }
-                if j < bytes.len() && bytes[j].is_ascii_digit() {
-                    i = j;
-                    while i < bytes.len() && bytes[i].is_ascii_digit() {
-                        i += 1;
-                    }
-                }
-            }
-        } else if b.is_ascii_alphabetic() || b == b'_' {
-            let start = i;
-            i += 1;
-            while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
-                i += 1;
-            }
-            let head = &text[start..i];
-            // A dotted path contributes only its head: consume the trailing `.segment` runs.
-            while i + 1 < bytes.len()
-                && bytes[i] == b'.'
-                && (bytes[i + 1].is_ascii_alphabetic() || bytes[i + 1] == b'_')
-            {
-                i += 2;
-                while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
-                    i += 1;
-                }
-            }
-            // Call-head exclusion: `(` after optional ASCII whitespace makes this a call, which
-            // the evaluator resolves as a builtin, never via Scope lookup.
-            let mut next = i;
-            while next < bytes.len() && bytes[next].is_ascii_whitespace() {
-                next += 1;
-            }
-            if !(next < bytes.len() && bytes[next] == b'(') {
-                heads.push(head);
-            }
-        } else {
-            i += 1;
-        }
-    }
+    collect_identifier_heads(&expression, &mut Vec::new(), &mut heads);
     heads
+}
+
+fn collect_identifier_heads(
+    expression: &ExprAst,
+    bound: &mut Vec<Arc<str>>,
+    heads: &mut Vec<String>,
+) {
+    match expression {
+        ExprAst::Ident(name) => {
+            if !bound.iter().any(|entry| entry == name) {
+                heads.push(name.to_string());
+            }
+        }
+        ExprAst::Real(_)
+        | ExprAst::Int(_)
+        | ExprAst::Bool(_)
+        | ExprAst::Str(_)
+        | ExprAst::Const(_)
+        | ExprAst::EnumRef(_) => {}
+        ExprAst::Unary(_, value) => collect_identifier_heads(value, bound, heads),
+        ExprAst::Binary(_, left, right) => {
+            collect_identifier_heads(left, bound, heads);
+            collect_identifier_heads(right, bound, heads);
+        }
+        ExprAst::Call(_, args) | ExprAst::ArrayLit(args) => {
+            for arg in args {
+                collect_identifier_heads(arg, bound, heads);
+            }
+        }
+        ExprAst::Range { start, step, stop } => {
+            collect_identifier_heads(start, bound, heads);
+            if let Some(step) = step {
+                collect_identifier_heads(step, bound, heads);
+            }
+            collect_identifier_heads(stop, bound, heads);
+        }
+        ExprAst::Index { base, indices } => {
+            collect_identifier_heads(base, bound, heads);
+            for index in indices {
+                collect_identifier_heads(index, bound, heads);
+            }
+        }
+        ExprAst::Comprehension { body, iters } => {
+            // Evaluation rejects this shape before it reads any source or body, so no scope lookup
+            // from the subtree can affect declaration order.
+            let [(name, source)] = iters.as_slice() else {
+                return;
+            };
+            collect_identifier_heads(source, bound, heads);
+            bound.push(name.clone());
+            collect_identifier_heads(body, bound, heads);
+            bound.pop();
+        }
+        // `ExprAst` is non-exhaustive across the crate boundary. Any future child-bearing variant
+        // must join an arm above so its free identifiers participate in declaration ordering.
+        _ => {}
+    }
 }
 
 /// Strongly connected components of the chain's reference graph (iterative Tarjan — no

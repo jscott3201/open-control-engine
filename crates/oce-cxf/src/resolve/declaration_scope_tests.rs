@@ -1,5 +1,5 @@
 //! Scope-construction pins for the shared own-declaration mechanism: the vendored
-//! `SupplyTemperature` forward-reference chain, the tokenizer's stated modes, own-name masking,
+//! `SupplyTemperature` forward-reference chain, parsed dependency discovery, own-name masking,
 //! duplicate refusal, cycle refusal with maximal progress, and the specialize invocation's
 //! withheld emission. Integration-level behavior (whole-document imports, permutations, probe
 //! graduations) lives in `tests/resolve_declaration_scope.rs`.
@@ -271,6 +271,24 @@ fn self_reference_refuses_as_a_length_one_cycle_never_reading_the_enclosing_bind
 }
 
 #[test]
+fn comprehension_iterator_shadows_a_same_named_declaration() {
+    let nodes = vec![node(serde_json::json!({
+        "@id": "ex:M.j",
+        "S231:value": "sum(j for j in 1:3)"
+    }))];
+    let (entries, diags) = evaluate_root(&nodes, &["ex:M.j"]);
+    assert!(
+        diags.is_empty(),
+        "the iterator must not create a self-cycle: {diags:?}"
+    );
+    assert!(
+        scalar(&entries, "j")
+            .unwrap_or_else(|| panic!("j must ground"))
+            .bit_eq(&Value::Integer(6))
+    );
+}
+
+#[test]
 fn specialize_invocation_withholds_tagged_findings_and_silences_generic_machinery() {
     let nodes = vec![
         node(serde_json::json!({ "@id": "ex:M.a", "S231:value": "b" })),
@@ -374,10 +392,18 @@ fn numeric_exponent_suffixes_never_yield_identifier_tokens() {
 }
 
 #[test]
-fn dotted_paths_contribute_only_their_head_segment() {
+fn qualified_references_do_not_create_scope_dependencies() {
     assert_eq!(
         identifier_heads("Types.Mode.occupied + foo.bar - kBase"),
-        vec!["Types", "foo", "kBase"]
+        vec!["kBase"]
+    );
+}
+
+#[test]
+fn comprehension_sources_use_outer_scope_and_iterators_shadow_the_body() {
+    assert_eq!(
+        identifier_heads("sum(j + k for j in source)"),
+        vec!["source", "k"]
     );
 }
 

@@ -46,13 +46,15 @@
 //! a simple-string value declares a prefix term, and that value must itself be a syntactically
 //! absolute IRI (see [`is_absolute_iri`]) or the binding is refused as `NonSubsetConstruct` —
 //! a prefix bound to a relative value would smuggle relative identities past the per-token
-//! guard; any other value shape is refused as `MalformedDocument`. A **remote context** — the whole `@context` a string IRI, or a string
-//! element inside the list — is refused as `NonSubsetConstruct`: a deterministic embedded
-//! engine dereferences nothing at load. Context-shape validation runs BEFORE slot expansion
-//! and its refusals return alone, so a `RelativeIri` refusal's "declares no @base" clause is
-//! literally true whenever it fires.
+//! guard. A value that is a compact IRI through another active prefix is also refused: recursive
+//! context-term expansion is outside the subset, and retaining the compact spelling would split
+//! canonical identity. Any other value shape is refused as `MalformedDocument`. A **remote
+//! context** — the whole `@context` a string IRI, or a string element inside the list — is refused
+//! as `NonSubsetConstruct`: a deterministic embedded engine dereferences nothing at load.
+//! Context-shape validation runs BEFORE slot expansion and its refusals return alone, so a
+//! `RelativeIri` refusal's "declares no @base" clause is literally true whenever it fires.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oce_diag::{DiagCode, Diagnostic};
 
@@ -138,7 +140,9 @@ fn merge_context_entries<'a>(
     table: &mut PrefixTable,
     diags: &mut Vec<Diagnostic>,
 ) {
-    for (term, value) in entries {
+    let entries: Vec<_> = entries.collect();
+    let local_terms: BTreeSet<&str> = entries.iter().map(|(term, _)| term.as_str()).collect();
+    for &(term, value) in &entries {
         if term == "@base" || term == "@import" || term == "@vocab" {
             // These keywords change identity semantics this engine does not implement.
             // Skipping them silently would be the spelling-dependent-identity hazard again:
@@ -162,24 +166,39 @@ fn merge_context_entries<'a>(
             continue;
         }
         match value {
-            serde_json::Value::String(iri) if is_absolute_iri(iri) => {
-                table.insert(term.clone(), iri.clone());
+            serde_json::Value::String(iri) => {
+                if let Some(prefix) = nested_compact_prefix(iri, &local_terms, table) {
+                    diags.push(
+                        Diagnostic::error(
+                            DiagCode::NonSubsetConstruct,
+                            format!(
+                                "@context term `{term}` binds the nested compact IRI `{iri}` \
+                                 through prefix `{prefix}`; nested compact-IRI term definitions \
+                                 are not supported — bind the expanded absolute IRI instead"
+                            ),
+                        )
+                        .with_subject(term.clone()),
+                    );
+                } else if is_absolute_iri(iri) {
+                    table.insert(term.clone(), iri.clone());
+                } else {
+                    // A prefix bound to a non-absolute value would concatenate every CURIE under
+                    // it into a RELATIVE identity that the per-token guard cannot see (the joined
+                    // token contains a `:` from the CURIE spelling), defeating the canonical-key
+                    // contract. Refuse the binding itself, up front.
+                    diags.push(
+                        Diagnostic::error(
+                            DiagCode::NonSubsetConstruct,
+                            format!(
+                                "@context term `{term}` binds `{iri}`, which is not an absolute \
+                                 IRI; a prefix must bind an absolute IRI (a scheme, `:`, then a \
+                                 nonempty remainder with no whitespace)"
+                            ),
+                        )
+                        .with_subject(term.clone()),
+                    );
+                }
             }
-            serde_json::Value::String(iri) => diags.push(
-                // A prefix bound to a non-absolute value would concatenate every CURIE under
-                // it into a RELATIVE identity that the per-token guard cannot see (the joined
-                // token contains a `:` from the CURIE spelling), defeating the canonical-key
-                // contract. Refuse the binding itself, up front.
-                Diagnostic::error(
-                    DiagCode::NonSubsetConstruct,
-                    format!(
-                        "@context term `{term}` binds `{iri}`, which is not an absolute IRI; \
-                         a prefix must bind an absolute IRI (a scheme, `:`, then a nonempty \
-                         remainder with no whitespace)"
-                    ),
-                )
-                .with_subject(term.clone()),
-            ),
             other => diags.push(
                 Diagnostic::error(
                     DiagCode::MalformedDocument,
@@ -194,6 +213,19 @@ fn merge_context_entries<'a>(
     }
 }
 
+/// The active prefix of a nested compact-IRI term definition, if one exists. Prefixes from earlier
+/// context maps and every term in the current map are active; a `//` suffix is an absolute IRI arm,
+/// not a compact IRI (JSON-LD 1.1 §4.1.5).
+fn nested_compact_prefix<'a>(
+    iri: &'a str,
+    local_terms: &BTreeSet<&str>,
+    table: &PrefixTable,
+) -> Option<&'a str> {
+    let (prefix, suffix) = iri.split_once(':')?;
+    (!suffix.starts_with("//") && (table.contains_key(prefix) || local_terms.contains(prefix)))
+        .then_some(prefix)
+}
+
 /// Whether `value` has syntactically absolute-IRI form: everything before the FIRST colon is
 /// a nonempty ASCII scheme per RFC 3986 §3.1 — a letter, then letters, digits, `+`, `-`, or
 /// `.` — and the remainder after that colon is nonempty and free of whitespace. The whole
@@ -203,11 +235,13 @@ fn merge_context_entries<'a>(
 /// U+00A0, U+2028, and other `char::is_whitespace` characters, so this predicate refuses
 /// some RFC 3987-conformant IRIs; and `ab:` is a legal URI (`path-empty`, RFC 3986 §3.3)
 /// that carries no name to key a durable identity on. The contract stays syntactic form,
-/// not semantic reachability: `S231:x` passes (`S231` is an RFC-valid scheme) —
-/// nested-CURIE expansion is deliberately not chased. The predicate guards both directions
-/// of the binding/identity symmetry: `@context` binding values (so the legal JSON-LD
-/// binding `{"ex": "urn:"}` refuses as `NonSubsetConstruct`), the two keep-as-written
-/// identity arms of [`expand_token`], and the declared-prefix arm's joined expansion.
+/// not semantic reachability: `S231:x` passes when `S231` is not an active prefix because it is an
+/// RFC-valid scheme. [`merge_context_entries`] separately refuses a binding value when its scheme
+/// position names an active prefix, closing the nested compact-IRI ambiguity before this predicate
+/// runs. The predicate guards both directions of the remaining binding/identity symmetry:
+/// `@context` binding values (so the legal JSON-LD binding `{"ex": "urn:"}` refuses as
+/// `NonSubsetConstruct`), the two keep-as-written identity arms of [`expand_token`], and the
+/// declared-prefix arm's joined expansion.
 fn is_absolute_iri(value: &str) -> bool {
     match value.split_once(':') {
         Some((scheme, rest)) => {
@@ -376,6 +410,10 @@ fn expand_node(node: &mut Node, table: &PrefixTable, diags: &mut Vec<Diagnostic>
         expand_typing(&mut datatype.id, table);
     }
 }
+
+#[cfg(test)]
+#[path = "expand_nested_tests.rs"]
+mod nested_tests;
 
 #[cfg(test)]
 mod tests {
@@ -801,9 +839,8 @@ mod tests {
 
     #[test]
     fn absolute_prefix_bindings_pass_the_scheme_predicate() {
-        // Controls, including the pre-ruled edge: `S231:x` passes because `S231` is an
-        // RFC 3986-valid scheme — the contract is syntactic absolute form, and nested-CURIE
-        // expansion is deliberately not chased.
+        // Controls, including the pre-ruled edge: `S231:x` passes because `S231` is an RFC
+        // 3986-valid scheme and is not an active prefix in this context.
         for value in ["http://example.org#", "urn:oce:names#", "S231:x"] {
             let mut diags = Vec::new();
             let context = Context::Map(
