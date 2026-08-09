@@ -113,7 +113,7 @@ Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:98`) a
 CDL allows a boundary input wired straight to a boundary output. Import lowers each such connect to
 a reserved internal identity block — `urn:oce:lowering#PassThrough.Real`, `.Integer`, or `.Boolean`
 (`crates/oce-blocks/src/lowering.rs:66-78`) — and export elides those blocks back to the bare
-boundary edge (`crates/oce-cxf/src/export.rs:717-752`, `:797-804`). Re-import re-synthesizes them,
+boundary edge (`crates/oce-cxf/src/export.rs:716-774`, `:799-804`). Re-import re-synthesizes them,
 so RT-2 holds by render identity.
 
 The visible consequence: the emitted document lists **fewer `containsBlock` entries than the graph

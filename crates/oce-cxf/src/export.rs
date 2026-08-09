@@ -69,12 +69,12 @@
 //! checks are judged over the **survivor cone**, so a defect sitting entirely inside a deferred
 //! block never aborts an export whose document omits that block.
 //!
-//! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
-//! at all (not from its connectors' attributes, not from its boundary entries), so a partly
-//! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
-//! exception is a non-empty graph with zero emitted runtime blocks after deferred and reserved
-//! lowering-only blocks are omitted: that would be an unloadable root-only shell, so it is an
-//! error ([`MSG_TOTAL_DEFERRAL`]).
+//! Enum deferral is the ordinary non-aborting axis: a deferred ordinary block contributes no error
+//! diagnostics, so a partly enum-bearing graph exports its enum-free remainder with
+//! `ExportDeferred` **warnings**. Reserved pass-through shape and hidden-state checks still run
+//! because elision cannot represent those defects. A non-empty graph with zero emitted runtime
+//! blocks after deferred and reserved lowering-only blocks are omitted also rejects: the result
+//! would be an unloadable root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -85,8 +85,8 @@ use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
 use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
-    has_unrepresentable_state, has_valid_wiring_shape, is_declared_pass_through_connector,
-    is_pass_through_class, reserved_connection_endpoint,
+    ReservedShapeFailure, has_plannable_shape, is_declared_pass_through_connector,
+    is_pass_through_class, reserved_connection_endpoint, reserved_shape_failures,
 };
 use crate::{CxfError, bridge};
 
@@ -449,20 +449,13 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
     // diagnostic they had before hidden-state checks were added; state with no wire representation
     // gets the reserved-shape diagnostic.
-    for (bi, block) in g.blocks.iter().enumerate() {
-        if !is_pass_through_class(&block.class_iri) {
-            continue;
-        }
-        let subject = block
-            .instance_iri
-            .as_deref()
-            .map_or_else(|| format!("block#{bi}"), str::to_owned);
-        if !has_valid_wiring_shape(g, bi) {
-            diags.push(reject(MSG_STRUCTURE, &subject));
-        }
-        if has_unrepresentable_state(g, bi) {
-            diags.push(reject(MSG_RESERVED_SHAPE, &subject));
-        }
+    for failure in reserved_shape_failures(g, &deferred) {
+        let (message, subject) = match failure {
+            ReservedShapeFailure::Structure(subject) => (MSG_STRUCTURE, subject),
+            ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
+            ReservedShapeFailure::HiddenState(subject) => (MSG_RESERVED_SHAPE, subject),
+        };
+        diags.push(reject(message, &subject));
     }
 
     // SKIP connectors whose owning block is deferred: a deferred block's
@@ -672,10 +665,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // which re-imports as `UnresolvedReference`) this skip is defense-in-depth, not the load-bearing
     // guard: `port_iri[idx]` is `None` for every deferred connector, so the orphan `let-else` below
     // already drops the entry. What the skip does uniquely is suppress the ERROR-severity checks
-    // between here and there — a deferred block's boundary entry with the wrong direction or no
-    // stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort an
-    // export whose only defect sits in a block the document omits. Same rule as the Phase 4 attr
-    // scan: an omitted block contributes no errors. That arm is pinned by
+    // between here and there — a deferred ordinary block's boundary entry with the wrong direction
+    // or no stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort
+    // an export whose only defect sits in a block the document omits. Reserved endpoint checks run
+    // in Phase 3 before this skip. The ordinary arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
@@ -693,6 +686,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ));
             continue;
         };
+        let invalid_reserved_shape = g.blocks.get(c.block.0 as usize).is_some_and(|block| {
+            is_pass_through_class(&block.class_iri) && !has_plannable_shape(g, c.block.0 as usize)
+        });
+        if invalid_reserved_shape {
+            continue; // Phase 3 already emitted the stable wiring or boundary-identity diagnostic.
+        }
         if deferred.contains(&(c.block.0 as usize)) {
             continue; // boundary drives a deferred block's child — drop the whole entry
         }
