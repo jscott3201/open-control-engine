@@ -352,6 +352,37 @@ fn t41_block_ids_must_be_dense_unique_arena_indices() {
 }
 
 #[test]
+fn connector_ids_must_be_dense_unique_arena_indices() {
+    let out_of_position = ModelGraph {
+        blocks: vec![constant_block(0, &[0])],
+        connectors: vec![conn(1, 0, Dir::Out, ValueType::Real)],
+        connections: vec![],
+        ..ModelGraph::new()
+    };
+    let err = validate(&out_of_position).expect_err("connector id must equal arena index");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("connector id invariant")
+    );
+    assert_eq!(err.diagnostics[0].subject.as_deref(), Some("connector#1"));
+
+    let duplicate = ModelGraph {
+        blocks: vec![block(0, "unknown.Class", &[], &[0, 1])],
+        connectors: vec![
+            conn(0, 0, Dir::Out, ValueType::Real),
+            conn(0, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        ..ModelGraph::new()
+    };
+    let err = validate(&duplicate).expect_err("duplicate connector id must fail density");
+    assert_eq!(codes(&err.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(err.diagnostics[0].message.contains("arena index 1"));
+}
+
+#[test]
 fn t42_block_port_ids_are_bounded_before_signature_lookup() {
     // The arena rule must be self-sufficient even when Rule 3 skips an unknown block class.
     let m = ModelGraph {

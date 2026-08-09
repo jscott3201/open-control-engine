@@ -33,6 +33,7 @@ fn port_value_type(kind: PortKind) -> ValueType {
 /// Every block and connector must reference the dense arenas the executor indexes by raw id:
 ///
 /// - `model.blocks[i].id.0 == i` for every block (dense + unique [`oce_model::BlockId`] space).
+/// - `model.connectors[i].id.0 == i` for every connector (dense + unique [`ConnectorId`] space).
 /// - `connector.block.0 < model.blocks.len()` for every connector.
 /// - every `BlockInstance.inputs` / `BlockInstance.outputs` [`ConnectorId`] is in range.
 ///
@@ -61,7 +62,21 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
         check_block_port_ids(blk, "output", &blk.outputs, connector_count, diags);
     }
 
-    for c in &model.connectors {
+    for (index, c) in model.connectors.iter().enumerate() {
+        if c.id.0 as usize != index {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "connector id invariant violated: connector at arena index {index} has \
+                         ConnectorId({}); expected a dense unique ConnectorId equal to its arena \
+                         index and < connectors={connector_count}",
+                        c.id.0
+                    ),
+                )
+                .with_subject(subject_of(c)),
+            );
+        }
         if c.block.0 as usize >= block_count {
             diags.push(
                 Diagnostic::error(

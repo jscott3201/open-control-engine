@@ -45,10 +45,9 @@ impl Outputs {
             paths.len(),
             "Outputs entries/paths must align"
         );
-        // The ordering `Outputs::get`'s binary search depends on. A development-only net: the
-        // workspace release profile leaves `debug-assertions` off, so this does not fire under the
-        // `--release` codegen the gate's second test pass uses. The load-bearing guard is
-        // `entries_are_strictly_ascending_by_connector_id`, which runs under both profiles.
+        // The ordering `Outputs::get`'s binary search depends on. Validation rejects any connector
+        // whose id differs from its arena index before this constructor runs; keep the assertion as
+        // a local defense against future construction changes.
         debug_assert!(
             entries.windows(2).all(|w| w[0].0 < w[1].0),
             "Outputs entries must be strictly ascending by ConnectorId"
@@ -68,10 +67,9 @@ impl Outputs {
     ///
     /// `O(log n)` in the number of outputs, so a host reading many connectors in a loop does not
     /// pay a scan per read. This relies on the entries being ascending by [`ConnectorId`]: they are
-    /// built by an in-order `connectors.filter(Out)` walk, and the connector arena is minted by
-    /// index at resolve time. Nothing in the type system enforces it — `ModelGraph::connectors` is
-    /// a plain `Vec` a hand-built model could disorder — so the ordering is pinned by test
-    /// (`entries_are_strictly_ascending_by_connector_id`) under both build profiles.
+    /// built by an in-order `connectors.filter(Out)` walk after validation proves every connector id
+    /// equals its arena index. The invariant is also pinned by
+    /// `entries_are_strictly_ascending_by_connector_id` under both build profiles.
     #[must_use]
     pub fn get(&self, c: ConnectorId) -> Option<&Value> {
         self.entries
