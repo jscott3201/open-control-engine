@@ -57,10 +57,10 @@ is byte-identical to an attribute-free port node.
 
 Two attributes are rejected rather than dropped — and the distinction between *rejected* and
 *dropped* is the point. On a **surviving** block, a connector carrying `nominal` or `unbounded`
-fails the export (`crates/oce-cxf/src/export.rs:126-134`), because the importer hardcodes both to
+fails the export (`crates/oce-cxf/src/export.rs:129-137`), because the importer hardcodes both to
 `None` and the value would vanish silently. A non-finite Real `min`/`max` bound is rejected for the
 same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
-(`crates/oce-cxf/src/export.rs:135-139`).
+(`crates/oce-cxf/src/export.rs:138-142`).
 
 On a **deferred** block, none of that runs. A deferred block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from
@@ -90,7 +90,7 @@ How large does that get in practice? The G36 corpus pins two cases as tripwires
 
 Rejection fires only on **total** deferral — a graph with no emitted runtime block left after
 deferred and reserved lowering-only blocks are removed, which would be an unloadable root-only
-shell (`crates/oce-cxf/src/export.rs:109-113`). In principle, then, all but one block can vanish
+shell (`crates/oce-cxf/src/export.rs:112-116`). In principle, then, all but one block can vanish
 from an export that returns `Ok`.
 
 And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:194-197` — it destructures them
