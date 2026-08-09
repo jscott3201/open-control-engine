@@ -175,11 +175,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   bounds, so `IoInventory` and `point_list(None)` metadata can change for an unchanged input
   document. Unit and quantity also reach the durable `PointDto`; `IoSummary` remains unchanged
   because it contains counts rather than point metadata.
-- **Export refuses an additional boundary alias over a reserved pass-through output** (#276).
-  Reserved lowering connectors have no emitted child-port node; the exporter previously skipped
-  such an alias and returned warning-free bytes containing only the canonical pass-through output.
-  The same valid hand-built graph now fails with `export-unsupported` naming the alias instead of
-  losing it on re-import. Resolver-produced pass-through graphs remain representable and unchanged.
+- **Export refuses extra aliases and connections involving reserved pass-through connectors**
+  (#277). Reserved lowering connectors have no emitted child-port node; the exporter previously
+  skipped host-built aliases and connections involving them. Those valid hand-built graphs now
+  fail with `export-unsupported` instead of losing graph state. Resolver-produced pass-through
+  graphs remain representable and unchanged.
 
 ### Host facade
 

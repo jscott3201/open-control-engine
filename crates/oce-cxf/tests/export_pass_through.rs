@@ -5,14 +5,16 @@ use std::sync::Arc;
 use oce_cxf::{CxfError, export};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{
-    Attrs, BlockId, BlockInstance, BoundaryOutput, Connector, ConnectorId, Dir, EnumClassId,
-    ModelGraph, ParamTable, Value, ValueType,
+    Attrs, BlockId, BlockInstance, BoundaryOutput, Connection, Connector, ConnectorId, Dir,
+    EnumClassId, ModelGraph, ParamTable, Value, ValueType,
 };
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
 const DUPLICATE_ID: &str = "export subset: emitted node @id collides with another emitted node @id";
 const BOUNDARY_SOURCE_NOT_EMITTED: &str =
     "export subset: declared boundary output source is not an emitted child output connector";
+const CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
+     child-port node";
 const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
 
@@ -40,7 +42,9 @@ fn survivor() -> BlockInstance {
         class_iri: Arc::from("CDL.Reals.Sources.Constant"),
         inputs: vec![],
         outputs: vec![ConnectorId(2)],
-        params: ParamTable::default(),
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(1.0))],
+        },
         decl_order: 1,
         instance_iri: Some(Arc::from("http://example.org#PassExport.keep")),
     }
@@ -178,6 +182,101 @@ fn boundary_alias_on_reserved_output_rejects_instead_of_disappearing() {
         vec![
             Diagnostic::error(DiagCode::ExportUnsupported, BOUNDARY_SOURCE_NOT_EMITTED)
                 .with_subject(ALIAS.to_owned())
+        ]
+    );
+}
+
+#[test]
+fn connection_from_reserved_output_rejects_instead_of_disappearing() {
+    let gain = BlockInstance {
+        id: BlockId(1),
+        class_iri: Arc::from("CDL.Reals.MultiplyByParameter"),
+        inputs: vec![ConnectorId(2)],
+        outputs: vec![ConnectorId(3)],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(2.0))],
+        },
+        decl_order: 1,
+        instance_iri: Some(Arc::from("http://example.org#PassExport.keep")),
+    };
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), gain],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::In, None),
+            connector(3, 1, Dir::Out, None),
+        ],
+        connections: vec![Connection {
+            from: ConnectorId(1),
+            to: ConnectorId(2),
+        }],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, CONNECTION_ENDPOINT_NOT_EMITTED)
+                .with_subject("connector#1".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn connection_to_reserved_input_rejects_instead_of_disappearing() {
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![Connection {
+            from: ConnectorId(2),
+            to: ConnectorId(0),
+        }],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, CONNECTION_ENDPOINT_NOT_EMITTED)
+                .with_subject("connector#0".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn alias_on_unclaimed_output_reports_structure_before_loss() {
+    const ALIAS: &str = "http://example.org#PassExport.orphanAlias";
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+            connector(3, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![BoundaryOutput {
+            iri: Arc::from(ALIAS),
+            source: ConnectorId(3),
+            attrs: Attrs::default_for(ValueType::Real),
+        }],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                .with_subject("http://example.org#PassExport.keep".to_owned()),
+            Diagnostic::error(DiagCode::ExportUnsupported, BOUNDARY_SOURCE_NOT_EMITTED)
+                .with_subject(ALIAS.to_owned()),
         ]
     );
 }
