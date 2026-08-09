@@ -60,8 +60,8 @@
 //!
 //! ## Rejection surface
 //! Everything outside the subset is a typed [`CxfError::Validation`] carrying
-//! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` is the owning
-//! block's `instance_iri` (connectors have none) — never a panic.
+//! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` identifies the
+//! offending block, connector owner, or declared boundary node — never a panic.
 //!
 //! Two of those rejections are not about the subset at all but about bytes that would not come
 //! back: a connector listed twice in `external_inputs` (which re-imports one entry short) and an
@@ -160,6 +160,12 @@ const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed
 /// elision type check for at least one target.
 const MSG_BOUNDARY_TYPE_MISMATCH: &str =
     "export subset: one boundary input drives child inputs with different value types";
+/// A declared boundary output aliases a connector that has no emitted child-port node. Reserved
+/// pass-through outputs are rebuilt directly as root boundary outputs, so an additional alias over
+/// that connector has no lossless wire representation. Other unclaimed connectors already carry a
+/// structural diagnostic; this message names the alias that would otherwise disappear.
+const MSG_BOUNDARY_SOURCE_NOT_EMITTED: &str =
+    "export subset: declared boundary output source is not an emitted child output connector";
 /// A surviving input connector is driven by more than one **surviving** output. The emitted
 /// document carries every one of those `isConnectedTo` targets, so re-import counts an in-degree
 /// above 1 and fails the §7.10 single-assignment law — the export would be `Ok` with bytes that do
@@ -609,6 +615,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             continue;
         }
         let Some(_) = port_iri[idx] else {
+            diags.push(reject(MSG_BOUNDARY_SOURCE_NOT_EMITTED, &output.iri));
             continue;
         };
         let iri = output.iri.as_ref();

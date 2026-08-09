@@ -169,14 +169,15 @@ pub fn import_cxf(
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
-///   (subject = the owning block's `instance_iri`; connectors carry no IRI of their own) for
+///   (subject identifies the offending block, connector owner, or declared boundary node) for
 ///   anything outside the subset that is NOT an enum deferral: non-finite parameters, connectors
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, the same connector listed more than once in
 ///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip), an input
 ///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
-///   fail re-import entirely rather than come back lossy),
+///   fail re-import entirely rather than come back lossy), a declared boundary output whose source
+///   has no emitted child-port node,
 ///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a

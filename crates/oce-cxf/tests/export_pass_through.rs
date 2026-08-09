@@ -5,12 +5,14 @@ use std::sync::Arc;
 use oce_cxf::{CxfError, export};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{
-    BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph, ParamTable,
-    Value, ValueType,
+    Attrs, BlockId, BlockInstance, BoundaryOutput, Connector, ConnectorId, Dir, EnumClassId,
+    ModelGraph, ParamTable, Value, ValueType,
 };
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
 const DUPLICATE_ID: &str = "export subset: emitted node @id collides with another emitted node @id";
+const BOUNDARY_SOURCE_NOT_EMITTED: &str =
+    "export subset: declared boundary output source is not an emitted child output connector";
 const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
 
@@ -149,6 +151,34 @@ fn boundary_output_iri_collision_rejects_at_plan_time() {
             diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == DUPLICATE_ID
         }),
         "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn boundary_alias_on_reserved_output_rejects_instead_of_disappearing() {
+    const ALIAS: &str = "http://example.org#PassExport.alias";
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![BoundaryOutput {
+            iri: Arc::from(ALIAS),
+            source: ConnectorId(1),
+            attrs: Attrs::default_for(ValueType::Real),
+        }],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, BOUNDARY_SOURCE_NOT_EMITTED)
+                .with_subject(ALIAS.to_owned())
+        ]
     );
 }
 

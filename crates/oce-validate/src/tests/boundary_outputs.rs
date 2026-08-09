@@ -19,6 +19,30 @@ fn valid_alias_matches_its_output_source() {
 }
 
 #[test]
+fn reserved_pass_through_alias_satisfies_deep_graph_rules() {
+    let model = ModelGraph {
+        blocks: vec![block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:alias",
+            1,
+            Attrs::Real(RealAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("pass-through alias is executable but not always exportable")
+            .is_empty()
+    );
+}
+
+#[test]
 fn dangling_alias_source_is_malformed() {
     let model = ModelGraph {
         boundary_outputs: vec![boundary_output(
