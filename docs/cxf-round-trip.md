@@ -7,7 +7,7 @@ not?
 CXF is bidirectional here. `oce-cxf` imports through the §7.1 resolver
 (`crates/oce-cxf/src/resolve/mod.rs:1`, reached via `oce_cxf::import_cxf` at
 `crates/oce-cxf/src/lib.rs:106`) and exports through a separate, deliberately smaller path
-(`oce_cxf::export` at `crates/oce-cxf/src/lib.rs:196`). Import and export do **not** cover the same
+(`oce_cxf::export` at `crates/oce-cxf/src/lib.rs:200`). Import and export do **not** cover the same
 ground, and the gap between them is where the surprises live.
 
 ## The RT-2 contract
@@ -62,12 +62,13 @@ fails the export (`crates/oce-cxf/src/export.rs:131-139`), because the importer 
 same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
 (`crates/oce-cxf/src/export.rs:140-144`).
 
-On a **deferred** block, none of that runs. A deferred block is omitted from the document and
+On a **deferred ordinary** block, none of that runs. The block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from
-its parameters, not from its boundary entries (`crates/oce-cxf/src/lib.rs:161-193`). Connector
-validation is skipped along with the block. Whole-graph guards behave differently: an empty
-(zero-block) graph, non-dense ids, and a connection that is not output→input reject either way,
-because they are attributable to no single block's presence in the document.
+its parameters, not from its boundary entries (`crates/oce-cxf/src/lib.rs:161-198`). A reserved
+pass-through with hidden state is the exception: elision cannot represent that state, so it rejects
+even when an enum parameter also marks the block deferred. Whole-graph guards behave differently:
+an empty (zero-block) graph, non-dense ids, and a connection that is not output→input reject either
+way, because they are attributable to no single block's presence in the document.
 
 ## The deferral trap
 
@@ -93,12 +94,12 @@ deferred and reserved lowering-only blocks are removed, which would be an unload
 shell (`crates/oce-cxf/src/export.rs:112-116`). In principle, then, all but one block can vanish
 from an export that returns `Ok`.
 
-And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:196-199` — it destructures them
+And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:200-203` — it destructures them
 into `_warnings`). A caller using `export()` alone cannot distinguish a complete export from one
 that dropped 39 % of the graph. Both return `Ok(Vec<u8>)`.
 
-**Use `export_with_report`** (`crates/oce-cxf/src/lib.rs:240`). It returns an `ExportReport` with
-`bytes` and `warnings` (`crates/oce-cxf/src/lib.rs:201-227`); the bytes are identical to what
+**Use `export_with_report`** (`crates/oce-cxf/src/lib.rs:244`). It returns an `ExportReport` with
+`bytes` and `warnings` (`crates/oce-cxf/src/lib.rs:205-231`); the bytes are identical to what
 `export()` returns for the same graph. An **empty `warnings` list is what certifies that the round
 trip covered the whole input.** Treat a non-empty list as "this document is a subset of the model I
 asked you to write."
@@ -119,11 +120,11 @@ The visible consequence: the emitted document lists **fewer `containsBlock` entr
 holds blocks**, and a canonical imported pass-through produces **no warning at all**
 (`crates/oce-cxf/src/lib.rs:136-141`). Reserved connectors have no emitted child-port node, so a
 host-built boundary alias or connection involving one is rejected rather than silently omitted. An
-authored instance identity, parameter, or class/type mismatch on the reserved block rejects for the
-same reason: elision has no wire representation for that state. An empty warning list means nothing
-was deferred; it does not mean the document explicitly lists every internal lowering block. If you
-are reconciling counts between a `ModelGraph` and an emitted document, that is the difference to
-expect.
+authored instance identity, parameter, input attribute, or class/type mismatch on the reserved block
+rejects for the same reason: elision has no wire representation for that state. An empty warning
+list means nothing was deferred; it does not mean the document explicitly lists every internal
+lowering block. If you are reconciling counts between a `ModelGraph` and an emitted document, that
+is the difference to expect.
 
 ## Two ways an `Ok` export produces bytes that fail re-import
 

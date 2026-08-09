@@ -741,9 +741,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             };
             claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
             // Reuse the Phase 4 classification: the pass-through output IS a real connector,
-            // already classified AND tag-guarded there (pass-through blocks are never deferred,
-            // so the slot is never a placeholder). A second guard here would add a duplicate
-            // diagnostic naming the innocent input connector.
+            // already classified AND tag-guarded there. A pass-through that reaches this branch
+            // survived the deferred-owner skip above, so the slot is not a placeholder. A second
+            // guard here would add a duplicate diagnostic naming the innocent input connector.
             boundary_outputs.push(PlannedBoundaryOutput {
                 iri: output_iri.to_owned(),
                 datatype,

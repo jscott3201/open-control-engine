@@ -6,7 +6,7 @@ use oce_cxf::{CxfError, export};
 use oce_diag::{DiagCode, Diagnostic, Severity};
 use oce_model::{
     Attrs, BlockId, BlockInstance, BoundaryOutput, Connection, Connector, ConnectorId, Dir,
-    EnumClassId, ModelGraph, ParamTable, Value, ValueType,
+    EnumClassId, IntAttrs, ModelGraph, ParamTable, RealAttrs, Value, ValueType,
 };
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
@@ -480,6 +480,97 @@ fn authored_identity_on_reserved_block_rejects_instead_of_disappearing() {
                 .with_subject(AUTHORED_IRI.to_owned())
         ]
     );
+}
+
+#[test]
+fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
+    let cases = [
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                quantity: Some(Arc::from("ThermodynamicTemperature")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("K")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                display_unit: Some(Arc::from("degC")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                min: Some(0.0),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                max: Some(1.0),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Integer",
+            ValueType::Integer,
+            Attrs::Integer(IntAttrs {
+                min: Some(0),
+                ..IntAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Integer",
+            ValueType::Integer,
+            Attrs::Integer(IntAttrs {
+                max: Some(1),
+                ..IntAttrs::default()
+            }),
+        ),
+    ];
+
+    for (class_path, value_type, input_attrs) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.blocks[0].class_iri = Arc::from(class_path);
+        for connector in &mut graph.connectors[..2] {
+            connector.value_type = value_type;
+            connector.attrs = Attrs::default_for(value_type);
+        }
+        graph.connectors[0].attrs = input_attrs;
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                    .with_subject("block#0".to_owned())
+            ],
+            "{class_path} accepted hidden input attributes"
+        );
+    }
 }
 
 #[test]

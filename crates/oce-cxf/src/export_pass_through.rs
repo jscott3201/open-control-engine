@@ -1,6 +1,6 @@
 //! Export-side validation helpers for reserved pass-through blocks.
 
-use oce_model::{Connector, ModelGraph, ValueType};
+use oce_model::{Attrs, Connector, ModelGraph, ValueType};
 
 fn pass_through_value_type(class_path: &str) -> Option<ValueType> {
     match class_path {
@@ -49,7 +49,9 @@ pub(crate) fn reserved_connection_endpoint(
         })
 }
 
-/// Whether Phase 3's pre-existing wiring checks accept a reserved block.
+/// Whether a reserved block declares one input/output pair whose input belongs to the block and is
+/// listed as external. Phase 6 owns output existence, direction, ownership, and pair-type checks;
+/// keeping those there preserves the established structural diagnostic order.
 pub(crate) fn has_valid_wiring_shape(graph: &ModelGraph, block_position: usize) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
@@ -66,7 +68,25 @@ pub(crate) fn has_valid_wiring_shape(graph: &ModelGraph, block_position: usize) 
     }
 }
 
-/// Whether elision would discard authored state or change the reserved scalar identity.
+fn has_elided_input_attrs(input: &Connector) -> bool {
+    if !input.attrs.matches(input.value_type) {
+        return false;
+    }
+    match &input.attrs {
+        Attrs::Real(attrs) => {
+            attrs.quantity.is_some()
+                || attrs.unit.is_some()
+                || attrs.display_unit.is_some()
+                || attrs.min.is_some_and(f64::is_finite)
+                || attrs.max.is_some_and(f64::is_finite)
+        }
+        Attrs::Integer(attrs) => attrs.min.is_some() || attrs.max.is_some(),
+        Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => false,
+    }
+}
+
+/// Whether elision would discard an authored identity, parameter, or representable input attribute,
+/// or would change the reserved scalar identity.
 pub(crate) fn has_unrepresentable_state(graph: &ModelGraph, block_position: usize) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
@@ -83,7 +103,9 @@ pub(crate) fn has_unrepresentable_state(graph: &ModelGraph, block_position: usiz
             graph.connectors.get(output_id.0 as usize),
         ) {
             (Some(input), Some(output)) => {
-                input.value_type != value_type || output.value_type != value_type
+                input.value_type != value_type
+                    || output.value_type != value_type
+                    || has_elided_input_attrs(input)
             }
             _ => false,
         },

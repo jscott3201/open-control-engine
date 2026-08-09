@@ -183,10 +183,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
 - **Export is total for malformed block ports and rejects hidden reserved-block state** (#280,
   fixes #278 and #279). Out-of-range connector IDs in a block's input or output list now return a
   structural `export-unsupported` diagnostic instead of panicking while reading an authored port
-  IRI. Reserved pass-through blocks must have no authored instance identity or parameters and must
-  carry the scalar type named by their class; violations now reject instead of dropping state or
-  re-importing as another reserved class. Resolver-produced pass-through graphs and their exported
-  bytes are unchanged.
+  IRI. Reserved pass-through blocks must have no authored instance identity, parameters, or input
+  attributes and must carry the scalar type named by their class; violations now reject instead of
+  dropping state or re-importing as another reserved class. Resolver-produced pass-through graphs
+  and their exported bytes are unchanged.
 
 ### Host facade
 

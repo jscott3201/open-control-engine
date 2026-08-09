@@ -462,8 +462,9 @@ pub fn derive_table() -> BTreeMap<String, ClassPorts> {
     assert_eq!(
         table.len(),
         132,
-        "vendored upstream corpus changed size. It is the 132 CDL classes reachable from the 47 \
-         G36 fixture documents; adding or removing source files changes what this gate covers."
+        "vendored upstream corpus changed size. It is the 132 CDL classes reachable from the 46 \
+         G36 catalog fixtures; the separate resolver-contract document adds no class. Adding or \
+         removing source files changes what this gate covers."
     );
     let portless: Vec<&str> = table
         .iter()
