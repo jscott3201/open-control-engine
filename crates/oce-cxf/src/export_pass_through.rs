@@ -12,7 +12,22 @@ pub(crate) fn is_pass_through_class(class_path: &str) -> bool {
     )
 }
 
-/// Return the first source-to-target connector owned by a reserved pass-through block.
+/// Whether `connector` belongs to the declared input/output pair of a reserved pass-through block.
+pub(crate) fn is_declared_pass_through_connector(
+    graph: &ModelGraph,
+    connector: &Connector,
+) -> bool {
+    graph
+        .blocks
+        .get(connector.block.0 as usize)
+        .filter(|block| is_pass_through_class(&block.class_iri))
+        .is_some_and(|block| {
+            block.inputs.contains(&connector.id) || block.outputs.contains(&connector.id)
+        })
+}
+
+/// Return the reserved-owned endpoint of a connection, source first, with its connector position.
+/// Returns `None` when neither endpoint belongs to a reserved pass-through block.
 pub(crate) fn reserved_connection_endpoint(
     graph: &ModelGraph,
     source_position: usize,

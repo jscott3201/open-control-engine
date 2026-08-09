@@ -21,8 +21,8 @@ fn valid_alias_matches_its_output_source() {
 
 #[test]
 fn reserved_pass_through_alias_satisfies_deep_graph_rules() {
-    // The deep gate owns executable graph integrity; CXF export separately owns wire
-    // representability for host-built references to reserved connectors.
+    // CXF export owns wire representability for host-built references to reserved connectors;
+    // these tests pin the deep gate's current acceptance separately.
     let model = ModelGraph {
         blocks: vec![block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1])],
         connectors: vec![
@@ -40,7 +40,7 @@ fn reserved_pass_through_alias_satisfies_deep_graph_rules() {
 
     assert!(
         validate(&model)
-            .expect("pass-through alias is executable but not always exportable")
+            .expect("deep gate accepts reserved pass-through alias")
             .is_empty()
     );
 }
@@ -71,7 +71,7 @@ fn connection_from_reserved_output_satisfies_deep_graph_rules() {
 
     assert!(
         validate(&model)
-            .expect("reserved source connection is executable but not exportable")
+            .expect("deep gate accepts reserved source connection")
             .is_empty()
     );
 }
@@ -95,7 +95,7 @@ fn connection_to_reserved_input_satisfies_deep_graph_rules() {
 
     assert!(
         validate(&model)
-            .expect("reserved target connection is executable but not exportable")
+            .expect("deep gate accepts reserved target connection")
             .is_empty()
     );
 }

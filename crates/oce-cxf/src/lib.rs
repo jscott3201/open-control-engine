@@ -181,9 +181,9 @@ pub fn import_cxf(
 ///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a
-///   parameter defect, an external input with no boundary IRI or listed twice, a multiply-driven
-///   input — reject only where
-///   the offender sits on a **surviving** block; a deferred block is omitted from the document and
+///   parameter defect, an external input with no boundary IRI or listed twice, a
+///   multiply-driven input, an alias source with no emitted port, or a reserved connection endpoint
+///   — reject only where the offender sits on a **surviving** block; a deferred block is omitted and
 ///   so contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
 ///   non-dense ids) and a connection that is not output→input reject either way, being
 ///   attributable to no single block's presence in the document. Deferred blocks — enum-carrying

@@ -64,10 +64,10 @@
 //! offending block, connector owner, or declared boundary node — never a panic.
 //!
 //! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
-//! `external_inputs`, a connection or boundary alias involving a reserved pass-through connector,
-//! and an input driven by more than one surviving output. These checks are judged over the
-//! **survivor cone**, so a defect sitting entirely inside a deferred block never aborts an export
-//! whose document omits that block.
+//! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
+//! reserved pass-through connector, and an input driven by more than one surviving output. These
+//! checks are judged over the **survivor cone**, so a defect sitting entirely inside a deferred
+//! block never aborts an export whose document omits that block.
 //!
 //! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
 //! at all (not from its connectors' attributes, not from its boundary entries), so a partly
@@ -85,7 +85,8 @@ use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
 use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
-    has_valid_shape, is_pass_through_class, reserved_connection_endpoint,
+    has_valid_shape, is_declared_pass_through_connector, is_pass_through_class,
+    reserved_connection_endpoint,
 };
 use crate::{CxfError, bridge};
 
@@ -466,10 +467,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if deferred.contains(&(c.block.0 as usize)) {
             continue;
         }
-        if g.blocks
-            .get(c.block.0 as usize)
-            .is_some_and(|block| is_pass_through_class(&block.class_iri))
-        {
+        if is_declared_pass_through_connector(g, c) {
             continue;
         }
         if port_iri[i].is_none() {

@@ -282,6 +282,30 @@ fn alias_on_unclaimed_output_reports_structure_before_loss() {
 }
 
 #[test]
+fn undeclared_connector_on_reserved_block_rejects_instead_of_disappearing() {
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+            connector(3, 0, Dir::Out, Some("http://example.org#PassExport.stray")),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                .with_subject("connector#3".to_owned())
+        ]
+    );
+}
+
+#[test]
 fn pass_through_plus_only_deferred_blocks_rejects_total_deferral() {
     let deferred = BlockInstance {
         id: BlockId(1),
