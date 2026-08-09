@@ -161,7 +161,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
   message, none occurring in the G36 corpus.
-- **Declared boundary-output attributes now unify with their source connector** (#273). The
+- **Declared boundary-output attributes now unify with their source connector** (#274, fixes #273). The
   `BoundaryOutput.attrs` alias previously sat outside every §7.10 cluster, so a declared output
   claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.
   Boundary aliases now join the existing deterministic gather-then-decide cluster rooted at their
@@ -366,7 +366,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   inputs. Controls pin first-tick-only and periodic allocation detection, the known wide `Sort`
   allocation, and exclusion of off-thread traffic. Current catalog blocks do not delegate work to
   worker threads; a future block that does needs a companion worker-allocation guard.
-- **Facade allocation guards now measure only the calling thread** (#272). The previous
+- **Facade allocation guards now measure only the calling thread** (#275, fixes #272). The previous
   process-global allocator could charge libtest or worker-thread traffic to a tick or simulation
   region despite the integration test's mutex. The replacement preserves the manual-tick,
   snapshot-floor, realtime-step, and fixed-per-run simulation contracts; watch remains the positive

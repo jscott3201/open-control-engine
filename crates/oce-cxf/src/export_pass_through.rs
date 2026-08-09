@@ -1,15 +1,19 @@
 //! Export-side validation helpers for reserved pass-through blocks.
 
-use oce_model::{Connector, ModelGraph};
+use oce_model::{Connector, Dir, ModelGraph, ValueType};
+
+fn pass_through_value_type(class_path: &str) -> Option<ValueType> {
+    match class_path {
+        "urn:oce:lowering#PassThrough.Real" => Some(ValueType::Real),
+        "urn:oce:lowering#PassThrough.Integer" => Some(ValueType::Integer),
+        "urn:oce:lowering#PassThrough.Boolean" => Some(ValueType::Boolean),
+        _ => None,
+    }
+}
 
 /// Whether `class_path` names one of the reserved scalar pass-through identities.
 pub(crate) fn is_pass_through_class(class_path: &str) -> bool {
-    matches!(
-        class_path,
-        "urn:oce:lowering#PassThrough.Real"
-            | "urn:oce:lowering#PassThrough.Integer"
-            | "urn:oce:lowering#PassThrough.Boolean"
-    )
+    pass_through_value_type(class_path).is_some()
 }
 
 /// Whether `connector` belongs to the declared input/output pair of a reserved pass-through block.
@@ -45,24 +49,33 @@ pub(crate) fn reserved_connection_endpoint(
         })
 }
 
-/// Whether a reserved block has the resolver-produced arity and external-input membership.
-///
-/// Phase 6 owns connector existence, direction, output ownership, and pair-type validation while
-/// it plans the external input and reserved output. It keys that plan from the input connector's
-/// owner, so this earlier gate uniquely owns the input-to-reserved-block relationship in addition
-/// to block arity and external-input membership.
+/// Whether a reserved block has the resolver-produced parameterless typed input/output pair.
 pub(crate) fn has_valid_shape(graph: &ModelGraph, block_position: usize) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
     };
+    let Some(value_type) = pass_through_value_type(&block.class_iri) else {
+        return false;
+    };
+    if !block.params.values.is_empty() {
+        return false;
+    }
     match (block.inputs.as_slice(), block.outputs.as_slice()) {
-        ([input_id], [_output_id]) => {
-            graph
-                .connectors
-                .get(input_id.0 as usize)
-                .is_some_and(|connector| connector.block.0 as usize == block_position)
-                && graph.external_inputs.contains(input_id)
-        }
+        ([input_id], [output_id]) => match (
+            graph.connectors.get(input_id.0 as usize),
+            graph.connectors.get(output_id.0 as usize),
+        ) {
+            (Some(input), Some(output)) => {
+                input.block.0 as usize == block_position
+                    && output.block.0 as usize == block_position
+                    && input.dir == Dir::In
+                    && output.dir == Dir::Out
+                    && input.value_type == value_type
+                    && output.value_type == value_type
+                    && graph.external_inputs.contains(input_id)
+            }
+            _ => false,
+        },
         _ => false,
     }
 }

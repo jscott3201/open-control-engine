@@ -10,6 +10,7 @@ use oce_model::{
 };
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
+const RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its parameterless typed lowering shape";
 const DUPLICATE_ID: &str = "export subset: emitted node @id collides with another emitted node @id";
 const BOUNDARY_SOURCE_NOT_EMITTED: &str =
     "export subset: declared boundary output source is not an emitted child output connector";
@@ -73,7 +74,7 @@ fn malformed_reserved_block_rejects_loudly() {
     let diagnostics = rejection(&graph);
     assert!(
         diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == RESERVED_SHAPE
         }),
         "{diagnostics:?}"
     );
@@ -97,7 +98,7 @@ fn missing_reserved_external_input_membership_rejects_loudly() {
     let diagnostics = rejection(&missing_external);
     assert!(
         diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == RESERVED_SHAPE
         }),
         "{diagnostics:?}"
     );
@@ -130,7 +131,7 @@ fn reserved_input_owned_by_another_block_rejects_loudly() {
     let diagnostics = rejection(&graph);
     assert!(
         diagnostics.iter().any(|diagnostic| {
-            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == STRUCTURE
+            diagnostic.code == DiagCode::ExportUnsupported && diagnostic.message == RESERVED_SHAPE
         }),
         "{diagnostics:?}"
     );
@@ -301,6 +302,73 @@ fn undeclared_connector_on_reserved_block_rejects_instead_of_disappearing() {
         vec![
             Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
                 .with_subject("connector#3".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn every_reserved_class_rejects_both_wrong_scalar_types() {
+    let cases = [
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Integer),
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Integer),
+    ];
+
+    for (class_path, wrong_type) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.blocks[0].class_iri = Arc::from(class_path);
+        graph.connectors[0].value_type = wrong_type;
+        graph.connectors[0].attrs = Attrs::default_for(wrong_type);
+        graph.connectors[1].value_type = wrong_type;
+        graph.connectors[1].attrs = Attrs::default_for(wrong_type);
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                    .with_subject("block#0".to_owned())
+            ],
+            "{class_path} accepted {wrong_type:?} connectors"
+        );
+    }
+}
+
+#[test]
+fn parameter_on_reserved_block_rejects_instead_of_disappearing() {
+    let mut graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+    graph.blocks[0]
+        .params
+        .values
+        .push((Arc::from("ghost"), Value::Real(42.0)));
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                .with_subject("block#0".to_owned())
         ]
     );
 }

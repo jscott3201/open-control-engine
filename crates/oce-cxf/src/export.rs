@@ -126,6 +126,8 @@ const MSG_CLASS_BRIDGE: &str =
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
 /// connector claimed twice or never, a connection endpoint out of range or not output→input).
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
+/// A reserved lowering block differs from the resolver-produced parameterless typed identity.
+const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its parameterless typed lowering shape";
 /// The connector carries a non-default `nominal` attribute (the importer hardcodes
 /// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
 /// dropped rather than round-tripped).
@@ -379,9 +381,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             let minted = if g.external_inputs.contains(cid) {
                 format!("{subject}.in{k}")
             } else {
-                g.connectors[cid.0 as usize]
-                    .iri
-                    .as_deref()
+                g.connectors
+                    .get(cid.0 as usize)
+                    .and_then(|connector| connector.iri.as_deref())
                     .map_or_else(|| format!("{subject}.in{k}"), str::to_owned)
             };
             if claim_port(
@@ -400,9 +402,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
         let mut output_ports = Vec::with_capacity(b.outputs.len());
         for (k, cid) in b.outputs.iter().enumerate() {
-            let minted = g.connectors[cid.0 as usize]
-                .iri
-                .as_deref()
+            let minted = g
+                .connectors
+                .get(cid.0 as usize)
+                .and_then(|connector| connector.iri.as_deref())
                 .map_or_else(|| format!("{subject}.out{k}"), str::to_owned);
             if claim_port(
                 g,
@@ -444,7 +447,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     }
 
     // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
-    // the same single typed external In/Out pair as resolver-produced blocks.
+    // the same parameterless typed external In/Out pair as resolver-produced blocks.
     for (bi, block) in g.blocks.iter().enumerate() {
         if !is_pass_through_class(&block.class_iri) {
             continue;
@@ -454,7 +457,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 .instance_iri
                 .as_deref()
                 .map_or_else(|| format!("block#{bi}"), str::to_owned);
-            diags.push(reject(MSG_STRUCTURE, &subject));
+            diags.push(reject(MSG_RESERVED_SHAPE, &subject));
         }
     }
 

@@ -1,8 +1,8 @@
 //! Export RT-2 over the **whole** G36 fixture corpus, not a hand-picked slice of it.
 //!
-//! Eight of the 46 fixtures used to be covered by eight individually-named tests. The other 38
+//! Eight of the 47 fixtures used to be covered by eight individually-named tests. The other 39
 //! were exercised by nothing on the export side, and — this is the part that made the gap
-//! self-perpetuating — nothing tied the directory to any test, so a 47th fixture would have landed
+//! self-perpetuating — nothing tied the directory to any test, so a new fixture would have landed
 //! uncovered with no signal. `EXPECTED_G36_FIXTURES` plus the listing assertion closes that: a new
 //! fixture is either added to the list and swept, or CI goes red naming it.
 //!
@@ -16,8 +16,8 @@
 //!   design and whole-graph render equality is false on purpose (see `export`'s rustdoc). RT-2
 //!   holds over the **survivor cone**, which is what [`assert_survivor_cone_rt2`] asserts.
 //!
-//! Note what the split is NOT. No fixture is outside the export subset: 46/46 import with zero
-//! diagnostics and 46/46 export. There are zero enum-typed *connectors* in the entire corpus —
+//! Note what the split is NOT. No fixture is outside the export subset: 47/47 import with zero
+//! diagnostics and 47/47 export. There are zero enum-typed *connectors* in the entire corpus —
 //! every deferral here comes from a parameter — and composites are flattened and arrays
 //! pre-flattened before export ever sees the graph.
 //!

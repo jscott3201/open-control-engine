@@ -178,6 +178,7 @@ pub fn import_cxf(
 ///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
 ///   fail re-import entirely rather than come back lossy), a declared boundary output whose source
 ///   has no emitted child-port node, a connection to or from a reserved lowering connector,
+///   a reserved pass-through block with parameters or mismatched connector types,
 ///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a

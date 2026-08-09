@@ -180,7 +180,7 @@ fn no_facade_surface_of_a_loaded_document_emits_a_positional_connector_path() {
     }
     assert!(
         offending_fixtures.is_empty(),
-        "{}/46 fixtures leak positional {POSITIONAL_PREFIX}<N> paths onto a facade surface: {:?}",
+        "{}/47 fixtures leak positional {POSITIONAL_PREFIX}<N> paths onto a facade surface: {:?}",
         offending_fixtures.len(),
         offending_fixtures
             .iter()

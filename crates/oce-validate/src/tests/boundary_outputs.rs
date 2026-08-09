@@ -101,6 +101,57 @@ fn connection_to_reserved_input_satisfies_deep_graph_rules() {
 }
 
 #[test]
+fn reserved_pass_through_parameter_satisfies_current_deep_graph_rules() {
+    let mut reserved = block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]);
+    reserved.params.values.push(rp("ghost", 42.0));
+    let model = ModelGraph {
+        blocks: vec![reserved],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate currently accepts an extra reserved parameter")
+            .is_empty()
+    );
+}
+
+#[test]
+fn reserved_pass_through_types_must_match_the_class() {
+    let cases = [
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Integer),
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Integer),
+    ];
+
+    for (class_path, wrong_type) in cases {
+        let model = ModelGraph {
+            blocks: vec![block(0, class_path, &[0], &[1])],
+            connectors: vec![
+                conn(0, 0, Dir::In, wrong_type),
+                conn(1, 0, Dir::Out, wrong_type),
+            ],
+            external_inputs: vec![ConnectorId(0)],
+            ..ModelGraph::new()
+        };
+        let error = validate(&model).expect_err("reserved connector types must match their class");
+        assert_eq!(
+            codes(&error.diagnostics),
+            vec![DiagCode::PortKindMismatch, DiagCode::PortKindMismatch],
+            "{class_path} accepted {wrong_type:?} connectors"
+        );
+    }
+}
+
+#[test]
 fn dangling_alias_source_is_malformed() {
     let model = ModelGraph {
         boundary_outputs: vec![boundary_output(
