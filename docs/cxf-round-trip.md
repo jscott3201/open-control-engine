@@ -120,14 +120,15 @@ The visible consequence: the emitted document lists **fewer `containsBlock` entr
 holds blocks**, and a canonical imported pass-through produces **no warning at all**
 (`crates/oce-cxf/src/lib.rs:136-141`). Reserved connectors have no emitted child-port node, so a
 host-built boundary alias or connection involving a surviving reserved block is rejected rather
-than silently omitted. If cascade deferral omits the reserved owner, those relationships follow the
-ordinary survivor-cone rule: they are omitted with `ExportDeferred` warnings. An authored instance
-identity, parameter, input attribute, or class/type mismatch on the reserved block rejects because
-elision has no wire representation for that state. Output attributes remain representable on an
-emitted boundary output. If cascade deferral omits the reserved block, any non-default connector
-attribute rejects rather than disappearing with it. An empty warning list means nothing was
-deferred; it does not mean the document explicitly lists every internal lowering block. If you are
-reconciling counts between a `ModelGraph` and an emitted document, that is the difference to expect.
+than silently omitted. If cascade deferral omits the reserved owner, well-directed relationships
+follow the ordinary survivor-cone rule: they are omitted with `ExportDeferred` warnings. Structural
+direction errors still reject before survivor filtering. An authored instance identity, parameter,
+input attribute, or class/type mismatch on the reserved block rejects because elision has no wire
+representation for that state. Output attributes remain representable on an emitted boundary
+output. If cascade deferral omits the reserved block, any non-default connector attribute rejects
+rather than disappearing with it. An empty warning list means nothing was deferred; it does not
+mean the document explicitly lists every internal lowering block. If you are reconciling counts
+between a `ModelGraph` and an emitted document, that is the difference to expect.
 
 ## Two ways an `Ok` export produces bytes that fail re-import
 

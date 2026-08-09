@@ -175,6 +175,10 @@ fn cascade_deferral_does_not_hide_reserved_endpoint_errors() {
 fn cascade_deferral_does_not_hide_reserved_connector_attribute_errors() {
     let cases = [
         Attrs::Real(RealAttrs {
+            unit: Some(Arc::from("Pa")),
+            ..RealAttrs::default()
+        }),
+        Attrs::Real(RealAttrs {
             nominal: Some(1.0),
             ..RealAttrs::default()
         }),
