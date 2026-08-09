@@ -1,5 +1,6 @@
 //! Deterministic resolver diagnostic subject and sort helpers.
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -40,7 +41,10 @@ pub(super) fn finalize_diags(
     diags.sort_by(|a, b| {
         key_cid(a)
             .cmp(&key_cid(b))
-            .then_with(|| a.subject.as_deref().cmp(&b.subject.as_deref()))
+            .then_with(|| match (&a.subject, &b.subject) {
+                (Some(a), Some(b)) if Arc::ptr_eq(a, b) => Ordering::Equal,
+                _ => a.subject.as_deref().cmp(&b.subject.as_deref()),
+            })
             .then_with(|| a.code.as_str().cmp(b.code.as_str()))
             .then_with(|| a.message.cmp(&b.message))
     });
