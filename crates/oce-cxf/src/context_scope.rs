@@ -2,15 +2,15 @@
 
 use oce_diag::{DiagCode, Diagnostic};
 
-use crate::dto::CxfDocument;
+use crate::dto::{CxfDocument, CxfValue, TermAttr};
 
 pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
     for (index, node) in doc.graph.iter().enumerate() {
-        let (subject, owner) = if node.id.is_empty() {
-            let subject = format!("@graph[{index}]");
-            (subject.clone(), format!("node at `{subject}`"))
+        let subject = format!("@graph[{index}]");
+        let owner = if node.id.is_empty() {
+            format!("node at `{subject}`")
         } else {
-            (node.id.clone(), format!("node `{}`", node.id))
+            format!("node `{}`", node.id)
         };
         let mut refuse = |location: String| {
             diags.push(
@@ -38,17 +38,56 @@ pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
         ] {
             for reference in references {
                 if reference.other.contains_key("@context") {
-                    refuse(format!("{slot} reference `{}` on {owner}", reference.id));
+                    refuse(format!("{slot} reference `{}`", reference.id));
                 }
             }
         }
         if let Some(reference) = &node.is_of_data_type
             && reference.other.contains_key("@context")
         {
-            refuse(format!(
-                "S231:isOfDataType reference `{}` on {owner}",
-                reference.id
-            ));
+            refuse(format!("S231:isOfDataType reference `{}`", reference.id));
         }
+        for (slot, value) in [
+            ("S231:value", node.value.as_ref()),
+            ("S231:min", node.min.as_ref()),
+            ("S231:max", node.max.as_ref()),
+        ] {
+            if let Some(value) = value {
+                collect_value_refusals(value, slot, &mut refuse);
+            }
+        }
+        for (slot, term) in [
+            ("S231:unit", node.unit.as_ref()),
+            ("S231:quantity", node.quantity.as_ref()),
+            ("S231:displayUnit", node.display_unit.as_ref()),
+        ] {
+            if term.is_some_and(term_declares_context) {
+                refuse(format!("{slot} term"));
+            }
+        }
+    }
+}
+
+fn collect_value_refusals(value: &CxfValue, path: &str, refuse: &mut impl FnMut(String)) {
+    match value {
+        CxfValue::Typed { extra, .. } if extra.contains_key("@context") => {
+            refuse(format!("{path} typed literal"));
+        }
+        CxfValue::List(values) => {
+            for (index, value) in values.iter().enumerate() {
+                collect_value_refusals(value, &format!("{path}[{index}]"), refuse);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn term_declares_context(term: &TermAttr) -> bool {
+    match term {
+        TermAttr::Typed { extra, .. } | TermAttr::Iri { extra, .. } => {
+            extra.contains_key("@context")
+        }
+        TermAttr::Other(serde_json::Value::Object(value)) => value.contains_key("@context"),
+        TermAttr::Bare(_) | TermAttr::Other(_) => false,
     }
 }

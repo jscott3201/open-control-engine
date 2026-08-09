@@ -92,11 +92,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   previously fell through the generic keyword skip, so the engine ignored identity bindings the
   document required. It now refuses as `non-subset-construct` before any identity slot is expanded,
   for every payload shape and for each occurrence in a context list.
-- **Node-scoped JSON-LD contexts fail closed** (#282). A direct `@context` on an `@graph` node or
-  followed identity/type reference was retained while expansion applied only the document context,
-  so an author and the engine could resolve the same spelling to different IRIs. Ingest now refuses
-  the scoped context before identity expansion and indexing; Layer-A parse/serialize remains
-  lossless.
+- **Node-scoped JSON-LD contexts fail closed** (#282). A direct `@context` on an `@graph` node,
+  followed identity/type reference, or modeled value/term object was retained while expansion
+  applied only the document context, so an author and the engine could resolve the same spelling to
+  different IRIs or datatypes. Ingest now refuses the scoped context before identity expansion and
+  indexing; Layer-A parse/serialize remains lossless.
 - **An identity token must be an absolute IRI on both verbatim arms** (#234, #238). `expand_token`
   had two arms returning a token unchanged without checking it was absolute, so a malformed `@id`
   like `2024:MinLoop.con.y`, `:x` or `1st://x` became a durable point key with zero diagnostics —

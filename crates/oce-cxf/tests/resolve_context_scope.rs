@@ -103,13 +103,13 @@ fn every_reference_slot_refuses_a_scoped_context_before_expansion() {
 
         assert_eq!(diags.len(), 1, "{slot}: {diags:?}");
         assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{slot}");
-        assert_eq!(diags[0].subject.as_deref(), Some("ex:M"), "{slot}");
+        assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"), "{slot}");
         assert_eq!(
             diags[0].message,
             format!(
-                "{slot} reference `local:target` on node `ex:M` declares a scoped `@context`; \
-                 node-scoped contexts are not supported; declare required bindings in the \
-                 document-level `@context`"
+                "{slot} reference `local:target` declares a scoped `@context`; node-scoped \
+                 contexts are not supported; declare required bindings in the document-level \
+                 `@context`"
             ),
             "{slot}"
         );
@@ -137,8 +137,8 @@ fn every_scoped_context_in_a_reference_list_is_reported_and_round_trips() {
 
     let diags = import_bytes(&bytes).expect_err("each reference context must refuse");
     assert_eq!(diags.len(), 2, "{diags:?}");
-    assert_eq!(diags[0].subject.as_deref(), Some("ex:M"));
-    assert_eq!(diags[1].subject.as_deref(), Some("ex:M"));
+    assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"));
+    assert_eq!(diags[1].subject.as_deref(), Some("@graph[0]"));
     assert!(
         diags
             .iter()
@@ -161,7 +161,7 @@ fn document_and_node_context_refusals_aggregate_in_deterministic_order() {
     assert_eq!(render_diagnostics(&first), render_diagnostics(&second));
     assert_eq!(first.len(), 2, "{first:?}");
     assert_eq!(first[0].subject.as_deref(), Some("@base"));
-    assert_eq!(first[1].subject.as_deref(), Some("ex:A"));
+    assert_eq!(first[1].subject.as_deref(), Some("@graph[0]"));
     assert!(
         first
             .iter()
@@ -187,7 +187,7 @@ fn node_scoped_context_precedes_duplicate_id_indexing() {
         "context refusal must return alone: {diags:?}"
     );
     assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
-    assert_eq!(diags[0].subject.as_deref(), Some("ex:A"));
+    assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"));
 }
 
 #[test]
@@ -197,4 +197,105 @@ fn node_scoped_context_values_remain_lossless_in_the_dto() {
     let serialized = serde_json::to_value(parsed).expect("DTO serializes");
 
     assert_eq!(serialized, source);
+}
+
+#[test]
+fn every_modeled_value_object_refuses_a_scoped_context() {
+    for (slot, value, location) in [
+        (
+            "S231:value",
+            json!({ "@value": "1.0", "@type": "xsd:double", "@context": {} }),
+            "S231:value typed literal",
+        ),
+        (
+            "S231:min",
+            json!({ "@value": "0.0", "@type": "xsd:double", "@context": [] }),
+            "S231:min typed literal",
+        ),
+        (
+            "S231:max",
+            json!({ "@value": "2.0", "@type": "xsd:double", "@context": false }),
+            "S231:max typed literal",
+        ),
+        (
+            "S231:value",
+            json!([ { "@value": "1.0", "@type": "xsd:double", "@context": null } ]),
+            "S231:value[0] typed literal",
+        ),
+        (
+            "S231:unit",
+            json!({ "@id": "unit:K", "@context": { "unit": "http://scoped.example#" } }),
+            "S231:unit term",
+        ),
+        (
+            "S231:quantity",
+            json!({ "@value": "Temperature", "@type": "xsd:string", "@context": "http://example.org/context.jsonld" }),
+            "S231:quantity term",
+        ),
+        (
+            "S231:displayUnit",
+            json!({ "@context": 17 }),
+            "S231:displayUnit term",
+        ),
+    ] {
+        let mut node = json!({ "@id": "ex:M" });
+        node[slot] = value;
+        let document = json!({
+            "@context": { "ex": "http://document.example#" },
+            "@graph": [node]
+        });
+        let bytes = serde_json::to_vec(&document).expect("serialize value context");
+        let parsed = oce_cxf::parse_document(&bytes).expect("DTO parses");
+        assert_eq!(
+            serde_json::to_value(parsed).expect("DTO serializes"),
+            document,
+            "{slot}"
+        );
+        let diags = import_bytes(&bytes).expect_err("value context must refuse");
+
+        assert_eq!(diags.len(), 1, "{slot}: {diags:?}");
+        assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{slot}");
+        assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"), "{slot}");
+        assert_eq!(
+            diags[0].message,
+            format!(
+                "{location} declares a scoped `@context`; node-scoped contexts are not supported; \
+                 declare required bindings in the document-level `@context`"
+            ),
+            "{slot}"
+        );
+    }
+}
+
+#[test]
+fn diagnostic_size_is_bounded_by_the_offending_input() {
+    let owner = format!("urn:{}", "x".repeat(64 * 1024));
+    let references: Vec<Value> = (0..128)
+        .map(|index| {
+            json!({
+                "@id": format!("local:r{index}"),
+                "@context": { "local": "http://scoped.example#" }
+            })
+        })
+        .collect();
+    let document = json!({
+        "@context": {},
+        "@graph": [ { "@id": owner, "S231:hasInput": references } ]
+    });
+    let bytes = serde_json::to_vec(&document).expect("serialize amplification fixture");
+    let diags = import_bytes(&bytes).expect_err("reference contexts must refuse");
+    let message_bytes: usize = diags.iter().map(|diag| diag.message.len()).sum();
+
+    assert_eq!(diags.len(), 128);
+    assert!(
+        diags
+            .iter()
+            .all(|diag| diag.subject.as_deref() == Some("@graph[0]")),
+        "subjects must identify the bounded graph position"
+    );
+    assert!(
+        message_bytes < bytes.len(),
+        "diagnostics amplified {} input bytes into {message_bytes} message bytes",
+        bytes.len()
+    );
 }

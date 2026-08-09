@@ -1,6 +1,6 @@
-error|non-subset-construct|S231:Map|node `S231:Map` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
-error|non-subset-construct|local:List|node `local:List` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
-error|non-subset-construct|local:Remote|node `local:Remote` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
-error|non-subset-construct|relative-bool|node `relative-bool` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
-error|non-subset-construct|relative-null|node `relative-null` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
-error|non-subset-construct|relative-number|node `relative-number` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[0]|node `S231:Map` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[1]|node `local:List` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[2]|node `local:Remote` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[3]|node `relative-null` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[4]|node `relative-bool` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
+error|non-subset-construct|@graph[5]|node `relative-number` declares a scoped `@context`; node-scoped contexts are not supported; declare required bindings in the document-level `@context`
