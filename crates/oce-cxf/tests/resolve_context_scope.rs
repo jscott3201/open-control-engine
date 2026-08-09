@@ -275,17 +275,22 @@ fn every_modeled_value_object_refuses_a_scoped_context() {
 #[test]
 fn repeated_diagnostics_share_the_owner_subject() {
     let owner = format!("urn:{}", "x".repeat(64 * 1024));
-    let references: Vec<Value> = (0..128)
-        .map(|index| {
-            json!({
-                "@id": format!("local:r{index}"),
-                "@context": { "local": "http://scoped.example#" }
+    let references = |start| {
+        (start..start + 64)
+            .map(|index| {
+                json!({
+                    "@id": format!("local:r{index}"),
+                    "@context": { "local": "http://scoped.example#" }
+                })
             })
-        })
-        .collect();
+            .collect::<Vec<Value>>()
+    };
     let document = json!({
         "@context": {},
-        "@graph": [ { "@id": &owner, "S231:hasInput": references } ]
+        "@graph": [
+            { "@id": &owner, "S231:hasInput": references(0) },
+            { "@id": &owner, "S231:hasInput": references(64) }
+        ]
     });
     let bytes = serde_json::to_vec(&document).expect("serialize amplification fixture");
     let diags = import_bytes(&bytes).expect_err("reference contexts must refuse");

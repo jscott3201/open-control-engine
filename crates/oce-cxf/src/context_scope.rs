@@ -1,12 +1,13 @@
 //! Rejection of node-scoped JSON-LD contexts before identity expansion.
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use oce_diag::{DiagCode, Diagnostic};
 
 use crate::dto::{CxfDocument, CxfValue, TermAttr};
 
 pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
+    let mut subjects = HashMap::<&str, Arc<str>>::new();
     for (index, node) in doc.graph.iter().enumerate() {
         let mut subject = None;
         let mut refuse = |location: String| {
@@ -14,7 +15,11 @@ pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                 if node.id.is_empty() {
                     Arc::from(format!("@graph[{index}]"))
                 } else {
-                    Arc::from(node.id.as_str())
+                    Arc::clone(
+                        subjects
+                            .entry(node.id.as_str())
+                            .or_insert_with(|| Arc::from(node.id.as_str())),
+                    )
                 }
             }));
             diags.push(
