@@ -1,4 +1,5 @@
-//! Structural and transactional checks for declared boundary-output aliases.
+//! Structural and transactional checks for declared boundary-output aliases and reserved
+//! pass-through connectors.
 
 use super::common::*;
 
@@ -16,6 +17,87 @@ fn valid_alias_matches_its_output_source() {
     };
 
     assert!(validate(&model).expect("valid boundary alias").is_empty());
+}
+
+#[test]
+fn reserved_pass_through_alias_satisfies_deep_graph_rules() {
+    // CXF export owns wire representability for host-built references to reserved connectors;
+    // these tests pin the deep gate's current acceptance separately.
+    let model = ModelGraph {
+        blocks: vec![block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:alias",
+            1,
+            Attrs::Real(RealAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved pass-through alias")
+            .is_empty()
+    );
+}
+
+#[test]
+fn connection_from_reserved_output_satisfies_deep_graph_rules() {
+    let model = ModelGraph {
+        blocks: vec![
+            block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]),
+            block_with_params(
+                1,
+                "CDL.Reals.MultiplyByParameter",
+                &[2],
+                &[3],
+                vec![rp("k", 2.0)],
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+            conn(2, 1, Dir::In, ValueType::Real),
+            conn(3, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![conn_edge(1, 2)],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved source connection")
+            .is_empty()
+    );
+}
+
+#[test]
+fn connection_to_reserved_input_satisfies_deep_graph_rules() {
+    let model = ModelGraph {
+        blocks: vec![
+            block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]),
+            constant_block(1, &[2]),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+            conn(2, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![conn_edge(2, 0)],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved target connection")
+            .is_empty()
+    );
 }
 
 #[test]

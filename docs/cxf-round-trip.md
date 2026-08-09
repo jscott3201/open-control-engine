@@ -6,8 +6,8 @@ not?
 
 CXF is bidirectional here. `oce-cxf` imports through the §7.1 resolver
 (`crates/oce-cxf/src/resolve/mod.rs:1`, reached via `oce_cxf::import_cxf` at
-`crates/oce-cxf/src/lib.rs:104`) and exports through a separate, deliberately smaller path
-(`oce_cxf::export` at `crates/oce-cxf/src/lib.rs:191`). Import and export do **not** cover the same
+`crates/oce-cxf/src/lib.rs:106`) and exports through a separate, deliberately smaller path
+(`oce_cxf::export` at `crates/oce-cxf/src/lib.rs:194`). Import and export do **not** cover the same
 ground, and the gap between them is where the surprises live.
 
 ## The RT-2 contract
@@ -16,10 +16,10 @@ Export is specified as a fixpoint, not as source recovery
 (`crates/oce-cxf/src/export.rs:5-9`). For a graph `G1` that `import_cxf` produced, re-importing the
 emitted bytes yields a graph that renders **bit-identically** to `G1` — Reals compared by their
 IEEE-754 bit patterns, never by an epsilon
-(`crates/oce-cxf/src/lib.rs:120-134`; the fixpoint test is
+(`crates/oce-cxf/src/lib.rs:122-135`; the fixpoint test is
 `crates/oce-cxf/tests/export_roundtrip.rs`, which compares through a hand-written renderer using
 `f64::to_bits`). Emission order derives from the `ModelGraph` vectors alone, so repeated exports of
-the same graph are byte-identical (`crates/oce-cxf/src/export.rs:45-50`).
+the same graph are byte-identical (`crates/oce-cxf/src/export.rs:47-52`).
 
 The carve-out belongs right here rather than in a footnote: **bit-identity holds over the survivor
 cone, not necessarily over the whole input graph.** When nothing is deferred the survivor cone *is*
@@ -34,9 +34,10 @@ composite is emitted under the fixed synthetic IRI `urn:open-control:cxf-export:
 ## The export subset
 
 Export accepts the **flat, ground, single-root, scalar-parameter** subset — the shape the resolver
-produces (`crates/oce-cxf/src/lib.rs:114-117`). Everything outside it is a typed
+produces (`crates/oce-cxf/src/lib.rs:114-120`). Everything outside it is a typed
 `CxfError::Validation` carrying `DiagCode::ExportUnsupported` error diagnostics whose `subject` is
-the owning block's `instance_iri`. Never a panic (`crates/oce-cxf/src/export.rs:59-62`).
+the offending block, connector owner, or declared boundary node. Never a panic
+(`crates/oce-cxf/src/export.rs:61-64`).
 
 Of the §7.4.1 connector attributes, five survive, each emitted as a bare JSON scalar on the minted
 child port node and on each declared boundary-**output** node. `Engine::load_cxf` joins a declared
@@ -56,14 +57,14 @@ is byte-identical to an attribute-free port node.
 
 Two attributes are rejected rather than dropped — and the distinction between *rejected* and
 *dropped* is the point. On a **surviving** block, a connector carrying `nominal` or `unbounded`
-fails the export (`crates/oce-cxf/src/export.rs:124-132`), because the importer hardcodes both to
+fails the export (`crates/oce-cxf/src/export.rs:129-137`), because the importer hardcodes both to
 `None` and the value would vanish silently. A non-finite Real `min`/`max` bound is rejected for the
 same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
-(`crates/oce-cxf/src/export.rs:133-137`).
+(`crates/oce-cxf/src/export.rs:138-142`).
 
 On a **deferred** block, none of that runs. A deferred block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from
-its parameters, not from its boundary entries (`crates/oce-cxf/src/lib.rs:177-186`). Connector
+its parameters, not from its boundary entries (`crates/oce-cxf/src/lib.rs:161-191`). Connector
 validation is skipped along with the block. Whole-graph guards behave differently: an empty
 (zero-block) graph, non-dense ids, and a connection that is not output→input reject either way,
 because they are attributable to no single block's presence in the document.
@@ -89,15 +90,15 @@ How large does that get in practice? The G36 corpus pins two cases as tripwires
 
 Rejection fires only on **total** deferral — a graph with no emitted runtime block left after
 deferred and reserved lowering-only blocks are removed, which would be an unloadable root-only
-shell (`crates/oce-cxf/src/export.rs:107-111`). In principle, then, all but one block can vanish
+shell (`crates/oce-cxf/src/export.rs:112-116`). In principle, then, all but one block can vanish
 from an export that returns `Ok`.
 
-And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:191-194` — it destructures them
+And `export()` **discards the warnings** (`crates/oce-cxf/src/lib.rs:194-197` — it destructures them
 into `_warnings`). A caller using `export()` alone cannot distinguish a complete export from one
 that dropped 39 % of the graph. Both return `Ok(Vec<u8>)`.
 
-**Use `export_with_report`** (`crates/oce-cxf/src/lib.rs:235`). It returns an `ExportReport` with
-`bytes` and `warnings` (`crates/oce-cxf/src/lib.rs:214-232`); the bytes are identical to what
+**Use `export_with_report`** (`crates/oce-cxf/src/lib.rs:238`). It returns an `ExportReport` with
+`bytes` and `warnings` (`crates/oce-cxf/src/lib.rs:199-225`); the bytes are identical to what
 `export()` returns for the same graph. An **empty `warnings` list is what certifies that the round
 trip covered the whole input.** Treat a non-empty list as "this document is a subset of the model I
 asked you to write."
@@ -111,11 +112,13 @@ Through the facade, `Engine::export_cxf()` (`crates/oce-api/src/export.rs:98`) a
 CDL allows a boundary input wired straight to a boundary output. Import lowers each such connect to
 a reserved internal identity block — `urn:oce:lowering#PassThrough.Real`, `.Integer`, or `.Boolean`
 (`crates/oce-blocks/src/lowering.rs:66-78`) — and export elides those blocks back to the bare
-boundary edge (`crates/oce-cxf/src/export.rs:221-228`). Re-import re-synthesizes them, so RT-2 holds
-by render identity.
+boundary edge (`crates/oce-cxf/src/export.rs:712-747`, `:793-800`). Re-import re-synthesizes them,
+so RT-2 holds by render identity.
 
 The visible consequence: the emitted document lists **fewer `containsBlock` entries than the graph
-holds blocks**, and this produces **no warning at all** (`crates/oce-cxf/src/lib.rs:136-141`). An
+holds blocks**, and a canonical imported pass-through produces **no warning at all**
+(`crates/oce-cxf/src/lib.rs:136-141`). Reserved connectors have no emitted child-port node, so a
+host-built boundary alias or connection involving one is rejected rather than silently omitted. An
 empty warning list means nothing was deferred; it does not mean the document explicitly lists every
 internal lowering block. If you are reconciling counts between a `ModelGraph` and an emitted
 document, that is the difference to expect.
@@ -130,7 +133,7 @@ resolver produced.
    a registered class while declaring fewer ports than that class requires exports `Ok`; the bytes
    then fail re-import with `MalformedDocument` (`crates/oce-cxf/src/lib.rs:143-149`).
 2. **An unregistered class path.** Same root cause, different symptom: the bytes export fine and
-   fail re-import loudly with `ClassNotFound` — never silently (`crates/oce-cxf/src/lib.rs:150-152`).
+   fail re-import loudly with `ClassNotFound` — never silently (`crates/oce-cxf/src/lib.rs:151-153`).
 
 Every graph the resolver produces is correct by construction on both axes.
 

@@ -1,6 +1,49 @@
 //! Export-side validation helpers for reserved pass-through blocks.
 
-use oce_model::ModelGraph;
+use oce_model::{Connector, ModelGraph};
+
+/// Whether `class_path` names one of the reserved scalar pass-through identities.
+pub(crate) fn is_pass_through_class(class_path: &str) -> bool {
+    matches!(
+        class_path,
+        "urn:oce:lowering#PassThrough.Real"
+            | "urn:oce:lowering#PassThrough.Integer"
+            | "urn:oce:lowering#PassThrough.Boolean"
+    )
+}
+
+/// Whether `connector` belongs to the declared input/output pair of a reserved pass-through block.
+pub(crate) fn is_declared_pass_through_connector(
+    graph: &ModelGraph,
+    connector: &Connector,
+) -> bool {
+    graph
+        .blocks
+        .get(connector.block.0 as usize)
+        .filter(|block| is_pass_through_class(&block.class_iri))
+        .is_some_and(|block| {
+            block.inputs.contains(&connector.id) || block.outputs.contains(&connector.id)
+        })
+}
+
+/// Return the reserved-owned endpoint of a connection, source first, with its connector position.
+/// Returns `None` when neither endpoint belongs to a reserved pass-through block.
+pub(crate) fn reserved_connection_endpoint(
+    graph: &ModelGraph,
+    source_position: usize,
+    target_position: usize,
+) -> Option<(&Connector, usize)> {
+    [source_position, target_position]
+        .into_iter()
+        .find_map(|position| {
+            let connector = graph.connectors.get(position)?;
+            graph
+                .blocks
+                .get(connector.block.0 as usize)
+                .is_some_and(|block| is_pass_through_class(&block.class_iri))
+                .then_some((connector, position))
+        })
+}
 
 /// Whether a reserved block has the resolver-produced arity and external-input membership.
 ///
