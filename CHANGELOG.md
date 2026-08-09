@@ -273,10 +273,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   document double-booking one IRI as both declared output and live connector previously loaded
   clean, carrying two conflicting truths about one name). The change is additive: `point_list`,
   `Outputs::to_map`, `CollectSpec::All`, `StepReport.written` and every pre-existing point key are
-  bit-identical, and no durable key moves. It is the change in this range that moves a public-API
-  baseline — `crates/oce-api/tests/public-api.txt`, +40/−0, of which the load-bearing lines are the
+  bit-identical, and no durable key moves. It is one of two changes in this range that move the
+  `oce-api` public-API baseline: this change adds 40 lines, of which the load-bearing lines are the
   `DeclaredOutput` type, its two `String` fields, and `Topology::boundary_outputs`; the remainder
-  are derived and blanket impls the baseline enumerates in full.
+  are derived and blanket impls the baseline enumerates in full. #263 later adds two lines for
+  `OcError::diagnostics` and the type's inherent implementation row.
 - **`Engine::step_realtime` resolves its durable batch once at load** (#246). It re-derived the
   batch's key identity on every step — one path-`String` clone per output point, plus two `Vec`
   collections — where `simulate` had always resolved its identity once before ticking. The batch is
