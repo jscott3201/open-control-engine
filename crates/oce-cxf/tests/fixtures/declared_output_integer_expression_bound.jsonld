@@ -1,0 +1,32 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#IntegerExpressionBound",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#IntegerExpressionBound.con" },
+      "S231:hasOutput": { "@id": "http://example.org#IntegerExpressionBound.yInt" }
+    },
+    {
+      "@id": "http://example.org#IntegerExpressionBound.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Integers.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#IntegerExpressionBound.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#IntegerExpressionBound.con.y" }
+    },
+    { "@id": "http://example.org#IntegerExpressionBound.con.k",
+      "S231:value": 1 },
+
+    { "@id": "http://example.org#IntegerExpressionBound.con.y",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:isConnectedTo": { "@id": "http://example.org#IntegerExpressionBound.yInt" } },
+
+    { "@id": "http://example.org#IntegerExpressionBound.yInt",
+      "@type": "S231:IntegerOutput",
+      "S231:isOfDataType": { "@id": "S231:Integer" },
+      "S231:min": "k" }
+  ]
+}

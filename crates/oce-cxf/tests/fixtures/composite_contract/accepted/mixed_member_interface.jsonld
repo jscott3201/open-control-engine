@@ -1,0 +1,153 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.mixed_member_interface",
+      "@type": "S231:Block",
+      "S231:label": "mixed_member_interface",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.mixed_member_interface.u"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.con"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.gain"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.del"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.mixed_member_interface.del.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.con.k"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.con.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "2.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.mixed_member_interface.gain.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.gain.u"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.gain.k"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.gain.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "4.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:label": "del",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.del.u"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.del.samplePeriod"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.del.y_start"
+        },
+        {
+          "@id": "http://example.org#cc.mixed_member_interface.del.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.del.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.del.y_start",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "0.5",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.mixed_member_interface.del.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

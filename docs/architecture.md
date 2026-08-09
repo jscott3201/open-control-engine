@@ -106,11 +106,12 @@ that snapshot is exactly one boxed allocation (`crates/oce-store-mem/src/lib.rs:
 `Box<dyn PointSnapshot>` over an `Arc` clone); the `PointStore` trait places **no** allocation bound
 on a third-party backend's `snapshot()`.
 
-Whether a tick allocates at all is gated per-PR, registry-wide and with a positive control, by
-`crates/oce-blocks/tests/tick_allocation_census.rs`. The facade has a narrower guard in
-`crates/oce-api/tests/tick_purity_tests.rs`. Throughput figures live in
-[`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced them,
-because nothing re-measures them in CI.
+Whether a block tick allocates on the evaluator thread is gated per-PR, registry-wide and with a
+positive control, by `crates/oce-blocks/tests/tick_allocation_census.rs`. No current block delegates
+work to a worker thread; such an implementation would need a companion guard for worker allocation.
+The facade has a narrower guard in `crates/oce-api/tests/tick_purity_tests.rs`. Throughput figures
+live in [`docs/benchmarks.md`](benchmarks.md), recorded per run with the commit and host that produced
+them, because nothing re-measures them in CI.
 
 ## The crate map
 
@@ -144,7 +145,7 @@ Seventeen crates. The dependency direction is acyclic and organized around the s
 | --- | --- |
 | `oce-conformance` | The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-extension` | **Reserved seam; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:142`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
+| `oce-extension` | **Reserved seam; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:167`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
 | `oce-docs` | **Reserved seam, not implemented.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs:17`). Nothing depends on it. |
 | `oce-api` | The embeddable host facade: `Engine<S: Store = MemStore>` (`crates/oce-api/src/engine.rs:38`) — the single public surface, spanning load, tick, simulate, parameters, IO inventory, key-selected output reads (`watch`), CXF export with content id, and a read-only topology view. |
 

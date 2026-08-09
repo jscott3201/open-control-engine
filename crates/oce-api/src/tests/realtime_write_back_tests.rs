@@ -29,7 +29,7 @@ fn expected_store_value(value: &Value) -> OcValue {
 fn assert_memstore_samples(engine: &Engine, timestamp: u64) {
     let outputs = engine.outputs().to_map();
     let snapshot = engine.store().snapshot().unwrap();
-    for (path, connector_id) in engine.io.out_columns() {
+    for (path, connector_id) in engine.io.durable_columns() {
         let sample = snapshot
             .read_by_key(&DomainKey::new(path.clone()))
             .unwrap_or_else(|| panic!("missing sample for {path}"));

@@ -39,8 +39,6 @@ const HIGH_LIMIT_TITLE24_DIFFERENTIAL_OFFSET_3: &str = include_str!(
     "../../oce-cxf/tests/fixtures/g36/generic_air_economizer_high_limits_title24_differential_offset_3.jsonld"
 );
 
-const TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#0";
-const DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME: &str = "conn#1";
 const FIXED_TIMES: [f64; 1] = [0.0];
 const DIFFERENTIAL_TIMES: [f64; 4] = [0.0, 1.0, 2.0, 3.0];
 const RETURN_AIR_TEMPERATURES: [f64; 4] = [289.25, 293.15, 297.5, 301.75];
@@ -67,49 +65,49 @@ const CASES: &[Case] = &[
         name: "ASHRAE90_1 FixedDryBulb 1B/2B/3B/3C/4B/4C/5B/5C/6B/7/8",
         fixture: HIGH_LIMIT_FIXED_24,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_24.con.y",
         expected_cutoff: ExpectedCutoff::Fixed(297.15),
     },
     Case {
         name: "ASHRAE90_1 FixedDryBulb 5A/6A",
         fixture: HIGH_LIMIT_FIXED_21,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_21.con1.y",
         expected_cutoff: ExpectedCutoff::Fixed(294.15),
     },
     Case {
         name: "ASHRAE90_1 FixedDryBulb 1A/2A/3A/4A",
         fixture: HIGH_LIMIT_FIXED_18,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_fixed_18.con2.y",
         expected_cutoff: ExpectedCutoff::Fixed(291.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 1/3/5/11-16",
         fixture: HIGH_LIMIT_TITLE24_FIXED_24,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_24.con5.y",
         expected_cutoff: ExpectedCutoff::Fixed(297.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 2/4/10",
         fixture: HIGH_LIMIT_TITLE24_FIXED_23,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_23.con6.y",
         expected_cutoff: ExpectedCutoff::Fixed(296.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 6/8/9",
         fixture: HIGH_LIMIT_TITLE24_FIXED_22,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_22.con7.y",
         expected_cutoff: ExpectedCutoff::Fixed(295.15),
     },
     Case {
         name: "California_Title_24 FixedDryBulb 7",
         fixture: HIGH_LIMIT_TITLE24_FIXED_21,
         input_path: None,
-        output_path: TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_fixed_21.con8.y",
         expected_cutoff: ExpectedCutoff::Fixed(294.15),
     },
     Case {
@@ -118,7 +116,7 @@ const CASES: &[Case] = &[
         input_path: Some(
             "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.TRet",
         ),
-        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_ashrae_differential.retAirIdentity.y",
         expected_cutoff: ExpectedCutoff::ReturnAirOffset(0.0),
     },
     Case {
@@ -127,7 +125,7 @@ const CASES: &[Case] = &[
         input_path: Some(
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.TRet",
         ),
-        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_0.retAirIdentity.y",
         expected_cutoff: ExpectedCutoff::ReturnAirOffset(0.0),
     },
     Case {
@@ -136,7 +134,7 @@ const CASES: &[Case] = &[
         input_path: Some(
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.TRet",
         ),
-        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_1.addPar.y",
         expected_cutoff: ExpectedCutoff::ReturnAirOffset(-1.0),
     },
     Case {
@@ -145,7 +143,7 @@ const CASES: &[Case] = &[
         input_path: Some(
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.TRet",
         ),
-        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_2.addPar1.y",
         expected_cutoff: ExpectedCutoff::ReturnAirOffset(-2.0),
     },
     Case {
@@ -154,7 +152,7 @@ const CASES: &[Case] = &[
         input_path: Some(
             "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.TRet",
         ),
-        output_path: DIFFERENTIAL_TEMPERATURE_CUTOFF_RUNTIME,
+        output_path: "http://example.org#g36.source.generic_air_economizer_high_limits_title24_differential_offset_3.addPar2.y",
         expected_cutoff: ExpectedCutoff::ReturnAirOffset(-3.0),
     },
 ];

@@ -63,19 +63,19 @@ layer. At minimum, implement all of the following:
    and nothing else; a sequence that omits an interlock has no interlock.
 6. **Write-failure handling.** `Engine::step_realtime` is not transactional: if the batched store
    write fails, the tick has already completed and model time and outputs have advanced, and they
-   are not rolled back (`crates/oce-api/src/sim.rs:455-456`).
+   are not rolled back (`crates/oce-api/src/sim.rs:457-458`).
 
 ## Time is host-supplied
 
 The engine never reads a wall clock. `std::time::Instant` appears only as a monotonic timer for
 latency metrics, never as a time source for the model (`crates/oce-api/src/sim.rs:6`). Model time
 arrives as a `f64` argument you pass in, and it must be monotonic — a decrease returns
-`OcError::TimeRegression` (`crates/oce-api/src/error.rs:62-69`).
+`OcError::TimeRegression` (`crates/oce-api/src/error.rs:64-71`).
 
 For real-time stepping you must first configure the UNIX epoch corresponding to model `t = 0`, via
 `Engine::set_realtime_epoch_unix_nanos` (`crates/oce-api/src/sim.rs:360-373`). If you never do,
 `step_realtime` returns `OcError::RealtimeEpochUnset` before ticking rather than silently stamping
-samples at 1970 (`crates/oce-api/src/sim.rs:457-461`, variant at `crates/oce-api/src/error.rs:70-72`,
+samples at 1970 (`crates/oce-api/src/sim.rs:457-461`, variant at `crates/oce-api/src/error.rs:72-74`,
 pinned by `host_epoch_is_required_and_exact_mapping_handles_signed_model_time` at
 `crates/oce-api/src/tests/realtime_write_back_tests.rs:79`). The epoch-plus-offset mapping is
 explicitly range-checked, so a non-finite or out-of-range instant fails with
@@ -85,9 +85,39 @@ explicitly range-checked, so a non-finite or out-of-range instant fails with
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
 Do not interleave horizon simulation with real-time stepping if you rely on the monotonic-time
-guard across that boundary. `simulate` deliberately clears the prior tick time on entry, so a
-following `step_realtime` cannot detect regression relative to a real-time step that happened
-before the simulation.
+guard across that boundary. After preflight succeeds, `simulate` deliberately clears the prior tick
+time, so a following `step_realtime` cannot detect regression relative to a real-time step that
+happened before the simulation.
+
+`simulate` is a run restart, not a continuation. Before restarting, it resolves recorded columns,
+fixed inputs, and the first list returned by an input closure. A refusal there leaves the prior run
+unchanged, including its monotonic-time guard and state words. After preflight succeeds, the engine
+clears the prior tick time and re-seeds stateful blocks to their authored start values. It leaves
+connector values alone, so it is narrower than the `resume` re-seed described below, which replaces
+the whole run state and only when parameters are dirty.
+
+An input closure remains dynamic after the first tick. If a later call returns an unknown point or
+a wrong-typed value, completed ticks stay in effect and any valid pairs before the failing pair stay
+staged. A simulation is not transactional after execution begins.
+
+Store-backed inputs are staged inside each tick, not during simulation preflight. A snapshot error
+or wrong-typed store sample on the first tick therefore returns after the run clock and state words
+have reset, even though no block evaluated. Model time and the output snapshot still describe the
+prior run. A snapshot error stages no store input; a wrong-typed sample leaves any valid store
+samples staged before it in the connector image.
+
+Two consequences to plan for. Splitting a horizon across two calls does not continue the
+trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the
+second call restarts from the seed. And a what-if interleaved into a live run resets that engine's
+stateful blocks, which for held and sampled values means a jump rather than an advance —
+snapshot-and-restore is the surface that would make this safe, and it does not exist yet
+([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
+
+Connector values that `simulate` does not overwrite carry into the horizon: `InputSource` writes
+the slots it names on every step, and the rest hold whatever was there. Whether a value staged
+through `set_input` reaches a given block depends on how that input is fed — a store-bound point is
+re-staged from the snapshot on any tick the snapshot has a sample for, and an input driven by
+another block inside the model is read from its driver rather than from its own slot.
 
 ## Lifecycle names are not equipment controls
 
@@ -105,18 +135,52 @@ The stable API also contains two loaders that do not work yet: `load_from_semant
 public `AssertLevel::Error` variant is never emitted today; the sole assertion collector produces
 `Warning`, so hosts must not depend on receiving `Error` for escalation.
 
-## CXF output identities are positional today
+## CXF point identities are the authored `@id`s
 
-Authored output IRIs are not currently carried into the point inventory after CXF loading. Every
-output therefore receives a synthetic `conn#<N>` path, where `N` is its `ConnectorId`: an index into
-the connector array populated at load, not a nominal identity. Editing or reordering the document
-can move that index even when the output's authored name is unchanged.
+Every point path — on the host-visible `IoInventory` and in the durable `PointDto` projection sent
+through the PointStore port — is an authored `@id` from the source CXF document, expanded against
+the document's `@context` to canonical absolute form at ingest: for a connector driven by a
+composite boundary input it is the declared boundary input's `@id` (one host point fans out to
+every internal consumer, which is why the G36 corpus's 3020 connectors surface as 2895 points),
+and for every other connector it is the connector's own node's `@id`. CXF ingest rejects a
+connector node without an `@id`, so a document-loaded point can never receive a positional
+identity. Because keys are canonical, a document re-serialized between compact and expanded
+spellings keeps its point paths; a relative `@id` that no `@context` can canonicalize is refused
+at load with a typed `relative-iri` diagnostic rather than admitted under a spelling-dependent
+key. The supported `@context` form is an inline prefix map — a single map, or a list of maps
+merged in order with later bindings winning; a remote context reference, `@base`, `@import`,
+`@vocab`, prefix bindings that are not absolute IRIs, and term definitions that use another active
+prefix are refused at load as non-subset constructs rather than silently ignored. The last case is
+a nested compact IRI; it includes an absolute-looking value such as `urn:oce:names#` when the same
+context also declares `urn` as a term. Recursive context-term expansion is outside the supported
+subset. The canonical-key guarantee therefore holds for every document that loads at all.
 
-The same path is used for the host-visible `IoInventory` and the durable `PointDto` projection sent
-through the PointStore port. A host that persists trends must therefore treat a model revision as an
-identity migration boundary: do not assume an old `conn#<N>` history belongs to the same authored
-output after loading a changed document. Restoring authored output IRIs is a known engine gap, not
-the intended identity design.
+The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
+identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named` as an alias for
+its driving internal connector's slot, and `Topology.boundary_outputs` enumerates the
+`(path, driver_path)` pairs. Declared names stay out of `point_list`, `to_map`, `IoSummary`,
+and the durable store batch — a declared name and its driver are two keys over one value, and
+only the driver's path carries samples. Their unit, quantity, and bounds are one §7.10 contract:
+conflicts refuse at load and one-sided values propagate to the unset peer. `set_input` never accepts
+a declared output name. Because the driver's connector supplies host point metadata, a declared
+alias can supply a previously unset driver unit, quantity, or bound. That changes the driver's
+`IoInventory` and `point_list(None)` row for an unchanged input document; propagated unit and
+quantity also reach the durable `PointDto`. `IoSummary` remains a count-only surface and does not
+change when metadata propagates. Hosts that retain point metadata outside the store port must
+refresh it after loading with this rule. An undriven declared output resolves nowhere; its load-time
+`undriven-boundary-output` warning is its only representation.
+
+A related contract for emitters and durable stores: array order is load-bearing wherever the
+resolver reads an array — `@graph` node position, `containsBlock` order, each instance's port and
+parameter lists, `isConnectedTo` order. The one carve-out is the boundary-input elision vector
+(`external_inputs`) and the pass-through pair list: both are re-keyed on the boundary port's own
+`@graph` node position instead of inheriting the order of that port's `isConnectedTo` array
+(`crates/oce-cxf/src/resolve/mod.rs`, Step 9). Neither array order nor node position is a stable
+identity: key by authored name, never by position.
+
+Point histories persisted under the earlier positional `conn#<N>` keys are disposable, not
+migratable: an index is not traceable to an authored connector after the document that produced it
+changes.
 
 ## The one hardening gap
 

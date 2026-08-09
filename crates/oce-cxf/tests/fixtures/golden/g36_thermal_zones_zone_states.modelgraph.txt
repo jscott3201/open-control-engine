@@ -41,38 +41,38 @@ blocks: 13
   B12 decl=12 class=CDL.Integers.Add instance_iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt1")
     inputs=[29, 30] outputs=[31]
 connectors: 32
-  C0 block=B0 dir=In type=Boolean decl=0 iri=None
-  C1 block=B0 dir=Out type=Integer decl=1 iri=None
-  C2 block=B1 dir=In type=Boolean decl=2 iri=None
-  C3 block=B1 dir=Out type=Integer decl=3 iri=None
-  C4 block=B2 dir=In type=Boolean decl=4 iri=None
-  C5 block=B2 dir=In type=Boolean decl=5 iri=None
-  C6 block=B2 dir=Out type=Boolean decl=6 iri=None
-  C7 block=B3 dir=In type=Boolean decl=7 iri=None
-  C8 block=B3 dir=Out type=Integer decl=8 iri=None
-  C9 block=B4 dir=In type=Boolean decl=9 iri=None
-  C10 block=B4 dir=In type=Boolean decl=10 iri=None
-  C11 block=B4 dir=Out type=Boolean decl=11 iri=None
+  C0 block=B0 dir=In type=Boolean decl=0 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.u")
+  C1 block=B0 dir=Out type=Integer decl=1 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntHea.y")
+  C2 block=B1 dir=In type=Boolean decl=2 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.u")
+  C3 block=B1 dir=Out type=Integer decl=3 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntCoo.y")
+  C4 block=B2 dir=In type=Boolean decl=4 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isDea.u1")
+  C5 block=B2 dir=In type=Boolean decl=5 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isDea.u2")
+  C6 block=B2 dir=Out type=Boolean decl=6 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isDea.y")
+  C7 block=B3 dir=In type=Boolean decl=7 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.u")
+  C8 block=B3 dir=Out type=Integer decl=8 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.booToIntDea.y")
+  C9 block=B4 dir=In type=Boolean decl=9 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isHea.u1")
+  C10 block=B4 dir=In type=Boolean decl=10 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isHea.u2")
+  C11 block=B4 dir=Out type=Boolean decl=11 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isHea.y")
   C12 block=B5 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.uHea")
-  C13 block=B5 dir=Out type=Boolean decl=13 iri=None
+  C13 block=B5 dir=Out type=Boolean decl=13 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.hysUHea.y")
   C14 block=B6 dir=In type=Real decl=14 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.uCoo")
-  C15 block=B6 dir=Out type=Boolean decl=15 iri=None
+  C15 block=B6 dir=Out type=Boolean decl=15 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.hysUCoo.y")
   C16 block=B7 dir=In type=Real decl=16 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.uHea")
   C17 block=B7 dir=In type=Real decl=17 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.uCoo")
-  C18 block=B7 dir=Out type=Real decl=18 iri=None
-  C19 block=B8 dir=In type=Boolean decl=19 iri=None
-  C20 block=B8 dir=In type=Boolean decl=20 iri=None
-  C21 block=B8 dir=Out type=Boolean decl=21 iri=None
-  C22 block=B9 dir=In type=Real decl=22 iri=None
-  C23 block=B9 dir=Out type=Boolean decl=23 iri=None
-  C24 block=B10 dir=In type=Boolean decl=24 iri=None
-  C25 block=B10 dir=Out type=Boolean decl=25 iri=None
-  C26 block=B11 dir=In type=Integer decl=26 iri=None
-  C27 block=B11 dir=In type=Integer decl=27 iri=None
-  C28 block=B11 dir=Out type=Integer decl=28 iri=None
-  C29 block=B12 dir=In type=Integer decl=29 iri=None
-  C30 block=B12 dir=In type=Integer decl=30 iri=None
-  C31 block=B12 dir=Out type=Integer decl=31 iri=None
+  C18 block=B7 dir=Out type=Real decl=18 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.uHeaMinUCoo.y")
+  C19 block=B8 dir=In type=Boolean decl=19 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isCoo.u1")
+  C20 block=B8 dir=In type=Boolean decl=20 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isCoo.u2")
+  C21 block=B8 dir=Out type=Boolean decl=21 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.isCoo.y")
+  C22 block=B9 dir=In type=Real decl=22 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.hysU.u")
+  C23 block=B9 dir=Out type=Boolean decl=23 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.hysU.y")
+  C24 block=B10 dir=In type=Boolean decl=24 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.notHea.u")
+  C25 block=B10 dir=Out type=Boolean decl=25 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.notHea.y")
+  C26 block=B11 dir=In type=Integer decl=26 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt.u1")
+  C27 block=B11 dir=In type=Integer decl=27 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt.u2")
+  C28 block=B11 dir=Out type=Integer decl=28 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt.y")
+  C29 block=B12 dir=In type=Integer decl=29 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt1.u1")
+  C30 block=B12 dir=In type=Integer decl=30 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt1.u2")
+  C31 block=B12 dir=Out type=Integer decl=31 iri=Some("http://example.org#g36.source.thermal_zones_zone_states.addInt1.y")
 connections: 15
   C1 -> C26
   C3 -> C27

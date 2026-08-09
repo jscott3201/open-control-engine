@@ -1,0 +1,13 @@
+blocks: 1
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#cc.leaf_array_parameter_conditional_member.con")
+    inputs=[] outputs=[0]
+    param k=Real(0x3ff8000000000000)
+    param holdSet_1=Real(0x4000000000000000)
+    param holdSet_2=Real(0x4008000000000000)
+    param have_hol=Boolean(false)
+connectors: 1
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#cc.leaf_array_parameter_conditional_member.con.y")
+connections: 0
+external_inputs: []
+boundary_outputs: 1
+  http://example.org#cc.leaf_array_parameter_conditional_member.y <- C0 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

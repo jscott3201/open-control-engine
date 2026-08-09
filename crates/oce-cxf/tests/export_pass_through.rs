@@ -3,16 +3,27 @@
 use std::sync::Arc;
 
 use oce_cxf::{CxfError, export};
-use oce_diag::{DiagCode, Diagnostic};
+use oce_diag::{DiagCode, Diagnostic, Severity};
 use oce_model::{
-    BlockId, BlockInstance, Connector, ConnectorId, Dir, EnumClassId, ModelGraph, ParamTable,
-    Value, ValueType,
+    Attrs, BlockId, BlockInstance, BoundaryOutput, Connection, Connector, ConnectorId, Dir,
+    EnumClassId, IntAttrs, ModelGraph, ParamTable, RealAttrs, Value, ValueType,
 };
 
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
+const RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
 const DUPLICATE_ID: &str = "export subset: emitted node @id collides with another emitted node @id";
+const BOUNDARY_SOURCE_NOT_EMITTED: &str =
+    "export subset: declared boundary output source is not an emitted child output connector";
+const CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
+     child-port node";
 const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
+const ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+const ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+const ATTR_NONFINITE_BOUND: &str = "export subset: connector carries a non-finite §7.4.1 min/max bound, \
+     which is outside the canonical (bare-scalar) export subset";
 
 fn connector(id: u32, block: u32, dir: Dir, iri: Option<&'static str>) -> Connector {
     let mut connector = Connector::new(ConnectorId(id), BlockId(block), dir, ValueType::Real, id);
@@ -38,7 +49,9 @@ fn survivor() -> BlockInstance {
         class_iri: Arc::from("CDL.Reals.Sources.Constant"),
         inputs: vec![],
         outputs: vec![ConnectorId(2)],
-        params: ParamTable::default(),
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(1.0))],
+        },
         decl_order: 1,
         instance_iri: Some(Arc::from("http://example.org#PassExport.keep")),
     }
@@ -62,6 +75,7 @@ fn malformed_reserved_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -83,6 +97,7 @@ fn missing_reserved_external_input_membership_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let mut missing_external = valid();
     missing_external.external_inputs.clear();
@@ -117,6 +132,7 @@ fn reserved_input_owned_by_another_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -138,6 +154,7 @@ fn boundary_output_iri_collision_rejects_at_plan_time() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -146,6 +163,478 @@ fn boundary_output_iri_collision_rejects_at_plan_time() {
         }),
         "{diagnostics:?}"
     );
+}
+
+#[test]
+fn boundary_alias_on_reserved_output_rejects_instead_of_disappearing() {
+    const ALIAS: &str = "http://example.org#PassExport.alias";
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![BoundaryOutput {
+            iri: Arc::from(ALIAS),
+            source: ConnectorId(1),
+            attrs: Attrs::default_for(ValueType::Real),
+        }],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, BOUNDARY_SOURCE_NOT_EMITTED)
+                .with_subject(ALIAS.to_owned())
+        ]
+    );
+}
+
+#[test]
+fn connection_from_reserved_output_rejects_instead_of_disappearing() {
+    let gain = BlockInstance {
+        id: BlockId(1),
+        class_iri: Arc::from("CDL.Reals.MultiplyByParameter"),
+        inputs: vec![ConnectorId(2)],
+        outputs: vec![ConnectorId(3)],
+        params: ParamTable {
+            values: vec![(Arc::from("k"), Value::Real(2.0))],
+        },
+        decl_order: 1,
+        instance_iri: Some(Arc::from("http://example.org#PassExport.keep")),
+    };
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), gain],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::In, None),
+            connector(3, 1, Dir::Out, None),
+        ],
+        connections: vec![Connection {
+            from: ConnectorId(1),
+            to: ConnectorId(2),
+        }],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, CONNECTION_ENDPOINT_NOT_EMITTED)
+                .with_subject("connector#1".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn connection_to_reserved_input_rejects_instead_of_disappearing() {
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![Connection {
+            from: ConnectorId(2),
+            to: ConnectorId(0),
+        }],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, CONNECTION_ENDPOINT_NOT_EMITTED)
+                .with_subject("connector#0".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn alias_on_unclaimed_output_reports_structure_before_loss() {
+    const ALIAS: &str = "http://example.org#PassExport.orphanAlias";
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+            connector(3, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![BoundaryOutput {
+            iri: Arc::from(ALIAS),
+            source: ConnectorId(3),
+            attrs: Attrs::default_for(ValueType::Real),
+        }],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                .with_subject("http://example.org#PassExport.keep".to_owned()),
+            Diagnostic::error(DiagCode::ExportUnsupported, BOUNDARY_SOURCE_NOT_EMITTED)
+                .with_subject(ALIAS.to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn undeclared_connector_on_reserved_block_rejects_instead_of_disappearing() {
+    let graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+            connector(3, 0, Dir::Out, Some("http://example.org#PassExport.stray")),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                .with_subject("connector#3".to_owned())
+        ]
+    );
+}
+
+#[test]
+fn every_reserved_class_rejects_both_wrong_scalar_types() {
+    let cases = [
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Integer),
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Integer),
+    ];
+
+    for (class_path, wrong_type) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.blocks[0].class_iri = Arc::from(class_path);
+        graph.connectors[0].value_type = wrong_type;
+        graph.connectors[0].attrs = Attrs::default_for(wrong_type);
+        graph.connectors[1].value_type = wrong_type;
+        graph.connectors[1].attrs = Attrs::default_for(wrong_type);
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                    .with_subject("block#0".to_owned())
+            ],
+            "{class_path} accepted {wrong_type:?} connectors"
+        );
+    }
+}
+
+#[test]
+fn every_reserved_class_rejects_asymmetric_connector_types() {
+    let cases = [
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            [ValueType::Integer, ValueType::Boolean],
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Integer",
+            ValueType::Integer,
+            [ValueType::Real, ValueType::Boolean],
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Boolean",
+            ValueType::Boolean,
+            [ValueType::Real, ValueType::Integer],
+        ),
+    ];
+
+    for (class_path, expected_type, wrong_types) in cases {
+        for wrong_type in wrong_types {
+            for wrong_position in [0, 1] {
+                let mut graph = ModelGraph {
+                    blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+                    connectors: vec![
+                        connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                        connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                        connector(2, 1, Dir::Out, None),
+                    ],
+                    connections: vec![],
+                    external_inputs: vec![ConnectorId(0)],
+                    boundary_outputs: vec![],
+                };
+                graph.blocks[0].class_iri = Arc::from(class_path);
+                for connector in &mut graph.connectors[..2] {
+                    connector.value_type = expected_type;
+                    connector.attrs = Attrs::default_for(expected_type);
+                }
+                graph.connectors[wrong_position].value_type = wrong_type;
+                graph.connectors[wrong_position].attrs = Attrs::default_for(wrong_type);
+
+                assert_eq!(
+                    rejection(&graph),
+                    vec![
+                        Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                            .with_subject("block#0".to_owned()),
+                        Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                            .with_subject("connector#0".to_owned()),
+                    ],
+                    "{class_path} accepted {wrong_type:?} at connector {wrong_position}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn every_parameter_value_on_reserved_block_rejects_instead_of_disappearing() {
+    let values = [
+        Value::Real(42.0),
+        Value::Integer(42),
+        Value::Boolean(true),
+        Value::String(Arc::from("hidden")),
+        Value::Enum {
+            class: EnumClassId::SIMPLE_CONTROLLER,
+            ordinal: 1,
+        },
+    ];
+
+    for value in values {
+        let is_enum = matches!(value, Value::Enum { .. });
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.blocks[0]
+            .params
+            .values
+            .push((Arc::from("ghost"), value));
+
+        let mut expected = Vec::new();
+        if is_enum {
+            expected.push(
+                Diagnostic::new(
+                    Severity::Warning,
+                    DiagCode::ExportDeferred,
+                    "export subset: deferring block `block#0` — parameter `ghost` is \
+                     enumeration-valued (class `EnumClass#1`); the block and its downstream \
+                     consumers are omitted from the emitted document so the enum-free remainder \
+                     can export",
+                )
+                .with_subject("block#0".to_owned()),
+            );
+        }
+        expected.push(
+            Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                .with_subject("block#0".to_owned()),
+        );
+
+        assert_eq!(rejection(&graph), expected);
+    }
+}
+
+#[test]
+fn authored_identity_on_reserved_block_rejects_instead_of_disappearing() {
+    const AUTHORED_IRI: &str = "http://example.org#PassExport.reserved";
+    let mut graph = ModelGraph {
+        blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+        connectors: vec![
+            connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+            connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+            connector(2, 1, Dir::Out, None),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
+    };
+    graph.blocks[0].instance_iri = Some(Arc::from(AUTHORED_IRI));
+
+    assert_eq!(
+        rejection(&graph),
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                .with_subject(AUTHORED_IRI.to_owned())
+        ]
+    );
+}
+
+#[test]
+fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
+    let cases = [
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                quantity: Some(Arc::from("ThermodynamicTemperature")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("K")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                display_unit: Some(Arc::from("degC")),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                min: Some(0.0),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Real",
+            ValueType::Real,
+            Attrs::Real(RealAttrs {
+                max: Some(1.0),
+                ..RealAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Integer",
+            ValueType::Integer,
+            Attrs::Integer(IntAttrs {
+                min: Some(0),
+                ..IntAttrs::default()
+            }),
+        ),
+        (
+            "urn:oce:lowering#PassThrough.Integer",
+            ValueType::Integer,
+            Attrs::Integer(IntAttrs {
+                max: Some(1),
+                ..IntAttrs::default()
+            }),
+        ),
+    ];
+
+    for (class_path, value_type, input_attrs) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.blocks[0].class_iri = Arc::from(class_path);
+        for connector in &mut graph.connectors[..2] {
+            connector.value_type = value_type;
+            connector.attrs = Attrs::default_for(value_type);
+        }
+        graph.connectors[0].attrs = input_attrs;
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, RESERVED_SHAPE)
+                    .with_subject("block#0".to_owned())
+            ],
+            "{class_path} accepted hidden input attributes"
+        );
+    }
+}
+
+#[test]
+fn out_of_subset_attributes_on_reserved_input_reject_instead_of_disappearing() {
+    let cases = [
+        (
+            Attrs::Real(RealAttrs {
+                nominal: Some(1.0),
+                ..RealAttrs::default()
+            }),
+            ATTR_NOMINAL,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                unbounded: Some(true),
+                ..RealAttrs::default()
+            }),
+            ATTR_UNBOUNDED,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                min: Some(f64::NAN),
+                ..RealAttrs::default()
+            }),
+            ATTR_NONFINITE_BOUND,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                max: Some(f64::INFINITY),
+                ..RealAttrs::default()
+            }),
+            ATTR_NONFINITE_BOUND,
+        ),
+    ];
+
+    for (input_attrs, message) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.connectors[0].attrs = input_attrs;
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, message)
+                    .with_subject("connector#0".to_owned())
+            ],
+            "reserved input accepted an out-of-subset attribute: {message}"
+        );
+    }
 }
 
 #[test]
@@ -176,6 +665,7 @@ fn pass_through_plus_only_deferred_blocks_rejects_total_deferral() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(
@@ -196,6 +686,7 @@ fn only_reserved_pass_through_blocks_reject_with_truthful_message() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
     assert!(

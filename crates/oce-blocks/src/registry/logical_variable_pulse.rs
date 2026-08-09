@@ -23,7 +23,10 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[RegistryEntry {
 }];
 
 pub(super) const VARIABLE_PULSE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "period" },
+    ParamRule::Required {
+        name: "period",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealGreaterOrEqual {
         name: "deltaU",
         min: MIN_DELTA_U,

@@ -8,6 +8,7 @@ use oce_conformance::{
     CombiTimeTable, ComparisonMode, ComparisonResult, ConfigError, DriveCadence, DriveMode,
     DriverError, DriverInputReplay, DriverOptions, IndicatorPattern, PartialTolerances, PointEnd,
     PointMapEntry, ReferenceSpec, Tolerances, VerifyConfig, drive_trace, drive_trace_with_options,
+    escape_regex,
 };
 
 const FREE_ADD: &str = include_str!("fixtures/driver/free_add.jsonld");
@@ -16,7 +17,8 @@ const U1: &str = "http://example.org#DriverAdd.u1";
 const U2: &str = "http://example.org#DriverAdd.u2";
 const DIVIDE_U1: &str = "http://example.org#DriverDivide.u1";
 const DIVIDE_U2: &str = "http://example.org#DriverDivide.u2";
-const Y: &str = "conn#2";
+const ADD_Y: &str = "http://example.org#DriverAdd.add.y";
+const DIVIDE_Y: &str = "http://example.org#DriverDivide.divide.y";
 
 fn table(rows: &[(f64, f64, f64)]) -> CombiTimeTable {
     table_with_outputs(
@@ -60,7 +62,7 @@ fn config() -> VerifyConfig {
         references: vec![ReferenceSpec {
             model: "driver-free-add".to_string(),
             sequence: "single-block-add".to_string(),
-            point_name_mapping: vec![map("u1", U1), map("u2", U2), map("y", Y)],
+            point_name_mapping: vec![map("u1", U1), map("u2", U2), map("y", ADD_Y)],
         }],
         tolerances: Tolerances {
             atolx: 0.0,
@@ -71,7 +73,8 @@ fn config() -> VerifyConfig {
             ltoly: 0.0,
         },
         outputs: vec![oce_conformance::OutputPattern {
-            pattern: "conn#2".to_string(),
+            // Anchored and escaped: the authored path's dots are regex wildcards.
+            pattern: format!("^{}$", escape_regex(ADD_Y)),
             tolerances: PartialTolerances::default(),
         }],
         indicators: Vec::new(),
@@ -85,7 +88,11 @@ fn divide_config() -> VerifyConfig {
         references: vec![ReferenceSpec {
             model: "driver-free-divide".to_string(),
             sequence: "single-block-divide".to_string(),
-            point_name_mapping: vec![map("u1", DIVIDE_U1), map("u2", DIVIDE_U2), map("y", Y)],
+            point_name_mapping: vec![
+                map("u1", DIVIDE_U1),
+                map("u2", DIVIDE_U2),
+                map("y", DIVIDE_Y),
+            ],
         }],
         tolerances: Tolerances {
             atolx: 0.0,
@@ -96,7 +103,8 @@ fn divide_config() -> VerifyConfig {
             ltoly: 0.0,
         },
         outputs: vec![oce_conformance::OutputPattern {
-            pattern: Y.to_string(),
+            // Anchored and escaped: the authored path's dots are regex wildcards.
+            pattern: format!("^{}$", escape_regex(DIVIDE_Y)),
             tolerances: PartialTolerances::default(),
         }],
         indicators: Vec::new(),
@@ -108,7 +116,8 @@ fn divide_config() -> VerifyConfig {
 fn config_with_indicator(signal: &str) -> VerifyConfig {
     let mut config = config();
     config.indicators = vec![IndicatorPattern {
-        pattern: Y.to_string(),
+        // Anchored and escaped: the authored path's dots are regex wildcards.
+        pattern: format!("^{}$", escape_regex(ADD_Y)),
         signals: vec![signal.to_string()],
     }];
     config
@@ -273,7 +282,7 @@ fn event_aligned_path_ticks_every_reference_instant() {
             .map(|t| t.to_bits())
             .collect::<Vec<_>>()
     );
-    let y = run.trace.column(Y).expect("captured output y");
+    let y = run.trace.column(ADD_Y).expect("captured output y");
     let expected_y = [3.0_f64, 8.0, 6.0, 4.75];
     assert_eq!(
         y.values.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
@@ -532,7 +541,7 @@ fn exact_mode_compares_non_finite_divide_reference_without_no_compared_points() 
     assert!(result.passed);
     assert_eq!(result.compared_points, reference.n_rows);
 
-    let y = run.trace.column(Y).expect("captured divide output");
+    let y = run.trace.column(DIVIDE_Y).expect("captured divide output");
     assert_eq!(y.values[0].to_bits(), 0.5_f64.to_bits());
     assert_eq!(y.values[1].to_bits(), f64::INFINITY.to_bits());
     assert_eq!(y.values[2].to_bits(), f64::NEG_INFINITY.to_bits());

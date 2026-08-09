@@ -587,10 +587,10 @@ fn get_output_on_valid_output_returns_bit_exact_value() {
 }
 
 #[test]
-fn simulate_resets_run_clock_at_entry() {
+fn a_valid_horizon_resets_the_prior_run_clock() {
     let mut eng = loaded_accumulator();
     eng.tick(100.0).unwrap(); // prev_t = 100
-    // simulate over [0,3] resets prev_t at entry, so ticking at t=0 does NOT regress.
+    // Preflight succeeds before the [0,3] horizon resets `prev_t`, so t=0 does not regress.
     let m = eng
         .simulate(&sim_spec(0.0, 3.0, 1.0, CollectSpec::None))
         .unwrap();
@@ -658,7 +658,6 @@ fn simulate_constant_input_source_flows_through() {
 
 #[test]
 fn constant_input_source_propagates_type_error() {
-    // A wrong-typed Constant pair surfaces as OcError::InputType through stage_inputs -> set_input.
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(free_add_model(), None).unwrap();
     let spec = SimSpec {

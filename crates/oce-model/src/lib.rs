@@ -371,8 +371,14 @@ pub struct Connector {
     pub attrs: Attrs,
     /// Position in the source declaration — the tie-break key for the deterministic sort (D6).
     pub decl_order: u32,
-    /// Source IRI of this connector in the originating CXF document, if any — used for
-    /// diagnostics and boundary-input identity. `None` for hand-built models.
+    /// Document-derived `@id` of this connector's host-visible identity: the declared boundary
+    /// input's node when a composite boundary drives this connector; otherwise the connector's
+    /// own authored node `@id`, or — for a `hasInstance`-derived connector with no node — the
+    /// member IRI as authored or the padded `<owner @id>.<declared port name>`, minted from the
+    /// owner's authored identity and the class signature, never from a position. The durable
+    /// point identity on every host surface. `None` only for hand-built models; CXF ingest
+    /// rejects a connector node without an `@id` and refuses a minted identity that collides
+    /// with one.
     pub iri: Option<Arc<str>>,
 }
 
@@ -472,6 +478,25 @@ pub struct Connection {
     pub to: ConnectorId,
 }
 
+/// An authored top-composite boundary output and the child output connector that drives it.
+///
+/// No derived equality: `attrs` carries `f64` bounds, so a derived `PartialEq` would compare
+/// floats with `==` — the epsilon-class hazard `TESTING.md` forbids. Compare fields explicitly
+/// (bounds by `to_bits`), as [`Connector`] consumers already do.
+#[derive(Clone, Debug)]
+pub struct BoundaryOutput {
+    /// The boundary output's authored full subject IRI, preserved verbatim for CXF export.
+    pub iri: Arc<str>,
+    /// The surviving child output connector whose value is exposed at the boundary.
+    pub source: ConnectorId,
+    /// The declared node's §7.4.1 attributes (unit/quantity/displayUnit/min/max), parsed by the same
+    /// path connector attrs use. §7.10 unification preserves authored values and propagates
+    /// one-sided values between this alias and `source`. Its variant matches the declared node's
+    /// value type (R5), which import guarantees equals the driver's; export refuses a
+    /// host-constructed mismatch.
+    pub attrs: Attrs,
+}
+
 /// The flattened, monomorphic model the engine schedules and ticks (D1's executable truth).
 ///
 /// This is the canonical in-memory artifact named `ModelGraph` by `oce-cxf` and the store
@@ -489,6 +514,17 @@ pub struct ModelGraph {
     /// in-degree-0 input that is **not** listed here as a single-assignment error. Empty for a
     /// fully-internal hand-built model.
     pub external_inputs: Vec<ConnectorId>,
+    /// Authored top-composite boundary outputs driven by surviving child output connectors.
+    ///
+    /// Unlike a boundary input, whose IRI can be back-filled onto its surviving target connector,
+    /// an output boundary node is elided without leaving a connector of its own. Its identity must
+    /// therefore be carried alongside the source connector. Entries follow the boundary nodes'
+    /// positions in the source document's `@graph`; this is deterministic for a document and
+    /// independent of `hasOutput` and `isConnectedTo` array spelling, but intentionally not
+    /// invariant under a whole-`@graph` permutation because node order remains load-bearing in the
+    /// resolver. Boundary IRIs are unique in a valid document. A source connector may occur more
+    /// than once when it intentionally drives multiple distinct boundary outputs.
+    pub boundary_outputs: Vec<BoundaryOutput>,
 }
 
 /// Short alias for the scheduler-facing view of [`ModelGraph`] (`01` §3). Same in-memory type.

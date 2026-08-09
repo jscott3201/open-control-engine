@@ -1,0 +1,11 @@
+blocks: 1
+  B0 decl=0 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#cc.agreeing_parameter_values.del")
+    inputs=[0] outputs=[1]
+    param samplePeriod=Real(0x3ff0000000000000)
+    param y_start=Real(0x401c000000000000)
+connectors: 2
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.agreeing_parameter_values.u")
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.agreeing_parameter_values.del.y")
+connections: 0
+external_inputs: [0]
+boundary_outputs: 0

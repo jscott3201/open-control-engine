@@ -17,6 +17,6 @@ libm = { workspace = true }
 oce-model = { workspace = true }
 
 [dev-dependencies]
+allocation-counter = "0.8.1"
 oce-bless = { workspace = true }
 serde_json = { workspace = true }
-stats_alloc = "0.1.10"

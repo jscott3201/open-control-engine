@@ -16,12 +16,12 @@
 //!   rejected).
 //! - Parameter node `@id`s are `<instance_iri>.<name>`; the importer recovers the parameter name
 //!   as the segment after the last `.`, so names containing `.` are rejected.
-//! - Connectors carry no usable source IRI (the resolver leaves `Connector::iri` `None` except
-//!   for the AD-2 boundary-input overwrite), so port `@id`s are minted deterministically as
-//!   `<instance_iri>.in<k>` / `<instance_iri>.out<k>` from the owner's port-list position.
-//!   Re-import rebuilds wiring from `isConnectedTo`, so port names never need to round-trip.
+//! - Ordinary imported connectors retain their authored IRI, which is emitted verbatim so port
+//!   identity survives an RT-2 round trip. A port `@id` is minted deterministically as
+//!   `<instance_iri>.in<k>` / `<instance_iri>.out<k>` only when the connector has no usable own
+//!   IRI, including a boundary-driven child whose stored IRI belongs to the boundary node.
 //! - Each `external_inputs` connector's stored boundary IRI is emitted verbatim as a boundary
-//!   node listed under the root's `hasInput` and wired `isConnectedTo` → the **minted** child
+//!   node listed under the root's `hasInput` and wired `isConnectedTo` → the child
 //!   port. The boundary node carries the driven child connector's `isOfDataType`; fan-out is
 //!   rejected if the driven connector types disagree. Re-import then re-elides the boundary
 //!   (AD-2), restoring both the `external_inputs` entry and the child connector's boundary IRI.
@@ -29,9 +29,13 @@
 //!   `@id` between the root's and a child's port list re-imports as a rejection.
 //!
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
-//! The five in-subset §7.4.1 attrs live on the **minted child port node** (never the shared
-//! boundary node), each emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
-//! `displayUnit` as bare strings ([`TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
+//! The five in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
+//! ruling (2026-08-05), on each **declared boundary-output node**. The exporter emits each node's
+//! stored attrs. In an engine-loaded graph, §7.10 unification may have filled an unset child or
+//! boundary-output value from its peer; directly exporting an imported, pre-unification graph
+//! preserves the two authored sets independently. The shared boundary-INPUT node still carries
+//! none (#243). Each attr is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
+//! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
 //! render fixpoint holds on an imported `G`. Attributes are emitted iff `Some` (the stored
@@ -56,31 +60,35 @@
 //!
 //! ## Rejection surface
 //! Everything outside the subset is a typed [`CxfError::Validation`] carrying
-//! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` is the owning
-//! block's `instance_iri` (connectors have none) — never a panic.
+//! [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics whose `subject` identifies the
+//! offending block, connector owner, or declared boundary node — never a panic.
 //!
-//! Two of those rejections are not about the subset at all but about bytes that would not come
-//! back: a connector listed twice in `external_inputs` (which re-imports one entry short) and an
-//! input driven by more than one surviving output (which fails §7.10 single assignment and does
-//! not re-import at all). Both are judged over the **survivor cone**, so a defect sitting entirely
-//! inside a deferred block never aborts an export whose document omits that block.
+//! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
+//! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
+//! reserved pass-through connector, and an input driven by more than one surviving output. These
+//! checks are judged over the **survivor cone** for ordinary blocks, so a defect sitting entirely
+//! inside a deferred ordinary block never aborts an export whose document omits that block.
 //!
-//! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
-//! at all (not from its connectors' attributes, not from its boundary entries), so a partly
-//! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
-//! exception is a non-empty graph with zero emitted runtime blocks after deferred and reserved
-//! lowering-only blocks are omitted: that would be an unloadable root-only shell, so it is an
-//! error ([`MSG_TOTAL_DEFERRAL`]).
+//! Enum deferral is the ordinary non-aborting axis: a deferred ordinary block contributes no error
+//! diagnostics, so a partly enum-bearing graph exports its enum-free remainder with
+//! `ExportDeferred` **warnings**. Reserved pass-through shape and hidden-state checks run
+//! independently of deferral; the resolver-produced lowering shape is the only valid form in the
+//! reserved namespace. A non-empty graph with zero emitted runtime blocks after deferred and
+//! reserved lowering-only blocks are omitted also rejects: the result would be an unloadable
+//! root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic, has_errors};
 use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
 
-use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany, TermAttr};
+use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
+use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
-use crate::export_pass_through::has_valid_shape;
+use crate::export_pass_through::{
+    ReservedShapeFailure, ReservedShapeValidation, is_declared_pass_through_connector,
+    is_pass_through_class, reserved_connection_endpoint, reserved_shape_validation,
+};
 use crate::{CxfError, bridge};
 
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
@@ -119,6 +127,8 @@ const MSG_CLASS_BRIDGE: &str =
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
 /// connector claimed twice or never, a connection endpoint out of range or not output→input).
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
+/// Elision would discard state or change the reserved scalar identity on re-import.
+const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
 /// The connector carries a non-default `nominal` attribute (the importer hardcodes
 /// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
 /// dropped rather than round-tripped).
@@ -156,6 +166,16 @@ const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed
 /// elision type check for at least one target.
 const MSG_BOUNDARY_TYPE_MISMATCH: &str =
     "export subset: one boundary input drives child inputs with different value types";
+/// A declared boundary output aliases a connector that has no emitted child-port node. Reserved
+/// pass-through outputs are rebuilt directly as root boundary outputs, so an additional alias over
+/// that connector has no lossless wire representation. Other unclaimed connectors already carry a
+/// structural diagnostic; this message names the alias that would otherwise disappear.
+const MSG_BOUNDARY_SOURCE_NOT_EMITTED: &str =
+    "export subset: declared boundary output source is not an emitted child output connector";
+/// Reserved pass-through connectors are rebuilt as a root boundary edge and have no child-port
+/// node on which an additional host-built connection can be represented.
+const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
+     child-port node";
 /// A surviving input connector is driven by more than one **surviving** output. The emitted
 /// document carries every one of those `isConnectedTo` targets, so re-import counts an in-degree
 /// above 1 and fails the §7.10 single-assignment law — the export would be `Ok` with bytes that do
@@ -208,19 +228,12 @@ struct PlannedBoundary {
     targets: Vec<String>,
 }
 
-/// One boundary-output node emitted only for a reserved pass-through pair.
+/// One declared boundary-output node: authored IRI, datatype, and its classified §7.4.1
+/// attributes (the DECLARED node's own, never the driving connector's).
 struct PlannedBoundaryOutput {
     iri: String,
     datatype: &'static str,
-}
-
-fn is_pass_through_class(class_path: &str) -> bool {
-    matches!(
-        class_path,
-        "urn:oce:lowering#PassThrough.Real"
-            | "urn:oce:lowering#PassThrough.Integer"
-            | "urn:oce:lowering#PassThrough.Boolean"
-    )
+    attrs: PortAttrs,
 }
 
 /// Export `model` as a CXF document plus the deferral warnings (empty for a fully-in-subset
@@ -363,7 +376,17 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
 
         let mut input_ports = Vec::with_capacity(b.inputs.len());
         for (k, cid) in b.inputs.iter().enumerate() {
-            let minted = format!("{subject}.in{k}");
+            // Boundary-input elision intentionally replaces the child input's IRI with the
+            // boundary IRI. Keep synthesising that child port so the boundary node and child port
+            // remain distinct; all other imported connectors retain their authored identity.
+            let minted = if g.external_inputs.contains(cid) {
+                format!("{subject}.in{k}")
+            } else {
+                g.connectors
+                    .get(cid.0 as usize)
+                    .and_then(|connector| connector.iri.as_deref())
+                    .map_or_else(|| format!("{subject}.in{k}"), str::to_owned)
+            };
             if claim_port(
                 g,
                 bi,
@@ -380,7 +403,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
         let mut output_ports = Vec::with_capacity(b.outputs.len());
         for (k, cid) in b.outputs.iter().enumerate() {
-            let minted = format!("{subject}.out{k}");
+            let minted = g
+                .connectors
+                .get(cid.0 as usize)
+                .and_then(|connector| connector.iri.as_deref())
+                .map_or_else(|| format!("{subject}.out{k}"), str::to_owned);
             if claim_port(
                 g,
                 bi,
@@ -420,19 +447,23 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         ));
     }
 
-    // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
-    // the same single typed external In/Out pair as resolver-produced blocks.
-    for (bi, block) in g.blocks.iter().enumerate() {
-        if !is_pass_through_class(&block.class_iri) {
-            continue;
-        }
-        if !has_valid_shape(g, bi) {
-            let subject = block
-                .instance_iri
-                .as_deref()
-                .map_or_else(|| format!("block#{bi}"), str::to_owned);
-            diags.push(reject(MSG_STRUCTURE, &subject));
-        }
+    // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
+    // diagnostic they had before hidden-state checks were added; state with no wire representation
+    // gets the reserved-shape diagnostic.
+    let ReservedShapeValidation {
+        failures,
+        unplannable_blocks: unplannable_reserved_blocks,
+    } = reserved_shape_validation(g, &deferred);
+    for failure in failures {
+        let (message, subject) = match failure {
+            ReservedShapeFailure::Structure(subject) => (MSG_STRUCTURE, subject),
+            ReservedShapeFailure::DuplicateExternalInput(subject) => {
+                (MSG_DUPLICATE_EXTERNAL_INPUT, subject)
+            }
+            ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
+            ReservedShapeFailure::HiddenState(subject) => (MSG_RESERVED_SHAPE, subject),
+        };
+        diags.push(reject(message, &subject));
     }
 
     // SKIP connectors whose owning block is deferred: a deferred block's
@@ -444,10 +475,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         if deferred.contains(&(c.block.0 as usize)) {
             continue;
         }
-        if g.blocks
-            .get(c.block.0 as usize)
-            .is_some_and(|block| is_pass_through_class(&block.class_iri))
-        {
+        if is_declared_pass_through_connector(g, c) {
             continue;
         }
         if port_iri[i].is_none() {
@@ -508,17 +536,19 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         });
     }
 
-    // Phase 5 — connections. The orphan guard `port_iri[t].is_none()` drops any edge whose TARGET
-    // endpoint owner is deferred (a deferred block's connectors are unclaimed). The source-side
-    // `continue` drops an edge whose SOURCE endpoint owner is deferred.
+    // Phase 5 — connections. The deferred-owner guard drops any edge whose source or target block
+    // is omitted. A surviving reserved pass-through endpoint rejects instead: those connectors are
+    // rebuilt as one root boundary edge and have no child-port node to carry another connection.
     //
     // For the emitted DOCUMENT either guard alone suffices with Phase 2 in place: a deferred
     // source's port node is never emitted, so its `targets` entry could not reach the wire. For
-    // `in_deg` below both are load-bearing, and in opposite directions — the source guard is what
-    // keeps a deferred driver from counting toward a survivor's in-degree, and the target guard is
-    // what keeps a multiply-driven input on a deferred block from being counted at all. Move the
-    // increment above either one and the count stops describing the emitted document.
+    // the single-assignment flags below, both deferred checks are load-bearing and in opposite
+    // directions — the source guard keeps a deferred driver from counting toward a survivor's
+    // in-degree, and the target guard keeps a multiply-driven input on a deferred block from being
+    // counted at all. Move the increment above either one and the count stops describing the
+    // emitted document.
     let mut targets: Vec<Vec<String>> = vec![Vec::new(); g.connectors.len()];
+    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Surviving drivers per connector, for the §7.10 single-assignment check after this loop, as
     // two flags rather than a count. Recorded at the `targets` push site so they describe exactly
     // the edges the document will carry.
@@ -552,14 +582,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             });
             continue;
         }
-        // Defense-in-depth: drop edges whose source owner is deferred.
-        if g.connectors
-            .get(f)
-            .is_some_and(|c| deferred.contains(&(c.block.0 as usize)))
+        let source = &g.connectors[f];
+        let target = &g.connectors[t];
+        if deferred.contains(&(source.block.0 as usize))
+            || deferred.contains(&(target.block.0 as usize))
         {
             continue;
         }
-        // Orphan guard: an unclaimed target (including any deferred-target endpoint) is dropped.
+        if let Some((endpoint, position)) = reserved_connection_endpoint(g, f, t) {
+            diags.push(reject(
+                MSG_CONNECTION_ENDPOINT_NOT_EMITTED,
+                &owner_subject(g, endpoint, position),
+            ));
+            continue;
+        }
+        // Orphan guard: an unclaimed target already carries a structural diagnostic.
         if let Some(to_iri) = port_iri[t].as_ref() {
             targets[f].push(to_iri.clone());
             // Second arrival at this connector ⇒ multiply driven. Endpoint OWNERSHIP is
@@ -571,6 +608,47 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 driven[t] = true;
             }
         }
+    }
+
+    for output in &g.boundary_outputs {
+        let idx = output.source.0 as usize;
+        let Some(source) = g.connectors.get(idx) else {
+            diags.push(Diagnostic::error(
+                DiagCode::ExportUnsupported,
+                MSG_STRUCTURE,
+            ));
+            continue;
+        };
+        if source.dir != Dir::Out || deferred.contains(&(source.block.0 as usize)) {
+            if source.dir != Dir::Out {
+                diags.push(reject(MSG_STRUCTURE, &owner_subject(g, source, idx)));
+            }
+            continue;
+        }
+        let Some(_) = port_iri[idx] else {
+            diags.push(reject(MSG_BOUNDARY_SOURCE_NOT_EMITTED, &output.iri));
+            continue;
+        };
+        let iri = output.iri.as_ref();
+        claim_emitted_id(&mut seen, iri, &owner_subject(g, source, idx), &mut diags);
+        targets[idx].push(iri.to_owned());
+        // Same R5 tag guard as the Phase 4 connector scan: `BoundaryOutput.attrs` is a plain
+        // field, so a host can hand Real attrs to a Boolean output, and emitting that would
+        // produce bytes the import refuses. Subject = the declared node — the thing a host
+        // must fix — not the driving block. Import cannot produce a mismatch (`connector_attrs`
+        // tags by the type it is given, and import refuses a declared type that differs from
+        // its driver's), so this fires for host-constructed graphs only.
+        let attrs = if output.attrs.matches(source.value_type) {
+            classify_attrs(&output.attrs, iri, &mut diags)
+        } else {
+            diags.push(reject(MSG_STRUCTURE, iri));
+            PortAttrs::None
+        };
+        boundary_outputs.push(PlannedBoundaryOutput {
+            iri: iri.to_owned(),
+            datatype: datatypes[idx],
+            attrs,
+        });
     }
 
     // Phase 5b — §7.10 single assignment over the survivor cone. Every edge counted above is one
@@ -595,13 +673,12 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // which re-imports as `UnresolvedReference`) this skip is defense-in-depth, not the load-bearing
     // guard: `port_iri[idx]` is `None` for every deferred connector, so the orphan `let-else` below
     // already drops the entry. What the skip does uniquely is suppress the ERROR-severity checks
-    // between here and there — a deferred block's boundary entry with the wrong direction or no
-    // stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort an
-    // export whose only defect sits in a block the document omits. Same rule as the Phase 4 attr
-    // scan: an omitted block contributes no errors. That arm is pinned by
+    // between here and there — a deferred ordinary block's boundary entry with the wrong direction
+    // or no stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort
+    // an export whose only defect sits in a block the document omits. Reserved endpoint checks run
+    // in Phase 3 before this skip. The ordinary arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
-    let mut boundary_outputs: Vec<PlannedBoundaryOutput> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
     // Scoped to survivors on purpose: the `deferred.contains` skip runs first, so a duplicate on a
     // deferred block never reaches the check and never aborts an export whose document omits it.
@@ -617,6 +694,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ));
             continue;
         };
+        if unplannable_reserved_blocks.contains(&(c.block.0 as usize)) {
+            continue; // Phase 3 already emitted the stable wiring or boundary-identity diagnostic.
+        }
         if deferred.contains(&(c.block.0 as usize)) {
             continue; // boundary drives a deferred block's child — drop the whole entry
         }
@@ -664,9 +744,14 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 continue;
             };
             claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
+            // Reuse the Phase 4 classification: the pass-through output IS a real connector,
+            // already classified AND tag-guarded there. A pass-through that reaches this branch
+            // survived the deferred-owner skip above, so the slot is not a placeholder. A second
+            // guard here would add a duplicate diagnostic naming the innocent input connector.
             boundary_outputs.push(PlannedBoundaryOutput {
                 iri: output_iri.to_owned(),
                 datatype,
+                attrs: classified[output_idx].clone(),
             });
             output_iri.to_owned()
         } else {
@@ -813,41 +898,6 @@ fn param_binding(
     }
 }
 
-/// The classified §7.4.1 attributes for one port node, narrowed to the Bare-Scalar Canonical
-/// emit subset. Produced by [`classify_attrs`] only when the connector's `Attrs` variant matches
-/// its `value_type` (the mismatch branch takes [`PortAttrs::None`] and a `MSG_STRUCTURE` diag
-/// instead, so no rejection double-fires). `build()` consumes this infallibly via
-/// [`emit_port_attrs`]: every variant is total, and `build()` never sees `PortAttrs::Real` on an
-/// `Integer` connector (`plan()`'s `attrs.matches` gate rejects that first).
-#[derive(Clone, Debug)]
-enum PortAttrs {
-    /// Real connector attrs: the three term attrs plus the two finite Real bounds. Any
-    /// `nominal`/`unbounded`/non-finite bound was already rejected by [`classify_attrs`] and is
-    /// absent here.
-    Real {
-        /// `S231:unit` (bare string).
-        unit: Option<Arc<str>>,
-        /// `S231:quantity` (bare string).
-        quantity: Option<Arc<str>>,
-        /// `S231:displayUnit` (bare string).
-        display_unit: Option<Arc<str>>,
-        /// `S231:min` (bare number, finite).
-        min: Option<f64>,
-        /// `S231:max` (bare number, finite).
-        max: Option<f64>,
-    },
-    /// Integer connector attrs: the two integer bounds (no non-finite hazard — `i64` has no NaN).
-    Integer {
-        /// `S231:min` (bare integer).
-        min: Option<i64>,
-        /// `S231:max` (bare integer).
-        max: Option<i64>,
-    },
-    /// No attrs to emit: a Boolean/String/Enum connector, or a tag-mismatched one. Emits zero
-    /// attr keys, byte-identical to an attr-free port node.
-    None,
-}
-
 /// Classify a type-matched connector's [`Attrs`] into the [`PortAttrs`] emit subset, rejecting
 /// `nominal`/`unbounded`/non-finite bounds (outside the canonical subset) into `diags`. A safe,
 /// total `match attrs` — no `as_real().unwrap()`, so no `plan()`-reachable panic. The importer
@@ -895,51 +945,6 @@ fn finite_real_bound(v: Option<f64>, subject: &str, diags: &mut Vec<Diagnostic>)
             None
         }
         None => None,
-    }
-}
-
-/// Emit a port node's classified §7.4.1 attributes under the Bare-Scalar Canonical wire shape.
-/// Infallible: a total `match attrs` with no `Option::unwrap`, no index, no partial match. Term
-/// attrs go out as [`TermAttr::Bare`] (the self-reproducing shape; `Arc<str>` → `String` via
-/// `as_ref().to_owned()` since `TermAttr::Bare` owns a `String`); Real bounds as
-/// [`CxfValue::Float`], Integer bounds as [`CxfValue::Int`]. `None` fields stay `None` (omitted
-/// on serialization by `skip_serializing_if = "Option::is_none"`), so an all-default connector
-/// emits zero attr keys. `serde` serializes `Node` in its declared field order regardless of
-/// assignment order here.
-fn emit_port_attrs(node: &mut Node, attrs: &PortAttrs) {
-    match attrs {
-        PortAttrs::Real {
-            unit,
-            quantity,
-            display_unit,
-            min,
-            max,
-        } => {
-            if let Some(u) = unit {
-                node.unit = Some(TermAttr::Bare(u.as_ref().to_owned()));
-            }
-            if let Some(q) = quantity {
-                node.quantity = Some(TermAttr::Bare(q.as_ref().to_owned()));
-            }
-            if let Some(d) = display_unit {
-                node.display_unit = Some(TermAttr::Bare(d.as_ref().to_owned()));
-            }
-            if let Some(m) = min {
-                node.min = Some(CxfValue::Float(*m));
-            }
-            if let Some(m) = max {
-                node.max = Some(CxfValue::Float(*m));
-            }
-        }
-        PortAttrs::Integer { min, max } => {
-            if let Some(m) = min {
-                node.min = Some(CxfValue::Int(*m));
-            }
-            if let Some(m) = max {
-                node.max = Some(CxfValue::Int(*m));
-            }
-        }
-        PortAttrs::None => {}
     }
 }
 
@@ -1008,6 +1013,7 @@ fn build(plan: Plan) -> CxfDocument {
     for output in plan.boundary_outputs {
         let mut node = blank_node(output.iri);
         node.is_of_data_type = Some(iri_ref(output.datatype.to_owned()));
+        emit_port_attrs(&mut node, &output.attrs);
         graph.push(node);
     }
 

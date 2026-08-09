@@ -29,9 +29,9 @@ const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.cooling_only_alar
 const OPERATION_MODE: &str = "http://example.org#g36.source.cooling_only_alarms.uOpeMod";
 const DAMPER_POSITION: &str = "http://example.org#g36.source.cooling_only_alarms.uDam";
 
-const LOW_AIRFLOW_ALARM: &str = "conn#36";
-const AIRFLOW_SENSOR_ALARM: &str = "conn#66";
-const LEAKING_DAMPER_ALARM: &str = "conn#81";
+const LOW_AIRFLOW_ALARM: &str = "http://example.org#g36.source.cooling_only_alarms.proInt.y";
+const AIRFLOW_SENSOR_ALARM: &str = "http://example.org#g36.source.cooling_only_alarms.booToInt2.y";
+const LEAKING_DAMPER_ALARM: &str = "http://example.org#g36.source.cooling_only_alarms.booToInt3.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("discharge_airflow", DISCHARGE_AIRFLOW),

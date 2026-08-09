@@ -38,28 +38,28 @@ connectors: 25
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.TAirSupSet")
   C1 block=B0 dir=In type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.TAirSup")
   C2 block=B0 dir=In type=Boolean decl=2 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan")
-  C3 block=B0 dir=Out type=Real decl=3 iri=None
-  C4 block=B1 dir=In type=Real decl=4 iri=None
+  C3 block=B0 dir=Out type=Real decl=3 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conTSup.y")
+  C4 block=B1 dir=In type=Real decl=4 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.swi.u1")
   C5 block=B1 dir=In type=Boolean decl=5 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.u1SupFan")
-  C6 block=B1 dir=In type=Real decl=6 iri=None
-  C7 block=B1 dir=Out type=Real decl=7 iri=None
-  C8 block=B2 dir=Out type=Real decl=8 iri=None
-  C9 block=B3 dir=Out type=Real decl=9 iri=None
-  C10 block=B4 dir=Out type=Real decl=10 iri=None
-  C11 block=B5 dir=Out type=Real decl=11 iri=None
-  C12 block=B6 dir=Out type=Real decl=12 iri=None
-  C13 block=B7 dir=In type=Real decl=13 iri=None
-  C14 block=B7 dir=In type=Real decl=14 iri=None
-  C15 block=B7 dir=In type=Real decl=15 iri=None
-  C16 block=B7 dir=In type=Real decl=16 iri=None
-  C17 block=B7 dir=In type=Real decl=17 iri=None
-  C18 block=B7 dir=Out type=Real decl=18 iri=None
-  C19 block=B8 dir=In type=Real decl=19 iri=None
-  C20 block=B8 dir=In type=Real decl=20 iri=None
-  C21 block=B8 dir=In type=Real decl=21 iri=None
-  C22 block=B8 dir=In type=Real decl=22 iri=None
-  C23 block=B8 dir=In type=Real decl=23 iri=None
-  C24 block=B8 dir=Out type=Real decl=24 iri=None
+  C6 block=B1 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.swi.u3")
+  C7 block=B1 dir=Out type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.swi.y")
+  C8 block=B2 dir=Out type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.uHeaMaxCon.y")
+  C9 block=B3 dir=Out type=Real decl=9 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.negOne.y")
+  C10 block=B4 dir=Out type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.uCooMinCon.y")
+  C11 block=B5 dir=Out type=Real decl=11 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.zer.y")
+  C12 block=B6 dir=Out type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.one.y")
+  C13 block=B7 dir=In type=Real decl=13 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x1")
+  C14 block=B7 dir=In type=Real decl=14 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f1")
+  C15 block=B7 dir=In type=Real decl=15 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.x2")
+  C16 block=B7 dir=In type=Real decl=16 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.f2")
+  C17 block=B7 dir=In type=Real decl=17 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.u")
+  C18 block=B7 dir=Out type=Real decl=18 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigCoo.y")
+  C19 block=B8 dir=In type=Real decl=19 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x1")
+  C20 block=B8 dir=In type=Real decl=20 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f1")
+  C21 block=B8 dir=In type=Real decl=21 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.x2")
+  C22 block=B8 dir=In type=Real decl=22 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.f2")
+  C23 block=B8 dir=In type=Real decl=23 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.u")
+  C24 block=B8 dir=Out type=Real decl=24 iri=Some("http://example.org#g36.source.multizone_vav_supply_signals.conSigHea.y")
 connections: 12
   C3 -> C4
   C7 -> C23

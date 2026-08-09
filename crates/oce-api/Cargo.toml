@@ -56,8 +56,8 @@ thiserror = { workspace = true }
 # Dropping it removes the `snapshot-testing` crate (license `Unlicense`, not on deny.toml's
 # allow-list) from the dev tree entirely — keeping the license surface explicit.
 [dev-dependencies]
+allocation-counter = "0.8.1"
 oce-bless = { workspace = true }
 public-api = { version = "=0.52.1", default-features = false }
 rustdoc-json = "=0.9.10"
 serde_json = { workspace = true }
-stats_alloc = "0.1.10"

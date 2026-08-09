@@ -226,7 +226,7 @@ fn an_enum_connector_past_the_first_port_position_still_defers() {
             ),
         ],
         connections: vec![wire(0, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -273,7 +273,7 @@ fn the_reported_enum_class_is_the_first_one_in_port_list_order() {
             conn(2, 1, Dir::Out, ValueType::Enum(other)),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -321,7 +321,7 @@ fn a_graph_whose_every_block_defers_is_rejected_not_emitted_as_a_root_only_docum
             conn(4, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 1), wire(2, 3)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let diags = export_rejection(&g);
@@ -375,7 +375,7 @@ fn a_lone_enum_bearing_block_is_rejected_rather_than_emitting_an_empty_composite
             ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER),
         )],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let diags = export_rejection(&g);
@@ -415,7 +415,7 @@ fn a_single_survivor_keeps_the_export_non_aborting() {
             conn(1, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -468,7 +468,7 @@ fn the_cascade_follows_a_chain_that_needs_several_reiterations_to_close() {
             conn(7, 4, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(6, 4), wire(5, 2), wire(3, 0)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -520,7 +520,7 @@ fn a_fan_out_cascade_reaches_every_branch_of_the_cone() {
             conn(8, 4, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(7, 3), wire(7, 5), wire(4, 0), wire(6, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -565,7 +565,7 @@ fn one_surviving_driver_keeps_a_consumer_out_of_the_cascade() {
             conn(3, 2, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 2), wire(1, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -610,6 +610,7 @@ fn an_input_that_was_never_driven_does_not_cascade() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1)],
+        boundary_outputs: vec![],
     };
 
     let report = export_report(&g);
@@ -664,7 +665,7 @@ fn a_feedback_cycle_reached_by_the_cascade_terminates_with_both_ends_deferred() 
             conn(6, 3, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(0, 1), wire(3, 4), wire(5, 2)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -698,7 +699,7 @@ fn a_self_loop_on_a_survivor_terminates_without_deferring_it() {
             conn(2, 1, Dir::Out, ValueType::Real),
         ],
         connections: vec![wire(2, 1)],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -707,7 +708,7 @@ fn a_self_loop_on_a_survivor_terminates_without_deferring_it() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// What a deferred block may contribute — nothing error-severity.
+// What a deferred ordinary block may contribute — nothing error-severity.
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
@@ -746,7 +747,7 @@ fn out_of_subset_connector_attributes_on_a_deferred_block_do_not_abort_the_expor
                 .expect("Real attrs on a Real connector"),
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -790,7 +791,7 @@ fn a_tag_mismatched_attribute_set_on_a_deferred_block_does_not_abort_the_export(
             mismatched,
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let report = export_report(&g);
@@ -829,6 +830,7 @@ fn boundary_entry_for_a_deferred_block_is_dropped_not_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1)],
+        boundary_outputs: vec![],
     };
 
     let report = export_report(&g);

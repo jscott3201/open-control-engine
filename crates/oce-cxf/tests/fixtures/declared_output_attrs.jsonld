@@ -1,0 +1,54 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#DeclaredOutputAttrs",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#DeclaredOutputAttrs.con" },
+      "S231:hasInput": { "@id": "http://example.org#DeclaredOutputAttrs.uPass" },
+      "S231:hasOutput": [
+        { "@id": "http://example.org#DeclaredOutputAttrs.yElided" },
+        { "@id": "http://example.org#DeclaredOutputAttrs.yPass" }
+      ]
+    },
+    {
+      "@id": "http://example.org#DeclaredOutputAttrs.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#DeclaredOutputAttrs.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#DeclaredOutputAttrs.con.y" }
+    },
+    { "@id": "http://example.org#DeclaredOutputAttrs.con.k",
+      "S231:value": { "@value": "295.15", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    { "@id": "http://example.org#DeclaredOutputAttrs.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:isConnectedTo": { "@id": "http://example.org#DeclaredOutputAttrs.yElided" } },
+
+    { "@id": "http://example.org#DeclaredOutputAttrs.yElided",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:min": { "@value": "200.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "330.15", "@type": "http://www.w3.org/2001/XMLSchema#double" } },
+
+    { "@id": "http://example.org#DeclaredOutputAttrs.uPass",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DeclaredOutputAttrs.yPass" } },
+
+    { "@id": "http://example.org#DeclaredOutputAttrs.yPass",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:min": { "@value": "-50.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "50.0", "@type": "http://www.w3.org/2001/XMLSchema#double" } }
+  ]
+}

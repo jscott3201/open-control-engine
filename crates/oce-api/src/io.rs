@@ -64,7 +64,15 @@ pub struct TrendCfg {
 /// excluded (CDL §7.8: a String signal is metadata, not a control point).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PointInfo {
-    /// Dotted instance path == `DomainKey` identity (06 D5); `conn#<id>` for an unnamed connector.
+    /// The point identity == `DomainKey` identity (06 D5): the document-derived `@id` of the
+    /// connector's host-visible identity — the declared boundary input's node for a
+    /// composite-boundary-driven connector (one host point fans out to every internal
+    /// consumer); otherwise the connector's own authored node, or a `hasInstance`-derived
+    /// member identity (`<owner @id>.<declared port name>`) minted from the owner's authored
+    /// identity, never from a position — expanded against the document `@context` to canonical
+    /// absolute form at ingest, so compact and expanded spellings of the same subject IRI name
+    /// the same point. The positional `conn#<id>` fallback appears only for hand-built,
+    /// IRI-less models, which no public API can construct.
     pub path: String,
     /// `In` | `Out` (CDL §7.8).
     pub direction: PointDirection,
@@ -120,6 +128,12 @@ pub struct IoInventory {
     conn_id: Vec<ConnectorId>,
     input_by_path: HashMap<String, Vec<ConnectorId>>,
     output_by_path: HashMap<String, ConnectorId>,
+    /// Declared boundary-output alias keys (`_spec/18` R18-2): the authored root `hasOutput`
+    /// IRI of each elided boundary output, resolving to its driving connector's slot. Read-only
+    /// aliases — they never enter `points`/`conn_id`, so rows, `to_map`, summaries, and the
+    /// durable batch are untouched. A pass-through declared output needs no entry here: its
+    /// lowered output connector already carries the declared IRI in `output_by_path`.
+    output_alias_by_path: HashMap<String, ConnectorId>,
 }
 
 /// Load-time binding from a store point key to an input connector arena slot.
@@ -135,9 +149,23 @@ pub(crate) struct PointInventoryRow {
     pub(crate) connector_id: ConnectorId,
 }
 
-/// The canonical point path of a connector: its `iri`, or a synthetic `conn#<id>` for an unnamed
-/// (hand-built) connector. The **single** path-derivation rule, shared by the inventory and by the
-/// `Outputs` snapshot, so the two never disagree (the `to_map` keying contract).
+/// The canonical point path of a connector: the document-derived `@id` of its host-visible
+/// identity — the declared boundary input's node for a composite-boundary-driven connector;
+/// otherwise the connector's own authored node, or a `hasInstance`-derived member identity
+/// minted from the owner's authored `@id` and the class signature (the resolver stamps the
+/// choice into `Connector::iri` at ingest).
+///
+/// The stored `@id` is the canonical absolute subject IRI: the resolver expands the authored
+/// spelling against the document `@context` at ingest, so a document re-serialized between
+/// compact and expanded spellings keeps its point paths, and a relative `@id` no context can
+/// canonicalize is refused at load with a typed diagnostic rather than admitted under a
+/// spelling-dependent key. CXF ingest rejects any connector node without an `@id` and mints a
+/// document-derived identity for every node-less derived connector, so every document-loaded
+/// connector has a document-derived identity and the positional `conn#<id>` spelling is
+/// unreachable from the public API. It survives only as the fallback for hand-built, IRI-less
+/// models (`Connector::new` without `with_iri`), which are constructible from in-crate tests
+/// alone. The distinction matters: a positional index renumbers under JSON-LD `@graph`
+/// reordering, an authored `@id` does not.
 #[must_use]
 pub(crate) fn connector_path(iri: Option<&str>, id: ConnectorId) -> String {
     iri.map(str::to_owned)
@@ -233,11 +261,33 @@ impl IoInventory {
             points.push(row.info);
             conn_id.push(row.connector_id);
         }
+        // Declared boundary-output aliases (R18-2). Keyed only when the driving connector is an
+        // inventory output point (a non-String `Out`), so an alias can never resolve to a slot
+        // the point surfaces exclude. CXF ingest refuses a declared IRI that collides with a
+        // connector path (`BoundaryOutputShadowsConnector`), so for document-loaded models the
+        // alias key space is disjoint from `output_by_path`; `resolve_output` still consults
+        // connector paths first so the lookup stays defined against a malformed hand-built
+        // store.
+        let mut output_alias_by_path = HashMap::with_capacity(model.boundary_outputs.len());
+        for boundary in &model.boundary_outputs {
+            // `get` (not indexing) keeps this total for a malformed hand-built graph (R-ERR-1);
+            // an out-of-range source simply mints no alias.
+            let Some(source) = model.connectors.get(boundary.source.0 as usize) else {
+                continue;
+            };
+            let driver_path = connector_path(source.iri.as_deref(), source.id);
+            if output_by_path.contains_key(&driver_path) {
+                output_alias_by_path
+                    .entry(boundary.iri.to_string())
+                    .or_insert(boundary.source);
+            }
+        }
         IoInventory {
             points,
             conn_id,
             input_by_path,
             output_by_path,
+            output_alias_by_path,
         }
     }
 
@@ -247,15 +297,48 @@ impl IoInventory {
         self.input_by_path.get(path).map(Vec::as_slice)
     }
 
-    /// Resolve a point path to its [`ConnectorId`] **only if it is an output** (the `get_output`
-    /// and `CollectSpec::Named` recording target).
+    /// Resolve a point path to its [`ConnectorId`] **only if it is an output** — the shared
+    /// resolver behind `get_output`, `watch`, and `CollectSpec::Named`.
+    ///
+    /// Two key spaces resolve here, connector paths first, then declared boundary-output
+    /// aliases (`_spec/18` R18-2). The order is defensive: ingest refuses a declared IRI that
+    /// shadows a connector path, so the two spaces are disjoint for every document-loaded
+    /// model, and the ordering only keeps the lookup defined against a malformed hand-built
+    /// one. An alias resolves to the driving connector's slot, so a declared name and its
+    /// driver path return bit-equal values.
     pub(crate) fn resolve_output(&self, path: &str) -> Option<ConnectorId> {
-        self.output_by_path.get(path).copied()
+        self.output_by_path
+            .get(path)
+            .or_else(|| self.output_alias_by_path.get(path))
+            .copied()
     }
 
     /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
-    /// `CollectSpec::All` recording set for `simulate`.
-    pub(crate) fn out_columns(&self) -> Vec<(String, ConnectorId)> {
+    /// `CollectSpec::All` recording set for `simulate` (the host-facing trace surface).
+    ///
+    /// Deliberately a separate method from [`IoInventory::durable_columns`] even though the two
+    /// bodies are identical today: the trace surface and the durable store batch are distinct
+    /// contracts (`_spec/18` D2/D3), and splitting the readers means a future decision to admit
+    /// declared boundary-output aliases into one of them is a visible edit to exactly one method
+    /// — and a red `trace_and_durable_output_columns_agree` assertion — instead of a silent
+    /// change to both.
+    pub(crate) fn trace_columns(&self) -> Vec<(String, ConnectorId)> {
+        self.points
+            .iter()
+            .zip(&self.conn_id)
+            .filter(|(p, _)| p.direction == PointDirection::Out)
+            .map(|(p, &cid)| (p.path.clone(), cid))
+            .collect()
+    }
+
+    /// The `(path, ConnectorId)` columns for every **output** point, in inventory order — the
+    /// key set the load-time `sim::DurableOutputBatch` is minted from.
+    ///
+    /// Must contain connector-identity keys only, never declared boundary-output aliases: every
+    /// existing host trend history is keyed by these paths, and an alias here would double-write
+    /// each aliased sample (`_spec/18` D3). See [`IoInventory::trace_columns`] for why the two
+    /// readers are separate methods.
+    pub(crate) fn durable_columns(&self) -> Vec<(String, ConnectorId)> {
         self.points
             .iter()
             .zip(&self.conn_id)

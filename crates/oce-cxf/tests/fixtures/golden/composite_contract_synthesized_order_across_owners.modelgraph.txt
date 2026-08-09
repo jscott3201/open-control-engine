@@ -1,0 +1,21 @@
+blocks: 3
+  B0 decl=0 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#cc.synthesized_order_across_owners.gain")
+    inputs=[0] outputs=[3]
+    param k=Real(0x4010000000000000)
+  B1 decl=1 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#cc.synthesized_order_across_owners.con")
+    inputs=[] outputs=[1]
+    param k=Real(0x4004000000000000)
+  B2 decl=2 class=CDL.Discrete.UnitDelay instance_iri=Some("http://example.org#cc.synthesized_order_across_owners.del")
+    inputs=[4] outputs=[2]
+    param samplePeriod=Real(0x3ff0000000000000)
+    param y_start=Real(0x3fe0000000000000)
+connectors: 5
+  C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.synthesized_order_across_owners.u")
+  C1 block=B1 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.synthesized_order_across_owners.con.y")
+  C2 block=B2 dir=Out type=Real decl=2 iri=Some("http://example.org#cc.synthesized_order_across_owners.del.y")
+  C3 block=B0 dir=Out type=Real decl=3 iri=Some("http://example.org#cc.synthesized_order_across_owners.gain.y")
+  C4 block=B2 dir=In type=Real decl=4 iri=Some("http://example.org#cc.synthesized_order_across_owners.del.u")
+connections: 1
+  C1 -> C4
+external_inputs: [0]
+boundary_outputs: 0

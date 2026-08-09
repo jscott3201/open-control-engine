@@ -1,0 +1,131 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list",
+      "@type": "S231:Block",
+      "S231:label": "inert_pruned_bothcarrying_list",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.flag"
+      },
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.u"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond"
+        },
+        {
+          "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.flag",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "cond",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "flag",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.y"
+      },
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.k"
+      },
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.u"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.cond.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.y"
+      },
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.k"
+      },
+      "S231:hasInstance": []
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_pruned_bothcarrying_list.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "2.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    }
+  ]
+}

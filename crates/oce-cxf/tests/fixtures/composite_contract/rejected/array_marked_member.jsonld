@@ -1,0 +1,48 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#M",
+      "@type": "S231:Block",
+      "S231:hasInput": {
+        "@id": "http://example.org#M.u"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#M.c"
+      }
+    },
+    {
+      "@id": "http://example.org#M.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#M.c.u"
+      }
+    },
+    {
+      "@id": "http://example.org#M.c",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#M.c.u"
+        },
+        {
+          "@id": "http://example.org#M.c.y"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#M.c.u",
+      "@type": "S231:BooleanInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:isArray": true
+    }
+  ]
+}

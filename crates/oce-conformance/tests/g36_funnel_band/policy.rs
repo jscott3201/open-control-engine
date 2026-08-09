@@ -25,7 +25,7 @@ use std::path::Path;
 use oce_conformance::{
     CombiTimeTable, ComparisonMode, ComparisonResult, DriveCadence, DriverInputReplay,
     DriverOptions, OutputPattern, PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec,
-    Series, Tolerances, ValueKind, VerifyConfig, compare, drive_trace_with_options,
+    Series, Tolerances, ValueKind, VerifyConfig, compare, drive_trace_with_options, escape_regex,
 };
 
 /// Near-ULP relative band (`rtoly = 1e-9`, every other tolerance field `0`) applied to **every** routed
@@ -393,18 +393,4 @@ fn assert_recorded_near_ulp_band(sequence: &str, signal: &str, tolerance: &Toler
             "{sequence} {signal} {label} must stay zero"
         );
     }
-}
-
-/// Escape the regex metacharacters that could appear in an engine connector id so an override pattern
-/// matches its connector literally. Connector ids are `conn#<n>`; `#` and digits are already literal,
-/// but escaping defensively keeps the keying robust if the id form ever changes.
-fn escape_regex(input: &str) -> String {
-    let mut escaped = String::with_capacity(input.len());
-    for ch in input.chars() {
-        if "\\.^$|?*+()[]{}".contains(ch) {
-            escaped.push('\\');
-        }
-        escaped.push(ch);
-    }
-    escaped
 }

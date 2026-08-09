@@ -202,7 +202,10 @@ fn integer_source_maps_logical_pulse_exactly_and_wraps_high_sum() {
 #[test]
 fn source_pulse_registry_rules_and_constructors_are_pinned() {
     let expected_rules = &[
-        ParamRule::Required { name: "period" },
+        ParamRule::Required {
+            name: "period",
+            kind: oce_model::ValueType::Real,
+        },
         ParamRule::RealGreaterOrEqual {
             name: "period",
             min: 1e-37,

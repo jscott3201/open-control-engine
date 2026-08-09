@@ -1,5 +1,8 @@
 //! Full-pipeline smoke tests for nested CXF composite import.
 
+use std::collections::BTreeSet;
+use std::fs;
+
 use oce_api::{CollectSpec, Engine, InputSource, PointDirection, SimSpec, Value};
 use oce_store::ModelStore;
 
@@ -20,6 +23,76 @@ const G36_SUPPLY_TEMPERATURE_MODEL: &str =
     "http://example.org#g36.source.multizone_vav_supply_temperature";
 const G36_SUPPLY_FAN_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_fan";
 const G36_SUPPLY_SIGNALS_MODEL: &str = "http://example.org#g36.source.multizone_vav_supply_signals";
+const DEVELOPMENT_NAMED_POINTS: &str = include_str!("fixtures/development_named_points.tsv");
+
+#[test]
+fn authored_connector_iris_do_not_move_corpus_host_point_inventory() {
+    let expected = DEVELOPMENT_NAMED_POINTS
+        .lines()
+        .map(|line| {
+            let mut fields = line.split('\t');
+            let row = (
+                fields.next().expect("baseline fixture"),
+                fields.next().expect("baseline direction"),
+                fields.next().expect("baseline point path"),
+            );
+            assert!(fields.next().is_none(), "unexpected baseline field: {line}");
+            row
+        })
+        .collect::<BTreeSet<_>>();
+    let fixture_dir = format!(
+        "{}/../oce-cxf/tests/fixtures/g36",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let mut fixtures = fs::read_dir(fixture_dir)
+        .expect("read G36 fixture corpus")
+        .map(|entry| entry.expect("fixture directory entry").path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "jsonld")
+        })
+        .collect::<Vec<_>>();
+    fixtures.sort();
+
+    let mut actual = BTreeSet::new();
+    let mut total_points = 0;
+    for fixture in fixtures {
+        let fixture_name = fixture
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .expect("UTF-8 fixture stem");
+        let bytes = fs::read(&fixture).expect("read G36 fixture");
+        let mut engine = Engine::in_memory();
+        engine
+            .load_cxf(&bytes)
+            .unwrap_or_else(|error| panic!("{fixture_name} loads: {error:?}"));
+        for point in engine
+            .point_list(None)
+            .expect("point inventory is available")
+        {
+            total_points += 1;
+            actual.insert((
+                fixture_name.to_owned(),
+                match point.direction {
+                    PointDirection::In => "In",
+                    PointDirection::Out => "Out",
+                },
+                point.path,
+            ));
+        }
+    }
+
+    let expected = expected
+        .into_iter()
+        .map(|(fixture, direction, path)| (fixture.to_owned(), direction, path.to_owned()))
+        .collect::<BTreeSet<_>>();
+    assert_eq!(total_points, 2_900, "development corpus point count moved");
+    assert_eq!(actual.len(), 2_900, "authored point inventory count moved");
+    assert_eq!(
+        actual, expected,
+        "host-visible authored points must remain byte-identical to the checked-in inventory"
+    );
+}
 
 #[test]
 fn nested_composite_loads_builds_and_ticks_through_frozen_facade() {
@@ -183,10 +256,10 @@ fn source_verified_g36_supply_temperature_fixture_loads_through_frozen_facade() 
         "inactive nested have_hol=false optional input should not survive facade IO export"
     );
 
-    let output = "conn#123";
+    let output = &format!("{G36_SUPPLY_TEMPERATURE_MODEL}.swi3.y");
     assert!(
-        paths.contains(&output.to_owned()),
-        "SupplyTemperature output alias {output} should be visible"
+        paths.contains(output),
+        "SupplyTemperature output {output} should be visible"
     );
 
     engine
@@ -253,12 +326,12 @@ fn source_verified_g36_supply_fan_fixture_loads_through_frozen_facade() {
         "inactive nested have_hol=false optional input should not survive facade IO export"
     );
 
-    let fan_speed = "conn#107";
-    let fan_status = "conn#110";
+    let fan_speed = &format!("{G36_SUPPLY_FAN_MODEL}.swi.y");
+    let fan_status = &format!("{G36_SUPPLY_FAN_MODEL}.or1.y");
     for output in [fan_speed, fan_status] {
         assert!(
-            paths.contains(&output.to_owned()),
-            "SupplyFan output alias {output} should be visible"
+            paths.contains(output),
+            "SupplyFan output {output} should be visible"
         );
     }
 
@@ -332,13 +405,13 @@ fn source_verified_g36_supply_signals_fixture_loads_through_frozen_facade() {
         assert!(paths.contains(required), "missing facade input {required}");
     }
 
-    let u_t_sup = "conn#7";
-    let cooling = "conn#18";
-    let heating = "conn#24";
+    let u_t_sup = &format!("{G36_SUPPLY_SIGNALS_MODEL}.swi.y");
+    let cooling = &format!("{G36_SUPPLY_SIGNALS_MODEL}.conSigCoo.y");
+    let heating = &format!("{G36_SUPPLY_SIGNALS_MODEL}.conSigHea.y");
     for output in [u_t_sup, cooling, heating] {
         assert!(
-            paths.contains(&output.to_owned()),
-            "SupplySignals output alias {output} should be visible"
+            paths.contains(output),
+            "SupplySignals output {output} should be visible"
         );
     }
 

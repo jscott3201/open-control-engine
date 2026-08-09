@@ -8,6 +8,7 @@ use oce_model::{BlockId, BlockInstance, Connector, ConnectorId, Dir, ParamTable,
 
 use crate::dto::{CxfDocument, Node};
 
+use super::attrs::connector_attrs;
 use super::value_types::{first_type, term_of, try_derive_value_type};
 
 /// Derive boundary types, retaining `String` only for endpoints of a native pass-through edge.
@@ -69,9 +70,12 @@ fn try_derive_pass_through_value_type(
 }
 
 /// Append reserved identity blocks after authored nodes have received their stable positions.
+/// `by_id` locates each declared output's node so its authored §7.4.1 attributes ride the
+/// minted output connector instead of being silently replaced by the type's empty defaults.
 pub(super) fn materialize(
     pairs: Vec<(String, String)>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
+    by_id: &HashMap<&str, &Node>,
     blocks: &mut Vec<BlockInstance>,
     connectors: &mut Vec<Connector>,
     external_inputs: &mut Vec<ConnectorId>,
@@ -105,6 +109,14 @@ pub(super) fn materialize(
         let mut input = Connector::new(input_id, block_id, Dir::In, value_type, input_id.0);
         input.iri = Some(Arc::from(input_iri));
         let mut output = Connector::new(output_id, block_id, Dir::Out, value_type, output_id.0);
+        // The declared output node's authored §7.4.1 attributes ride the minted connector. A
+        // pass-through pair elides to no `Connection`, so no other connector joins this output's
+        // §7.10 cluster; declared boundary aliases are joined to their source separately.
+        // A missing node cannot happen on a surviving graph (Step 2 refuses it); the default
+        // attrs it would leave behind are withheld with the graph.
+        if let Some(node) = by_id.get(output_iri.as_str()) {
+            output.attrs = connector_attrs(node, value_type, diags);
+        }
         output.iri = Some(Arc::from(output_iri));
         connectors.push(input);
         connectors.push(output);

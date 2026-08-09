@@ -18,7 +18,7 @@ fn t26_diagnostics_are_deterministic_and_id_sorted() {
             conn(2, 0, Dir::In, ValueType::Real), // undriven non-external → single-assignment
         ],
         connections: vec![],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
     let run1 = validate(&make())
         .expect_err("three undriven inputs")
@@ -51,6 +51,7 @@ fn t27_unify_and_validate_propagates_then_passes() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(2)],
+        boundary_outputs: vec![],
     };
     let warnings = unify_and_validate(&mut m).expect("valid graph loads clean");
     assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
@@ -153,6 +154,7 @@ fn t44_block_subjects_sort_by_numeric_block_id() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+            boundary_outputs: vec![],
         }
     };
 

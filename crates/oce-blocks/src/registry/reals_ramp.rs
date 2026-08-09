@@ -22,6 +22,7 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[RegistryEntry {
 pub(super) const RAMP_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Required {
         name: "raisingSlewRate",
+        kind: oce_model::ValueType::Real,
     },
     ParamRule::RealGreaterOrEqual {
         name: "raisingSlewRate",

@@ -88,9 +88,12 @@ fn projection_is_deterministic_and_coherent_with_io_inventory() {
         .map(|point| point.key.as_str().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(dto_paths, io_paths);
+    // The conn#<id> fallback regime is reachable from in-crate tests only: no public API accepts
+    // a `ModelGraph`, and CXF ingest rejects any connector node missing its `@id`, so every
+    // document-loaded point is keyed by an authored `@id`.
     assert!(
         dto_paths.iter().all(|path| path.starts_with("conn#")),
-        "all-None IRI models use deterministic connector fallbacks"
+        "IRI-less hand-built models keep the in-crate-only positional fallback"
     );
 }
 
@@ -455,6 +458,7 @@ fn fully_populated_projection_fixture() -> (ModelGraph, ResolvedSemantics) {
             },
         ],
         external_inputs: Vec::new(),
+        boundary_outputs: vec![],
     };
     let semantics = ResolvedSemantics {
         points: vec![
@@ -580,6 +584,7 @@ fn string_only_model() -> ModelGraph {
             to: ConnectorId(1),
         }],
         external_inputs: Vec::new(),
+        boundary_outputs: vec![],
     }
 }
 
@@ -604,6 +609,7 @@ fn duplicate_point_key_model() -> ModelGraph {
         connectors,
         connections: Vec::new(),
         external_inputs: Vec::new(),
+        boundary_outputs: vec![],
     }
 }
 

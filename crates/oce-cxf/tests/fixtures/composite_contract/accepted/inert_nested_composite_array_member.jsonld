@@ -1,0 +1,89 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member",
+      "@type": "S231:Block",
+      "S231:label": "inert_nested_composite_array_member",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.u"
+      },
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isConnectedTo": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.u"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub",
+      "@type": "S231:Block",
+      "S231:label": "sub",
+      "S231:containsBlock": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain"
+      },
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.arr"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:label": "gain",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.u"
+      },
+      "S231:hasOutput": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.y"
+      },
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.k"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.gain.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "3.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inert_nested_composite_array_member.sub.arr",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:isArray": true
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#BooleanOutputAttr",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#BooleanOutputAttr.con" },
+      "S231:hasOutput": { "@id": "http://example.org#BooleanOutputAttr.yBool" }
+    },
+    {
+      "@id": "http://example.org#BooleanOutputAttr.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Sources.Constant",
+      "S231:hasParameter": { "@id": "http://example.org#BooleanOutputAttr.con.k" },
+      "S231:hasOutput": { "@id": "http://example.org#BooleanOutputAttr.con.y" }
+    },
+    { "@id": "http://example.org#BooleanOutputAttr.con.k",
+      "S231:value": true },
+
+    { "@id": "http://example.org#BooleanOutputAttr.con.y",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:isConnectedTo": { "@id": "http://example.org#BooleanOutputAttr.yBool" } },
+
+    { "@id": "http://example.org#BooleanOutputAttr.yBool",
+      "@type": "S231:BooleanOutput",
+      "S231:isOfDataType": { "@id": "S231:Boolean" },
+      "S231:unit": "1" }
+  ]
+}

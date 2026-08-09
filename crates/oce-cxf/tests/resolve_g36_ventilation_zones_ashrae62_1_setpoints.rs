@@ -365,7 +365,7 @@ fn capstone_configuration_preserves_source_topology_grounding_and_output_fanout(
     assert_eq!(
         output_edges.len(),
         4,
-        "all four named outputs must resolve to distinct conn#N runtime edges"
+        "all four named outputs must resolve to distinct connector arena slots"
     );
     let req_breathing_air = block(&graph, ".reqBreAir");
     assert!(

@@ -45,36 +45,6 @@ impl PointSpec {
             kind: ValueKind::Boolean,
         }
     }
-
-    pub(crate) const fn real_alias(reference_name: &'static str, cdl_name: &'static str) -> Self {
-        Self {
-            reference_name,
-            cdl_name,
-            kind: ValueKind::Real,
-        }
-    }
-
-    pub(crate) const fn boolean_alias(
-        reference_name: &'static str,
-        cdl_name: &'static str,
-    ) -> Self {
-        Self {
-            reference_name,
-            cdl_name,
-            kind: ValueKind::Boolean,
-        }
-    }
-
-    pub(crate) const fn integer_alias(
-        reference_name: &'static str,
-        cdl_name: &'static str,
-    ) -> Self {
-        Self {
-            reference_name,
-            cdl_name,
-            kind: ValueKind::Integer,
-        }
-    }
 }
 
 pub(crate) struct SequenceSpec {

@@ -24,9 +24,12 @@ const SUPPLY_FAN_ON: &str =
 const FREEZE_PROTECTION_STAGE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.uFreProSta";
 
-const OUTDOOR_DAMPER_MAX_OUTPUT: &str = "conn#13";
-const RETURN_DAMPER_MAX_OUTPUT: &str = "conn#21";
-const RETURN_DAMPER_MIN_OUTPUT: &str = "conn#25";
+const OUTDOOR_DAMPER_MAX_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.outDamSwitch.y";
+const RETURN_DAMPER_MAX_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.maxRetDamSwitch.y";
+const RETURN_DAMPER_MIN_OUTPUT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_enable.minRetDamSwitch.y";
 
 const EXPECTED_TIMES: [f64; 24] = [
     0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0, 420.0, 480.0, 540.0, 600.0, 660.0, 720.0, 780.0,

@@ -36,9 +36,16 @@
 //!   `Sources.TimeTable` classes;
 //! - hand-built models never went through a document.
 //!
-//! A *partial* match is the one shape that is neither: a document that names most of a class's
-//! ports and then does not is following no convention this resolver can safely read, so it earns a
-//! [`DiagCode::PortNameMismatch`] rather than a guess.
+//! The `hasInstance` dialect never binds positionally: its derived port vectors are already
+//! signature-ordered and every identity — a member IRI or a padded `<owner>.<name>` — carries
+//! the declared port name as its local segment, so [`match_names`] answers
+//! [`Binding::Permuted`] (the identity permutation) and a scalar-only refusal upstream keeps
+//! the no-port-name classes off this path entirely (`_spec/19` R19-1/R19-13).
+//!
+//! The exporter may mix authored names with its unambiguous positional markers (`in0`, `out1`)
+//! when boundary elision has replaced one child port's own IRI. Those markers bind only to their
+//! matching signature position. Any other partial match still earns [`DiagCode::PortNameMismatch`]
+//! rather than a guess.
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{BlockInstance, ConnectorId};
@@ -78,7 +85,7 @@ pub(super) fn match_names(port_iris: &[&str], names: &[&str]) -> Binding {
     let mut order = Vec::with_capacity(names.len());
     let mut taken = vec![false; leaves.len()];
     let mut matched = 0usize;
-    for name in names {
+    for (position, name) in names.iter().enumerate() {
         // Duplicate leaves are consumed one apiece rather than both resolving to the first, so a
         // document with two ports of the same local name can never bind two signature positions to
         // one connector; the leftover falls through as unmatched and the side reports Partial.
@@ -87,7 +94,19 @@ pub(super) fn match_names(port_iris: &[&str], names: &[&str]) -> Binding {
             .enumerate()
             .find(|(k, leaf)| *leaf == name && !taken[*k])
             .map(|(k, _)| k);
-        match found {
+        match found.or_else(|| {
+            let input_marker = format!("in{position}");
+            let output_marker = format!("out{position}");
+            leaves
+                .iter()
+                .enumerate()
+                .find(|(k, leaf)| {
+                    !taken[*k]
+                        && *k == position
+                        && (**leaf == input_marker || **leaf == output_marker)
+                })
+                .map(|(k, _)| k)
+        }) {
             Some(k) => {
                 taken[k] = true;
                 order.push(k);

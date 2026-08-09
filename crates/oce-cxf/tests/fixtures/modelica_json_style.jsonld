@@ -1,0 +1,64 @@
+{
+  "comment": "Synthetic fixture authored in the modelica-json translation style (compact everything: ex:/S231: CURIEs, the S231# no-P namespace, and one S231:unit IRI-node decoration written with the declared unit: prefix) but within the engine's supported subset — ports declared via S231:hasInput/S231:hasOutput, not S231:hasInstance. Proves a document in the real emitter dialect loads clean with authored, expanded point paths, while the unit term on gai.y stays the verbatim CURIE unit:K — lexical terms are excluded from expansion even when their prefix is declared. Consumed by resolve_context_expansion.rs and oce-api's context_expansion_identity.rs. third_party/ itself deliberately gains no reader from this.",
+  "@context": {
+    "S231": "http://data.ashrae.org/S231#",
+    "qudt": "http://qudt.org/schema/qudt#",
+    "unit": "http://qudt.org/vocab/unit#",
+    "q": "http://qudt.org/vocab/quantitykind#",
+    "ex": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain",
+      "@type": "S231:Block",
+      "S231:label": "SupplyGain",
+      "S231:containsBlock": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai" },
+      "S231:hasInput": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.TSup" },
+      "S231:hasOutput": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.ySup" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.TSup",
+      "@type": "S231:RealInput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Supply temperature",
+      "S231:graphics": "Placement(transformation(extent={{-140,-20},{-100,20}})))",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.u" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai",
+      "@type": "ex:Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+      "S231:accessSpecifier": "protected",
+      "S231:description": "Fixed supply scaling",
+      "S231:graphics": "Placement(transformation(extent={{-10,-10},{10,10}})))",
+      "S231:hasParameter": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.k" },
+      "S231:hasInput": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.u" },
+      "S231:hasOutput": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.y" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.k",
+      "@type": "S231:Parameter",
+      "S231:description": "Gain factor",
+      "S231:value": { "@value": "0.5", "@type": "http://www.w3.org/2001/XMLSchema#double" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.u",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.gai.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": { "@id": "unit:K" },
+      "S231:isConnectedTo": { "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.ySup" }
+    },
+    {
+      "@id": "ex:Buildings.Controls.OBC.Examples.SupplyGain.ySup",
+      "@type": "S231:RealOutput",
+      "S231:accessSpecifier": "public",
+      "S231:description": "Scaled supply signal",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    }
+  ]
+}

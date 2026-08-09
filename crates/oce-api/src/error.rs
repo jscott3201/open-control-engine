@@ -5,6 +5,8 @@
 //! `StoreError::Backend(String)` at the seam (R-ERR-3), so the facade error surface is identical in
 //! shape regardless of which `Store` backend is wired.
 
+use oce_diag::Diagnostic;
+
 /// The single typed error returned by every fallible `oce-api` operation.
 #[derive(thiserror::Error, Debug)]
 #[non_exhaustive]
@@ -92,6 +94,48 @@ pub enum OcError {
     /// A store-seam failure — the only path any `Store` backend reaches the error type.
     #[error("store error: {0}")]
     Store(#[from] oce_store::StoreError),
+}
+
+impl OcError {
+    /// The structured diagnostics behind this failure, or an empty slice for a failure that carries
+    /// none.
+    ///
+    /// A rejected load already knows why it rejected — [`Diagnostic`] carries a stable
+    /// [`code`](Diagnostic::code), a severity, the offending subject, and a message. Two of the
+    /// variants here own that vector, and until this accessor existed only one of them could be
+    /// read through this crate: `Validate`'s payload is a struct with a public field, which Rust
+    /// reaches through a type the caller cannot name, while `Cxf`'s sits in a tuple variant, which
+    /// needs the variant path and therefore a dependency on `oce-cxf`. That asymmetry was an
+    /// accident of how the two errors happen to be shaped, and it fell on the wrong side: the
+    /// resolver arm is where the composite-contract rejections land, and its `Display` is a bare
+    /// count, so two documents refused for unrelated reasons print the same sentence.
+    ///
+    /// **The two seams filter differently, so read severity rather than position.** `Validate`
+    /// carries `shall`-level errors only — `oce-validate` drops the warnings before constructing
+    /// it. `Cxf` carries the whole finalized stream, warnings included, and the stream is sorted
+    /// into its pinned order rather than by severity, so its first element is not necessarily an
+    /// error: `composite_contract/rejected/partial_port_declaration.jsonld` leads with a warning
+    /// and carries two errors behind it. Filter with [`Diagnostic::is_error`] instead of indexing.
+    ///
+    /// **Empty means the failure carried no structured diagnostics, not that it passed.** Both
+    /// diagnostic-bearing variants are constructed only from a non-empty vector, so an empty slice
+    /// identifies the other failures — malformed JSON, a build failure, a host misuse — for which
+    /// the [`Display`](std::fmt::Display) message is the whole description. The malformed-JSON case
+    /// is pinned by `a_refusal_carrying_no_diagnostics_reports_an_empty_slice`; the rest are
+    /// unreachable or untested here and rest on the construction sites, not on a test.
+    ///
+    /// Codes are compared as strings via [`DiagCode::as_str`](oce_diag::DiagCode::as_str), which
+    /// resolves without naming the type. The enum is deliberately not re-exported: it is
+    /// `#[non_exhaustive]`, so matching it exhaustively is impossible anyway, and its membership
+    /// has moved often enough that publishing it would promise a stability nothing yet guards.
+    #[must_use]
+    pub fn diagnostics(&self) -> &[Diagnostic] {
+        match self {
+            Self::Cxf(oce_cxf::CxfError::Validation(diagnostics)) => diagnostics,
+            Self::Validate(error) => &error.diagnostics,
+            _ => &[],
+        }
+    }
 }
 
 /// Convenience result alias for facade operations.

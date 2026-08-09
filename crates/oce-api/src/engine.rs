@@ -17,7 +17,7 @@ use crate::io::IoInventory;
 use crate::loading::LoadReport;
 use crate::params::{ParamTable, RunMode};
 use crate::projection::project_resolved_model;
-use crate::sim::Outputs;
+use crate::sim::{DurableOutputBatch, Outputs};
 
 /// One logical input point's load-time store handle and model-state slots.
 #[derive(Clone, Debug)]
@@ -63,6 +63,10 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) params_dirty: bool,
     /// The typed IO inventory (`08` §6): built at load; the `set_input`/`get_output` name resolver.
     pub(crate) io: IoInventory,
+    /// The pre-built `step_realtime` store batch: identity resolved once at load from `io`'s
+    /// durable columns, values refreshed in place each step. Re-minted with `io` on every load
+    /// so it can never outlive its model.
+    pub(crate) durable_batch: DurableOutputBatch,
     /// Host-supplied UNIX epoch corresponding to model time `t = 0` for real-time writes.
     pub(crate) realtime_epoch_unix_nanos: Option<u64>,
 }
@@ -96,6 +100,7 @@ impl<S: Store> Engine<S> {
             mode: RunMode::Running,
             params_dirty: false,
             io: IoInventory::default(),
+            durable_batch: DurableOutputBatch::default(),
             realtime_epoch_unix_nanos: None,
         }
     }
@@ -143,6 +148,9 @@ impl<S: Store> Engine<S> {
         let state = allocate_state(&model, &blocks);
         let outputs = Outputs::build(&model, &state);
         let io = IoInventory::build_at_load(&model);
+        // Minted eagerly, from the same inventory the engine keeps: reload invalidation is
+        // structural (a new `io` always ships a new batch), never remembered.
+        let durable_batch = DurableOutputBatch::build_at_load(&io);
         let params = ParamTable::build_at_load(&model);
         let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
             detail: format!("semantic resolution failed: {err}"),
@@ -159,6 +167,7 @@ impl<S: Store> Engine<S> {
         self.state = state;
         self.outputs = outputs;
         self.io = io;
+        self.durable_batch = durable_batch;
         self.params = params;
         self.mode = RunMode::Running;
         self.params_dirty = false;
@@ -217,8 +226,11 @@ impl<S: Store> Engine<S> {
     ///
     /// # Errors
     /// [`OcError::NonFiniteTime`] if `t_now` is NaN or infinite; [`OcError::TimeRegression`] if
-    /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time). A rejected tick
-    /// does not advance the model. Never panics (R-ERR-1).
+    /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time);
+    /// [`OcError::Store`] if the input snapshot fails; or [`OcError::InputType`] if a store sample
+    /// does not match its connector. A time refusal changes nothing. A store-input refusal runs no
+    /// block and does not advance model time or outputs. A snapshot refusal stages nothing; a bad
+    /// sample leaves any valid samples before it in the connector image. Never panics (R-ERR-1).
     pub fn tick(&mut self, t_now: f64) -> Result<&Outputs, OcError> {
         let diag = NoopDiagnostics;
         self.tick_with(t_now, &diag)

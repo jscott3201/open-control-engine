@@ -14,27 +14,27 @@ blocks: 5
   B4 decl=4 class=CDL.Reals.Greater instance_iri=Some("http://example.org#MinLoop.gt")
     inputs=["ConnectorId(8)", "ConnectorId(9)"] outputs=["ConnectorId(10)"]
 connectors: 11
-  C0 block=B0 dir=Out type=Real decl=0 iri=None
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#MinLoop.con.y")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C1 block=B1 dir=In type=Real decl=1 iri=None
+  C1 block=B1 dir=In type=Real decl=1 iri=Some("http://example.org#MinLoop.add.u1")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C2 block=B1 dir=In type=Real decl=2 iri=None
+  C2 block=B1 dir=In type=Real decl=2 iri=Some("http://example.org#MinLoop.add.u2")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C3 block=B1 dir=Out type=Real decl=3 iri=None
+  C3 block=B1 dir=Out type=Real decl=3 iri=Some("http://example.org#MinLoop.add.y")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C4 block=B2 dir=In type=Real decl=4 iri=None
+  C4 block=B2 dir=In type=Real decl=4 iri=Some("http://example.org#MinLoop.del.u")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C5 block=B2 dir=Out type=Real decl=5 iri=None
+  C5 block=B2 dir=Out type=Real decl=5 iri=Some("http://example.org#MinLoop.del.y")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C6 block=B3 dir=In type=Real decl=6 iri=None
+  C6 block=B3 dir=In type=Real decl=6 iri=Some("http://example.org#MinLoop.gain.u")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C7 block=B3 dir=Out type=Real decl=7 iri=None
+  C7 block=B3 dir=Out type=Real decl=7 iri=Some("http://example.org#MinLoop.gain.y")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C8 block=B4 dir=In type=Real decl=8 iri=None
+  C8 block=B4 dir=In type=Real decl=8 iri=Some("http://example.org#MinLoop.gt.u1")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
   C9 block=B4 dir=In type=Real decl=9 iri=Some("http://example.org#MinLoop.uSet")
     attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
-  C10 block=B4 dir=Out type=Boolean decl=10 iri=None
+  C10 block=B4 dir=Out type=Boolean decl=10 iri=Some("http://example.org#MinLoop.gt.y")
     attrs=Boolean
 connections: 5
   C0 -> C1

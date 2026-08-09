@@ -50,10 +50,12 @@ whole reason the type exists.
 
 **The caveat that will cost you ten minutes:** `catalog()` lives in `oce-blocks`, and **`oce-api`
 does not re-export it**. Reading `crates/oce-api/src/lib.rs`, the string `catalog` does not appear
-anywhere in `crates/oce-api/src/` — the `pub use` block at `crates/oce-api/src/lib.rs:49-76`
+anywhere in `crates/oce-api/src/` — the `pub use` block at `crates/oce-api/src/lib.rs:50-77`
 re-exports `Engine`, the error types, `ExportReport`, IO and sim types, `LoadReport`, the parameter
-table, `Topology`, `oce_diag::Diagnostic`, `oce_model::{ConnectorId, Value, ValueType}`, and
-`oce_store` — and nothing from `oce_blocks`. `oce-api` depends on `oce-blocks`
+table, the topology view (`Topology`, `TopologyBlock`, `TopologyConnection`, `DeclaredOutput`,
+`PassThroughPair`), `oce_diag::Diagnostic`, `oce_model::{ConnectorId, Value, ValueType}`, and
+`oce_store` (including `SemanticQuery`) — and nothing from `oce_blocks`. `oce-api` depends on
+`oce-blocks`
 (`crates/oce-api/Cargo.toml:29`) and uses it internally, but a consumer depending only on `oce-api`
 must add `oce-blocks` as its own dependency to call `catalog()`.
 
@@ -110,16 +112,16 @@ elaboration — parameter propagation, expression folding, conditional-instance 
 (`crates/oce-flatten/src/lib.rs:2-20`). If your sequence exists only as `.mo`, something upstream has
 to produce CXF first.
 
-## 46 fixtures is not 46 sequences
+## 47 fixture documents is not 47 sequences
 
 `crates/oce-conformance/tests/fixtures/golden/g36_traces/` holds 46 `.csv` traces and 46 matching
-`.prov.json` provenance records — 92 files. The same 46 names are pinned as
-`EXPECTED_G36_FIXTURES` at `crates/oce-cxf/tests/export_g36_roundtrip.rs:44`, and they are exactly
-the 43 runtime-sequence rows plus the 3 fixture-only rows from the G36 catalog: the two name sets
-match with no leftovers on either side.
+`.prov.json` provenance records — 92 files. `EXPECTED_G36_FIXTURES` at
+`crates/oce-cxf/tests/export_g36_roundtrip.rs:46` pins 47 CXF documents: those 46 catalog fixtures
+plus `member_list_interface.jsonld`, a resolver contract fixture with no conformance trace or G36
+catalog claim.
 
-**These are conformance fixtures — configurations — not 46 distinct G36 sequences.** Across the 43
-runtime variants, the 31 distinct canonical class paths distribute like this:
+**The 46 catalog fixtures are configurations, not 46 distinct G36 sequences.** Across the 43 runtime
+variants, the 31 distinct canonical class paths distribute like this:
 
 - 29 class paths appear **once**;
 - `…Economizers.Subsequences.Modulations.ReturnFan` appears **twice**;
@@ -129,9 +131,9 @@ Those 12 are the air-economizer high-limit family: 4 ASHRAE 90.1 variants (`diff
 dry-bulb at 18 / 21 / 24) and 8 Title 24 variants (4 differential offsets and fixed dry-bulb at 21 /
 22 / 23 / 24). Twelve fixtures, one class, twelve parameterizations.
 
-So the honest reading of "46" is: **46 checked-in configurations covering 31 canonical G36 class
-paths plus 3 non-canonical fragments.** Any count of distinct sequences is smaller than 46, and the
-public-facing number should say which of the two it means.
+So the honest reading is: **47 checked-in CXF documents comprise 46 catalog configurations covering
+31 canonical G36 class paths plus 3 non-canonical fragments, and one resolver contract fixture.**
+Any count of distinct sequences is smaller, and a public-facing number must say which set it means.
 
 ## What the coverage is evidence *of*
 

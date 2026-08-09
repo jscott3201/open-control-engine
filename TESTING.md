@@ -62,7 +62,12 @@ comparison that fails if even one bit differs.
   scrutinized change, not noise.
 - **Compare floats by bits, never with `==` or an epsilon.** Use `Value::bit_eq` (which compares
   `f64` via `to_bits`, so `NaN == NaN` and `+0.0 != -0.0` as determinism demands). An epsilon
-  comparison would mask exactly the drift a golden test exists to catch.
+  comparison would mask exactly the drift a golden test exists to catch. One named exception: the
+  21 transcendental, psychrometric, and solar Real signal goldens are compared under the documented
+  aligned-tolerance band (`crates/oce-conformance/src/aligned.rs:218-245`, tolerances pinned at
+  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`). That exception is a property of
+  their libm-dependent outputs, not a license for epsilon anywhere else — every other golden stays
+  bit-exact.
 - **No snapshot magic.** Goldens are explicit files compared by explicit code — reviewable and
   obvious. If a golden needs regenerating, do it deliberately and explain the diff in the PR.
 
@@ -155,7 +160,11 @@ case" is itself a finding to resolve, not a pass.
 - **Test location:** inline `#[cfg(test)] mod tests;` for unit tests; `crates/<crate>/tests/` for
   integration tests; `crates/<crate>/tests/fixtures/` for input + golden files.
 - **Float comparison:** `Value::bit_eq` (or `f64::to_bits`) — **never** `==` or `(a-b).abs() < ε`
-  in an engine assertion.
+  in an engine assertion. Sole exception: the 21 transcendental, psychrometric, and solar Real
+  signal goldens, whose libm-dependent outputs use the documented aligned-tolerance band
+  (`crates/oce-conformance/src/aligned.rs:218-245`,
+  `crates/oce-conformance/tests/block_harness/mod.rs:323-332`) — not a license for epsilon
+  anywhere else.
 - **Error assertions:** match the exact variant (`assert!(matches!(err, CxfError::Json(_)))`),
   not `is_err()`.
 - **No time/randomness in tests:** deterministic inputs only; no wall-clock, no RNG.
@@ -183,14 +192,23 @@ pass on such a change, run the suite yourself:
 bash .agents/gate.sh full
 ```
 
-**Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.133`).
+**Runner: [`cargo-nextest`](https://nexte.st/)** (pinned `0.9.143`; the repository config rejects an
+older binary).
 
 ```bash
-cargo nextest run --workspace            # unit + integration tests (the whole workspace)
-cargo nextest run --profile ci           # reproduce the release gate's profile locally
-cargo nextest run --profile ci --cargo-profile release  # release-codegen panic-freedom pass
-cargo test --workspace --doc             # doctests — nextest CANNOT run these (separate step)
+cargo nextest show-config version         # verify the installed runner satisfies the repository
+cargo nextest run --workspace --locked --no-tests=fail
+cargo nextest run --workspace --locked --profile ci --no-tests=fail
+cargo nextest run --workspace --locked --profile ci-release --cargo-profile release --no-tests=fail
+cargo test --workspace --doc --locked     # doctests — nextest CANNOT run these (separate step)
 ```
+
+The default profile is fail-fast for local feedback. Automated profiles run every selected test and
+retry none. Ordinary tests terminate after 120 seconds; the public-API profiles allow 10 minutes for
+their nested nightly rustdoc builds. All profiles fail when a child process retains inherited output
+handles for more than two seconds, and bound a whole run to 15 minutes. `ci-release` inherits `ci` so
+runner semantics cannot drift between debug and release codegen. Both write JUnit under
+`target/nextest/<profile>/junit.xml`; CI uploads those files for 14 days.
 
 The public-api surface gates need the gate-only nightly and run in `release-gate.yml`. Run them
 in **the release gate's own form** — the `NIGHTLY` value is pinned at `release-gate.yml`'s `env:`
@@ -199,14 +217,14 @@ block, so read it from there rather than copying the date:
 ```bash
 OCE_PUBLIC_API_NIGHTLY=<release-gate.yml NIGHTLY> OCE_REQUIRE_SURFACE_CHECK=1 \
   cargo nextest run -p oce-api -E 'test(public_api_surface_matches_blessed_baseline)' \
-  --profile public-api --locked --no-tests=fail
+  --profile public-api-oce-api --locked --no-tests=fail
 ```
 
 `--no-tests=fail` is what gives it teeth: under raw `cargo test`, a surface test that is renamed,
 deleted, `#[ignore]`d or filtered out disappears silently and the run still passes green.
-`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. Swap `-p oce-api`
-for `-p oce-store` for the other baseline — keep the package selectors in separate invocations,
-which is what preserves vanish-to-RED for the re-exported port surface.
+`OCE_REQUIRE_SURFACE_CHECK=1` likewise turns an unarmed skip into a failure. For the other baseline,
+swap both `-p oce-api` → `-p oce-store` and `--profile public-api-oce-api` →
+`--profile public-api-oce-store`. Separate invocations preserve vanish-to-RED and separate reports.
 
 > nextest does **not** run doctests (a stable-Rust limitation). A complete local/CI test pass is
 > therefore always **two commands**: `cargo nextest run` **and** `cargo test --doc`.
@@ -215,9 +233,9 @@ which is what preserves vanish-to-RED for the re-exported port surface.
 
 One gate step tests **no shipping code at all**, and it is worth understanding why it still gates.
 
-`oce-cxf::fixture_port_order` checks that the 46 G36 fixture documents list their block ports in
-upstream CDL **declaration order**. It derives that order at test time by parsing 132 vendored
-upstream Modelica sources in
+`oce-cxf::fixture_port_order` sweeps 47 CXF documents and checks every authored `hasInput` and
+`hasOutput` list against upstream CDL **declaration order**. It derives that order at test time by
+parsing 132 vendored upstream Modelica sources in
 [`third_party/modelica-buildings-cdl/`](third_party/modelica-buildings-cdl/README.md), copied
 verbatim at the pinned reference commit. There is no catalog artifact in between, deliberately: a
 checked-in table has to be reviewed entry by entry against upstream, which nobody does reliably —
@@ -229,15 +247,16 @@ the upstream fidelity of the `upstream-buildings` files. The derivation is code 
 rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
-fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and Tier-A
-oracles are all derived from them, so a transposed fixture fails nothing — it makes the entire
-suite validate the wrong sequence, silently and permanently.
+46 catalog fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and
+Tier-A oracles are all derived from them, so a transposed catalog fixture fails nothing — it makes
+the entire suite validate the wrong sequence, silently and permanently.
 
 Nothing else can see it. The resolver assigns port positions from document array order; the arity
 guard checks counts and `oce-validate`'s `check_ports_dir` checks each position's *kind*. A
 transposition between two ports of the **same kind** passes both. `Reals.PID` with `u_s`/`u_m`
 swapped inverts the control action. **30 of 136 blocks are exposed; 282 instances live across 33
-of the 46 fixtures.**
+of the 46 catalog fixtures.** The 47th document is the `member_list_interface.jsonld` resolver
+contract fixture; its `hasInstance`-derived ports add no comparison to this audit.
 
 It gates because its value is entirely future-tense — the corpus is verified clean, so it stays
 silent until someone edits a fixture, which is exactly when a person will not remember to run it.
@@ -248,7 +267,7 @@ cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 ```
 
 **Expect it to fail when you legitimately add a fixture.** Seven volume pins are deliberate —
-`fixtures == 46`, `checked == 2129`, `skipped_array == 37`, `compared == 104` and
+`fixtures == 47`, `checked == 2129`, `skipped_array == 37`, `compared == 104` and
 `exempt_array == 28` on the registry cross-check, and on the vendored corpus itself
 `classes == 132` and `175 inputs / 144 outputs`. A change that stops discovering ports would
 otherwise leave the comparison vacuously green, which is the exact failure mode the check exists

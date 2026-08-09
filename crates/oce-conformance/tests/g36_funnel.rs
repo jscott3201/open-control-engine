@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use oce_conformance::{
     CombiTimeTable, ComparisonMode, ComparisonResult, DriveCadence, DriverInputReplay,
     DriverOptions, IndicatorPattern, PointEnd, PointMapEntry, ReferenceSpec, Tolerances, ValueKind,
-    VerifyConfig, drive_trace_with_options,
+    VerifyConfig, drive_trace_with_options, escape_regex,
 };
 use serde_json::Value;
 
@@ -101,9 +101,15 @@ fn options_for(spec: &SequenceSpec, comparison: ComparisonMode) -> DriverOptions
 }
 
 fn vav_mask_indicators() -> Vec<IndicatorPattern> {
+    // Anchored AND escaped: authored point paths carry `.` segments, and an unescaped dot can
+    // silently select a point the pattern never named.
     vec![IndicatorPattern {
-        pattern: format!("^({VAV_AIRFLOW_SETPOINT_RUNTIME}|{VAV_DAMPER_COMMAND_RUNTIME})$"),
-        signals: vec![VAV_HEATING_ENABLED_RUNTIME.to_string()],
+        pattern: format!(
+            "^({}|{})$",
+            escape_regex(VAV_AIRFLOW_SETPOINT_PATH),
+            escape_regex(VAV_DAMPER_COMMAND_PATH)
+        ),
+        signals: vec![VAV_HEATING_ENABLED_PATH.to_string()],
     }]
 }
 
@@ -223,7 +229,7 @@ fn assert_masked_funnel_comparisons(
 fn assert_vav_heating_guard_is_non_vacuous(run: &oce_conformance::DriverRun) {
     let indicator = run
         .trace
-        .column(VAV_HEATING_ENABLED_RUNTIME)
+        .column(VAV_HEATING_ENABLED_PATH)
         .expect("captured VAV heating indicator");
     assert_eq!(
         run.trace.times,

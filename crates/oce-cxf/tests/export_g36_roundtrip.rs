@@ -1,10 +1,11 @@
-//! Export RT-2 over the **whole** G36 fixture corpus, not a hand-picked slice of it.
+//! Export RT-2 over the **whole** swept CXF corpus, not a hand-picked slice of it.
 //!
-//! Eight of the 46 fixtures used to be covered by eight individually-named tests. The other 38
+//! Eight of the 47 documents used to be covered by eight individually-named tests. The other 39
 //! were exercised by nothing on the export side, and — this is the part that made the gap
-//! self-perpetuating — nothing tied the directory to any test, so a 47th fixture would have landed
+//! self-perpetuating — nothing tied the directory to any test, so a new document would have landed
 //! uncovered with no signal. `EXPECTED_G36_FIXTURES` plus the listing assertion closes that: a new
-//! fixture is either added to the list and swept, or CI goes red naming it.
+//! document is either added to the list and swept, or CI goes red naming it. The set is 46 G36
+//! catalog fixtures plus one resolver-contract document.
 //!
 //! Two classes, distinguished at runtime by whether the export deferred anything, because the
 //! right assertion differs:
@@ -16,8 +17,8 @@
 //!   design and whole-graph render equality is false on purpose (see `export`'s rustdoc). RT-2
 //!   holds over the **survivor cone**, which is what [`assert_survivor_cone_rt2`] asserts.
 //!
-//! Note what the split is NOT. No fixture is outside the export subset: 46/46 import with zero
-//! diagnostics and 46/46 export. There are zero enum-typed *connectors* in the entire corpus —
+//! Note what the split is NOT. No swept document is outside the export subset: 47/47 import with
+//! zero diagnostics and 47/47 export. There are zero enum-typed *connectors* in the entire corpus —
 //! every deferral here comes from a parameter — and composites are flattened and arrays
 //! pre-flattened before export ever sees the graph.
 //!
@@ -37,6 +38,7 @@ use oce_model::{
     ValueType,
 };
 use render::{render, render_attrs, render_value};
+use serde_json::Value as JsonValue;
 
 /// Every `*.jsonld` under `tests/fixtures/g36/`, sorted. Checked in so that adding a fixture is a
 /// deliberate, reviewed act rather than a silent expansion — and so that adding one without
@@ -62,6 +64,7 @@ const EXPECTED_G36_FIXTURES: &[&str] = &[
     "generic_air_economizer_high_limits_title24_fixed_23.jsonld",
     "generic_air_economizer_high_limits_title24_fixed_24.jsonld",
     "generic_time_suppression.jsonld",
+    "member_list_interface.jsonld",
     "multizone_vav_economizer_controller_single_damper_relief_damper_fixed_21.jsonld",
     "multizone_vav_economizer_enable.jsonld",
     "multizone_vav_economizer_limits_common.jsonld",
@@ -123,6 +126,56 @@ fn import_ok(fixture: &str, bytes: &[u8]) -> ModelGraph {
 fn export_ok(fixture: &str, g: &ModelGraph) -> ExportReport {
     export_with_report(g)
         .unwrap_or_else(|e| panic!("`{fixture}` must be inside the export subset: {e:?}"))
+}
+
+fn top_composite(doc: &JsonValue) -> &JsonValue {
+    doc["@graph"]
+        .as_array()
+        .expect("@graph array")
+        .iter()
+        .find(|node| node.get("S231:containsBlock").is_some())
+        .expect("top composite")
+}
+
+fn reference_ids(value: Option<&JsonValue>) -> BTreeSet<String> {
+    let Some(value) = value else {
+        return BTreeSet::new();
+    };
+    let values = value
+        .as_array()
+        .map_or_else(|| vec![value], |items| items.iter().collect());
+    values
+        .into_iter()
+        .map(|item| item["@id"].as_str().expect("reference @id").to_owned())
+        .collect()
+}
+
+fn assert_authored_boundary_output_contract(
+    fixture: &str,
+    source: &[u8],
+    graph: &ModelGraph,
+    report: &ExportReport,
+) {
+    let source_doc: JsonValue = serde_json::from_slice(source).expect("source JSON");
+    let export_doc: JsonValue = serde_json::from_slice(&report.bytes).expect("export JSON");
+    let mut expected = reference_ids(top_composite(&source_doc).get("S231:hasOutput"));
+    let deferred = deferred_subjects(report);
+    for output in &graph.boundary_outputs {
+        let connector = &graph.connectors[output.source.0 as usize];
+        let owner = &graph.blocks[connector.block.0 as usize];
+        if owner
+            .instance_iri
+            .as_deref()
+            .is_some_and(|iri| deferred.contains(iri))
+        {
+            expected.remove(output.iri.as_ref());
+        }
+    }
+    let actual = reference_ids(top_composite(&export_doc).get("S231:hasOutput"));
+    assert_eq!(
+        actual, expected,
+        "`{fixture}` authored boundary-output contract"
+    );
 }
 
 /// The blocks a report says were deferred, read off the warning subjects.
@@ -484,7 +537,7 @@ fn the_least_closure_excludes_a_cycle_no_enum_root_reaches() {
                 to: ConnectorId(3),
             }, // spinB -> spinA
         ],
-        external_inputs: vec![],
+        ..ModelGraph::new()
     };
 
     let closure = least_deferred_closure(&g);
@@ -522,12 +575,55 @@ fn the_fixture_directory_and_the_swept_list_stay_one_to_one() {
 fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     let mut enum_free = 0usize;
     let mut deferring = 0usize;
+    let mut authored_outputs = 0usize;
+    let mut represented_outputs = 0usize;
+    let mut non_surviving_outputs = 0usize;
+    let mut shared_output_drivers = Vec::new();
+    let mut other_root_keys = BTreeSet::new();
+    let mut lost_root_keys = BTreeSet::new();
 
     for fixture in EXPECTED_G36_FIXTURES {
         let bytes = std::fs::read(g36_dir().join(fixture))
             .unwrap_or_else(|e| panic!("`{fixture}` must be readable: {e}"));
         let g1 = import_ok(fixture, &bytes);
+        let source_doc: JsonValue = serde_json::from_slice(&bytes).expect("source JSON");
+        authored_outputs += reference_ids(top_composite(&source_doc).get("S231:hasOutput")).len();
+        represented_outputs += g1.boundary_outputs.len();
+        let mut by_source: BTreeMap<ConnectorId, usize> = BTreeMap::new();
+        for output in &g1.boundary_outputs {
+            *by_source.entry(output.source).or_default() += 1;
+        }
+        for (source, count) in by_source.into_iter().filter(|(_, count)| *count > 1) {
+            let connector = &g1.connectors[source.0 as usize];
+            let owner = g1.blocks[connector.block.0 as usize]
+                .instance_iri
+                .as_deref()
+                .expect("imported owner IRI");
+            shared_output_drivers.push(format!("{fixture}:{owner}:source={}:{count}", source.0));
+        }
         let report = export_ok(fixture, &g1);
+        assert_authored_boundary_output_contract(fixture, &bytes, &g1, &report);
+        let export_doc: JsonValue = serde_json::from_slice(&report.bytes).expect("export JSON");
+        let exported_root = top_composite(&export_doc);
+        // Volume companion to the per-fixture set equality above: each non-surviving declared
+        // output is already ATTRIBUTED to a resolved deferral owner there, so this aggregate is
+        // a corpus-drift pin only — deliberately not an "unattributed == 0" line, which could
+        // never fail beside the set equality. The per-key attr comparison over the 97 surviving
+        // (61 attr-carrying) lives in `export_declared_output_attrs.rs`.
+        non_surviving_outputs += reference_ids(top_composite(&source_doc).get("S231:hasOutput"))
+            .difference(&reference_ids(exported_root.get("S231:hasOutput")))
+            .count();
+        for key in top_composite(&source_doc)
+            .as_object()
+            .expect("root object")
+            .keys()
+            .filter(|key| key.as_str() != "S231:hasOutput" && key.as_str() != "S231:label")
+        {
+            other_root_keys.insert(key.clone());
+            if exported_root.get(key).is_none() {
+                lost_root_keys.insert(key.clone());
+            }
+        }
 
         // The corpus carries no enum-typed connectors at all; every deferral is on the parameter
         // axis. Pinned because it is what makes the two-branch split exhaustive.
@@ -555,6 +651,41 @@ fn every_g36_fixture_reaches_its_rt2_fixpoint() {
     assert!(
         enum_free > 0 && deferring > 0,
         "both branches must be exercised, got enum-free={enum_free} deferring={deferring}"
+    );
+    assert_eq!(authored_outputs, 132, "top-composite authored outputs");
+    assert_eq!(
+        represented_outputs, 130,
+        "child-output-driven boundary outputs"
+    );
+    assert_eq!(
+        non_surviving_outputs, 35,
+        "deferral-attributed declared outputs absent from the exported root hasOutput"
+    );
+    assert_eq!(
+        shared_output_drivers.len(),
+        1,
+        "exactly one corpus connector drives multiple top-level outputs: {shared_output_drivers:?}"
+    );
+    assert_eq!(
+        other_root_keys,
+        BTreeSet::from([
+            "@id".to_owned(),
+            "@type".to_owned(),
+            "S231:containsBlock".to_owned(),
+            "S231:hasConstant".to_owned(),
+            "S231:hasInput".to_owned(),
+            "S231:hasParameter".to_owned(),
+        ]),
+        "all other import-surviving root keys are explicitly swept"
+    );
+    assert_eq!(
+        lost_root_keys,
+        BTreeSet::from([
+            "S231:hasConstant".to_owned(),
+            "S231:hasInput".to_owned(),
+            "S231:hasParameter".to_owned(),
+        ]),
+        "the root-key blind-spot inventory changed"
     );
 }
 

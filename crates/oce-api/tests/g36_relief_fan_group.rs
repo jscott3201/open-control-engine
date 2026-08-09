@@ -20,9 +20,20 @@ const PROOF_2: &str = "http://example.org#g36.source.multizone_vav_relief_fan_gr
 const PROOF_3: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_3";
 const PROOF_4: &str = "http://example.org#g36.source.multizone_vav_relief_fan_group.u1RelFan_4";
 
-const AVERAGED_PRESSURE: &str = "conn#19";
-const RELIEF_FAN_SPEEDS: [&str; 4] = ["conn#417", "conn#420", "conn#423", "conn#426"];
-const RELIEF_DAMPERS: [&str; 4] = ["conn#519", "conn#522", "conn#525", "conn#528"];
+const AVERAGED_PRESSURE: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.movMea.y";
+const RELIEF_FAN_SPEEDS: [&str; 4] = [
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_1.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_2.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_3.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.pro3_4.y",
+];
+const RELIEF_DAMPERS: [&str; 4] = [
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_1.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_2.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_3.y",
+    "http://example.org#g36.source.multizone_vav_relief_fan_group.mul_4.y",
+];
 
 const SAMPLE_STEP_SECONDS: u32 = 15;
 const SAMPLE_STEP: f64 = SAMPLE_STEP_SECONDS as f64;

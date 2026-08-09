@@ -69,6 +69,8 @@ pub enum DiagCode {
     // --- Resolve-time `shall`-errors (oce-cxf, doc 04 §9.1) ---
     /// Two `@graph` nodes share an `@id` (§9.1.1).
     DuplicateId,
+    /// A connector node in a CXF document has no authored `@id`.
+    MissingConnectorId,
     /// An `@id` referenced by an edge / `hasInstance` / `containsBlock` / `isConnectedTo` /
     /// `isOfDataType` is absent from both the document and the libraries (§9.1.2).
     UnresolvedReference,
@@ -108,12 +110,40 @@ pub enum DiagCode {
     PortNameMismatch,
     /// The JSON-LD document was structurally malformed for CXF (e.g. missing `@graph`, bad shape).
     MalformedDocument,
+    /// An instance's `S231:hasInstance` member list disagrees with the node's own declared
+    /// interface routes: a class-declared name rides the list while no
+    /// `hasInput`/`hasOutput`/`hasParameter`/`hasConstant` route of the node declares it
+    /// (Warning — the shape is legal CXF), or one parameter name carries different values on
+    /// the two routes (Error — two values for one name state a contradiction). Compared
+    /// one-directional, list minus own, over names the resolved class declares.
+    ConflictingInterfaceDeclaration,
+    /// A root-declared boundary output's IRI is also an existing connector identity — the same
+    /// name would answer as two different points (subject = the declared IRI). Two authored
+    /// forms produce it: the root's `hasOutput` referencing a child instance's port node, and
+    /// one IRI listed in both the root's `hasInput` and `hasOutput`. Refused at load: the
+    /// identity-level analogue of [`DiagCode::SingleAssignment`]'s value-level refusal.
+    BoundaryOutputShadowsConnector,
+    /// An identity token — a node `@id` or a followed structural reference — has no canonical
+    /// absolute form. Three routes refuse: the token carries no declared `@context` prefix
+    /// and no valid RFC 3986 scheme, or a valid scheme whose remainder is empty or
+    /// whitespace-bearing (`ab:`, `ab:c d`); its first `:` is followed by `//` — never
+    /// CURIE-expanded, even under a declared prefix — and it has no valid scheme
+    /// (`2024://x` with `2024` bound); or its declared prefix expands to a joined IRI
+    /// failing the same remainder rule (a whitespace-bearing suffix, `ex:c d` with `ex`
+    /// bound). The document declares no `@base` to resolve the token against, so it cannot
+    /// be expanded to the canonical absolute IRI that keys the model (doc 04 R-3). The
+    /// no-`@base` clause holds by construction:
+    /// context-shape validation runs before slot expansion, and a document declaring `@base`
+    /// is refused there as [`DiagCode::NonSubsetConstruct`] before this code can fire. Typing
+    /// tokens (`@type`, `isOfDataType`) are never refused with this code: their no-match paths
+    /// ([`DiagCode::ClassNotFound`], [`DiagCode::UnresolvedReference`]) own junk there.
+    RelativeIri,
 
     // --- Validate-time `shall`-errors (oce-validate, the deep gate) ---
     /// An input's in-degree was not exactly 1 and it is not an external boundary input
     /// (§9.1.5 / §7.10).
     SingleAssignment,
-    /// A connection's `from` was not an output, or its `to` not an input (§9.1.6).
+    /// A connection endpoint or declared boundary-output source has the wrong direction (§9.1.6).
     DirectionMismatch,
     /// A connection joined connectors of different value types — no implicit coercion (§9.1.6).
     TypeMismatch,
@@ -122,18 +152,20 @@ pub enum DiagCode {
     /// scoped): this is a connector-vs-block-signature mismatch the resolver cannot catch because
     /// it derives the connector type independently of the class.
     PortKindMismatch,
-    /// Two connected connectors both declared a unit/quantity and they differ — §7.10 hard error.
+    /// Connected cluster members declared different units or quantities — §7.10 hard error.
     UnitQuantityMismatch,
-    /// Two connected connectors both declared a `min`/`max` bound and they differ — §7.10 R13.1
+    /// Connected cluster members declared different `min`/`max` bounds — §7.10 R13.1
     /// hard error (the bound analogue of [`DiagCode::UnitQuantityMismatch`]).
     BoundMismatch,
     /// A block instance omitted a parameter that the class requires at build time.
     MissingRequiredParameter,
+    /// A required block parameter has a scalar kind the block constructor does not consume.
+    ParameterKindMismatch,
     /// A block parameter violates a class-level range or ordering rule.
     ParameterOutOfRange,
 
     // --- Advisory `should`-warnings (doc 04 §9) ---
-    /// Connected connectors declared divergent `displayUnit`s — non-computational, warning only
+    /// Connected cluster members declared divergent `displayUnit`s — non-computational, warning only
     /// (§7.17).
     DisplayUnitDivergence,
     /// An `S231:Analog*` connector was coerced to `Real` (§8.2 coercion policy) — advisory.
@@ -142,6 +174,12 @@ pub enum DiagCode {
     MissingFmuPath,
     /// An unknown `S231:` property key was preserved for forward-compatibility (§9) — advisory.
     UnknownProperty,
+    /// A root-declared boundary output's node exists but no internal connector or boundary
+    /// input drives it (subject = the declared IRI). Advisory: CDL does not require a top
+    /// composite's declared output to be internally driven, but the undriven declaration is
+    /// otherwise invisible — it enters no point surface and vanishes from re-export — so the
+    /// warning is its only representation.
+    UndrivenBoundaryOutput,
 
     // --- Export-time `shall`-errors (oce-cxf exporter) ---
     /// CXF export was requested but the exporter has not landed; the whole operation is rejected,
@@ -160,6 +198,7 @@ impl DiagCode {
     pub fn as_str(self) -> &'static str {
         match self {
             DiagCode::DuplicateId => "duplicate-id",
+            DiagCode::MissingConnectorId => "missing-connector-id",
             DiagCode::UnresolvedReference => "unresolved-reference",
             DiagCode::ClassNotFound => "class-not-found",
             DiagCode::OverlayTargetNotFound => "overlay-target-not-found",
@@ -175,6 +214,9 @@ impl DiagCode {
             DiagCode::UnresolvedPolymorphism => "unresolved-polymorphism",
             DiagCode::NonSubsetConstruct => "non-subset-construct",
             DiagCode::MalformedDocument => "malformed-document",
+            DiagCode::ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
+            DiagCode::BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
+            DiagCode::RelativeIri => "relative-iri",
             DiagCode::SingleAssignment => "single-assignment",
             DiagCode::DirectionMismatch => "direction-mismatch",
             DiagCode::TypeMismatch => "type-mismatch",
@@ -183,11 +225,13 @@ impl DiagCode {
             DiagCode::UnitQuantityMismatch => "unit-quantity-mismatch",
             DiagCode::BoundMismatch => "bound-mismatch",
             DiagCode::MissingRequiredParameter => "missing-required-parameter",
+            DiagCode::ParameterKindMismatch => "parameter-kind-mismatch",
             DiagCode::ParameterOutOfRange => "parameter-out-of-range",
             DiagCode::DisplayUnitDivergence => "display-unit-divergence",
             DiagCode::AnalogCoercedToReal => "analog-coerced-to-real",
             DiagCode::MissingFmuPath => "missing-fmu-path",
             DiagCode::UnknownProperty => "unknown-property",
+            DiagCode::UndrivenBoundaryOutput => "undriven-boundary-output",
             DiagCode::ExportUnsupported => "export-unsupported",
             DiagCode::ExportDeferred => "export-deferred",
         }
@@ -310,6 +354,7 @@ mod tests {
 
     pinned_diag_code_strings! {
         DuplicateId => "duplicate-id",
+        MissingConnectorId => "missing-connector-id",
         UnresolvedReference => "unresolved-reference",
         ClassNotFound => "class-not-found",
         OverlayTargetNotFound => "overlay-target-not-found",
@@ -326,6 +371,9 @@ mod tests {
         NonSubsetConstruct => "non-subset-construct",
         PortNameMismatch => "port-name-mismatch",
         MalformedDocument => "malformed-document",
+        ConflictingInterfaceDeclaration => "conflicting-interface-declaration",
+        BoundaryOutputShadowsConnector => "boundary-output-shadows-connector",
+        RelativeIri => "relative-iri",
         SingleAssignment => "single-assignment",
         DirectionMismatch => "direction-mismatch",
         TypeMismatch => "type-mismatch",
@@ -333,11 +381,13 @@ mod tests {
         UnitQuantityMismatch => "unit-quantity-mismatch",
         BoundMismatch => "bound-mismatch",
         MissingRequiredParameter => "missing-required-parameter",
+        ParameterKindMismatch => "parameter-kind-mismatch",
         ParameterOutOfRange => "parameter-out-of-range",
         DisplayUnitDivergence => "display-unit-divergence",
         AnalogCoercedToReal => "analog-coerced-to-real",
         MissingFmuPath => "missing-fmu-path",
         UnknownProperty => "unknown-property",
+        UndrivenBoundaryOutput => "undriven-boundary-output",
         ExportUnsupported => "export-unsupported",
         ExportDeferred => "export-deferred",
     }

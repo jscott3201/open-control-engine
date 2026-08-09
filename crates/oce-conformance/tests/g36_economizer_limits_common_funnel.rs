@@ -28,12 +28,18 @@ const OPERATION_MODE: &str =
 const SUPPLY_FAN_STATUS: &str =
     "http://example.org#g36.source.multizone_vav_economizer_limits_common.u1SupFan";
 
-const OUTDOOR_DAMPER_MIN_LIMIT: &str = "conn#16";
-const OUTDOOR_DAMPER_MAX_LIMIT: &str = "conn#30";
-const RETURN_DAMPER_MIN_LIMIT: &str = "conn#26";
-const RETURN_DAMPER_MAX_LIMIT: &str = "conn#22";
-const RETURN_DAMPER_PHYSICAL_MAX_LIMIT: &str = "conn#7";
-const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: &str = "conn#39";
+const OUTDOOR_DAMPER_MIN_LIMIT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minOutDam.y";
+const OUTDOOR_DAMPER_MAX_LIMIT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.outDamPosMaxSwitch.y";
+const RETURN_DAMPER_MIN_LIMIT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPosMinSwitch.y";
+const RETURN_DAMPER_MAX_LIMIT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.minRetDam.y";
+const RETURN_DAMPER_PHYSICAL_MAX_LIMIT: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.retDamPhyPosMaxSig.y";
+const MINIMUM_OUTDOOR_AIR_LOOP_ENABLED: &str =
+    "http://example.org#g36.source.multizone_vav_economizer_limits_common.and3.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("outdoor_airflow_normalized", OUTDOOR_AIRFLOW_NORMALIZED),

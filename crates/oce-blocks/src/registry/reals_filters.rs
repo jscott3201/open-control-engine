@@ -42,6 +42,7 @@ pub(super) const ENTRIES: &[RegistryEntry] = &[
 pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[
     ParamRule::Required {
         name: "raisingSlewRate",
+        kind: oce_model::ValueType::Real,
     },
     ParamRule::RealGreaterThan {
         name: "Td",
@@ -51,7 +52,10 @@ pub(super) const LIMIT_SLEW_RATE_PARAM_RULES: &[ParamRule] = &[
 
 /// Upstream `MovingAverage.mo` (pin `a131864`) declares `delta(min=1E-5)` with NO default.
 pub(super) const MOVING_AVERAGE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "delta" },
+    ParamRule::Required {
+        name: "delta",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealGreaterThan {
         name: "delta",
         min: 0.0,

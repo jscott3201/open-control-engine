@@ -2,7 +2,7 @@
 
 use oce_conformance::{
     ConfigError, IndicatorPattern, OutputPattern, PartialTolerances, PointEnd, PointMapEntry,
-    ReferenceSpec, Tolerances, VerifyConfig,
+    ReferenceSpec, Tolerances, VerifyConfig, escape_regex,
 };
 
 fn valid_config_json() -> &'static str {
@@ -280,6 +280,65 @@ fn verify_config_preserves_ordered_duplicate_patterns_and_cascades_matches() {
             .indicator_signals_for_output("TSupSet.y")
             .expect("regexes compile"),
         ["fanSta.y".to_string(), "mode.y".to_string()]
+    );
+}
+
+/// A config whose single per-output override carries `pattern`, consumed through
+/// `tolerance_for_output` — the same machinery every point-keyed pattern in the suite feeds.
+fn config_with_output_pattern(pattern: String) -> VerifyConfig {
+    VerifyConfig {
+        references: Vec::new(),
+        tolerances: Tolerances::default(),
+        outputs: vec![OutputPattern {
+            pattern,
+            tolerances: PartialTolerances {
+                atoly: Some(0.5),
+                ..PartialTolerances::default()
+            },
+        }],
+        indicators: Vec::new(),
+        sampling: None,
+        run_controller: true,
+    }
+}
+
+#[test]
+fn escaped_anchored_pattern_selects_only_the_authored_path_it_names() {
+    // The shape every point-keyed call site builds: `^` + escape_regex(path) + `$`.
+    let path = "http://example.org#DriverAdd.add.y";
+    // Each `.` in the path wildcard-matches the `X`s here when left unescaped.
+    let sibling = "http://example.org#DriverAddXaddXy";
+    let config = config_with_output_pattern(format!("^{}$", escape_regex(path)));
+    let on_path = config.tolerance_for_output(path).expect("pattern compiles");
+    assert_eq!(
+        on_path.atoly.to_bits(),
+        0.5f64.to_bits(),
+        "the override must land on the named point"
+    );
+    let on_sibling = config
+        .tolerance_for_output(sibling)
+        .expect("pattern compiles");
+    assert_eq!(
+        on_sibling.atoly.to_bits(),
+        Tolerances::default().atoly.to_bits(),
+        "escaped dots must not select a sibling point"
+    );
+}
+
+#[test]
+fn unescaped_dots_in_an_anchored_authored_path_select_a_sibling_point() {
+    // The control for the test above: the same anchored pattern WITHOUT escaping does match the
+    // sibling, so the escape is load-bearing, not decorative.
+    let path = "http://example.org#DriverAdd.add.y";
+    let sibling = "http://example.org#DriverAddXaddXy";
+    let config = config_with_output_pattern(format!("^{path}$"));
+    let on_sibling = config
+        .tolerance_for_output(sibling)
+        .expect("pattern compiles");
+    assert_eq!(
+        on_sibling.atoly.to_bits(),
+        0.5f64.to_bits(),
+        "an unescaped authored path selects points it never named"
     );
 }
 

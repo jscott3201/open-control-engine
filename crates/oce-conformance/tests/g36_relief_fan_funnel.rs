@@ -19,10 +19,11 @@ const GOLDEN_DIR: &str = "../../tools/golden-gen/goldens/G36";
 const SEQUENCE: &str = "multizone_vav_relief_fan";
 const BUILDING_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_fan.dpBui";
 const SUPPLY_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_relief_fan.u1SupFan";
-const AVERAGED_PRESSURE: &str = "conn#1";
-const RELIEF_DAMPER_STATUS: &str = "conn#38";
-const RELIEF_FAN_STATUS: &str = "conn#41";
-const RELIEF_FAN_SPEED: &str = "conn#46";
+const AVERAGED_PRESSURE: &str = "http://example.org#g36.source.multizone_vav_relief_fan.movMea.y";
+const RELIEF_DAMPER_STATUS: &str =
+    "http://example.org#g36.source.multizone_vav_relief_fan.relDam.y";
+const RELIEF_FAN_STATUS: &str = "http://example.org#g36.source.multizone_vav_relief_fan.relFan.y";
+const RELIEF_FAN_SPEED: &str = "http://example.org#g36.source.multizone_vav_relief_fan.pro1.y";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real("building_pressure", BUILDING_PRESSURE),

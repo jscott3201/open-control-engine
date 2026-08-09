@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::time::Instant;
 
 use oce_blocks::Diagnostics;
-use oce_graph::RunState;
+use oce_graph::{RunState, allocate_state};
 use oce_model::{ConnectorId, Dir, ModelGraph, Value};
 use oce_store::{DomainKey, Durability, OcValue, PointSample, PointStatus, PointWrite, Store};
 
@@ -45,6 +45,13 @@ impl Outputs {
             paths.len(),
             "Outputs entries/paths must align"
         );
+        // The ordering `Outputs::get`'s binary search depends on. Load validation rejects any
+        // connector whose id differs from its arena index. `Engine::resume` is the other caller and
+        // changes parameters only, so it rebuilds from that already-validated connector arena.
+        debug_assert!(
+            entries.windows(2).all(|w| w[0].0 < w[1].0),
+            "Outputs entries must be strictly ascending by ConnectorId"
+        );
         Outputs { entries, paths }
     }
 
@@ -57,9 +64,19 @@ impl Outputs {
     }
 
     /// The current value of output connector `c`, if it is an output of the loaded model.
+    ///
+    /// `O(log n)` in the number of outputs, so a host reading many connectors in a loop does not
+    /// pay a scan per read. This relies on the entries being ascending by [`ConnectorId`]: they are
+    /// built by an in-order `connectors.filter(Out)` walk over the connector arena validated at
+    /// load. [`Engine::resume`] can rebuild the snapshot after parameter changes but cannot change
+    /// connector ids. The invariant is also pinned by `entries_are_strictly_ascending_by_connector_id`
+    /// under both build profiles.
     #[must_use]
     pub fn get(&self, c: ConnectorId) -> Option<&Value> {
-        self.entries.iter().find(|(id, _)| *id == c).map(|(_, v)| v)
+        self.entries
+            .binary_search_by_key(&c, |(id, _)| *id)
+            .ok()
+            .map(|i| &self.entries[i].1)
     }
 
     /// Iterate `(connector, value)` for every output connector, in declaration order.
@@ -159,7 +176,9 @@ pub enum CollectSpec {
     },
     /// Record only the named outputs, every `stride` steps.
     Named {
-        /// The output point paths to record.
+        /// The output point paths to record: connector paths or root-declared boundary-output
+        /// IRIs (read aliases for their driving connectors). The recorded column echoes the
+        /// supplied name either way.
         points: Vec<String>,
         /// Recording stride (steps between recorded rows).
         stride: usize,
@@ -237,7 +256,9 @@ impl OutputTrace {
 pub struct SimMetrics {
     /// Number of ticks evaluated over the horizon.
     pub ticks: u64,
-    /// Total wall time over the run (nanoseconds; monotonic `Instant` elapsed, saturating).
+    /// Wall time from input preflight through the state re-seed, final tick and any final trace row
+    /// (nanoseconds; monotonic `Instant` elapsed, saturating). Recorded-column resolution is
+    /// excluded.
     pub wall_nanos: u64,
     /// Worst single-tick latency over the run (nanoseconds) — the jitter signal (perf §8, R-SIM-4).
     pub max_tick_nanos: u64,
@@ -282,7 +303,8 @@ fn model_time_to_unix_nanos(epoch_unix_nanos: u64, t_now: f64) -> Result<u64, Oc
 ///
 /// Unlike `projection::value_to_oc_value`, enum outputs use `OcValue::Int` so they round-trip
 /// through `engine::sample_to_value`. String is retained for totality, but is unreachable from
-/// [`projected_output_batch`] because `io::point_rows_at_load` excludes String points. Never panics.
+/// [`DurableOutputBatch::refresh`] because `io::point_rows_at_load` excludes String points. Never
+/// panics.
 pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     match value {
         Value::Real(value) => OcValue::Real(*value),
@@ -293,28 +315,82 @@ pub(crate) fn output_value_to_oc_value(value: &Value) -> OcValue {
     }
 }
 
-/// Build the off-tick store batch for projected output columns.
+/// The pre-built durable store batch for [`Engine::step_realtime`]: point identity is resolved
+/// once at load, and each step rewrites only the value + timestamp of every row in place, so a
+/// warm step allocates nothing on the write path (issue #242 slice 1).
 ///
-/// `values` is indexed by `ConnectorId`, never column position. Load validation guarantees every
-/// projected connector is in bounds and point keys are unique. Samples use the supplied exact UNIX
-/// timestamp in nanoseconds, `Ok` status, and Telemetry durability. Never panics for a loaded model.
-pub(crate) fn projected_output_batch(
-    io: &IoInventory,
-    values: &[Value],
-    at_unix_nanos: u64,
-) -> Vec<PointWrite> {
-    io.out_columns()
-        .into_iter()
-        .map(|(path, connector_id)| PointWrite {
-            key: DomainKey::new(path),
-            sample: PointSample {
+/// `writes` and `connectors` are parallel vectors aligned by index. Two vectors are forced by
+/// the [`DurableOutputBatch::writes`] `&[PointWrite]` signature (`write_points` takes that
+/// slice, so the rows must already be contiguous `PointWrite`s); both builders therefore assert
+/// the length invariant, mirroring the `Outputs::build` entries/paths assert.
+///
+/// # Invariants
+/// - Rows are minted from [`IoInventory::durable_columns`] semantics only — never from
+///   `trace_columns` and never from the declared boundary-output alias map (`_spec/18` D3:
+///   an alias in the durable batch would double-write each aliased sample).
+/// - Pre-refresh rows are placeholders (`OcValue::Bool(false)` at instant 0):
+///   [`DurableOutputBatch::writes`] is meaningful only after a [`DurableOutputBatch::refresh`].
+///   `step_realtime`, the only production caller, always refreshes first, so a placeholder is
+///   never committed.
+/// - The batch is valid only for the model whose [`IoInventory`] minted it: `refresh` indexes
+///   the live value arena by the cached connector ids, so `step_realtime`'s panic-freedom
+///   depends on `Engine::build_model_in_memory` re-minting this batch alongside `io` at every
+///   load. Samples carry the exact supplied UNIX-nanosecond timestamp, `Ok` status, and
+///   Telemetry durability.
+#[derive(Debug, Default)]
+pub(crate) struct DurableOutputBatch {
+    writes: Vec<PointWrite>,
+    connectors: Vec<ConnectorId>,
+}
+
+impl DurableOutputBatch {
+    /// Resolve the durable key set once, minting one placeholder row per output point.
+    pub(crate) fn build_at_load(io: &IoInventory) -> DurableOutputBatch {
+        let columns = io.durable_columns();
+        let mut writes = Vec::with_capacity(columns.len());
+        let mut connectors = Vec::with_capacity(columns.len());
+        for (path, connector_id) in columns {
+            writes.push(PointWrite {
+                key: DomainKey::new(path),
+                sample: PointSample {
+                    value: OcValue::Bool(false),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 0,
+                },
+                durability: Durability::Telemetry,
+            });
+            connectors.push(connector_id);
+        }
+        debug_assert_eq!(
+            writes.len(),
+            connectors.len(),
+            "DurableOutputBatch writes/connectors must align"
+        );
+        DurableOutputBatch { writes, connectors }
+    }
+
+    /// Rewrite every row's sample in place from the live connector values — identity (key,
+    /// durability, row order) is untouched. `values` is indexed by cached [`ConnectorId`],
+    /// never by column position; ids are inventory-sourced and in range for the loaded model.
+    pub(crate) fn refresh(&mut self, values: &[Value], at_unix_nanos: u64) {
+        debug_assert_eq!(
+            self.writes.len(),
+            self.connectors.len(),
+            "DurableOutputBatch writes/connectors must align"
+        );
+        for (write, connector_id) in self.writes.iter_mut().zip(&self.connectors) {
+            write.sample = PointSample {
                 value: output_value_to_oc_value(&values[connector_id.0 as usize]),
                 status: PointStatus::Ok,
                 at_unix_nanos,
-            },
-            durability: Durability::Telemetry,
-        })
-        .collect()
+            };
+        }
+    }
+
+    /// The batch rows in durable-column order — the exact `write_points` argument.
+    pub(crate) fn writes(&self) -> &[PointWrite] {
+        &self.writes
+    }
 }
 
 /// A single tripped CDL `Assert` block, surfaced for the verification report (`08` §5.2, R-RT-4).
@@ -373,20 +449,47 @@ impl<S: Store> Engine<S> {
     }
 
     /// Run a full horizon, collecting a per-timestep trace + timing metrics (`08` §5.1). A tight,
-    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params ⇒ identical
-    /// [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    /// deterministic loop over [`Engine::tick`]: identical `SimSpec` + params + **entry connector
+    /// image** ⇒ identical [`OutputTrace`] (CDL §7.16, FRAME §1, R-SIM-2).
+    ///
+    /// The entry connector image is a determinant not derivable from the spec or the params: the
+    /// values in the connector arena when the call begins carry into the horizon. `InputSource`
+    /// overwrites the slots it names on every step; the rest are whatever the arena already held.
+    /// Pinned by `tests::sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`.
+    ///
+    /// A model with store-bound inputs takes one more. [`Engine::tick`] re-stages those points from
+    /// the store on every tick, so two runs agreeing on spec, params and entry image still diverge
+    /// when the store's samples differ — see `tests::sim_tests::store_bound_staging`. The list above
+    /// is not the whole determinant set for such a model.
     ///
     /// Horizon: `n = floor((t_stop - t_start) / step)` samples at `t = t_start + k*step` for
     /// `k ∈ 0..=n` — a **fresh multiply** each step (no accumulating float error), so the time axis
-    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine's run clock is
-    /// reset (`prev_t = None`) at entry so a prior real-time tick never poisons the horizon, and the
-    /// engine is left at the horizon end on return.
+    /// is bit-reproducible. `t_stop` is included iff it lands on that grid. The engine is left at
+    /// the horizon end on return.
+    ///
+    /// **A call that returns `Ok` is a run restart, not a continuation.** After preflight succeeds,
+    /// entry resets the run clock (`prev_t = None`) so a prior real-time tick never poisons the
+    /// horizon, then re-seeds the `[S]` state words via [`allocate_state`]. `values` is left alone,
+    /// so staged inputs survive (`tests::sim_tests::
+    /// a_staged_input_still_reaches_the_horizon_after_the_reseed`) while integrators, timers,
+    /// latches and filters do not. Restarting has consequences for a host: see
+    /// `docs/host-responsibilities.md`.
+    ///
+    /// **A preflight refusal preserves the prior run.** Recorded columns, a `Constant` list, and the
+    /// first list returned by a `Closure` are resolved and type-checked before the clock or state
+    /// words reset. The closure is called exactly once at the first computed grid time; its
+    /// validated plan is reused for the first tick. A closure refusal after completed ticks leaves
+    /// those ticks in effect, so `simulate` is not transactional once execution has begun.
     ///
     /// # Errors
     /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
     /// [`OcError::NonFiniteTime`] if `t_start`/`t_stop` is non-finite; [`OcError::TimeRegression`] if
-    /// `t_stop < t_start`; [`OcError::UnknownPoint`] if `CollectSpec::Named` names an unknown output
-    /// (fail-fast — no tick runs). Never panics (R-ERR-1).
+    /// `t_stop < t_start`; [`OcError::UnknownPoint`] if `CollectSpec::Named` or an input source names
+    /// an unknown point; [`OcError::InputType`] if an input value has the wrong type; and
+    /// [`OcError::Store`] if store-backed input staging fails. Collection, `Constant`, and
+    /// first-closure-list failures are preflight refusals — no restart or tick occurs. Store-backed
+    /// input failures occur after the restart but before that tick evaluates. Never panics
+    /// (R-ERR-1).
     pub fn simulate(&mut self, spec: &SimSpec) -> Result<SimMetrics, OcError> {
         if !spec.step.is_finite() || spec.step <= 0.0 {
             return Err(OcError::Load {
@@ -416,15 +519,42 @@ impl<S: Store> Engine<S> {
         // partial trace and no advanced model state.
         let cols = self.resolve_collect(&spec.collect)?;
         let stride = collect_stride(&spec.collect).max(1) as u64;
+        let run_start = Instant::now();
+        let staged_inputs = self.resolve_constant_inputs(&spec.inputs)?;
+        let first_t = spec.t_start + 0.0 * spec.step;
+        let mut first_closure_inputs = match &spec.inputs {
+            InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(first_t))?),
+            InputSource::None | InputSource::Constant(_) | InputSource::Csv { .. } => None,
+        };
+        // All input lists available before the first tick have now passed whole-list validation.
+        // Nothing else can refuse before the restart.
         // Fresh time axis (R-SIM-2): isolate from any prior real-time tick's prev_t.
         self.prev_t = None;
+        // Fresh `[S]` state (R-SIM-2): without this, a reused engine started the horizon from the
+        // words the previous run left behind.
+        //
+        // `words` only. `allocate_state` also re-seeds `values`, which would discard the host's
+        // staged input image and contradict [`Engine::set_input`]'s "before the next tick" contract
+        // (`sim_tests::a_staged_input_still_reaches_the_horizon_after_the_reseed`). What carries in
+        // `values` is the documented limit, not an oversight — see the rustdoc above.
+        //
+        // Below all first-tick name-resolution gates, so a refusal returns without re-seeding
+        // (`sim_tests::a_refused_name_resolution_does_not_reseed_state_words`).
+        self.state.words = allocate_state(&self.model, &self.blocks).words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
-        let run_start = Instant::now();
         let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
         for k in 0..=n {
-            let t = spec.t_start + (k as f64) * spec.step; // fresh multiply — no float accumulator
-            self.stage_inputs(&spec.inputs, t)?;
+            let t = if k == 0 {
+                first_t
+            } else {
+                spec.t_start + (k as f64) * spec.step // fresh multiply — no float accumulator
+            };
+            if let Some(first) = first_closure_inputs.take() {
+                self.stage_resolved_inputs(&first);
+            } else {
+                self.stage_inputs(&spec.inputs, &staged_inputs, t)?;
+            }
             let t0 = Instant::now();
             self.tick(t)?;
             let dt = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
@@ -463,8 +593,9 @@ impl<S: Store> Engine<S> {
         let collector = AssertCollector::default();
         self.tick_with(t_now, &collector)?;
         let tick_nanos = t0.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64;
-        let batch = projected_output_batch(&self.io, &self.state.values, at_unix_nanos);
-        let written = self.store.write_points(&batch)?;
+        self.durable_batch
+            .refresh(&self.state.values, at_unix_nanos);
+        let written = self.store.write_points(self.durable_batch.writes())?;
         Ok(StepReport {
             asserts: collector.events.into_inner(),
             written,
@@ -474,7 +605,8 @@ impl<S: Store> Engine<S> {
 
     /// Stage an external input value before the next tick (the host's view of a physical/logical
     /// input connector). Resolved by point path through the IO inventory; validated against the
-    /// connector type (no coercion, `01` §5 invariant 3).
+    /// connector type (no coercion, `01` §5 invariant 3). The declared boundary-output alias
+    /// space is output-only: a declared output name is never accepted here.
     ///
     /// # Errors
     /// [`OcError::UnknownPoint`] if `point` is not an input in the inventory; [`OcError::InputType`]
@@ -484,25 +616,26 @@ impl<S: Store> Engine<S> {
             .io
             .resolve_inputs(point)
             .ok_or_else(|| OcError::UnknownPoint(point.to_string()))?;
-        let connectors = connectors.to_vec();
-        for &cid in &connectors {
+        for &cid in connectors {
             // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
             let want = self.model.connectors[cid.0 as usize].value_type;
             if value.value_type() != want {
                 return Err(OcError::InputType(point.to_string()));
             }
         }
-        for cid in connectors {
+        for &cid in connectors {
             self.state.values[cid.0 as usize] = value.clone();
         }
         Ok(())
     }
 
-    /// Read an output connector value by point path after a tick (host-facing).
+    /// Read an output value by point path after a tick (host-facing). `point` is an output
+    /// connector path or a root-declared boundary-output IRI; the declared spelling is a read
+    /// alias for its driving connector's slot, so both keys return bit-equal values.
     ///
     /// # Errors
-    /// [`OcError::UnknownPoint`] if `point` is not an OUTPUT connector in the inventory. Never
-    /// panics (R-ERR-1).
+    /// [`OcError::UnknownPoint`] if `point` resolves to no output point. Never panics
+    /// (R-ERR-1).
     pub fn get_output(&self, point: &str) -> Result<Value, OcError> {
         let cid = self
             .io
@@ -511,14 +644,80 @@ impl<S: Store> Engine<S> {
         Ok(self.state.values[cid.0 as usize].clone())
     }
 
+    /// Resolve an [`InputSource`]'s staging targets once, before the horizon runs (the `simulate`
+    /// helper). Every other variant resolves nothing and yields an empty plan.
+    ///
+    /// Only [`InputSource::Constant`] can be pre-resolved for the whole horizon: its `(point, value)`
+    /// pairs are fixed, so the per-step point-path hash lookup and type check they used to cost are
+    /// hoisted here. A [`InputSource::Closure`] may name different points at each `t`; only its first
+    /// returned list is preflighted by [`Engine::simulate`].
+    ///
+    /// Each name flattens to **every** connector it stages — a composite boundary input fans one
+    /// host point out to several internal connectors — in list order, so two pairs naming the same
+    /// point stay last-wins when the plan is written.
+    ///
+    /// # Errors
+    /// [`OcError::UnknownPoint`] if a `Constant` name is not an input in the inventory;
+    /// [`OcError::InputType`] if a value's type does not match the connector it would stage. Either
+    /// refusal discards the whole plan, so a run that fails here stages nothing at all — including
+    /// the pairs preceding the failing one, which per-name staging used to write before refusing.
+    /// Never panics (R-ERR-1).
+    pub(crate) fn resolve_constant_inputs(
+        &self,
+        inputs: &InputSource,
+    ) -> Result<Vec<(ConnectorId, Value)>, OcError> {
+        let InputSource::Constant(pairs) = inputs else {
+            return Ok(Vec::new());
+        };
+        self.resolve_input_pairs(pairs)
+    }
+
+    /// Resolve and type-check one complete input list without staging any value.
+    fn resolve_input_pairs(
+        &self,
+        pairs: &[(String, Value)],
+    ) -> Result<Vec<(ConnectorId, Value)>, OcError> {
+        let mut staged = Vec::with_capacity(pairs.len());
+        for (name, value) in pairs {
+            let connectors = self
+                .io
+                .resolve_inputs(name)
+                .ok_or_else(|| OcError::UnknownPoint(name.to_string()))?;
+            for &cid in connectors {
+                // `cid` is inventory-sourced (an in-range model connector) — never a host integer.
+                if value.value_type() != self.model.connectors[cid.0 as usize].value_type {
+                    return Err(OcError::InputType(name.to_string()));
+                }
+                staged.push((cid, value.clone()));
+            }
+        }
+        Ok(staged)
+    }
+
+    /// Stage a plan whose names and types were checked as one complete list. `staged` must come from
+    /// [`Engine::resolve_input_pairs`], which guarantees every connector id indexes the loaded value
+    /// arena and every value matches its connector type.
+    fn stage_resolved_inputs(&mut self, staged: &[(ConnectorId, Value)]) {
+        for (cid, value) in staged {
+            self.state.values[cid.0 as usize] = value.clone();
+        }
+    }
+
     /// Stage the inputs for one simulation step from an [`InputSource`] (the `simulate` helper).
-    pub(crate) fn stage_inputs(&mut self, inputs: &InputSource, t: f64) -> Result<(), OcError> {
+    ///
+    /// `staged` is the [`Engine::resolve_constant_inputs`] plan for `inputs`, resolved once per
+    /// run. It is written on **every** step, at the same cadence as the per-name staging it
+    /// replaces: only the resolution is hoisted, never the write.
+    pub(crate) fn stage_inputs(
+        &mut self,
+        inputs: &InputSource,
+        staged: &[(ConnectorId, Value)],
+        t: f64,
+    ) -> Result<(), OcError> {
         match inputs {
             InputSource::None => Ok(()),
-            InputSource::Constant(pairs) => {
-                for (name, v) in pairs {
-                    self.set_input(name, v.clone())?;
-                }
+            InputSource::Constant(_) => {
+                self.stage_resolved_inputs(staged);
                 Ok(())
             }
             InputSource::Closure(f) => {
@@ -542,7 +741,7 @@ impl<S: Store> Engine<S> {
     ) -> Result<Vec<(String, ConnectorId)>, OcError> {
         match c {
             CollectSpec::None => Ok(Vec::new()),
-            CollectSpec::All { .. } => Ok(self.io.out_columns()),
+            CollectSpec::All { .. } => Ok(self.io.trace_columns()),
             CollectSpec::Named { points, .. } => points
                 .iter()
                 .map(|name| {

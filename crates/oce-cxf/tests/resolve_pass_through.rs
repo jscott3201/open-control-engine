@@ -326,8 +326,12 @@ fn unwired_string_boundaries_keep_their_ordinary_rejections() {
     let diagnostics = import(&document).expect_err("unwired String boundaries must reject");
     assert!(
         diagnostics.iter().any(|diagnostic| {
+            // The subject is the canonical expanded spelling of the authored `S231:String`,
+            // not the compact token: diagnostics are produced from the resolver's expanded
+            // working clone, and canonical form on every resolved surface is the ratified
+            // cycle-54 normalization intent. The pin stays byte-exact — on the new truth.
             diagnostic.code == DiagCode::UnresolvedReference
-                && diagnostic.subject.as_deref() == Some("S231:String")
+                && diagnostic.subject.as_deref() == Some("http://data.ashrae.org/S231P#String")
         }),
         "{diagnostics:?}"
     );
@@ -600,7 +604,10 @@ fn same_composite_both_ways_rejects_for_the_two_undriven_leaf_inputs() {
         .collect::<Vec<_>>();
     assert_eq!(
         undriven_subjects,
-        [Some("connector#0"), Some("connector#3")],
+        [
+            Some("http://example.org#g36.profile.nested_composite.sub.gain.u"),
+            Some("http://example.org#g36.profile.nested_composite.post.u"),
+        ],
         "{diagnostics:?}"
     );
     assert!(

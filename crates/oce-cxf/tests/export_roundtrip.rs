@@ -197,10 +197,10 @@ fn boundary_input_reconstruction_reelides_to_the_original_iri() {
     assert_eq!(
         gt_inputs,
         vec![
-            "http://example.org#MinLoop.gt.in0",
+            "http://example.org#MinLoop.gt.u1",
             "http://example.org#MinLoop.gt.in1"
         ],
-        "the owning block lists only minted ports, never the boundary @id"
+        "the owning block retains authored ports and mints only the boundary-driven child"
     );
     let boundary = node("http://example.org#MinLoop.uSet");
     assert_eq!(

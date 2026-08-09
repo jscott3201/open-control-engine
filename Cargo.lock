@@ -12,6 +12,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "allocation-counter"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beb9e990c0a33699f1984d85a6abead615ccc72dd8130bf3e15dcabe2ca149c9"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -165,6 +171,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 name = "oce-api"
 version = "0.1.0"
 dependencies = [
+ "allocation-counter",
  "oce-bless",
  "oce-blocks",
  "oce-cxf",
@@ -179,7 +186,6 @@ dependencies = [
  "public-api",
  "rustdoc-json",
  "serde_json",
- "stats_alloc",
  "thiserror",
 ]
 
@@ -191,11 +197,11 @@ version = "0.1.0"
 name = "oce-blocks"
 version = "0.1.0"
 dependencies = [
+ "allocation-counter",
  "libm",
  "oce-bless",
  "oce-model",
  "serde_json",
- "stats_alloc",
 ]
 
 [[package]]
@@ -513,12 +519,6 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
-
-[[package]]
-name = "stats_alloc"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c0e04424e733e69714ca1bbb9204c1a57f09f5493439520f9f68c132ad25eec"
 
 [[package]]
 name = "syn"

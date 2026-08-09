@@ -7,9 +7,11 @@ blocks: 2
     param k=Real(0x4000000000000000)
 connectors: 4
   C0 block=B0 dir=In type=Real decl=0 iri=Some("http://example.org#cc.minimal_nested.u")
-  C1 block=B0 dir=Out type=Real decl=1 iri=None
-  C2 block=B1 dir=In type=Real decl=2 iri=None
-  C3 block=B1 dir=Out type=Real decl=3 iri=None
+  C1 block=B0 dir=Out type=Real decl=1 iri=Some("http://example.org#cc.minimal_nested.sub.gain.y")
+  C2 block=B1 dir=In type=Real decl=2 iri=Some("http://example.org#cc.minimal_nested.post.u")
+  C3 block=B1 dir=Out type=Real decl=3 iri=Some("http://example.org#cc.minimal_nested.post.y")
 connections: 1
   C1 -> C2
 external_inputs: [0]
+boundary_outputs: 1
+  http://example.org#cc.minimal_nested.y <- C3 attrs=Real(unit=None quantity=None display_unit=None min=- max=-)

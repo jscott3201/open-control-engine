@@ -1,0 +1,44 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#M",
+      "@type": "S231:Block",
+      "S231:containsBlock": {
+        "@id": "http://example.org#M.del"
+      }
+    },
+    {
+      "@id": "http://example.org#M.del",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Discrete.UnitDelay",
+      "S231:hasInstance": [
+        {
+          "@id": "http://example.org#M.del.u"
+        },
+        {
+          "@id": "http://example.org#M.del.y"
+        },
+        {
+          "@id": "http://example.org#M.del.samplePeriod"
+        },
+        {
+          "@id": "http://example.org#M.del.samplePeriod"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#M.del.samplePeriod",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "1.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    }
+  ]
+}

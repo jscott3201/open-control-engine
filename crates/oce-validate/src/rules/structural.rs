@@ -13,6 +13,7 @@ use oce_blocks::{PortKind, lookup};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{ConnectorId, Dir, ModelGraph, ValueType};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 // ---- shared helpers -------------------------------------------------------------------------
 
@@ -32,6 +33,7 @@ fn port_value_type(kind: PortKind) -> ValueType {
 /// Every block and connector must reference the dense arenas the executor indexes by raw id:
 ///
 /// - `model.blocks[i].id.0 == i` for every block (dense + unique [`oce_model::BlockId`] space).
+/// - `model.connectors[i].id.0 == i` for every connector (dense + unique [`ConnectorId`] space).
 /// - `connector.block.0 < model.blocks.len()` for every connector.
 /// - every `BlockInstance.inputs` / `BlockInstance.outputs` [`ConnectorId`] is in range.
 ///
@@ -60,7 +62,21 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
         check_block_port_ids(blk, "output", &blk.outputs, connector_count, diags);
     }
 
-    for c in &model.connectors {
+    for (index, c) in model.connectors.iter().enumerate() {
+        if c.id.0 as usize != index {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "connector id invariant violated: connector at arena index {index} has \
+                         ConnectorId({}); expected a dense unique ConnectorId equal to its arena \
+                         index and < connectors={connector_count}",
+                        c.id.0
+                    ),
+                )
+                .with_subject(subject_of(c)),
+            );
+        }
         if c.block.0 as usize >= block_count {
             diags.push(
                 Diagnostic::error(
@@ -71,6 +87,54 @@ pub(crate) fn check_arena_ids(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
                     ),
                 )
                 .with_subject(subject_of(c)),
+            );
+        }
+    }
+}
+
+/// Every declared boundary output must reference an in-range `Out` connector and carry the
+/// attribute variant for that connector's value type. CXF resolution guarantees these invariants;
+/// this check protects callers that construct [`ModelGraph`] directly.
+pub(crate) fn check_boundary_outputs(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
+    for output in &model.boundary_outputs {
+        let Some(source) = model.connectors.get(output.source.0 as usize) else {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "boundary output references out-of-range source connector {} \
+                         (connectors={})",
+                        output.source.0,
+                        model.connectors.len()
+                    ),
+                )
+                .with_subject(Arc::clone(&output.iri)),
+            );
+            continue;
+        };
+        if source.dir != Dir::Out {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::DirectionMismatch,
+                    format!(
+                        "boundary output source connector {} is not an output connector",
+                        output.source.0
+                    ),
+                )
+                .with_subject(Arc::clone(&output.iri)),
+            );
+        }
+        if !output.attrs.matches(source.value_type) {
+            diags.push(
+                Diagnostic::error(
+                    DiagCode::MalformedDocument,
+                    format!(
+                        "boundary output attribute variant does not match source connector {} \
+                         value type {:?}",
+                        output.source.0, source.value_type
+                    ),
+                )
+                .with_subject(Arc::clone(&output.iri)),
             );
         }
     }

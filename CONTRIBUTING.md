@@ -18,6 +18,28 @@ the architecture and invariants are the design of record.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
   when you change behavior.
 
+## Release checklist
+
+Promotions into `main` are infrequent enough that every step gets forgotten by someone. In
+order (a checklist by convention, not a CI gate):
+
+1. **Bring `CHANGELOG.md` current first.** Check by comparison, not by whether the file was
+   touched: list the PRs merged into `development` since the last release with
+   `gh pr list --state merged --base development`, and confirm each number appears in
+   `CHANGELOG.md`. Any that do not are the entries to recover before opening the PR.
+
+   This step used to be `git log origin/main..development -- CHANGELOG.md`, read as "empty means
+   undocumented". The converse does not follow and the converse is how it was used: run against a
+   ten-PR gap it returned three commits and passed, because three earlier PRs had each added an
+   entry. It answers whether the file was touched in a range, never whether it is current.
+2. Open the promotion PR `development` → `main`.
+3. Merge with a **merge commit**, never squash — both prior promotions (`a57d860`, `cf70c80`)
+   are true merges, and squashing would rewrite the history `development` continues from.
+4. The release gate and manual publishing then apply as described under
+   [How changes land](#how-changes-land) — the full-workspace release gate runs on the
+   promotion PR, and publishing stays manual (`workflow_dispatch`; a tag alone never
+   publishes).
+
 ## Local setup
 
 The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.97.1, edition
@@ -27,10 +49,18 @@ The toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml) (Rust 1.
 each step fails with "no such command" on a fresh clone:
 
 ```bash
-cargo install cargo-nextest --locked --version 0.9.133   # pinned; see TESTING.md
+cargo install cargo-nextest --locked --version 0.9.143   # pinned; see TESTING.md
 cargo install cargo-machete --locked
 cargo install cargo-deny --locked
+cargo nextest show-config version                         # must report required/recommended: ok
 ```
+
+The installed version matches CI; [`.config/nextest.toml`](.config/nextest.toml) rejects older
+versions while allowing a newer compatible local runner.
+The command above builds nextest from source; CI uses its pre-built binary through
+`taiki-e/install-action`. On macOS, if even trivial nextest cases take more than about 0.2 seconds,
+follow nextest's [XProtect guidance](https://nexte.st/docs/installation/macos/): enable your terminal
+under Developer Tools, restart it, and run `cargo clean` once.
 
 Install the git hooks once after cloning:
 
@@ -92,11 +122,13 @@ and the determinism matrix — while claiming to mirror it. Change a command in
   heap `Vec`s only above that (`reals_matrix.rs:388`, `:399-403`), and `Engine::tick` takes one
   `store.snapshot()` when the model declares store-backed inputs.
 
-  A new allocating block **is** caught per-PR. `crates/oce-blocks/tests/tick_allocation_census.rs`
-  sweeps the whole registry via `catalog()` and carries a permanent positive control
-  (`CDL.Reals.Sort`), and `oce-blocks` is one of the two crates the per-PR gate runs
-  (`.agents/gate.sh`). The facade-level guard in `oce-api/tests/tick_purity_tests.rs` is
-  narrower — three fixtures — and, like all `oce-api` tests, runs only on the release gate.
+  A new block allocation on the evaluator thread **is** caught per-PR.
+  `crates/oce-blocks/tests/tick_allocation_census.rs` sweeps the whole registry via `catalog()` and
+  carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the two crates
+  the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
+  block that introduces worker execution also needs an allocation guard for that work. The
+  facade-level guard in `oce-api/tests/tick_purity_tests.rs` is narrower — three fixtures — and,
+  like all `oce-api` tests, runs only on the release gate.
 
 ## Commits
 

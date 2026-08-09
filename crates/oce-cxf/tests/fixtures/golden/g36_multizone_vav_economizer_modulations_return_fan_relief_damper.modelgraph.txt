@@ -20,22 +20,22 @@ blocks: 6
     inputs=[] outputs=[15]
     param k=Real(0x3ff0000000000000)
 connectors: 16
-  C0 block=B0 dir=Out type=Real decl=0 iri=None
-  C1 block=B1 dir=Out type=Real decl=1 iri=None
-  C2 block=B2 dir=In type=Real decl=2 iri=None
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMinLimSig.y")
+  C1 block=B1 dir=Out type=Real decl=1 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.damMaxLimSig.y")
+  C2 block=B2 dir=In type=Real decl=2 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x1")
   C3 block=B2 dir=In type=Real decl=3 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_max")
-  C4 block=B2 dir=In type=Real decl=4 iri=None
+  C4 block=B2 dir=In type=Real decl=4 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.x2")
   C5 block=B2 dir=In type=Real decl=5 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uRetDam_min")
   C6 block=B2 dir=In type=Real decl=6 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uTSup")
-  C7 block=B2 dir=Out type=Real decl=7 iri=None
-  C8 block=B3 dir=In type=Real decl=8 iri=None
-  C9 block=B3 dir=In type=Real decl=9 iri=None
-  C10 block=B3 dir=In type=Real decl=10 iri=None
-  C11 block=B3 dir=In type=Real decl=11 iri=None
+  C7 block=B2 dir=Out type=Real decl=7 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.retDamPos.y")
+  C8 block=B3 dir=In type=Real decl=8 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x1")
+  C9 block=B3 dir=In type=Real decl=9 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f1")
+  C10 block=B3 dir=In type=Real decl=10 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.x2")
+  C11 block=B3 dir=In type=Real decl=11 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.f2")
   C12 block=B3 dir=In type=Real decl=12 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.uTSup")
-  C13 block=B3 dir=Out type=Real decl=13 iri=None
-  C14 block=B4 dir=Out type=Real decl=14 iri=None
-  C15 block=B5 dir=Out type=Real decl=15 iri=None
+  C13 block=B3 dir=Out type=Real decl=13 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.relDamPos.y")
+  C14 block=B4 dir=Out type=Real decl=14 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.zer.y")
+  C15 block=B5 dir=Out type=Real decl=15 iri=Some("http://example.org#g36.source.multizone_vav_economizer_modulations_return_fan_relief_damper.one.y")
 connections: 6
   C0 -> C2
   C0 -> C8

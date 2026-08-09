@@ -1,0 +1,218 @@
+//! Structural and transactional checks for declared boundary-output aliases and reserved
+//! pass-through connectors.
+
+use super::common::*;
+
+#[test]
+fn valid_alias_matches_its_output_source() {
+    let model = ModelGraph {
+        blocks: vec![constant_block(0, &[0])],
+        connectors: vec![real_unit(0, 0, Dir::Out, None)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    assert!(validate(&model).expect("valid boundary alias").is_empty());
+}
+
+#[test]
+fn reserved_pass_through_alias_satisfies_deep_graph_rules() {
+    // CXF export owns wire representability for host-built references to reserved connectors;
+    // these tests pin the deep gate's current acceptance separately.
+    let model = ModelGraph {
+        blocks: vec![block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:alias",
+            1,
+            Attrs::Real(RealAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved pass-through alias")
+            .is_empty()
+    );
+}
+
+#[test]
+fn connection_from_reserved_output_satisfies_deep_graph_rules() {
+    let model = ModelGraph {
+        blocks: vec![
+            block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]),
+            block_with_params(
+                1,
+                "CDL.Reals.MultiplyByParameter",
+                &[2],
+                &[3],
+                vec![rp("k", 2.0)],
+            ),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+            conn(2, 1, Dir::In, ValueType::Real),
+            conn(3, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![conn_edge(1, 2)],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved source connection")
+            .is_empty()
+    );
+}
+
+#[test]
+fn connection_to_reserved_input_satisfies_deep_graph_rules() {
+    let model = ModelGraph {
+        blocks: vec![
+            block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]),
+            constant_block(1, &[2]),
+        ],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+            conn(2, 1, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![conn_edge(2, 0)],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate accepts reserved target connection")
+            .is_empty()
+    );
+}
+
+#[test]
+fn reserved_pass_through_parameter_satisfies_current_deep_graph_rules() {
+    let mut reserved = block(0, "urn:oce:lowering#PassThrough.Real", &[0], &[1]);
+    reserved.params.values.push(rp("ghost", 42.0));
+    let model = ModelGraph {
+        blocks: vec![reserved],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+
+    assert!(
+        validate(&model)
+            .expect("deep gate currently accepts an extra reserved parameter")
+            .is_empty()
+    );
+}
+
+#[test]
+fn reserved_pass_through_types_must_match_the_class() {
+    let cases = [
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Integer),
+        ("urn:oce:lowering#PassThrough.Real", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Integer", ValueType::Boolean),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Real),
+        ("urn:oce:lowering#PassThrough.Boolean", ValueType::Integer),
+    ];
+
+    for (class_path, wrong_type) in cases {
+        let model = ModelGraph {
+            blocks: vec![block(0, class_path, &[0], &[1])],
+            connectors: vec![
+                conn(0, 0, Dir::In, wrong_type),
+                conn(1, 0, Dir::Out, wrong_type),
+            ],
+            external_inputs: vec![ConnectorId(0)],
+            ..ModelGraph::new()
+        };
+        let error = validate(&model).expect_err("reserved connector types must match their class");
+        assert_eq!(
+            codes(&error.diagnostics),
+            vec![DiagCode::PortKindMismatch, DiagCode::PortKindMismatch],
+            "{class_path} accepted {wrong_type:?} connectors"
+        );
+    }
+}
+
+#[test]
+fn dangling_alias_source_is_malformed() {
+    let model = ModelGraph {
+        boundary_outputs: vec![boundary_output(
+            "urn:test:dangling",
+            7,
+            Attrs::Real(RealAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = validate(&model).expect_err("dangling boundary source must fail");
+    assert_eq!(codes(&error.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert_eq!(
+        error.diagnostics[0].subject.as_deref(),
+        Some("urn:test:dangling")
+    );
+}
+
+#[test]
+fn alias_source_must_be_an_output_with_matching_attrs() {
+    let model = ModelGraph {
+        blocks: vec![block(0, "unknown.Class", &[0], &[])],
+        connectors: vec![conn(0, 0, Dir::In, ValueType::Real)],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:mismatched",
+            0,
+            Attrs::Integer(IntAttrs::default()),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = validate(&model).expect_err("malformed boundary source must fail");
+    assert_eq!(
+        codes(&error.diagnostics),
+        vec![DiagCode::DirectionMismatch, DiagCode::MalformedDocument]
+    );
+    assert!(
+        error
+            .diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.subject.as_deref() == Some("urn:test:mismatched"))
+    );
+}
+
+#[test]
+fn later_structural_failure_rolls_back_alias_propagation() {
+    let mut model = ModelGraph {
+        connectors: vec![real_unit(0, 0, Dir::Out, None)],
+        boundary_outputs: vec![boundary_output(
+            "urn:test:boundary",
+            0,
+            Attrs::Real(RealAttrs {
+                unit: Some(Arc::from("K")),
+                ..RealAttrs::default()
+            }),
+        )],
+        ..ModelGraph::new()
+    };
+
+    let error = unify_and_validate(&mut model).expect_err("missing owner block must fail");
+    assert_eq!(codes(&error.diagnostics), vec![DiagCode::MalformedDocument]);
+    assert!(model.connectors[0].attrs.as_real().unwrap().unit.is_none());
+}

@@ -60,7 +60,7 @@ pub use sim::{
     AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
     StepReport,
 };
-pub use topology::{PassThroughPair, Topology, TopologyBlock, TopologyConnection};
+pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a
 /// binder owns it as `oce_api::Diagnostic`.

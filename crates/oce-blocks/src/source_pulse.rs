@@ -14,7 +14,10 @@ pub(crate) const MIN_SOURCE_PULSE_BOUND: f64 = 1e-37;
 
 /// Parameter validation rules shared by Logical/Reals/Integers `Sources.Pulse`.
 pub(crate) const SOURCE_PULSE_PARAM_RULES: &[ParamRule] = &[
-    ParamRule::Required { name: "period" },
+    ParamRule::Required {
+        name: "period",
+        kind: oce_model::ValueType::Real,
+    },
     ParamRule::RealGreaterOrEqual {
         name: "period",
         min: MIN_SOURCE_PULSE_BOUND,

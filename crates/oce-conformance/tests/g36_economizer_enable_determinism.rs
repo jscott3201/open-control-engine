@@ -42,9 +42,6 @@ const RETURN_DAMPER_MAX_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_max";
 const RETURN_DAMPER_MIN_SOURCE: &str =
     "http://example.org#g36.source.multizone_vav_economizer_enable.yRetDam_min";
-const OUTDOOR_DAMPER_MAX_RUNTIME: &str = "conn#13";
-const RETURN_DAMPER_MAX_RUNTIME: &str = "conn#21";
-const RETURN_DAMPER_MIN_RUNTIME: &str = "conn#25";
 
 const INPUTS: &[PointSpec] = &[
     PointSpec::real(OUTDOOR_AIR_TEMPERATURE),
@@ -58,9 +55,9 @@ const INPUTS: &[PointSpec] = &[
     PointSpec::integer(FREEZE_PROTECTION_STAGE),
 ];
 const OUTPUTS: &[PointSpec] = &[
-    PointSpec::real_alias(OUTDOOR_DAMPER_MAX_SOURCE, OUTDOOR_DAMPER_MAX_RUNTIME),
-    PointSpec::real_alias(RETURN_DAMPER_MAX_SOURCE, RETURN_DAMPER_MAX_RUNTIME),
-    PointSpec::real_alias(RETURN_DAMPER_MIN_SOURCE, RETURN_DAMPER_MIN_RUNTIME),
+    PointSpec::real(OUTDOOR_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MAX_SOURCE),
+    PointSpec::real(RETURN_DAMPER_MIN_SOURCE),
 ];
 const SPEC: SequenceSpec = SequenceSpec {
     name: "multizone_vav_economizer_enable",

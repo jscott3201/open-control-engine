@@ -24,7 +24,9 @@ use oce_model::ModelGraph;
 mod arrays;
 mod bridge;
 pub mod dto;
+mod expand;
 mod export;
+mod export_attrs;
 mod export_defer;
 mod export_pass_through;
 #[cfg(test)]
@@ -156,37 +158,45 @@ pub fn import_cxf(
 /// Reals always carry a fractional part or exponent, so a whole-number Real never re-grounds as
 /// an Integer.
 ///
-/// Enum-carrying blocks (any `ValueType::Enum` connector or `Value::Enum` parameter) are
+/// Enum-carrying ordinary blocks (any `ValueType::Enum` connector or `Value::Enum` parameter) are
 /// **deferred**, not rejected: the block and its transitive downstream consumers are omitted from
 /// the emitted document so the enum-free remainder can still export, and the omission is reported
-/// as an [`oce_diag::DiagCode::ExportDeferred`] **warning** (non-aborting). This function
-/// **discards deferral warnings**, so a caller using it alone cannot tell a complete export from
-/// one that dropped blocks; use [`export_with_report`] for that. Deferral is
-/// non-aborting only while something survives it: a graph whose every block is deferred has no
-/// runtime composite left to emit and is an error, not an empty document.
+/// as an [`oce_diag::DiagCode::ExportDeferred`] **warning** (non-aborting). A reserved pass-through
+/// with an enum parameter still rejects because no reserved parameter has a wire representation;
+/// its deferral warning precedes the error. This function **discards deferral warnings**, so a
+/// caller using it alone cannot tell a complete export from one that dropped blocks; use
+/// [`export_with_report`] for that. Deferral is non-aborting only while something survives it: a
+/// graph whose every block is deferred has no runtime composite left to emit and is an error, not
+/// an empty document.
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
-///   (subject = the owning block's `instance_iri`; connectors carry no IRI of their own) for
-///   anything outside the subset that is NOT an enum deferral: non-finite parameters, connectors
+///   (subject identifies the offending block, connector owner, or declared boundary node) for
+///   anything outside the subset that is not an ordinary enum deferral: non-finite parameters,
+///   connectors
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, the same connector listed more than once in
 ///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip), an input
 ///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
-///   fail re-import entirely rather than come back lossy),
+///   fail re-import entirely rather than come back lossy), a declared boundary output whose source
+///   has no emitted child-port node, a connection to or from a reserved lowering connector,
+///   a reserved pass-through block with an authored instance identity, parameters, representable
+///   input attributes, or mismatched connector types,
 ///   structurally inconsistent wiring, or an empty (zero-block)
 ///   graph. The per-node checks in that list — a String connector, an out-of-subset connector
 ///   attribute, a missing `instance_iri`, a class path that fails the bridge round-trip, a
-///   parameter defect, an external input with no boundary IRI or listed twice, a multiply-driven
-///   input — reject only where
-///   the offender sits on a **surviving** block; a deferred block is omitted from the document and
-///   so contributes no error diagnostic of its own. The whole-graph guards (an empty graph,
-///   non-dense ids) and a connection that is not output→input reject either way, being
-///   attributable to no single block's presence in the document. Deferred blocks — enum-carrying
-///   ones and the cascade they reach alike — are a warning, not a rejection, and do NOT trigger
-///   this variant, unless deferral is *total*, which leaves no block to emit and rejects. Never
-///   panics.
+///   parameter defect, an external input with no boundary IRI or listed twice, a
+///   multiply-driven input, an alias source with no emitted port, or a reserved connection endpoint
+///   — reject only where the offender sits on a **surviving** block; a deferred ordinary block is
+///   omitted and so contributes no error diagnostic of its own. Reserved shape and hidden-state
+///   checks run independently of deferral because the resolver-produced lowering shape is the only
+///   valid form in the reserved namespace. The whole-graph guards (an empty graph, non-dense ids)
+///   and a connection that is not output→input reject either way, being attributable to no single
+///   block's presence in the document. Deferred ordinary blocks —
+///   enum-carrying ones and the cascade they reach alike — are a warning, not a rejection, and do
+///   NOT trigger this variant unless deferral is *total*, which leaves no block to emit. A reserved
+///   block carrying hidden state rejects independently of deferral. Never panics.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export(model: &ModelGraph) -> Result<Vec<u8>, CxfError> {
     let (doc, _warnings) = export::document(model)?;
@@ -229,8 +239,8 @@ pub struct ExportReport {
 ///
 /// # Errors
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
-///   for any error-severity subset failure (same surface as [`export()`]); enum deferrals are
-///   warnings and do NOT trigger this variant.
+///   for any error-severity subset failure (same surface as [`export()`]); ordinary enum deferrals
+///   are warnings and do NOT trigger this variant, while reserved hidden state rejects.
 /// - [`CxfError::Json`] if document serialization itself fails.
 pub fn export_with_report(model: &ModelGraph) -> Result<ExportReport, CxfError> {
     let (doc, warnings) = export::document(model)?;
