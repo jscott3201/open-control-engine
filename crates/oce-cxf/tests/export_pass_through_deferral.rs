@@ -150,11 +150,16 @@ fn cascade_deferral_does_not_hide_reserved_endpoint_errors() {
         }
 
         let mut expected = expected_rejection(message, "connector#1");
-        if matches!(mutation, EndpointMutation::InputWrongDirection) {
-            expected.push(
+        match mutation {
+            EndpointMutation::OutputOutOfRange => expected.push(
+                Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
+                    .with_subject("connector#2".to_owned()),
+            ),
+            EndpointMutation::InputWrongDirection => expected.push(
                 Diagnostic::error(DiagCode::ExportUnsupported, STRUCTURE)
                     .with_subject(SOURCE_IRI.to_owned()),
-            );
+            ),
+            _ => {}
         }
         assert_eq!(
             rejection(&graph),
@@ -194,6 +199,22 @@ fn cascade_deferral_does_not_hide_reserved_input_attribute_errors() {
             expected_rejection(RESERVED_SHAPE, "block#1")
         );
     }
+}
+
+#[test]
+fn cascade_deferral_does_not_hide_an_undeclared_owned_connector() {
+    let mut graph = cascade_deferred_pass_graph();
+    graph.connectors.push(connector(
+        4,
+        1,
+        Dir::Out,
+        Some("http://example.org#PassExport.stray"),
+    ));
+
+    assert_eq!(
+        rejection(&graph),
+        expected_rejection(STRUCTURE, "connector#4")
+    );
 }
 
 #[test]

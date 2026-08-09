@@ -85,8 +85,8 @@ use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
 use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
-    ReservedShapeFailure, has_plannable_shape, is_declared_pass_through_connector,
-    is_pass_through_class, reserved_connection_endpoint, reserved_shape_failures,
+    ReservedShapeFailure, ReservedShapeValidation, is_declared_pass_through_connector,
+    is_pass_through_class, reserved_connection_endpoint, reserved_shape_validation,
 };
 use crate::{CxfError, bridge};
 
@@ -449,7 +449,11 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
     // diagnostic they had before hidden-state checks were added; state with no wire representation
     // gets the reserved-shape diagnostic.
-    for failure in reserved_shape_failures(g, &deferred) {
+    let ReservedShapeValidation {
+        failures,
+        unplannable_blocks: unplannable_reserved_blocks,
+    } = reserved_shape_validation(g, &deferred);
+    for failure in failures {
         let (message, subject) = match failure {
             ReservedShapeFailure::Structure(subject) => (MSG_STRUCTURE, subject),
             ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
@@ -686,10 +690,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ));
             continue;
         };
-        let invalid_reserved_shape = g.blocks.get(c.block.0 as usize).is_some_and(|block| {
-            is_pass_through_class(&block.class_iri) && !has_plannable_shape(g, c.block.0 as usize)
-        });
-        if invalid_reserved_shape {
+        if unplannable_reserved_blocks.contains(&(c.block.0 as usize)) {
             continue; // Phase 3 already emitted the stable wiring or boundary-identity diagnostic.
         }
         if deferred.contains(&(c.block.0 as usize)) {

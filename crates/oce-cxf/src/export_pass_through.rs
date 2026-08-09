@@ -54,7 +54,11 @@ pub(crate) fn reserved_connection_endpoint(
 /// Whether a reserved block declares one input/output pair whose input belongs to the block and is
 /// listed as external. This first structural check avoids choosing an endpoint diagnostic subject
 /// from malformed membership data.
-fn has_valid_wiring_shape(graph: &ModelGraph, block_position: usize) -> bool {
+fn has_valid_wiring_shape(
+    graph: &ModelGraph,
+    block_position: usize,
+    external_inputs: &BTreeSet<u32>,
+) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
     };
@@ -64,7 +68,7 @@ fn has_valid_wiring_shape(graph: &ModelGraph, block_position: usize) -> bool {
                 .connectors
                 .get(input_id.0 as usize)
                 .is_some_and(|input| input.block.0 as usize == block_position)
-                && graph.external_inputs.contains(input_id)
+                && external_inputs.contains(&input_id.0)
         }
         _ => false,
     }
@@ -165,6 +169,14 @@ pub(crate) enum ReservedShapeFailure {
     HiddenState(String),
 }
 
+/// Phase 3 reserved-shape diagnostics and the owners Phase 6 must not plan again.
+pub(crate) struct ReservedShapeValidation {
+    /// Rejections in deterministic planner order.
+    pub(crate) failures: Vec<ReservedShapeFailure>,
+    /// Reserved block positions whose boundary shape cannot be planned.
+    pub(crate) unplannable_blocks: BTreeSet<usize>,
+}
+
 fn block_subject(graph: &ModelGraph, block_position: usize) -> String {
     graph
         .blocks
@@ -193,37 +205,84 @@ fn endpoint_subject(graph: &ModelGraph, block_position: usize, fallback: &str) -
         .map_or_else(|| format!("connector#{}", input_id.0), str::to_owned)
 }
 
-/// Validate every reserved block before deferred-owner skips can suppress Phase 6 checks.
-pub(crate) fn reserved_shape_failures(
+fn connector_subject(graph: &ModelGraph, connector: &Connector, position: usize) -> String {
+    graph
+        .blocks
+        .get(connector.block.0 as usize)
+        .and_then(|owner| owner.instance_iri.as_deref())
+        .map_or_else(|| format!("connector#{position}"), str::to_owned)
+}
+
+/// Validate every reserved block before deferred-owner skips can suppress later checks.
+pub(crate) fn reserved_shape_validation(
     graph: &ModelGraph,
     deferred: &BTreeSet<usize>,
-) -> Vec<ReservedShapeFailure> {
+) -> ReservedShapeValidation {
+    let external_inputs: BTreeSet<u32> = graph.external_inputs.iter().map(|id| id.0).collect();
+    let declared_deferred_connectors: BTreeSet<(usize, u32)> = graph
+        .blocks
+        .iter()
+        .enumerate()
+        .filter(|(position, block)| {
+            deferred.contains(position) && is_pass_through_class(&block.class_iri)
+        })
+        .flat_map(|(position, block)| {
+            block
+                .inputs
+                .iter()
+                .chain(&block.outputs)
+                .map(move |id| (position, id.0))
+        })
+        .collect();
     let mut failures = Vec::new();
+    let mut unplannable_blocks = BTreeSet::new();
     for (block_position, block) in graph.blocks.iter().enumerate() {
         if !is_pass_through_class(&block.class_iri) {
             continue;
         }
         let block_subject = block_subject(graph, block_position);
-        if !has_valid_wiring_shape(graph, block_position) {
+        if !has_valid_wiring_shape(graph, block_position, &external_inputs) {
             failures.push(ReservedShapeFailure::Structure(block_subject.clone()));
+            unplannable_blocks.insert(block_position);
         } else {
             let endpoint_subject = endpoint_subject(graph, block_position, &block_subject);
             if !has_valid_endpoint_shape(graph, block_position) {
                 failures.push(ReservedShapeFailure::Structure(endpoint_subject));
+                unplannable_blocks.insert(block_position);
             } else if !has_boundary_iris(graph, block_position) {
                 failures.push(ReservedShapeFailure::BoundaryIri(endpoint_subject));
+                unplannable_blocks.insert(block_position);
             }
         }
         if has_unrepresentable_state(graph, block_position, deferred.contains(&block_position)) {
             failures.push(ReservedShapeFailure::HiddenState(block_subject));
         }
     }
-    failures
-}
 
-/// Whether Phase 6 can plan this reserved block without repeating a Phase 3 diagnostic.
-pub(crate) fn has_plannable_shape(graph: &ModelGraph, block_position: usize) -> bool {
-    has_valid_wiring_shape(graph, block_position)
-        && has_valid_endpoint_shape(graph, block_position)
-        && has_boundary_iris(graph, block_position)
+    // The ordinary orphan scan reports these for surviving blocks. Deferred owners are skipped
+    // there, so preserve the same rejection for reserved lowering blocks before that skip.
+    for (connector_position, connector) in graph.connectors.iter().enumerate() {
+        let owner_position = connector.block.0 as usize;
+        if !deferred.contains(&owner_position) {
+            continue;
+        }
+        let Some(owner) = graph.blocks.get(owner_position) else {
+            continue;
+        };
+        if is_pass_through_class(&owner.class_iri)
+            && !declared_deferred_connectors.contains(&(owner_position, connector.id.0))
+        {
+            failures.push(ReservedShapeFailure::Structure(connector_subject(
+                graph,
+                connector,
+                connector_position,
+            )));
+            unplannable_blocks.insert(owner_position);
+        }
+    }
+
+    ReservedShapeValidation {
+        failures,
+        unplannable_blocks,
+    }
 }
