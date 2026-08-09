@@ -456,6 +456,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     for failure in failures {
         let (message, subject) = match failure {
             ReservedShapeFailure::Structure(subject) => (MSG_STRUCTURE, subject),
+            ReservedShapeFailure::DuplicateExternalInput(subject) => {
+                (MSG_DUPLICATE_EXTERNAL_INPUT, subject)
+            }
             ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
             ReservedShapeFailure::HiddenState(subject) => (MSG_RESERVED_SHAPE, subject),
         };

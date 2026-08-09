@@ -13,6 +13,8 @@ const SOURCE_IRI: &str = "http://example.org#PassExport.deferredSource";
 const STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
 const EXTERNAL_IRI: &str =
     "export subset: external input carries no boundary IRI to rebuild the root hasInput";
+const DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed more than once in external_inputs, and re-import \
+     deduplicates the repeat away";
 const RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
 
 fn connector(id: u32, block: u32, dir: Dir, iri: Option<&'static str>) -> Connector {
@@ -218,6 +220,25 @@ fn cascade_deferral_does_not_hide_an_undeclared_owned_connector() {
         rejection(&graph),
         expected_rejection(STRUCTURE, "connector#4")
     );
+}
+
+#[test]
+fn cascade_deferral_does_not_hide_invalid_reserved_external_membership() {
+    let cases = [
+        (ConnectorId(1), DUPLICATE_EXTERNAL_INPUT, "connector#1"),
+        (ConnectorId(2), STRUCTURE, "connector#2"),
+    ];
+
+    for (external_id, message, subject) in cases {
+        let mut graph = cascade_deferred_pass_graph();
+        graph.external_inputs.push(external_id);
+        assert_eq!(
+            rejection(&graph),
+            expected_rejection(message, subject),
+            "external connector {} escaped reserved validation",
+            external_id.0
+        );
+    }
 }
 
 #[test]

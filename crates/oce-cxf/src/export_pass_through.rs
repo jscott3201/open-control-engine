@@ -164,6 +164,8 @@ fn has_unrepresentable_state(graph: &ModelGraph, block_position: usize, deferred
 pub(crate) enum ReservedShapeFailure {
     /// Block/connector cross-references disagree.
     Structure(String),
+    /// The reserved input occurs more than once in the graph's external-input list.
+    DuplicateExternalInput(String),
     /// The reserved input or output lacks the boundary identity needed for emission.
     BoundaryIri(String),
     /// Elision would discard state or change the reserved scalar identity.
@@ -257,6 +259,35 @@ pub(crate) fn reserved_shape_validation(
         }
         if has_unrepresentable_state(graph, block_position, deferred.contains(&block_position)) {
             failures.push(ReservedShapeFailure::HiddenState(block_subject));
+        }
+    }
+
+    // Phase 6 owns these checks for ordinary and surviving reserved blocks. Its deferred-owner
+    // skip runs before both, so mirror the established diagnostics for deferred reserved owners.
+    let mut seen_deferred_reserved_inputs = BTreeSet::new();
+    for external_id in &graph.external_inputs {
+        let Some(connector) = graph.connectors.get(external_id.0 as usize) else {
+            continue;
+        };
+        let owner_position = connector.block.0 as usize;
+        if !deferred.contains(&owner_position) {
+            continue;
+        }
+        let Some(owner) = graph.blocks.get(owner_position) else {
+            continue;
+        };
+        if !is_pass_through_class(&owner.class_iri) {
+            continue;
+        }
+        let subject = connector_subject(graph, connector, external_id.0 as usize);
+        if owner.outputs.contains(external_id) && !owner.inputs.contains(external_id) {
+            failures.push(ReservedShapeFailure::Structure(subject));
+            unplannable_blocks.insert(owner_position);
+        } else if owner.inputs.as_slice() == [*external_id]
+            && !seen_deferred_reserved_inputs.insert((owner_position, external_id.0))
+        {
+            failures.push(ReservedShapeFailure::DuplicateExternalInput(subject));
+            unplannable_blocks.insert(owner_position);
         }
     }
 
