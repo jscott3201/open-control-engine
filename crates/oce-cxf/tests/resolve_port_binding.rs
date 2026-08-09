@@ -217,8 +217,8 @@ fn name_binding_is_deterministic_across_imports() {
 /// graph, rather than that one block, is what makes this an assertion about the model instead of
 /// about a vector.
 ///
-/// The corpus cannot cover this on its own: all 46 fixtures already list ports in declaration
-/// order, so the permutation is the identity on all 1206 of their block instances. Permuting one
+/// The corpus cannot cover this on its own: all 47 fixtures already list ports in declaration
+/// order, so the permutation is the identity on all 1208 of their block instances. Permuting one
 /// here is the only way the reorder path meets a real document.
 #[test]
 fn permuting_a_real_fixtures_port_array_resolves_to_the_same_model() {
@@ -251,7 +251,7 @@ fn permuting_a_real_fixtures_port_array_resolves_to_the_same_model() {
 /// `CDL.Integers.Change` with its OUTPUT array permuted resolves to the same model.
 ///
 /// Output binding had no end-to-end coverage before this test: the whole output side could be
-/// disabled and 660 tests still passed, because every case above exercises PID inputs and all 46
+/// disabled and 660 tests still passed, because every case above exercises PID inputs and all 47
 /// fixtures list ports in declaration order.
 ///
 /// `Integers.Change` is the output-side counterpart of `Reals.PID`. It declares `y, up, down`, all

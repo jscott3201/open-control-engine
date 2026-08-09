@@ -102,10 +102,11 @@ type-blind and a band could otherwise admit a value between two discrete levels
 
 ### The structural oracle — it bounds fixture fidelity, not block behavior
 
-Every conformance test in the workspace derives from the same 46 fixture documents. A structurally
-wrong fixture therefore fails nothing — it makes the entire suite validate the wrong sequence,
-consistently and permanently. Neither goldens nor oracles can see that, because both are computed
-from the fixture.
+Every conformance test in the workspace derives from the same 46 catalog fixture documents. The
+47th CXF document, `member_list_interface.jsonld`, is a resolver contract fixture and has no
+conformance trace. A structurally wrong catalog fixture therefore fails nothing — it makes the
+entire suite validate the wrong sequence, consistently and permanently. Neither goldens nor oracles
+can see that, because both are computed from the fixture.
 
 The check that can is `crates/oce-cxf/tests/fixture_structural_oracle.rs`. It compares each fixture
 against `modelica-json`'s independent CXF translation of the same upstream G36 class — 44 `.jsonld`

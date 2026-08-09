@@ -708,7 +708,7 @@ fn a_self_loop_on_a_survivor_terminates_without_deferring_it() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// What a deferred block may contribute — nothing error-severity.
+// What a deferred ordinary block may contribute — nothing error-severity.
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]

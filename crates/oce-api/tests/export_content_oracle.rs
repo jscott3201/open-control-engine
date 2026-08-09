@@ -1,4 +1,5 @@
-//! Corpus-wide CXF export content oracle over the 47 G36 fixtures.
+//! Export content oracle over the 47-document swept CXF corpus: 46 G36 catalog fixtures and one
+//! resolver contract.
 //!
 //! For every fixture this pins two things against a checked-in expectation file:
 //! the FNV-1a-128 digest of [`oce_api::ExportReport::bytes`], and the completeness state of
@@ -30,7 +31,7 @@ use oce_api::{ContentIdError, Engine};
 /// orphaned in the `oce-cxf` fixtures tree, and restates the honesty sequence so a reader of
 /// the file alone knows what its digests are evidence of.
 const FILE_HEADER: &str = "\
-# G36 export content oracle expectations.
+# Swept CXF export content oracle expectations.
 # Owner test: crates/oce-api/tests/export_content_oracle.rs (regenerate with OCE_BLESS=1).
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10
@@ -49,14 +50,14 @@ fn expectation_path() -> PathBuf {
     ))
 }
 
-/// Every `.jsonld` document in the G36 corpus, sorted for deterministic iteration order.
+/// Every `.jsonld` document in the swept CXF corpus, sorted for deterministic iteration order.
 fn corpus_fixtures() -> Vec<PathBuf> {
     let fixture_dir = format!(
         "{}/../oce-cxf/tests/fixtures/g36",
         env!("CARGO_MANIFEST_DIR")
     );
     let mut fixtures = fs::read_dir(fixture_dir)
-        .expect("read G36 fixture corpus")
+        .expect("read swept CXF fixture corpus")
         .map(|entry| entry.expect("fixture directory entry").path())
         .filter(|path| {
             path.extension()
@@ -64,7 +65,7 @@ fn corpus_fixtures() -> Vec<PathBuf> {
         })
         .collect::<Vec<_>>();
     fixtures.sort();
-    assert_eq!(fixtures.len(), 47, "G36 corpus size moved");
+    assert_eq!(fixtures.len(), 47, "swept CXF corpus size moved");
     fixtures
 }
 
@@ -91,7 +92,7 @@ fn rendered_expectations() -> String {
             .and_then(|stem| stem.to_str())
             .expect("UTF-8 fixture stem")
             .to_owned();
-        let bytes = fs::read(&fixture).expect("read G36 fixture");
+        let bytes = fs::read(&fixture).expect("read swept CXF fixture");
         let mut engine = Engine::in_memory();
         engine
             .load_cxf(&bytes)

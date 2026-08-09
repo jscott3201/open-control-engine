@@ -233,9 +233,9 @@ swap both `-p oce-api` → `-p oce-store` and `--profile public-api-oce-api` →
 
 One gate step tests **no shipping code at all**, and it is worth understanding why it still gates.
 
-`oce-cxf::fixture_port_order` checks that the 47 G36 fixture documents list their block ports in
-upstream CDL **declaration order**. It derives that order at test time by parsing 132 vendored
-upstream Modelica sources in
+`oce-cxf::fixture_port_order` sweeps 47 CXF documents and checks every authored `hasInput` and
+`hasOutput` list against upstream CDL **declaration order**. It derives that order at test time by
+parsing 132 vendored upstream Modelica sources in
 [`third_party/modelica-buildings-cdl/`](third_party/modelica-buildings-cdl/README.md), copied
 verbatim at the pinned reference commit. There is no catalog artifact in between, deliberately: a
 checked-in table has to be reviewed entry by entry against upstream, which nobody does reliably —
@@ -247,15 +247,16 @@ the upstream fidelity of the `upstream-buildings` files. The derivation is code 
 rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
-fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and Tier-A
-oracles are all derived from them, so a transposed fixture fails nothing — it makes the entire
-suite validate the wrong sequence, silently and permanently.
+46 catalog fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and
+Tier-A oracles are all derived from them, so a transposed catalog fixture fails nothing — it makes
+the entire suite validate the wrong sequence, silently and permanently.
 
 Nothing else can see it. The resolver assigns port positions from document array order; the arity
 guard checks counts and `oce-validate`'s `check_ports_dir` checks each position's *kind*. A
 transposition between two ports of the **same kind** passes both. `Reals.PID` with `u_s`/`u_m`
 swapped inverts the control action. **30 of 136 blocks are exposed; 282 instances live across 33
-of the 46 fixtures.**
+of the 46 catalog fixtures.** The 47th document is the `member_list_interface.jsonld` resolver
+contract fixture; its `hasInstance`-derived ports add no comparison to this audit.
 
 It gates because its value is entirely future-tense — the corpus is verified clean, so it stays
 silent until someone edits a fixture, which is exactly when a person will not remember to run it.
@@ -266,7 +267,7 @@ cargo nextest run -p oce-cxf --locked -E 'binary(fixture_port_order)'
 ```
 
 **Expect it to fail when you legitimately add a fixture.** Seven volume pins are deliberate —
-`fixtures == 46`, `checked == 2129`, `skipped_array == 37`, `compared == 104` and
+`fixtures == 47`, `checked == 2129`, `skipped_array == 37`, `compared == 104` and
 `exempt_array == 28` on the registry cross-check, and on the vendored corpus itself
 `classes == 132` and `175 inputs / 144 outputs`. A change that stops discovering ports would
 otherwise leave the comparison vacuously green, which is the exact failure mode the check exists

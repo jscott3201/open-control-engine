@@ -190,7 +190,7 @@ fn vector_of(topology: &Topology) -> Vec<(String, String)> {
 /// (`emission_order must derive from the ModelGraph vectors alone`) stayed GREEN under that
 /// same mutation — it derives its expected emission order from `ModelGraph.boundary_outputs`
 /// itself, the vector under test — and its single-fixture byte golden, which did red, covers
-/// one document and cannot see a driver repoint at all. This oracle covers all 46, in order,
+/// one document and cannot see a driver repoint at all. This oracle covers all 47, in order,
 /// against document-derived drivers.
 #[test]
 fn boundary_output_vector_matches_the_document_derived_expectation_in_order() {

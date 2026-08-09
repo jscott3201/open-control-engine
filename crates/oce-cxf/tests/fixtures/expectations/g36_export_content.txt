@@ -1,4 +1,4 @@
-# G36 export content oracle expectations.
+# Swept CXF export content oracle expectations.
 # Owner test: crates/oce-api/tests/export_content_oracle.rs (regenerate with OCE_BLESS=1).
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10

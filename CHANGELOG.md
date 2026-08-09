@@ -34,10 +34,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   round-trip fixpoint (#175), and where the subset does not apply the former panic is now a
   typed `ExportUnsupported` rejection (#174). Connector §7.4.1 attributes export under the
   bare-scalar canonical subset (#176).
-- **Arrays export flattened, and enum-carrying blocks defer with warnings rather than
-  failing** (#177). `export_with_report` surfaces those warnings; plain `export` discards
-  them — so an integrator who needs to know whether an export was *complete* must use the
-  reporting form.
+- **Arrays export flattened, and ordinary enum-carrying blocks defer with warnings rather
+  than failing** (#177). Reserved pass-through blocks still reject enum parameters because
+  omission would erase hidden state. `export_with_report` surfaces deferral warnings; plain
+  `export` discards them — so an integrator who needs to know whether an export was *complete*
+  must use the reporting form.
 - **Ports bind by declared CDL name, not array position** (#185), with the port-order table
   derived from vendored upstream CDL source instead of a hand-maintained JSON file (#184).
   Fixture port order is gated against upstream declaration order (#183).
@@ -161,25 +162,35 @@ and a gate that accepted any text would restore exactly the false assurance desc
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
   message, none occurring in the G36 corpus.
-- **Declared boundary-output attributes now unify with their source connector** (#273). The
+- **Declared boundary-output attributes now unify with their source connector** (#274, fixes #273). The
   `BoundaryOutput.attrs` alias previously sat outside every §7.10 cluster, so a declared output
   claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.
   Boundary aliases now join the existing deterministic gather-then-decide cluster rooted at their
   source. Conflicting unit, quantity, and bounds refuse; one-sided values propagate to unset
   connector and alias members; `displayUnit` divergence remains advisory. A conflict rolls back all
   propagation, permuted aliases produce identical diagnostics, and the full validator refuses
-  malformed hand-built aliases without a panic. Across the 47 G36 fixtures, 33 exported byte streams
-  change and none flips between accepting and refusing. The 27 complete exports among those changes
-  receive new `content_id_complete` values; the other six remain incomplete before and after the
-  change. A declared alias can now supply a previously unset driver connector's unit, quantity, or
-  bounds, so `IoInventory` and `point_list(None)` metadata can change for an unchanged input
-  document. Unit and quantity also reach the durable `PointDto`; `IoSummary` remains unchanged
-  because it contains counts rather than point metadata.
+  malformed hand-built aliases without a panic. Across the 47 swept CXF documents — 46 G36 catalog
+  fixtures plus one resolver contract — 33 exported byte streams change and none flips between
+  accepting and refusing. The 27 complete exports among those changes receive new
+  `content_id_complete` values; the other six remain incomplete before and after the change. A
+  declared alias can now supply a previously unset driver connector's unit, quantity, or bounds, so
+  `IoInventory` and `point_list(None)` metadata can change for an unchanged input document. Unit and
+  quantity also reach the durable `PointDto`; `IoSummary` remains unchanged because it contains
+  counts rather than point metadata.
 - **Export refuses extra aliases, connections, and undeclared connectors involving reserved
   pass-through connectors** (#277). Reserved lowering connectors have no emitted child-port node;
   the exporter previously skipped those host-built graph entries. The affected hand-built graphs
   now fail with `export-unsupported` instead of losing graph state. Resolver-produced pass-through
   graphs remain representable and unchanged.
+- **Export is total for malformed block ports and rejects hidden reserved-block state** (#280,
+  fixes #278 and #279). Out-of-range connector IDs in a block's input or output list now return a
+  structural `export-unsupported` diagnostic instead of panicking while reading an authored port
+  IRI. Reserved pass-through blocks must have no authored instance identity, parameters, or input
+  attributes and must carry the scalar type named by their class; violations now reject instead of
+  dropping state or re-importing as another reserved class. Deferred reserved blocks also reject
+  connector attributes, undeclared owned connectors, and duplicate or misdirected external-input
+  membership instead of hiding those defects through cascade omission. Resolver-produced
+  pass-through graphs and their exported bytes are unchanged.
 
 ### Host facade
 
@@ -366,7 +377,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   inputs. Controls pin first-tick-only and periodic allocation detection, the known wide `Sort`
   allocation, and exclusion of off-thread traffic. Current catalog blocks do not delegate work to
   worker threads; a future block that does needs a companion worker-allocation guard.
-- **Facade allocation guards now measure only the calling thread** (#272). The previous
+- **Facade allocation guards now measure only the calling thread** (#275, fixes #272). The previous
   process-global allocator could charge libtest or worker-thread traffic to a tick or simulation
   region despite the integration test's mutex. The replacement preserves the manual-tick,
   snapshot-floor, realtime-step, and fixed-per-run simulation contracts; watch remains the positive

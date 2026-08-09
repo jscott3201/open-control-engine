@@ -66,15 +66,16 @@
 //! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
 //! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
 //! reserved pass-through connector, and an input driven by more than one surviving output. These
-//! checks are judged over the **survivor cone**, so a defect sitting entirely inside a deferred
-//! block never aborts an export whose document omits that block.
+//! checks are judged over the **survivor cone** for ordinary blocks, so a defect sitting entirely
+//! inside a deferred ordinary block never aborts an export whose document omits that block.
 //!
-//! Enum deferral is the one non-aborting axis: a deferred block contributes no error diagnostics
-//! at all (not from its connectors' attributes, not from its boundary entries), so a partly
-//! enum-bearing graph exports its enum-free remainder with `ExportDeferred` **warnings**. The
-//! exception is a non-empty graph with zero emitted runtime blocks after deferred and reserved
-//! lowering-only blocks are omitted: that would be an unloadable root-only shell, so it is an
-//! error ([`MSG_TOTAL_DEFERRAL`]).
+//! Enum deferral is the ordinary non-aborting axis: a deferred ordinary block contributes no error
+//! diagnostics, so a partly enum-bearing graph exports its enum-free remainder with
+//! `ExportDeferred` **warnings**. Reserved pass-through shape and hidden-state checks run
+//! independently of deferral; the resolver-produced lowering shape is the only valid form in the
+//! reserved namespace. A non-empty graph with zero emitted runtime blocks after deferred and
+//! reserved lowering-only blocks are omitted also rejects: the result would be an unloadable
+//! root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -85,8 +86,8 @@ use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
 use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
-    has_valid_shape, is_declared_pass_through_connector, is_pass_through_class,
-    reserved_connection_endpoint,
+    ReservedShapeFailure, ReservedShapeValidation, is_declared_pass_through_connector,
+    is_pass_through_class, reserved_connection_endpoint, reserved_shape_validation,
 };
 use crate::{CxfError, bridge};
 
@@ -126,6 +127,8 @@ const MSG_CLASS_BRIDGE: &str =
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
 /// connector claimed twice or never, a connection endpoint out of range or not output→input).
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
+/// Elision would discard state or change the reserved scalar identity on re-import.
+const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
 /// The connector carries a non-default `nominal` attribute (the importer hardcodes
 /// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
 /// dropped rather than round-tripped).
@@ -379,9 +382,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             let minted = if g.external_inputs.contains(cid) {
                 format!("{subject}.in{k}")
             } else {
-                g.connectors[cid.0 as usize]
-                    .iri
-                    .as_deref()
+                g.connectors
+                    .get(cid.0 as usize)
+                    .and_then(|connector| connector.iri.as_deref())
                     .map_or_else(|| format!("{subject}.in{k}"), str::to_owned)
             };
             if claim_port(
@@ -400,9 +403,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         }
         let mut output_ports = Vec::with_capacity(b.outputs.len());
         for (k, cid) in b.outputs.iter().enumerate() {
-            let minted = g.connectors[cid.0 as usize]
-                .iri
-                .as_deref()
+            let minted = g
+                .connectors
+                .get(cid.0 as usize)
+                .and_then(|connector| connector.iri.as_deref())
                 .map_or_else(|| format!("{subject}.out{k}"), str::to_owned);
             if claim_port(
                 g,
@@ -443,19 +447,23 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         ));
     }
 
-    // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
-    // the same single typed external In/Out pair as resolver-produced blocks.
-    for (bi, block) in g.blocks.iter().enumerate() {
-        if !is_pass_through_class(&block.class_iri) {
-            continue;
-        }
-        if !has_valid_shape(g, bi) {
-            let subject = block
-                .instance_iri
-                .as_deref()
-                .map_or_else(|| format!("block#{bi}"), str::to_owned);
-            diags.push(reject(MSG_STRUCTURE, &subject));
-        }
+    // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
+    // diagnostic they had before hidden-state checks were added; state with no wire representation
+    // gets the reserved-shape diagnostic.
+    let ReservedShapeValidation {
+        failures,
+        unplannable_blocks: unplannable_reserved_blocks,
+    } = reserved_shape_validation(g, &deferred);
+    for failure in failures {
+        let (message, subject) = match failure {
+            ReservedShapeFailure::Structure(subject) => (MSG_STRUCTURE, subject),
+            ReservedShapeFailure::DuplicateExternalInput(subject) => {
+                (MSG_DUPLICATE_EXTERNAL_INPUT, subject)
+            }
+            ReservedShapeFailure::BoundaryIri(subject) => (MSG_EXTERNAL_IRI, subject),
+            ReservedShapeFailure::HiddenState(subject) => (MSG_RESERVED_SHAPE, subject),
+        };
+        diags.push(reject(message, &subject));
     }
 
     // SKIP connectors whose owning block is deferred: a deferred block's
@@ -665,10 +673,10 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     // which re-imports as `UnresolvedReference`) this skip is defense-in-depth, not the load-bearing
     // guard: `port_iri[idx]` is `None` for every deferred connector, so the orphan `let-else` below
     // already drops the entry. What the skip does uniquely is suppress the ERROR-severity checks
-    // between here and there — a deferred block's boundary entry with the wrong direction or no
-    // stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort an
-    // export whose only defect sits in a block the document omits. Same rule as the Phase 4 attr
-    // scan: an omitted block contributes no errors. That arm is pinned by
+    // between here and there — a deferred ordinary block's boundary entry with the wrong direction
+    // or no stored boundary IRI would otherwise push `MSG_STRUCTURE`/`MSG_EXTERNAL_IRI` and abort
+    // an export whose only defect sits in a block the document omits. Reserved endpoint checks run
+    // in Phase 3 before this skip. The ordinary arm is pinned by
     // `tests/export_deferral.rs::boundary_entry_for_a_deferred_block_is_dropped_not_rejected`.
     let mut boundaries: Vec<PlannedBoundary> = Vec::new();
     // Survivor `external_inputs` connectors already seen, for the duplicate-entry rejection below.
@@ -686,6 +694,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             ));
             continue;
         };
+        if unplannable_reserved_blocks.contains(&(c.block.0 as usize)) {
+            continue; // Phase 3 already emitted the stable wiring or boundary-identity diagnostic.
+        }
         if deferred.contains(&(c.block.0 as usize)) {
             continue; // boundary drives a deferred block's child — drop the whole entry
         }
@@ -734,9 +745,9 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             };
             claim_emitted_id(&mut seen, output_iri, &subject, &mut diags);
             // Reuse the Phase 4 classification: the pass-through output IS a real connector,
-            // already classified AND tag-guarded there (pass-through blocks are never deferred,
-            // so the slot is never a placeholder). A second guard here would add a duplicate
-            // diagnostic naming the innocent input connector.
+            // already classified AND tag-guarded there. A pass-through that reaches this branch
+            // survived the deferred-owner skip above, so the slot is not a placeholder. A second
+            // guard here would add a duplicate diagnostic naming the innocent input connector.
             boundary_outputs.push(PlannedBoundaryOutput {
                 iri: output_iri.to_owned(),
                 datatype,

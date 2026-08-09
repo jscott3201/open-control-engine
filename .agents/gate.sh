@@ -124,8 +124,8 @@ step 'determinism subset (release codegen)' \
   --cargo-profile release --no-tests=fail
 
 # ── Fixture input hygiene ────────────────────────────────────────────────────
-# NOT engine coverage — it exercises no shipping code path. It checks that the G36 fixture
-# documents list their block ports in upstream CDL declaration order.
+# NOT engine coverage — it exercises no shipping code path. It checks 46 G36 catalog fixtures and
+# one resolver-contract document for block ports listed in upstream CDL declaration order.
 #
 # It gates because the fixtures are the INPUTS to every conformance test in the workspace: a
 # transposed port fails nothing, it makes the whole suite validate the wrong sequence. The

@@ -46,8 +46,9 @@ is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-
 (`ci.yml:148-156`), each running that two-crate subset twice — once under debug codegen, once under
 release codegen (`ci.yml:165-168`). No other crate's test suite runs. The gate script additionally
 runs two named `oce-cxf` test binaries, and it is explicit that they are input hygiene rather than
-engine coverage: they check that the 47 Guideline 36 fixtures list ports in upstream CDL declaration
-order, and that each fixture matches the vendored modelica-json structural oracle
+engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
+fixtures and one is a resolver contract; the structural oracle compares the catalog fixtures it can
+pair with vendored modelica-json translations
 (`.agents/gate.sh:126-154`). That oracle compares document structure — instances and undirected
 edges — not simulated behavior.
 
