@@ -153,7 +153,10 @@ merged in order with later bindings winning; a remote context reference, `@base`
 prefix are refused at load as non-subset constructs rather than silently ignored. The last case is
 a nested compact IRI; it includes an absolute-looking value such as `urn:oce:names#` when the same
 context also declares `urn` as a term. Recursive context-term expansion is outside the supported
-subset. The canonical-key guarantee therefore holds for every document that loads at all.
+subset. A direct `@context` on an `@graph` node or on one of its identity/type reference objects is
+also refused: context bindings are document-level only, and the engine never applies a scoped
+context to one node or reference. The canonical-key guarantee therefore holds for every document
+that loads at all.
 
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named` as an alias for

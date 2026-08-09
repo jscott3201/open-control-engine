@@ -1,0 +1,37 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#"
+  },
+  "@graph": [
+    {
+      "@id": "S231:Map",
+      "@context": {
+        "local": "http://example.org#"
+      }
+    },
+    {
+      "@id": "local:List",
+      "@context": [
+        {
+          "local": "http://example.org#"
+        }
+      ]
+    },
+    {
+      "@id": "local:Remote",
+      "@context": "http://example.org/context.jsonld"
+    },
+    {
+      "@id": "relative-null",
+      "@context": null
+    },
+    {
+      "@id": "relative-bool",
+      "@context": false
+    },
+    {
+      "@id": "relative-number",
+      "@context": 17
+    }
+  ]
+}
