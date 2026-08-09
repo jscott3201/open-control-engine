@@ -149,9 +149,10 @@ spellings keeps its point paths; a relative `@id` that no `@context` can canonic
 at load with a typed `relative-iri` diagnostic rather than admitted under a spelling-dependent
 key. The supported `@context` form is an inline prefix map — a single map, or a list of maps
 merged in order with later bindings winning; a remote context reference, `@base`, `@import`,
-`@vocab`, and prefix bindings that are not absolute IRIs are refused at load as non-subset
-constructs rather than silently ignored, so the canonical-key guarantee holds for every document
-that loads at all.
+`@vocab`, prefix bindings that are not absolute IRIs, and term definitions that use another active
+prefix are refused at load as non-subset constructs rather than silently ignored. The last case is
+a nested compact IRI; recursive context-term expansion is outside the supported subset. The
+canonical-key guarantee therefore holds for every document that loads at all.
 
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named` as an alias for
