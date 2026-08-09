@@ -129,9 +129,9 @@ fn has_elided_input_attrs(input: &Connector) -> bool {
     }
 }
 
-/// Whether elision would discard an authored identity, parameter, or input attribute, or would
-/// change the reserved scalar identity. A deferred reserved block checks every non-default input
-/// attribute here because Phase 4 intentionally suppresses its ordinary connector diagnostics.
+/// Whether elision would discard an authored identity, parameter, or connector attribute, or would
+/// change the reserved scalar identity. A deferred reserved block checks every non-default
+/// connector attribute here because Phase 4 intentionally suppresses its ordinary diagnostics.
 fn has_unrepresentable_state(graph: &ModelGraph, block_position: usize, deferred: bool) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
@@ -152,6 +152,7 @@ fn has_unrepresentable_state(graph: &ModelGraph, block_position: usize, deferred
                     || output.value_type != value_type
                     || has_elided_input_attrs(input)
                     || (deferred && input.attrs != Attrs::default_for(input.value_type))
+                    || (deferred && output.attrs != Attrs::default_for(output.value_type))
             }
             _ => false,
         },

@@ -170,7 +170,7 @@ fn cascade_deferral_does_not_hide_reserved_endpoint_errors() {
 }
 
 #[test]
-fn cascade_deferral_does_not_hide_reserved_input_attribute_errors() {
+fn cascade_deferral_does_not_hide_reserved_connector_attribute_errors() {
     let cases = [
         Attrs::Real(RealAttrs {
             nominal: Some(1.0),
@@ -191,13 +191,16 @@ fn cascade_deferral_does_not_hide_reserved_input_attribute_errors() {
         Attrs::Integer(IntAttrs::default()),
     ];
 
-    for attrs in cases {
-        let mut graph = cascade_deferred_pass_graph();
-        graph.connectors[1].attrs = attrs;
-        assert_eq!(
-            rejection(&graph),
-            expected_rejection(RESERVED_SHAPE, "block#1")
-        );
+    for connector_position in [1, 2] {
+        for attrs in &cases {
+            let mut graph = cascade_deferred_pass_graph();
+            graph.connectors[connector_position].attrs = attrs.clone();
+            assert_eq!(
+                rejection(&graph),
+                expected_rejection(RESERVED_SHAPE, "block#1"),
+                "connector {connector_position} attributes escaped reserved validation"
+            );
+        }
     }
 }
 

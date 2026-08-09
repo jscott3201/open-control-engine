@@ -120,8 +120,8 @@ The visible consequence: the emitted document lists **fewer `containsBlock` entr
 holds blocks**, and a canonical imported pass-through produces **no warning at all**
 (`crates/oce-cxf/src/lib.rs:136-141`). Reserved connectors have no emitted child-port node, so a
 host-built boundary alias or connection involving one is rejected rather than silently omitted. An
-authored instance identity, parameter, input attribute, or class/type mismatch on the reserved block
-rejects for the same reason: elision has no wire representation for that state. An empty warning
+authored instance identity, parameter, connector attribute, or class/type mismatch on the reserved
+block rejects for the same reason: elision has no wire representation for that state. An empty warning
 list means nothing was deferred; it does not mean the document explicitly lists every internal
 lowering block. If you are reconciling counts between a `ModelGraph` and an emitted document, that
 is the difference to expect.
