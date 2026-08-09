@@ -74,12 +74,13 @@ way, because they are attributable to no single block's presence in the document
 
 This is the most important thing on this page.
 
-Enum-carrying blocks — any `ValueType::Enum` connector or `Value::Enum` parameter — are **deferred,
-not rejected**. The block *and its entire transitive downstream cone* are omitted from the emitted
-document so that the enum-free remainder can still export. Each omission is reported as a
-`DiagCode::ExportDeferred` **warning**, which is non-aborting
-(`crates/oce-cxf/src/export_defer.rs:1-32`). The cone is a least fixpoint: a single enum connector
-near the front of a chain dooms everything downstream of it.
+Ordinary enum-carrying blocks — any `ValueType::Enum` connector or `Value::Enum` parameter — are
+**deferred, not rejected**. The block *and its entire transitive downstream cone* are omitted from
+the emitted document so that the enum-free remainder can still export. Reserved pass-through
+blocks remain strict: an enum parameter is hidden state that cannot survive omission, so it rejects
+before deferral. Each omission is reported as a `DiagCode::ExportDeferred` **warning**, which is
+non-aborting (`crates/oce-cxf/src/export_defer.rs:1-32`). The cone is a least fixpoint: a single enum
+connector near the front of a chain dooms everything downstream of it.
 
 How large does that get in practice? The G36 corpus pins two cases as tripwires
 (`crates/oce-cxf/tests/export_g36_roundtrip.rs:678-698`):

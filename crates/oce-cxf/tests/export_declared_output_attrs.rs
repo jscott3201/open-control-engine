@@ -78,12 +78,12 @@ fn g36_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/g36")
 }
 
-/// Sorted `*.jsonld` paths of the engine G36 corpus (47 fixtures; the count is pinned by the
-/// comparator's own per-fixture counter, not by this listing).
+/// Sorted `*.jsonld` paths of the swept CXF corpus: 46 G36 catalog fixtures and one resolver
+/// contract. The comparator's per-document counter pins the total.
 fn sorted_fixture_paths() -> Vec<PathBuf> {
     let dir = g36_dir();
     let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
-        .unwrap_or_else(|e| panic!("G36 fixture dir {} must exist: {e}", dir.display()))
+        .unwrap_or_else(|e| panic!("swept CXF fixture dir {} must exist: {e}", dir.display()))
         .map(|entry| entry.expect("readable directory entry").path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "jsonld"))
         .collect();
@@ -265,19 +265,19 @@ fn corpus_declared_outputs_export_their_authored_attrs_key_by_key() {
 
     assert!(
         mismatches.is_empty(),
-        "declared boundary-output §7.4.1 attribute mismatches over the engine G36 corpus \
+        "declared boundary-output §7.4.1 attribute mismatches over the swept CXF corpus \
          ({} total):\n{}",
         mismatches.len(),
         mismatches.join("\n")
     );
-    assert_eq!(fixtures, 47, "engine G36 corpus size moved");
+    assert_eq!(fixtures, 47, "swept CXF corpus size moved");
     // One assertion carrying BOTH counters: written as two assert_eq! calls, the first panic
     // would hide the second, and mutation control 7 needs either red observable.
     assert_eq!(
         (surviving, attr_carrying),
         (97, 61),
         "compared-population pins moved (surviving, attr-carrying), counted from what the \
-         comparator actually compared over the engine G36 corpus"
+         comparator actually compared over the swept CXF corpus"
     );
     assert!(
         conditional_pair_compared > 0,

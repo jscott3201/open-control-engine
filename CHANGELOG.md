@@ -34,10 +34,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   round-trip fixpoint (#175), and where the subset does not apply the former panic is now a
   typed `ExportUnsupported` rejection (#174). Connector §7.4.1 attributes export under the
   bare-scalar canonical subset (#176).
-- **Arrays export flattened, and enum-carrying blocks defer with warnings rather than
-  failing** (#177). `export_with_report` surfaces those warnings; plain `export` discards
-  them — so an integrator who needs to know whether an export was *complete* must use the
-  reporting form.
+- **Arrays export flattened, and ordinary enum-carrying blocks defer with warnings rather
+  than failing** (#177). Reserved pass-through blocks still reject enum parameters because
+  omission would erase hidden state. `export_with_report` surfaces deferral warnings; plain
+  `export` discards them — so an integrator who needs to know whether an export was *complete*
+  must use the reporting form.
 - **Ports bind by declared CDL name, not array position** (#185), with the port-order table
   derived from vendored upstream CDL source instead of a hand-maintained JSON file (#184).
   Fixture port order is gated against upstream declaration order (#183).
