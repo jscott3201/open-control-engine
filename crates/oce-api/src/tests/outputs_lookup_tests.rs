@@ -2,8 +2,9 @@
 //! agreement with independent oracles across the whole connector-id space.
 //!
 //! `Outputs::get` is `O(log n)` only because `entries` is ascending by `ConnectorId`.
-//! `oce-validate` rejects any connector whose id differs from its arena index before
-//! `Outputs::build`; the ordering pin below guards that validated invariant at the consumer.
+//! `oce-validate` rejects any connector whose id differs from its arena index at load;
+//! `Engine::resume` changes parameters only and preserves that arena. The ordering pin below guards
+//! the validated invariant at the consumer.
 //!
 //! The `debug_assert` in `Outputs::build` does **not** stand in for it. The workspace release
 //! profile leaves `debug-assertions` off, so that assert is absent from the `--release` codegen the

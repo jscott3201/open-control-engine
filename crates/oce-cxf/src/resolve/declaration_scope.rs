@@ -441,8 +441,9 @@ impl Scope for OwnDeclarationScope<'_> {
 ///
 /// Parsing applies the evaluator's real classification: literals, builtins, named constants, and
 /// qualified enum references never become dependencies. A comprehension source uses the enclosing
-/// scope; its iterator shadows the body. An expression that cannot parse contributes no edges
-/// because it cannot reach evaluation. Total; never panics.
+/// scope; its iterator shadows the body. A multi-iterator comprehension contributes no edges because
+/// evaluation rejects its clause count before reading any source or body. An expression that cannot
+/// parse also contributes no edges because it cannot reach evaluation. Total; never panics.
 pub(super) fn identifier_heads(text: &str) -> Vec<String> {
     let Ok(expression) = oce_expr::parse(text) else {
         return Vec::new();
@@ -458,9 +459,17 @@ fn collect_identifier_heads(
     heads: &mut Vec<String>,
 ) {
     match expression {
-        ExprAst::Ident(name) if !bound.iter().any(|entry| entry == name) => {
-            heads.push(name.to_string());
+        ExprAst::Ident(name) => {
+            if !bound.iter().any(|entry| entry == name) {
+                heads.push(name.to_string());
+            }
         }
+        ExprAst::Real(_)
+        | ExprAst::Int(_)
+        | ExprAst::Bool(_)
+        | ExprAst::Str(_)
+        | ExprAst::Const(_)
+        | ExprAst::EnumRef(_) => {}
         ExprAst::Unary(_, value) => collect_identifier_heads(value, bound, heads),
         ExprAst::Binary(_, left, right) => {
             collect_identifier_heads(left, bound, heads);
@@ -485,6 +494,8 @@ fn collect_identifier_heads(
             }
         }
         ExprAst::Comprehension { body, iters } => {
+            // Evaluation rejects this shape before it reads any source or body, so no scope lookup
+            // from the subtree can affect declaration order.
             let [(name, source)] = iters.as_slice() else {
                 return;
             };
@@ -493,6 +504,8 @@ fn collect_identifier_heads(
             collect_identifier_heads(body, bound, heads);
             bound.pop();
         }
+        // `ExprAst` is non-exhaustive across the crate boundary. Any future child-bearing variant
+        // must join an arm above so its free identifiers participate in declaration ordering.
         _ => {}
     }
 }

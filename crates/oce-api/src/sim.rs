@@ -45,9 +45,9 @@ impl Outputs {
             paths.len(),
             "Outputs entries/paths must align"
         );
-        // The ordering `Outputs::get`'s binary search depends on. Validation rejects any connector
-        // whose id differs from its arena index before this constructor runs; keep the assertion as
-        // a local defense against future construction changes.
+        // The ordering `Outputs::get`'s binary search depends on. Load validation rejects any
+        // connector whose id differs from its arena index. `Engine::resume` is the other caller and
+        // changes parameters only, so it rebuilds from that already-validated connector arena.
         debug_assert!(
             entries.windows(2).all(|w| w[0].0 < w[1].0),
             "Outputs entries must be strictly ascending by ConnectorId"
@@ -67,9 +67,10 @@ impl Outputs {
     ///
     /// `O(log n)` in the number of outputs, so a host reading many connectors in a loop does not
     /// pay a scan per read. This relies on the entries being ascending by [`ConnectorId`]: they are
-    /// built by an in-order `connectors.filter(Out)` walk after validation proves every connector id
-    /// equals its arena index. The invariant is also pinned by
-    /// `entries_are_strictly_ascending_by_connector_id` under both build profiles.
+    /// built by an in-order `connectors.filter(Out)` walk over the connector arena validated at
+    /// load. [`Engine::resume`] can rebuild the snapshot after parameter changes but cannot change
+    /// connector ids. The invariant is also pinned by `entries_are_strictly_ascending_by_connector_id`
+    /// under both build profiles.
     #[must_use]
     pub fn get(&self, c: ConnectorId) -> Option<&Value> {
         self.entries

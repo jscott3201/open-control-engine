@@ -52,7 +52,7 @@ fn declared_scheme_does_not_capture_double_slash_context_values() {
 }
 
 #[test]
-fn large_flat_context_avoids_pairwise_term_scans() {
+fn large_flat_context_preserves_every_binding() {
     let context = Context::Map(
         (0..50_000)
             .map(|index| (format!("p{index:05}"), serde_json::json!("urn:x")))

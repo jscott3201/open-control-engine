@@ -309,9 +309,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   loop should not be O(n). The ascending-order dependency is pinned under both build profiles.
 - **Connector IDs must equal their arena positions before a model reaches BUILD** (#281).
   `ConnectorId` is documented and consumed as a dense arena index, but the structural gate enforced
-  that invariant only for blocks. A hand-built graph could therefore reach `Outputs::get` with an
-  unsorted snapshot and miss an existing output under binary search. The load seam now returns a
-  typed `malformed-document` diagnostic before allocating state or building the snapshot.
+  that invariant only for blocks. An in-crate hand-built graph could therefore reach `Outputs::get`
+  with an unsorted snapshot and miss an existing output under binary search; current public loaders
+  already mint dense ids. The validated in-crate load tail now returns a typed `malformed-document`
+  diagnostic before allocating state or building the snapshot, protecting future non-CXF loaders
+  at the same seam.
 - **Export completeness is enforceable** (#217). `ExportReport::content_id()` would mint a
   well-formed `cxf:fnv1a128:…` identity for a *partially* exported document. Its rustdoc already
   said hosts must require an empty warning list; nothing made them, and because deferral warnings
