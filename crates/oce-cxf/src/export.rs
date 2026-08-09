@@ -66,15 +66,16 @@
 //! Some rejections prevent silent loss rather than enforce the subset: a connector listed twice in
 //! `external_inputs`, a boundary alias whose source has no emitted port, a connection involving a
 //! reserved pass-through connector, and an input driven by more than one surviving output. These
-//! checks are judged over the **survivor cone**, so a defect sitting entirely inside a deferred
-//! block never aborts an export whose document omits that block.
+//! checks are judged over the **survivor cone** for ordinary blocks, so a defect sitting entirely
+//! inside a deferred ordinary block never aborts an export whose document omits that block.
 //!
 //! Enum deferral is the ordinary non-aborting axis: a deferred ordinary block contributes no error
 //! diagnostics, so a partly enum-bearing graph exports its enum-free remainder with
-//! `ExportDeferred` **warnings**. Reserved pass-through shape and hidden-state checks still run
-//! because elision cannot represent those defects. A non-empty graph with zero emitted runtime
-//! blocks after deferred and reserved lowering-only blocks are omitted also rejects: the result
-//! would be an unloadable root-only shell ([`MSG_TOTAL_DEFERRAL`]).
+//! `ExportDeferred` **warnings**. Reserved pass-through shape and hidden-state checks run
+//! independently of deferral; the resolver-produced lowering shape is the only valid form in the
+//! reserved namespace. A non-empty graph with zero emitted runtime blocks after deferred and
+//! reserved lowering-only blocks are omitted also rejects: the result would be an unloadable
+//! root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
 use std::collections::{BTreeMap, BTreeSet};
 

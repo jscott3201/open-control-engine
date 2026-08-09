@@ -65,8 +65,9 @@ same reason: `serde_json` writes it as JSON `null`, which re-imports as `None`
 On a **deferred ordinary** block, none of that runs. The block is omitted from the document and
 therefore contributes no error diagnostic of its own — not from its connector attributes, not from
 its parameters, not from its boundary entries (`crates/oce-cxf/src/lib.rs:161-198`). A reserved
-pass-through with hidden state is the exception: elision cannot represent that state, so it rejects
-even when an enum parameter also marks the block deferred. Whole-graph guards behave differently:
+pass-through with hidden state is the exception: the resolver-produced lowering shape is the only
+valid form in the reserved namespace, so it rejects even when an enum parameter also marks the
+block deferred. Whole-graph guards behave differently:
 an empty (zero-block) graph, non-dense ids, and a connection that is not output→input reject either
 way, because they are attributable to no single block's presence in the document.
 
@@ -77,7 +78,7 @@ This is the most important thing on this page.
 Ordinary enum-carrying blocks — any `ValueType::Enum` connector or `Value::Enum` parameter — are
 **deferred, not rejected**. The block *and its entire transitive downstream cone* are omitted from
 the emitted document so that the enum-free remainder can still export. Reserved pass-through
-blocks remain strict: an enum parameter is hidden state that cannot survive omission, so it rejects
+blocks remain strict: an enum parameter violates the resolver-produced lowering shape, so it rejects
 despite being selected for deferral. Each omission is reported as a `DiagCode::ExportDeferred`
 **warning**, which is non-aborting (`crates/oce-cxf/src/export_defer.rs:1-32`). The cone is a least
 fixpoint: a single enum connector near the front of a chain dooms everything downstream of it.

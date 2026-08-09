@@ -18,6 +18,12 @@ const CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoin
      child-port node";
 const TOTAL_DEFERRAL: &str = "CXF export requires at least one emitted runtime block: all blocks \
      were deferred or reserved lowering-only, leaving no runtime composite to emit";
+const ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+const ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
+     which is outside the canonical (bare-scalar) export subset";
+const ATTR_NONFINITE_BOUND: &str = "export subset: connector carries a non-finite §7.4.1 min/max bound, \
+     which is outside the canonical (bare-scalar) export subset";
 
 fn connector(id: u32, block: u32, dir: Dir, iri: Option<&'static str>) -> Connector {
     let mut connector = Connector::new(ConnectorId(id), BlockId(block), dir, ValueType::Real, id);
@@ -569,6 +575,64 @@ fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
                     .with_subject("block#0".to_owned())
             ],
             "{class_path} accepted hidden input attributes"
+        );
+    }
+}
+
+#[test]
+fn out_of_subset_attributes_on_reserved_input_reject_instead_of_disappearing() {
+    let cases = [
+        (
+            Attrs::Real(RealAttrs {
+                nominal: Some(1.0),
+                ..RealAttrs::default()
+            }),
+            ATTR_NOMINAL,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                unbounded: Some(true),
+                ..RealAttrs::default()
+            }),
+            ATTR_UNBOUNDED,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                min: Some(f64::NAN),
+                ..RealAttrs::default()
+            }),
+            ATTR_NONFINITE_BOUND,
+        ),
+        (
+            Attrs::Real(RealAttrs {
+                max: Some(f64::INFINITY),
+                ..RealAttrs::default()
+            }),
+            ATTR_NONFINITE_BOUND,
+        ),
+    ];
+
+    for (input_attrs, message) in cases {
+        let mut graph = ModelGraph {
+            blocks: vec![pass_block(vec![ConnectorId(0)]), survivor()],
+            connectors: vec![
+                connector(0, 0, Dir::In, Some("http://example.org#PassExport.u")),
+                connector(1, 0, Dir::Out, Some("http://example.org#PassExport.y")),
+                connector(2, 1, Dir::Out, None),
+            ],
+            connections: vec![],
+            external_inputs: vec![ConnectorId(0)],
+            boundary_outputs: vec![],
+        };
+        graph.connectors[0].attrs = input_attrs;
+
+        assert_eq!(
+            rejection(&graph),
+            vec![
+                Diagnostic::error(DiagCode::ExportUnsupported, message)
+                    .with_subject("connector#0".to_owned())
+            ],
+            "reserved input accepted an out-of-subset attribute: {message}"
         );
     }
 }

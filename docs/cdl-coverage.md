@@ -116,7 +116,7 @@ to produce CXF first.
 
 `crates/oce-conformance/tests/fixtures/golden/g36_traces/` holds 46 `.csv` traces and 46 matching
 `.prov.json` provenance records — 92 files. `EXPECTED_G36_FIXTURES` at
-`crates/oce-cxf/tests/export_g36_roundtrip.rs:45` pins 47 CXF documents: those 46 catalog fixtures
+`crates/oce-cxf/tests/export_g36_roundtrip.rs:46` pins 47 CXF documents: those 46 catalog fixtures
 plus `member_list_interface.jsonld`, a resolver contract fixture with no conformance trace or G36
 catalog claim.
 

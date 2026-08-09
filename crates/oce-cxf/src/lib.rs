@@ -189,10 +189,11 @@ pub fn import_cxf(
 ///   parameter defect, an external input with no boundary IRI or listed twice, a
 ///   multiply-driven input, an alias source with no emitted port, or a reserved connection endpoint
 ///   — reject only where the offender sits on a **surviving** block; a deferred ordinary block is
-///   omitted and so contributes no error diagnostic of its own. Reserved hidden-state checks still
-///   run because elision cannot represent that state. The whole-graph guards (an empty graph,
-///   non-dense ids) and a connection that is not output→input reject either way, being
-///   attributable to no single block's presence in the document. Deferred ordinary blocks —
+///   omitted and so contributes no error diagnostic of its own. Reserved shape and hidden-state
+///   checks run independently of deferral because the resolver-produced lowering shape is the only
+///   valid form in the reserved namespace. The whole-graph guards (an empty graph, non-dense ids)
+///   and a connection that is not output→input reject either way, being attributable to no single
+///   block's presence in the document. Deferred ordinary blocks —
 ///   enum-carrying ones and the cascade they reach alike — are a warning, not a rejection, and do
 ///   NOT trigger this variant unless deferral is *total*, which leaves no block to emit. A reserved
 ///   block carrying hidden state rejects independently of deferral. Never panics.

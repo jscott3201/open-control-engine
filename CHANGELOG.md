@@ -187,8 +187,10 @@ and a gate that accepted any text would restore exactly the false assurance desc
   structural `export-unsupported` diagnostic instead of panicking while reading an authored port
   IRI. Reserved pass-through blocks must have no authored instance identity, parameters, or input
   attributes and must carry the scalar type named by their class; violations now reject instead of
-  dropping state or re-importing as another reserved class. Resolver-produced pass-through graphs
-  and their exported bytes are unchanged.
+  dropping state or re-importing as another reserved class. Deferred reserved blocks also reject
+  connector attributes, undeclared owned connectors, and duplicate or misdirected external-input
+  membership instead of hiding those defects through cascade omission. Resolver-produced
+  pass-through graphs and their exported bytes are unchanged.
 
 ### Host facade
 
