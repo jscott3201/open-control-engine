@@ -85,8 +85,8 @@ use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
 use crate::export_attrs::{PortAttrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
-    has_valid_shape, is_declared_pass_through_connector, is_pass_through_class,
-    reserved_connection_endpoint,
+    has_unrepresentable_state, has_valid_wiring_shape, is_declared_pass_through_connector,
+    is_pass_through_class, reserved_connection_endpoint,
 };
 use crate::{CxfError, bridge};
 
@@ -126,8 +126,8 @@ const MSG_CLASS_BRIDGE: &str =
 /// Block/connector cross-references disagree (non-dense ids, wrong owner or direction, a
 /// connector claimed twice or never, a connection endpoint out of range or not output→input).
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
-/// A reserved lowering block differs from the resolver-produced parameterless typed identity.
-const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its parameterless typed lowering shape";
+/// Elision would discard state or change the reserved scalar identity on re-import.
+const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
 /// The connector carries a non-default `nominal` attribute (the importer hardcodes
 /// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
 /// dropped rather than round-tripped).
@@ -446,17 +446,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
         ));
     }
 
-    // Phase 3 — reserved lowering shape and orphan scan. Host-built pass-through blocks must have
-    // the same parameterless typed external In/Out pair as resolver-produced blocks.
+    // Phase 3 — reserved lowering shape and orphan scan. Wiring defects keep the structural
+    // diagnostic they had before hidden-state checks were added; state with no wire representation
+    // gets the reserved-shape diagnostic.
     for (bi, block) in g.blocks.iter().enumerate() {
         if !is_pass_through_class(&block.class_iri) {
             continue;
         }
-        if !has_valid_shape(g, bi) {
-            let subject = block
-                .instance_iri
-                .as_deref()
-                .map_or_else(|| format!("block#{bi}"), str::to_owned);
+        let subject = block
+            .instance_iri
+            .as_deref()
+            .map_or_else(|| format!("block#{bi}"), str::to_owned);
+        if !has_valid_wiring_shape(g, bi) {
+            diags.push(reject(MSG_STRUCTURE, &subject));
+        }
+        if has_unrepresentable_state(g, bi) {
             diags.push(reject(MSG_RESERVED_SHAPE, &subject));
         }
     }

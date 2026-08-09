@@ -1,6 +1,6 @@
 //! Export-side validation helpers for reserved pass-through blocks.
 
-use oce_model::{Connector, Dir, ModelGraph, ValueType};
+use oce_model::{Connector, ModelGraph, ValueType};
 
 fn pass_through_value_type(class_path: &str) -> Option<ValueType> {
     match class_path {
@@ -49,16 +49,33 @@ pub(crate) fn reserved_connection_endpoint(
         })
 }
 
-/// Whether a reserved block has the resolver-produced parameterless typed input/output pair.
-pub(crate) fn has_valid_shape(graph: &ModelGraph, block_position: usize) -> bool {
+/// Whether Phase 3's pre-existing wiring checks accept a reserved block.
+pub(crate) fn has_valid_wiring_shape(graph: &ModelGraph, block_position: usize) -> bool {
+    let Some(block) = graph.blocks.get(block_position) else {
+        return false;
+    };
+    match (block.inputs.as_slice(), block.outputs.as_slice()) {
+        ([input_id], [_output_id]) => {
+            graph
+                .connectors
+                .get(input_id.0 as usize)
+                .is_some_and(|input| input.block.0 as usize == block_position)
+                && graph.external_inputs.contains(input_id)
+        }
+        _ => false,
+    }
+}
+
+/// Whether elision would discard authored state or change the reserved scalar identity.
+pub(crate) fn has_unrepresentable_state(graph: &ModelGraph, block_position: usize) -> bool {
     let Some(block) = graph.blocks.get(block_position) else {
         return false;
     };
     let Some(value_type) = pass_through_value_type(&block.class_iri) else {
         return false;
     };
-    if !block.params.values.is_empty() {
-        return false;
+    if block.instance_iri.is_some() || !block.params.values.is_empty() {
+        return true;
     }
     match (block.inputs.as_slice(), block.outputs.as_slice()) {
         ([input_id], [output_id]) => match (
@@ -66,13 +83,7 @@ pub(crate) fn has_valid_shape(graph: &ModelGraph, block_position: usize) -> bool
             graph.connectors.get(output_id.0 as usize),
         ) {
             (Some(input), Some(output)) => {
-                input.block.0 as usize == block_position
-                    && output.block.0 as usize == block_position
-                    && input.dir == Dir::In
-                    && output.dir == Dir::Out
-                    && input.value_type == value_type
-                    && output.value_type == value_type
-                    && graph.external_inputs.contains(input_id)
+                input.value_type != value_type || output.value_type != value_type
             }
             _ => false,
         },

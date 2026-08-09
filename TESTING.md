@@ -255,7 +255,8 @@ Nothing else can see it. The resolver assigns port positions from document array
 guard checks counts and `oce-validate`'s `check_ports_dir` checks each position's *kind*. A
 transposition between two ports of the **same kind** passes both. `Reals.PID` with `u_s`/`u_m`
 swapped inverts the control action. **30 of 136 blocks are exposed; 282 instances live across 33
-of the 47 fixture documents.**
+of the 46 catalog fixtures.** The 47th document is the `member_list_interface.jsonld` resolver
+contract fixture; its `hasInstance`-derived ports add no comparison to this audit.
 
 It gates because its value is entirely future-tense — the corpus is verified clean, so it stays
 silent until someone edits a fixture, which is exactly when a person will not remember to run it.
