@@ -50,3 +50,17 @@ fn declared_scheme_does_not_capture_double_slash_context_values() {
     assert!(diags.is_empty(), "{diags:?}");
     assert_eq!(table["alias"], "http://example.org#A");
 }
+
+#[test]
+fn large_flat_context_avoids_pairwise_term_scans() {
+    let context = Context::Map(
+        (0..50_000)
+            .map(|index| (format!("p{index:05}"), serde_json::json!("urn:x")))
+            .collect(),
+    );
+    let mut diags = Vec::new();
+    let table = prefix_table(&context, &mut diags);
+    assert!(diags.is_empty(), "{diags:?}");
+    assert_eq!(table.len(), 50_000);
+    assert_eq!(table["p49999"], "urn:x");
+}

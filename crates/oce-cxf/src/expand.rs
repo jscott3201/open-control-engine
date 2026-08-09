@@ -54,7 +54,7 @@
 //! Context-shape validation runs BEFORE slot expansion and its refusals return alone, so a
 //! `RelativeIri` refusal's "declares no @base" clause is literally true whenever it fires.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oce_diag::{DiagCode, Diagnostic};
 
@@ -141,6 +141,7 @@ fn merge_context_entries<'a>(
     diags: &mut Vec<Diagnostic>,
 ) {
     let entries: Vec<_> = entries.collect();
+    let local_terms: BTreeSet<&str> = entries.iter().map(|(term, _)| term.as_str()).collect();
     for &(term, value) in &entries {
         if term == "@base" || term == "@import" || term == "@vocab" {
             // These keywords change identity semantics this engine does not implement.
@@ -166,7 +167,7 @@ fn merge_context_entries<'a>(
         }
         match value {
             serde_json::Value::String(iri) => {
-                if let Some(prefix) = nested_compact_prefix(iri, &entries, table) {
+                if let Some(prefix) = nested_compact_prefix(iri, &local_terms, table) {
                     diags.push(
                         Diagnostic::error(
                             DiagCode::NonSubsetConstruct,
@@ -217,13 +218,12 @@ fn merge_context_entries<'a>(
 /// not a compact IRI (JSON-LD 1.1 §4.1.5).
 fn nested_compact_prefix<'a>(
     iri: &'a str,
-    entries: &[(&String, &serde_json::Value)],
+    local_terms: &BTreeSet<&str>,
     table: &PrefixTable,
 ) -> Option<&'a str> {
     let (prefix, suffix) = iri.split_once(':')?;
-    (!suffix.starts_with("//")
-        && (table.contains_key(prefix) || entries.iter().any(|(term, _)| term.as_str() == prefix)))
-    .then_some(prefix)
+    (!suffix.starts_with("//") && (table.contains_key(prefix) || local_terms.contains(prefix)))
+        .then_some(prefix)
 }
 
 /// Whether `value` has syntactically absolute-IRI form: everything before the FIRST colon is
