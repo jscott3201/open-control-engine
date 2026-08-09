@@ -191,6 +191,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   connector attributes, undeclared owned connectors, and duplicate or misdirected external-input
   membership instead of hiding those defects through cascade omission. Resolver-produced
   pass-through graphs and their exported bytes are unchanged.
+- **Context bindings and declaration dependencies no longer admit false identities or cycles**
+  (#281). A context term whose value is a compact IRI through another active prefix now refuses as
+  non-subset; retaining that spelling made the term and its expanded twin key different points.
+  Composite declaration dependencies now come from the parsed expression AST rather than a raw
+  identifier scan, so comprehension iterators shadow their bodies and qualified enum references do
+  not become sibling edges.
 
 ### Host facade
 
@@ -300,8 +306,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   itself, and is characterized by test rather than left to a reader. Separately, `Outputs::get`
   binary-searches rather than scanning linearly; the in-tree caller count is one and it is a test,
   so no in-tree win is claimed — the point is that a `ConnectorId`-keyed read a host may call in a
-  loop should not be O(n). Nothing in the type system holds the ascending order the search needs,
-  so a test pins it under both build profiles.
+  loop should not be O(n). The ascending-order dependency is pinned under both build profiles.
+- **Connector IDs must equal their arena positions before a model reaches BUILD** (#281).
+  `ConnectorId` is documented and consumed as a dense arena index, but the structural gate enforced
+  that invariant only for blocks. A hand-built graph could therefore reach `Outputs::get` with an
+  unsorted snapshot and miss an existing output under binary search. The load seam now returns a
+  typed `malformed-document` diagnostic before allocating state or building the snapshot.
 - **Export completeness is enforceable** (#217). `ExportReport::content_id()` would mint a
   well-formed `cxf:fnv1a128:…` identity for a *partially* exported document. Its rustdoc already
   said hosts must require an empty warning list; nothing made them, and because deferral warnings
