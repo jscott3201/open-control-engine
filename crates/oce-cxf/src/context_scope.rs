@@ -1,18 +1,22 @@
 //! Rejection of node-scoped JSON-LD contexts before identity expansion.
 
+use std::sync::Arc;
+
 use oce_diag::{DiagCode, Diagnostic};
 
 use crate::dto::{CxfDocument, CxfValue, TermAttr};
 
 pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
     for (index, node) in doc.graph.iter().enumerate() {
-        let subject = format!("@graph[{index}]");
-        let owner = if node.id.is_empty() {
-            format!("node at `{subject}`")
-        } else {
-            format!("node `{}`", node.id)
-        };
+        let mut subject = None;
         let mut refuse = |location: String| {
+            let subject = Arc::clone(subject.get_or_insert_with(|| {
+                if node.id.is_empty() {
+                    Arc::from(format!("@graph[{index}]"))
+                } else {
+                    Arc::from(node.id.as_str())
+                }
+            }));
             diags.push(
                 Diagnostic::error(
                     DiagCode::NonSubsetConstruct,
@@ -21,11 +25,16 @@ pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
                          supported; declare required bindings in the document-level `@context`"
                     ),
                 )
-                .with_subject(subject.clone()),
+                .with_subject(subject),
             );
         };
         if node.other.contains_key("@context") {
-            refuse(owner.clone());
+            let owner = if node.id.is_empty() {
+                format!("node at `@graph[{index}]`")
+            } else {
+                format!("node `{}`", node.id)
+            };
+            refuse(owner);
         }
         for (slot, references) in [
             ("S231:hasInput", node.has_input.as_slice()),
@@ -68,14 +77,14 @@ pub(super) fn collect_refusals(doc: &CxfDocument, diags: &mut Vec<Diagnostic>) {
     }
 }
 
-fn collect_value_refusals(value: &CxfValue, path: &str, refuse: &mut impl FnMut(String)) {
+fn collect_value_refusals(value: &CxfValue, slot: &str, refuse: &mut impl FnMut(String)) {
     match value {
         CxfValue::Typed { extra, .. } if extra.contains_key("@context") => {
-            refuse(format!("{path} typed literal"));
+            refuse(format!("{slot} typed literal"));
         }
         CxfValue::List(values) => {
-            for (index, value) in values.iter().enumerate() {
-                collect_value_refusals(value, &format!("{path}[{index}]"), refuse);
+            for value in values {
+                collect_value_refusals(value, slot, refuse);
             }
         }
         _ => {}

@@ -103,7 +103,7 @@ fn every_reference_slot_refuses_a_scoped_context_before_expansion() {
 
         assert_eq!(diags.len(), 1, "{slot}: {diags:?}");
         assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{slot}");
-        assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"), "{slot}");
+        assert_eq!(diags[0].subject.as_deref(), Some("ex:M"), "{slot}");
         assert_eq!(
             diags[0].message,
             format!(
@@ -137,8 +137,8 @@ fn every_scoped_context_in_a_reference_list_is_reported_and_round_trips() {
 
     let diags = import_bytes(&bytes).expect_err("each reference context must refuse");
     assert_eq!(diags.len(), 2, "{diags:?}");
-    assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"));
-    assert_eq!(diags[1].subject.as_deref(), Some("@graph[0]"));
+    assert_eq!(diags[0].subject.as_deref(), Some("ex:M"));
+    assert_eq!(diags[1].subject.as_deref(), Some("ex:M"));
     assert!(
         diags
             .iter()
@@ -161,7 +161,7 @@ fn document_and_node_context_refusals_aggregate_in_deterministic_order() {
     assert_eq!(render_diagnostics(&first), render_diagnostics(&second));
     assert_eq!(first.len(), 2, "{first:?}");
     assert_eq!(first[0].subject.as_deref(), Some("@base"));
-    assert_eq!(first[1].subject.as_deref(), Some("@graph[0]"));
+    assert_eq!(first[1].subject.as_deref(), Some("ex:A"));
     assert!(
         first
             .iter()
@@ -187,7 +187,7 @@ fn node_scoped_context_precedes_duplicate_id_indexing() {
         "context refusal must return alone: {diags:?}"
     );
     assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct);
-    assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"));
+    assert_eq!(diags[0].subject.as_deref(), Some("ex:A"));
 }
 
 #[test]
@@ -220,7 +220,12 @@ fn every_modeled_value_object_refuses_a_scoped_context() {
         (
             "S231:value",
             json!([ { "@value": "1.0", "@type": "xsd:double", "@context": null } ]),
-            "S231:value[0] typed literal",
+            "S231:value typed literal",
+        ),
+        (
+            "S231:value",
+            json!([[{ "@value": "1.0", "@type": "xsd:double", "@context": null }]]),
+            "S231:value typed literal",
         ),
         (
             "S231:unit",
@@ -255,7 +260,7 @@ fn every_modeled_value_object_refuses_a_scoped_context() {
 
         assert_eq!(diags.len(), 1, "{slot}: {diags:?}");
         assert_eq!(diags[0].code, DiagCode::NonSubsetConstruct, "{slot}");
-        assert_eq!(diags[0].subject.as_deref(), Some("@graph[0]"), "{slot}");
+        assert_eq!(diags[0].subject.as_deref(), Some("ex:M"), "{slot}");
         assert_eq!(
             diags[0].message,
             format!(
@@ -268,7 +273,7 @@ fn every_modeled_value_object_refuses_a_scoped_context() {
 }
 
 #[test]
-fn diagnostic_size_is_bounded_by_the_offending_input() {
+fn repeated_diagnostics_share_the_owner_subject() {
     let owner = format!("urn:{}", "x".repeat(64 * 1024));
     let references: Vec<Value> = (0..128)
         .map(|index| {
@@ -280,19 +285,19 @@ fn diagnostic_size_is_bounded_by_the_offending_input() {
         .collect();
     let document = json!({
         "@context": {},
-        "@graph": [ { "@id": owner, "S231:hasInput": references } ]
+        "@graph": [ { "@id": &owner, "S231:hasInput": references } ]
     });
     let bytes = serde_json::to_vec(&document).expect("serialize amplification fixture");
     let diags = import_bytes(&bytes).expect_err("reference contexts must refuse");
     let message_bytes: usize = diags.iter().map(|diag| diag.message.len()).sum();
 
     assert_eq!(diags.len(), 128);
-    assert!(
-        diags
-            .iter()
-            .all(|diag| diag.subject.as_deref() == Some("@graph[0]")),
-        "subjects must identify the bounded graph position"
-    );
+    let first_subject = diags[0].subject.as_ref().expect("owner subject");
+    assert_eq!(first_subject.as_ref(), owner);
+    assert!(diags.iter().all(|diag| {
+        let subject = diag.subject.as_ref().expect("owner subject");
+        std::sync::Arc::ptr_eq(first_subject, subject)
+    }));
     assert!(
         message_bytes < bytes.len(),
         "diagnostics amplified {} input bytes into {message_bytes} message bytes",
