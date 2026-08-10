@@ -167,7 +167,7 @@ and a gate that accepted any text would restore exactly the false assurance desc
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
   message, none occurring in the G36 corpus.
-- **Declared boundary inputs carry and export their own §7.4.1 attributes** (fixes #243). The
+- **Declared boundary inputs carry and export their own §7.4.1 attributes** (#284, fixes #243). The
   resolver previously back-filled only the boundary IRI onto each child target, so all five fields
   vanished before `ModelGraph` existed. One declaration may fan out, and child ports retain their
   own metadata; `ModelGraph.boundary_inputs` therefore stores declaration attrs separately from

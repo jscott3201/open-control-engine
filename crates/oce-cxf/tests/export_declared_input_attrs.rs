@@ -287,20 +287,23 @@ fn integer_bounds_remain_integer_declaration_attrs_across_export_and_reimport() 
     let document = document::attr_input_document(
         "Integer",
         "CDL.Integers.Add",
-        serde_json::json!({ "S231:min": -17, "S231:max": 42 }),
+        serde_json::json!({ "S231:min": i64::MIN, "S231:max": i64::MAX }),
     );
     let source = serde_json::to_vec(&document).expect("document serializes");
     let first = import_ok("integer boundary attrs", &source);
     let Attrs::Integer(first_attrs) = &first.boundary_inputs[0].attrs else {
         panic!("integer boundary has Integer attrs");
     };
-    assert_eq!((first_attrs.min, first_attrs.max), (Some(-17), Some(42)));
+    assert_eq!(
+        (first_attrs.min, first_attrs.max),
+        (Some(i64::MIN), Some(i64::MAX))
+    );
 
     let bytes = export(&first).expect("integer boundary attrs export");
     let exported: JsonValue = serde_json::from_slice(&bytes).expect("exported JSON");
     let boundary = node_by_id(&exported, "http://example.org#AttrInput.uExt");
-    assert_eq!(boundary["S231:min"].as_i64(), Some(-17));
-    assert_eq!(boundary["S231:max"].as_i64(), Some(42));
+    assert_eq!(boundary["S231:min"].as_i64(), Some(i64::MIN));
+    assert_eq!(boundary["S231:max"].as_i64(), Some(i64::MAX));
 
     let second = import_ok("integer boundary attrs export", &bytes);
     let second_boundary = second
@@ -474,21 +477,45 @@ fn term_string(fixture: &str, id: &str, key: &str, value: &JsonValue) -> String 
         .to_owned()
 }
 
-fn bound_bits(fixture: &str, id: &str, key: &str, value: &JsonValue) -> u64 {
+#[derive(Debug, PartialEq, Eq)]
+enum BoundValue {
+    Real(u64),
+    Integer(i64),
+}
+
+fn bound_value(fixture: &str, id: &str, key: &str, value: &JsonValue, integer: bool) -> BoundValue {
     if let Some(object) = value.as_object() {
         let lexical = object
             .get("@value")
             .and_then(JsonValue::as_str)
             .unwrap_or_else(|| panic!("`{fixture}` {id} {key}: typed literal without @value"));
-        lexical
-            .parse::<f64>()
-            .unwrap_or_else(|error| panic!("`{fixture}` {id} {key}: invalid bound: {error}"))
-            .to_bits()
+        if integer {
+            BoundValue::Integer(lexical.parse::<i64>().unwrap_or_else(|error| {
+                panic!("`{fixture}` {id} {key}: invalid Integer bound: {error}")
+            }))
+        } else {
+            BoundValue::Real(
+                lexical
+                    .parse::<f64>()
+                    .unwrap_or_else(|error| {
+                        panic!("`{fixture}` {id} {key}: invalid Real bound: {error}")
+                    })
+                    .to_bits(),
+            )
+        }
+    } else if integer {
+        BoundValue::Integer(
+            value.as_i64().unwrap_or_else(|| {
+                panic!("`{fixture}` {id} {key}: expected an Integer, got {value}")
+            }),
+        )
     } else {
-        value
-            .as_f64()
-            .unwrap_or_else(|| panic!("`{fixture}` {id} {key}: expected a number, got {value}"))
-            .to_bits()
+        BoundValue::Real(
+            value
+                .as_f64()
+                .unwrap_or_else(|| panic!("`{fixture}` {id} {key}: expected a Real, got {value}"))
+                .to_bits(),
+        )
     }
 }
 
@@ -521,6 +548,9 @@ fn current_census() -> (Census, Vec<String>) {
         for id in authored_inputs.intersection(&exported_inputs) {
             let authored = node_by_id(&authored_doc, id);
             let exported = node_by_id(&exported_doc, id);
+            let integer_bounds = authored["S231:isOfDataType"]["@id"]
+                .as_str()
+                .is_some_and(|datatype| datatype.ends_with("Integer"));
             census.surviving += 1;
             let mut carries_attr = false;
             for (index, key) in ATTR_KEYS.iter().enumerate() {
@@ -549,14 +579,14 @@ fn current_census() -> (Census, Vec<String>) {
             for key in ["S231:min", "S231:max"] {
                 let authored_value = authored
                     .get(key)
-                    .map(|value| bound_bits(fixture, id, key, value));
+                    .map(|value| bound_value(fixture, id, key, value, integer_bounds));
                 let exported_value = exported
                     .get(key)
-                    .map(|value| bound_bits(fixture, id, key, value));
+                    .map(|value| bound_value(fixture, id, key, value, integer_bounds));
                 if authored_value != exported_value {
                     mismatches.push(format!(
-                        "`{fixture}` {id} {key}: authored {authored_value:016x?}, exported \
-                         {exported_value:016x?}"
+                        "`{fixture}` {id} {key}: authored {authored_value:?}, exported \
+                         {exported_value:?}"
                     ));
                 }
             }

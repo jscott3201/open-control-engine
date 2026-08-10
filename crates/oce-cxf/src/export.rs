@@ -735,7 +735,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             diags.push(reject(MSG_STRUCTURE, &subject));
             continue;
         }
-        let Some(boundary_iri) = c.iri.as_deref() else {
+        let Some(boundary_iri) = c.iri.as_deref().filter(|iri| !iri.is_empty()) else {
             diags.push(reject(MSG_EXTERNAL_IRI, &subject));
             continue;
         };
@@ -761,7 +761,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 diags.push(reject(MSG_STRUCTURE, &subject));
                 continue;
             }
-            let Some(output_iri) = output.iri.as_deref() else {
+            let Some(output_iri) = output.iri.as_deref().filter(|iri| !iri.is_empty()) else {
                 diags.push(reject(MSG_EXTERNAL_IRI, &subject));
                 continue;
             };
