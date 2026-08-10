@@ -122,6 +122,14 @@ re-derived expectation — otherwise we are grading our own homework.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
   golden with the derivation documented.
 
+Detected disagreements may be recorded in
+`crates/oce-conformance/tests/fixtures/known_divergence/register.json` after human adjudication.
+The register is evidence only: membership does not change discrepancies, comparison settings,
+tier status, goldens, or test results. Its initial revision is empty because no current clean-room
+Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
+digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
+This does not add an external-tool execution or a Tier-3 result.
+
 ### 4. Determinism goldens — same input, bit-identical output, every time
 
 Determinism is a *testable property*, not an assumption. For anything that ingests, orders, or
