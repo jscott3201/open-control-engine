@@ -806,23 +806,25 @@ pub(crate) fn resolve(
         &mut external_inputs,
         &mut diags,
     );
-    let boundary_inputs = boundary_inputs::materialize(
-        doc,
-        &external_inputs,
-        &connectors,
-        &blocks,
-        &role_aliases,
-        &boundary_types,
-        &mut diags,
-    );
+    let mut graph = ModelGraph {
+        blocks,
+        connectors,
+        connections,
+        external_inputs,
+        boundary_inputs: Vec::new(),
+        boundary_outputs,
+    };
+    let boundary_inputs =
+        boundary_inputs::materialize(doc, &graph, &role_aliases, &boundary_types, &mut diags);
+    graph.boundary_inputs = boundary_inputs;
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
     // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
     // that port's node position, so the first key component only orders port GROUPS relative to
     // each other, and `ConnectorId` alone orders within a group. That second component is what
     // moved all fifteen goldens. It is assigned in Step 5a from `@graph` order over instance port
     // nodes, so it does not follow the boundary port's array spelling.
-    external_inputs.sort_by_key(|id| {
-        let pos = connectors[id.0 as usize]
+    graph.external_inputs.sort_by_key(|id| {
+        let pos = graph.connectors[id.0 as usize]
             .iri
             .as_deref()
             .and_then(|iri| graph_pos.get(iri).copied())
@@ -831,7 +833,8 @@ pub(crate) fn resolve(
     });
 
     // --- Step 10: gross direction/type fail-fast on emitted edges (AD-8; deep §7.10 is oce-validate).
-    for c in &connections {
+    let connectors = &graph.connectors;
+    for c in &graph.connections {
         let (f, t) = (&connectors[c.from.0 as usize], &connectors[c.to.0 as usize]);
         if f.dir != Dir::Out || t.dir != Dir::In {
             diags.push(
@@ -858,7 +861,12 @@ pub(crate) fn resolve(
 
     // --- Step 11: boundary-aware single-assignment pre-check (AD-2). in-degree per input over the
     // emitted connections; in-degree 0 is legal iff the input is an external boundary input.
-    single_assignment::check(&connectors, &connections, &external_inputs, &mut diags);
+    single_assignment::check(
+        &graph.connectors,
+        &graph.connections,
+        &graph.external_inputs,
+        &mut diags,
+    );
 
     // --- Step 12: deterministic sort + return. On any Error (or any Warning under deny_warnings),
     // withhold the graph and return Err(CxfError::Validation).
@@ -866,14 +874,6 @@ pub(crate) fn resolve(
     if has_errors(&diags) || (opts.deny_warnings && !diags.is_empty()) {
         return Err(CxfError::Validation(diags));
     }
-    let graph = ModelGraph {
-        blocks,
-        connectors,
-        connections,
-        external_inputs,
-        boundary_inputs,
-        boundary_outputs,
-    };
     Ok((
         graph,
         ValidationReport {

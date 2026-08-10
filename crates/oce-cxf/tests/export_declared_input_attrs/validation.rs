@@ -4,7 +4,7 @@ use oce_model::{Attrs, BoundaryInput, NoAttrs, RealAttrs};
 use serde_json::Value as JsonValue;
 
 use super::document::{attr_input_document, node_mut};
-use crate::{ATTR_KEYS, DECLARED_INPUT_ATTRS, import_ok, node_by_id};
+use crate::{ATTR_KEYS, DECLARED_INPUT_ATTRS, import_ok, node_by_id, reference_ids};
 
 const ENUM_DEFERRAL: &str = include_str!("../fixtures/enum_deferral_miniature.jsonld");
 
@@ -145,6 +145,42 @@ fn boundary_input_identity_cannot_also_name_an_instance_connector() {
 }
 
 #[test]
+fn refused_connector_alias_parses_malformed_attrs_once() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.y");
+    node_mut(&mut document, "uExt")
+        .as_object_mut()
+        .expect("boundary node object")
+        .remove("S231:isConnectedTo");
+    let alias = node_mut(&mut document, "add.y");
+    alias["S231:isConnectedTo"] =
+        serde_json::json!({ "@id": "http://example.org#AttrInput.add.u1" });
+    alias["S231:unit"] = serde_json::json!(7);
+
+    let bytes = serde_json::to_vec(&document).expect("document serializes");
+    let diagnostics = match import_cxf(&bytes, &ResolveOptions::default()) {
+        Err(CxfError::Validation(diagnostics)) => diagnostics,
+        other => panic!("expected validation diagnostics, got {other:?}"),
+    };
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                "S231:unit is not a string, typed literal, or IRI node — malformed term",
+            )
+            .with_subject("http://example.org#AttrInput.add.y".to_owned()),
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                "boundary input shadows an instance port connector",
+            )
+            .with_subject("http://example.org#AttrInput.add.y".to_owned()),
+        ]
+    );
+}
+
+#[test]
 fn boundary_input_identity_cannot_also_name_a_contained_block() {
     let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
     node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
@@ -267,6 +303,86 @@ fn boundary_input_identity_cannot_collide_with_the_canonical_export_root() {
         )
         .with_subject("urn:open-control:cxf-export:root".to_owned()),
     );
+}
+
+fn enum_deferral_with_boundary_alias(alias: &str, rename_parameter: bool) -> JsonValue {
+    let mut document: JsonValue =
+        serde_json::from_str(ENUM_DEFERRAL).expect("enum deferral fixture parses");
+    if rename_parameter {
+        node_mut(&mut document, "Mini.con")["S231:hasParameter"][1]["@id"] =
+            serde_json::json!("http://example.org#Other.k");
+        node_mut(&mut document, "Mini.con.k")["@id"] =
+            serde_json::json!("http://example.org#Other.k");
+    }
+    node_mut(&mut document, "Mini")["S231:hasInput"]["@id"] = serde_json::json!(alias);
+    node_mut(&mut document, "Mini.bIn")["@id"] = serde_json::json!(alias);
+    document
+}
+
+#[test]
+fn deferred_boundary_aliases_do_not_collide_with_unemitted_nodes() {
+    for (alias, rename_parameter) in [
+        ("http://example.org#Mini.con.in0", false),
+        ("http://example.org#Mini.con.k", true),
+        ("urn:open-control:cxf-export:root", false),
+    ] {
+        let document = enum_deferral_with_boundary_alias(alias, rename_parameter);
+        let bytes = serde_json::to_vec(&document).expect("document serializes");
+        let graph = import_ok("deferred boundary alias", &bytes);
+        assert_eq!(graph.boundary_inputs[0].iri.as_ref(), alias);
+
+        let report = export_with_report(&graph).expect("deferred alias does not reach the wire");
+        assert!(!report.warnings.is_empty(), "the target owner is deferred");
+        let exported: JsonValue =
+            serde_json::from_slice(&report.bytes).expect("exported JSON parses");
+        let graph_nodes = exported["@graph"].as_array().expect("@graph array");
+        let expected_nodes = usize::from(alias == "urn:open-control:cxf-export:root");
+        assert_eq!(
+            graph_nodes
+                .iter()
+                .filter(|node| node["@id"].as_str() == Some(alias))
+                .count(),
+            expected_nodes,
+            "deferred boundary `{alias}` does not add an emitted node"
+        );
+        let root = node_by_id(&exported, "urn:open-control:cxf-export:root");
+        assert!(
+            !reference_ids(root.get("S231:hasInput")).contains(alias),
+            "deferred boundary `{alias}` is absent from the emitted root interface"
+        );
+    }
+}
+
+#[test]
+fn surviving_boundary_can_reuse_identity_minted_only_by_a_deferred_owner() {
+    for (alias, rename_parameter) in [
+        ("http://example.org#Mini.con.in0", false),
+        ("http://example.org#Mini.con.k", true),
+    ] {
+        let mut document = enum_deferral_with_boundary_alias(alias, rename_parameter);
+        node_mut(&mut document, "Mini.src.y")["S231:isConnectedTo"]
+            .as_array_mut()
+            .expect("source target array")
+            .retain(|target| target["@id"].as_str() != Some("http://example.org#Mini.gain.u"));
+        node_mut(&mut document, alias)["S231:isConnectedTo"] = serde_json::json!([
+            { "@id": "http://example.org#Mini.con.u_s" },
+            { "@id": "http://example.org#Mini.gain.u" }
+        ]);
+
+        let bytes = serde_json::to_vec(&document).expect("document serializes");
+        let graph = import_ok("mixed survivor boundary alias", &bytes);
+        let report =
+            export_with_report(&graph).expect("only the live boundary identity is emitted");
+        assert!(!report.warnings.is_empty(), "one target owner is deferred");
+        let exported: JsonValue =
+            serde_json::from_slice(&report.bytes).expect("exported JSON parses");
+        node_by_id(&exported, alias);
+        let root = node_by_id(&exported, "urn:open-control:cxf-export:root");
+        assert!(
+            reference_ids(root.get("S231:hasInput")).contains(alias),
+            "surviving boundary `{alias}` remains on the emitted root interface"
+        );
+    }
 }
 
 fn export_diagnostics(graph: &oce_model::ModelGraph) -> Vec<Diagnostic> {

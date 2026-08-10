@@ -1,13 +1,15 @@
 //! Materialization of represented top-composite boundary-input declarations.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{Attrs, BlockInstance, BoundaryInput, Connector, ConnectorId, NoAttrs, ValueType};
+use oce_model::{Attrs, BoundaryInput, ConnectorId, ModelGraph, NoAttrs, ValueType};
 
 use crate::dto::{CxfDocument, Node};
 use crate::export::EXPORT_ROOT_IRI;
+use crate::export_defer::deferral_set;
+use crate::export_pass_through::is_pass_through_class;
 
 use super::attrs::connector_attrs;
 use super::instance_params::Inst;
@@ -71,31 +73,25 @@ pub(super) fn refuse_role_aliases<'a>(
 /// order and fan-out cardinality remain independent in `external_inputs`.
 pub(super) fn materialize(
     doc: &CxfDocument,
-    external_inputs: &[ConnectorId],
-    connectors: &[Connector],
-    blocks: &[BlockInstance],
+    graph: &ModelGraph,
     role_aliases: &HashSet<&str>,
     boundary_types: &HashMap<&str, Option<ValueType>>,
     diags: &mut Vec<Diagnostic>,
 ) -> Vec<BoundaryInput> {
-    let represented = external_inputs
+    let represented = graph
+        .external_inputs
         .iter()
-        .filter_map(|id| connectors.get(id.0 as usize))
+        .filter_map(|id| graph.connectors.get(id.0 as usize))
         .filter_map(|connector| connector.iri.as_deref())
         .collect::<HashSet<_>>();
-    refuse_minted_aliases(
-        doc,
-        &represented,
-        external_inputs,
-        connectors,
-        blocks,
-        role_aliases,
-        diags,
-    );
+    let (deferred, _) = deferral_set(graph);
+    refuse_minted_aliases(doc, &represented, graph, role_aliases, &deferred, diags);
 
     doc.graph
         .iter()
-        .filter(|node| represented.contains(node.id.as_str()))
+        .filter(|node| {
+            represented.contains(node.id.as_str()) && !role_aliases.contains(node.id.as_str())
+        })
         .map(|node| BoundaryInput {
             iri: Arc::from(node.id.as_str()),
             attrs: declared_attrs(node, boundary_types, diags),
@@ -103,18 +99,20 @@ pub(super) fn materialize(
         .collect()
 }
 
-/// Refuse declaration IRIs that collide with identities synthesized only during export.
+/// Refuse emitted declaration IRIs that collide with identities synthesized for the survivor cone.
 fn refuse_minted_aliases(
     doc: &CxfDocument,
     represented: &HashSet<&str>,
-    external_inputs: &[ConnectorId],
-    connectors: &[Connector],
-    blocks: &[BlockInstance],
+    graph: &ModelGraph,
     role_aliases: &HashSet<&str>,
+    deferred: &BTreeSet<usize>,
     diags: &mut Vec<Diagnostic>,
 ) {
     let mut minted = HashSet::from([EXPORT_ROOT_IRI.to_owned()]);
-    for block in blocks {
+    for (position, block) in graph.blocks.iter().enumerate() {
+        if deferred.contains(&position) || is_pass_through_class(&block.class_iri) {
+            continue;
+        }
         let Some(instance) = block.instance_iri.as_deref() else {
             continue;
         };
@@ -124,13 +122,18 @@ fn refuse_minted_aliases(
             }
         }
     }
-    for connector_id in external_inputs {
-        let Some(connector) = connectors.get(connector_id.0 as usize) else {
+    for connector_id in &graph.external_inputs {
+        let Some(connector) = graph.connectors.get(connector_id.0 as usize) else {
             continue;
         };
-        let Some(block) = blocks.get(connector.block.0 as usize) else {
+        let Some(block) = graph.blocks.get(connector.block.0 as usize) else {
             continue;
         };
+        if deferred.contains(&(connector.block.0 as usize))
+            || is_pass_through_class(&block.class_iri)
+        {
+            continue;
+        }
         let Some(instance) = block.instance_iri.as_deref() else {
             continue;
         };
@@ -140,8 +143,17 @@ fn refuse_minted_aliases(
         minted.insert(format!("{instance}.in{position}"));
     }
 
+    let emitted_boundaries = graph
+        .external_inputs
+        .iter()
+        .filter_map(|id| graph.connectors.get(id.0 as usize))
+        .filter(|connector| !deferred.contains(&(connector.block.0 as usize)))
+        .filter_map(|connector| connector.iri.as_deref())
+        .collect::<HashSet<_>>();
+
     for node in &doc.graph {
         if represented.contains(node.id.as_str())
+            && emitted_boundaries.contains(node.id.as_str())
             && !role_aliases.contains(node.id.as_str())
             && minted.contains(&node.id)
         {
