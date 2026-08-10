@@ -75,6 +75,7 @@ fn malformed_reserved_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
@@ -97,6 +98,7 @@ fn missing_reserved_external_input_membership_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let mut missing_external = valid();
@@ -132,6 +134,7 @@ fn reserved_input_owned_by_another_block_rejects_loudly() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
@@ -154,6 +157,7 @@ fn boundary_output_iri_collision_rejects_at_plan_time() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
@@ -177,6 +181,7 @@ fn boundary_alias_on_reserved_output_rejects_instead_of_disappearing() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![BoundaryOutput {
             iri: Arc::from(ALIAS),
             source: ConnectorId(1),
@@ -219,6 +224,7 @@ fn connection_from_reserved_output_rejects_instead_of_disappearing() {
             to: ConnectorId(2),
         }],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -245,6 +251,7 @@ fn connection_to_reserved_input_rejects_instead_of_disappearing() {
             to: ConnectorId(0),
         }],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -270,6 +277,7 @@ fn alias_on_unclaimed_output_reports_structure_before_loss() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![BoundaryOutput {
             iri: Arc::from(ALIAS),
             source: ConnectorId(3),
@@ -300,6 +308,7 @@ fn undeclared_connector_on_reserved_block_rejects_instead_of_disappearing() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -333,6 +342,7 @@ fn every_reserved_class_rejects_both_wrong_scalar_types() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         };
         graph.blocks[0].class_iri = Arc::from(class_path);
@@ -384,6 +394,7 @@ fn every_reserved_class_rejects_asymmetric_connector_types() {
                     ],
                     connections: vec![],
                     external_inputs: vec![ConnectorId(0)],
+                    boundary_inputs: vec![],
                     boundary_outputs: vec![],
                 };
                 graph.blocks[0].class_iri = Arc::from(class_path);
@@ -433,6 +444,7 @@ fn every_parameter_value_on_reserved_block_rejects_instead_of_disappearing() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         };
         graph.blocks[0]
@@ -475,6 +487,7 @@ fn authored_identity_on_reserved_block_rejects_instead_of_disappearing() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     graph.blocks[0].instance_iri = Some(Arc::from(AUTHORED_IRI));
@@ -559,6 +572,7 @@ fn representable_attributes_on_reserved_input_reject_instead_of_disappearing() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         };
         graph.blocks[0].class_iri = Arc::from(class_path);
@@ -622,6 +636,7 @@ fn out_of_subset_attributes_on_reserved_input_reject_instead_of_disappearing() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         };
         graph.connectors[0].attrs = input_attrs;
@@ -665,6 +680,7 @@ fn pass_through_plus_only_deferred_blocks_rejects_total_deferral() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);
@@ -686,6 +702,7 @@ fn only_reserved_pass_through_blocks_reject_with_truthful_message() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let diagnostics = rejection(&graph);

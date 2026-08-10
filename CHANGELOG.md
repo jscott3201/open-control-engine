@@ -162,11 +162,23 @@ and a gate that accepted any text would restore exactly the false assurance desc
   is the #227 failure shape repeating: a loss identical on both sides of a comparison is invisible
   to that comparison. A per-node authored-vs-exported comparator now runs key by key over the G36
   corpus, pinning the population from its own counters at 97 surviving declared outputs of which 61
-  carry attributes (`export_declared_output_attrs.rs:283`). Boundary **inputs** stay out of scope
-  by ruling (#243). Two consequences are worth knowing before you emit: reusing the connector-attr
+  carry attributes (`export_declared_output_attrs.rs:283`). Boundary inputs were deferred to #243.
+  Two consequences are worth knowing before you emit: reusing the connector-attr
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
   message, none occurring in the G36 corpus.
+- **Declared boundary inputs carry and export their own §7.4.1 attributes** (fixes #243). The
+  resolver previously back-filled only the boundary IRI onto each child target, so all five fields
+  vanished before `ModelGraph` existed. One declaration may fan out, and child ports retain their
+  own metadata; `ModelGraph.boundary_inputs` therefore stores declaration attrs separately from
+  `external_inputs` and `Connector.attrs`. The current 47-document sweep measures 184 authored
+  root inputs, 170 surviving exports, and 100 attr-bearing survivors; every scoped value now
+  compares to the authored node key by key. A second oracle removes only those five fields from the
+  new exports and recovers all 47 pre-change canonical byte streams. `@type`, undriven declarations,
+  and boundary-input §7.10 unification remain out of scope. Two distinct boundary IRIs claiming one
+  child input now refuse instead of silently overwriting the first identity, and a boundary input
+  cannot reuse an instance connector's IRI. Adding the sidecar is source-breaking for exhaustive
+  `oce-model::ModelGraph` literals; the frozen `oce-api` surface is unchanged.
 - **Declared boundary-output attributes now unify with their source connector** (#274, fixes #273). The
   `BoundaryOutput.attrs` alias previously sat outside every §7.10 cluster, so a declared output
   claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.

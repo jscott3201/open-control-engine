@@ -51,6 +51,7 @@ fn t27_unify_and_validate_propagates_then_passes() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let warnings = unify_and_validate(&mut m).expect("valid graph loads clean");
@@ -154,6 +155,7 @@ fn t44_block_subjects_sort_by_numeric_block_id() {
             ],
             connections: vec![],
             external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         }
     };

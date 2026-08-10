@@ -603,6 +603,7 @@ fn host_constructed_attr_tag_mismatch_is_refused_at_export() {
         connectors: vec![output],
         connections: vec![],
         external_inputs: vec![],
+        boundary_inputs: vec![],
         boundary_outputs: vec![BoundaryOutput {
             iri: Arc::from("http://example.org#Host.y"),
             source: output_id,

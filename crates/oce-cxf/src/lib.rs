@@ -115,9 +115,11 @@ pub fn import_cxf(
 ///
 /// Accepts the flat, ground, single-root, scalar-parameter subset (the shape the resolver
 /// produces for documents like the `minimal_loop` fixture) and emits the in-subset §7.4.1
-/// connector attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`) on each port node under
-/// the Bare-Scalar Canonical wire shape. The emitted bytes are deterministic — repeated calls are
-/// byte-identical.
+/// attributes (`unit`/`quantity`/`displayUnit`/`min`/`max`) on connector ports and represented
+/// boundary declarations under the Bare-Scalar Canonical wire shape. Boundary-input declaration
+/// attrs remain independent of their child connector attrs; boundary-output attrs may have been
+/// unified with their source by `oce-validate`. The emitted bytes are deterministic: repeated calls
+/// are byte-identical.
 ///
 /// **Round-trip (RT-2).** For an accepted graph whose class paths name registered block classes
 /// (everything the resolver itself produces), the emitted bytes re-import to a `ModelGraph` that
@@ -132,7 +134,13 @@ pub fn import_cxf(
 /// re-import outright rather than round-trip imperfectly. Block ids are
 /// renumbered densely on re-import, so the comparison is by `instance_iri`, never by raw
 /// `BlockId`. `export_with_report` is the only way to tell the two cases apart: an empty
-/// `warnings` list means nothing was deferred and the round trip covers the whole input.
+/// `warnings` list means nothing was deferred and the round trip covers the whole resolver-produced
+/// input.
+///
+/// Hand-built graphs may omit `boundary_inputs` while retaining `external_inputs`; this legacy
+/// shape remains exportable. Its declarations emit without attributes, and re-import materializes
+/// empty sidecars, so whole-graph RT-2 equality does not cover that omission. Graphs produced by
+/// [`import_cxf`] always carry the represented sidecars.
 ///
 /// Reserved `urn:oce:lowering#PassThrough.*` blocks are emitted as bare boundary edges rather
 /// than `containsBlock` nodes; boundary-output nodes are re-emitted and import synthesizes the
@@ -173,11 +181,13 @@ pub fn import_cxf(
 /// - [`CxfError::Validation`] with [`oce_diag::DiagCode::ExportUnsupported`] error diagnostics
 ///   (subject identifies the offending block, connector owner, or declared boundary node) for
 ///   anything outside the subset that is not an ordinary enum deferral: non-finite parameters,
-///   connectors
+///   connectors or boundary-input sidecars
 ///   carrying `nominal`/`unbounded` or non-finite `min`/`max` bounds (outside the canonical
 ///   subset), String-typed connectors, blocks without an `instance_iri`, external inputs
 ///   without a recorded boundary IRI, the same connector listed more than once in
 ///   `external_inputs` (re-import deduplicates the repeat, so it cannot round-trip), an input
+///   sidecar duplicated by IRI, naming no external target, or carrying an attribute variant that
+///   disagrees with its targets,
 ///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
 ///   fail re-import entirely rather than come back lossy), a declared boundary output whose source
 ///   has no emitted child-port node, a connection to or from a reserved lowering connector,

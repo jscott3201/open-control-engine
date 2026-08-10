@@ -48,6 +48,7 @@ use crate::{CxfError, bridge};
 
 mod array_nodes;
 mod attrs;
+mod boundary_inputs;
 mod boundary_outputs;
 mod composite;
 mod composite_orientation;
@@ -374,6 +375,7 @@ pub(crate) fn resolve(
             ConnectorId((conn_nodes.len() + k) as u32),
         );
     }
+    boundary_inputs::refuse_shadowed(top, &boundary_in, &conn_of_iri, &mut diags);
 
     // --- Step 5b: wiring — direction + owner come authoritatively from the instance port lists
     // (the side a connector is referenced on; a derived instance's signature-ordered vectors
@@ -505,6 +507,7 @@ pub(crate) fn resolve(
     // array order). Mutates connectors[].iri for the elided boundary-input child.
     let mut connections: Vec<Connection> = Vec::new();
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
+    let mut boundary_input_sources: HashMap<ConnectorId, String> = HashMap::new();
     let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
     let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
     let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
@@ -631,6 +634,20 @@ pub(crate) fn resolve(
                         );
                     }
                     Some(to) => {
+                        if let Some(existing) = boundary_input_sources.get(&to) {
+                            if existing != source {
+                                diags.push(
+                                    Diagnostic::error(
+                                        DiagCode::SingleAssignment,
+                                        "input is driven by distinct boundary inputs",
+                                    )
+                                    .with_subject(target.to_owned()),
+                                );
+                                continue;
+                            }
+                        } else {
+                            boundary_input_sources.insert(to, source.to_owned());
+                        }
                         // This elision path bypasses Step 10, so it must also compare the boundary
                         // input's type with the child input's type here.
                         if let Some(boundary_type) = boundary_types.get(source).copied().flatten() {
@@ -788,6 +805,13 @@ pub(crate) fn resolve(
         &mut external_inputs,
         &mut diags,
     );
+    let boundary_inputs = boundary_inputs::materialize(
+        doc,
+        &external_inputs,
+        &connectors,
+        &boundary_types,
+        &mut diags,
+    );
     // `ConnectorId` is not a tie-break here, it is the whole discriminator, and calling it a
     // tie-break would misdescribe what changed: every entry belonging to ONE boundary port shares
     // that port's node position, so the first key component only orders port GROUPS relative to
@@ -844,6 +868,7 @@ pub(crate) fn resolve(
         connectors,
         connections,
         external_inputs,
+        boundary_inputs,
         boundary_outputs,
     };
     Ok((

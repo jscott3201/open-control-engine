@@ -138,6 +138,7 @@ fn a_connector_listed_twice_in_external_inputs_is_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -174,6 +175,7 @@ fn one_boundary_driving_several_distinct_inputs_still_exports() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -202,6 +204,7 @@ fn one_boundary_driving_different_value_types_is_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -257,6 +260,7 @@ fn a_duplicate_external_input_on_a_cascade_deferred_block_does_not_abort_the_exp
         ],
         connections: vec![wire(0, 1)],
         external_inputs: vec![ConnectorId(2), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -335,6 +339,7 @@ fn a_duplicate_external_input_on_an_enum_bearing_deferred_block_does_not_abort_t
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -370,6 +375,7 @@ fn a_single_external_input_entry_round_trips_unchanged() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 

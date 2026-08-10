@@ -1,0 +1,87 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#DeclaredInputAttrs",
+      "@type": "S231:Block",
+      "S231:containsBlock": { "@id": "http://example.org#DeclaredInputAttrs.add" },
+      "S231:hasInput": [
+        { "@id": "http://example.org#DeclaredInputAttrs.uExt" },
+        { "@id": "http://example.org#DeclaredInputAttrs.uPass" }
+      ],
+      "S231:hasOutput": [
+        { "@id": "http://example.org#DeclaredInputAttrs.y" },
+        { "@id": "http://example.org#DeclaredInputAttrs.yPass" }
+      ]
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.add",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#DeclaredInputAttrs.add.u1" },
+        { "@id": "http://example.org#DeclaredInputAttrs.add.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#DeclaredInputAttrs.add.y" }
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.add.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:displayUnit": "degF"
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.add.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K"
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.add.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:isConnectedTo": { "@id": "http://example.org#DeclaredInputAttrs.y" }
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K"
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.uPass",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:quantity": "PressureDifference",
+      "S231:min": { "@value": "-50.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "50.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": { "@id": "http://example.org#DeclaredInputAttrs.yPass" }
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.yPass",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "Pa",
+      "S231:displayUnit": "inH2O"
+    },
+    {
+      "@id": "http://example.org#DeclaredInputAttrs.uExt",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:unit": "K",
+      "S231:quantity": "ThermodynamicTemperature",
+      "S231:displayUnit": "degC",
+      "S231:min": { "@value": "200.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:max": { "@value": "330.0", "@type": "http://www.w3.org/2001/XMLSchema#double" },
+      "S231:isConnectedTo": [
+        { "@id": "http://example.org#DeclaredInputAttrs.add.u2" },
+        { "@id": "http://example.org#DeclaredInputAttrs.add.u1" }
+      ]
+    }
+  ]
+}

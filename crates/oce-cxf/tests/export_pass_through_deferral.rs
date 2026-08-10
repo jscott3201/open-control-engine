@@ -75,6 +75,7 @@ fn cascade_deferred_pass_graph() -> ModelGraph {
             to: ConnectorId(1),
         }],
         external_inputs: vec![ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     }
 }
