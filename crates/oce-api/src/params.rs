@@ -13,7 +13,7 @@ use std::collections::HashMap;
 
 use oce_blocks::{ParamRule, lookup};
 use oce_graph::allocate_state;
-use oce_model::{BlockId, ModelGraph, Value, ValueType};
+use oce_model::{BlockId, ModelGraph, Value, ValueType, enum_descriptor};
 use oce_store::Store;
 
 use crate::engine::{Engine, instantiate_blocks};
@@ -202,6 +202,15 @@ impl<S: Store> Engine<S> {
                 path: path.to_string(),
             });
         }
+        if let Value::Enum { class, ordinal } = &value
+            && enum_descriptor(*class).is_none_or(|descriptor| {
+                *ordinal == 0 || *ordinal as usize > descriptor.members.len()
+            })
+        {
+            return Err(OcError::ParamRange {
+                path: path.to_string(),
+            });
+        }
         if self.is_structural_param(idx) {
             return Err(OcError::ParamStructural {
                 path: path.to_string(),
@@ -263,6 +272,7 @@ impl<S: Store> Engine<S> {
             self.outputs = outputs;
             self.prev_t = None;
             self.params_dirty = false;
+            self.durable_restore_ready = false;
         }
         self.mode = RunMode::Running;
         Ok(())

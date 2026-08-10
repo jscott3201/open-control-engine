@@ -130,7 +130,11 @@ fn time_table_rejects_missing_incomplete_and_malformed_table_params() {
 #[test]
 fn real_time_table_rejects_bad_time_shape_enums_and_offsets() {
     let mut nonmonotonic = valid_real_table();
-    nonmonotonic.push(rp("table_3_1", 0.5));
+    nonmonotonic
+        .iter_mut()
+        .find(|(name, _)| name.as_ref() == "table_3_1")
+        .expect("valid table has a third time row")
+        .1 = Value::Real(0.5);
     let m = one_block_model(
         "CDL.Reals.Sources.TimeTable",
         &[],

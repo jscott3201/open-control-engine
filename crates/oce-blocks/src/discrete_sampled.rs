@@ -168,6 +168,24 @@ impl Block for Sampler {
         region[SAMPLED_INITIALIZED_WORD] = bool_word(false);
     }
 
+    fn validate_state(&self, region: &[u64], state_t: Time, _prev_t: Time) -> Result<(), String> {
+        crate::state_contract::validate_sampled(region, state_t, self.period(), false, false)
+    }
+
+    fn time_is_representable(&self, t_now: Time, region: &[u64]) -> bool {
+        crate::state_contract::sampled_time_representable(
+            t_now,
+            region,
+            self.period(),
+            SAMPLED_INITIALIZED_WORD,
+            SAMPLED_T0_WORD,
+        )
+    }
+
+    fn simulation_time_is_representable(&self, first: Time, last: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sampled_horizon_representable(first, last, self.period())
+    }
+
     fn emit_from_state(
         &self,
         ctx: &Ctx<'_>,
@@ -242,6 +260,25 @@ impl Block for ZeroOrderHold {
 
     fn init_state(&self, region: &mut [u64], params: &ParamTable) {
         self.sampler().init_state(region, params);
+    }
+
+    fn validate_state(&self, region: &[u64], state_t: Time, _prev_t: Time) -> Result<(), String> {
+        crate::state_contract::validate_sampled(
+            region,
+            state_t,
+            self.sampler().period(),
+            false,
+            false,
+        )
+    }
+
+    fn time_is_representable(&self, t_now: Time, region: &[u64]) -> bool {
+        self.sampler().time_is_representable(t_now, region)
+    }
+
+    fn simulation_time_is_representable(&self, first: Time, last: Time, region: &[u64]) -> bool {
+        self.sampler()
+            .simulation_time_is_representable(first, last, region)
     }
 
     fn emit_from_state(
@@ -336,6 +373,24 @@ impl Block for FirstOrderHold {
         region[FIRST_ORDER_HOLD_U_SAMPLE_WORD] = 0.0f64.to_bits();
         region[FIRST_ORDER_HOLD_PRE_U_SAMPLE_WORD] = 0.0f64.to_bits();
         region[FIRST_ORDER_HOLD_SLOPE_WORD] = 0.0f64.to_bits();
+    }
+
+    fn validate_state(&self, region: &[u64], state_t: Time, _prev_t: Time) -> Result<(), String> {
+        crate::state_contract::validate_sampled(region, state_t, self.period(), true, false)
+    }
+
+    fn time_is_representable(&self, t_now: Time, region: &[u64]) -> bool {
+        crate::state_contract::sampled_time_representable(
+            t_now,
+            region,
+            self.period(),
+            FIRST_ORDER_HOLD_INITIALIZED_WORD,
+            FIRST_ORDER_HOLD_T0_WORD,
+        )
+    }
+
+    fn simulation_time_is_representable(&self, first: Time, last: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sampled_horizon_representable(first, last, self.period())
     }
 
     fn emit_from_state(

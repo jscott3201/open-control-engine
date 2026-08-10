@@ -117,7 +117,7 @@ To run the engine's own tests from a clone:
 ```bash
 git clone https://github.com/jscott3201/open-control-engine
 cd open-control-engine
-cargo nextest run -p oce-blocks -p oce-expr    # the per-PR engine subset
+cargo nextest run -p oce-api -p oce-blocks -p oce-expr # the per-PR engine subset
 bash .agents/gate.sh                            # the gate script CI runs; see its closing report
                                                 # for the per-PR checks it cannot cover locally
 ```
@@ -242,9 +242,9 @@ script is the single source of truth for what CI runs.
 Read **[CONTRIBUTING.md](CONTRIBUTING.md)** first, and **[TESTING.md](TESTING.md)** before writing a
 test. Notable changes are in **[CHANGELOG.md](CHANGELOG.md)**.
 
-One thing worth knowing up front: the per-PR gate runs engine tests for `oce-blocks` and `oce-expr`
-only. A change confined to another crate can show every check green having run none of its own
-tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
+One thing worth knowing up front: the per-PR gate runs engine tests for `oce-api`, `oce-blocks`, and
+`oce-expr` only. A change confined to another crate can show every check green having run none of
+its own tests. [CI and the gate](docs/ci-and-the-gate.md) explains the split.
 
 ---
 

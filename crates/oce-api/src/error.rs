@@ -69,6 +69,12 @@ pub enum OcError {
         /// The previous tick's time.
         prev: f64,
     },
+    /// A finite model time cannot be encoded by one loaded block's sampled-time state.
+    #[error("model time cannot be represented by loaded block state: t_now={now}")]
+    ModelTimeUnrepresentable {
+        /// Finite time refused before any engine or store mutation.
+        now: f64,
+    },
     /// A real-time step was requested before the host supplied its wall-clock origin.
     #[error("real-time epoch is not configured; call set_realtime_epoch_unix_nanos first")]
     RealtimeEpochUnset,
@@ -91,6 +97,9 @@ pub enum OcError {
     /// A staged input value whose type does not match the target connector (no coercion; `01` §5).
     #[error("input type mismatch for '{0}'")]
     InputType(String),
+    /// A checkpoint, snapshot, or restore failure.
+    #[error(transparent)]
+    State(#[from] crate::state::EngineStateError),
     /// A store-seam failure — the only path any `Store` backend reaches the error type.
     #[error("store error: {0}")]
     Store(#[from] oce_store::StoreError),

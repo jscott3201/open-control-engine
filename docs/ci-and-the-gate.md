@@ -17,7 +17,7 @@ bash .agents/gate.sh full   # full  — adds the workspace suite and doctests
 ```
 
 CI does not merely mirror that script, it **executes** it: the `gate (light)` job at
-`.github/workflows/ci.yml:273-289` and `gate (full)` at
+`.github/workflows/ci.yml:293-338` and `gate (full)` at
 `.github/workflows/release-gate.yml:334-349`.
 So every command in the script gates a pull request whether or not `ci.yml` also runs it as its own
 job. Read that as coverage, not as parity, and note that the implication does not run the other way:
@@ -25,7 +25,7 @@ job. Read that as coverage, not as parity, and note that the implication does no
 was exactly that for a while — a required check no local run of the script performed — and an
 earlier revision of this paragraph cited the job as `ci.yml:256-270`, stopping one line short of it.
 Nothing verifies mechanically that the two files still list the same commands. That check was
-attempted and withdrawn, and `ci.yml:244-267` records why —
+attempted and withdrawn, and `ci.yml:293-321` records why —
 every design either compared argv strings that `RUSTFLAGS=--cap-lints=allow` leaves byte-identical
 while neutering clippy, or reimplemented enough of GitHub's `if:`/`needs:`/matrix semantics to
 become its own untested gate.
@@ -41,31 +41,36 @@ every problem instead of the first (`.agents/gate.sh:41-56`).
 
 **A green PR is not evidence that the change's own tests pass.**
 
-The per-PR gate into `development` runs engine tests for **`oce-blocks` and `oce-expr` only**. That
+The per-PR gate into `development` runs engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
+only**. That
 is the `determinism-matrix` job: two runners, `ubuntu-latest` and `ubuntu-24.04-arm`
-(`ci.yml:148-156`), each running that two-crate subset twice — once under debug codegen, once under
-release codegen (`ci.yml:165-168`). No other crate's test suite runs. The gate script additionally
-runs two named `oce-cxf` test binaries, and it is explicit that they are input hygiene rather than
+(`ci.yml:148-156`), each running that three-crate subset twice — once under debug codegen, once under
+release codegen (`ci.yml:167-176`). No other crate's test suite runs. Each architecture emits
+populated revision-1 portable and target-bound state vectors. The matrix compares both across
+codegen profiles; a dependent job requires the portable files to match and the target-bound files
+to differ across architectures, then parses and refuses the arm64 target-bound bytes on x86_64.
+The gate script runs the test commands locally and adds two named
+`oce-cxf` test binaries, which are input hygiene rather than
 engine coverage: the port-order audit sweeps 47 CXF documents, of which 46 are Guideline 36 catalog
 fixtures and one is a resolver contract; the structural oracle compares the catalog fixtures it can
 pair with vendored modelica-json translations
 (`.agents/gate.sh:126-154`). That oracle compares document structure — instances and undirected
 edges — not simulated behavior.
 
-Everything else waits for the release gate. A change confined to `oce-api`, `oce-cxf`, `oce-store`,
-`oce-conformance` or `oce-diag` can show a fully green PR having executed none of its own tests.
+Everything else waits for the release gate. A change confined to `oce-cxf`, `oce-store`,
+`oce-conformance`, or `oce-diag` can show a fully green PR having executed none of its own tests.
 Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read the tail.
 
 ## Draft pull requests run nothing
 
-Not a reduced subset — nothing. All fourteen jobs in `ci.yml` are conditioned on
+Not a reduced subset — nothing. All fifteen jobs in `ci.yml` are conditioned on
 `github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`, from
-`ci.yml:55` through `ci.yml:275`. A draft PR with no checks looks a lot like a PR with no failing
+`ci.yml:55` through `ci.yml:324`. A draft PR with no checks looks a lot like a PR with no failing
 checks. Confirm the checks actually ran.
 
 ## cargo-deny is not skippable, but advisories do not gate a PR
 
-The standalone `cargo-deny` job in `ci.yml:229-242` is conditional on a manifest change, computed by
+The standalone `cargo-deny` job in `ci.yml:281-291` is conditional on a manifest change, computed by
 the paths filter at `ci.yml:64-69`. That conditional does not make the check skippable: the gate
 script runs cargo-deny's bans, licenses and sources checks unconditionally
 (`.agents/gate.sh:110-114`), and CI runs the script. Leaving manifests alone does not dodge it.
@@ -118,7 +123,7 @@ thread reservations remain available when measurement identifies a shared resour
 none is known today.
 
 The public-api baselines are the strongest stability evidence in this repo. They are checked-in
-text files — `crates/oce-api/tests/public-api.txt` (1230 lines) and
+text files — `crates/oce-api/tests/public-api.txt` (1374 lines) and
 `crates/oce-store/tests/public-api.txt` (1230 lines) — and the tests at
 `crates/oce-api/tests/public_api.rs` and `crates/oce-store/tests/public_api.rs` diff the crate's
 real surface against them, so any unintended addition, removal or signature change fails the gate

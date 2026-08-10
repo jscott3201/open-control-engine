@@ -44,6 +44,14 @@ mod params;
 mod projection;
 mod sim;
 mod stable_hash;
+mod state;
+mod state_codec;
+mod state_diagnostics;
+mod state_key_order;
+mod state_manifest;
+mod state_manifest_codec;
+mod state_manifest_validation;
+mod state_wire;
 mod topology;
 mod watch;
 
@@ -60,6 +68,7 @@ pub use sim::{
     AssertEvent, AssertLevel, CollectSpec, InputSource, OutputTrace, Outputs, SimMetrics, SimSpec,
     StepReport,
 };
+pub use state::{EngineCheckpoint, EngineStateError, EngineStateSnapshot};
 pub use topology::{DeclaredOutput, PassThroughPair, Topology, TopologyBlock, TopologyConnection};
 
 /// Re-export of the shared diagnostic type: the element type of [`LoadReport::warnings`], so a

@@ -458,7 +458,7 @@ fn sample_trigger_period_zero_rejection_is_pinned() {
         golden,
         vec![
             "error|parameter-out-of-range|block#0|parameter `period` on block \
-             `CDL.Logical.Sources.SampleTrigger` must be > 0; got 0"
+             `CDL.Logical.Sources.SampleTrigger` must be finite and > 0; got 0"
                 .to_string()
         ]
     );

@@ -205,6 +205,19 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **Engine state can be checkpointed, persisted, and restored**
+  ([issue #143](https://github.com/jscott3201/open-control-engine/issues/143)). `EngineCheckpoint` is an
+  opaque process-local image that may rewind a compatible running engine. `EngineStateSnapshot`
+  carries canonical, integrity-checked bytes for durable continuation into a freshly loaded engine;
+  its decoder is capped at 64 MiB and rejects malformed or non-canonical input with typed
+  `EngineStateError` variants. Compatibility is derived from the executable manifest rather than
+  the diagnostic model id, including stable block and connector identities, parameters, port
+  bindings, schedule, state-slot revisions, and enum descriptors. Restore validates the complete
+  image before mutating the target and never calls the `Store` port. Persistence, authentication,
+  generation fencing, real-time epoch configuration, and actuator ownership remain host-owned.
+  Sampled-time blocks now refuse finite model times that their integer clock state cannot represent,
+  before any engine or store mutation; sampled periods and `SampleTrigger` shifts must also be
+  finite at load.
 - **A simulation preflight refusal preserves the prior run** (#266, fixes #260). `simulate` now
   resolves fixed inputs and the first list returned by an input closure before clearing the run
   clock or re-seeding state words. An unknown or wrong-typed preflight input therefore leaves model

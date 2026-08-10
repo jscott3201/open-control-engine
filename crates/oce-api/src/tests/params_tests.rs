@@ -312,6 +312,49 @@ fn sun_rise_set_param_rules_surface_bounds_and_reject_invalid_edits_at_rest() {
 }
 
 #[test]
+fn enum_parameters_reject_out_of_descriptor_ordinals_at_load_and_edit() {
+    fn pid_model(ordinal: u32) -> ModelGraph {
+        let mut builder = Mb::new();
+        let (_, inputs, _) = builder.block(
+            "CDL.Reals.PID",
+            &[ValueType::Real, ValueType::Real],
+            &[ValueType::Real],
+            vec![(
+                Arc::from("controllerType"),
+                Value::Enum {
+                    class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                    ordinal,
+                },
+            )],
+        );
+        let mut model = builder.finish();
+        model.external_inputs = inputs;
+        model
+    }
+
+    let mut invalid = Engine::in_memory();
+    assert!(matches!(
+        invalid.build_model_in_memory(pid_model(99), None),
+        Err(OcError::Validate(_))
+    ));
+
+    let mut engine = Engine::in_memory();
+    engine.build_model_in_memory(pid_model(2), None).unwrap();
+    engine.halt().unwrap();
+    assert!(matches!(
+        engine.set_param(
+            "b0.controllerType",
+            Value::Enum {
+                class: oce_model::EnumClassId::SIMPLE_CONTROLLER,
+                ordinal: 99,
+            }
+        ),
+        Err(OcError::ParamRange { .. })
+    ));
+    engine.checkpoint().unwrap();
+}
+
+#[test]
 fn structural_vector_width_params_are_not_editable_at_rest() {
     let mut eng = Engine::in_memory();
     eng.build_model_in_memory(real_multi_sum_model(), None)

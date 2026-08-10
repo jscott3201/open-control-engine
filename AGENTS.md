@@ -69,7 +69,8 @@ you cloned this repo, you will not find them, and that is expected.
   is a **blocking review defect**. See `TESTING.md` for the full standard.
 - **The gate:** `bash .agents/gate.sh` runs the per-PR gate's commands; `bash .agents/gate.sh full`
   adds the workspace suite and doctests. It is not the whole per-PR gate — the script's own closing
-  report names what it cannot cover locally (cross-arch matrix, public-api surface, cargo-deny), and
+  report names what it cannot cover locally (cross-arch matrix, public-api surface, cargo-deny
+  advisories), and
   a green local run is not a green CI. That script is the single source of truth for gate commands —
   do not restate them here or anywhere else, and change one only by changing `ci.yml` first. Nine
   divergent copies of the command list existed before it was written, two of them materially
@@ -77,8 +78,9 @@ you cloned this repo, you will not find them, and that is expected.
   `gate (light)` step the script did not have, so the required check existed but no local run
   performed it. When they disagree, check which one is behind before assuming it is the script.
 - **CI is dev-light / release-heavy.** The per-PR gate into `development` runs engine tests for
-  **`oce-blocks` and `oce-expr` only** (the `determinism-matrix` job, x86_64 and arm64, debug and
-  release codegen). Every other crate's tests run only on `development` -> `main` release PRs via
+  **`oce-api`, `oce-blocks`, and `oce-expr` only** (the `determinism-matrix` job, x86_64 and
+  arm64, debug and release codegen, with a byte-for-byte cross-architecture portable-state vector
+  comparison). Every other crate's tests run only on `development` -> `main` release PRs via
   `release-gate.yml`. **A green PR is therefore not evidence that a change's own tests pass** —
   run `bash .agents/gate.sh full` first-hand before claiming they do. cargo-nextest is the runner
   (`.config/nextest.toml`: `default` = fast local fail-fast, `ci` = automated debug runs,

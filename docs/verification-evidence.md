@@ -204,7 +204,7 @@ run here does not prove these pass`, listing:
 - **`cargo deny check advisories`.** It needs network access and a writable advisory database, so it
   runs in `advisories.yml` and in the release gate's cargo-deny job instead.
 - **That these commands still match `ci.yml`.** Nothing verifies that mechanically. An attempt was
-  made and withdrawn; `.github/workflows/ci.yml:244-267` records why — every design either compared
+  made and withdrawn; `.github/workflows/ci.yml:293-321` records why — every design either compared
   argv strings, which `RUSTFLAGS=--cap-lints=allow` leaves byte-identical while neutering clippy, or
   reimplemented enough of `if:` / `needs:` / matrix semantics to become its own untested gate. CI
   does *execute* the script (`gate (light)`), so every command in it gates a PR; the script says
@@ -216,18 +216,23 @@ the per-PR gate does not run them either.
 ### The CI split, read in the dangerous direction
 
 CI is dev-light and release-heavy. The per-PR gate into `development` runs engine tests for
-**`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job
+**`oce-api`, `oce-blocks`, and `oce-expr` only** — the `determinism-matrix` job
 (`.github/workflows/ci.yml:148-168`) and the identical step inside the gate script
-(`.agents/gate.sh:120-124`), on two architectures in debug and release codegen.
+(`.agents/gate.sh:120-124`), on two architectures in debug and release codegen. The matrix emits
+populated portable and target-bound engine-state vectors. It requires both to match across codegen
+profiles, the portable bytes to match across architectures, and the target-bound bytes to differ.
+The x86_64 comparison job also parses the arm64 target-bound snapshot and requires
+`restore_state` to return the target-domain refusal.
 
 Read that in the direction that costs you something. **A change confined to `oce-cxf`,
-`oce-store`, `oce-api` or `oce-diag` can show every check green having run none of its own tests.**
+`oce-store`, `oce-conformance`, or `oce-diag` can show every check green having run none of its own
+tests.**
 A green PR is not evidence that a change's own tests pass.
 
-That has a direct consequence for everything on this page. The Tier-A comparison suites live in
-`crates/oce-conformance/tests/` and `crates/oce-api/tests/`, so **the 410 oracle
-comparisons — 389 bit-exact, 21 aligned-tolerance — do not run per PR.** They run on
-`development → main` release PRs, on a daily cron
+That has a direct consequence for everything on this page. The `oce-api` comparison tests now run
+per PR, but `crates/oce-conformance/tests/` does not, so the complete set of 410 oracle comparisons
+— 389 bit-exact, 21 aligned-tolerance — still runs only on `development → main` release PRs, on a
+daily cron
 against the `development` tip, and on manual dispatch (`.github/workflows/release-gate.yml`). Two
 input-hygiene audits *do* run per PR, because `.agents/gate.sh` invokes them directly: the fixture
 port-order audit and the structural oracle, the latter also carrying the vendored-tree hash manifest

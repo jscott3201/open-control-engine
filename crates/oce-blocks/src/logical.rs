@@ -516,6 +516,20 @@ impl Block for SampleTrigger {
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[0] = (-1i64).cast_unsigned(); // -1 == "no sample fired yet"
     }
+    fn validate_state(&self, region: &[u64], state_t: Time, _prev_t: Time) -> Result<(), String> {
+        crate::state_contract::validate_sample_trigger(region, state_t, self.period, self.shift)
+    }
+    fn time_is_representable(&self, t_now: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sample_trigger_time_representable(t_now, self.period, self.shift)
+    }
+    fn simulation_time_is_representable(&self, first: Time, last: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sample_trigger_horizon_representable(
+            first,
+            last,
+            self.period,
+            self.shift,
+        )
+    }
     fn emit_from_state(
         &self,
         ctx: &Ctx<'_>,

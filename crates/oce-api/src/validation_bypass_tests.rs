@@ -120,12 +120,72 @@ fn build_model_in_memory_rejects_sample_trigger_zero_period_without_panic() {
     let err = assert_build_validate_codes(model, &[DiagCode::ParameterOutOfRange]);
     assert_eq!(err.diagnostics[0].subject.as_deref(), Some("block#0"));
     assert!(
-        err.diagnostics[0]
-            .message
-            .contains("`period` on block `CDL.Logical.Sources.SampleTrigger` must be > 0"),
+        err.diagnostics[0].message.contains(
+            "`period` on block `CDL.Logical.Sources.SampleTrigger` must be finite and > 0"
+        ),
         "unexpected diagnostic: {:?}",
         err.diagnostics
     );
+}
+
+#[test]
+fn build_model_in_memory_rejects_duplicate_raw_parameter_names() {
+    let model = ModelGraph {
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Reals.Sources.Constant",
+            &[],
+            &[0],
+            vec![rp("k", 1.0), rp("k", 2.0)],
+        )],
+        connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Real)],
+        ..ModelGraph::new()
+    };
+    let err = assert_build_validate_codes(model, &[DiagCode::DuplicateParameter]);
+    assert!(
+        err.diagnostics[0]
+            .message
+            .contains("duplicate parameter name `k`")
+    );
+}
+
+#[test]
+fn loaded_sample_clocks_require_finite_periods_and_shift() {
+    let cases = [
+        (
+            "CDL.Logical.Sources.SampleTrigger",
+            vec![rp("period", f64::INFINITY)],
+        ),
+        (
+            "CDL.Logical.Sources.SampleTrigger",
+            vec![rp("period", 1.0), rp("shift", f64::NAN)],
+        ),
+    ];
+    for (class, params) in cases {
+        let model = ModelGraph {
+            blocks: vec![raw_block_with_params(0, class, &[], &[0], params)],
+            connectors: vec![raw_conn(0, 0, Dir::Out, ValueType::Boolean)],
+            ..ModelGraph::new()
+        };
+        assert_build_validate_codes(model, &[DiagCode::ParameterOutOfRange]);
+    }
+
+    let sampled = ModelGraph {
+        blocks: vec![raw_block_with_params(
+            0,
+            "CDL.Discrete.Sampler",
+            &[0],
+            &[1],
+            vec![rp("samplePeriod", f64::INFINITY)],
+        )],
+        connectors: vec![
+            raw_conn(0, 0, Dir::In, ValueType::Real),
+            raw_conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        external_inputs: vec![ConnectorId(0)],
+        ..ModelGraph::new()
+    };
+    assert_build_validate_codes(sampled, &[DiagCode::ParameterOutOfRange]);
 }
 
 #[test]
