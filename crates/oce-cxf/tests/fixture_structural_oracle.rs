@@ -48,6 +48,7 @@ mod bless;
 mod clean_room_nand;
 mod golden_provenance;
 mod hooks_truthiness;
+mod known_divergence_register;
 mod structural_oracle;
 mod third_party_manifest;
 
