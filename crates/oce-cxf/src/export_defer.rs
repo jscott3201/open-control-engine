@@ -32,7 +32,7 @@
 //! algorithm; nothing checked it, and a hand-built graph that broke it exported `Ok` with bytes
 //! that failed re-import.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::{EnumClassId, ModelGraph, Value, ValueType};
@@ -136,17 +136,6 @@ fn has_enum_param(g: &ModelGraph, bi: usize) -> Option<(&str, EnumClassId)> {
     })
 }
 
-/// The connectors driving input connector `to_idx` (the `from` endpoints of every connection
-/// whose `to` is `to_idx`) — the driver set for the cascade fixpoint. An input with no drivers in
-/// the original graph returns an empty slice (a boundary `external_inputs` entry is undriven
-/// inter-block and does NOT trigger a cascade).
-fn drivers_of(g: &ModelGraph, to_idx: usize) -> Vec<usize> {
-    g.connections
-        .iter()
-        .filter_map(|conn| (conn.to.0 as usize == to_idx).then_some(conn.from.0 as usize))
-        .collect()
-}
-
 /// Compute the deferral set and its warnings: `enum_blocks` detected and warned, then the
 /// transitive cascade grown to its fixpoint with a cascade warning per newly-deferred block.
 /// Returns `(deferred, warnings)` in block-then-cascade order. The `deferred` set is the set of
@@ -182,51 +171,90 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         deferred.insert(bi);
     }
 
-    // Phase 1c: transitive cascade fixpoint. Repeat until `deferred` stops growing: for each
-    // surviving block, for each input connector that had ≥1 driver in the original graph, if
-    // EVERY driver's owning block is in `deferred`, the block is cascade-deferred. An input with
-    // zero original drivers (a boundary input) is unaffected.
-    let mut grew = true;
-    while grew {
-        grew = false;
-        for (bi, b) in g.blocks.iter().enumerate() {
-            if deferred.contains(&bi) {
+    // Phase 1c: transitive cascade fixpoint. Index each input's drivers once, then decrement its
+    // surviving-driver count when an owning block becomes deferred. `current_pass` and
+    // `next_pass` preserve the former repeated ascending scan: a newly ready higher-index block is
+    // still visited in this pass, while a lower-index block waits for the next one. This keeps the
+    // warning order stable without rescanning every connection for every input on every pass.
+    #[derive(Clone, Copy, Default)]
+    struct DriverState {
+        original: usize,
+        remaining: usize,
+        blocked: bool,
+    }
+
+    let mut input_uses: HashMap<u32, Vec<(usize, usize)>> = HashMap::new();
+    let mut states = g
+        .blocks
+        .iter()
+        .enumerate()
+        .map(|(bi, block)| {
+            for (k, input) in block.inputs.iter().enumerate() {
+                input_uses.entry(input.0).or_default().push((bi, k));
+            }
+            vec![DriverState::default(); block.inputs.len()]
+        })
+        .collect::<Vec<_>>();
+    let mut dependents = vec![Vec::<(usize, usize)>::new(); g.blocks.len()];
+    for connection in &g.connections {
+        let Some(uses) = input_uses.get(&connection.to.0) else {
+            continue;
+        };
+        for &(bi, k) in uses {
+            let state = &mut states[bi][k];
+            state.original += 1;
+            let Some(driver) = g.connectors.get(connection.from.0 as usize) else {
+                state.blocked = true;
+                continue;
+            };
+            let owner = driver.block.0 as usize;
+            if !deferred.contains(&owner) {
+                state.remaining += 1;
+                if let Some(entries) = dependents.get_mut(owner) {
+                    entries.push((bi, k));
+                }
+            }
+        }
+    }
+
+    let ready = |state: &DriverState| state.original != 0 && state.remaining == 0 && !state.blocked;
+    let mut current_pass = states
+        .iter()
+        .enumerate()
+        .filter_map(|(bi, inputs)| {
+            (!deferred.contains(&bi) && inputs.iter().any(&ready)).then_some(bi)
+        })
+        .collect::<BTreeSet<_>>();
+    let mut next_pass = BTreeSet::new();
+    while let Some(bi) = current_pass.pop_first() {
+        if deferred.contains(&bi) {
+            continue;
+        }
+        let Some(k) = states[bi].iter().position(&ready) else {
+            continue;
+        };
+        deferred.insert(bi);
+        let subject = block_subject(g, bi);
+        let conn = format!("in{k}");
+        warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
+
+        for &(target_bi, target_k) in &dependents[bi] {
+            if deferred.contains(&target_bi) {
                 continue;
             }
-            // `k` is the port-list position, taken from the iteration rather than reconstructed.
-            // `crate::export::plan` mints this block's port `@id`s from exactly this enumeration
-            // (`for (k, cid) in b.inputs.iter().enumerate()`), so the name in the warning and the
-            // `@id` in the document agree by construction and cannot drift.
-            //
-            // The previous version reconstructed `k` by searching for `cin` in the port list of
-            // `g.connectors[cin].block` — a block the graph *claims* owns the connector, which for
-            // a hand-built graph need not be the `b` this loop is standing in. On a mis-owned
-            // connector that search either missed (and fell back to position 0) or, worse,
-            // succeeded at the wrong index in the wrong block's list and named a confidently wrong
-            // port. Both shipped inside an `Ok` export with no error diagnostic to warn the host
-            // the name was untrustworthy.
-            'inputs: for (k, cid) in b.inputs.iter().enumerate() {
-                let cin = cid.0 as usize;
-                let drivers = drivers_of(g, cin);
-                if drivers.is_empty() {
-                    continue; // undriven in the original (boundary) — not a cascade trigger
+            let state = &mut states[target_bi][target_k];
+            let became_ready = state.remaining == 1 && state.original != 0 && !state.blocked;
+            state.remaining = state.remaining.saturating_sub(1);
+            if became_ready {
+                if target_bi > bi {
+                    current_pass.insert(target_bi);
+                } else {
+                    next_pass.insert(target_bi);
                 }
-                for d_idx in &drivers {
-                    let Some(d) = g.connectors.get(*d_idx) else {
-                        continue 'inputs; // out-of-range driver: do not cascade on a bad edge
-                    };
-                    if !deferred.contains(&(d.block.0 as usize)) {
-                        continue 'inputs; // at least one surviving driver — input still driven
-                    }
-                }
-                // Every driver is deferred → cascade-defer this block.
-                deferred.insert(bi);
-                grew = true;
-                let subject = block_subject(g, bi);
-                let conn = format!("in{k}");
-                warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
-                break 'inputs;
             }
+        }
+        if current_pass.is_empty() {
+            std::mem::swap(&mut current_pass, &mut next_pass);
         }
     }
 
@@ -249,6 +277,169 @@ fn enum_class_label(id: EnumClassId) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+
+    use oce_model::{BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, ParamTable};
+
+    fn repeated_scan_reference(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>) {
+        let mut warnings = Vec::new();
+        let enum_blocks = g
+            .blocks
+            .iter()
+            .enumerate()
+            .filter_map(|(bi, _)| {
+                (has_enum_connector(g, bi).is_some() || has_enum_param(g, bi).is_some())
+                    .then_some(bi)
+            })
+            .collect::<BTreeSet<_>>();
+        let mut deferred = enum_blocks.clone();
+        for &bi in &enum_blocks {
+            let subject = block_subject(g, bi);
+            if let Some(id) = has_enum_connector(g, bi) {
+                warnings.push(defer(
+                    msg_enum_defer_connector(&subject, &enum_class_label(id)),
+                    &subject,
+                ));
+            } else if let Some((name, id)) = has_enum_param(g, bi) {
+                warnings.push(defer(
+                    msg_enum_defer_param(&subject, name, &enum_class_label(id)),
+                    &subject,
+                ));
+            }
+        }
+
+        let mut grew = true;
+        while grew {
+            grew = false;
+            for (bi, block) in g.blocks.iter().enumerate() {
+                if deferred.contains(&bi) {
+                    continue;
+                }
+                'inputs: for (k, input) in block.inputs.iter().enumerate() {
+                    let drivers = g.connections.iter().filter_map(|connection| {
+                        (connection.to == *input).then_some(connection.from)
+                    });
+                    let mut found = false;
+                    for driver_id in drivers {
+                        found = true;
+                        let Some(driver) = g.connectors.get(driver_id.0 as usize) else {
+                            continue 'inputs;
+                        };
+                        if !deferred.contains(&(driver.block.0 as usize)) {
+                            continue 'inputs;
+                        }
+                    }
+                    if found {
+                        deferred.insert(bi);
+                        grew = true;
+                        let subject = block_subject(g, bi);
+                        warnings.push(defer(
+                            msg_enum_defer_cascade(&subject, &format!("in{k}")),
+                            &subject,
+                        ));
+                        break 'inputs;
+                    }
+                }
+            }
+        }
+        (deferred, warnings)
+    }
+
+    fn chain_graph(block_count: usize, reverse: bool) -> ModelGraph {
+        let enum_block = if reverse { block_count - 1 } else { 0 };
+        let mut graph = ModelGraph::default();
+        for bi in 0..block_count {
+            let block_id = BlockId(bi as u32);
+            let input_id = ConnectorId((bi * 2) as u32);
+            let output_id = ConnectorId(input_id.0 + 1);
+            graph.connectors.push(Connector::new(
+                input_id,
+                block_id,
+                Dir::In,
+                ValueType::Real,
+                input_id.0,
+            ));
+            graph.connectors.push(Connector::new(
+                output_id,
+                block_id,
+                Dir::Out,
+                if bi == enum_block {
+                    ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER)
+                } else {
+                    ValueType::Real
+                },
+                output_id.0,
+            ));
+            graph.blocks.push(BlockInstance {
+                id: block_id,
+                class_iri: Arc::from("CDL.Reals.Add"),
+                inputs: vec![input_id],
+                outputs: vec![output_id],
+                params: ParamTable::default(),
+                decl_order: bi as u32,
+                instance_iri: Some(Arc::from(format!("block{bi}"))),
+            });
+        }
+        for bi in 0..block_count - 1 {
+            let (driver, target) = if reverse { (bi + 1, bi) } else { (bi, bi + 1) };
+            graph.connections.push(Connection {
+                from: ConnectorId((driver * 2 + 1) as u32),
+                to: ConnectorId((target * 2) as u32),
+            });
+        }
+        graph
+    }
+
+    #[test]
+    fn ordered_worklist_matches_repeated_scans_on_both_chain_directions() {
+        for block_count in [2, 3, 8, 32, 128] {
+            for reverse in [false, true] {
+                let graph = chain_graph(block_count, reverse);
+                assert_eq!(
+                    deferral_set(&graph),
+                    repeated_scan_reference(&graph),
+                    "block_count={block_count}, reverse={reverse}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn ordered_worklist_matches_every_three_block_topology() {
+        for enum_mask in 0_u8..8 {
+            for edge_mask in 0_u8..64 {
+                let mut graph = chain_graph(3, false);
+                graph.connections.clear();
+                for bi in 0..3 {
+                    graph.connectors[bi * 2 + 1].value_type = if enum_mask & (1 << bi) != 0 {
+                        ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER)
+                    } else {
+                        ValueType::Real
+                    };
+                }
+                let mut edge_bit = 0;
+                for driver in 0..3 {
+                    for target in 0..3 {
+                        if driver == target {
+                            continue;
+                        }
+                        if edge_mask & (1 << edge_bit) != 0 {
+                            graph.connections.push(Connection {
+                                from: ConnectorId((driver * 2 + 1) as u32),
+                                to: ConnectorId((target * 2) as u32),
+                            });
+                        }
+                        edge_bit += 1;
+                    }
+                }
+                assert_eq!(
+                    deferral_set(&graph),
+                    repeated_scan_reference(&graph),
+                    "enum_mask={enum_mask:03b}, edge_mask={edge_mask:06b}"
+                );
+            }
+        }
+    }
 
     /// The three rendered messages are pinned verbatim — a host greps logs/exports for the stable
     /// `export subset: deferring block` prefix and the sentence shape around it. A single
