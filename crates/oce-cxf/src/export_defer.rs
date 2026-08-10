@@ -176,61 +176,64 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
     // `next_pass` preserve the former repeated ascending scan: a newly ready higher-index block is
     // still visited in this pass, while a lower-index block waits for the next one. This keeps the
     // warning order stable without rescanning every connection for every input on every pass.
-    #[derive(Clone, Copy, Default)]
+    #[derive(Default)]
     struct DriverState {
+        uses: Vec<(usize, usize)>,
         original: usize,
         remaining: usize,
         blocked: bool,
     }
 
-    let mut input_uses: HashMap<u32, Vec<(usize, usize)>> = HashMap::new();
-    let mut states = g
-        .blocks
-        .iter()
-        .enumerate()
-        .map(|(bi, block)| {
-            for (k, input) in block.inputs.iter().enumerate() {
-                input_uses.entry(input.0).or_default().push((bi, k));
-            }
-            vec![DriverState::default(); block.inputs.len()]
-        })
-        .collect::<Vec<_>>();
-    let mut dependents = vec![Vec::<(usize, usize)>::new(); g.blocks.len()];
+    let mut state_of_input = HashMap::<u32, usize>::new();
+    let mut states = Vec::<DriverState>::new();
+    for (bi, block) in g.blocks.iter().enumerate() {
+        for (k, input) in block.inputs.iter().enumerate() {
+            let state_index = *state_of_input.entry(input.0).or_insert_with(|| {
+                states.push(DriverState::default());
+                states.len() - 1
+            });
+            states[state_index].uses.push((bi, k));
+        }
+    }
+    let mut dependents = vec![Vec::<usize>::new(); g.blocks.len()];
     for connection in &g.connections {
-        let Some(uses) = input_uses.get(&connection.to.0) else {
+        let Some(&state_index) = state_of_input.get(&connection.to.0) else {
             continue;
         };
-        for &(bi, k) in uses {
-            let state = &mut states[bi][k];
-            state.original += 1;
-            let Some(driver) = g.connectors.get(connection.from.0 as usize) else {
-                state.blocked = true;
-                continue;
-            };
-            let owner = driver.block.0 as usize;
-            if !deferred.contains(&owner) {
-                state.remaining += 1;
-                if let Some(entries) = dependents.get_mut(owner) {
-                    entries.push((bi, k));
-                }
+        let state = &mut states[state_index];
+        state.original += 1;
+        let Some(driver) = g.connectors.get(connection.from.0 as usize) else {
+            state.blocked = true;
+            continue;
+        };
+        let owner = driver.block.0 as usize;
+        if !deferred.contains(&owner) {
+            state.remaining += 1;
+            if let Some(entries) = dependents.get_mut(owner) {
+                entries.push(state_index);
             }
         }
     }
 
     let ready = |state: &DriverState| state.original != 0 && state.remaining == 0 && !state.blocked;
-    let mut current_pass = states
-        .iter()
-        .enumerate()
-        .filter_map(|(bi, inputs)| {
-            (!deferred.contains(&bi) && inputs.iter().any(&ready)).then_some(bi)
-        })
-        .collect::<BTreeSet<_>>();
+    let mut current_pass = BTreeSet::new();
+    for state in states.iter().filter(|state| ready(state)) {
+        for &(bi, _) in &state.uses {
+            if !deferred.contains(&bi) {
+                current_pass.insert(bi);
+            }
+        }
+    }
     let mut next_pass = BTreeSet::new();
     while let Some(bi) = current_pass.pop_first() {
         if deferred.contains(&bi) {
             continue;
         }
-        let Some(k) = states[bi].iter().position(&ready) else {
+        let Some(k) = g.blocks[bi].inputs.iter().position(|input| {
+            state_of_input
+                .get(&input.0)
+                .is_some_and(|&state_index| ready(&states[state_index]))
+        }) else {
             continue;
         };
         deferred.insert(bi);
@@ -238,18 +241,20 @@ pub(crate) fn deferral_set(g: &ModelGraph) -> (BTreeSet<usize>, Vec<Diagnostic>)
         let conn = format!("in{k}");
         warnings.push(defer(msg_enum_defer_cascade(&subject, &conn), &subject));
 
-        for &(target_bi, target_k) in &dependents[bi] {
-            if deferred.contains(&target_bi) {
-                continue;
-            }
-            let state = &mut states[target_bi][target_k];
+        for &state_index in &dependents[bi] {
+            let state = &mut states[state_index];
             let became_ready = state.remaining == 1 && state.original != 0 && !state.blocked;
             state.remaining = state.remaining.saturating_sub(1);
             if became_ready {
-                if target_bi > bi {
-                    current_pass.insert(target_bi);
-                } else {
-                    next_pass.insert(target_bi);
+                for &(target_bi, _) in &state.uses {
+                    if deferred.contains(&target_bi) {
+                        continue;
+                    }
+                    if target_bi > bi {
+                        current_pass.insert(target_bi);
+                    } else {
+                        next_pass.insert(target_bi);
+                    }
                 }
             }
         }
@@ -463,6 +468,22 @@ mod tests {
                 to: ConnectorId(4),
             },
         ];
+
+        assert_eq!(deferral_set(&graph), repeated_scan_reference(&graph));
+    }
+
+    #[test]
+    fn shared_connector_uses_match_reference_without_cross_product_storage() {
+        let mut graph = chain_graph(256, false);
+        for block in &mut graph.blocks {
+            block.inputs = vec![ConnectorId(0)];
+        }
+        graph.connections = (0..256)
+            .map(|_| Connection {
+                from: ConnectorId(1),
+                to: ConnectorId(0),
+            })
+            .collect();
 
         assert_eq!(deferral_set(&graph), repeated_scan_reference(&graph));
     }
