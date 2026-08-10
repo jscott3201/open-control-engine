@@ -96,7 +96,7 @@ use crate::{CxfError, bridge};
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
 /// root IRI, so every export uses this fixed, collision-improbable URN. A (contrived) block whose
 /// `instance_iri` equals it would surface as a loud `DuplicateId` on re-import, never silently.
-const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
+pub(crate) const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
 /// The `S231` prefix binding emitted in `@context` (matches the import fixtures).
 const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231P#";

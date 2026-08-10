@@ -206,6 +206,69 @@ fn boundary_input_identity_cannot_also_name_an_instance_parameter() {
     );
 }
 
+#[test]
+fn boundary_input_identity_cannot_collide_with_a_minted_child_port() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.in0");
+    node_mut(&mut document, "uExt")["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.in0");
+
+    assert_import_diagnostic(
+        document,
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "boundary input collides with a canonical export node identity",
+        )
+        .with_subject("http://example.org#AttrInput.add.in0".to_owned()),
+    );
+}
+
+#[test]
+fn boundary_input_identity_cannot_collide_with_a_minted_parameter_node() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.k");
+    node_mut(&mut document, "uExt")["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.k");
+    node_mut(&mut document, "AttrInput.add")["S231:hasParameter"] =
+        serde_json::json!({ "@id": "http://example.org#Other.k" });
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph array")
+        .push(serde_json::json!({
+            "@id": "http://example.org#Other.k",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:value": 1.0
+        }));
+
+    assert_import_diagnostic(
+        document,
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "boundary input collides with a canonical export node identity",
+        )
+        .with_subject("http://example.org#AttrInput.add.k".to_owned()),
+    );
+}
+
+#[test]
+fn boundary_input_identity_cannot_collide_with_the_canonical_export_root() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("urn:open-control:cxf-export:root");
+    node_mut(&mut document, "uExt")["@id"] = serde_json::json!("urn:open-control:cxf-export:root");
+
+    assert_import_diagnostic(
+        document,
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "boundary input collides with a canonical export node identity",
+        )
+        .with_subject("urn:open-control:cxf-export:root".to_owned()),
+    );
+}
+
 fn export_diagnostics(graph: &oce_model::ModelGraph) -> Vec<Diagnostic> {
     match export(graph) {
         Err(CxfError::Validation(diagnostics)) => diagnostics,
