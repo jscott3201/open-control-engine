@@ -9,31 +9,55 @@ use oce_model::{Attrs, BoundaryInput, Connector, ConnectorId, NoAttrs, ValueType
 use crate::dto::{CxfDocument, Node};
 
 use super::attrs::connector_attrs;
+use super::instance_params::Inst;
 
-/// Refuse a root input IRI that is also owned by an instance port.
+/// Refuse a root input IRI that is also owned by an instance or one of its members.
 ///
-/// Export emits root declarations and child ports as separate nodes. Sharing one authored IRI
-/// would therefore produce duplicate `@id` values even though import has only one source node.
-pub(super) fn refuse_shadowed(
+/// Export emits root declarations, blocks, parameters, and child ports as separate nodes. Sharing
+/// one authored IRI would therefore produce duplicate `@id` values even though import has only one
+/// source node.
+pub(super) fn refuse_role_aliases(
     top: &Node,
     boundary_in: &HashSet<&str>,
     conn_of_iri: &HashMap<&str, ConnectorId>,
+    insts: &[Inst<'_>],
     diags: &mut Vec<Diagnostic>,
 ) {
+    let block_iris = insts
+        .iter()
+        .map(|inst| inst.node.id.as_str())
+        .collect::<HashSet<_>>();
+    let instance_member_iris = insts
+        .iter()
+        .flat_map(|inst| {
+            inst.node
+                .has_parameter
+                .iter()
+                .chain(inst.node.has_constant.iter())
+                .chain(inst.node.has_instance.iter())
+        })
+        .map(|reference| reference.id.as_str())
+        .collect::<HashSet<_>>();
     let mut seen = HashSet::new();
     for iri in top
         .has_input
         .iter()
         .map(|reference| reference.id.as_str())
-        .filter(|iri| boundary_in.contains(iri) && conn_of_iri.contains_key(iri))
+        .filter(|iri| boundary_in.contains(iri))
     {
+        let message = if conn_of_iri.contains_key(iri) {
+            "boundary input shadows an instance port connector"
+        } else if block_iris.contains(iri) {
+            "boundary input shadows a contained block"
+        } else if instance_member_iris.contains(iri) {
+            "boundary input shadows an instance member"
+        } else {
+            continue;
+        };
         if seen.insert(iri) {
             diags.push(
-                Diagnostic::error(
-                    DiagCode::MalformedDocument,
-                    "boundary input shadows an instance port connector",
-                )
-                .with_subject(iri.to_owned()),
+                Diagnostic::error(DiagCode::MalformedDocument, message)
+                    .with_subject(iri.to_owned()),
             );
         }
     }

@@ -168,6 +168,9 @@ const MSG_ORPHAN_BOUNDARY_INPUT: &str =
 /// structural diagnostic; this message names the alias that would otherwise disappear.
 const MSG_BOUNDARY_SOURCE_NOT_EMITTED: &str =
     "export subset: declared boundary output source is not an emitted child output connector";
+/// A declared boundary output needs a non-empty identity for its emitted node.
+const MSG_BOUNDARY_OUTPUT_IRI: &str =
+    "export subset: declared boundary output carries no IRI to name its CXF node";
 /// Reserved pass-through connectors are rebuilt as a root boundary edge and have no child-port
 /// node on which an additional host-built connection can be represented.
 const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
@@ -621,6 +624,13 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             if source.dir != Dir::Out {
                 diags.push(reject(MSG_STRUCTURE, &owner_subject(g, source, idx)));
             }
+            continue;
+        }
+        if output.iri.is_empty() {
+            diags.push(reject(
+                MSG_BOUNDARY_OUTPUT_IRI,
+                &owner_subject(g, source, idx),
+            ));
             continue;
         }
         let Some(_) = port_iri[idx] else {

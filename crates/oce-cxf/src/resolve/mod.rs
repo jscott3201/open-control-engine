@@ -375,7 +375,7 @@ pub(crate) fn resolve(
             ConnectorId((conn_nodes.len() + k) as u32),
         );
     }
-    boundary_inputs::refuse_shadowed(top, &boundary_in, &conn_of_iri, &mut diags);
+    boundary_inputs::refuse_role_aliases(top, &boundary_in, &conn_of_iri, &insts, &mut diags);
 
     // --- Step 5b: wiring — direction + owner come authoritatively from the instance port lists
     // (the side a connector is referenced on; a derived instance's signature-ordered vectors

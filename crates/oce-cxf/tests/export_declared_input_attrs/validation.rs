@@ -144,6 +144,68 @@ fn boundary_input_identity_cannot_also_name_an_instance_connector() {
     );
 }
 
+#[test]
+fn boundary_input_identity_cannot_also_name_a_contained_block() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add");
+    node_mut(&mut document, "uExt")
+        .as_object_mut()
+        .expect("boundary node object")
+        .remove("S231:isConnectedTo");
+    let block = node_mut(&mut document, "AttrInput.add")
+        .as_object_mut()
+        .expect("block node object");
+    block.insert(
+        "S231:isOfDataType".to_owned(),
+        serde_json::json!({ "@id": "S231:Real" }),
+    );
+    block.insert(
+        "S231:isConnectedTo".to_owned(),
+        serde_json::json!({ "@id": "http://example.org#AttrInput.add.u1" }),
+    );
+
+    assert_import_diagnostic(
+        document,
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "boundary input shadows a contained block",
+        )
+        .with_subject("http://example.org#AttrInput.add".to_owned()),
+    );
+}
+
+#[test]
+fn boundary_input_identity_cannot_also_name_an_instance_parameter() {
+    let mut document = attr_input_document("Real", "CDL.Reals.Add", serde_json::json!({}));
+    node_mut(&mut document, "AttrInput")["S231:hasInput"][0]["@id"] =
+        serde_json::json!("http://example.org#AttrInput.add.k");
+    node_mut(&mut document, "uExt")
+        .as_object_mut()
+        .expect("boundary node object")
+        .remove("S231:isConnectedTo");
+    node_mut(&mut document, "AttrInput.add")["S231:hasParameter"] =
+        serde_json::json!({ "@id": "http://example.org#AttrInput.add.k" });
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph array")
+        .push(serde_json::json!({
+            "@id": "http://example.org#AttrInput.add.k",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:value": 1.0,
+            "S231:isConnectedTo": { "@id": "http://example.org#AttrInput.add.u1" }
+        }));
+
+    assert_import_diagnostic(
+        document,
+        Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "boundary input shadows an instance member",
+        )
+        .with_subject("http://example.org#AttrInput.add.k".to_owned()),
+    );
+}
+
 fn export_diagnostics(graph: &oce_model::ModelGraph) -> Vec<Diagnostic> {
     match export(graph) {
         Err(CxfError::Validation(diagnostics)) => diagnostics,

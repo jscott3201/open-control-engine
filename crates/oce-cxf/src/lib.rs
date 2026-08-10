@@ -190,7 +190,8 @@ pub fn import_cxf(
 ///   disagrees with its targets,
 ///   connector driven by more than one **surviving** output (§7.10 single assignment; those bytes
 ///   fail re-import entirely rather than come back lossy), a declared boundary output whose source
-///   has no emitted child-port node, a connection to or from a reserved lowering connector,
+///   has no emitted child-port node or whose IRI is empty, a connection to or from a reserved
+///   lowering connector,
 ///   a reserved pass-through block with an authored instance identity, parameters, representable
 ///   input attributes, or mismatched connector types,
 ///   structurally inconsistent wiring, or an empty (zero-block)
