@@ -294,6 +294,7 @@ mod tests {
             connectors,
             connections: Vec::new(),
             external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         }
     }

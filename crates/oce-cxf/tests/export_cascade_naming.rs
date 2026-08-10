@@ -320,6 +320,7 @@ fn staggered_cascade_graph() -> ModelGraph {
         ],
         connections: vec![wire(0, 2), wire(3, 4)],
         external_inputs: vec![ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     }
 }
@@ -361,6 +362,7 @@ fn deep_position_cascade_graph() -> ModelGraph {
         ],
         connections: vec![wire(0, 3)],
         external_inputs: vec![ConnectorId(1), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     }
 }

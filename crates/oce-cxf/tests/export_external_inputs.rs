@@ -16,8 +16,8 @@ use std::sync::Arc;
 use oce_cxf::{CxfError, ResolveOptions, export_with_report, import_cxf};
 use oce_diag::{DiagCode, Diagnostic, Severity, has_errors};
 use oce_model::{
-    BlockId, BlockInstance, Connection, Connector, ConnectorId, Dir, EnumClassId, ModelGraph,
-    ParamTable, Value, ValueType,
+    Attrs, BlockId, BlockInstance, BoundaryInput, Connection, Connector, ConnectorId, Dir,
+    EnumClassId, ModelGraph, ParamTable, RealAttrs, Value, ValueType,
 };
 
 /// IRI prefix for every hand-built block here.
@@ -29,6 +29,8 @@ const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed
 /// The exact rejection for a fan-out boundary whose driven connector types disagree.
 const MSG_BOUNDARY_TYPE_MISMATCH: &str =
     "export subset: one boundary input drives child inputs with different value types";
+const MSG_EXTERNAL_IRI: &str =
+    "export subset: external input carries no boundary IRI to rebuild the root hasInput";
 
 fn iri(name: &str) -> String {
     format!("{PREFIX}{name}")
@@ -138,6 +140,7 @@ fn a_connector_listed_twice_in_external_inputs_is_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -153,6 +156,36 @@ fn a_connector_listed_twice_in_external_inputs_is_rejected() {
         errors[0].subject.as_deref(),
         Some(iri("sink").as_str()),
         "the rejection names the block owning the repeated connector"
+    );
+}
+
+#[test]
+fn an_empty_boundary_iri_is_rejected_before_emitting_an_unloadable_node_id() {
+    let g = ModelGraph {
+        blocks: vec![block(0, "CDL.Reals.Abs", "sink", &[0], &[1], vec![])],
+        connectors: vec![
+            conn(0, 0, Dir::In, ValueType::Real).with_iri(""),
+            conn(1, 0, Dir::Out, ValueType::Real),
+        ],
+        connections: vec![],
+        external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![BoundaryInput {
+            iri: Arc::from(""),
+            attrs: Attrs::Real(RealAttrs::default()),
+        }],
+        boundary_outputs: vec![],
+    };
+
+    let errors = export_rejection(&g)
+        .into_iter()
+        .filter(|diagnostic| diagnostic.severity == Severity::Error)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        errors,
+        vec![
+            Diagnostic::error(DiagCode::ExportUnsupported, MSG_EXTERNAL_IRI)
+                .with_subject(iri("sink")),
+        ]
     );
 }
 
@@ -174,6 +207,7 @@ fn one_boundary_driving_several_distinct_inputs_still_exports() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -202,6 +236,7 @@ fn one_boundary_driving_different_value_types_is_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -257,6 +292,7 @@ fn a_duplicate_external_input_on_a_cascade_deferred_block_does_not_abort_the_exp
         ],
         connections: vec![wire(0, 1)],
         external_inputs: vec![ConnectorId(2), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -335,6 +371,7 @@ fn a_duplicate_external_input_on_an_enum_bearing_deferred_block_does_not_abort_t
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -370,6 +407,7 @@ fn a_single_external_input_entry_round_trips_unchanged() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 

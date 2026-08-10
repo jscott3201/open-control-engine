@@ -34,6 +34,7 @@ fn t2_minimal_valid_graph_passes_all_rules() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let warnings = validate(&m).expect("minimal valid graph passes");
@@ -62,6 +63,7 @@ fn t4_undriven_input_that_is_external_is_ok() {
         connectors: vec![conn(0, 0, Dir::In, ValueType::Real)],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     assert!(
@@ -102,6 +104,7 @@ fn t6_external_input_driven_from_inside_is_still_an_error() {
         ],
         connections: vec![conn_edge(0, 2), conn_edge(1, 2)],
         external_inputs: vec![ConnectorId(2)], // declared external, yet doubly driven
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("external + doubly-driven must still fail");
@@ -133,6 +136,7 @@ fn t8_connection_from_input_is_direction_mismatch() {
         ],
         connections: vec![conn_edge(0, 1)],
         external_inputs: vec![ConnectorId(0)], // silence the single-assignment rule on C0
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("from-an-input is a direction mismatch");
@@ -184,6 +188,7 @@ fn t11_input_mistyped_against_signature_is_port_kind_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)], // silence single-assignment
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("mistyped Add input must fail");
@@ -211,6 +216,7 @@ fn t12_switch_boolean_control_port_typed_real_is_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("Switch control port mistype must fail");
@@ -318,6 +324,7 @@ fn t25_block_port_out_of_range_connector_is_malformed() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("out-of-range port connector must fail");
@@ -420,6 +427,7 @@ fn t30_output_port_mistyped_against_signature_is_port_kind_mismatch() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = validate(&m).expect_err("mistyped Greater output must fail");
@@ -699,6 +707,7 @@ fn t43_block_interface_arity_mismatch_covers_missing_and_extra_ports() {
             connectors,
             connections: vec![],
             external_inputs,
+            boundary_inputs: vec![],
             boundary_outputs: vec![],
         };
         let err = match validate(&m) {

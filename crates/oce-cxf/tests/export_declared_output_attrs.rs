@@ -603,6 +603,7 @@ fn host_constructed_attr_tag_mismatch_is_refused_at_export() {
         connectors: vec![output],
         connections: vec![],
         external_inputs: vec![],
+        boundary_inputs: vec![],
         boundary_outputs: vec![BoundaryOutput {
             iri: Arc::from("http://example.org#Host.y"),
             source: output_id,
@@ -625,5 +626,47 @@ fn host_constructed_attr_tag_mismatch_is_refused_at_export() {
             );
         }
         other => panic!("a tag-mismatched declared output must refuse export, got {other:?}"),
+    }
+}
+
+#[test]
+fn host_constructed_empty_boundary_output_iri_is_refused_at_export() {
+    let block_id = BlockId(0);
+    let output_id = ConnectorId(0);
+    let mut output = Connector::new(output_id, block_id, Dir::Out, ValueType::Boolean, 0);
+    output.iri = Some(Arc::from("http://example.org#Host.con.y"));
+    let graph = ModelGraph {
+        blocks: vec![BlockInstance {
+            id: block_id,
+            class_iri: Arc::from("CDL.Logical.Sources.Constant"),
+            inputs: vec![],
+            outputs: vec![output_id],
+            params: ParamTable::default(),
+            decl_order: 0,
+            instance_iri: Some(Arc::from("http://example.org#Host.con")),
+        }],
+        connectors: vec![output],
+        connections: vec![],
+        external_inputs: vec![],
+        boundary_inputs: vec![],
+        boundary_outputs: vec![BoundaryOutput {
+            iri: Arc::from(""),
+            source: output_id,
+            attrs: Attrs::Boolean(oce_model::NoAttrs),
+        }],
+    };
+
+    match export(&graph) {
+        Err(CxfError::Validation(diags)) => assert_eq!(
+            diags,
+            vec![
+                Diagnostic::error(
+                    DiagCode::ExportUnsupported,
+                    "export subset: declared boundary output carries no IRI to name its CXF node",
+                )
+                .with_subject("http://example.org#Host.con".to_owned()),
+            ]
+        ),
+        other => panic!("an empty declared-output IRI must refuse export, got {other:?}"),
     }
 }

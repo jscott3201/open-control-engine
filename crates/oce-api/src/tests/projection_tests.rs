@@ -458,6 +458,7 @@ fn fully_populated_projection_fixture() -> (ModelGraph, ResolvedSemantics) {
             },
         ],
         external_inputs: Vec::new(),
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let semantics = ResolvedSemantics {
@@ -584,6 +585,7 @@ fn string_only_model() -> ModelGraph {
             to: ConnectorId(1),
         }],
         external_inputs: Vec::new(),
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     }
 }
@@ -609,6 +611,7 @@ fn duplicate_point_key_model() -> ModelGraph {
         connectors,
         connections: Vec::new(),
         external_inputs: Vec::new(),
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     }
 }

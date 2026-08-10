@@ -285,6 +285,7 @@ fn build_model_in_memory_rejects_out_of_range_port_connector_without_panic() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
@@ -308,6 +309,7 @@ fn build_model_in_memory_rejects_port_kind_mismatch_without_wrong_value() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::PortKindMismatch]);
@@ -330,6 +332,7 @@ fn build_model_in_memory_rejects_missing_input_arity_without_panic() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
@@ -350,6 +353,7 @@ fn build_model_in_memory_rejects_missing_output_arity_without_release_panic() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
@@ -372,6 +376,7 @@ fn build_model_in_memory_rejects_extra_input_arity_without_panic() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1), ConnectorId(2)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
@@ -394,6 +399,7 @@ fn build_model_in_memory_rejects_extra_output_arity_without_panic() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(0), ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
     let err = assert_build_validate_codes(model, &[DiagCode::MalformedDocument]);
