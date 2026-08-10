@@ -441,6 +441,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn lower_ready_block_waits_for_the_next_reference_scan_pass() {
+        let mut graph = chain_graph(7, false);
+        graph.connections.clear();
+        for output in graph.connectors.iter_mut().skip(1).step_by(2) {
+            output.value_type = ValueType::Real;
+        }
+        graph.connectors[9].value_type = ValueType::Enum(EnumClassId::SIMPLE_CONTROLLER);
+        graph.connections = vec![
+            Connection {
+                from: ConnectorId(9),
+                to: ConnectorId(10),
+            },
+            Connection {
+                from: ConnectorId(9),
+                to: ConnectorId(12),
+            },
+            Connection {
+                from: ConnectorId(11),
+                to: ConnectorId(4),
+            },
+        ];
+
+        assert_eq!(deferral_set(&graph), repeated_scan_reference(&graph));
+    }
+
     /// The three rendered messages are pinned verbatim — a host greps logs/exports for the stable
     /// `export subset: deferring block` prefix and the sentence shape around it. A single
     /// character of drift fails loudly.
