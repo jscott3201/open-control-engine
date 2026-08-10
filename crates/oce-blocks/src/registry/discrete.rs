@@ -27,6 +27,9 @@ pub(super) const SAMPLED_PARAM_RULES: &[ParamRule] = &[
         name: "samplePeriod",
         kind: oce_model::ValueType::Real,
     },
+    ParamRule::RealFinite {
+        name: "samplePeriod",
+    },
     ParamRule::RealGreaterOrEqual {
         name: "samplePeriod",
         min: MIN_SAMPLE_PERIOD,

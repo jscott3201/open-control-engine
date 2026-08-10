@@ -22,8 +22,25 @@ require_pattern() {
   path="$1"
   pattern="$2"
   label="$3"
-  if ! grep -Eq "$pattern" "$path"; then
+  searchable="$(grep -Ev '^[[:space:]]*#' "$path")"
+  if ! grep -Eq "$pattern" <<< "$searchable"; then
     echo "FAIL: $path is missing required gate pattern: $label"
+    exit 1
+  fi
+}
+
+require_job_pattern() {
+  path="$1"
+  job="$2"
+  pattern="$3"
+  label="$4"
+  job_body="$(awk -v header="  $job:" '
+    $0 == header { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found { print }
+  ' "$path")"
+  if ! grep -Eq "$pattern" <<< "$job_body"; then
+    echo "FAIL: $path job $job is missing required gate pattern: $label"
     exit 1
   fi
 }
@@ -108,12 +125,41 @@ require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'
 require_pattern "$ci" 'determinism-matrix' 'targeted cross-arch determinism matrix job'
 require_pattern "$ci" 'ubuntu-24\.04-arm' 'arm64 determinism matrix runner'
 require_pattern "$ci" 'nextest@0\.9\.143' 'pinned cargo-nextest 0.9.143 install'
-require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
+require_pattern "$ci" 'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail' \
   'debug determinism subset with hard-fail-on-zero-tests'
-require_pattern "$ci" 'cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
+require_pattern "$ci" 'cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail' \
   'release determinism subset with hard-fail-on-zero-tests'
+require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/portable-state-debug\.bin' \
+  'emit the debug portable state vector in every determinism cell'
+require_pattern "$ci" 'OCE_PORTABLE_STATE_OUT: target/portable-state-release\.bin' \
+  'emit the release portable state vector in every determinism cell'
+require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-debug\.bin' \
+  'emit the debug target-bound state vector in every determinism cell'
+require_pattern "$ci" 'OCE_TARGET_STATE_OUT: target/target-state-release\.bin' \
+  'emit the release target-bound state vector in every determinism cell'
+require_pattern "$ci" 'cmp target/portable-state-debug\.bin target/portable-state-release\.bin' \
+  'compare portable state bytes across codegen profiles'
+require_pattern "$ci" 'cmp target/target-state-debug\.bin target/target-state-release\.bin' \
+  'compare target-bound state bytes across codegen profiles'
+require_pattern "$ci" 'portable-state-cross-arch:' 'cross-architecture portable-state comparison job'
+require_job_pattern "$ci" 'portable-state-cross-arch' 'tool:[[:space:]]*nextest@0\.9\.143' \
+  'pinned cargo-nextest install for foreign restore'
+require_pattern "$ci" 'portable-state-ubuntu-latest' 'download the x86_64 portable state vector'
+require_pattern "$ci" 'portable-state-ubuntu-24\.04-arm' 'download the arm64 portable state vector'
+require_pattern "$ci" 'cmp target/state-x86/portable-state-debug\.bin target/state-arm/portable-state-debug\.bin' \
+  'compare portable state bytes across architectures'
+require_pattern "$ci" '![[:space:]]*cmp -s target/state-x86/target-state-debug\.bin target/state-arm/target-state-debug\.bin' \
+  'require target-bound state bytes to differ across architectures'
+require_pattern "$ci" 'OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug\.bin' \
+  'supply the arm64 target-bound snapshot to the x86_64 restore test'
+require_pattern "$ci" "test\(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied\).*'" \
+  'restore and refuse the foreign target-bound snapshot'
+require_pattern "$ci" 'cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail' \
+  'foreign target-bound restore hard-fails when its test is absent'
 require_pattern "$ci" 'target/nextest/\{ci,ci-release\}/junit\.xml' \
   'clear cached nextest JUnit reports'
+require_pattern "$ci" 'target/\{portable,target\}-state-\{debug,release\}\.bin' \
+  'clear cached state vectors before the determinism matrix'
 require_pattern "$ci" 'actions/upload-artifact@v7\.0\.1' 'upload nextest JUnit report artifacts'
 require_pattern "$ci" '![[:space:]]*cancelled\(\)' 'upload nextest reports after test failures'
 require_pattern "$ci" 'target/nextest/ci/junit\.xml' 'collect nextest debug JUnit report'

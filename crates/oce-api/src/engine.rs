@@ -69,6 +69,10 @@ pub struct Engine<S: Store = MemStore> {
     pub(crate) durable_batch: DurableOutputBatch,
     /// Host-supplied UNIX epoch corresponding to model time `t = 0` for real-time writes.
     pub(crate) realtime_epoch_unix_nanos: Option<u64>,
+    /// True only after a model has completed the full load and store-open path successfully.
+    pub(crate) loaded: bool,
+    /// Durable restore is a startup operation and closes at the first mutation boundary.
+    pub(crate) durable_restore_ready: bool,
 }
 
 impl Engine<MemStore> {
@@ -102,6 +106,8 @@ impl<S: Store> Engine<S> {
             io: IoInventory::default(),
             durable_batch: DurableOutputBatch::default(),
             realtime_epoch_unix_nanos: None,
+            loaded: false,
+            durable_restore_ready: false,
         }
     }
 
@@ -175,6 +181,8 @@ impl<S: Store> Engine<S> {
         self.model_id = resolved_model.model_id;
         self.semantic_warnings = semantic_warnings;
         self.store_inputs = store_inputs;
+        self.loaded = true;
+        self.durable_restore_ready = true;
         Ok(())
     }
 
@@ -251,7 +259,11 @@ impl<S: Store> Engine<S> {
         {
             return Err(OcError::TimeRegression { now: t_now, prev });
         }
+        if !self.time_is_representable(t_now) {
+            return Err(OcError::ModelTimeUnrepresentable { now: t_now });
+        }
         self.stage_store_inputs()?;
+        self.durable_restore_ready = false;
         {
             let mut ctx = EvalContext {
                 model: &self.model,
@@ -277,7 +289,16 @@ impl<S: Store> Engine<S> {
             snapshot.as_ref(),
             &self.model,
             &mut self.state,
+            &mut self.durable_restore_ready,
         )
+    }
+
+    pub(crate) fn time_is_representable(&self, t_now: f64) -> bool {
+        self.state.slots.iter().all(|slot| {
+            let block = &self.blocks[slot.block.0 as usize];
+            let end = slot.offset + slot.len;
+            block.time_is_representable(t_now, &self.state.words[slot.offset..end])
+        })
     }
 
     /// The frozen schedule (for trace tooling / determinism assertions; D6).
@@ -364,6 +385,7 @@ fn stage_store_inputs_from_snapshot(
     snapshot: &dyn PointSnapshot,
     model: &ModelGraph,
     state: &mut RunState,
+    durable_restore_ready: &mut bool,
 ) -> Result<(), OcError> {
     for input in inputs {
         let Some(sample) = snapshot.read_resolved(input.handle) else {
@@ -374,6 +396,7 @@ fn stage_store_inputs_from_snapshot(
             // StoreInputHandle connector ids are inventory-sourced and in range for the loaded model.
             let connector = &model.connectors[connector_id.0 as usize];
             let value = sample_to_value(sample.clone(), connector.value_type, &input.path)?;
+            *durable_restore_ready = false;
             state.values[connector_id.0 as usize] = value;
         }
     }

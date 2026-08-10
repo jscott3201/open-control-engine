@@ -16,7 +16,8 @@ fn registry_exposes_block_param_rules() {
                 name: "period",
                 kind: ValueType::Real
             },
-            ParamRule::RealGreaterThan { name: "period", min: 0.0 },
+            ParamRule::RealFiniteGreaterThan { name: "period", min: 0.0 },
+            ParamRule::RealFinite { name: "shift" },
         ]
     );
     assert_eq!(
@@ -548,6 +549,9 @@ fn registry_exposes_block_param_rules() {
         ParamRule::Required {
             name: "samplePeriod",
             kind: ValueType::Real,
+        },
+        ParamRule::RealFinite {
+            name: "samplePeriod",
         },
         ParamRule::RealGreaterOrEqual {
             name: "samplePeriod",

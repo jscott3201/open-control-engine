@@ -21,11 +21,12 @@ use std::sync::Arc;
 use oce_store_mem::MemStore;
 
 use crate::{
-    AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, IoClass,
-    IoInventory, IoSummary, LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable,
-    PassThroughPair, PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode,
-    SemanticQuery, SimMetrics, SimSpec, StepReport, TemplateRef, Topology, TopologyBlock,
-    TopologyConnection, TrendCfg, TrendInterval, Value, ValueType,
+    AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
+    EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadReport, OcError,
+    OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind, PointDirection,
+    PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics, SimSpec, StepReport,
+    TemplateRef, Topology, TopologyBlock, TopologyConnection, TrendCfg, TrendInterval, Value,
+    ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -69,8 +70,9 @@ where
 
 /// R-API-PY-3: each public type a Python method returns or accepts is `Clone`, so the binding
 /// converts it to an owned Python object (no borrowed-lifetime leak). `OcError` is **excluded by
-/// design** — it is `Debug`-only and wraps non-`Clone` `#[from]` source errors; it crosses via
-/// `From<OcError> for PyErr` (R-API-PY-7), whose *shape* is pinned by [`_assert_ocerror_shape`].
+/// design** — it is `Debug`-only and wraps non-`Clone` `#[from]` source errors; a binding-local
+/// mapper owns conversion to `PyErr` (R-API-PY-7), while [`_assert_ocerror_shape`] pins the source
+/// error requirements.
 fn _assert_python_facing_types_are_clone() {
     needs_clone::<LoadReport>();
     needs_clone::<IoSummary>();
@@ -102,6 +104,8 @@ fn _assert_python_facing_types_are_clone() {
     needs_clone::<TopologyConnection>();
     needs_clone::<PassThroughPair>();
     needs_clone::<DeclaredOutput>();
+    needs_clone::<EngineCheckpoint>();
+    needs_clone::<EngineStateSnapshot>();
 }
 
 // ---- R-API-PY-4a — owned-snapshot enumeration is first-class (no borrowed iterator crosses) ----
@@ -142,6 +146,14 @@ fn _assert_frozen_signatures() {
     let _: fn(&mut Engine<MemStore>, &Path) -> Result<LoadReport, OcError> =
         Engine::<MemStore>::load_modelica;
     let _: fn(&mut Engine<MemStore>, f64) -> Result<&Outputs, OcError> = Engine::<MemStore>::tick;
+    let _: fn(&Engine<MemStore>) -> Result<EngineCheckpoint, OcError> =
+        Engine::<MemStore>::checkpoint;
+    let _: fn(&mut Engine<MemStore>, &EngineCheckpoint) -> Result<(), OcError> =
+        Engine::<MemStore>::restore_checkpoint;
+    let _: fn(&Engine<MemStore>) -> Result<EngineStateSnapshot, OcError> =
+        Engine::<MemStore>::state_snapshot;
+    let _: fn(&mut Engine<MemStore>, &EngineStateSnapshot) -> Result<(), OcError> =
+        Engine::<MemStore>::restore_state;
     let _: fn(&mut Engine<MemStore>, &str, Value) -> Result<(), OcError> =
         Engine::<MemStore>::set_input;
     let _: fn(&Engine<MemStore>, &str) -> Result<Value, OcError> = Engine::<MemStore>::get_output;
@@ -176,6 +188,10 @@ fn _assert_frozen_signatures() {
     let _: Option<ValueType> = None;
     let _: Option<ConnectorId> = None;
     let _: Option<Diagnostic> = None;
+    let _: fn(&[u8]) -> Result<EngineStateSnapshot, EngineStateError> =
+        EngineStateSnapshot::from_bytes;
+    let _: fn(&EngineStateSnapshot) -> &[u8] = EngineStateSnapshot::as_bytes;
+    let _: fn(EngineStateSnapshot) -> Vec<u8> = EngineStateSnapshot::into_bytes;
 }
 
 // ---- R-API-PY-5/6 — the accessor surface the frozen-method set above does not reach ----
@@ -228,13 +244,15 @@ fn _assert_accessor_signatures() {
 // ---- R-API-PY-7 — `OcError` is `Error + Send + Sync + 'static` (mappable to a PyErr) ----
 
 /// R-API-PY-7: `OcError` is a `std::error::Error` that is `Send + Sync + 'static`, so the binding's
-/// `From<OcError> for PyErr` can own and re-raise it across the GIL. The non-exhaustive per-family
-/// `_ => OceError::new_err(..)` catch-all is a documented *binding-side* obligation (it lives in
-/// `oce-py`, which adds no dependency here), not a guard.
+/// binding-local mapper can own and re-raise it across the GIL. The non-exhaustive per-family
+/// catch-all is a binding-side obligation (it lives in `oce-py`, which adds no dependency here),
+/// not a guard.
 fn _assert_ocerror_shape() {
     needs_send_sync::<OcError>();
+    needs_send_sync::<EngineStateError>();
     fn needs_error<E: std::error::Error + Send + Sync + 'static>() {}
     needs_error::<OcError>();
+    needs_error::<EngineStateError>();
 }
 
 // ---- the failed-load diagnostics accessor keeps its signature (satisfies R-PUB-7) ----

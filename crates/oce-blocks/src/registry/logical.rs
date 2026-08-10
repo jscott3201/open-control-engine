@@ -104,10 +104,11 @@ pub(super) const SAMPLE_TRIGGER_PARAM_RULES: &[ParamRule] = &[
         name: "period",
         kind: oce_model::ValueType::Real,
     },
-    ParamRule::RealGreaterThan {
+    ParamRule::RealFiniteGreaterThan {
         name: "period",
         min: 0.0,
     },
+    ParamRule::RealFinite { name: "shift" },
 ];
 
 pub(super) const MULTI_LOGICAL_PARAM_RULES: &[ParamRule] = &[

@@ -8,8 +8,8 @@ the architecture and invariants are the design of record.
 - Every logical change opens a pull request into the **`development`** branch.
 - Development PRs run the CI gates in [`.github/workflows/ci.yml`](.github/workflows/ci.yml);
   `bash .agents/gate.sh` reproduces them locally in CI's exact command form, so the list lives
-  in one place rather than being restated here. Only `oce-blocks` and `oce-expr` tests run
-  per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
+  in one place rather than being restated here. Only `oce-api`, `oce-blocks`, and `oce-expr` tests
+  run per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
   batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
   only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
   never publishes.
@@ -86,7 +86,7 @@ bash .agents/gate.sh
 
 That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
 no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
-`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-blocks`/`oce-expr`
+`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr`
 determinism subset in debug and release codegen.
 
 CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
@@ -94,7 +94,7 @@ CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `ga
 its own job — but that is coverage, not proof that the script and the workflows still agree.
 Nothing verifies that mechanically; change a command in CI first, then here.
 
-If your change touches any other crate, its tests did not run. Add `full`:
+If your change touches a crate outside that three-crate subset, its tests did not run. Add `full`:
 
 ```bash
 bash .agents/gate.sh full

@@ -526,9 +526,24 @@ impl<S: Store> Engine<S> {
             InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(first_t))?),
             InputSource::None | InputSource::Constant(_) | InputSource::Csv { .. } => None,
         };
+        let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
+        let last_t = spec.t_start + (n as f64) * spec.step;
+        let fresh_state = allocate_state(&self.model, &self.blocks);
+        for slot in &fresh_state.slots {
+            let block = &self.blocks[slot.block.0 as usize];
+            let end = slot.offset + slot.len;
+            if !block.simulation_time_is_representable(
+                first_t,
+                last_t,
+                &fresh_state.words[slot.offset..end],
+            ) {
+                return Err(OcError::ModelTimeUnrepresentable { now: last_t });
+            }
+        }
         // All input lists available before the first tick have now passed whole-list validation.
         // Nothing else can refuse before the restart.
         // Fresh time axis (R-SIM-2): isolate from any prior real-time tick's prev_t.
+        self.durable_restore_ready = false;
         self.prev_t = None;
         // Fresh `[S]` state (R-SIM-2): without this, a reused engine started the horizon from the
         // words the previous run left behind.
@@ -540,10 +555,9 @@ impl<S: Store> Engine<S> {
         //
         // Below all first-tick name-resolution gates, so a refusal returns without re-seeding
         // (`sim_tests::a_refused_name_resolution_does_not_reseed_state_words`).
-        self.state.words = allocate_state(&self.model, &self.blocks).words;
+        self.state.words = fresh_state.words;
         let mut trace = OutputTrace::with_columns(cols.iter().map(|(p, _)| p.clone()).collect());
         let mut metrics = SimMetrics::default();
-        let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
         for k in 0..=n {
             let t = if k == 0 {
                 first_t
@@ -624,6 +638,7 @@ impl<S: Store> Engine<S> {
             }
         }
         for &cid in connectors {
+            self.durable_restore_ready = false;
             self.state.values[cid.0 as usize] = value.clone();
         }
         Ok(())

@@ -17,7 +17,7 @@ use oce_store::{
 };
 use oce_store_mem::MemStore;
 
-use crate::{CollectSpec, Engine, InputSource, OcError, OutputTrace, SimSpec};
+use crate::{CollectSpec, Engine, EngineStateError, InputSource, OcError, OutputTrace, SimSpec};
 
 const AHU_SAT_RESET: &str =
     include_str!("../../../oce-cxf/tests/fixtures/g36/ahu_supply_air_temp_reset.jsonld");
@@ -156,6 +156,59 @@ fn missing_store_sample_holds_prior_input_value() {
 }
 
 #[test]
+fn partial_store_staging_closes_the_fresh_durable_restore_window() {
+    let store = Arc::new(MemStore::new());
+    let mut engine = Engine::with_store(Arc::clone(&store));
+    engine.load_cxf(AHU_ECONOMIZER.as_bytes()).unwrap();
+    let snapshot = engine.state_snapshot().unwrap();
+    let real_inputs: Vec<_> = engine
+        .io
+        .input_bindings()
+        .into_iter()
+        .filter(|binding| {
+            binding.connector_ids.first().is_some_and(|id| {
+                engine.model.connectors[id.0 as usize].value_type == ValueType::Real
+            })
+        })
+        .take(2)
+        .collect();
+    assert_eq!(real_inputs.len(), 2);
+    let staged = &real_inputs[0];
+    let rejected = &real_inputs[1];
+    store
+        .write_points(&[
+            PointWrite {
+                key: DomainKey::new(staged.path.clone()),
+                sample: PointSample {
+                    value: OcValue::Real(-91.25),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 0,
+                },
+                durability: Durability::Telemetry,
+            },
+            PointWrite {
+                key: DomainKey::new(rejected.path.clone()),
+                sample: PointSample {
+                    value: OcValue::Bool(true),
+                    status: PointStatus::Ok,
+                    at_unix_nanos: 0,
+                },
+                durability: Durability::Telemetry,
+            },
+        ])
+        .unwrap();
+
+    assert!(matches!(engine.tick(0.0), Err(OcError::InputType(_))));
+    for &connector in &staged.connector_ids {
+        assert!(engine.state.values[connector.0 as usize].bit_eq(&Value::Real(-91.25)));
+    }
+    assert!(matches!(
+        engine.restore_state(&snapshot),
+        Err(OcError::State(EngineStateError::DurableTargetAdvanced))
+    ));
+}
+
+#[test]
 fn a_first_tick_store_type_error_leaves_the_restart_reset_in_effect() {
     let store = Arc::new(MemStore::new());
     let mut engine = Engine::with_store(Arc::clone(&store));
@@ -259,6 +312,12 @@ fn a_first_tick_store_type_error_leaves_the_restart_reset_in_effect() {
         prior_t,
         "no block evaluated, so model time stays at the prior run"
     );
+    engine
+        .checkpoint()
+        .expect("the failed restart remains checkpointable");
+    engine
+        .state_snapshot()
+        .expect("the failed restart remains durably snapshotable");
     assert_outputs_bit_eq(&engine.outputs.to_map(), &prior_outputs);
     for &connector in &staged.connector_ids {
         assert!(

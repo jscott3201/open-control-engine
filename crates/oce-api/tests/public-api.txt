@@ -1,4 +1,5 @@
 #[non_exhaustive] pub enum oce_api::ContentIdError
+#[non_exhaustive] pub enum oce_api::EngineStateError
 #[non_exhaustive] pub enum oce_api::InputSource
 #[non_exhaustive] pub enum oce_api::OcError
 #[non_exhaustive] pub oce_api::ContentIdError::Incomplete
@@ -20,6 +21,8 @@ impl core::clone::Clone for oce_api::AssertEvent
 impl core::clone::Clone for oce_api::AssertLevel
 impl core::clone::Clone for oce_api::CollectSpec
 impl core::clone::Clone for oce_api::DeclaredOutput
+impl core::clone::Clone for oce_api::EngineCheckpoint
+impl core::clone::Clone for oce_api::EngineStateSnapshot
 impl core::clone::Clone for oce_api::IoClass
 impl core::clone::Clone for oce_api::IoInventory
 impl core::clone::Clone for oce_api::IoSummary
@@ -62,6 +65,8 @@ impl core::cmp::PartialEq for oce_api::Topology
 impl core::cmp::PartialEq for oce_api::TopologyBlock
 impl core::cmp::PartialEq for oce_api::TopologyConnection
 impl core::cmp::PartialEq for oce_api::TrendCfg
+impl core::convert::From<oce_api::EngineStateError> for oce_api::OcError
+impl core::convert::From<oce_api::EngineStateError> for oce_api::OcError
 impl core::convert::From<oce_cxf::CxfError> for oce_api::OcError
 impl core::convert::From<oce_flatten::FlattenError> for oce_api::OcError
 impl core::convert::From<oce_graph::BuildError> for oce_api::OcError
@@ -78,12 +83,16 @@ impl core::default::Default for oce_api::RunMode
 impl core::default::Default for oce_api::SimMetrics
 impl core::default::Default for oce_api::StepReport
 impl core::error::Error for oce_api::ContentIdError
+impl core::error::Error for oce_api::EngineStateError
 impl core::error::Error for oce_api::OcError
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
 impl core::fmt::Debug for oce_api::CollectSpec
 impl core::fmt::Debug for oce_api::ContentIdError
 impl core::fmt::Debug for oce_api::DeclaredOutput
+impl core::fmt::Debug for oce_api::EngineCheckpoint
+impl core::fmt::Debug for oce_api::EngineStateError
+impl core::fmt::Debug for oce_api::EngineStateSnapshot
 impl core::fmt::Debug for oce_api::ExportReport
 impl core::fmt::Debug for oce_api::InputSource
 impl core::fmt::Debug for oce_api::IoClass
@@ -108,6 +117,7 @@ impl core::fmt::Debug for oce_api::TopologyBlock
 impl core::fmt::Debug for oce_api::TopologyConnection
 impl core::fmt::Debug for oce_api::TrendCfg
 impl core::fmt::Display for oce_api::ContentIdError
+impl core::fmt::Display for oce_api::EngineStateError
 impl core::fmt::Display for oce_api::OcError
 impl core::hash::Hash for oce_api::TemplateRef
 impl core::marker::Copy for oce_api::AssertLevel
@@ -121,6 +131,9 @@ impl core::marker::Freeze for oce_api::AssertLevel
 impl core::marker::Freeze for oce_api::CollectSpec
 impl core::marker::Freeze for oce_api::ContentIdError
 impl core::marker::Freeze for oce_api::DeclaredOutput
+impl core::marker::Freeze for oce_api::EngineCheckpoint
+impl core::marker::Freeze for oce_api::EngineStateError
+impl core::marker::Freeze for oce_api::EngineStateSnapshot
 impl core::marker::Freeze for oce_api::ExportReport
 impl core::marker::Freeze for oce_api::InputSource
 impl core::marker::Freeze for oce_api::IoClass
@@ -149,6 +162,9 @@ impl core::marker::Send for oce_api::AssertLevel
 impl core::marker::Send for oce_api::CollectSpec
 impl core::marker::Send for oce_api::ContentIdError
 impl core::marker::Send for oce_api::DeclaredOutput
+impl core::marker::Send for oce_api::EngineCheckpoint
+impl core::marker::Send for oce_api::EngineStateError
+impl core::marker::Send for oce_api::EngineStateSnapshot
 impl core::marker::Send for oce_api::ExportReport
 impl core::marker::Send for oce_api::InputSource
 impl core::marker::Send for oce_api::IoClass
@@ -190,6 +206,9 @@ impl core::marker::Sync for oce_api::AssertLevel
 impl core::marker::Sync for oce_api::CollectSpec
 impl core::marker::Sync for oce_api::ContentIdError
 impl core::marker::Sync for oce_api::DeclaredOutput
+impl core::marker::Sync for oce_api::EngineCheckpoint
+impl core::marker::Sync for oce_api::EngineStateError
+impl core::marker::Sync for oce_api::EngineStateSnapshot
 impl core::marker::Sync for oce_api::ExportReport
 impl core::marker::Sync for oce_api::InputSource
 impl core::marker::Sync for oce_api::IoClass
@@ -218,6 +237,9 @@ impl core::marker::Unpin for oce_api::AssertLevel
 impl core::marker::Unpin for oce_api::CollectSpec
 impl core::marker::Unpin for oce_api::ContentIdError
 impl core::marker::Unpin for oce_api::DeclaredOutput
+impl core::marker::Unpin for oce_api::EngineCheckpoint
+impl core::marker::Unpin for oce_api::EngineStateError
+impl core::marker::Unpin for oce_api::EngineStateSnapshot
 impl core::marker::Unpin for oce_api::ExportReport
 impl core::marker::Unpin for oce_api::InputSource
 impl core::marker::Unpin for oce_api::IoClass
@@ -246,6 +268,9 @@ impl core::marker::UnsafeUnpin for oce_api::AssertLevel
 impl core::marker::UnsafeUnpin for oce_api::CollectSpec
 impl core::marker::UnsafeUnpin for oce_api::ContentIdError
 impl core::marker::UnsafeUnpin for oce_api::DeclaredOutput
+impl core::marker::UnsafeUnpin for oce_api::EngineCheckpoint
+impl core::marker::UnsafeUnpin for oce_api::EngineStateError
+impl core::marker::UnsafeUnpin for oce_api::EngineStateSnapshot
 impl core::marker::UnsafeUnpin for oce_api::ExportReport
 impl core::marker::UnsafeUnpin for oce_api::InputSource
 impl core::marker::UnsafeUnpin for oce_api::IoClass
@@ -274,6 +299,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for oce_api::AssertLevel
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::CollectSpec
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::DeclaredOutput
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineCheckpoint
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateError
+impl core::panic::unwind_safe::RefUnwindSafe for oce_api::EngineStateSnapshot
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::RefUnwindSafe for oce_api::IoInventory
@@ -299,6 +327,9 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::AssertLevel
 impl core::panic::unwind_safe::UnwindSafe for oce_api::CollectSpec
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ContentIdError
 impl core::panic::unwind_safe::UnwindSafe for oce_api::DeclaredOutput
+impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineCheckpoint
+impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateError
+impl core::panic::unwind_safe::UnwindSafe for oce_api::EngineStateSnapshot
 impl core::panic::unwind_safe::UnwindSafe for oce_api::ExportReport
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoClass
 impl core::panic::unwind_safe::UnwindSafe for oce_api::IoInventory
@@ -320,6 +351,7 @@ impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyBlock
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TopologyConnection
 impl core::panic::unwind_safe::UnwindSafe for oce_api::TrendCfg
 impl oce_api::Engine<oce_store_mem::MemStore>
+impl oce_api::EngineStateSnapshot
 impl oce_api::ExportReport
 impl oce_api::IoInventory
 impl oce_api::OcError
@@ -327,6 +359,7 @@ impl oce_api::OutputTrace
 impl oce_api::Outputs
 impl oce_api::ParamTable
 impl oce_api::TemplateRef
+impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
 impl<S: oce_store::Store> oce_api::Engine<S>
@@ -348,6 +381,9 @@ impl<T, U> core::convert::Into<U> for oce_api::CollectSpec where U: core::conver
 impl<T, U> core::convert::Into<U> for oce_api::ContentIdError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::DeclaredOutput where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::Engine<S> where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::EngineCheckpoint where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::EngineStateError where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::EngineStateSnapshot where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::ExportReport where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoClass where U: core::convert::From<T>
@@ -377,6 +413,9 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::CollectSpec where U: core::con
 impl<T, U> core::convert::TryFrom<U> for oce_api::ContentIdError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::DeclaredOutput where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::Engine<S> where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::EngineCheckpoint where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateError where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::EngineStateSnapshot where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::ExportReport where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoClass where U: core::convert::Into<T>
@@ -406,6 +445,9 @@ impl<T, U> core::convert::TryInto<U> for oce_api::CollectSpec where U: core::con
 impl<T, U> core::convert::TryInto<U> for oce_api::ContentIdError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::DeclaredOutput where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::Engine<S> where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::EngineCheckpoint where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateError where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::EngineStateSnapshot where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::ExportReport where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoClass where U: core::convert::TryFrom<T>
@@ -433,6 +475,8 @@ impl<T> alloc::borrow::ToOwned for oce_api::AssertEvent where T: core::clone::Cl
 impl<T> alloc::borrow::ToOwned for oce_api::AssertLevel where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::CollectSpec where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::DeclaredOutput where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::EngineCheckpoint where T: core::clone::Clone
+impl<T> alloc::borrow::ToOwned for oce_api::EngineStateSnapshot where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoClass where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoInventory where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::IoSummary where T: core::clone::Clone
@@ -453,6 +497,7 @@ impl<T> alloc::borrow::ToOwned for oce_api::TopologyBlock where T: core::clone::
 impl<T> alloc::borrow::ToOwned for oce_api::TopologyConnection where T: core::clone::Clone
 impl<T> alloc::borrow::ToOwned for oce_api::TrendCfg where T: core::clone::Clone
 impl<T> alloc::string::ToString for oce_api::ContentIdError where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::EngineStateError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
@@ -460,6 +505,9 @@ impl<T> core::any::Any for oce_api::CollectSpec where T: 'static + ?core::marker
 impl<T> core::any::Any for oce_api::ContentIdError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::DeclaredOutput where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::Engine<S> where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::EngineCheckpoint where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::EngineStateError where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::EngineStateSnapshot where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::ExportReport where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoClass where T: 'static + ?core::marker::Sized
@@ -489,6 +537,9 @@ impl<T> core::borrow::Borrow<T> for oce_api::CollectSpec where T: ?core::marker:
 impl<T> core::borrow::Borrow<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::DeclaredOutput where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::Engine<S> where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::EngineCheckpoint where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::EngineStateError where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoClass where T: ?core::marker::Sized
@@ -518,6 +569,9 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::CollectSpec where T: ?core::mark
 impl<T> core::borrow::BorrowMut<T> for oce_api::ContentIdError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::DeclaredOutput where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::Engine<S> where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::EngineCheckpoint where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateError where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::EngineStateSnapshot where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::ExportReport where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoClass where T: ?core::marker::Sized
@@ -545,6 +599,8 @@ impl<T> core::clone::CloneToUninit for oce_api::AssertEvent where T: core::clone
 impl<T> core::clone::CloneToUninit for oce_api::AssertLevel where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::CollectSpec where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::DeclaredOutput where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::EngineCheckpoint where T: core::clone::Clone
+impl<T> core::clone::CloneToUninit for oce_api::EngineStateSnapshot where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoClass where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoInventory where T: core::clone::Clone
 impl<T> core::clone::CloneToUninit for oce_api::IoSummary where T: core::clone::Clone
@@ -570,6 +626,9 @@ impl<T> core::convert::From<T> for oce_api::CollectSpec
 impl<T> core::convert::From<T> for oce_api::ContentIdError
 impl<T> core::convert::From<T> for oce_api::DeclaredOutput
 impl<T> core::convert::From<T> for oce_api::Engine<S>
+impl<T> core::convert::From<T> for oce_api::EngineCheckpoint
+impl<T> core::convert::From<T> for oce_api::EngineStateError
+impl<T> core::convert::From<T> for oce_api::EngineStateSnapshot
 impl<T> core::convert::From<T> for oce_api::ExportReport
 impl<T> core::convert::From<T> for oce_api::InputSource
 impl<T> core::convert::From<T> for oce_api::IoClass
@@ -658,6 +717,7 @@ pub fn oce_api::DeclaredOutput::try_into(self) -> core::result::Result<U, <U as 
 pub fn oce_api::DeclaredOutput::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::borrow(&self) -> &T
 pub fn oce_api::Engine<S>::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::Engine<S>::checkpoint(&self) -> core::result::Result<oce_api::EngineCheckpoint, oce_api::OcError>
 pub fn oce_api::Engine<S>::export_cxf(&self) -> core::result::Result<oce_api::ExportReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::from(T) -> T
 pub fn oce_api::Engine<S>::get_output(&self, &str) -> core::result::Result<oce_model::Value, oce_api::OcError>
@@ -674,12 +734,15 @@ pub fn oce_api::Engine<S>::outputs(&self) -> &oce_api::Outputs
 pub fn oce_api::Engine<S>::params(&self) -> &oce_api::ParamTable
 pub fn oce_api::Engine<S>::point_list(&self, core::option::Option<&str>) -> core::result::Result<alloc::vec::Vec<oce_api::PointInfo>, oce_api::OcError>
 pub fn oce_api::Engine<S>::realtime_epoch_unix_nanos(&self) -> core::option::Option<u64>
+pub fn oce_api::Engine<S>::restore_checkpoint(&mut self, &oce_api::EngineCheckpoint) -> core::result::Result<(), oce_api::OcError>
+pub fn oce_api::Engine<S>::restore_state(&mut self, &oce_api::EngineStateSnapshot) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::resume(&mut self) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::schedule(&self) -> &oce_graph::Schedule
 pub fn oce_api::Engine<S>::set_input(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_param(&mut self, &str, oce_model::Value) -> core::result::Result<(), oce_api::OcError>
 pub fn oce_api::Engine<S>::set_realtime_epoch_unix_nanos(&mut self, u64)
 pub fn oce_api::Engine<S>::simulate(&mut self, &oce_api::SimSpec) -> core::result::Result<oce_api::SimMetrics, oce_api::OcError>
+pub fn oce_api::Engine<S>::state_snapshot(&self) -> core::result::Result<oce_api::EngineStateSnapshot, oce_api::OcError>
 pub fn oce_api::Engine<S>::step_realtime(&mut self, f64) -> core::result::Result<oce_api::StepReport, oce_api::OcError>
 pub fn oce_api::Engine<S>::store(&self) -> &S
 pub fn oce_api::Engine<S>::tick(&mut self, f64) -> core::result::Result<&oce_api::Outputs, oce_api::OcError>
@@ -690,6 +753,41 @@ pub fn oce_api::Engine<S>::type_id(&self) -> core::any::TypeId
 pub fn oce_api::Engine<S>::watch(&self, &[&str]) -> core::result::Result<alloc::vec::Vec<(alloc::string::String, oce_model::Value)>, oce_api::OcError>
 pub fn oce_api::Engine<S>::with_store(alloc::sync::Arc<S>) -> Self
 pub fn oce_api::Engine<oce_store_mem::MemStore>::in_memory() -> Self
+pub fn oce_api::EngineCheckpoint::borrow(&self) -> &T
+pub fn oce_api::EngineCheckpoint::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::EngineCheckpoint::clone(&self) -> oce_api::EngineCheckpoint
+pub fn oce_api::EngineCheckpoint::clone_into(&self, &mut T)
+pub fn oce_api::EngineCheckpoint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::EngineCheckpoint::from(T) -> T
+pub fn oce_api::EngineCheckpoint::into(self) -> U
+pub fn oce_api::EngineCheckpoint::to_owned(&self) -> T
+pub fn oce_api::EngineCheckpoint::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::EngineCheckpoint::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::EngineCheckpoint::type_id(&self) -> core::any::TypeId
+pub fn oce_api::EngineStateError::borrow(&self) -> &T
+pub fn oce_api::EngineStateError::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::EngineStateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::EngineStateError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::EngineStateError::from(T) -> T
+pub fn oce_api::EngineStateError::into(self) -> U
+pub fn oce_api::EngineStateError::to_string(&self) -> alloc::string::String
+pub fn oce_api::EngineStateError::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::EngineStateError::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::EngineStateError::type_id(&self) -> core::any::TypeId
+pub fn oce_api::EngineStateSnapshot::as_bytes(&self) -> &[u8]
+pub fn oce_api::EngineStateSnapshot::borrow(&self) -> &T
+pub fn oce_api::EngineStateSnapshot::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::EngineStateSnapshot::clone(&self) -> oce_api::EngineStateSnapshot
+pub fn oce_api::EngineStateSnapshot::clone_into(&self, &mut T)
+pub fn oce_api::EngineStateSnapshot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::EngineStateSnapshot::from(T) -> T
+pub fn oce_api::EngineStateSnapshot::from_bytes(&[u8]) -> core::result::Result<Self, oce_api::EngineStateError>
+pub fn oce_api::EngineStateSnapshot::into(self) -> U
+pub fn oce_api::EngineStateSnapshot::into_bytes(self) -> alloc::vec::Vec<u8>
+pub fn oce_api::EngineStateSnapshot::to_owned(&self) -> T
+pub fn oce_api::EngineStateSnapshot::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::EngineStateSnapshot::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::EngineStateSnapshot::type_id(&self) -> core::any::TypeId
 pub fn oce_api::ExportReport::borrow(&self) -> &T
 pub fn oce_api::ExportReport::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::ExportReport::content_id(&self) -> alloc::string::String
@@ -768,6 +866,8 @@ pub fn oce_api::OcError::diagnostics(&self) -> &[oce_diag::Diagnostic]
 pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::OcError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn oce_api::OcError::from(T) -> T
+pub fn oce_api::OcError::from(oce_api::EngineStateError) -> Self
+pub fn oce_api::OcError::from(oce_api::EngineStateError) -> Self
 pub fn oce_api::OcError::from(oce_cxf::CxfError) -> Self
 pub fn oce_api::OcError::from(oce_flatten::FlattenError) -> Self
 pub fn oce_api::OcError::from(oce_graph::BuildError) -> Self
@@ -1000,6 +1100,35 @@ pub oce_api::CollectSpec::None
 pub oce_api::ContentIdError::Incomplete::warning_count: usize
 pub oce_api::DeclaredOutput::driver_path: alloc::string::String
 pub oce_api::DeclaredOutput::path: alloc::string::String
+pub oce_api::EngineStateError::DurableTargetAdvanced
+pub oce_api::EngineStateError::IncompatibleExecution
+pub oce_api::EngineStateError::IncompatibleExecution::snapshot: alloc::string::String
+pub oce_api::EngineStateError::IncompatibleExecution::subject: alloc::string::String
+pub oce_api::EngineStateError::IncompatibleExecution::target: alloc::string::String
+pub oce_api::EngineStateError::IneligibleModel
+pub oce_api::EngineStateError::IneligibleModel::detail: alloc::string::String
+pub oce_api::EngineStateError::IneligibleModel::subject: alloc::string::String
+pub oce_api::EngineStateError::IntegrityMismatch
+pub oce_api::EngineStateError::IntegrityMismatch::expected: u128
+pub oce_api::EngineStateError::IntegrityMismatch::found: u128
+pub oce_api::EngineStateError::InvalidBlockState
+pub oce_api::EngineStateError::InvalidBlockState::block: alloc::string::String
+pub oce_api::EngineStateError::InvalidBlockState::detail: alloc::string::String
+pub oce_api::EngineStateError::MalformedSnapshot
+pub oce_api::EngineStateError::MalformedSnapshot::detail: alloc::string::String
+pub oce_api::EngineStateError::MalformedSnapshot::offset: u64
+pub oce_api::EngineStateError::NoLoadedModel
+pub oce_api::EngineStateError::PendingParameterEdits
+pub oce_api::EngineStateError::SnapshotTooLarge
+pub oce_api::EngineStateError::SnapshotTooLarge::actual_bytes: u64
+pub oce_api::EngineStateError::SnapshotTooLarge::max_bytes: u64
+pub oce_api::EngineStateError::TargetDomainMismatch
+pub oce_api::EngineStateError::TargetDomainMismatch::snapshot_arch: alloc::string::String
+pub oce_api::EngineStateError::TargetDomainMismatch::snapshot_os: alloc::string::String
+pub oce_api::EngineStateError::TargetDomainMismatch::target_arch: alloc::string::String
+pub oce_api::EngineStateError::TargetDomainMismatch::target_os: alloc::string::String
+pub oce_api::EngineStateError::UnsupportedFormat
+pub oce_api::EngineStateError::UnsupportedFormat::revision: u32
 pub oce_api::ExportReport::bytes: alloc::vec::Vec<u8>
 pub oce_api::ExportReport::warnings: alloc::vec::Vec<oce_diag::Diagnostic>
 pub oce_api::InputSource::Closure(alloc::boxed::Box<(dyn core::ops::function::Fn(f64) -> alloc::vec::Vec<(alloc::string::String, oce_model::Value)> + core::marker::Send + core::marker::Sync)>)
@@ -1030,6 +1159,8 @@ pub oce_api::OcError::Flatten(oce_flatten::FlattenError)
 pub oce_api::OcError::InputType(alloc::string::String)
 pub oce_api::OcError::Load
 pub oce_api::OcError::Load::detail: alloc::string::String
+pub oce_api::OcError::ModelTimeUnrepresentable
+pub oce_api::OcError::ModelTimeUnrepresentable::now: f64
 pub oce_api::OcError::NonFiniteTime
 pub oce_api::OcError::NonFiniteTime::now: f64
 pub oce_api::OcError::ParamRange
@@ -1044,6 +1175,7 @@ pub oce_api::OcError::RealtimeEpochUnset
 pub oce_api::OcError::RealtimeInstantUnrepresentable
 pub oce_api::OcError::RealtimeInstantUnrepresentable::epoch_unix_nanos: u64
 pub oce_api::OcError::RealtimeInstantUnrepresentable::t_now: f64
+pub oce_api::OcError::State(oce_api::EngineStateError)
 pub oce_api::OcError::Store(oce_store::StoreError)
 pub oce_api::OcError::TimeRegression
 pub oce_api::OcError::TimeRegression::now: f64
@@ -1103,6 +1235,8 @@ pub oce_api::TrendCfg::enabled: bool
 pub oce_api::TrendCfg::interval: oce_store::TrendInterval
 pub struct oce_api::AssertEvent
 pub struct oce_api::Engine<S: oce_store::Store>
+pub struct oce_api::EngineCheckpoint
+pub struct oce_api::EngineStateSnapshot
 pub struct oce_api::IoInventory
 pub struct oce_api::IoSummary
 pub struct oce_api::OutputTrace
@@ -1130,6 +1264,14 @@ pub type oce_api::DeclaredOutput::Error = core::convert::Infallible
 pub type oce_api::DeclaredOutput::Owned = T
 pub type oce_api::Engine<S>::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::Engine<S>::Error = core::convert::Infallible
+pub type oce_api::EngineCheckpoint::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::EngineCheckpoint::Error = core::convert::Infallible
+pub type oce_api::EngineCheckpoint::Owned = T
+pub type oce_api::EngineStateError::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::EngineStateError::Error = core::convert::Infallible
+pub type oce_api::EngineStateSnapshot::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::EngineStateSnapshot::Error = core::convert::Infallible
+pub type oce_api::EngineStateSnapshot::Owned = T
 pub type oce_api::ExportReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::ExportReport::Error = core::convert::Infallible
 pub type oce_api::InputSource::Error = <U as core::convert::TryFrom<T>>::Error
@@ -1200,6 +1342,8 @@ pub unsafe fn oce_api::AssertEvent::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::AssertLevel::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::CollectSpec::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::DeclaredOutput::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::EngineCheckpoint::clone_to_uninit(&self, *mut u8)
+pub unsafe fn oce_api::EngineStateSnapshot::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoClass::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoInventory::clone_to_uninit(&self, *mut u8)
 pub unsafe fn oce_api::IoSummary::clone_to_uninit(&self, *mut u8)

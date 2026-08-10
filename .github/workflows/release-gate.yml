@@ -14,7 +14,7 @@
 # == ...` clauses in each `if:` document the non-PR paths and avoid relying on GitHub's null coercion.
 #
 # WHAT RUNS HERE vs. ci.yml:
-#   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-blocks`/`oce-expr`
+#   * NEW value — the FULL test suite. ci.yml runs only the targeted `oce-api`/`oce-blocks`/`oce-expr`
 #     determinism subset, so this gate is the first place every OTHER crate's tests execute:
 #       - `cargo nextest run` for every unit + integration test in the workspace,
 #       - `cargo nextest run --cargo-profile release` for release-codegen panic-freedom regressions,
@@ -325,7 +325,8 @@ jobs:
   # why this is a coverage backstop and explicitly NOT a parity check.
   #
   # `full` is the higher-stakes half. AGENTS.md instructs every agent to run `bash .agents/gate.sh
-  # full` before claiming a change's tests pass — the per-PR gate runs only oce-blocks/oce-expr, so
+  # full` before claiming a change's tests pass — the per-PR gate runs only
+  # oce-api/oce-blocks/oce-expr, so
   # for a change confined to any other crate that claim rests entirely on this script. Running it
   # here is what keeps the commands behind that instruction under CI observation.
   #
