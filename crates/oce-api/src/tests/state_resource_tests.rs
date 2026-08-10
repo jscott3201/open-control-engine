@@ -89,6 +89,34 @@ fn checkpoint_size_counter_matches_the_wire_encoder() {
 }
 
 #[test]
+fn compact_many_block_snapshot_round_trips_within_the_decode_budget() {
+    let mut model = ModelGraph::new();
+    for index in 0..1_000u32 {
+        let block = BlockId(index);
+        let output = ConnectorId(index);
+        model.blocks.push(BlockInstance {
+            id: block,
+            class_iri: Arc::from("CDL.Reals.Sources.CivilTime"),
+            inputs: Vec::new(),
+            outputs: vec![output],
+            params: ParamTable::default(),
+            decl_order: index,
+            instance_iri: Some(Arc::from(format!("u:{index:03}"))),
+        });
+        model.connectors.push(
+            Connector::new(output, block, Dir::Out, ValueType::Real, 0)
+                .with_iri(format!("v:{index:03}")),
+        );
+    }
+    let mut engine = Engine::in_memory();
+    engine
+        .build_model_in_memory(model, Some("urn:test:compact-manifest"))
+        .unwrap();
+    let snapshot = engine.state_snapshot().unwrap();
+    EngineStateSnapshot::from_bytes(snapshot.as_bytes()).unwrap();
+}
+
+#[test]
 fn compatibility_diagnostics_bound_large_parameter_values() {
     let mut source = Engine::in_memory();
     source

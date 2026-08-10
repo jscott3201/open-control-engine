@@ -10,7 +10,7 @@ use crate::state_manifest_codec::{
     decode_manifest, encode_manifest, read_connector_key, read_value, write_connector_key,
     write_value,
 };
-use crate::state_wire::{Reader, Writer};
+use crate::state_wire::{DecodeBudget, Reader, Writer};
 
 const MAGIC: &[u8; 8] = b"OCESTAT\0";
 const HEADER_BYTES: usize = 8 + 4 + 4 + 8;
@@ -100,13 +100,14 @@ fn write_snapshot(
 
 pub(crate) fn decode_snapshot(bytes: &[u8]) -> Result<StateImage, EngineStateError> {
     crate::state::enforce_size(bytes.len())?;
+    let budget = DecodeBudget::for_input(bytes.len());
     if bytes.len() < HEADER_BYTES + TRAILER_BYTES {
         return malformed(0, "snapshot is shorter than the fixed header and trailer");
     }
     if bytes.get(..MAGIC.len()) != Some(MAGIC) {
         return malformed(0, "invalid state-snapshot magic");
     }
-    let mut header = Reader::new(&bytes[8..HEADER_BYTES], 8);
+    let mut header = Reader::new(&bytes[8..HEADER_BYTES], 8, budget.clone());
     let format_revision = header.u32()?;
     if format_revision != FORMAT_REVISION {
         return Err(EngineStateError::UnsupportedFormat {
@@ -147,7 +148,7 @@ pub(crate) fn decode_snapshot(bytes: &[u8]) -> Result<StateImage, EngineStateErr
         return Err(EngineStateError::IntegrityMismatch { expected, found });
     }
     let body = &bytes[HEADER_BYTES..trailer_offset];
-    let mut reader = Reader::new(body, HEADER_BYTES as u64);
+    let mut reader = Reader::new(body, HEADER_BYTES as u64, budget.clone());
     let fingerprint = reader.u128()?;
     let model_id = reader.string()?;
     let state_t_offset = reader.offset();
@@ -178,7 +179,7 @@ pub(crate) fn decode_snapshot(bytes: &[u8]) -> Result<StateImage, EngineStateErr
         })?;
     let manifest_offset = reader.offset();
     let manifest_bytes = reader.slice(manifest_length)?;
-    let manifest = decode_manifest(manifest_bytes, manifest_offset, execution_revision)?;
+    let manifest = decode_manifest(manifest_bytes, manifest_offset, execution_revision, budget)?;
     let expected_fingerprint =
         crate::state_manifest::fingerprint(execution_revision, manifest_bytes);
     if fingerprint != expected_fingerprint {

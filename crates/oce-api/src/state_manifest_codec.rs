@@ -6,7 +6,7 @@ use crate::state::{
     BlockKey, BlockManifestEntry, ConnectorKey, ConnectorManifestEntry, EngineStateError,
     EnumManifestEntry, ExecutionManifest, Portability, WireDir, WireValue, WireValueType,
 };
-use crate::state_wire::{Reader, Writer};
+use crate::state_wire::{DecodeBudget, Reader, Writer};
 use oce_blocks::BlockKind;
 
 pub(crate) fn encode_manifest(
@@ -86,8 +86,9 @@ pub(crate) fn decode_manifest(
     bytes: &[u8],
     base_offset: u64,
     execution_revision: u32,
+    budget: DecodeBudget,
 ) -> Result<ExecutionManifest, EngineStateError> {
-    let mut reader = Reader::new(bytes, base_offset);
+    let mut reader = Reader::new(bytes, base_offset, budget);
     let portability = match reader.u8()? {
         0 => Portability::CrossPlatform,
         1 => Portability::TargetBound {
@@ -98,62 +99,23 @@ pub(crate) fn decode_manifest(
     };
     let enum_count = read_count(&mut reader, "enum class count")?;
     let mut enums = reader.bounded_vec(enum_count, 8, "enum classes")?;
-    let mut enum_heap = enum_count
-        .checked_mul(std::mem::size_of::<EnumManifestEntry>())
-        .ok_or_else(|| EngineStateError::MalformedSnapshot {
-            offset: reader.offset(),
-            detail: "enum descriptor allocation size overflows".into(),
-        })?;
     for _ in 0..enum_count {
-        let class_path = reader.string_bounded(
-            (crate::state::MAX_SNAPSHOT_BYTES as usize).saturating_sub(enum_heap),
-        )?;
-        enum_heap = enum_heap.checked_add(class_path.len()).ok_or_else(|| {
-            EngineStateError::MalformedSnapshot {
-                offset: reader.offset(),
-                detail: "enum descriptor allocation size overflows".into(),
-            }
-        })?;
+        let class_path = reader.string()?;
         let member_count = read_count(&mut reader, "enum member count")?;
-        let member_storage = member_count
-            .checked_mul(std::mem::size_of::<Arc<str>>())
-            .ok_or_else(|| EngineStateError::MalformedSnapshot {
-                offset: reader.offset(),
-                detail: "enum member allocation size overflows".into(),
-            })?;
         let index_storage = member_count
             .checked_mul(std::mem::size_of::<&str>())
             .ok_or_else(|| EngineStateError::MalformedSnapshot {
                 offset: reader.offset(),
                 detail: "enum member index allocation size overflows".into(),
             })?;
-        let peak_without_names = enum_heap
-            .checked_add(member_storage)
-            .and_then(|total| total.checked_add(index_storage))
-            .ok_or_else(|| EngineStateError::MalformedSnapshot {
-                offset: reader.offset(),
-                detail: "enum descriptor allocation size overflows".into(),
-            })?;
-        if peak_without_names > crate::state::MAX_SNAPSHOT_BYTES as usize {
-            return reader.malformed("enum descriptors exceed their bounded allocation budget");
-        }
         let mut members = reader.bounded_vec(member_count, 4, "enum members")?;
-        let mut member_name_bytes = 0usize;
         for _ in 0..member_count {
-            let available = (crate::state::MAX_SNAPSHOT_BYTES as usize)
-                .saturating_sub(peak_without_names)
-                .saturating_sub(member_name_bytes);
-            // String-to-Arc conversion temporarily owns both allocations.
-            let member = reader.string_bounded(available / 2)?;
-            member_name_bytes = member_name_bytes.checked_add(member.len()).ok_or_else(|| {
-                EngineStateError::MalformedSnapshot {
-                    offset: reader.offset(),
-                    detail: "enum member allocation size overflows".into(),
-                }
-            })?;
+            let member = reader.string()?;
+            reader.claim_allocation(member.len(), "enum member Arc allocation")?;
             let member = Arc::<str>::from(member);
             reader.push(&mut members, member, "enum members")?;
         }
+        reader.claim_allocation(index_storage, "enum member index allocation")?;
         let mut member_names = Vec::new();
         member_names.try_reserve_exact(member_count).map_err(|_| {
             EngineStateError::MalformedSnapshot {
@@ -166,13 +128,6 @@ pub(crate) fn decode_manifest(
         if member_names.windows(2).any(|pair| pair[0] == pair[1]) {
             return reader.malformed("duplicate enum member name");
         }
-        enum_heap = enum_heap
-            .checked_add(member_storage)
-            .and_then(|total| total.checked_add(member_name_bytes))
-            .ok_or_else(|| EngineStateError::MalformedSnapshot {
-                offset: reader.offset(),
-                detail: "enum descriptor allocation size overflows".into(),
-            })?;
         push_strict(
             &mut enums,
             EnumManifestEntry {
@@ -315,11 +270,45 @@ pub(crate) fn decode_manifest(
         external_inputs,
         boundary_outputs,
     };
+    let validation_entries = manifest
+        .enums
+        .len()
+        .checked_mul(2)
+        .and_then(|count| {
+            manifest
+                .blocks
+                .len()
+                .checked_mul(4)
+                .and_then(|blocks| count.checked_add(blocks))
+        })
+        .and_then(|count| {
+            manifest
+                .connectors
+                .len()
+                .checked_mul(4)
+                .and_then(|connectors| count.checked_add(connectors))
+        })
+        .and_then(|count| count.checked_add(manifest.state_slots.len()))
+        .and_then(|count| count.checked_add(manifest.external_inputs.len()))
+        .and_then(|count| count.checked_add(manifest.boundary_outputs.len()))
+        .ok_or_else(|| EngineStateError::MalformedSnapshot {
+            offset: reader.offset(),
+            detail: "manifest validation workspace size overflows".into(),
+        })?;
+    let validation_workspace =
+        validation_entries
+            .checked_mul(128)
+            .ok_or_else(|| EngineStateError::MalformedSnapshot {
+                offset: reader.offset(),
+                detail: "manifest validation workspace size overflows".into(),
+            })?;
+    reader.claim_allocation(validation_workspace, "manifest validation workspace")?;
     crate::state_manifest_validation::validate_manifest(
         &manifest,
         base_offset.saturating_add(u64::try_from(bytes.len()).unwrap_or(u64::MAX)),
         execution_revision == crate::state::EXECUTION_ABI_REVISION,
     )?;
+    reader.claim_allocation(bytes.len(), "canonical manifest encoding")?;
     let canonical = encode_manifest(&manifest, false)?;
     if canonical != bytes {
         let first = canonical

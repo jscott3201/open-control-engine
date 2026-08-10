@@ -1,6 +1,42 @@
 //! Checked little-endian primitives for the state-snapshot codec.
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use crate::state::EngineStateError;
+
+const MAX_DECODE_ALLOCATION_BYTES: usize =
+    crate::state::MAX_SNAPSHOT_BYTES as usize * 2 + 8 * 1024 * 1024;
+const DECODE_INPUT_EXPANSION: usize = 16;
+
+#[derive(Clone)]
+pub(crate) struct DecodeBudget {
+    remaining: Rc<Cell<usize>>,
+}
+
+impl DecodeBudget {
+    pub(crate) fn for_input(input_bytes: usize) -> Self {
+        Self {
+            remaining: Rc::new(Cell::new(
+                input_bytes
+                    .saturating_mul(DECODE_INPUT_EXPANSION)
+                    .min(MAX_DECODE_ALLOCATION_BYTES),
+            )),
+        }
+    }
+
+    fn claim(&self, bytes: usize, offset: u64, detail: &str) -> Result<(), EngineStateError> {
+        let remaining = self.remaining.get();
+        let Some(next) = remaining.checked_sub(bytes) else {
+            return Err(EngineStateError::MalformedSnapshot {
+                offset,
+                detail: format!("{detail} exceeds the snapshot decode-allocation budget"),
+            });
+        };
+        self.remaining.set(next);
+        Ok(())
+    }
+}
 
 pub(crate) struct Writer {
     bytes: Vec<u8>,
@@ -107,14 +143,16 @@ pub(crate) struct Reader<'a> {
     bytes: &'a [u8],
     position: usize,
     base_offset: u64,
+    budget: DecodeBudget,
 }
 
 impl<'a> Reader<'a> {
-    pub(crate) fn new(bytes: &'a [u8], base_offset: u64) -> Self {
+    pub(crate) fn new(bytes: &'a [u8], base_offset: u64, budget: DecodeBudget) -> Self {
         Self {
             bytes,
             position: 0,
             base_offset,
+            budget,
         }
     }
 
@@ -182,6 +220,7 @@ impl<'a> Reader<'a> {
                 offset: string_offset.saturating_add(error.valid_up_to() as u64),
                 detail: "string is not valid UTF-8".into(),
             })?;
+        self.claim_allocation(length, "string allocation")?;
         let mut owned = String::new();
         owned
             .try_reserve_exact(length)
@@ -259,6 +298,7 @@ impl<'a> Reader<'a> {
                 detail: format!("{detail} allocation exceeds its bounded input budget"),
             });
         }
+        self.claim_allocation(allocation, detail)?;
         let mut values = Vec::new();
         values
             .try_reserve_exact(count)
@@ -267,6 +307,14 @@ impl<'a> Reader<'a> {
                 detail: format!("{detail} allocation failed"),
             })?;
         Ok(values)
+    }
+
+    pub(crate) fn claim_allocation(
+        &self,
+        bytes: usize,
+        detail: &str,
+    ) -> Result<(), EngineStateError> {
+        self.budget.claim(bytes, self.offset(), detail)
     }
 
     pub(crate) fn push<T>(
@@ -316,10 +364,27 @@ mod tests {
 
     #[test]
     fn decoded_vector_allocation_cannot_exceed_the_snapshot_cap() {
-        let reader = Reader::new(&[], 0);
+        let reader = Reader::new(&[], 0, DecodeBudget::for_input(0));
         let count = crate::state::MAX_SNAPSHOT_BYTES as usize / 1024 + 1;
         assert!(matches!(
             reader.bounded_vec::<[u8; 1024]>(count, 1, "hostile vector"),
+            Err(EngineStateError::MalformedSnapshot { .. })
+        ));
+    }
+
+    #[test]
+    fn readers_share_one_input_scaled_allocation_budget() {
+        let bytes = [0; 256];
+        let budget = DecodeBudget::for_input(bytes.len());
+        for _ in 0..DECODE_INPUT_EXPANSION {
+            let reader = Reader::new(&bytes, 0, budget.clone());
+            reader
+                .bounded_vec::<[u8; 256]>(1, 256, "shared vector")
+                .unwrap();
+        }
+        let reader = Reader::new(&bytes, 0, budget);
+        assert!(matches!(
+            reader.bounded_vec::<[u8; 256]>(1, 256, "shared vector"),
             Err(EngineStateError::MalformedSnapshot { .. })
         ));
     }

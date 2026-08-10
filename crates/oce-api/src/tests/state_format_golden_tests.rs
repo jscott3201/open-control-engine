@@ -404,10 +404,13 @@ fn complete_vector_rejects_missing_duplicate_and_invalid_enum_values() {
     };
     *ordinal = 5;
     assert!(EngineStateSnapshot::from_bytes(&encoded_vector(invalid_enum)).is_err());
+}
 
+#[test]
+fn current_revision_enum_compatibility_is_deferred_until_restore() {
     let mut wrong_members = vector_image();
     wrong_members.manifest.enums[0].members.swap(0, 1);
-    assert!(EngineStateSnapshot::from_bytes(&encoded_vector(wrong_members)).is_err());
+    EngineStateSnapshot::from_bytes(&encoded_vector(wrong_members)).unwrap();
 }
 
 #[test]

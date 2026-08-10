@@ -2,12 +2,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use oce_blocks::BlockKind;
-use oce_model::enum_descriptor_by_path;
-
 use crate::state::{
     EngineStateError, ExecutionManifest, Portability, WireDir, WireValue, WireValueType,
 };
+use oce_blocks::BlockKind;
 
 pub(crate) fn validate_value_enum<'a>(
     value: &'a WireValue,
@@ -56,7 +54,7 @@ pub(crate) fn require_exact_set<'a, T: Ord + Clone + 'a>(
 pub(crate) fn validate_manifest(
     manifest: &ExecutionManifest,
     validation_offset: u64,
-    current_execution_revision: bool,
+    validate_current_portability: bool,
 ) -> Result<(), EngineStateError> {
     let malformed = |detail: String| EngineStateError::MalformedSnapshot {
         offset: validation_offset,
@@ -69,25 +67,6 @@ pub(crate) fn validate_manifest(
                 "enum descriptor '{}' has no members",
                 crate::state_diagnostics::bounded_text(&entry.class_path)
             )));
-        }
-        if current_execution_revision {
-            let descriptor = enum_descriptor_by_path(&entry.class_path).ok_or_else(|| {
-                malformed(format!(
-                    "unknown enum descriptor '{}'",
-                    crate::state_diagnostics::bounded_text(&entry.class_path)
-                ))
-            })?;
-            if !entry
-                .members
-                .iter()
-                .map(AsRef::as_ref)
-                .eq(descriptor.members.iter().copied())
-            {
-                return Err(malformed(format!(
-                    "enum descriptor '{}' has the wrong member order",
-                    crate::state_diagnostics::bounded_text(&entry.class_path)
-                )));
-            }
         }
         enum_paths.insert(entry.class_path.as_str(), entry.members.len());
     }
@@ -256,7 +235,7 @@ pub(crate) fn validate_manifest(
             ));
         }
     }
-    if current_execution_revision {
+    if validate_current_portability {
         let target_bound = manifest
             .blocks
             .iter()

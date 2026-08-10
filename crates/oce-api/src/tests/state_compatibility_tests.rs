@@ -141,18 +141,28 @@ fn enum_member_identity_change_is_incompatible() {
         )],
     );
     let mut model = builder.finish();
+    model.blocks[0].instance_iri = Some(Arc::from("urn:test:enum-block"));
+    for (index, connector) in model.connectors.iter_mut().enumerate() {
+        connector.iri = Some(Arc::from(format!("urn:test:enum-connector:{index}")));
+    }
     model.external_inputs = inputs;
     let mut source = Engine::in_memory();
-    source.build_model_in_memory(model.clone(), None).unwrap();
-    let checkpoint = source.checkpoint().unwrap();
-    let mut image = (*checkpoint.image).clone();
+    source
+        .build_model_in_memory(model.clone(), Some("urn:test:enum-model"))
+        .unwrap();
+    let snapshot = source.state_snapshot().unwrap();
+    let mut image = (*snapshot.image).clone();
     image.manifest.enums[0].members.swap(0, 1);
+    let manifest = crate::state_manifest_codec::encode_manifest(&image.manifest, false).unwrap();
+    image.fingerprint = crate::state_manifest::fingerprint(image.execution_revision, &manifest);
+    let bytes = crate::state_codec::encode_snapshot(&image, false).unwrap();
+    let snapshot = EngineStateSnapshot::from_bytes(&bytes).unwrap();
     let mut target = Engine::in_memory();
-    target.build_model_in_memory(model, None).unwrap();
+    target
+        .build_model_in_memory(model, Some("urn:test:enum-model"))
+        .unwrap();
     assert!(matches!(
-        target.restore_checkpoint(&EngineCheckpoint {
-            image: Arc::new(image)
-        }),
+        target.restore_state(&snapshot),
         Err(OcError::State(EngineStateError::IncompatibleExecution { subject, .. }))
             if subject.contains("enum class")
     ));
