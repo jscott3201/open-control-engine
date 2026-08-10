@@ -196,6 +196,8 @@ fn paths_are_ascii_canonical_and_repository_relative() {
         "https://example.test/evidence",
         "C:/absolute/file",
         "inside\\file",
+        "inside/dir./file",
+        "inside/dir /file",
     ] {
         let mut value = entry("DVG-000001", "base");
         value["evidence"][0]["path"] = json!(path);
@@ -218,6 +220,15 @@ fn paths_are_ascii_canonical_and_repository_relative() {
         code(&register(vec![subject_glob])),
         ValidationCode::InvalidString
     );
+
+    let mut literal_brackets = entry("DVG-000001", "base");
+    literal_brackets["subject"]["signal"] = json!("y[01]");
+    valid(&register(vec![literal_brackets]));
+    for wildcard in ["y*", "y?"] {
+        let mut value = entry("DVG-000001", "base");
+        value["subject"]["signal"] = json!(wildcard);
+        assert_eq!(code(&register(vec![value])), ValidationCode::InvalidString);
+    }
 }
 
 #[test]
@@ -316,6 +327,16 @@ fn upstream_status_url_combinations_are_exact() {
         json!({"status":"filed","url":null}),
         json!({"status":"filed","url":"http://example.test/issue/1"}),
         json!({"status":"filed","url":"https://example.test/issue 1"}),
+        json!({"status":"filed","url":"https://?issue=1"}),
+        json!({"status":"filed","url":"https://#issue-1"}),
+        json!({"status":"filed","url":"https://user@github.com/issues/1"}),
+        json!({"status":"filed","url":"https://github.com:443/issues/1"}),
+        json!({"status":"filed","url":"https://.github.com/issues/1"}),
+        json!({"status":"filed","url":"https://github..com/issues/1"}),
+        json!({"status":"filed","url":"https://github.com./issues/1"}),
+        json!({"status":"filed","url":"https://-github.com/issues/1"}),
+        json!({"status":"filed","url":"https://github-.com/issues/1"}),
+        json!({"status":"filed","url":"https://git_hub.com/issues/1"}),
         json!({"status":"not_filed","url":"https://example.test/issue/1"}),
         json!({"status":"not_applicable","url":"https://example.test/issue/1"}),
     ] {
@@ -329,6 +350,17 @@ fn upstream_status_url_combinations_are_exact() {
         "url":"https://example.test/issue/1"
     });
     valid(&register(vec![filed]));
+
+    for url in [
+        "https://github.com/lbl-srg/modelica-buildings/issues/123",
+        "https://github.com/lbl-srg/modelica-buildings/issues/123?state=open#discussion",
+        "https://github.com?issue=123",
+        "https://github.com#issue-123",
+    ] {
+        let mut value = entry("DVG-000001", "base");
+        value["upstream_issue"] = json!({"status":"filed","url":url});
+        valid(&register(vec![value]));
+    }
 }
 
 fn implementation_evidence(party: &str) -> Value {

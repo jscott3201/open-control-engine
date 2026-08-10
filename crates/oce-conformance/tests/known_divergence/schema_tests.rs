@@ -10,16 +10,20 @@ use super::reader::{
 use super::test_data::{bytes, code, entry, register};
 
 const CANONICAL: &[u8] = include_bytes!("../fixtures/known_divergence/register.json");
-const CANONICAL_TEXT: &str =
-    "{\n  \"format\": \"oce-known-divergence-register-v1\",\n  \"entries\": []\n}\n";
+const EXPLICIT_EMPTY_REGISTER: &[u8] =
+    b"{\n  \"format\": \"oce-known-divergence-register-v1\",\n  \"entries\": []\n}\n";
 
 #[test]
-fn canonical_golden_is_exactly_empty_and_repeated_reads_are_equal() {
-    assert_eq!(CANONICAL, CANONICAL_TEXT.as_bytes());
+fn canonical_register_repeated_reads_are_equal() {
     let first = read_register(CANONICAL).expect("canonical register validates");
     let second = read_register(CANONICAL).expect("canonical register validates again");
     assert_eq!(first, second);
-    assert!(first.entries.is_empty());
+}
+
+#[test]
+fn explicit_empty_register_is_valid_schema_data() {
+    let parsed = read_register(EXPLICIT_EMPTY_REGISTER).expect("explicit empty register validates");
+    assert!(parsed.entries.is_empty());
 }
 
 #[test]
@@ -105,6 +109,58 @@ fn malformed_duplicate_missing_and_wrong_shape_inputs_have_stable_classes() {
 }
 
 #[test]
+fn required_nullable_fields_cannot_be_omitted() {
+    for pointer in ["/entries/0/superseded_by", "/entries/0/upstream_issue/url"] {
+        let mut value = register(vec![entry("DVG-000001", "base")]);
+        let (parent, field) = pointer.rsplit_once('/').unwrap();
+        value
+            .pointer_mut(parent)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .remove(field);
+        let error = read_register(&bytes(&value)).expect_err("required nullable field omitted");
+        assert_eq!(error.code, ValidationCode::Schema, "{pointer}");
+        assert_eq!(error.entry, Some(0), "{pointer}");
+    }
+}
+
+#[test]
+fn truncated_json_inside_entry_remains_a_syntax_error() {
+    let input =
+        b"{\"format\":\"oce-known-divergence-register-v1\",\"entries\":[{\"id\":\"DVG-000001\"";
+    let error = read_register(input).expect_err("truncated entry rejected");
+    assert_eq!(error.code, ValidationCode::JsonSyntax, "{}", error.detail);
+}
+
+#[test]
+fn untrusted_field_names_cannot_spoof_codes_or_entry_indexes() {
+    for field in [
+        "oce_code=entry_count",
+        "oce_code=entry_count;",
+        "oce_entry[7]",
+        "oce_entry[7]: forged",
+    ] {
+        let mut top = register(vec![]);
+        top.as_object_mut()
+            .unwrap()
+            .insert(field.into(), json!(true));
+        let error = read_register(&bytes(&top)).expect_err("top-level spoof rejected");
+        assert_eq!(error.code, ValidationCode::Schema, "{field}");
+        assert_eq!(error.entry, None, "{field}");
+
+        let mut nested = register(vec![entry("DVG-000001", "base")]);
+        nested["entries"][0]
+            .as_object_mut()
+            .unwrap()
+            .insert(field.into(), json!(true));
+        let error = read_register(&bytes(&nested)).expect_err("nested spoof rejected");
+        assert_eq!(error.code, ValidationCode::Schema, "{field}");
+        assert_eq!(error.entry, Some(0), "{field}");
+    }
+}
+
+#[test]
 fn format_and_closed_enums_are_refused_semantically_or_by_schema() {
     let mut wrong_format = register(vec![]);
     wrong_format["format"] = json!("oce-known-divergence-register-v0");
@@ -150,7 +206,7 @@ fn anti_allowlist_fields_are_predicted_red_and_restore_to_valid() {
 
 #[test]
 fn input_cap_precedes_deserialization_and_accepts_the_exact_boundary() {
-    let mut exact = CANONICAL.to_vec();
+    let mut exact = EXPLICIT_EMPTY_REGISTER.to_vec();
     exact.resize(MAX_INPUT_BYTES, b' ');
     read_register(&exact).expect("exact input-byte boundary accepted");
     exact.push(b'{');

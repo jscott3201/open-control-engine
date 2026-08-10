@@ -2,7 +2,7 @@
 
 use std::fs::{self, File};
 use std::io::Read as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use sha2::{Digest as _, Sha256};
 
@@ -12,38 +12,40 @@ pub(crate) fn validate_repository(
     register: &Register,
     repository_root: &Path,
 ) -> Result<(), ValidationError> {
+    let canonical_root = fs::canonicalize(repository_root).map_err(|error| {
+        ValidationError::new(
+            ValidationCode::RepositoryRoot,
+            None,
+            format!("{}: {error}", repository_root.display()),
+        )
+    })?;
+    if !canonical_root.is_dir() {
+        return Err(ValidationError::new(
+            ValidationCode::RepositoryRoot,
+            None,
+            format!("{} is not a directory", repository_root.display()),
+        ));
+    }
     for (index, entry) in register.entries.iter().enumerate() {
-        let comparison_path = repository_root.join(&entry.comparison_reference);
-        let comparison_metadata = fs::symlink_metadata(&comparison_path).map_err(|error| {
-            ValidationError::new(
-                ValidationCode::ComparisonReferenceMissing,
-                Some(index),
-                format!("{}: {error}", entry.comparison_reference),
-            )
-        })?;
-        if !comparison_metadata.is_file() {
-            return Err(ValidationError::new(
-                ValidationCode::ComparisonReferenceNotFile,
-                Some(index),
-                format!("{} is not a regular file", entry.comparison_reference),
-            ));
-        }
+        canonical_regular_file(
+            repository_root,
+            &canonical_root,
+            &entry.comparison_reference,
+            index,
+            ValidationCode::ComparisonReferenceMissing,
+            ValidationCode::ComparisonReferenceNotFile,
+            ValidationCode::ComparisonReferenceOutsideRepository,
+        )?;
         for evidence in &entry.evidence {
-            let path = repository_root.join(&evidence.path);
-            let metadata = fs::symlink_metadata(&path).map_err(|error| {
-                ValidationError::new(
-                    ValidationCode::EvidenceMissing,
-                    Some(index),
-                    format!("{}: {error}", evidence.path),
-                )
-            })?;
-            if !metadata.is_file() {
-                return Err(ValidationError::new(
-                    ValidationCode::EvidenceNotFile,
-                    Some(index),
-                    format!("{} is not a regular file", evidence.path),
-                ));
-            }
+            let path = canonical_regular_file(
+                repository_root,
+                &canonical_root,
+                &evidence.path,
+                index,
+                ValidationCode::EvidenceMissing,
+                ValidationCode::EvidenceNotFile,
+                ValidationCode::EvidenceOutsideRepository,
+            )?;
             let mut file = File::open(&path).map_err(|error| {
                 ValidationError::new(
                     ValidationCode::EvidenceMissing,
@@ -70,6 +72,39 @@ pub(crate) fn validate_repository(
         }
     }
     Ok(())
+}
+
+fn canonical_regular_file(
+    repository_root: &Path,
+    canonical_root: &Path,
+    relative: &str,
+    index: usize,
+    missing: ValidationCode,
+    not_file: ValidationCode,
+    outside: ValidationCode,
+) -> Result<PathBuf, ValidationError> {
+    let candidate = repository_root.join(relative);
+    let metadata = fs::symlink_metadata(&candidate).map_err(|error| {
+        ValidationError::new(missing, Some(index), format!("{relative}: {error}"))
+    })?;
+    if !metadata.is_file() {
+        return Err(ValidationError::new(
+            not_file,
+            Some(index),
+            format!("{relative} is not a regular file"),
+        ));
+    }
+    let canonical = fs::canonicalize(&candidate).map_err(|error| {
+        ValidationError::new(missing, Some(index), format!("{relative}: {error}"))
+    })?;
+    if !canonical.starts_with(canonical_root) {
+        return Err(ValidationError::new(
+            outside,
+            Some(index),
+            format!("{relative} resolves outside the repository root"),
+        ));
+    }
+    Ok(canonical)
 }
 
 pub(crate) fn validate_digest(

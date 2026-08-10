@@ -64,6 +64,9 @@ pub(crate) enum ValidationCode {
     EvidenceDigestMismatch,
     ComparisonReferenceMissing,
     ComparisonReferenceNotFile,
+    EvidenceOutsideRepository,
+    ComparisonReferenceOutsideRepository,
+    RepositoryRoot,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -114,6 +117,7 @@ pub(crate) struct Entry {
     state: State,
     disposition: String,
     upstream_issue: UpstreamIssue,
+    #[serde(deserialize_with = "deserialize_required_option")]
     superseded_by: Option<String>,
     conformance_effect: ConformanceEffect,
 }
@@ -187,7 +191,16 @@ enum State {
 #[serde(deny_unknown_fields)]
 struct UpstreamIssue {
     status: UpstreamStatus,
+    #[serde(deserialize_with = "deserialize_required_option")]
     url: Option<String>,
+}
+
+fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::deserialize(deserializer)
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
@@ -311,23 +324,25 @@ pub(crate) fn read_register(input: &[u8]) -> Result<Register, ValidationError> {
 }
 
 pub(crate) fn parse_register(input: &[u8]) -> Result<Register, ValidationError> {
-    serde_json::from_slice(input).map_err(classify_json_error)
+    serde_json::from_slice::<IgnoredAny>(input).map_err(|error| {
+        ValidationError::new(ValidationCode::JsonSyntax, None, error.to_string())
+    })?;
+    serde_json::from_slice(input).map_err(classify_typed_error)
 }
 
-fn classify_json_error(error: serde_json::Error) -> ValidationError {
+fn classify_typed_error(error: serde_json::Error) -> ValidationError {
     let detail = error.to_string();
-    let mut entry = detail
-        .find("oce_entry[")
-        .and_then(|start| detail[start + 10..].split(']').next())
-        .and_then(|index| index.parse().ok());
-    let code = if detail.contains("oce_code=entry_count") {
-        entry = Some(MAX_ENTRIES);
+    let (entry, message) = trusted_entry_marker(&detail)
+        .map_or((None, detail.as_str()), |(entry, message)| {
+            (Some(entry), message)
+        });
+    let code = if entry.is_none() && message.starts_with("oce_code=entry_count;") {
         ValidationCode::EntryCount
-    } else if detail.contains("oce_code=producer_case_count") {
+    } else if entry.is_some() && message.starts_with("oce_code=producer_case_count;") {
         ValidationCode::ProducerCaseCount
-    } else if detail.contains("oce_code=party_count") {
+    } else if entry.is_some() && message.starts_with("oce_code=party_count;") {
         ValidationCode::PartyCount
-    } else if detail.contains("oce_code=evidence_count") {
+    } else if entry.is_some() && message.starts_with("oce_code=evidence_count;") {
         ValidationCode::EvidenceCount
     } else {
         match error.classify() {
@@ -339,7 +354,21 @@ fn classify_json_error(error: serde_json::Error) -> ValidationError {
             }
         }
     };
+    let entry = if code == ValidationCode::EntryCount {
+        Some(MAX_ENTRIES)
+    } else {
+        entry
+    };
     ValidationError::new(code, entry, detail)
+}
+
+fn trusted_entry_marker(detail: &str) -> Option<(usize, &str)> {
+    let rest = detail.strip_prefix("oce_entry[")?;
+    let (index, message) = rest.split_once("]: ")?;
+    if index.is_empty() || !index.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    Some((index.parse().ok()?, message))
 }
 
 fn validate_register(register: &Register) -> Result<(), ValidationError> {
@@ -577,9 +606,13 @@ fn valid_repository_path(value: &str, entry: Option<usize>) -> Result<(), Valida
         || value.contains(':')
         || value.contains('*')
         || value.contains('?')
-        || value
-            .split('/')
-            .any(|part| part.is_empty() || part == "." || part == "..")
+        || value.split('/').any(|part| {
+            part.is_empty()
+                || part == "."
+                || part == ".."
+                || part.ends_with(' ')
+                || part.ends_with('.')
+        })
     {
         return Err(ValidationError::new(
             ValidationCode::InvalidPath,
@@ -611,8 +644,24 @@ fn valid_https_url(value: &str) -> bool {
     let Some(rest) = value.strip_prefix("https://") else {
         return false;
     };
-    let authority = rest.split('/').next().unwrap_or_default();
-    !authority.is_empty() && !authority.starts_with('.') && !authority.ends_with('.')
+    let authority_end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let authority = &rest[..authority_end];
+    !authority.is_empty()
+        && !authority.contains(['@', ':'])
+        && authority.split('.').all(valid_hostname_label)
+}
+
+fn valid_hostname_label(label: &str) -> bool {
+    let Some(first) = label.bytes().next() else {
+        return false;
+    };
+    let last = label.bytes().next_back().unwrap_or(first);
+    label.len() <= 63
+        && first.is_ascii_alphanumeric()
+        && last.is_ascii_alphanumeric()
+        && label
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
 }
 
 fn valid_id(value: &str) -> bool {

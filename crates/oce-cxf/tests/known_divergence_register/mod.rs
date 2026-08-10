@@ -14,15 +14,8 @@ const REGISTER: &[u8] =
 const SYNTHETIC_SCHEMA_TEST_REGISTER: &[u8] = include_bytes!(
     "../../../oce-conformance/tests/fixtures/known_divergence/synthetic_schema_test_register.json"
 );
-const EMPTY_REGISTER: &[u8] =
-    b"{\n  \"format\": \"oce-known-divergence-register-v1\",\n  \"entries\": []\n}\n";
-
 #[test]
-fn canonical_register_is_empty_valid_and_content_bound() {
-    assert_eq!(
-        REGISTER, EMPTY_REGISTER,
-        "initial register must remain honest and empty"
-    );
+fn canonical_register_and_current_evidence_validate() {
     let parsed = reader::read_register(REGISTER).expect("known-divergence register validates");
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
