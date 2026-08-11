@@ -86,9 +86,10 @@ Worked examples of the bar, and where each stands:
 
 ### 3. Oracle cross-checks — agreement with the reference implementation
 
-CDL has a normative reference (the Modelica *Buildings* library / OpenModelica). Where a block or
-expression has a reference result, **cross-check against it** rather than against our own
-re-derived expectation — otherwise we are grading our own homework.
+The Modelica *Buildings* library supplies reference semantics, and an independently executed
+implementation can detect disagreements that an in-repository derivation misses. External output
+is a detector, not a verdict: adjudication follows analytical evidence, then Dymola, then
+OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
 
 - Oracle vectors live in the `oce-conformance` crate — the home for reference traces and the CDL
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
@@ -128,7 +129,13 @@ The register is evidence only: membership does not change discrepancies, compari
 tier status, goldens, or test results. Its initial revision is empty because no current clean-room
 Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
-This does not add an external-tool execution or a Tier-3 result.
+The separate OpenModelica evidence set executes one exhaustive finite-domain case:
+`CDL.Logical.Nand/all_boolean_input_pairs_evented`, under exact Boolean comparison against OMC
+1.25.1 and the pinned Buildings and MSL sources. The light-gated sentinel validates the committed
+raw output, keep-last projection, schedule, repeat-run records, OCI identities, and mutation
+controls; Docker does not run in CI. This is scoped Tier-3 evidence for that case only. The global
+Tier-3 report remains `Skipped`; no stateful, numeric, sequence-wide, or cross-architecture OMC
+claim follows from it.
 
 ### 4. Determinism goldens — same input, bit-identical output, every time
 

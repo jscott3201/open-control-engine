@@ -14,12 +14,12 @@
 //! - **Tier 2** — bit-exact regression vs a blessed prior-self trace. Populated by a separate
 //!   `Exact`-mode run whose reference is derived from the committed self-output golden; the Exact
 //!   comparisons passing *is* the bit-exact regression check. `Skipped` when not wired.
-//! - **Tier 3** — cross-implementation differential. `Skipped`: the external toolchain is deferred
-//!   (`_spec/07 §10.1`).
+//! - **Tier 3** — cross-implementation differential. `Skipped`: this global report cannot represent
+//!   partial external coverage (`_spec/07 §7`).
 //! - **Tier 4** — full-sequence trace vs the Tier-A reference oracle, through the L1 funnel band.
 //!
-//! The assembler always emits all five tiers in order, because an empty [`ConformanceReport`] passes
-//! vacuously ([`ConformanceReport::passed`] is `all(!failed)`).
+//! Successful assembly emits all five tiers in order. An empty [`ConformanceReport`] would pass
+//! vacuously because [`ConformanceReport::passed`] is `all(!failed)`.
 
 use crate::{
     CombiTimeTable, ComparisonMode, ConformanceReport, ConformanceTier, DriverError, DriverOptions,
@@ -138,7 +138,7 @@ fn tier1_skipped() -> TierReport {
 fn tier3_skipped() -> TierReport {
     TierReport::skipped(
         ConformanceTier::Tier3,
-        "cross-implementation differential toolchain is deferred (_spec/07 §10.1)",
+        "partial external coverage is not represented in the global report (_spec/07 §7)",
     )
 }
 

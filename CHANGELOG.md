@@ -400,6 +400,13 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
+- **One exhaustive OpenModelica differential now exists for `CDL.Logical.Nand`.** Two sandboxed
+  native-arm64 OMC 1.25.1 runs produced byte-identical raw CSV for all four Boolean input pairs; a
+  strict keep-last projection feeds the existing facade-bound exact harness. The evidence set binds
+  the image, source trees, raw and canonical bytes, logs, OCI metadata, and semantic/projection
+  mutation controls. This is scoped Tier-3 evidence for one stateless Boolean class. The global
+  Tier-3 report remains skipped, and the result says nothing about sequences, stateful behavior,
+  numeric tolerances, or cross-architecture OMC identity.
 - **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
   repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
   zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
