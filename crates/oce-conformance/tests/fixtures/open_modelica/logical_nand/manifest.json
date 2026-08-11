@@ -1,0 +1,141 @@
+{
+  "format": "oce-openmodelica-external-run-v1",
+  "scope": {
+    "class": "CDL.Logical.Nand",
+    "scenario": "all_boolean_input_pairs_evented",
+    "inputs": ["u1", "u2"],
+    "output": "y",
+    "comparison": "exact_boolean",
+    "global_tier3_status": "skipped"
+  },
+  "image": {
+    "repository": "openmodelica/openmodelica",
+    "tag": "v1.25.1-minimal",
+    "index_digest": "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+    "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
+    "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
+    "platform": "linux/arm64",
+    "host_architecture": "arm64",
+    "docker_server_architecture": "aarch64",
+    "omc_version": "OpenModelica 1.25.1",
+    "gcc_version": "11.4.0",
+    "binutils_version": "2.38",
+    "glibc_version": "2.35"
+  },
+  "sources": [
+    {
+      "name": "buildings",
+      "repository": "https://github.com/lbl-srg/modelica-buildings.git",
+      "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+      "package": "Buildings",
+      "version": "14.0.0",
+      "files": [
+        {"path": "Buildings/package.mo", "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"},
+        {"path": "Buildings/Controls/OBC/CDL/Logical/And.mo", "sha256": "5169e635aefc83a0f65f689af3e9af7385f57e7dc156cebf0dc8108d74ea0fde"},
+        {"path": "Buildings/Controls/OBC/CDL/Logical/Nand.mo", "sha256": "6e420d89f0636059c9431d0966b8c6756e385bf6b02596e2582bac1ea6bf1ca1"}
+      ]
+    },
+    {
+      "name": "modelica",
+      "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git",
+      "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+      "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+      "package": "Modelica",
+      "version": "4.1.0",
+      "files": [
+        {"path": "Complex.mo", "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"},
+        {"path": "Modelica/package.mo", "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"},
+        {"path": "Modelica/Blocks/Sources.mo", "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"},
+        {"path": "ModelicaServices/package.mo", "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"}
+      ]
+    }
+  ],
+  "simulation": {
+    "method": "dassl",
+    "start_time": "0",
+    "stop_time": "240",
+    "number_of_intervals": 4,
+    "tolerance": "1e-9",
+    "output_format": "csv",
+    "event_emission": true
+  },
+  "projection": {
+    "columns": ["time", "u1", "u2", "y"],
+    "grouping": "contiguous_equal_f64_bits",
+    "selection": "last",
+    "normalize_times": false,
+    "raw_rows": 12,
+    "canonical_rows": 8,
+    "group_sizes": [1, 1, 2, 1, 2, 1, 2, 2],
+    "canonical_time_bits": [
+      "0000000000000000", "404e000000000000", "404e000000000eff",
+      "405e000000000000", "405e000000000781", "4066800000000000",
+      "40668000000003c1", "406e000000000000"
+    ]
+  },
+  "runs": [
+    {
+      "id": "run-a",
+      "output_directory_token": "fresh-run-a",
+      "log_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/run-a.log",
+      "log_sha256": "995e03245e6083b40080f2763cd1af90eb01bb72509373793c91bec096458dff",
+      "raw_sha256": "3c27fdb59b14e793bde210b6c587c0ee68007c7257f3431ba16f7fa86353dd26"
+    },
+    {
+      "id": "run-b",
+      "output_directory_token": "fresh-run-b",
+      "log_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/run-b.log",
+      "log_sha256": "bd956865e1a0efc705b2baff035b037d0de8e246d47d5c8b10292cc5e156cc84",
+      "raw_sha256": "3c27fdb59b14e793bde210b6c587c0ee68007c7257f3431ba16f7fa86353dd26"
+    }
+  ],
+  "semantic_control": {
+    "substitution_class": "CDL.Logical.And",
+    "raw_rows": 12,
+    "canonical_rows": 8,
+    "expected_comparison": "exact_mismatch"
+  },
+  "artifacts": [
+    {"role": "canonical_csv", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/nand.canonical.csv", "sha256": "946cf65b945f10d1f93cfa098e3a2fbe63621ca37a5575354bde1276d64de9c6"},
+    {"role": "canonicalizer_source", "path": "crates/oce-cxf/tests/open_modelica_reference/canonicalizer.rs", "sha256": "9d854c64cdd7ae09cb6929496a406aaf40ad1c5ba37c49f3db43bd731df5b5ba"},
+    {"role": "image_index_json", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/image-index.json", "sha256": "79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"},
+    {"role": "image_manifest_json", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/image-manifest.json", "sha256": "39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4"},
+    {"role": "projection_mutation_log", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/projection-mutation.log", "sha256": "6a1548b51abfbaf651bfc6629b87b7352e0e666e5e3d3aeee07f6c75b1ed0b9b"},
+    {"role": "raw_csv", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/nand.raw.csv", "sha256": "3c27fdb59b14e793bde210b6c587c0ee68007c7257f3431ba16f7fa86353dd26"},
+    {"role": "regeneration_script", "path": "tools/openmodelica-reference/nand/regenerate.sh", "sha256": "ece33ece500812314d1beaa90f62b2aca5a7fcacb0bea91e64e21dcfd4afe878"},
+    {"role": "run_a_log", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/run-a.log", "sha256": "995e03245e6083b40080f2763cd1af90eb01bb72509373793c91bec096458dff"},
+    {"role": "run_b_log", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/run-b.log", "sha256": "bd956865e1a0efc705b2baff035b037d0de8e246d47d5c8b10292cc5e156cc84"},
+    {"role": "runner_script", "path": "tools/openmodelica-reference/nand/runner.sh", "sha256": "57cfab76a6f44dfebde6a02b55b45235ccecd482ea5a57b32aa2c90524de72bf"},
+    {"role": "semantic_control_canonical_csv", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/and.canonical.csv", "sha256": "5a985ee6e907baa610f9e5c8d0783b82c9cb0f097c8531e8fde6584b4ee15439"},
+    {"role": "semantic_control_log", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/and.log", "sha256": "ee28adabca80d90bc00f2cda509336d2e93c602ed17780a2e46b0752c540efb8"},
+    {"role": "semantic_control_raw_csv", "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/and.raw.csv", "sha256": "a541c1e1363bb73d2bfb10e41ad993d88fe6817163cf2d6675b0cc129d1afe1d"},
+    {"role": "semantic_control_wrapper_model", "path": "tools/openmodelica-reference/nand/AndPilot.mo", "sha256": "f761a0be825b982e5d2629b516f08ad41ac21ed51111297f76aa0cdcf7828435"},
+    {"role": "tool_cargo_lock", "path": "tools/openmodelica-reference/Cargo.lock", "sha256": "fd1e926af8592e7c0ff976216fea28272afc6f1ba126cd2f91e7db3d44ac419c"},
+    {"role": "tool_cargo_toml", "path": "tools/openmodelica-reference/Cargo.toml", "sha256": "4b8fa1adf7fc39f7362f307f3ade6a2193524d4f05107b9758d67db8eac73552"},
+    {"role": "tool_main_source", "path": "tools/openmodelica-reference/src/main.rs", "sha256": "358f23cc2cd1cd21b1b60d70f90401efea90f87ae753be711ade977044100e0b"},
+    {"role": "wrapper_model", "path": "tools/openmodelica-reference/nand/NandPilot.mo", "sha256": "739dfa3a094440dac27e3411945c3a7814bf330e81dc1c3793de67fa090fb152"}
+  ],
+  "regeneration": {
+    "entrypoint": "tools/openmodelica-reference/nand/regenerate.sh",
+    "network": "none",
+    "pull": "never",
+    "platform": "linux/arm64",
+    "source_materialization": "git_archive",
+    "source_mounts": "read_only",
+    "container_root": "read_only",
+    "container_user": "non_root",
+    "capabilities": "none",
+    "no_new_privileges": true,
+    "device_mounts": 0,
+    "docker_socket_mounted": false,
+    "timeout_seconds": 120,
+    "cpus": "4",
+    "memory_bytes": 2147483648,
+    "memory_swap_bytes": 2147483648,
+    "pids_limit": 256,
+    "tmpfs_bytes": 268435456,
+    "per_file_bytes": 67108864,
+    "output_directory_bytes": 268435456
+  }
+}

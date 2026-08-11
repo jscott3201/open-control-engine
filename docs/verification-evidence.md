@@ -8,16 +8,17 @@ is wrong? Is that thing independent of the system it is judging? And will it tel
 it is not running? This page answers them in that order, and every count on it can be reproduced
 from a clone with `find` and `grep`.
 
-The short version first, because it is the part that matters most: **no sequence in this repository
-has ever been executed against the official Modelica / Buildings reference implementation of CDL.**
-Two of the five conformance tiers are deliberately not wired, and the cross-implementation
-differential is one of them. Everything below describes what exists instead of that.
+The short version first, because it is the part that matters most: one elementary case,
+`CDL.Logical.Nand/all_boolean_input_pairs_evented`, has been executed through OpenModelica 1.25.1
+against pinned Buildings and MSL sources. It covers all four two-input Boolean states under exact
+comparison. The global Tier-3 report remains skipped; no sequence-wide, stateful, numeric, or
+cross-architecture OpenModelica claim follows from this case.
 
 ---
 
 ## What can tell this engine it is wrong?
 
-Four different artifacts here are called "tests". They prove four different things, and the most
+Five different artifacts here are called "tests". They prove different things, and the most
 visible of them proves nothing about correctness at all.
 
 | Layer | Artifact | Count | Independent of the engine? |
@@ -26,7 +27,7 @@ visible of them proves nothing about correctness at all.
 | Tier-A oracles | `tools/golden-gen/goldens/` | 412 provenance records, 410 signal goldens | Yes — CI-enforced code-dependency firewall |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
 | Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens (257 bit-exact, 21 aligned-tolerance) | Yes — Tier-A generator is outside the engine workspace |
-| Tier-3 cross-implementation differential | — | nothing | **Not wired at all** |
+| Scoped Tier-3 cross-implementation differential | `crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/` | 1 exhaustive Nand case; global report skipped | Yes — pinned OpenModelica and Buildings execution |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
 
@@ -138,32 +139,32 @@ State the limit next to the result: this compares **graph structure only**. It c
 numerics and executes no engine code path. It bounds how faithfully the fixture corpus represents
 upstream G36. It says nothing whatsoever about whether a block computes the right number.
 
-### Tier 1 and Tier 3 — not wired
+### Tier 1 and the global Tier-3 report
 
 This is not a footnote. It is the boundary of everything above.
 
-The conformance report assembler (`crates/oce-conformance/src/report.rs`) always emits five tiers,
-and two of them are hard-coded as skipped on every path through the function:
+When conformance report assembly succeeds, it emits five tiers. Tier 1 and Tier 3 are hard-coded as
+skipped on every successful path:
 
 - **Tier 1** — per-block "same response" against the Buildings library. Skipped with the summary
   `"per-block Buildings-oracle comparison is the per-block corpus, not a full-sequence run"`
   (`report.rs:131-136`). A per-block corpus does exist — the `per_block_*.rs` suites described
   above — but it compares against re-derived references, not against Buildings executed output, and
   it is not wired into the tier report.
-- **Tier 3** — cross-implementation differential against an external Modelica / Buildings
-  toolchain. Skipped with the summary `"cross-implementation differential toolchain is deferred"`
-  (`report.rs:138-143`).
+- **Tier 3** — the global row remains skipped because the report cannot represent partial external
+  coverage (`report.rs:138-143`). The separate Nand test does not enter the report.
 
-There is no OpenModelica in this repository, no Dymola, no external solver, and no captured run
-from one. **The engine has never been executed alongside the normative reference implementation of
-the standard it implements.** That is the deliberately deferred tail, and no amount of green CI
-here substitutes for it.
+The scoped Nand fixture retains two byte-identical raw OMC runs, one semantic And control, strict
+raw-to-canonical projection, and the exact facade comparison. The checked regeneration command is
+network-disabled and native `linux/arm64`; CI validates committed evidence and never runs Docker.
+No Dymola, Spawn, FMI, whole sequence, Real, Integer, or stateful external case exists. One Boolean
+block therefore cannot make the engine-wide report pass.
 
 ---
 
 ## Is the thing that judges it independent of it?
 
-Three different answers, one per layer.
+The answer differs by layer.
 
 **Tier-2: no, and it never claimed to be.** The reference *is* prior engine output. Its provenance
 records say so in a field a script can read.
@@ -178,10 +179,16 @@ formula is right. A mechanical shared-kernel detector is filed as follow-up work
 today, so treat the boundary between "independently derived" and "independently transcribed" as
 un-audited per class.
 
-**The structural oracle: yes, and this is the strongest independence claim in the repository.**
+**The structural oracle: yes.**
 `modelica-json` is an LBL tool, not one of ours, translating upstream `.mo` sources this project did
 not author, at a pinned commit whose bytes are gated. It is also the narrowest claim: structure
 only, over 31 of 46 fixtures.
+
+**The scoped OpenModelica case: yes at execution and source boundaries.** A digest-pinned native
+arm64 image executes the pinned Buildings `Nand` class with inputs supplied by MSL `BooleanTable`.
+The wrapper contains no expected output. The comparison remains a discrepancy detector rather than
+an oracle verdict: analytical evidence comes first in adjudication, and a mismatch cannot change a
+golden, tolerance, or report status. Its scope is the four Boolean pairs for one class.
 
 One more thing an evaluator should weigh: independence of the oracle does not make the *comparison*
 independent of when it runs. See the next section.
@@ -279,11 +286,11 @@ If you are evaluating this engine, the defensible summary is:
   128 of 133 classes, and running on the release gate rather than per PR.
 - Fixture fidelity is bounded structurally against an independent LBL translation of upstream
   sources, per PR, for 31 of 46 fixtures.
-- Agreement with the **executed reference implementation** is not bounded at all, because that
-  comparison has never been run.
+- Agreement with an **executed Buildings implementation** is bounded for one exhaustive
+  `CDL.Logical.Nand` Boolean case. Global Tier 3 remains skipped.
 
-The gate will tell you which of these it just skipped. Nothing in this repository will tell you that
-the last bullet has changed until it does.
+The gate will tell you which broader checks it skipped. The scoped OMC artifacts do not change those
+disclosures.
 
 See also: [Testing standard](../TESTING.md) for the bar every change is held to, and
 [CI and the gate](ci-and-the-gate.md) for what runs when.

@@ -146,9 +146,9 @@ Stating this plainly is more useful than a feature list.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
-- **It has never been run against the normative reference implementation.** Two verification tiers
-  are deliberately not wired, including the cross-implementation differential against an external
-  Modelica / Buildings toolchain. That is the honest boundary of what has been proven —
+- **Its external-reference evidence is one Boolean block, not broad engine coverage.**
+  `CDL.Logical.Nand` has one exhaustive OpenModelica case. No sequence, stateful behavior, or numeric
+  tolerance has been checked that way, and the global Tier-3 report remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
@@ -192,7 +192,7 @@ Full layer-by-layer detail, the crate map, and the platform and MSRV policy are 
 
 ## How it is verified
 
-Four different things in this repository are called "tests", and they prove four different things.
+Five different things in this repository are called "tests", and they prove different things.
 One of them proves nothing about correctness at all — the 46 fixture goldens are **engine
 self-output**, a determinism snapshot that catches drift, not wrongness.
 
@@ -202,8 +202,8 @@ code-dependency firewall. Of the 410 signal goldens, 389 are compared bit-exactl
 sequence goldens among them — and the 21 transcendental, psychrometric, and solar Real goldens
 are compared under a documented 1e-12 aligned-tolerance band.
 
-Two tiers are **not wired**, and no sequence here has been executed against an external Modelica /
-Buildings toolchain.
+Two global report tiers are **not wired**, and no sequence here has been executed against an external
+Modelica / Buildings toolchain. The separate OpenModelica case covers only exhaustive Boolean Nand.
 
 **[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
 it cannot, and which checks are not running.
