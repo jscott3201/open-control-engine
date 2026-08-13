@@ -468,11 +468,16 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Hardening
 
+- **Composite boundary lowering is iterative and resource-bounded.** A path may enter at most 64
+  non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
+  examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
+  hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
+  partial graph is built. Direct leaf wiring is unchanged. The walk remains path-local and
+  preserves canonical order and duplicate multiplicity, so multiple drives remain visible to
+  single-assignment validation. These limits are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
-  completed AST, and again in `eval()`. Composite nesting is capped at 64. One gap remains,
-  stated rather than assumed: composite boundary resolution recurses per `isConnectedTo` hop
-  and is not depth-bounded.
+  completed AST, and again in `eval()`. Composite nesting is capped at 64.
 - **Environment-variable switches use truthiness, not presence** (#206, #210, #211, #213).
   `OCE_BLESS`, `UPDATE_EXPECT` and `OCE_SKIP_HOOKS` each treated `0` as "on", so setting one
   to zero armed golden regeneration or disabled the git hooks. Empty, `0` and `false` now

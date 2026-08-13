@@ -19,12 +19,22 @@ use super::specialize::Specialization;
 /// bounds the recursive lowering walk well below the measured stack-exhaustion threshold.
 const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
 
+/// Maximum non-top boundary nodes one rewritten connection path may enter.
+const MAX_COMPOSITE_BOUNDARY_HOPS: usize = 64;
+
+/// Maximum rewrite targets examined across one document's boundary traversal.
+const MAX_COMPOSITE_BOUNDARY_TARGETS: usize = 65_536;
+
+/// Maximum aggregate target-IRI bytes examined across one document's boundary traversal.
+const MAX_COMPOSITE_BOUNDARY_TARGET_BYTES: usize = 8 * 1024 * 1024;
+
 /// A CXF document lowered to the existing single-root, flat-child resolver shape.
 #[derive(Clone, Debug)]
 pub(super) struct LoweredCxf {
     pub(super) doc: CxfDocument,
     pub(super) root_iri: Option<String>,
     pub(super) inherited_scope: HashMap<String, Vec<(Arc<str>, EvalResult)>>,
+    pub(super) boundary_traversal_failed: bool,
 }
 
 /// Lower the supported nested-composite subset before dense block/connector ids are assigned.
@@ -49,6 +59,7 @@ pub(super) fn lower(
             doc: lowered,
             root_iri: None,
             inherited_scope,
+            boundary_traversal_failed: false,
         };
     };
     let root_iri = Some(root.to_owned());
@@ -74,7 +85,18 @@ pub(super) fn lower(
     );
     withheld.emit_unvisited(&evaluated_chains, diags);
 
-    let rewritten = rewrite_connections(doc, by_id, root, specialization, &boundary);
+    let rewritten = match rewrite_connections(doc, by_id, root, specialization, &boundary) {
+        Ok(rewritten) => rewritten,
+        Err(diagnostic) => {
+            diags.push(diagnostic);
+            return LoweredCxf {
+                doc: lowered,
+                root_iri,
+                inherited_scope,
+                boundary_traversal_failed: true,
+            };
+        }
+    };
     for node in &mut lowered.graph {
         let id = node.id.as_str();
         if id == root {
@@ -91,6 +113,7 @@ pub(super) fn lower(
         doc: lowered,
         root_iri,
         inherited_scope,
+        boundary_traversal_failed: false,
     }
 }
 
@@ -351,16 +374,17 @@ fn rewrite_connections(
     root: &str,
     specialization: &Specialization,
     boundary: &CompositeOrientation,
-) -> HashMap<String, Vec<String>> {
+) -> Result<HashMap<String, Vec<String>>, Diagnostic> {
     let (canonical, crossed_drivers) =
         boundary.canonical_connections(doc, by_id, root, specialization);
-    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    let mut deferred = Vec::new();
     let walk = BoundaryWalk {
         by_id,
         canonical: &canonical,
         specialization,
         boundary,
     };
+    let mut budget = BoundaryBudget::default();
     for node in &doc.graph {
         let source = node.id.as_str();
         let Some(authored_targets) = canonical.get(source) else {
@@ -376,8 +400,8 @@ fn rewrite_connections(
             continue;
         }
         let mut targets = Vec::new();
-        for target in authored_targets {
-            resolve_target(target, &walk, &mut HashSet::new(), &mut targets);
+        for &target in authored_targets {
+            resolve_authored_target(target, &walk, &mut budget, &mut targets)?;
         }
         // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
         // already collapsed in the canonical map, so any surviving duplicate is a genuine
@@ -386,67 +410,160 @@ fn rewrite_connections(
             targets.sort_by_key(|target| boundary.position(target));
         }
         if !targets.is_empty() {
-            out.entry(source.to_owned()).or_default().extend(targets);
+            deferred.push((source, targets));
         }
     }
-    out
+    Ok(deferred
+        .into_iter()
+        .map(|(source, targets)| {
+            (
+                source.to_owned(),
+                targets.into_iter().map(str::to_owned).collect(),
+            )
+        })
+        .collect())
 }
 
-struct BoundaryWalk<'a> {
+struct BoundaryWalk<'a, 'b> {
     by_id: &'a HashMap<&'a str, &'a Node>,
-    canonical: &'a HashMap<String, Vec<String>>,
+    canonical: &'b HashMap<&'b str, Vec<&'b str>>,
     specialization: &'a Specialization,
     boundary: &'a CompositeOrientation,
 }
 
-/// Resolve one rewritten target.
-fn resolve_target(
-    target: &str,
-    walk: &BoundaryWalk<'_>,
-    seen: &mut HashSet<String>,
-    out: &mut Vec<String>,
-) {
-    if walk.specialization.is_inactive(target) {
-        out.push(target.to_owned());
-        return;
-    }
-    if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
-        follow_boundary(target, walk, seen, out);
-        return;
-    }
-    if walk.boundary.outputs.contains(target) {
-        if walk.boundary.top_outputs.contains(target) {
-            out.push(target.to_owned());
-        } else {
-            follow_boundary(target, walk, seen, out);
-        }
-        return;
-    }
-    out.push(target.to_owned());
+#[derive(Default)]
+struct BoundaryBudget {
+    examined_targets: usize,
+    examined_target_bytes: usize,
 }
 
-/// Walk through a non-top composite boundary node.
-fn follow_boundary(
-    boundary_iri: &str,
-    walk: &BoundaryWalk<'_>,
-    seen: &mut HashSet<String>,
-    out: &mut Vec<String>,
-) {
-    if !seen.insert(boundary_iri.to_owned()) {
-        // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
-        // resolver's ordinary dangling-reference diagnostic.
-        out.push(boundary_iri.to_owned());
-        return;
+impl BoundaryBudget {
+    fn examine(&mut self, target: &str) -> Result<(), Diagnostic> {
+        if self.examined_targets >= MAX_COMPOSITE_BOUNDARY_TARGETS {
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported target examination count \
+                     ({MAX_COMPOSITE_BOUNDARY_TARGETS})"
+                ),
+            )
+            .with_subject(target.to_owned()));
+        }
+        if target.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported aggregate target IRI \
+                     byte count ({MAX_COMPOSITE_BOUNDARY_TARGET_BYTES})"
+                ),
+            )
+            .with_subject(target.to_owned()));
+        }
+        self.examined_targets += 1;
+        self.examined_target_bytes += target.len();
+        Ok(())
     }
-    if !walk.by_id.contains_key(boundary_iri) {
-        out.push(boundary_iri.to_owned());
-        seen.remove(boundary_iri);
-        return;
+}
+
+enum BoundaryFrame<'a> {
+    Target(&'a str),
+    Children {
+        boundary: &'a str,
+        next_child: usize,
+    },
+}
+
+fn requires_boundary_walk(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
+    if walk.specialization.is_inactive(target) {
+        return false;
     }
-    for target in walk.canonical.get(boundary_iri).into_iter().flatten() {
-        resolve_target(target, walk, seen, out);
+    (walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target))
+        || (walk.boundary.outputs.contains(target) && !walk.boundary.top_outputs.contains(target))
+}
+
+fn resolve_authored_target<'a, 'b>(
+    target: &'b str,
+    walk: &BoundaryWalk<'a, 'b>,
+    budget: &mut BoundaryBudget,
+    out: &mut Vec<&'b str>,
+) -> Result<(), Diagnostic> {
+    if requires_boundary_walk(target, walk) {
+        resolve_target(target, walk, budget, out)
+    } else {
+        out.push(target);
+        Ok(())
     }
-    seen.remove(boundary_iri);
+}
+
+/// Resolve one target with path-local cycle state and ordered depth-first expansion.
+fn resolve_target<'a, 'b>(
+    target: &'b str,
+    walk: &BoundaryWalk<'a, 'b>,
+    budget: &mut BoundaryBudget,
+    out: &mut Vec<&'b str>,
+) -> Result<(), Diagnostic> {
+    let mut active_path: HashSet<&'b str> = HashSet::new();
+    let mut frames = vec![BoundaryFrame::Target(target)];
+    while let Some(frame) = frames.pop() {
+        let BoundaryFrame::Target(target) = frame else {
+            let BoundaryFrame::Children {
+                boundary,
+                next_child,
+            } = frame
+            else {
+                unreachable!();
+            };
+            let Some(child) = walk
+                .canonical
+                .get(boundary)
+                .and_then(|children| children.get(next_child))
+                .copied()
+            else {
+                active_path.remove(boundary);
+                continue;
+            };
+            frames.push(BoundaryFrame::Children {
+                boundary,
+                next_child: next_child + 1,
+            });
+            frames.push(BoundaryFrame::Target(child));
+            continue;
+        };
+
+        budget.examine(target)?;
+        if walk.specialization.is_inactive(target) {
+            out.push(target);
+            continue;
+        }
+        if !requires_boundary_walk(target, walk) {
+            out.push(target);
+            continue;
+        }
+
+        // Preserve authored boundary-cycle and missing-node visibility before applying the resource
+        // bound: both continue through the resolver's ordinary dangling-reference diagnostic.
+        if active_path.contains(target) || !walk.by_id.contains_key(target) {
+            out.push(target);
+            continue;
+        }
+        if active_path.len() >= MAX_COMPOSITE_BOUNDARY_HOPS {
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported isConnectedTo hop count \
+                     ({MAX_COMPOSITE_BOUNDARY_HOPS})"
+                ),
+            )
+            .with_subject(target.to_owned()));
+        }
+
+        active_path.insert(target);
+        frames.push(BoundaryFrame::Children {
+            boundary: target,
+            next_child: 0,
+        });
+    }
+    Ok(())
 }
 
 fn refs(ids: Vec<String>) -> OneOrMany<IriRef> {
@@ -480,5 +597,69 @@ mod tests {
         }))
         .expect("test node");
         assert!(!is_runtime_composite(&node));
+    }
+
+    #[test]
+    fn boundary_target_budget_accepts_the_limit_and_refuses_before_overflow() {
+        let mut budget = BoundaryBudget {
+            examined_targets: MAX_COMPOSITE_BOUNDARY_TARGETS - 1,
+            examined_target_bytes: 0,
+        };
+        assert!(budget.examine("http://example.org#at-limit").is_ok());
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+        let diagnostic = budget
+            .examine("http://example.org#over-limit")
+            .expect_err("the attempted target beyond the limit must reject");
+        assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
+        assert_eq!(
+            diagnostic.subject.as_deref(),
+            Some("http://example.org#over-limit")
+        );
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+    }
+
+    #[test]
+    fn boundary_target_byte_budget_accepts_the_limit_and_refuses_before_overflow() {
+        let mut budget = BoundaryBudget {
+            examined_targets: 0,
+            examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - 1,
+        };
+        assert!(budget.examine("x").is_ok());
+        let diagnostic = budget
+            .examine("y")
+            .expect_err("the attempted byte beyond the limit must reject");
+        assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
+        assert_eq!(diagnostic.subject.as_deref(), Some("y"));
+        assert_eq!(
+            budget.examined_target_bytes,
+            MAX_COMPOSITE_BOUNDARY_TARGET_BYTES
+        );
+    }
+
+    #[test]
+    fn ordinary_direct_target_does_not_consume_boundary_budget() {
+        let by_id = HashMap::new();
+        let canonical = HashMap::new();
+        let specialization = Specialization::default();
+        let boundary = CompositeOrientation::default();
+        let walk = BoundaryWalk {
+            by_id: &by_id,
+            canonical: &canonical,
+            specialization: &specialization,
+            boundary: &boundary,
+        };
+        let mut budget = BoundaryBudget {
+            examined_targets: MAX_COMPOSITE_BOUNDARY_TARGETS,
+            examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES,
+        };
+        let mut out = Vec::new();
+        resolve_authored_target("http://example.org#leaf.u", &walk, &mut budget, &mut out)
+            .expect("ordinary wiring is outside boundary budgets");
+        assert_eq!(out, ["http://example.org#leaf.u"]);
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+        assert_eq!(
+            budget.examined_target_bytes,
+            MAX_COMPOSITE_BOUNDARY_TARGET_BYTES
+        );
     }
 }
