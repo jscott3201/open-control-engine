@@ -218,7 +218,8 @@ and a gate that accepted any text would restore exactly the false assurance desc
 ### Host facade
 
 - **Engine state can be checkpointed, persisted, and restored**
-  ([issue #143](https://github.com/jscott3201/open-control-engine/issues/143)). `EngineCheckpoint` is an
+  (#283, fixes [issue #143](https://github.com/jscott3201/open-control-engine/issues/143)).
+  `EngineCheckpoint` is an
   opaque process-local image that may rewind a compatible running engine. `EngineStateSnapshot`
   carries canonical, integrity-checked bytes for durable continuation into a freshly loaded engine;
   its decoder is capped at 64 MiB and rejects malformed or non-canonical input with typed
@@ -400,7 +401,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
-- **One exhaustive OpenModelica differential now exists for `CDL.Logical.Nand`.** Two sandboxed
+- **Human-adjudicated conformance discrepancies have a bounded evidence register** (#285). The
+  register is test-only and initially empty; a separate nonempty synthetic record exercises its
+  closed schema, lifecycle, repository containment, and evidence digests on every PR. Register
+  membership cannot alter discrepancies, tolerances, comparison results, tier status, goldens, or
+  test outcomes, and the register adds no public or runtime surface.
+- **One exhaustive OpenModelica differential now exists for `CDL.Logical.Nand`** (#286). Two sandboxed
   native-arm64 OMC 1.25.1 runs produced byte-identical raw CSV for all four Boolean input pairs; a
   strict keep-last projection feeds the existing facade-bound exact harness. The evidence set binds
   the image, source trees, raw and canonical bytes, logs, OCI metadata, and semantic/projection

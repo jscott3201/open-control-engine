@@ -114,7 +114,7 @@ step_env 'rustdoc — bins' RUSTDOCFLAGS '-D warnings' \
 step 'cargo-deny (bans licenses sources)' cargo deny check bans licenses sources
 
 # ── Determinism subset ───────────────────────────────────────────────────────
-# These two are the ONLY engine tests the per-PR gate runs. Everything else in
+# These three crates are the ONLY engine test packages the per-PR gate runs. Everything else in
 # the workspace is untested until the release gate — which is why `full` exists
 # and why a green PR is not evidence that the suite passes.
 step 'determinism subset' \

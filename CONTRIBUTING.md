@@ -124,11 +124,11 @@ and the determinism matrix — while claiming to mirror it. Change a command in
 
   A new block allocation on the evaluator thread **is** caught per-PR.
   `crates/oce-blocks/tests/tick_allocation_census.rs` sweeps the whole registry via `catalog()` and
-  carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the two crates
-  the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
+  carries a permanent positive control (`CDL.Reals.Sort`), and `oce-blocks` is one of the three
+  crates the per-PR gate runs (`.agents/gate.sh`). Current blocks do not delegate work to worker threads; a
   block that introduces worker execution also needs an allocation guard for that work. The
-  facade-level guard in `oce-api/tests/tick_purity_tests.rs` is narrower — three fixtures — and,
-  like all `oce-api` tests, runs only on the release gate.
+  facade-level guard in `oce-api/tests/tick_purity_tests.rs` is narrower — three fixtures — and runs
+  per-PR as part of the `oce-api` subset.
 
 ## Commits
 
