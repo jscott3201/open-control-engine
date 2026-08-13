@@ -468,7 +468,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Hardening
 
-- **Composite boundary lowering is iterative and resource-bounded.** A path may enter at most 64
+- **Composite boundary lowering is iterative and resource-bounded** (#290). A path may enter at most 64
   non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
   examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
   hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
