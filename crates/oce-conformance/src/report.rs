@@ -110,21 +110,21 @@ fn tier0_passed(run: &DriverRun) -> TierReport {
     TierReport::tier0("static parse/validate/build", run.load_warnings.clone())
 }
 
-/// Tier 0 from a `shall`-level load failure. A validation error already carries structured
-/// diagnostics; every other load error (CXF/flatten/build/load) carries only a message, so — per the
-/// summary-and-status reporting choice — it becomes a `Failed` tier with the detail in the summary
-/// and no synthesized diagnostic code.
+/// Tier 0 from a load failure. Structured diagnostics remain attached, but warning-only context on
+/// a build or store failure cannot downgrade the terminal failure to an advisory.
 fn tier0_load_failed(err: &oce_api::OcError) -> TierReport {
-    match err {
-        oce_api::OcError::Validate(validation) => TierReport::from_diagnostics(
+    if err.all_diagnostics().next().is_none() {
+        TierReport::failure(
             ConformanceTier::Tier0,
-            "static validate",
-            validation.diagnostics.clone(),
-        ),
-        other => TierReport::failure(
-            ConformanceTier::Tier0,
-            format!("static parse/validate/build failed: {other}"),
-        ),
+            format!("static parse/validate/build failed: {err}"),
+        )
+    } else {
+        TierReport {
+            tier: ConformanceTier::Tier0,
+            status: crate::TierStatus::Failed,
+            summary: format!("static parse/validate/build failed: {err}"),
+            diagnostics: err.all_diagnostics().cloned().collect(),
+        }
     }
 }
 
@@ -201,4 +201,27 @@ fn classify_comparisons(
         );
     }
     TierReport::passed(tier, format!("{context}: {total} signals within tolerance"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::TierStatus;
+
+    const ANALOG_ALGEBRAIC_LOOP: &[u8] =
+        include_bytes!("../tests/fixtures/analog_warning_algebraic_loop.jsonld");
+
+    #[test]
+    fn contextual_warning_on_terminal_load_failure_remains_failed() {
+        let error = oce_api::Engine::in_memory()
+            .load_cxf(ANALOG_ALGEBRAIC_LOOP)
+            .expect_err("fixture must fail after a resolver warning");
+        let report = tier0_load_failed(&error);
+        assert_eq!(report.status, TierStatus::Failed);
+        assert_eq!(
+            report.diagnostics,
+            error.all_diagnostics().cloned().collect::<Vec<_>>()
+        );
+        assert!(report.summary.contains("model build/schedule error"));
+    }
 }

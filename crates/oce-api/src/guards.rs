@@ -22,11 +22,11 @@ use oce_store_mem::MemStore;
 
 use crate::{
     AssertEvent, AssertLevel, ConnectorId, DeclaredOutput, Diagnostic, Engine, EngineCheckpoint,
-    EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadReport, OcError,
-    OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair, PhysicalKind, PointDirection,
-    PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics, SimSpec, StepReport,
-    TemplateRef, Topology, TopologyBlock, TopologyConnection, TrendCfg, TrendInterval, Value,
-    ValueType,
+    EngineStateError, EngineStateSnapshot, IoClass, IoInventory, IoSummary, LoadErrorContext,
+    LoadReport, OcError, OutputTrace, Outputs, ParamAttrs, ParamTable, PassThroughPair,
+    PhysicalKind, PointDirection, PointInfo, PointValueType, RunMode, SemanticQuery, SimMetrics,
+    SimSpec, StepReport, TemplateRef, Topology, TopologyBlock, TopologyConnection, TrendCfg,
+    TrendInterval, Value, ValueType,
 };
 
 /// `T: Send + Sync` (used for the concrete thread-safety guards).
@@ -249,23 +249,31 @@ fn _assert_accessor_signatures() {
 /// not a guard.
 fn _assert_ocerror_shape() {
     needs_send_sync::<OcError>();
+    needs_send_sync::<LoadErrorContext>();
     needs_send_sync::<EngineStateError>();
     fn needs_error<E: std::error::Error + Send + Sync + 'static>() {}
     needs_error::<OcError>();
+    needs_error::<LoadErrorContext>();
     needs_error::<EngineStateError>();
 }
 
-// ---- the failed-load diagnostics accessor keeps its signature (satisfies R-PUB-7) ----
+// ---- the failed-load diagnostics accessors keep their signatures (satisfies R-PUB-7) ----
 
 /// Satisfies R-PUB-7 (`_spec/08` §11.1 — each frozen item carries a compile-shaped assertion) for
-/// `OcError::diagnostics`. It is the only route to the resolver seam's diagnostics for a consumer
-/// depending on `oce-api` alone; the deep-gate seam is separately reachable through
-/// `OcError::Validate`'s public field, which needs no accessor and no nameable type.
+/// `OcError::diagnostics` and `OcError::all_diagnostics`. They are the only routes to the resolver
+/// seam's diagnostics for a consumer depending on `oce-api` alone and the authoritative route for
+/// diagnostics retained across a later failed load stage. The deep-gate seam is separately
+/// reachable through `OcError::Validate`'s public field, which needs no accessor and no nameable
+/// type.
 ///
 /// Borrowing is the load-bearing part of the signature: returning owned diagnostics would oblige a
 /// clone on a path a host may take per failed document, and `Diagnostic` is not `Copy`.
 fn _assert_ocerror_diagnostics_shape() {
     let _: fn(&OcError) -> &[Diagnostic] = OcError::diagnostics;
+    fn assert_complete_stream(error: &OcError) -> impl Iterator<Item = &Diagnostic> {
+        error.all_diagnostics()
+    }
+    let _ = assert_complete_stream;
 }
 
 // ---- R-API-PY-8 — every public method returns `Result<_, OcError>` or is an infallible accessor.

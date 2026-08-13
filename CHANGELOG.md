@@ -257,8 +257,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
   diagnostic-bearing variants are built only from a non-empty vector. `DiagCode` is deliberately
   still not re-exported: `code.as_str()` already resolves without naming the type, and the enum is
   `#[non_exhaustive]`, so matching it exhaustively is impossible anyway. Two gaps found alongside it
-  are tracked rather than folded in — #261 (resolver warnings discarded when a later stage fails)
-  and #262 (a composite rejection's rule id is reachable only as a message-text prefix).
+  were filed separately rather than folded in — #261 (resolver warnings discarded when a later
+  stage fails, fixed below) and #262 (a composite rejection's rule id is reachable only as a
+  message-text prefix).
+- **Failed loads retain diagnostics from completed stages** (fixes #261). `Engine::load_cxf` now
+  carries resolver, validation, and semantic diagnostics across a later validation, build, or store
+  failure in an opaque `OcError::LoadContext`. The allocation-free `OcError::all_diagnostics()`
+  iterator returns prior-stage diagnostics followed by the terminal stream without cloning the
+  terminal payload; `diagnostics()` keeps its existing terminal-error semantics. `Display` remains
+  the terminal message and `Error::source()` exposes the terminal `OcError`. Loads with no prior
+  diagnostics retain their original top-level variant. `oce-conformance` keeps contextual
+  diagnostics on the failed Tier 0 report without allowing warning-only context to downgrade a
+  build or store failure to an advisory.
 - **`simulate` is a run restart, and was not one** (#257, fixes #256). It cleared the run clock and
   nothing else, so a reused engine started a horizon from the state words the previous run left
   behind, falsifying the method's own rustdoc and R-SIM-2. Entry now re-seeds those words. The
