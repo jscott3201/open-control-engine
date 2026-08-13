@@ -1,0 +1,336 @@
+{
+  "format": "oce-openmodelica-toggle-external-run-v1",
+  "scope": {
+    "class": "CDL.Logical.Toggle",
+    "scenario": "repeated_rises_initial_true_and_clear_priority",
+    "inputs": [
+      "u",
+      "clr"
+    ],
+    "output": "y",
+    "comparison": "exact_boolean",
+    "global_tier3_status": "skipped"
+  },
+  "image": {
+    "repository": "openmodelica/openmodelica",
+    "tag": "v1.25.1-minimal",
+    "index_digest": "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+    "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
+    "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
+    "platform": "linux/arm64",
+    "host_architecture": "arm64",
+    "docker_server_architecture": "aarch64",
+    "omc_version": "OpenModelica 1.25.1",
+    "gcc_version": "11.4.0",
+    "binutils_version": "2.38",
+    "glibc_version": "2.35"
+  },
+  "sources": [
+    {
+      "name": "buildings",
+      "repository": "https://github.com/lbl-srg/modelica-buildings.git",
+      "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+      "package": "Buildings",
+      "version": "14.0.0",
+      "files": [
+        {
+          "path": "Buildings/package.mo",
+          "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"
+        },
+        {
+          "path": "Buildings/Controls/OBC/CDL/Logical/Toggle.mo",
+          "sha256": "49d33a88242163def412dff83e3f49e23b187fe56859a01649edbf5fb2bab60c"
+        },
+        {
+          "path": "Buildings/Controls/OBC/CDL/Logical/Latch.mo",
+          "sha256": "2ab7e15a0026d5a6c0089d7af88329869fc3e397398a7b86ad5ea49fd1d9b271"
+        }
+      ]
+    },
+    {
+      "name": "modelica",
+      "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git",
+      "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+      "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+      "package": "Modelica",
+      "version": "4.1.0",
+      "files": [
+        {
+          "path": "Complex.mo",
+          "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"
+        },
+        {
+          "path": "Modelica/package.mo",
+          "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+        },
+        {
+          "path": "Modelica/Blocks/Sources.mo",
+          "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"
+        },
+        {
+          "path": "ModelicaServices/package.mo",
+          "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"
+        }
+      ]
+    }
+  ],
+  "simulation": {
+    "method": "dassl",
+    "start_time": "0",
+    "stop_time": "600",
+    "number_of_intervals": 10,
+    "tolerance": "1e-9",
+    "output_format": "csv",
+    "variable_filter": "^(u|clr|y)$",
+    "simflags": "",
+    "event_emission": true,
+    "raw_header": "\"time\",\"clr\",\"u\",\"y\""
+  },
+  "projection": {
+    "columns": [
+      "time",
+      "u",
+      "clr",
+      "y"
+    ],
+    "grouping": "contiguous_equal_f64_bits",
+    "selection": "last",
+    "normalize_times": false,
+    "raw_rows": 34,
+    "canonical_rows": 22,
+    "group_sizes": [
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2
+    ],
+    "canonical_time_bits": [
+      "0000000000000000",
+      "403e000000001dff",
+      "404e000000000000",
+      "4056800000000780",
+      "405e000000000000",
+      "4062c000000003c1",
+      "4066800000000000",
+      "406a4000000003c1",
+      "406e000000000000",
+      "4070e000000001e0",
+      "4072c00000000000",
+      "4073600000000320",
+      "4075e000000002d0",
+      "4076800000000000",
+      "40786000000003c1",
+      "407a400000000000",
+      "407ae00000000320",
+      "407c2000000003c1",
+      "407e000000000000",
+      "407fe000000003c1",
+      "4080e00000000000",
+      "4082c00000000000"
+    ]
+  },
+  "runs": [
+    {
+      "id": "run-a",
+      "output_directory_token": "fresh-run-a",
+      "log_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/run-a.log",
+      "raw_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/toggle-run-a.raw.csv",
+      "log_sha256": "a742e7db43c95b8100a31c53f49ccdd8e0315acdb94888be67c204b89948e0e3",
+      "raw_sha256": "cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641"
+    },
+    {
+      "id": "run-b",
+      "output_directory_token": "fresh-run-b",
+      "log_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/run-b.log",
+      "raw_path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/toggle-run-b.raw.csv",
+      "log_sha256": "e1b8f5e8468cf3c34a96e2b30b8337dea36295a9ada85f572790095e7af75e64",
+      "raw_sha256": "cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641"
+    }
+  ],
+  "semantic_control": {
+    "substitution_class": "CDL.Logical.Latch",
+    "first_mismatch_row": 3,
+    "first_mismatch_time_bits": "4056800000000780",
+    "raw_rows": 34,
+    "canonical_rows": 22,
+    "expected_comparison": "exact_mismatch"
+  },
+  "artifacts": [
+    {
+      "role": "canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/toggle.canonical.csv",
+      "sha256": "a413d5bf60702f09c1267631f54d46d1ecb1fdd8651165f8e967e309652fd7c4"
+    },
+    {
+      "role": "canonicalizer_source",
+      "path": "crates/oce-cxf/tests/open_modelica_toggle_reference/canonicalizer.rs",
+      "sha256": "acb2296bd4861544856794215287f3b98dc1c13c32c501c5fa26305d4f78919b"
+    },
+    {
+      "role": "image_index_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/image-index.json",
+      "sha256": "79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"
+    },
+    {
+      "role": "image_manifest_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/image-manifest.json",
+      "sha256": "39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4"
+    },
+    {
+      "role": "projection_mutation_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/projection-mutation.log",
+      "sha256": "1707d8870aa13421f93a6803a8cb730fe3b0ec931211ff393d9352c9b36a934e"
+    },
+    {
+      "role": "raw_run_a_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/toggle-run-a.raw.csv",
+      "sha256": "cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641"
+    },
+    {
+      "role": "raw_run_b_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/toggle-run-b.raw.csv",
+      "sha256": "cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641"
+    },
+    {
+      "role": "regeneration_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/regenerate.sh",
+      "sha256": "a2ac4957ee9dd7536a3f6715be5c82fb75721b92af38f302d76426a42df4237f"
+    },
+    {
+      "role": "run_a_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/run-a.log",
+      "sha256": "a742e7db43c95b8100a31c53f49ccdd8e0315acdb94888be67c204b89948e0e3"
+    },
+    {
+      "role": "run_b_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/run-b.log",
+      "sha256": "e1b8f5e8468cf3c34a96e2b30b8337dea36295a9ada85f572790095e7af75e64"
+    },
+    {
+      "role": "runner_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/runner.sh",
+      "sha256": "8799f299296a09ccef80268b43cca92b9badb757d65baac4a7108975c14c3cff"
+    },
+    {
+      "role": "semantic_control_canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/latch.canonical.csv",
+      "sha256": "03d0c854620f4730febf652114246ac0844bae54ab4ac02005fe6c95a290ed60"
+    },
+    {
+      "role": "semantic_control_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/latch.log",
+      "sha256": "4096d21f54f939aadcd16197c289b5d70aa56aec5a1bf774ab3bfc281fb13753"
+    },
+    {
+      "role": "semantic_control_raw_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/logical_toggle/latch.raw.csv",
+      "sha256": "2d760f33964d0f6e7de4abc5d236d2dafef9608727b00175c2871a565ef575d2"
+    },
+    {
+      "role": "semantic_control_wrapper_model",
+      "path": "tools/openmodelica-toggle-reference/toggle/LatchPilot.mo",
+      "sha256": "410fd91ccff362bb2f6b6a2a31a2d746bd97ee9d5e88ea4e8a579c62565b639d"
+    },
+    {
+      "role": "tool_cargo_lock",
+      "path": "tools/openmodelica-toggle-reference/Cargo.lock",
+      "sha256": "d11cb2a1db46e9ef3bb0e114a662a7dd2b07573f92f852ffe1cd552ee8de9ca7"
+    },
+    {
+      "role": "tool_cargo_toml",
+      "path": "tools/openmodelica-toggle-reference/Cargo.toml",
+      "sha256": "7b814d8bc7316c19d519a86c152e545d16bf74514117435114eab896be38c317"
+    },
+    {
+      "role": "tool_main_source",
+      "path": "tools/openmodelica-toggle-reference/src/main.rs",
+      "sha256": "721a6676b4da4d947c35812a99f45ee4a5b8b024e15f97664b1774d1877908e9"
+    },
+    {
+      "role": "evidence_validator_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/verify_evidence.py",
+      "sha256": "d7836a023e0557b5a3104af500e9ee8b890d79ea5bbd75f19655d4ee3ccd88d2"
+    },
+    {
+      "role": "manifest_generator_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/generate_manifest.py",
+      "sha256": "9108a7c1bd854aab76eacbba6a03f8eac41314e0f8f1cbc7bbd5cecd77775a36"
+    },
+    {
+      "role": "deadline_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/deadline.sh",
+      "sha256": "ccedf17f714ab54b6589a20f0a463c8a04760bae026e21e769f551437f89c800"
+    },
+    {
+      "role": "deadline_test_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/deadline_test.sh",
+      "sha256": "a2c7b440f11216815d1b99c4041cacaf1dea16ad283ea8b745d24f6955d2e54d"
+    },
+    {
+      "role": "output_publish_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/output_publish.py",
+      "sha256": "13e6842b227dfa494b29cf65359d0b5fd83cc75cf18de288a4b9350b60a22102"
+    },
+    {
+      "role": "output_publish_test_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/output_publish_test.sh",
+      "sha256": "9d01bd85fc41e7603a968d0e71bfa0f90ff08eef67d048d28525e695ee5900ee"
+    },
+    {
+      "role": "container_cleanup_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/container_cleanup.sh",
+      "sha256": "254308d71232c526b45f3dc9384cb8cc72c4862c74d48d155f2fe0f9b1f9b683"
+    },
+    {
+      "role": "container_cleanup_test_script",
+      "path": "tools/openmodelica-toggle-reference/toggle/container_cleanup_test.sh",
+      "sha256": "9af8798a60e5210894674fa48f5338c92268dd45f991a8ef86a08af55f7dd60a"
+    },
+    {
+      "role": "wrapper_model",
+      "path": "tools/openmodelica-toggle-reference/toggle/TogglePilot.mo",
+      "sha256": "b2ac87b9d00f1b6225bc9ad59398408a2d2c554583b5190687e4cae3bdc195f0"
+    }
+  ],
+  "regeneration": {
+    "entrypoint": "tools/openmodelica-toggle-reference/toggle/regenerate.sh",
+    "network": "none",
+    "pull": "never",
+    "platform": "linux/arm64",
+    "source_materialization": "git_archive",
+    "source_mounts": "read_only",
+    "container_root": "read_only",
+    "container_user": "non_root",
+    "capabilities": "none",
+    "no_new_privileges": true,
+    "device_mounts": 0,
+    "docker_socket_mounted": false,
+    "timeout_seconds": 120,
+    "cpus": "4",
+    "memory_bytes": 2147483648,
+    "memory_swap_bytes": 2147483648,
+    "pids_limit": 256,
+    "tmpfs_bytes": 268435456,
+    "per_file_bytes": 67108864,
+    "output_directory_bytes": 268435456
+  }
+}

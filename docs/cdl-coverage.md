@@ -144,10 +144,10 @@ code-dependency firewall — are described in [`../README.md`](../README.md) and
 [`../TESTING.md`](../TESTING.md).
 
 The load-bearing limitation, stated plainly: **no sequence here has been executed against an
-external Modelica / Buildings toolchain.** One exhaustive `CDL.Logical.Nand` Boolean case now has
-scoped Tier-3 evidence from OpenModelica, but it covers no sequence, stateful behavior, or numeric
-tolerance. The global Tier-3 report remains skipped, and no number on this page stands in for that
-deferred coverage.
+external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
+`CDL.Logical.Nand` Boolean case and one stateful `CDL.Logical.Toggle` event schedule, but no numeric
+tolerance or broader sequence behavior. The global Tier-3 report remains skipped, and no number on
+this page stands in for that deferred coverage.
 
 For what happens when you export a loaded sequence back out to CXF, see
 [`cxf-round-trip.md`](cxf-round-trip.md).

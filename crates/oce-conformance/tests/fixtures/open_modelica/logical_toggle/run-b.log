@@ -1,0 +1,75 @@
+host_architecture=arm64
+docker_server_architecture=aarch64
+image_index_digest=sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864
+image_platform_manifest_digest=sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4
+image_config_digest=sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666
+oci_metadata_validation=raw_digest_and_pinned_graph
+pull_policy=never
+host_timeout_seconds=120
+buildings_remote=https://github.com/lbl-srg/modelica-buildings.git
+buildings_commit=a131864e4c4df22ebcd52bb8da439de0087ac365
+buildings_tree=a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09
+modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git
+modelica_commit=7a4bf7de77a3986e8eb1e88cbb515d646f78f834
+modelica_tree=43d7d8fc1a991358e9e5e91976e27cdc4280173f
+source_materialization=git_archive_exact_committed_bytes
+buildings_package_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59
+toggle_source_sha256=49d33a88242163def412dff83e3f49e23b187fe56859a01649edbf5fb2bab60c
+latch_source_sha256=2ab7e15a0026d5a6c0089d7af88329869fc3e397398a7b86ad5ea49fd1d9b271
+modelica_package_sha256=c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191
+boolean_table_source_sha256=565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3
+modelica_services_sha256=7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb
+complex_sha256=9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f
+docker_command=docker run --pull=never --platform linux/arm64 --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro
+output_directory_token=fresh-run-b
+selected_model=Toggle
+container_architecture=aarch64
+container_identity=501:20
+modelica_path=
+root_write_probe=read-only
+source_write_probe=read-only
+network_route_lines=1
+cgroup_memory_max=2147483648
+cgroup_pids_max=256
+cgroup_cpu_max=400000 100000
+per_file_limit_bytes=67108864
+output_directory_limit_bytes=268435456
+gcc_version=11.4.0
+binutils_version=2.38
+glibc_version=2.35
+omc_version=OpenModelica 1.25.1
+
+
+
+
+
+toggle_source=/sources/buildings/Buildings/Controls/OBC/CDL/Logical/Toggle.mo
+
+latch_source=/sources/buildings/Buildings/Controls/OBC/CDL/Logical/Latch.mo
+
+boolean_table_source=/sources/modelica/Modelica/Blocks/Sources.mo
+
+Modelica=4.1.0
+
+Buildings=14.0.0
+
+
+record SimulationResult
+    resultFile = "/out/TogglePilot_res.csv",
+    simulationOptions = "startTime = 0.0, stopTime = 600.0, numberOfIntervals = 10, tolerance = 1e-9, method = 'dassl', fileNamePrefix = 'TogglePilot', options = '', outputFormat = 'csv', variableFilter = '^(u|clr|y)$', cflags = '', simflags = ''",
+    messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
+LOG_SUCCESS       | info    | The simulation finished successfully.
+",
+    timeFrontend = 0.293944333,
+    timeBackend = 0.007936833,
+    timeSimCode = 0.015275333,
+    timeTemplates = 0.008300666,
+    timeCompile = 0.518435125,
+    timeSimulation = 0.015752708,
+    timeTotal = 0.8598492090000001
+end SimulationResult;
+
+
+output_directory_kib=1116
+raw_sha256=cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641
+runner_complete=1
