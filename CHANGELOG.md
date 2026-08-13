@@ -423,7 +423,7 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   mutation controls. This is scoped Tier-3 evidence for one stateless Boolean class. The global
   Tier-3 report remains skipped, and the result says nothing about sequences, stateful behavior,
   numeric tolerances, or cross-architecture OMC identity.
-- **One stateful OpenModelica differential now exists for `CDL.Logical.Toggle`** (fixes #294).
+- **One stateful OpenModelica differential now exists for `CDL.Logical.Toggle`** (#295).
   Two sandboxed native-arm64 OMC 1.25.1 runs produced byte-identical event traces for an initially
   true input, repeated rises, clear-only reset, simultaneous rise with clear priority, and clear
   release. The facade runs at the exact emitted timestamp bits and is checked against an independent
