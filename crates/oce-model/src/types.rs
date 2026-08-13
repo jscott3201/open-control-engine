@@ -4,6 +4,67 @@ use crate::EnumClassId;
 
 const G36_TYPES_PREFIX: &str = "Buildings.Controls.OBC.ASHRAE.G36.Types.";
 
+const SIMPLE_CONTROLLER_MEMBERS: &[&str] = &["P", "PI", "PD", "PID"];
+const SMOOTHNESS_MEMBERS: &[&str] = &["LinearSegments", "ConstantSegments"];
+const EXTRAPOLATION_MEMBERS: &[&str] = &["HoldLastPoint", "LastTwoPoints", "Periodic"];
+const ZERO_TIME_MEMBERS: &[&str] = &[
+    "UnixTimeStamp",
+    "UnixTimeStampGMT",
+    "Custom",
+    "NY2010",
+    "NY2011",
+    "NY2012",
+    "NY2013",
+    "NY2014",
+    "NY2015",
+    "NY2016",
+    "NY2017",
+    "NY2018",
+    "NY2019",
+    "NY2020",
+    "NY2021",
+    "NY2022",
+    "NY2023",
+    "NY2024",
+    "NY2025",
+    "NY2026",
+    "NY2027",
+    "NY2028",
+    "NY2029",
+    "NY2030",
+    "NY2031",
+    "NY2032",
+    "NY2033",
+    "NY2034",
+    "NY2035",
+    "NY2036",
+    "NY2037",
+    "NY2038",
+    "NY2039",
+    "NY2040",
+    "NY2041",
+    "NY2042",
+    "NY2043",
+    "NY2044",
+    "NY2045",
+    "NY2046",
+    "NY2047",
+    "NY2048",
+    "NY2049",
+    "NY2050",
+];
+
+/// Canonical durable identity and source-order members for one known enum class.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EnumDescriptor {
+    /// Stable in-memory class id used by [`crate::ValueType::Enum`].
+    pub id: EnumClassId,
+    /// Canonical class path used by durable formats instead of the numeric id.
+    pub class_path: &'static str,
+    /// Members in their one-based source ordinal order.
+    pub members: &'static [&'static str],
+}
+
 /// CDL `Types.SimpleController` enumeration (`03` section 4.9).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SimpleController {
@@ -135,43 +196,82 @@ pub fn enum_class_id(qualified: &str) -> Option<EnumClassId> {
     })
 }
 
+/// Return the canonical descriptor for a known enum class id.
+///
+/// The numeric id is process-local representation; durable consumers use `class_path` and
+/// `members` as the class identity.
+#[must_use]
+pub fn enum_descriptor(class: EnumClassId) -> Option<EnumDescriptor> {
+    let (class_path, members) = match class {
+        EnumClassId::SIMPLE_CONTROLLER => ("CDL.Types.SimpleController", SIMPLE_CONTROLLER_MEMBERS),
+        EnumClassId::SMOOTHNESS => ("CDL.Types.Smoothness", SMOOTHNESS_MEMBERS),
+        EnumClassId::EXTRAPOLATION => ("CDL.Types.Extrapolation", EXTRAPOLATION_MEMBERS),
+        EnumClassId::ZERO_TIME => ("CDL.Types.ZeroTime", ZERO_TIME_MEMBERS),
+        EnumClassId::G36_ASHRAE_CLIMATE_ZONE => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.ASHRAEClimateZone",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_CONTROL_ECONOMIZER => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.ControlEconomizer",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_COOLING_COIL => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.CoolingCoil",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_ENERGY_STANDARD => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.EnergyStandard",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_FREEZE_STAT => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.FreezeStat",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_HEATING_COIL => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.HeatingCoil",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_OUTDOOR_AIR_SECTION => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.OutdoorAirSection",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_PRESSURE_CONTROL => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.PressureControl",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_TITLE24_CLIMATE_ZONE => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.Title24ClimateZone",
+            g36_enum_literals(class)?,
+        ),
+        EnumClassId::G36_VENTILATION_STANDARD => (
+            "Buildings.Controls.OBC.ASHRAE.G36.Types.VentilationStandard",
+            g36_enum_literals(class)?,
+        ),
+        _ => return None,
+    };
+    Some(EnumDescriptor {
+        id: class,
+        class_path,
+        members,
+    })
+}
+
+/// Resolve a canonical durable enum class path.
+#[must_use]
+pub fn enum_descriptor_by_path(class_path: &str) -> Option<EnumDescriptor> {
+    let class = enum_class_id(class_path)?;
+    let descriptor = enum_descriptor(class)?;
+    (descriptor.class_path == class_path).then_some(descriptor)
+}
+
 /// Resolve a member literal within a known CDL enum class to its 1-based ordinal.
 #[must_use]
 pub fn enum_member_ordinal(class: EnumClassId, literal: &str) -> Option<u32> {
-    match class {
-        EnumClassId::SIMPLE_CONTROLLER => match literal {
-            "P" => Some(1),
-            "PI" => Some(2),
-            "PD" => Some(3),
-            "PID" => Some(4),
-            _ => None,
-        },
-        EnumClassId::SMOOTHNESS => match literal {
-            "LinearSegments" => Some(1),
-            "ConstantSegments" => Some(2),
-            _ => None,
-        },
-        EnumClassId::EXTRAPOLATION => match literal {
-            "HoldLastPoint" => Some(1),
-            "LastTwoPoints" => Some(2),
-            "Periodic" => Some(3),
-            _ => None,
-        },
-        EnumClassId::ZERO_TIME => ZeroTime::from_member(literal).map(ZeroTime::ordinal),
-        EnumClassId::G36_ASHRAE_CLIMATE_ZONE
-        | EnumClassId::G36_CONTROL_ECONOMIZER
-        | EnumClassId::G36_COOLING_COIL
-        | EnumClassId::G36_ENERGY_STANDARD
-        | EnumClassId::G36_FREEZE_STAT
-        | EnumClassId::G36_HEATING_COIL
-        | EnumClassId::G36_OUTDOOR_AIR_SECTION
-        | EnumClassId::G36_PRESSURE_CONTROL
-        | EnumClassId::G36_TITLE24_CLIMATE_ZONE
-        | EnumClassId::G36_VENTILATION_STANDARD => g36_enum_literals(class)
-            .and_then(|members| members.iter().position(|member| *member == literal))
-            .map(|index| index as u32 + 1),
-        _ => None,
-    }
+    enum_descriptor(class)?
+        .members
+        .iter()
+        .position(|member| *member == literal)
+        .map(|index| index as u32 + 1)
 }
 
 /// Whether `qualified` names the source-pinned ASHRAE G36 `Types` package.

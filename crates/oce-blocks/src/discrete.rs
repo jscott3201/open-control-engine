@@ -92,6 +92,31 @@ impl Block for UnitDelay {
         region[UNIT_DELAY_LAST_INDEX_WORD] = i64_word(-1);
         region[UNIT_DELAY_INITIALIZED_WORD] = bool_word(false);
     }
+    fn validate_state(&self, region: &[u64], state_t: f64, _prev_t: f64) -> Result<(), String> {
+        crate::state_contract::validate_sampled(
+            region,
+            state_t,
+            valid_sample_period(self.sample_period),
+            false,
+            true,
+        )
+    }
+    fn time_is_representable(&self, t_now: f64, region: &[u64]) -> bool {
+        crate::state_contract::sampled_time_representable(
+            t_now,
+            region,
+            valid_sample_period(self.sample_period),
+            UNIT_DELAY_INITIALIZED_WORD,
+            UNIT_DELAY_T0_WORD,
+        )
+    }
+    fn simulation_time_is_representable(&self, first: f64, last: f64, _region: &[u64]) -> bool {
+        crate::state_contract::sampled_horizon_representable(
+            first,
+            last,
+            valid_sample_period(self.sample_period),
+        )
+    }
     fn emit_from_state(
         &self,
         ctx: &Ctx<'_>,

@@ -22,8 +22,9 @@
 //!   IRI, including a boundary-driven child whose stored IRI belongs to the boundary node.
 //! - Each `external_inputs` connector's stored boundary IRI is emitted verbatim as a boundary
 //!   node listed under the root's `hasInput` and wired `isConnectedTo` → the child
-//!   port. The boundary node carries the driven child connector's `isOfDataType`; fan-out is
-//!   rejected if the driven connector types disagree. Re-import then re-elides the boundary
+//!   port. The boundary node carries the driven child connector's `isOfDataType` and, when
+//!   `ModelGraph.boundary_inputs` supplies one, its own declaration attrs; fan-out is rejected if
+//!   the driven connector types disagree. Re-import then re-elides the boundary
 //!   (AD-2), restoring both the `external_inputs` entry and the child connector's boundary IRI.
 //!   The boundary `@id` never appears in the owning block's own `hasInput` list — sharing one
 //!   `@id` between the root's and a child's port list re-imports as a rejection.
@@ -31,10 +32,11 @@
 //! ## §7.4.1 connector attributes (Bare-Scalar Canonical)
 //! The five in-subset §7.4.1 attrs live on the **child port node** and, per the #233 owner
 //! ruling (2026-08-05), on each **declared boundary-output node**. The exporter emits each node's
-//! stored attrs. In an engine-loaded graph, §7.10 unification may have filled an unset child or
-//! boundary-output value from its peer; directly exporting an imported, pre-unification graph
-//! preserves the two authored sets independently. The shared boundary-INPUT node still carries
-//! none (#243). Each attr is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
+//! stored attrs. Declared boundary inputs keep their declaration attrs separate from every driven
+//! child connector, so direct import/export preserves both authored sets independently. In an
+//! engine-loaded graph, §7.10 unification may have filled an unset child or boundary-output value
+//! from its peer; boundary-input unification is a separately reviewed acceptance change. Each attr
+//! is emitted as a **bare JSON scalar/string** — `S231:unit`/`quantity`/
 //! `displayUnit` as bare strings ([`crate::dto::TermAttr::Bare`], Real only) and `S231:min`/`max` as bare
 //! numbers ([`CxfValue::Float`] for Real, [`CxfValue::Int`] for Integer). Bare is the unique
 //! shape that survives the importer's `as_term()` collapse and reproduces itself, so the RT-2
@@ -77,13 +79,13 @@
 //! reserved lowering-only blocks are omitted also rejects: the result would be an unloadable
 //! root-only shell ([`MSG_TOTAL_DEFERRAL`]).
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use oce_diag::{DiagCode, Diagnostic, has_errors};
-use oce_model::{Attrs, Connector, Dir, ModelGraph, Value, ValueType};
+use oce_model::{Connector, Dir, ModelGraph, Value, ValueType};
 
 use crate::dto::{Context, CxfDocument, CxfValue, IriRef, Node, OneOrMany};
-use crate::export_attrs::{PortAttrs, emit_port_attrs};
+use crate::export_attrs::{PortAttrs, classify_attrs, emit_port_attrs};
 use crate::export_defer::deferral_set;
 use crate::export_pass_through::{
     ReservedShapeFailure, ReservedShapeValidation, is_declared_pass_through_connector,
@@ -94,7 +96,7 @@ use crate::{CxfError, bridge};
 /// `@id` of the synthesized root composite. `ModelGraph` does not record the source document's
 /// root IRI, so every export uses this fixed, collision-improbable URN. A (contrived) block whose
 /// `instance_iri` equals it would surface as a loud `DuplicateId` on re-import, never silently.
-const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
+pub(crate) const EXPORT_ROOT_IRI: &str = "urn:open-control:cxf-export:root";
 
 /// The `S231` prefix binding emitted in `@context` (matches the import fixtures).
 const S231_CONTEXT_IRI: &str = "http://data.ashrae.org/S231P#";
@@ -129,20 +131,6 @@ const MSG_CLASS_BRIDGE: &str =
 const MSG_STRUCTURE: &str = "export subset: block/connector wiring is structurally inconsistent";
 /// Elision would discard state or change the reserved scalar identity on re-import.
 const MSG_RESERVED_SHAPE: &str = "export subset: reserved pass-through block does not match its resolver-produced lowering shape";
-/// The connector carries a non-default `nominal` attribute (the importer hardcodes
-/// `nominal: None`, so any `Some` is outside the canonical export subset and would be silently
-/// dropped rather than round-tripped).
-const MSG_ATTR_NOMINAL: &str = "export subset: connector carries a non-default §7.4.1 nominal attribute, \
-     which is outside the canonical (bare-scalar) export subset";
-/// The connector carries a non-default `unbounded` attribute (the importer hardcodes
-/// `unbounded: None`, so any `Some` is outside the canonical export subset).
-const MSG_ATTR_UNBOUNDED: &str = "export subset: connector carries a non-default §7.4.1 unbounded attribute, \
-     which is outside the canonical (bare-scalar) export subset";
-/// A Real `min`/`max` bound is non-finite (`NaN`/`INFINITY`/`NEG_INFINITY`). `serde_json`
-/// serializes a non-finite `f64` as JSON `null`, which re-imports as `None`, silently breaking
-/// the RT-2 render fixpoint — so the bound is rejected instead of emitted.
-const MSG_ATTR_NONFINITE_BOUND: &str = "export subset: connector carries a non-finite §7.4.1 min/max bound, \
-     which is outside the canonical (bare-scalar) export subset";
 /// String connectors have no importable CXF form (§7.8 forbids them).
 const MSG_STRING_CONNECTOR: &str =
     "export subset: String connectors are not permitted in CXF (§7.8)";
@@ -166,12 +154,23 @@ const MSG_DUPLICATE_EXTERNAL_INPUT: &str = "export subset: a connector is listed
 /// elision type check for at least one target.
 const MSG_BOUNDARY_TYPE_MISMATCH: &str =
     "export subset: one boundary input drives child inputs with different value types";
+/// More than one sidecar claims the same boundary IRI. Export cannot choose declaration metadata
+/// without dropping a host-authored value.
+const MSG_DUPLICATE_BOUNDARY_INPUT: &str =
+    "export subset: duplicate boundary-input declaration metadata";
+/// A sidecar names no underlying external-input target. With no represented declaration, emitting
+/// or silently dropping the metadata would both invent a different graph.
+const MSG_ORPHAN_BOUNDARY_INPUT: &str =
+    "export subset: boundary-input declaration metadata has no external target";
 /// A declared boundary output aliases a connector that has no emitted child-port node. Reserved
 /// pass-through outputs are rebuilt directly as root boundary outputs, so an additional alias over
 /// that connector has no lossless wire representation. Other unclaimed connectors already carry a
 /// structural diagnostic; this message names the alias that would otherwise disappear.
 const MSG_BOUNDARY_SOURCE_NOT_EMITTED: &str =
     "export subset: declared boundary output source is not an emitted child output connector";
+/// A declared boundary output needs a non-empty identity for its emitted node.
+const MSG_BOUNDARY_OUTPUT_IRI: &str =
+    "export subset: declared boundary output carries no IRI to name its CXF node";
 /// Reserved pass-through connectors are rebuilt as a root boundary edge and have no child-port
 /// node on which an additional host-built connection can be represented.
 const MSG_CONNECTION_ENDPOINT_NOT_EMITTED: &str = "export subset: connection endpoint is a reserved lowering connector with no emitted \
@@ -221,11 +220,13 @@ struct PlannedPort {
     attrs: PortAttrs,
 }
 
-/// One boundary-input node: stored boundary IRI, datatype, and minted child ports it drives.
+/// One boundary-input node: stored boundary IRI, datatype, declaration attrs, and minted child
+/// ports it drives.
 struct PlannedBoundary {
     iri: String,
     datatype: &'static str,
     targets: Vec<String>,
+    attrs: PortAttrs,
 }
 
 /// One declared boundary-output node: authored IRI, datatype, and its classified §7.4.1
@@ -625,6 +626,13 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             }
             continue;
         }
+        if output.iri.is_empty() {
+            diags.push(reject(
+                MSG_BOUNDARY_OUTPUT_IRI,
+                &owner_subject(g, source, idx),
+            ));
+            continue;
+        }
         let Some(_) = port_iri[idx] else {
             diags.push(reject(MSG_BOUNDARY_SOURCE_NOT_EMITTED, &output.iri));
             continue;
@@ -665,6 +673,30 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
     for (i, c) in g.connectors.iter().enumerate() {
         if multiply_driven[i] {
             diags.push(reject(MSG_MULTIPLY_DRIVEN, &owner_subject(g, c, i)));
+        }
+    }
+
+    // Boundary-input declarations are a sidecar over `external_inputs`: one declaration per IRI,
+    // independent of fan-out targets. Validate the sidecar before the survivor scan, but defer attr
+    // classification until a target survives so omitted blocks retain the existing non-aborting
+    // deferral behavior.
+    let mut boundary_input_attrs = HashMap::new();
+    let mut seen_boundary_inputs: BTreeSet<&str> = BTreeSet::new();
+    for input in &g.boundary_inputs {
+        let iri = input.iri.as_ref();
+        if !seen_boundary_inputs.insert(iri) {
+            diags.push(reject(MSG_DUPLICATE_BOUNDARY_INPUT, iri));
+            continue;
+        }
+        boundary_input_attrs.insert(iri, &input.attrs);
+        let has_target = g.external_inputs.iter().any(|id| {
+            g.connectors
+                .get(id.0 as usize)
+                .and_then(|connector| connector.iri.as_deref())
+                == Some(iri)
+        });
+        if !has_target {
+            diags.push(reject(MSG_ORPHAN_BOUNDARY_INPUT, iri));
         }
     }
 
@@ -713,7 +745,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
             diags.push(reject(MSG_STRUCTURE, &subject));
             continue;
         }
-        let Some(boundary_iri) = c.iri.as_deref() else {
+        let Some(boundary_iri) = c.iri.as_deref().filter(|iri| !iri.is_empty()) else {
             diags.push(reject(MSG_EXTERNAL_IRI, &subject));
             continue;
         };
@@ -739,7 +771,7 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 diags.push(reject(MSG_STRUCTURE, &subject));
                 continue;
             }
-            let Some(output_iri) = output.iri.as_deref() else {
+            let Some(output_iri) = output.iri.as_deref().filter(|iri| !iri.is_empty()) else {
                 diags.push(reject(MSG_EXTERNAL_IRI, &subject));
                 continue;
             };
@@ -769,10 +801,21 @@ fn plan(g: &ModelGraph) -> Result<(Plan, Vec<Diagnostic>), Vec<Diagnostic>> {
                 // First occurrence mints the boundary node, so its @id joins the emitted set;
                 // later same-IRI entries reuse the node (fan-out grouping), not a duplicate.
                 claim_emitted_id(&mut seen, boundary_iri, &subject, &mut diags);
+                let attrs = match boundary_input_attrs.get(boundary_iri).copied() {
+                    Some(attrs) if attrs.matches(c.value_type) => {
+                        classify_attrs(attrs, boundary_iri, &mut diags)
+                    }
+                    Some(_) => {
+                        diags.push(reject(MSG_STRUCTURE, boundary_iri));
+                        PortAttrs::None
+                    }
+                    None => PortAttrs::None,
+                };
                 boundaries.push(PlannedBoundary {
                     iri: boundary_iri.to_owned(),
                     datatype,
                     targets: vec![target],
+                    attrs,
                 });
             }
         }
@@ -898,56 +941,6 @@ fn param_binding(
     }
 }
 
-/// Classify a type-matched connector's [`Attrs`] into the [`PortAttrs`] emit subset, rejecting
-/// `nominal`/`unbounded`/non-finite bounds (outside the canonical subset) into `diags`. A safe,
-/// total `match attrs` — no `as_real().unwrap()`, so no `plan()`-reachable panic. The importer
-/// hardcodes `nominal: None` and `unbounded: None` (`resolve/attrs.rs`), so any `Some` is outside
-/// the imported-graph contract; a non-finite Real bound would serialize as JSON `null` and
-/// re-import as `None`, silently breaking the RT-2 render fixpoint, so it is rejected too (R6-C).
-fn classify_attrs(attrs: &Attrs, subject: &str, diags: &mut Vec<Diagnostic>) -> PortAttrs {
-    match attrs {
-        Attrs::Real(a) => {
-            if a.nominal.is_some() {
-                diags.push(reject(MSG_ATTR_NOMINAL, subject));
-            }
-            if a.unbounded.is_some() {
-                diags.push(reject(MSG_ATTR_UNBOUNDED, subject));
-            }
-            let min = finite_real_bound(a.min, subject, diags);
-            let max = finite_real_bound(a.max, subject, diags);
-            PortAttrs::Real {
-                unit: a.unit.clone(),
-                quantity: a.quantity.clone(),
-                display_unit: a.display_unit.clone(),
-                min,
-                max,
-            }
-        }
-        Attrs::Integer(a) => PortAttrs::Integer {
-            min: a.min,
-            max: a.max,
-        },
-        Attrs::Boolean(_) | Attrs::String(_) | Attrs::Enum(_) => PortAttrs::None,
-    }
-}
-
-/// Emit a finite Real bound, or reject a non-finite one (R6-C). Mirrors the `is_finite()` guard on
-/// `param_binding`'s Real arm: `serde_json` serializes a non-finite `f64` as JSON `null`, which
-/// `Option<CxfValue>` deserializes back to `None`, so emitting `Some(NaN)` would silently break
-/// `render(G1) == render(G2)`. The importer's `real_connector_bound` stores `Some(r)` with no
-/// `is_finite()` check, so `Some(NaN)` IS import-reachable — this guard is required for RT-2 on
-/// imported graphs, not merely defense-in-depth.
-fn finite_real_bound(v: Option<f64>, subject: &str, diags: &mut Vec<Diagnostic>) -> Option<f64> {
-    match v {
-        Some(x) if x.is_finite() => Some(x),
-        Some(_) => {
-            diags.push(reject(MSG_ATTR_NONFINITE_BOUND, subject));
-            None
-        }
-        None => None,
-    }
-}
-
 /// Quote a `Value::String` payload as a CDL string-literal expression. Only `\` and `"` need
 /// escaping (the `oce-expr` lexer resolves both; every other character — including raw control
 /// characters — passes through the JSON string layer verbatim).
@@ -1007,6 +1000,7 @@ fn build(plan: Plan) -> CxfDocument {
         let mut node = blank_node(boundary.iri);
         node.is_of_data_type = Some(iri_ref(boundary.datatype.to_owned()));
         node.is_connected_to = refs(boundary.targets);
+        emit_port_attrs(&mut node, &boundary.attrs);
         graph.push(node);
     }
 

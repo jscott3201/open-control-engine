@@ -58,6 +58,8 @@ mod routing_boolean;
 mod routing_integer;
 mod source_pulse;
 mod source_timetable;
+mod state_contract;
+mod state_contract_registry;
 mod utilities;
 
 pub use conversions::{BooleanToInteger, BooleanToReal, IntegerToReal, RealToInteger};
@@ -314,6 +316,39 @@ pub trait Block: Send + Sync {
     /// Seed the `[S]` state `region` from resolved parameters (CDL has no `start` attribute; the
     /// initial state seeds from a parameter — §7.4, R-TRAIT-4 / `01` §7 req 2). `[A]` blocks: no-op.
     fn init_state(&self, _region: &mut [u64], _params: &ParamTable) {}
+
+    /// Revision of this resolved instance's runtime-state contract.
+    ///
+    /// Stateless instances return zero. Stateful registry classes return a nonzero revision only
+    /// when their word layout and validator are registered for continuation.
+    fn state_contract_revision(&self) -> u32 {
+        state_contract::revision(self.signature().class_path, self.kind())
+    }
+
+    /// Validate a post-tick state region against this resolved block's structural invariants.
+    ///
+    /// `state_t` and `prev_t` are finite absolute model times in seconds and have equal bits. The
+    /// default implementation handles fixed schemas; parameter-dependent blocks override it.
+    fn validate_state(&self, region: &[u64], state_t: Time, prev_t: Time) -> Result<(), String> {
+        state_contract::validate(self.signature().class_path, region, state_t, prev_t)
+    }
+
+    /// Whether this resolved block can represent `t_now` in its current state words.
+    ///
+    /// Most blocks have no narrower domain than finite model time. Sample-index blocks override
+    /// this to reject before a tick mutates state or stages store inputs.
+    fn time_is_representable(&self, _t_now: Time, _region: &[u64]) -> bool {
+        true
+    }
+
+    /// Whether every time in an increasing simulation horizon fits this block's time state.
+    ///
+    /// `region` is the block's fresh [`Block::init_state`] output. Sampled blocks derive their
+    /// origin at `first` and reuse it when checking `last`; their index formula is monotonic between
+    /// those endpoints.
+    fn simulation_time_is_representable(&self, first: Time, last: Time, region: &[u64]) -> bool {
+        self.time_is_representable(first, region) && self.time_is_representable(last, region)
+    }
 
     /// `[A]` output: `y = f(p, t, u)`. Emit each output by port index via `emit` (R-TRAIT-1).
     /// `[S]` blocks leave this as the default no-op — their output is [`Block::emit_from_state`].

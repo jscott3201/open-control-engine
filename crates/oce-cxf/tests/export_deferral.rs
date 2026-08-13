@@ -610,6 +610,7 @@ fn an_input_that_was_never_driven_does_not_cascade() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 
@@ -830,6 +831,7 @@ fn boundary_entry_for_a_deferred_block_is_dropped_not_rejected() {
         ],
         connections: vec![],
         external_inputs: vec![ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 

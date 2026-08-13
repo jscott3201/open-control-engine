@@ -1,10 +1,11 @@
 //! Class-level block-parameter validation.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 
 use oce_blocks::{ParamRule, lookup};
 use oce_diag::{DiagCode, Diagnostic};
-use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType};
+use oce_model::{BlockInstance, ModelGraph, ParamTable, Value, ValueType, enum_descriptor};
 
 use super::{block_subject_of, params_flattened};
 
@@ -14,9 +15,40 @@ use super::{block_subject_of, params_flattened};
 /// load error for unresolved block implementations.
 pub(crate) fn check_block_params(model: &ModelGraph, diags: &mut Vec<Diagnostic>) {
     for blk in &model.blocks {
+        let mut names = HashSet::with_capacity(blk.params.values.len());
+        for (name, _) in &blk.params.values {
+            if !names.insert(name.as_ref()) {
+                diags.push(
+                    Diagnostic::error(
+                        DiagCode::DuplicateParameter,
+                        format!(
+                            "block `{}` carries duplicate parameter name `{name}`",
+                            blk.class_iri
+                        ),
+                    )
+                    .with_subject(block_subject_of(blk)),
+                );
+            }
+        }
         let Some(entry) = lookup(&blk.class_iri) else {
             continue;
         };
+        for (name, value) in &blk.params.values {
+            if let Value::Enum { class, ordinal } = value
+                && enum_descriptor(*class).is_none_or(|descriptor| {
+                    *ordinal == 0 || *ordinal as usize > descriptor.members.len()
+                })
+            {
+                push_range_error(
+                    blk,
+                    diags,
+                    format!(
+                        "enum parameter `{name}` on block `{}` is outside its canonical descriptor",
+                        blk.class_iri
+                    ),
+                );
+            }
+        }
         for rule in entry.param_rules() {
             check_rule(blk, *rule, diags);
         }

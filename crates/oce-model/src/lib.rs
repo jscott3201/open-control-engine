@@ -33,9 +33,10 @@ impl EnumClassId {
 }
 
 pub use types::{
-    SimpleController, ZeroTime, enum_class_id, enum_member_ordinal, g36_enum_class_id,
-    g36_enum_literals, g36_integer_constant, g36_integer_constant_in_package,
-    is_g36_integer_constant_package, is_g36_type_path,
+    EnumDescriptor, SimpleController, ZeroTime, enum_class_id, enum_descriptor,
+    enum_descriptor_by_path, enum_member_ordinal, g36_enum_class_id, g36_enum_literals,
+    g36_integer_constant, g36_integer_constant_in_package, is_g36_integer_constant_package,
+    is_g36_type_path,
 };
 
 /// A scalar CDL value (CDL §7.4.1). The payload **only** — attributes live in [`Attrs`] and
@@ -497,6 +498,22 @@ pub struct BoundaryOutput {
     pub attrs: Attrs,
 }
 
+/// An authored top-composite boundary input declaration.
+///
+/// No derived equality: `attrs` carries `f64` bounds, so a derived `PartialEq` would compare
+/// floats with `==` — the epsilon-class hazard `TESTING.md` forbids. Compare fields explicitly
+/// (bounds by `to_bits`), as [`Connector`] consumers already do.
+#[derive(Clone, Debug)]
+pub struct BoundaryInput {
+    /// The boundary input's expanded authored subject IRI, preserved verbatim for CXF export.
+    pub iri: Arc<str>,
+    /// The declared node's §7.4.1 attributes (unit/quantity/displayUnit/min/max).
+    ///
+    /// Its variant matches the boundary node's derived [`ValueType`]. These attributes describe
+    /// the declaration; they do not replace or alias a target connector's authored attributes.
+    pub attrs: Attrs,
+}
+
 /// The flattened, monomorphic model the engine schedules and ticks (D1's executable truth).
 ///
 /// This is the canonical in-memory artifact named `ModelGraph` by `oce-cxf` and the store
@@ -514,6 +531,15 @@ pub struct ModelGraph {
     /// in-degree-0 input that is **not** listed here as a single-assignment error. Empty for a
     /// fully-internal hand-built model.
     pub external_inputs: Vec<ConnectorId>,
+    /// Authored root boundary-input declarations with at least one surviving child input target.
+    ///
+    /// There is one entry per represented declaration, in boundary-node order from the source
+    /// document's `@graph`. Hosts must key entries by IRI rather than vector position because a
+    /// whole-`@graph` permutation may change this order. Fan-out does not duplicate entries:
+    /// [`ModelGraph::external_inputs`] independently stores the ordered child connector targets.
+    /// These attributes are declaration metadata only; they do not participate in scheduling,
+    /// execution, connector identity, or durable engine state.
+    pub boundary_inputs: Vec<BoundaryInput>,
     /// Authored top-composite boundary outputs driven by surviving child output connectors.
     ///
     /// Unlike a boundary input, whose IRI can be back-filled onto its surviving target connector,

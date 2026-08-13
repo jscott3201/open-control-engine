@@ -46,10 +46,21 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143
-      - name: Clear cached nextest reports
-        run: rm -f target/nextest/{ci,ci-release}/junit.xml
-      - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
-      - run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - name: Clear cached reports and state vectors
+        run: >-
+          rm -f target/nextest/{ci,ci-release}/junit.xml
+          target/{portable,target}-state-{debug,release}.bin
+      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+      - run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/target-state-release.bin
+      - run: >-
+          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
+          cmp target/target-state-debug.bin target/target-state-release.bin
       - run: >-
           for profile in ci ci-release;
           do test -s "target/nextest/$profile/junit.xml";
@@ -62,6 +73,38 @@ jobs:
             target/nextest/ci-release/junit.xml
           if-no-files-found: error
           retention-days: 14
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: portable-state-${{ matrix.runner }}
+          path: |
+            target/portable-state-debug.bin
+            target/target-state-debug.bin
+          if-no-files-found: error
+          retention-days: 14
+  portable-state-cross-arch:
+    needs: determinism-matrix
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: portable-state-ubuntu-latest
+          path: target/state-x86
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: portable-state-ubuntu-24.04-arm
+          path: target/state-arm
+      - run: >-
+          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
+          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
+      - env:
+          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
+          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
 EOF
   cat > "$dir/release-gate.yml" <<'EOF'
 on:
@@ -342,7 +385,34 @@ remove_no_db_gate() {
 remove_determinism_matrix() {
   dir="$1"
   _deny="$2"
-  grep -v 'oce-blocks -p oce-expr' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  grep -v 'oce-api -p oce-blocks -p oce-expr' "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+comment_foreign_restore_command() {
+  dir="$1"
+  _deny="$2"
+  grep -v 'foreign_matrix_target_snapshot_refuses_restore_when_supplied' \
+    "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+allow_absent_foreign_restore_test() {
+  dir="$1"
+  _deny="$2"
+  sed '/cargo nextest run -p oce-api --lib/ s/ --no-tests=fail//' \
+    "$dir/ci.yml" > "$dir/ci.yml.tmp"
+  mv "$dir/ci.yml.tmp" "$dir/ci.yml"
+}
+
+remove_foreign_restore_nextest_install() {
+  dir="$1"
+  _deny="$2"
+  awk '
+    /portable-state-cross-arch:/ { in_job = 1 }
+    in_job && /tool: nextest@0.9.143/ { next }
+    { print }
+  ' "$dir/ci.yml" > "$dir/ci.yml.tmp"
   mv "$dir/ci.yml.tmp" "$dir/ci.yml"
 }
 
@@ -442,6 +512,12 @@ run_case missing-no-db-gate fail remove_no_db_gate \
   "run default-no-db smoke"
 run_case missing-determinism-matrix fail remove_determinism_matrix \
   "debug determinism subset with hard-fail-on-zero-tests"
+run_case commented-foreign-restore fail comment_foreign_restore_command \
+  "restore and refuse the foreign target-bound snapshot"
+run_case vacuous-foreign-restore fail allow_absent_foreign_restore_test \
+  "foreign target-bound restore hard-fails when its test is absent"
+run_case missing-foreign-nextest-install fail remove_foreign_restore_nextest_install \
+  "pinned cargo-nextest install for foreign restore"
 run_case missing-nextest-junit-artifacts fail remove_nextest_junit_artifacts \
   "upload nextest JUnit report artifacts"
 run_case partial-nextest-junit-artifacts fail remove_one_nextest_junit_artifact \

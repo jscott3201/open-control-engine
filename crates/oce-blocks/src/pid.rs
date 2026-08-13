@@ -362,6 +362,11 @@ impl Block for Pid {
         }
     }
 
+    fn validate_state(&self, region: &[u64], _state_t: f64, prev_t: f64) -> Result<(), String> {
+        let state = layout(self.config, false);
+        crate::state_contract::validate_pid(region, prev_t, state.prev_t, None)
+    }
+
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {
         emit_pid(inputs, self.config, None, layout(self.config, false), emit);
     }
@@ -435,6 +440,11 @@ impl Block for PidWithReset {
         if let Some(prev_trigger) = state.prev_trigger {
             region[prev_trigger] = 0;
         }
+    }
+
+    fn validate_state(&self, region: &[u64], _state_t: f64, prev_t: f64) -> Result<(), String> {
+        let state = layout(self.config, true);
+        crate::state_contract::validate_pid(region, prev_t, state.prev_t, state.prev_trigger)
     }
 
     fn step_algebraic(&self, _ctx: &Ctx<'_>, inputs: &[Value], emit: &mut dyn FnMut(usize, Value)) {

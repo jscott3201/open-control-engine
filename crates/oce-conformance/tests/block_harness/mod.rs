@@ -71,11 +71,11 @@ pub(crate) enum ParamValue {
 #[derive(Copy, Clone)]
 pub(crate) struct BlockCase {
     pub(crate) slug: &'static str,
-    class_path: &'static str,
+    pub(crate) class_path: &'static str,
     reference_path: &'static str,
-    inputs: &'static [Port],
+    pub(crate) inputs: &'static [Port],
     params: &'static [Param],
-    outputs: &'static [Port],
+    pub(crate) outputs: &'static [Port],
 }
 
 #[allow(dead_code)]
@@ -250,6 +250,15 @@ pub(crate) fn drive_case_for_audit(
     let cxf = build_cxf(case);
     let run = drive_case(case, sequence, &cxf, &reference);
     (reference, run)
+}
+
+pub(crate) fn drive_case_with_external_reference(
+    case: &BlockCase,
+    sequence: &str,
+    reference: &CombiTimeTable,
+) -> oce_conformance::DriverRun {
+    let cxf = build_cxf(case);
+    drive_case(case, sequence, &cxf, reference)
 }
 
 fn drive_case_with_mode(

@@ -25,6 +25,10 @@ use support::{
     read_output_golden,
 };
 
+mod block_harness;
+#[path = "open_modelica_nand/support.rs"]
+mod scoped_open_modelica_nand;
+
 const ECONOMIZER_ENABLE: &str =
     include_str!("../../oce-cxf/tests/fixtures/g36/multizone_vav_economizer_enable.jsonld");
 const SEQUENCE: &str = "multizone_vav_economizer_enable";
@@ -311,6 +315,38 @@ fn conformance_report_is_deterministic() {
         .expect("assemble report")
     };
     assert_eq!(build(), build(), "report assembly must be deterministic");
+}
+
+#[test]
+fn scoped_openmodelica_case_does_not_change_global_tier_three_status() {
+    let tier4_ref = tier_a_reference();
+    let golden = read_output_golden(&SPEC);
+    let tier2_ref = driver_reference_from_output_golden(&SPEC, &golden);
+    let tier2_config = config_for(&SPEC);
+    let tier2_options = options_for(&SPEC);
+    let assemble = || {
+        assemble_report(&ConformanceRun {
+            cxf: ECONOMIZER_ENABLE.as_bytes(),
+            tier4: RunInputs {
+                config: &tier4_config(),
+                reference: &tier4_ref,
+                options: &tier4_options(),
+            },
+            tier2: Tier2Source::Golden(RunInputs {
+                config: &tier2_config,
+                reference: &tier2_ref,
+                options: &tier2_options,
+            }),
+        })
+        .unwrap()
+    };
+    let before = assemble();
+    assert_eq!(status(&before, ConformanceTier::Tier3), TierStatus::Skipped);
+    let external = scoped_open_modelica_nand::read_reference("nand.canonical.csv").unwrap();
+    assert!(scoped_open_modelica_nand::evaluate(&external).exact_match);
+    let after = assemble();
+    assert_eq!(status(&after, ConformanceTier::Tier3), TierStatus::Skipped);
+    assert_eq!(before, after);
 }
 
 #[test]

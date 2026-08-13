@@ -92,6 +92,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   previously fell through the generic keyword skip, so the engine ignored identity bindings the
   document required. It now refuses as `non-subset-construct` before any identity slot is expanded,
   for every payload shape and for each occurrence in a context list.
+- **Node-scoped JSON-LD contexts fail closed** (#282). A direct `@context` on an `@graph` node,
+  followed identity/type reference, or modeled value/term object was retained while expansion
+  applied only the document context, so an author and the engine could resolve the same spelling to
+  different IRIs or datatypes. Ingest now refuses the scoped context before identity expansion and
+  indexing; Layer-A parse/serialize remains lossless.
 - **An identity token must be an absolute IRI on both verbatim arms** (#234, #238). `expand_token`
   had two arms returning a token unchanged without checking it was absolute, so a malformed `@id`
   like `2024:MinLoop.con.y`, `:x` or `1st://x` became a durable point key with zero diagnostics —
@@ -157,11 +162,23 @@ and a gate that accepted any text would restore exactly the false assurance desc
   is the #227 failure shape repeating: a loss identical on both sides of a comparison is invisible
   to that comparison. A per-node authored-vs-exported comparator now runs key by key over the G36
   corpus, pinning the population from its own counters at 97 surviving declared outputs of which 61
-  carry attributes (`export_declared_output_attrs.rs:283`). Boundary **inputs** stay out of scope
-  by ruling (#243). Two consequences are worth knowing before you emit: reusing the connector-attr
+  carry attributes (`export_declared_output_attrs.rs:283`). Boundary inputs were deferred to #243.
+  Two consequences are worth knowing before you emit: reusing the connector-attr
   path makes six refusal shapes reachable from a declared output node that were previously
   reachable only from an instance port — each pinned with its own rejected fixture and exact
   message, none occurring in the G36 corpus.
+- **Declared boundary inputs carry and export their own §7.4.1 attributes** (#284, fixes #243). The
+  resolver previously back-filled only the boundary IRI onto each child target, so all five fields
+  vanished before `ModelGraph` existed. One declaration may fan out, and child ports retain their
+  own metadata; `ModelGraph.boundary_inputs` therefore stores declaration attrs separately from
+  `external_inputs` and `Connector.attrs`. The current 47-document sweep measures 184 authored
+  root inputs, 170 surviving exports, and 100 attr-bearing survivors; every scoped value now
+  compares to the authored node key by key. A second oracle removes only those five fields from the
+  new exports and recovers all 47 pre-change canonical byte streams. `@type`, undriven declarations,
+  and boundary-input §7.10 unification remain out of scope. Two distinct boundary IRIs claiming one
+  child input now refuse instead of silently overwriting the first identity, and a boundary input
+  cannot reuse an instance connector's IRI. Adding the sidecar is source-breaking for exhaustive
+  `oce-model::ModelGraph` literals; the frozen `oce-api` surface is unchanged.
 - **Declared boundary-output attributes now unify with their source connector** (#274, fixes #273). The
   `BoundaryOutput.attrs` alias previously sat outside every §7.10 cluster, so a declared output
   claiming `unit: "Pa"` over a `unit: "K"` driver loaded and exported both contradictory contracts.
@@ -200,6 +217,20 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **Engine state can be checkpointed, persisted, and restored**
+  (#283, fixes [issue #143](https://github.com/jscott3201/open-control-engine/issues/143)).
+  `EngineCheckpoint` is an
+  opaque process-local image that may rewind a compatible running engine. `EngineStateSnapshot`
+  carries canonical, integrity-checked bytes for durable continuation into a freshly loaded engine;
+  its decoder is capped at 64 MiB and rejects malformed or non-canonical input with typed
+  `EngineStateError` variants. Compatibility is derived from the executable manifest rather than
+  the diagnostic model id, including stable block and connector identities, parameters, port
+  bindings, schedule, state-slot revisions, and enum descriptors. Restore validates the complete
+  image before mutating the target and never calls the `Store` port. Persistence, authentication,
+  generation fencing, real-time epoch configuration, and actuator ownership remain host-owned.
+  Sampled-time blocks now refuse finite model times that their integer clock state cannot represent,
+  before any engine or store mutation; sampled periods and `SampleTrigger` shifts must also be
+  finite at load.
 - **A simulation preflight refusal preserves the prior run** (#266, fixes #260). `simulate` now
   resolves fixed inputs and the first list returned by an input closure before clearing the run
   clock or re-seeding state words. An unknown or wrong-typed preflight input therefore leaves model
@@ -370,6 +401,18 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Verification
 
+- **Human-adjudicated conformance discrepancies have a bounded evidence register** (#285). The
+  register is test-only and initially empty; a separate nonempty synthetic record exercises its
+  closed schema, lifecycle, repository containment, and evidence digests on every PR. Register
+  membership cannot alter discrepancies, tolerances, comparison results, tier status, goldens, or
+  test outcomes, and the register adds no public or runtime surface.
+- **One exhaustive OpenModelica differential now exists for `CDL.Logical.Nand`** (#286). Two sandboxed
+  native-arm64 OMC 1.25.1 runs produced byte-identical raw CSV for all four Boolean input pairs; a
+  strict keep-last projection feeds the existing facade-bound exact harness. The evidence set binds
+  the image, source trees, raw and canonical bytes, logs, OCI metadata, and semantic/projection
+  mutation controls. This is scoped Tier-3 evidence for one stateless Boolean class. The global
+  Tier-3 report remains skipped, and the result says nothing about sequences, stateful behavior,
+  numeric tolerances, or cross-architecture OMC identity.
 - **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
   repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
   zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
@@ -446,6 +489,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
+- **Release records and contributor gate prose were reconciled before promotion** (#287). State
+  snapshot, known-divergence, and scoped OpenModelica entries now cite their implementing PRs, and
+  the contributor guide and gate comment name the three test packages that run per PR.
 - Measured tick throughput is recorded per run, with the commit, host and method that
   produced it (#205), with a later correction to the load figure, which was a cold-process
   artifact (#207). The file moved from `BENCHMARKS.md` to

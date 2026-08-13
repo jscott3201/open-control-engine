@@ -1,0 +1,69 @@
+{
+  "format": "oce-known-divergence-register-v1",
+  "entries": [
+    {
+      "id": "DVG-000001",
+      "summary": "Synthetic schema-test disagreement; this is not an observed project divergence.",
+      "subject": {
+        "class": "CDL.Logical.Nand",
+        "scenario": "schema_test_fixture",
+        "signal": "y",
+        "observation": "u1=false,u2=false"
+      },
+      "producer_cases": [
+        {
+          "producer": "clean_room",
+          "case_id": "clean-room:CDL.Logical.Nand:schema_test:fixture"
+        },
+        {
+          "producer": "tier_a",
+          "case_id": "tier-a-schema-fixture"
+        },
+        {
+          "producer": "engine",
+          "case_id": "engine-schema-fixture"
+        }
+      ],
+      "parties": [
+        "analytical",
+        "tier_a",
+        "engine"
+      ],
+      "evidence": [
+        {
+          "party": "analytical",
+          "kind": "derivation",
+          "path": "crates/oce-conformance/tests/fixtures/known_divergence/schema_test_artifact.txt",
+          "sha256": "210e6fadba176fbd5027a0d7d2062d758c01d06ebc2e87152734d3730aaa9419",
+          "summary": "Synthetic schema-test artifact standing in for a derivation."
+        },
+        {
+          "party": "tier_a",
+          "kind": "tier_a_reference",
+          "path": "crates/oce-conformance/tests/fixtures/known_divergence/schema_test_artifact.txt",
+          "sha256": "210e6fadba176fbd5027a0d7d2062d758c01d06ebc2e87152734d3730aaa9419",
+          "summary": "Synthetic schema-test artifact standing in for a Tier-A reference."
+        },
+        {
+          "party": "engine",
+          "kind": "engine_run",
+          "path": "crates/oce-conformance/tests/fixtures/known_divergence/schema_test_artifact.txt",
+          "sha256": "210e6fadba176fbd5027a0d7d2062d758c01d06ebc2e87152734d3730aaa9419",
+          "summary": "Synthetic schema-test artifact standing in for an engine run."
+        }
+      ],
+      "comparison_reference": "crates/oce-conformance/src/clean_room.rs",
+      "opened_on": "2026-08-01",
+      "reviewed_on": "2026-08-10",
+      "reviewed_commit": "0123456789abcdef0123456789abcdef01234567",
+      "state": "open",
+      "disposition": "Synthetic schema test data remains unresolved by construction.",
+      "upstream_issue": {
+        "status": "not_applicable",
+        "url": null
+      },
+      "superseded_by": null,
+      "conformance_effect": "evidence_only"
+    }
+  ]
+}

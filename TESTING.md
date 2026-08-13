@@ -86,9 +86,10 @@ Worked examples of the bar, and where each stands:
 
 ### 3. Oracle cross-checks — agreement with the reference implementation
 
-CDL has a normative reference (the Modelica *Buildings* library / OpenModelica). Where a block or
-expression has a reference result, **cross-check against it** rather than against our own
-re-derived expectation — otherwise we are grading our own homework.
+The Modelica *Buildings* library supplies reference semantics, and an independently executed
+implementation can detect disagreements that an in-repository derivation misses. External output
+is a detector, not a verdict: adjudication follows analytical evidence, then Dymola, then
+OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
 
 - Oracle vectors live in the `oce-conformance` crate — the home for reference traces and the CDL
   §7.7.2 expression-semantics vectors (R10.x). `compare()` is implemented
@@ -121,6 +122,20 @@ re-derived expectation — otherwise we are grading our own homework.
   mismatch is debuggable.
 - When no oracle exists for a construct, say so in the test and fall back to a hand-derived
   golden with the derivation documented.
+
+Detected disagreements may be recorded in
+`crates/oce-conformance/tests/fixtures/known_divergence/register.json` after human adjudication.
+The register is evidence only: membership does not change discrepancies, comparison settings,
+tier status, goldens, or test results. Its initial revision is empty because no current clean-room
+Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
+digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
+The separate OpenModelica evidence set executes one exhaustive finite-domain case:
+`CDL.Logical.Nand/all_boolean_input_pairs_evented`, under exact Boolean comparison against OMC
+1.25.1 and the pinned Buildings and MSL sources. The light-gated sentinel validates the committed
+raw output, keep-last projection, schedule, repeat-run records, OCI identities, and mutation
+controls; Docker does not run in CI. This is scoped Tier-3 evidence for that case only. The global
+Tier-3 report remains `Skipped`; no stateful, numeric, sequence-wide, or cross-architecture OMC
+claim follows from it.
 
 ### 4. Determinism goldens — same input, bit-identical output, every time
 
@@ -179,12 +194,12 @@ CI is **dev-light / release-heavy** (keep per-change PRs fast; save the heavy su
 
 | Gate | Trigger | Runs tests? |
 | --- | --- | --- |
-| `ci.yml` (light) | PRs into `development` | **`oce-blocks` and `oce-expr` only** — the `determinism-matrix` job runs those two crates on x86_64 and arm64, in debug and release codegen. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself — which includes an **unconditional** `cargo deny check bans licenses sources`, stricter than the standalone cargo-deny job that triggers only on a manifest change. |
+| `ci.yml` (light) | PRs into `development` | **`oce-api`, `oce-blocks`, and `oce-expr` only** — the `determinism-matrix` job runs those three crates on x86_64 and arm64, in debug and release codegen. It requires portable snapshots to match across architectures and both portable and target-bound snapshots to match across codegen profiles; target-bound snapshots must differ across architectures, and the x86_64 job parses and refuses the arm64 bytes through `restore_state`. No other crate's tests run. Alongside them: fmt, clippy `-D warnings`, build, rustdoc, file-size, no-secret, workspace-wide default-no-db, cargo-machete, stale crate-status header lint, golden-gen anti-tautology firewall, gate-fixture smoke, a `gate (light)` job that runs `.agents/gate.sh` itself — which includes an **unconditional** `cargo deny check bans licenses sources`, stricter than the standalone cargo-deny job that triggers only on a manifest change. |
 | `release-gate.yml` (heavy) | **Any** non-draft PR targeting `main` (it filters on the base branch only — there is no `head_ref == development` condition), daily cron against `development`, manual dispatch | **Yes** — full nextest, release-codegen nextest, doctests, two armed per-crate public-api surface snapshots (`oce-api` and `oce-store`), plus a re-run of the light gates (including stale crate-status header lint) and an unconditional cargo-deny. |
 | `advisories.yml` | Daily cron, manual dispatch | **No** — advisory/yanked scan only (`cargo deny check advisories`, `yanked = "deny"`, `ignore = []`). |
 
 Read the first row in the dangerous direction and you will trust a green PR you
-should not. A change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag`
+should not. A change confined to `oce-cxf`, `oce-store`, `oce-conformance`, or `oce-diag`
 can show every check green having run none of its own tests. Before claiming tests
 pass on such a change, run the suite yourself:
 

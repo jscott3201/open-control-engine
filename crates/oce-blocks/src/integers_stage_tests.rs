@@ -107,6 +107,19 @@ fn hold_duration_preserves_pre_y_start_until_guard_opens() {
 }
 
 #[test]
+fn elapsed_deadline_remains_valid_while_the_stage_condition_is_inactive() {
+    let stage = IntegerStage {
+        n: 4,
+        hold_duration: 2.0,
+        h: 0.05,
+        pre_y_start: 0,
+    };
+    let (_, region) = run(&stage, &[(0.0, 0.0), (10.0, 0.0)]);
+    assert!(f64::from_bits(region[1]) < 10.0);
+    stage.validate_state(&region, 10.0, 10.0).unwrap();
+}
+
+#[test]
 fn stage_thresholds_are_lower_inclusive_and_top_threshold_selects_n() {
     let stage = IntegerStage {
         n: 4,

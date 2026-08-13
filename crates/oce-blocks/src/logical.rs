@@ -460,10 +460,8 @@ pub struct SampleTrigger {
 
 impl Default for SampleTrigger {
     fn default() -> Self {
-        // `period`/`shift` are author-supplied via CXF; `period > 0` is REQUIRED by CDL (a dedicated
-        // oce-validate rule enforcing it is pending — see `sample_index` for the safe degradation
-        // until then). These defaults only make a param-less construction well-defined (a real model
-        // always carries the resolved values, so this is never a silent-wrong-value path).
+        // Loaded models require finite `period > 0` and finite `shift`. These defaults keep direct
+        // param-less registry construction well-defined.
         Self {
             period: 1.0,
             shift: 0.0,
@@ -485,10 +483,7 @@ impl SampleTrigger {
             let phase = self.shift - (self.shift / self.period).floor() * self.period;
             ((t_now - phase) / self.period + SAMPLE_INDEX_EPS).floor() as i64
         } else {
-            // `period > 0` is REQUIRED by CDL but is NOT yet enforced by oce-validate here; until
-            // that rule lands, a non-positive or NaN `period` degrades safely to "one sample
-            // at/after `shift`, then never" — deterministic, never dividing by zero, and panic-free
-            // in every build.
+            // Keep direct block construction panic-free even though loaded models reject this case.
             if t_now >= self.shift { 0 } else { -1 }
         }
     }
@@ -515,6 +510,20 @@ impl Block for SampleTrigger {
     }
     fn init_state(&self, region: &mut [u64], _params: &ParamTable) {
         region[0] = (-1i64).cast_unsigned(); // -1 == "no sample fired yet"
+    }
+    fn validate_state(&self, region: &[u64], state_t: Time, _prev_t: Time) -> Result<(), String> {
+        crate::state_contract::validate_sample_trigger(region, state_t, self.period, self.shift)
+    }
+    fn time_is_representable(&self, t_now: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sample_trigger_time_representable(t_now, self.period, self.shift)
+    }
+    fn simulation_time_is_representable(&self, first: Time, last: Time, _region: &[u64]) -> bool {
+        crate::state_contract::sample_trigger_horizon_representable(
+            first,
+            last,
+            self.period,
+            self.shift,
+        )
     }
     fn emit_from_state(
         &self,

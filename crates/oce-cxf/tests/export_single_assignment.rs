@@ -439,6 +439,7 @@ fn a_boundary_input_that_is_also_driven_by_one_output_is_accepted() {
         ],
         connections: vec![wire(0, 1)],
         external_inputs: vec![ConnectorId(1)],
+        boundary_inputs: vec![],
         boundary_outputs: vec![],
     };
 

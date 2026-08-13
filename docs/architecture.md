@@ -171,5 +171,6 @@ Each of these is a design commitment, not a gap waiting to be closed.
   point should do, or what safe state looks like for your equipment. Those decisions are yours, and
   they are enumerated in [host-responsibilities.md](host-responsibilities.md).
 
-For what the engine has and has not been verified against — including the tiers that are not wired —
-see [`TESTING.md`](../TESTING.md) and the verification section of the [README](../README.md).
+For what the engine has and has not been verified against — including the global report tiers that
+are not wired — see [`TESTING.md`](../TESTING.md) and the verification section of the
+[README](../README.md).

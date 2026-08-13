@@ -85,7 +85,7 @@ impl TierReport {
 
     /// Build a skipped tier report.
     ///
-    /// This is used for Tier 3 until the cross-implementation toolchain is wired in.
+    /// This is used for global Tier 3 until the report can represent partial external coverage.
     #[must_use]
     pub fn skipped(tier: ConformanceTier, summary: impl Into<String>) -> Self {
         Self {

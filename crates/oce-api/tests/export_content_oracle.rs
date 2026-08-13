@@ -15,11 +15,12 @@
 //! this test's `OCE_BLESS` arm at `development`@`c06a657`, before any `@context`-expansion
 //! code existed. It was regenerated under the #233 ruling when declared boundary outputs began
 //! exporting their authored attributes, then under #273 when §7.10 propagation began joining those
-//! attributes to their source connectors. The checked-in file is therefore a post-#273
-//! current-engine snapshot. Direct validator tests pin the propagation and conflict rules;
-//! `boundary_output_attrs.rs` independently pins the direction of one corpus document's exported,
-//! host-visible, and durable projection. Regenerating the file (`OCE_BLESS=1`) replaces its evidence
-//! with another current-engine snapshot, so do so only for a ratified behavior change and record why.
+//! attributes to their source connectors, then under #243 when surviving boundary inputs began
+//! exporting their declaration-local attributes. The checked-in file is therefore a post-#243
+//! current-engine snapshot. Direct validator tests pin output propagation and conflict rules;
+//! `export_declared_input_attrs.rs` independently proves that removing only #243's five scoped keys
+//! recovers every pre-#243 export. Regenerating the file (`OCE_BLESS=1`) replaces its evidence with
+//! another current-engine snapshot, so do so only for a ratified behavior change and record why.
 
 use std::fmt::Write as _;
 use std::fs;
@@ -35,9 +36,9 @@ const FILE_HEADER: &str = "\
 # Owner test: crates/oce-api/tests/export_content_oracle.rs (regenerate with OCE_BLESS=1).
 # Honesty sequence: first generated at development@c06a657, before @context expansion;
 # regenerated under #233 for authored declared-output attrs, then under #273 when section-7.10
-# propagation joined those attrs to their source connectors. This is a post-#273 current-engine
-# snapshot; direct validator tests pin the rules and boundary_output_attrs.rs pins one directional
-# document, host-visible, and durable projection independently.
+# propagation joined those attrs to their source connectors, then under #243 for declaration-local
+# boundary-input attrs. This is a post-#243 current-engine snapshot; export_declared_input_attrs.rs
+# proves that stripping only #243's five scoped keys recovers every pre-#243 corpus export.
 # Format: <fixture stem> <fnv1a128 hex over ExportReport::bytes> ok|incomplete:<warnings>
 ";
 

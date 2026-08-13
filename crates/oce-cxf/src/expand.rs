@@ -29,12 +29,13 @@
 //!   pinned behavior for junk typing tokens (`resolve_errors.rs` pins `@type: "NotAnIri"` →
 //!   `ClassNotFound`).
 //!
-//! Deliberately out of scope: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
-//! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type`
-//! annotation inside `S231:value` typed literals (an XSD datatype, not a graph identity), and
-//! the lossless passthrough (`other`) maps — the semantic payload body is carried verbatim for
-//! re-emit (`_spec/05` R-SEM-6). A generic JSON walk over `@id` keys would violate all three at
-//! once and would refuse the shipped `"degC"` unit term.
+//! Deliberately excluded from expansion: the [`crate::dto::TermAttr::Iri`] arm (`unit`/`quantity`/
+//! `displayUnit` are lexical terms consumed verbatim by attribute parsing), the `@type` annotation
+//! inside typed literals (an XSD datatype, not a graph identity), and the lossless passthrough
+//! (`other`) maps. Their enclosing modeled objects are still checked for a direct `@context`, which
+//! is refused rather than applied. The remaining semantic payload body is carried verbatim for
+//! re-emit (`_spec/05` R-SEM-6). A generic JSON walk over `@id` keys would violate all three
+//! exclusions at once and would refuse the shipped `"degC"` unit term.
 //!
 //! `@context` handling: the supported form is an **inline prefix map** — a single map, or a
 //! list of maps merged in order with later bindings overriding earlier ones (JSON-LD context
@@ -51,6 +52,10 @@
 //! canonical identity. Any other value shape is refused as `MalformedDocument`. A **remote
 //! context** — the whole `@context` a string IRI, or a string element inside the list — is refused
 //! as `NonSubsetConstruct`: a deterministic embedded engine dereferences nothing at load.
+//! A direct `@context` on any `@graph` node, followed identity/typing reference, or modeled
+//! value/term object is also refused as `NonSubsetConstruct`, regardless of its value shape.
+//! Applying only the document context while silently retaining a scoped context would let the
+//! author and engine assign different identities or datatypes to the same semantic value.
 //! Context-shape validation runs BEFORE slot expansion and its refusals return alone, so a
 //! `RelativeIri` refusal's "declares no @base" clause is literally true whenever it fires.
 
@@ -60,18 +65,23 @@ use oce_diag::{DiagCode, Diagnostic};
 
 use crate::dto::{Context, CxfDocument, IriRef, Node, OneOrMany};
 
+#[path = "context_scope.rs"]
+mod context_scope;
+
 /// Declared `@context` prefix/term substitutions: term → IRI.
 type PrefixTable = BTreeMap<String, String>;
 
 /// Expand `doc`'s identity and typing tokens against its own `@context`.
 ///
 /// Returns the expanded working clone the resolver keys on, or every refusal diagnostic when
-/// any identity token cannot be canonicalized or a non-keyword `@context` term is not a simple
-/// string IRI. The input document is never mutated — the DTO keeps the raw source (R-3's
+/// any identity token cannot be canonicalized, a non-keyword `@context` term is not a simple
+/// string IRI, or a scoped context appears on an `@graph` node, followed reference, or modeled
+/// value/term object. The input document is never mutated — the DTO keeps the raw source (R-3's
 /// "retain the raw string" lives in the Layer-A document, not in the resolved graph).
 pub(crate) fn expand_document(doc: &CxfDocument) -> Result<CxfDocument, Vec<Diagnostic>> {
     let mut context_diags = Vec::new();
     let table = prefix_table(&doc.context, &mut context_diags);
+    context_scope::collect_refusals(doc, &mut context_diags);
     if !context_diags.is_empty() {
         // Context-shape refusals return alone, before any slot is inspected: whenever the slot
         // pass below reports `RelativeIri`, "declares no @base" is literally true, because a

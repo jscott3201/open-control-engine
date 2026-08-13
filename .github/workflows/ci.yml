@@ -6,7 +6,7 @@
 # This per-PR gate is the LIGHT gate: the near-instant checks plus the compile-requiring lints
 # (clippy -D warnings), a workspace build, cargo-machete unused-dependency detection, and gate-script
 # behavior fixtures, stale crate-status header lint, and a targeted cross-arch determinism subset
-# for oce-blocks/oce-expr. It does NOT run the full engine test suite — keeping per-change PRs into
+# for oce-api/oce-blocks/oce-expr. It does NOT run the full workspace test suite — keeping PRs into
 # `development` fast. The heavy test suite (cargo nextest run for unit + integration tests, cargo
 # nextest run with release codegen for panic-freedom regressions, and cargo test --doc for doctests
 # — nextest cannot run doctests) lives in the development -> main release gate at
@@ -160,12 +160,24 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest@0.9.143
-      - name: Clear cached nextest reports
-        run: rm -f target/nextest/{ci,ci-release}/junit.xml
+      - name: Clear cached reports and state vectors
+        run: >-
+          rm -f target/nextest/{ci,ci-release}/junit.xml
+          target/{portable,target}-state-{debug,release}.bin
       - name: cargo nextest determinism subset
-        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-debug.bin
+          OCE_TARGET_STATE_OUT: target/target-state-debug.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci --no-tests=fail
       - name: cargo nextest determinism subset --release
-        run: cargo nextest run -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+        env:
+          OCE_PORTABLE_STATE_OUT: target/portable-state-release.bin
+          OCE_TARGET_STATE_OUT: target/target-state-release.bin
+        run: cargo nextest run -p oce-api -p oce-blocks -p oce-expr --locked --profile ci-release --cargo-profile release --no-tests=fail
+      - name: Compare snapshot bytes across codegen profiles
+        run: >-
+          cmp target/portable-state-debug.bin target/portable-state-release.bin &&
+          cmp target/target-state-debug.bin target/target-state-release.bin
       - name: Require complete nextest JUnit report set
         run: >-
           for profile in ci ci-release;
@@ -181,6 +193,46 @@ jobs:
             target/nextest/ci-release/junit.xml
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload portable state vector
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: portable-state-${{ matrix.runner }}
+          path: |
+            target/portable-state-debug.bin
+            target/target-state-debug.bin
+          if-no-files-found: error
+          retention-days: 14
+
+  portable-state-cross-arch:
+    name: portable state cross-arch equality
+    if: github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'
+    needs: determinism-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.143
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: portable-state-ubuntu-latest
+          path: target/state-x86
+      - uses: actions/download-artifact@v7.0.0
+        with:
+          name: portable-state-ubuntu-24.04-arm
+          path: target/state-arm
+      - name: Compare portable snapshot bytes
+        run: >-
+          cmp target/state-x86/portable-state-debug.bin target/state-arm/portable-state-debug.bin &&
+          ! cmp -s target/state-x86/target-state-debug.bin target/state-arm/target-state-debug.bin
+      - name: Refuse a target-bound snapshot from the other architecture
+        env:
+          OCE_FOREIGN_TARGET_STATE_IN: target/state-arm/target-state-debug.bin
+        run: >-
+          cargo nextest run -p oce-api --lib --locked --profile ci --no-tests=fail
+          -E 'test(=tests::state_portability_tests::foreign_matrix_target_snapshot_refuses_restore_when_supplied)'
 
   clippy:
     name: clippy (-D warnings)

@@ -21,6 +21,7 @@
 //! | `enum_deferral_miniature.export.cxf.json`| the deferral survivor cone — what is emitted *and* what is absent |
 //! | `pass_through_miniature.export.cxf.json` | native boundary pass-through inputs, outputs, and bare edges |
 //! | `declared_output_attrs.export.cxf.json`  | §7.4.1 attrs on declared boundary-output nodes, both fill sites (#233) |
+//! | `declared_input_attrs.export.cxf.json`   | independent attrs on fan-out and pass-through input declarations (#243) |
 //!
 //! To regenerate a golden after an **intentional** format change:
 //!
@@ -53,6 +54,8 @@ const DEFERRAL_FIXTURE: &str = include_str!("fixtures/enum_deferral_miniature.js
 const PASS_THROUGH_FIXTURE: &str = include_str!("fixtures/pass_through_miniature.jsonld");
 /// Declared boundary outputs carrying authored §7.4.1 attrs on both fill sites (#233).
 const DECLARED_OUTPUT_ATTRS_FIXTURE: &str = include_str!("fixtures/declared_output_attrs.jsonld");
+/// Declared boundary inputs retaining attrs separately from child and pass-through output attrs.
+const DECLARED_INPUT_ATTRS_FIXTURE: &str = include_str!("fixtures/declared_input_attrs.jsonld");
 
 /// The synthesized root `@id` (`ModelGraph` does not record the source root IRI). Pinned here
 /// against the exporter's constant: changing it is a byte-format break.
@@ -208,6 +211,14 @@ fn declared_output_attr_bytes_match_the_checked_in_golden() {
     assert_golden(
         &export_stable(DECLARED_OUTPUT_ATTRS_FIXTURE),
         "declared_output_attrs.export.cxf.json",
+    );
+}
+
+#[test]
+fn declared_input_attr_bytes_match_the_checked_in_golden() {
+    assert_golden(
+        &export_stable(DECLARED_INPUT_ATTRS_FIXTURE),
+        "declared_input_attrs.export.cxf.json",
     );
 }
 

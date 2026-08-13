@@ -241,20 +241,25 @@ pub struct Node {
     pub is_replaceable: Option<bool>,
 
     /// Everything else (icon/diagram/graphics/documentation/`qudt:*`/`cdlLineNum*`/redeclare/…) —
-    /// opaque passthrough for lossless round-trip (R-8). (`S231:unit`/`quantity`/`displayUnit` are
-    /// modeled typed fields above, not passthrough.)
+    /// opaque passthrough for lossless round-trip (R-8). A direct `@context` is retained here for
+    /// round-trip fidelity, but the resolver refuses it before identity expansion because
+    /// node-scoped context processing is outside the ingest subset. (`S231:unit`/`quantity`/
+    /// `displayUnit` are modeled typed fields above, not passthrough.)
     #[serde(flatten)]
     pub other: BTreeMap<String, serde_json::Value>,
 }
 
 /// A JSON-LD cross-reference: `{"@id": "..."}`. Any other keys on the reference object (JSON-LD
-/// permits `@index`/`@type` on a reference) flow through `other` for lossless round-trip (R-8).
+/// permits `@index`/`@type` on a reference) flow through `other` for lossless round-trip (R-8). A
+/// direct `@context` is retained but refused before identity expansion, matching the same rule on
+/// [`Node::other`].
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct IriRef {
     /// The referenced node's IRI.
     #[serde(rename = "@id")]
     pub id: String,
-    /// Any other keys on the reference object, preserved for lossless round-trip (R-8).
+    /// Any other keys on the reference object, preserved for lossless round-trip (R-8). A direct
+    /// `@context` is preserved here but refused by ingest as an unsupported scoped context.
     #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
     pub other: BTreeMap<String, serde_json::Value>,
 }
@@ -359,6 +364,7 @@ pub enum CxfValue {
     Float(f64),
     /// A typed literal object `{"@value": "...", "@type": "...XMLSchema#double"}`. Any other keys
     /// on the object (JSON-LD `@language`/`@index`/…) flow through `extra` for losslessness (R-8).
+    /// A direct `@context` is retained there but refused before value grounding.
     Typed {
         /// The literal lexical form.
         #[serde(rename = "@value")]
@@ -366,7 +372,8 @@ pub enum CxfValue {
         /// The XSD datatype IRI.
         #[serde(rename = "@type")]
         datatype: String,
-        /// Any other keys on the typed-literal object, preserved for lossless round-trip (R-8).
+        /// Any other keys on the typed-literal object, preserved for lossless round-trip (R-8). A
+        /// direct `@context` is preserved here but refused by ingest.
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
@@ -418,7 +425,8 @@ pub enum TermAttr {
         /// The XSD datatype IRI.
         #[serde(rename = "@type")]
         datatype: String,
-        /// Any other keys on the typed-literal object, preserved for lossless round-trip (R-8).
+        /// Any other keys on the typed-literal object, preserved for lossless round-trip (R-8). A
+        /// direct `@context` is preserved here but refused by ingest.
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
@@ -429,13 +437,16 @@ pub enum TermAttr {
         /// lexical terms the §7.10 gate compares by exact string equality, not graph identities.
         #[serde(rename = "@id")]
         id: String,
-        /// Any other keys on the reference object, preserved for lossless round-trip (R-8).
+        /// Any other keys on the reference object, preserved for lossless round-trip (R-8). A
+        /// direct `@context` is preserved here but refused by ingest.
         #[serde(flatten, skip_serializing_if = "BTreeMap::is_empty")]
         extra: BTreeMap<String, serde_json::Value>,
     },
     /// Any other (malformed-per-S231P) JSON shape — a number/array/bool or a partial object. Kept
     /// verbatim for lossless round-trip (R-8); [`as_term`](TermAttr::as_term) returns `None` and the
-    /// resolver surfaces a targeted `MalformedDocument`. **Must be the last arm** (it matches any JSON).
+    /// resolver surfaces a targeted `MalformedDocument`. A direct `@context` on an object in this
+    /// arm is refused first as an unsupported scoped context. **Must be the last arm** (it matches
+    /// any JSON).
     Other(serde_json::Value),
 }
 

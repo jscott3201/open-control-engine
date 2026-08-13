@@ -109,15 +109,61 @@ samples staged before it in the connector image.
 Two consequences to plan for. Splitting a horizon across two calls does not continue the
 trajectory: simulating `0..10` then `11..20` is not the same as simulating `0..20`, because the
 second call restarts from the seed. And a what-if interleaved into a live run resets that engine's
-stateful blocks, which for held and sampled values means a jump rather than an advance —
-snapshot-and-restore is the surface that would make this safe, and it does not exist yet
-([#143](https://github.com/jscott3201/open-control-engine/issues/143)).
+stateful blocks, which for held and sampled values means a jump rather than an advance. Use a
+process-local checkpoint to save and restore the live run around the simulation; checkpoint restore
+may rewind a compatible engine (`crates/oce-api/src/state.rs:367-394`).
 
 Connector values that `simulate` does not overwrite carry into the horizon: `InputSource` writes
 the slots it names on every step, and the rest hold whatever was there. Whether a value staged
 through `set_input` reaches a given block depends on how that input is fed — a store-bound point is
 re-staged from the snapshot on any tick the snapshot has a sample for, and an input driven by
 another block inside the model is read from its driver rather than from its own slot.
+
+## Persist engine state outside the store port
+
+`Engine::state_snapshot` returns the engine-owned canonical bytes needed to continue a run. It does
+not write them anywhere. `Engine::checkpoint`, `state_snapshot`, `restore_checkpoint`, and
+`restore_state` call no `Store` method (`crates/oce-api/src/state.rs:367-421`). The host owns durable
+storage, authentication, generation fencing, and the decision that a restored process may command
+equipment.
+
+Capture only after a model has loaded successfully and while no parameter edits are pending. A
+durable capture also requires authored stable identities and registered state contracts for every
+stateful block. The decoder enforces a 64 MiB limit, validates canonical ordering and manifest
+self-consistency, and checks an integrity trailer (`crates/oce-api/src/state.rs:13-15,42-53`;
+`crates/oce-api/src/state_codec.rs:101-239`).
+Class-specific block-state invariants are checked during restore, when a target engine is available.
+The trailer detects accidental corruption; it is not an authenticity or freshness proof. Protect
+snapshot bytes according to the trust boundary of the host that consumes them.
+
+Durable continuation has a narrow restore window:
+
+1. Load the model into a fresh engine.
+2. Parse persisted bytes with `EngineStateSnapshot::from_bytes`.
+3. Call `restore_state` before any input write, tick, simulation, dirty-parameter resume, or earlier
+   restore.
+4. Re-establish host-owned wall-clock mapping, actuator ownership, and generation fencing before
+   resuming equipment writes.
+
+The target model must have the same executable manifest: block classes and parameters, port
+bindings, connector types, schedule, state-slot layout, enum descriptors, external inputs, and
+boundary outputs. The diagnostic model id may differ; executable compatibility may not. A refusal
+is atomic and leaves engine and store state unchanged. Durable restore also refuses after the target
+crosses a mutation boundary, even if that mutation was otherwise harmless
+(`crates/oce-api/src/state.rs:412-438`).
+
+Snapshots for models that use the revision-1 libm-dependent class set are target-bound. They restore
+only on the same architecture and operating system; `restore_state` returns
+`EngineStateError::TargetDomainMismatch` before commit on another target. Other revision-1 models
+are portable. If restart scheduling may cross machine types, retain the capture target alongside the
+opaque bytes and treat a target-domain refusal as a placement failure, not as recoverable model
+state.
+
+Snapshots restore absolute model time and the prior-tick monotonicity guard. They do not carry the
+real-time UNIX epoch, backend point history, point status or timestamps, backend transaction state,
+or host safety policy. The current connector image, including staged input values, is part of the
+snapshot. Restore the other state outside the engine. Use `EngineCheckpoint` instead when branching
+or rewinding within one process; it is opaque and has no persistence format.
 
 ## Lifecycle names are not equipment controls
 
@@ -153,7 +199,10 @@ merged in order with later bindings winning; a remote context reference, `@base`
 prefix are refused at load as non-subset constructs rather than silently ignored. The last case is
 a nested compact IRI; it includes an absolute-looking value such as `urn:oce:names#` when the same
 context also declares `urn` as a term. Recursive context-term expansion is outside the supported
-subset. The canonical-key guarantee therefore holds for every document that loads at all.
+subset. A direct `@context` on an `@graph` node, one of its identity/type reference objects, or a
+modeled value/term object is also refused: context bindings are document-level only, and the engine
+never applies a scoped context to one semantic value. The canonical-key guarantee therefore holds
+for every document that loads at all.
 
 The document's declared boundary-output names (root `S231:hasOutput`) are a second read-only
 identity space: each resolves on `get_output`, `watch`, and `CollectSpec::Named` as an alias for
@@ -218,6 +267,6 @@ The rest of the ingest path is bounded and returns typed diagnostics rather than
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather
 than "an error occurred". That standard is why this one gap is written down instead of assumed away.
 
-One more thing worth knowing: the tests cited on this page live in `oce-api`, and the per-PR gate
-does not run `oce-api`'s tests. They execute on the release gate. See
-[`ci-and-the-gate.md`](ci-and-the-gate.md) for what a green check actually covers.
+The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 under debug and
+release codegen. The full workspace and doctests still wait for the release gate. See
+[`ci-and-the-gate.md`](ci-and-the-gate.md) for the exact split.

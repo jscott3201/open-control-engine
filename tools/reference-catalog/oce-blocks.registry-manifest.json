@@ -1171,7 +1171,8 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "period" },
-      { "rule": "RealGreaterThan", "name": "period", "min": 0.0 }
+      { "rule": "RealFiniteGreaterThan", "name": "period", "min": 0.0 },
+      { "rule": "RealFinite", "name": "shift" }
     ],
     "port_naming": "named",
     "input_names": [],
@@ -2155,6 +2156,7 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealFinite", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
     ],
     "port_naming": "named",
@@ -2173,6 +2175,7 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealFinite", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
     ],
     "port_naming": "named",
@@ -2237,6 +2240,7 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealFinite", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
     ],
     "port_naming": "named",
@@ -2256,6 +2260,7 @@
     "width_driven": false,
     "param_rules": [
       { "rule": "Required", "name": "samplePeriod" },
+      { "rule": "RealFinite", "name": "samplePeriod" },
       { "rule": "RealGreaterOrEqual", "name": "samplePeriod", "min": 0.001 }
     ],
     "port_naming": "named",

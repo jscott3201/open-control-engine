@@ -23,8 +23,12 @@ dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
 cap, the no-secret scan, the database-free check, the golden-gen firewall, the gate
-fixtures, `cargo machete` — and engine tests for **`oce-blocks` and `oce-expr`
+fixtures, `cargo machete` — and engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
 only**, via the determinism matrix on x86_64 and arm64 in debug and release codegen.
+The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
+checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
+to differ across architectures. The x86_64 job also parses and refuses the arm64 target-bound bytes
+through the public restore path.
 The standalone `cargo-deny` CI job runs only when a manifest changed — but `.agents/gate.sh`
 runs `cargo deny check bans licenses sources` **unconditionally**, and CI runs that script in
 the `gate (light)` job, so the check is not actually skippable by leaving manifests alone.
@@ -32,7 +36,7 @@ the `gate (light)` job, so the check is not actually skippable by leaving manife
 advisory-db, neither of which a sandboxed lane has, so it runs in `advisories.yml`.
 
 Every other crate's tests run **only** on the `development` → `main` release gate. A
-change confined to `oce-cxf`, `oce-store`, `oce-api`, or `oce-diag` can show a fully
+change confined to `oce-cxf`, `oce-store`, or `oce-diag` can show a fully
 green PR having executed none of its own tests. Before claiming your tests pass, run
 `bash .agents/gate.sh full` and read the tail.
 

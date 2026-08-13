@@ -1,0 +1,14 @@
+projection_mutation=contiguous equal-time selection changed from last to first
+source=crates/oce-cxf/tests/open_modelica_reference/canonicalizer.rs
+exact_edit=-            *rows.last_mut().unwrap() = row;
+exact_edit=+            // Mutation probe: retain the first row in an equal-time group.
+unmutated_command=cargo test -p oce-cxf --test fixture_structural_oracle open_modelica_reference::checked_nand_artifacts_reproduce_projection_and_schedule --locked
+unmutated_result=PASS; 1 passed; 0 failed
+mutated_compile=PASS
+mutated_schedule_command=cargo test -p oce-cxf --test fixture_structural_oracle open_modelica_reference::checked_nand_artifacts_reproduce_projection_and_schedule --locked
+mutated_schedule_result=FAIL; post-event source schedule drifted; shifted-event rows retained pre-event inputs
+mutated_exact_control_command=cargo test -p oce-conformance --test open_modelica_nand external_nand_matches_facade_exactly_at_every_observation --locked
+mutated_exact_control_result=PASS; 1 passed; 0 failed
+restoration_command=cargo test -p oce-cxf --test fixture_structural_oracle open_modelica_reference::checked_nand_artifacts_reproduce_projection_and_schedule --locked
+restoration_result=PASS; 1 passed; 0 failed
+restored_canonicalizer_sha256=9d854c64cdd7ae09cb6929496a406aaf40ad1c5ba37c49f3db43bd731df5b5ba

@@ -143,10 +143,11 @@ diff against vendored `modelica-json` translations, and the oracle layer generat
 code-dependency firewall — are described in [`../README.md`](../README.md) and
 [`../TESTING.md`](../TESTING.md).
 
-The load-bearing limitation, stated plainly: **no sequence here has been executed against the
-official reference implementation of the standard.** Tier 3, the cross-implementation differential
-against an external Modelica / Buildings toolchain, is not wired. That is the deliberately deferred
-tail, and no number on this page should be read as standing in for it.
+The load-bearing limitation, stated plainly: **no sequence here has been executed against an
+external Modelica / Buildings toolchain.** One exhaustive `CDL.Logical.Nand` Boolean case now has
+scoped Tier-3 evidence from OpenModelica, but it covers no sequence, stateful behavior, or numeric
+tolerance. The global Tier-3 report remains skipped, and no number on this page stands in for that
+deferred coverage.
 
 For what happens when you export a loaded sequence back out to CXF, see
 [`cxf-round-trip.md`](cxf-round-trip.md).
