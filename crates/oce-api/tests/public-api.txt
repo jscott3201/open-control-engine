@@ -12,9 +12,11 @@
 #[non_exhaustive] pub struct oce_api::TopologyBlock
 #[non_exhaustive] pub struct oce_api::TopologyConnection
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::InputSource
+impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::LoadErrorContext
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::OcError
 impl !core::panic::unwind_safe::RefUnwindSafe for oce_api::SimSpec
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::InputSource
+impl !core::panic::unwind_safe::UnwindSafe for oce_api::LoadErrorContext
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::OcError
 impl !core::panic::unwind_safe::UnwindSafe for oce_api::SimSpec
 impl core::clone::Clone for oce_api::AssertEvent
@@ -84,6 +86,7 @@ impl core::default::Default for oce_api::SimMetrics
 impl core::default::Default for oce_api::StepReport
 impl core::error::Error for oce_api::ContentIdError
 impl core::error::Error for oce_api::EngineStateError
+impl core::error::Error for oce_api::LoadErrorContext
 impl core::error::Error for oce_api::OcError
 impl core::fmt::Debug for oce_api::AssertEvent
 impl core::fmt::Debug for oce_api::AssertLevel
@@ -98,6 +101,7 @@ impl core::fmt::Debug for oce_api::InputSource
 impl core::fmt::Debug for oce_api::IoClass
 impl core::fmt::Debug for oce_api::IoInventory
 impl core::fmt::Debug for oce_api::IoSummary
+impl core::fmt::Debug for oce_api::LoadErrorContext
 impl core::fmt::Debug for oce_api::LoadReport
 impl core::fmt::Debug for oce_api::OcError
 impl core::fmt::Debug for oce_api::OutputTrace
@@ -118,6 +122,7 @@ impl core::fmt::Debug for oce_api::TopologyConnection
 impl core::fmt::Debug for oce_api::TrendCfg
 impl core::fmt::Display for oce_api::ContentIdError
 impl core::fmt::Display for oce_api::EngineStateError
+impl core::fmt::Display for oce_api::LoadErrorContext
 impl core::fmt::Display for oce_api::OcError
 impl core::hash::Hash for oce_api::TemplateRef
 impl core::marker::Copy for oce_api::AssertLevel
@@ -139,6 +144,7 @@ impl core::marker::Freeze for oce_api::InputSource
 impl core::marker::Freeze for oce_api::IoClass
 impl core::marker::Freeze for oce_api::IoInventory
 impl core::marker::Freeze for oce_api::IoSummary
+impl core::marker::Freeze for oce_api::LoadErrorContext
 impl core::marker::Freeze for oce_api::LoadReport
 impl core::marker::Freeze for oce_api::OcError
 impl core::marker::Freeze for oce_api::OutputTrace
@@ -170,6 +176,7 @@ impl core::marker::Send for oce_api::InputSource
 impl core::marker::Send for oce_api::IoClass
 impl core::marker::Send for oce_api::IoInventory
 impl core::marker::Send for oce_api::IoSummary
+impl core::marker::Send for oce_api::LoadErrorContext
 impl core::marker::Send for oce_api::LoadReport
 impl core::marker::Send for oce_api::OcError
 impl core::marker::Send for oce_api::OutputTrace
@@ -214,6 +221,7 @@ impl core::marker::Sync for oce_api::InputSource
 impl core::marker::Sync for oce_api::IoClass
 impl core::marker::Sync for oce_api::IoInventory
 impl core::marker::Sync for oce_api::IoSummary
+impl core::marker::Sync for oce_api::LoadErrorContext
 impl core::marker::Sync for oce_api::LoadReport
 impl core::marker::Sync for oce_api::OcError
 impl core::marker::Sync for oce_api::OutputTrace
@@ -245,6 +253,7 @@ impl core::marker::Unpin for oce_api::InputSource
 impl core::marker::Unpin for oce_api::IoClass
 impl core::marker::Unpin for oce_api::IoInventory
 impl core::marker::Unpin for oce_api::IoSummary
+impl core::marker::Unpin for oce_api::LoadErrorContext
 impl core::marker::Unpin for oce_api::LoadReport
 impl core::marker::Unpin for oce_api::OcError
 impl core::marker::Unpin for oce_api::OutputTrace
@@ -276,6 +285,7 @@ impl core::marker::UnsafeUnpin for oce_api::InputSource
 impl core::marker::UnsafeUnpin for oce_api::IoClass
 impl core::marker::UnsafeUnpin for oce_api::IoInventory
 impl core::marker::UnsafeUnpin for oce_api::IoSummary
+impl core::marker::UnsafeUnpin for oce_api::LoadErrorContext
 impl core::marker::UnsafeUnpin for oce_api::LoadReport
 impl core::marker::UnsafeUnpin for oce_api::OcError
 impl core::marker::UnsafeUnpin for oce_api::OutputTrace
@@ -389,6 +399,7 @@ impl<T, U> core::convert::Into<U> for oce_api::InputSource where U: core::conver
 impl<T, U> core::convert::Into<U> for oce_api::IoClass where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoInventory where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::IoSummary where U: core::convert::From<T>
+impl<T, U> core::convert::Into<U> for oce_api::LoadErrorContext where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::LoadReport where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OcError where U: core::convert::From<T>
 impl<T, U> core::convert::Into<U> for oce_api::OutputTrace where U: core::convert::From<T>
@@ -421,6 +432,7 @@ impl<T, U> core::convert::TryFrom<U> for oce_api::InputSource where U: core::con
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoClass where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoInventory where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::IoSummary where U: core::convert::Into<T>
+impl<T, U> core::convert::TryFrom<U> for oce_api::LoadErrorContext where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::LoadReport where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OcError where U: core::convert::Into<T>
 impl<T, U> core::convert::TryFrom<U> for oce_api::OutputTrace where U: core::convert::Into<T>
@@ -453,6 +465,7 @@ impl<T, U> core::convert::TryInto<U> for oce_api::InputSource where U: core::con
 impl<T, U> core::convert::TryInto<U> for oce_api::IoClass where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoInventory where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::IoSummary where U: core::convert::TryFrom<T>
+impl<T, U> core::convert::TryInto<U> for oce_api::LoadErrorContext where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::LoadReport where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OcError where U: core::convert::TryFrom<T>
 impl<T, U> core::convert::TryInto<U> for oce_api::OutputTrace where U: core::convert::TryFrom<T>
@@ -498,6 +511,7 @@ impl<T> alloc::borrow::ToOwned for oce_api::TopologyConnection where T: core::cl
 impl<T> alloc::borrow::ToOwned for oce_api::TrendCfg where T: core::clone::Clone
 impl<T> alloc::string::ToString for oce_api::ContentIdError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::EngineStateError where T: core::fmt::Display + ?core::marker::Sized
+impl<T> alloc::string::ToString for oce_api::LoadErrorContext where T: core::fmt::Display + ?core::marker::Sized
 impl<T> alloc::string::ToString for oce_api::OcError where T: core::fmt::Display + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertEvent where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::AssertLevel where T: 'static + ?core::marker::Sized
@@ -513,6 +527,7 @@ impl<T> core::any::Any for oce_api::InputSource where T: 'static + ?core::marker
 impl<T> core::any::Any for oce_api::IoClass where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoInventory where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::IoSummary where T: 'static + ?core::marker::Sized
+impl<T> core::any::Any for oce_api::LoadErrorContext where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::LoadReport where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OcError where T: 'static + ?core::marker::Sized
 impl<T> core::any::Any for oce_api::OutputTrace where T: 'static + ?core::marker::Sized
@@ -545,6 +560,7 @@ impl<T> core::borrow::Borrow<T> for oce_api::InputSource where T: ?core::marker:
 impl<T> core::borrow::Borrow<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoInventory where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::IoSummary where T: ?core::marker::Sized
+impl<T> core::borrow::Borrow<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::LoadReport where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OcError where T: ?core::marker::Sized
 impl<T> core::borrow::Borrow<T> for oce_api::OutputTrace where T: ?core::marker::Sized
@@ -577,6 +593,7 @@ impl<T> core::borrow::BorrowMut<T> for oce_api::InputSource where T: ?core::mark
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoClass where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoInventory where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::IoSummary where T: ?core::marker::Sized
+impl<T> core::borrow::BorrowMut<T> for oce_api::LoadErrorContext where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::LoadReport where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OcError where T: ?core::marker::Sized
 impl<T> core::borrow::BorrowMut<T> for oce_api::OutputTrace where T: ?core::marker::Sized
@@ -634,6 +651,7 @@ impl<T> core::convert::From<T> for oce_api::InputSource
 impl<T> core::convert::From<T> for oce_api::IoClass
 impl<T> core::convert::From<T> for oce_api::IoInventory
 impl<T> core::convert::From<T> for oce_api::IoSummary
+impl<T> core::convert::From<T> for oce_api::LoadErrorContext
 impl<T> core::convert::From<T> for oce_api::LoadReport
 impl<T> core::convert::From<T> for oce_api::OcError
 impl<T> core::convert::From<T> for oce_api::OutputTrace
@@ -848,6 +866,17 @@ pub fn oce_api::IoSummary::to_owned(&self) -> T
 pub fn oce_api::IoSummary::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::IoSummary::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::IoSummary::type_id(&self) -> core::any::TypeId
+pub fn oce_api::LoadErrorContext::borrow(&self) -> &T
+pub fn oce_api::LoadErrorContext::borrow_mut(&mut self) -> &mut T
+pub fn oce_api::LoadErrorContext::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::LoadErrorContext::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn oce_api::LoadErrorContext::from(T) -> T
+pub fn oce_api::LoadErrorContext::into(self) -> U
+pub fn oce_api::LoadErrorContext::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+pub fn oce_api::LoadErrorContext::to_string(&self) -> alloc::string::String
+pub fn oce_api::LoadErrorContext::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
+pub fn oce_api::LoadErrorContext::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
+pub fn oce_api::LoadErrorContext::type_id(&self) -> core::any::TypeId
 pub fn oce_api::LoadReport::borrow(&self) -> &T
 pub fn oce_api::LoadReport::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::LoadReport::clone(&self) -> oce_api::LoadReport
@@ -860,6 +889,7 @@ pub fn oce_api::LoadReport::to_owned(&self) -> T
 pub fn oce_api::LoadReport::try_from(U) -> core::result::Result<T, <T as core::convert::TryFrom<U>>::Error>
 pub fn oce_api::LoadReport::try_into(self) -> core::result::Result<U, <U as core::convert::TryFrom<T>>::Error>
 pub fn oce_api::LoadReport::type_id(&self) -> core::any::TypeId
+pub fn oce_api::OcError::all_diagnostics(&self) -> impl core::iter::traits::iterator::Iterator<Item = &oce_diag::Diagnostic>
 pub fn oce_api::OcError::borrow(&self) -> &T
 pub fn oce_api::OcError::borrow_mut(&mut self) -> &mut T
 pub fn oce_api::OcError::diagnostics(&self) -> &[oce_diag::Diagnostic]
@@ -1159,6 +1189,7 @@ pub oce_api::OcError::Flatten(oce_flatten::FlattenError)
 pub oce_api::OcError::InputType(alloc::string::String)
 pub oce_api::OcError::Load
 pub oce_api::OcError::Load::detail: alloc::string::String
+pub oce_api::OcError::LoadContext(oce_api::LoadErrorContext)
 pub oce_api::OcError::ModelTimeUnrepresentable
 pub oce_api::OcError::ModelTimeUnrepresentable::now: f64
 pub oce_api::OcError::NonFiniteTime
@@ -1239,6 +1270,7 @@ pub struct oce_api::EngineCheckpoint
 pub struct oce_api::EngineStateSnapshot
 pub struct oce_api::IoInventory
 pub struct oce_api::IoSummary
+pub struct oce_api::LoadErrorContext
 pub struct oce_api::OutputTrace
 pub struct oce_api::Outputs
 pub struct oce_api::ParamAttrs
@@ -1285,6 +1317,8 @@ pub type oce_api::IoInventory::Owned = T
 pub type oce_api::IoSummary::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::IoSummary::Error = core::convert::Infallible
 pub type oce_api::IoSummary::Owned = T
+pub type oce_api::LoadErrorContext::Error = <U as core::convert::TryFrom<T>>::Error
+pub type oce_api::LoadErrorContext::Error = core::convert::Infallible
 pub type oce_api::LoadReport::Error = <U as core::convert::TryFrom<T>>::Error
 pub type oce_api::LoadReport::Error = core::convert::Infallible
 pub type oce_api::LoadReport::Owned = T

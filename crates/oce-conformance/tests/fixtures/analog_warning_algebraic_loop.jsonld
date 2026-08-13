@@ -1,0 +1,78 @@
+{
+  "@context": { "S231": "http://data.ashrae.org/S231P#" },
+  "@graph": [
+    {
+      "@id": "http://example.org#loop",
+      "@type": "S231:Block",
+      "S231:containsBlock": [
+        { "@id": "http://example.org#loop.a" },
+        { "@id": "http://example.org#loop.b" }
+      ],
+      "S231:hasInput": [
+        { "@id": "http://example.org#loop.uA" },
+        { "@id": "http://example.org#loop.uB" }
+      ]
+    },
+    {
+      "@id": "http://example.org#loop.uA",
+      "@type": "S231:AnalogInput",
+      "S231:isConnectedTo": { "@id": "http://example.org#loop.a.u2" }
+    },
+    {
+      "@id": "http://example.org#loop.uB",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#loop.b.u2" }
+    },
+    {
+      "@id": "http://example.org#loop.a",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#loop.a.u1" },
+        { "@id": "http://example.org#loop.a.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#loop.a.y" }
+    },
+    {
+      "@id": "http://example.org#loop.a.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#loop.a.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#loop.a.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#loop.b.u1" }
+    },
+    {
+      "@id": "http://example.org#loop.b",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Add",
+      "S231:hasInput": [
+        { "@id": "http://example.org#loop.b.u1" },
+        { "@id": "http://example.org#loop.b.u2" }
+      ],
+      "S231:hasOutput": { "@id": "http://example.org#loop.b.y" }
+    },
+    {
+      "@id": "http://example.org#loop.b.u1",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#loop.b.u2",
+      "@type": "S231:RealInput",
+      "S231:isOfDataType": { "@id": "S231:Real" }
+    },
+    {
+      "@id": "http://example.org#loop.b.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": { "@id": "S231:Real" },
+      "S231:isConnectedTo": { "@id": "http://example.org#loop.a.u1" }
+    }
+  ]
+}
