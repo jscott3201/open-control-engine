@@ -489,6 +489,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Documentation and tooling
 
+- **Release records and contributor gate prose were reconciled before promotion** (#287). State
+  snapshot, known-divergence, and scoped OpenModelica entries now cite their implementing PRs, and
+  the contributor guide and gate comment name the three test packages that run per PR.
 - Measured tick throughput is recorded per run, with the commit, host and method that
   produced it (#205), with a later correction to the load figure, which was a cold-process
   artifact (#207). The file moved from `BENCHMARKS.md` to
