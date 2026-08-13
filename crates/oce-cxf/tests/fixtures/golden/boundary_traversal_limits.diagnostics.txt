@@ -1,0 +1,2 @@
+error|malformed-document|http://example.org#top.sub32.u|composite boundary resolution exceeds the supported isConnectedTo hop count (64)
+error|malformed-document|http://example.org#top.sub0.y|composite boundary resolution exceeds the supported target examination count (65536)

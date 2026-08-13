@@ -188,16 +188,16 @@ impl CompositeOrientation {
     /// either sighting swapped) while keeping authored duplicate copies. Also returns the set of
     /// canonical drivers whose edges touch a non-root boundary — the drivers whose lowered lists
     /// rule Gx orders by target `@graph` position.
-    pub(super) fn canonical_connections(
+    pub(super) fn canonical_connections<'a>(
         &self,
-        doc: &CxfDocument,
+        doc: &'a CxfDocument,
         by_id: &HashMap<&str, &Node>,
         root: &str,
         specialization: &Specialization,
-    ) -> (HashMap<String, Vec<String>>, HashSet<String>) {
-        let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    ) -> (HashMap<&'a str, Vec<&'a str>>, HashSet<&'a str>) {
+        let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut crossed = HashSet::new();
-        let mut stored: HashMap<(String, String), Verdict> = HashMap::new();
+        let mut stored: HashMap<(&str, &str), Verdict> = HashMap::new();
         for node in &doc.graph {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
@@ -205,9 +205,9 @@ impl CompositeOrientation {
                 if self.is_non_root_boundary(&node.id, root)
                     || self.is_non_root_boundary(authored_target, root)
                 {
-                    crossed.insert(source.clone());
+                    crossed.insert(source);
                 }
-                let pair = (source.clone(), target.clone());
+                let pair = (source, target);
                 if stored
                     .get(&pair)
                     .is_some_and(|previous| verdict == Verdict::Swap || *previous == Verdict::Swap)
@@ -221,14 +221,14 @@ impl CompositeOrientation {
         (out, crossed)
     }
 
-    fn canonical_pair(
+    fn canonical_pair<'a>(
         &self,
-        source: &str,
-        target: &str,
+        source: &'a str,
+        target: &'a str,
         by_id: &HashMap<&str, &Node>,
         root: &str,
         specialization: &Specialization,
-    ) -> (String, String, Verdict) {
+    ) -> (&'a str, &'a str, Verdict) {
         if specialization.is_inactive(source) || specialization.is_inactive(target) {
             return authored(source, target, Verdict::Untouched);
         }
@@ -246,7 +246,7 @@ impl CompositeOrientation {
         match (source_polarity, target_polarity) {
             (Polarity::Source, Polarity::Sink) => authored(source, target, Verdict::Keep),
             (Polarity::Sink, Polarity::Source) if by_id.contains_key(target) => {
-                (target.to_owned(), source.to_owned(), Verdict::Swap)
+                (target, source, Verdict::Swap)
             }
             (Polarity::Sink, Polarity::Source) => authored(source, target, Verdict::SwapBlocked),
             _ => authored(source, target, Verdict::Contradictory),
@@ -316,8 +316,8 @@ impl CompositeOrientation {
     }
 }
 
-fn authored(source: &str, target: &str, verdict: Verdict) -> (String, String, Verdict) {
-    (source.to_owned(), target.to_owned(), verdict)
+fn authored<'a>(source: &'a str, target: &'a str, verdict: Verdict) -> (&'a str, &'a str, Verdict) {
+    (source, target, verdict)
 }
 
 #[cfg(test)]
@@ -361,6 +361,14 @@ mod tests {
         index
             .canonical_connections(&doc, &by_id, "root", &specialization)
             .0
+            .into_iter()
+            .map(|(source, targets)| {
+                (
+                    source.to_owned(),
+                    targets.into_iter().map(str::to_owned).collect(),
+                )
+            })
+            .collect()
     }
 
     fn pair_count(adjacency: &HashMap<String, Vec<String>>) -> usize {
@@ -424,10 +432,7 @@ mod tests {
         let specialization = Specialization::default();
         let index = CompositeOrientation::new(&doc, &by_id, "root", &specialization);
         let (adjacency, _) = index.canonical_connections(&doc, &by_id, "root", &specialization);
-        assert_eq!(
-            adjacency.get("sub.u"),
-            Some(&vec!["first.u".to_owned(), "second.u".to_owned()])
-        );
+        assert_eq!(adjacency.get("sub.u"), Some(&vec!["first.u", "second.u"]));
     }
 
     #[test]
@@ -464,7 +469,7 @@ mod tests {
             node.as_object_mut()
                 .expect("node")
                 .remove("S231:isConnectedTo");
-            if let Some(targets) = first.get(&id) {
+            if let Some(targets) = first.get(id.as_str()) {
                 node["S231:isConnectedTo"] = Value::Array(
                     targets
                         .iter()

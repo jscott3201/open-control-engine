@@ -183,10 +183,11 @@ machine-readable `composite/<rule-id>: ` message tags an emitter can match on â€
 [`cxf-composite-subset.md`](cxf-composite-subset.md) in this directory. Read that one if you are
 writing a CXF generator.
 
-One hardening gap, stated rather than assumed: composite boundary resolution recurses per
-`isConnectedTo` hop and is not yet depth-bounded. Composite *nesting* is bounded at
-`MAX_COMPOSITE_NESTING_DEPTH` = 64 (`crates/oce-cxf/src/resolve/composite.rs:22`), but the boundary
-walk is not. Treat untrusted CXF documents accordingly.
+Composite *nesting* is bounded at 64. Boundary lowering is iterative and separately rejects paths
+beyond 64 non-top `isConnectedTo` hops or documents beyond 65,536 target examinations or 8 MiB of
+aggregate target-IRI bytes within boundary walks. These are engine acceptance bounds, not CDL
+semantics. Hosts must still bound input bytes before JSON deserialization when accepting untrusted
+documents.
 
 For which CDL classes and G36 sequences exist on the other end of that pipe, see
 [`cdl-coverage.md`](cdl-coverage.md).

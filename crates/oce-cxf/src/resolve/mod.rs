@@ -201,6 +201,7 @@ pub(crate) fn resolve(
     let top = match lowered
         .root_iri
         .as_deref()
+        .filter(|_| !lowered.boundary_traversal_failed)
         .and_then(|root| by_id.get(root).copied())
     {
         Some(top) => top,

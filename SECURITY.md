@@ -37,27 +37,29 @@ Verified in the tree, with the enforcing site named so you can check rather than
 | --- | --- | --- |
 | Binding-expression nesting | 64 (`MAX_NESTING_DEPTH`) | parser entry, the completed AST, and again in `eval()` — `crates/oce-expr/src/parse.rs`, `crates/oce-expr/src/lib.rs` |
 | Binding-expression size | 4096 nodes (`MAX_EXPR_NODES`) | parser construction — `crates/oce-expr/src/parse.rs` |
-| Composite *nesting* depth | 64 (`MAX_COMPOSITE_NESTING_DEPTH`) | CXF import — `crates/oce-cxf/src/resolve/composite.rs:22`, checked at `:231` |
+| Composite *nesting* depth | 64 (`MAX_COMPOSITE_NESTING_DEPTH`) | CXF import — `crates/oce-cxf/src/resolve/composite.rs` |
+| Composite boundary path | 64 non-top `isConnectedTo` hops | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
+| Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | iterative CXF lowering — `crates/oce-cxf/src/resolve/composite.rs` |
 
 Each returns a typed diagnostic rather than aborting. `#![forbid(unsafe_code)]` is set in
 all 17 crates, so the usual memory-safety classes are out of scope by construction.
 
-## Known limitation: composite boundary resolution is not depth-bounded
+## Untrusted CXF remains untrusted input
 
-**Composite boundary resolution recurses once per `isConnectedTo` hop, and that recursion is
-not depth-bounded.** A sufficiently long boundary chain in a CXF document can therefore
-exhaust the thread stack. Stack exhaustion aborts the process; it is not a catchable error,
-and no typed diagnostic will save you from it.
+Composite boundary resolution is iterative and bounded independently from composite nesting. A
+path may enter 64 non-top boundary nodes, and the complete document may cause 65,536 target
+examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next hop,
+examination, or byte returns a `MalformedDocument` diagnostic; the resolver does not build a
+partial flattened graph. Direct leaf wiring does not consume the boundary-work budgets.
 
-This is distinct from composite *nesting*, which **is** capped at 64. Nesting is how deeply
-composites are contained within one another; hop-depth is how far a boundary connection is
-chased across peers. Only the first is bounded. An earlier revision of the README confused
-these two and attributed the gap to the wrong crate — it lives in `oce-cxf`.
+The library does not impose a byte limit before JSON deserialization. A host accepting CXF from an
+untrusted source must still cap document size and resource use before calling the loader. Keep
+untrusted loading outside the process that is actively commanding equipment when your threat model
+requires process isolation.
 
-**If you accept CXF from anywhere you do not control, treat it as untrusted input.** Parse
-it in a process or thread you can afford to lose, bound the stack you give it, and validate
-document size before handing it over. This limitation is tracked and stated in `TESTING.md`
-alongside the bounds that do exist.
+The boundary limits narrow the accepted CXF subset; they are engine safety policy, not CDL
+semantics. Below the limits, canonical target order and duplicate path multiplicity are preserved
+so single-assignment validation sees the same graph as before.
 
 ## What the engine will not do for you
 

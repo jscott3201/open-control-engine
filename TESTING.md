@@ -37,11 +37,11 @@ Enumerate the input domain and hit every boundary and degenerate case:
   `MAX_COMPOSITE_NESTING_DEPTH`, returning `MalformedDocument`. These limits intentionally
   narrow acceptance: expressions whose parse nesting exceeds 64 guarded entries (measured at 31
   nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
-  larger than 4096 AST nodes, and composites deeper than 64 are rejected even if a
-  shallower/smaller input of the same shape is accepted. One known gap, so state it rather than
-  assume it: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
-  depth-bounded. Assert the *specific* `DiagCode` / error variant, not merely "an error occurred."
-  Fuzz-grade hostility is the expectation within the bounded ingest paths.
+  larger than 4096 AST nodes, composites deeper than 64, boundary paths beyond 64 non-top hops,
+  and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
+  rejected even if a smaller input of the same shape is accepted. Assert the *specific* `DiagCode`
+  / error variant, not merely "an error occurred." Fuzz-grade hostility is the expectation within
+  the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational
@@ -161,9 +161,8 @@ A PR is **not done** until, for every unit of behavior it adds or changes:
 3. An oracle cross-check where a reference result exists.
 4. A determinism check where the code ingests, orders, or executes.
 5. Every error path asserts a **specific** typed variant / `DiagCode`. Expression parsing,
-   evaluation, and composite lowering reject over-limit depth/size with typed outcomes. One known
-   gap remains: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
-   depth-bounded.
+   evaluation, composite nesting, and boundary lowering reject over-limit depth, size, or work with
+   typed outcomes.
 
 Reviewers reject PRs that add behavior with only happy-path tests. "I couldn't think of an edge
 case" is itself a finding to resolve, not a pass.
