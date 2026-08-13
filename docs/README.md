@@ -31,7 +31,7 @@ front door; these pages are the detail behind it.
 **[Verification and evidence](verification-evidence.md)** is the honest accounting. Five
 different things in this repository are called "tests" and they prove different things — one of
 them proves nothing about correctness at all. That page says which is which, names the two global
-report tiers that are not wired, and bounds the separate one-case OpenModelica evidence.
+report tiers that are not wired, and bounds the separate two-case OpenModelica evidence.
 
 **[Host responsibilities](host-responsibilities.md)** is the one to read before anything
 touches a physical output. The engine implements no fail-safe policy of its own, by design,

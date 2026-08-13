@@ -1,0 +1,11 @@
+[package]
+name = "oce-openmodelica-toggle-reference"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "oce-openmodelica-toggle-reference"
+path = "src/main.rs"
+
+[workspace]

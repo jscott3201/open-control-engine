@@ -129,13 +129,14 @@ The register is evidence only: membership does not change discrepancies, compari
 tier status, goldens, or test results. Its initial revision is empty because no current clean-room
 Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
-The separate OpenModelica evidence set executes one exhaustive finite-domain case:
-`CDL.Logical.Nand/all_boolean_input_pairs_evented`, under exact Boolean comparison against OMC
-1.25.1 and the pinned Buildings and MSL sources. The light-gated sentinel validates the committed
-raw output, keep-last projection, schedule, repeat-run records, OCI identities, and mutation
-controls; Docker does not run in CI. This is scoped Tier-3 evidence for that case only. The global
-Tier-3 report remains `Skipped`; no stateful, numeric, sequence-wide, or cross-architecture OMC
-claim follows from it.
+The separate OpenModelica evidence profiles execute two exact Boolean cases against OMC 1.25.1 and
+the pinned Buildings and MSL sources: exhaustive
+`CDL.Logical.Nand/all_boolean_input_pairs_evented`, and the stateful
+`CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule. The light-gated
+sentinel validates committed raw output, keep-last projection, schedules, repeat-run records, OCI
+identities, and mutation controls; Docker does not run in CI. These are scoped Tier-3 results for
+the two named cases only. The global Tier-3 report remains `Skipped`; no numeric, sequence-wide, or
+cross-architecture OMC claim follows from them.
 
 ### 4. Determinism goldens — same input, bit-identical output, every time
 

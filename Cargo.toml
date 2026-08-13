@@ -63,6 +63,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 thiserror = "2.0"
 libm = { version = "0.2.16", default-features = false }
+rustix = { version = "1.1.4", features = ["fs"] }
 
 # --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
 # version (matching workspace.package.version) keeps these from reading as wildcard deps and makes

@@ -423,6 +423,15 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   mutation controls. This is scoped Tier-3 evidence for one stateless Boolean class. The global
   Tier-3 report remains skipped, and the result says nothing about sequences, stateful behavior,
   numeric tolerances, or cross-architecture OMC identity.
+- **One stateful OpenModelica differential now exists for `CDL.Logical.Toggle`** (#295).
+  Two sandboxed native-arm64 OMC 1.25.1 runs produced byte-identical event traces for an initially
+  true input, repeated rises, clear-only reset, simultaneous rise with clear priority, and clear
+  release. The facade runs at the exact emitted timestamp bits and is checked against an independent
+  recurrence. A one-token Latch substitution, a live keep-first projection mutation, and four
+  independently accumulated wrong recurrences fail at pinned rows. Separate controls catch a missed
+  clear-only reset and lost clear priority on a simultaneous input rise. This is scoped Tier-3
+  evidence for one stateful Boolean schedule;
+  global Tier 3 remains skipped, with no sequence-wide, numeric, or cross-architecture claim.
 - **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
   repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
   zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
