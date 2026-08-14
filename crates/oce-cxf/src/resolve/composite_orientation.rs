@@ -235,6 +235,7 @@ impl CompositeOrientation {
         &self,
         doc: &CxfDocument,
         by_id: &HashMap<&str, &Node>,
+        canonical: &HashMap<&str, Vec<&str>>,
         root: &str,
         specialization: &Specialization,
         reached_boundaries: &HashSet<&str>,
@@ -282,6 +283,16 @@ impl CompositeOrientation {
                     }
                 }
                 match verdict {
+                    Verdict::Contradictory
+                        if source_is_erased
+                            && reached_boundaries.contains(node.id.as_str())
+                            && self.expansion_reaches_flat_source(
+                                authored_target,
+                                canonical,
+                                by_id,
+                                root,
+                                specialization,
+                            ) => {}
                     Verdict::Contradictory => {
                         return Some(Diagnostic::error(
                             DiagCode::DirectionMismatch,
@@ -306,6 +317,46 @@ impl CompositeOrientation {
             }
         }
         None
+    }
+
+    fn expansion_reaches_flat_source(
+        &self,
+        target: &str,
+        canonical: &HashMap<&str, Vec<&str>>,
+        by_id: &HashMap<&str, &Node>,
+        root: &str,
+        specialization: &Specialization,
+    ) -> bool {
+        let mut pending = vec![target];
+        let mut seen = HashSet::new();
+        while let Some(target) = pending.pop() {
+            if !seen.insert(target) || specialization.is_inactive(target) {
+                continue;
+            }
+            if !self.is_elided_boundary_source(target) {
+                if self.flat_polarity(target, root) == Some(Polarity::Source) {
+                    return true;
+                }
+                continue;
+            }
+            if !by_id.contains_key(target) {
+                continue;
+            }
+            if let Some(children) = canonical.get(target) {
+                pending.extend(children.iter().copied());
+            }
+        }
+        false
+    }
+
+    fn flat_polarity(&self, port: &str, root: &str) -> Option<Polarity> {
+        match self.roles.get(port)?.as_ref()? {
+            Role::LeafOutput => Some(Polarity::Source),
+            Role::LeafInput => Some(Polarity::Sink),
+            Role::BoundaryInput(owner) if owner == root => Some(Polarity::Source),
+            Role::BoundaryOutput(owner) if owner == root => Some(Polarity::Sink),
+            Role::BoundaryInput(_) | Role::BoundaryOutput(_) => None,
+        }
     }
 
     fn canonical_pair<'a>(

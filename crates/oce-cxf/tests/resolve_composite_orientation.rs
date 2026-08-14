@@ -10,6 +10,8 @@ mod render;
 
 #[path = "resolve_composite_orientation/refusals.rs"]
 mod refusals;
+#[path = "resolve_composite_orientation/synthesized.rs"]
+mod synthesized;
 
 const FIXTURE: &str = include_str!("fixtures/nested_composite.jsonld");
 const BASE: &str = "http://example.org#g36.profile.nested_composite";

@@ -436,7 +436,9 @@ fn rewrite_connections(
             continue;
         }
         if boundary.is_synthesized_source(source) {
-            budget.examine_bytes(source)?;
+            for _ in authored_targets {
+                budget.examine_bytes(source)?;
+            }
         }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
             continue;
@@ -464,8 +466,14 @@ fn rewrite_connections(
             deferred.push((source, targets));
         }
     }
-    let deferred_diagnostic =
-        boundary.erased_relation_diagnostic(doc, by_id, root, specialization, &reached_boundaries);
+    let deferred_diagnostic = boundary.erased_relation_diagnostic(
+        doc,
+        by_id,
+        &canonical,
+        root,
+        specialization,
+        &reached_boundaries,
+    );
     Ok((
         deferred
             .into_iter()

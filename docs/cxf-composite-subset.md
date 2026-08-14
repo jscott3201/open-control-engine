@@ -309,7 +309,9 @@ shallow branching graph from expanding without bound even when every path is sho
 byte budget also charges an authored target that orientation turns into a synthesized canonical
 driver, before the completed target lists are cloned. Resource-limit diagnostics omit the attempted
 target subject to avoid an additional untrusted IRI copy at refusal. Deferred diagnostics,
-including the inactive-target variant, also omit their subject.
+including the inactive-target variant, also omit their subject. If bounded expansion produces
+several edges from one missing source, the importer emits one unresolved-source diagnostic for that
+source rather than copying its subject once per edge.
 
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:
