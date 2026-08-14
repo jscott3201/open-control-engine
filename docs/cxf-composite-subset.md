@@ -289,15 +289,17 @@ inside or outside that owning composite, then re-anchors reverse-spelled edges o
 driver. This is an orientation rule over the existing connector and containment data, not a new
 runtime model. Edges whose roles cannot be derived — a dangling or non-connector peer, a port
 claimed by two owners, non-tree containment — as well as same-polarity (contradictory) pairs and
-reverse spellings whose canonical driver has no node in the document, are left exactly as
-authored and reject under the existing Rule 6 diagnostics when their source survives lowering. An
-unreachable, active non-root boundary source rejects during orientation when its edge cannot be
-kept or swapped; lowering would otherwise erase the relation with that source. Reachable boundary
-sources remain available to the bounded boundary walk and generic diagnostics. Inactive relations
-neither trigger this refusal nor make a boundary source reachable. Re-anchoring never invents or
-silently removes a relation: an input driven twice still rejects. Authoring the same relation from
-both endpoints collapses when either spelling required re-anchoring. In particular, both directions
-between one composite's input and output denote one pass-through relation, not a boundary cycle.
+reverse spellings whose canonical driver has neither a node nor a synthesized connector identity,
+are left exactly as authored and reject under the existing Rule 6 diagnostics when the relation
+survives lowering. If boundary elision would erase an active relation that cannot be kept or
+swapped, the importer defers a direction diagnostic until the bounded boundary walk succeeds. This
+applies whether the boundary is the authored source or target. An active elided boundary source
+targeting an inactive node similarly retains the ordinary inactive-node refusal. A node-less output
+derived from `hasInstance` can be a canonical driver; its lowered edges follow authored sources in
+derived connector order. Re-anchoring never invents or silently removes a relation: an input driven
+twice still rejects. Authoring the same relation from both endpoints collapses when either spelling
+required re-anchoring. In particular, both directions between one composite's input and output
+denote one pass-through relation, not a boundary cycle.
 
 The boundary walk preserves canonical target order and duplicate multiplicity below its resource
 limits. It checks an active-path cycle or missing boundary node before the hop limit, so those
@@ -306,7 +308,8 @@ counts inactive, terminal, dangling, and cycle-revisit targets before classifica
 shallow branching graph from expanding without bound even when every path is short. The aggregate
 byte budget bounds repeated long target IRIs before the completed target lists are cloned.
 Resource-limit diagnostics omit the attempted target subject to avoid an additional untrusted IRI
-copy at refusal.
+copy at refusal. Deferred diagnostics, including the inactive-target variant, also omit their
+subject.
 
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:

@@ -5,6 +5,9 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
+#[path = "resolve_composite_orientation/refusals.rs"]
+mod refusals;
+
 const FIXTURE: &str = include_str!("fixtures/nested_composite.jsonld");
 const BASE: &str = "http://example.org#g36.profile.nested_composite";
 
@@ -464,37 +467,6 @@ fn sibling_document() -> Value {
         "@context": { "S231": "http://data.ashrae.org/S231P#" },
         "@graph": graph
     })
-}
-
-/// An unreachable contradictory edge authored from a non-root boundary source must reject before
-/// that source is removed. A dead boundary predecessor must not make the bad source reachable, and
-/// the direct top-input arm keeps both leaf inputs driven so dropping the chain would accept.
-#[test]
-fn contradictory_boundary_source_edge_rejects_before_elision() {
-    let mut document = sibling_document();
-    let model = "http://example.org#siblings";
-    set_absolute_targets(
-        &mut document,
-        ".u",
-        &[
-            &format!("{model}.subA.gain.u"),
-            &format!("{model}.subB.gain.u"),
-        ],
-    );
-    clear_targets(&mut document, ".subA.gain.y");
-    set_absolute_targets(&mut document, ".subA.y", &[&format!("{model}.subB.u")]);
-    set_absolute_targets(&mut document, ".subB.u", &[&format!("{model}.subB.gain.y")]);
-    let diagnostics = import(&document).expect_err("contradictory boundary source must reject");
-    assert_eq!(
-        diagnostics,
-        vec![
-            Diagnostic::error(
-                DiagCode::DirectionMismatch,
-                "non-root boundary source connection has contradictory endpoint directions",
-            )
-            .with_subject(format!("{model}.subB.u"))
-        ]
-    );
 }
 
 /// An entered sibling boundary output-to-output pair remains visible to generic validation.

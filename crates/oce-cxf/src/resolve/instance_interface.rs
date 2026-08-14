@@ -82,9 +82,9 @@ pub(super) fn is_derivation_shaped(node: &Node, contains_referents: &HashSet<&st
 
 /// A derivation-shaped node's members classified as ports of its class, for the pre-lowering
 /// [`CompositeOrientation`](super::composite_orientation::CompositeOrientation) ownership index
-/// (R19-14): `(member IRI, is_input)` per member whose `local_name` is a declared port name.
-/// Classes publishing no port names contribute nothing (they are refused on the derivation
-/// path), and non-port members claim no ownership.
+/// (R19-14): `(member IRI, is_input)` per member whose `local_name` is a declared port name, in
+/// class-signature input-then-output order. Classes publishing no port names contribute nothing
+/// (they are refused on the derivation path), and non-port members claim no ownership.
 pub(super) fn classified_port_members(node: &Node) -> Vec<(&str, bool)> {
     let Some(names) = first_type(node)
         .map(crate::bridge::class_path_of)
@@ -92,19 +92,29 @@ pub(super) fn classified_port_members(node: &Node) -> Vec<(&str, bool)> {
     else {
         return Vec::new();
     };
-    node.has_instance
+    let mut classified = node
+        .has_instance
         .iter()
         .map(|r| r.id.as_str())
         .filter_map(|member| {
             let name = local_name(member);
-            if names.inputs.contains(&name) {
-                Some((member, true))
-            } else if names.outputs.contains(&name) {
-                Some((member, false))
+            if let Some(position) = names.inputs.iter().position(|candidate| *candidate == name) {
+                Some((member, true, position))
+            } else if let Some(position) = names
+                .outputs
+                .iter()
+                .position(|candidate| *candidate == name)
+            {
+                Some((member, false, names.inputs.len() + position))
             } else {
                 None
             }
         })
+        .collect::<Vec<_>>();
+    classified.sort_by_key(|(_, _, position)| *position);
+    classified
+        .into_iter()
+        .map(|(member, input, _)| (member, input))
         .collect()
 }
 

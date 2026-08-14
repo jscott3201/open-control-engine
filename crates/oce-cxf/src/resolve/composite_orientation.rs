@@ -9,13 +9,13 @@
 //!   fixed (input SOURCE, output SINK); a non-root boundary input is a SOURCE toward its own
 //!   composite interior (peer located in, or strictly inside, the owner) and a SINK outside it;
 //!   a non-root boundary output is the mirror image.
-//! - Verdicts: (SOURCE, SINK) keeps the authored direction; (SINK, SOURCE) swaps — unless the
-//!   canonical source has no `@graph` node (swap-blocked); same-polarity pairs are contradictory;
-//!   edges with an underivable endpoint (dangling or non-connector peer, conflicted ownership,
-//!   non-tree containment) cannot be oriented. An unreachable, active non-root boundary source
-//!   rejects here when its edge cannot be kept or swapped, because lowering would otherwise erase
-//!   it with that source. Reachable boundary sources remain available to the boundary walk and
-//!   generic diagnostics; inactive relations neither reject here nor establish reachability.
+//! - Verdicts: (SOURCE, SINK) keeps the authored direction; (SINK, SOURCE) swaps unless the
+//!   canonical source has neither an `@graph` node nor a synthesized connector identity; same-
+//!   polarity pairs are contradictory. Edges with an underivable endpoint (dangling or
+//!   non-connector peer, conflicted ownership, non-tree containment) cannot be oriented. If
+//!   lowering would erase an active unorientable edge, its diagnostic is deferred until after the
+//!   bounded boundary walk. Active boundary-source edges to inactive targets similarly preserve
+//!   the ordinary inactive-node refusal.
 //! - Duplicate suppression: forward+reverse restatements of ONE relation collapse (a canonical
 //!   pair repeats and either sighting swapped); two authored copies of the same edge are NOT
 //!   collapsed — a genuine double-drive stays visible to the single-assignment check.
@@ -55,7 +55,11 @@ enum Verdict {
     Untouched,
 }
 
-type CanonicalConnections<'a> = (HashMap<&'a str, Vec<&'a str>>, HashSet<&'a str>);
+type CanonicalConnections<'a> = (
+    HashMap<&'a str, Vec<&'a str>>,
+    HashSet<&'a str>,
+    Option<Diagnostic>,
+);
 
 /// Port-role and containment index for one document: composite membership, boundary-port sets,
 /// per-port ownership claims, `@graph` positions, and the transitive `containsBlock` closure the
@@ -70,6 +74,8 @@ pub(super) struct CompositeOrientation {
     owners: HashMap<String, Option<(String, bool)>>,
     roles: HashMap<String, Option<Role>>,
     parents: HashMap<String, String>,
+    synthesized: HashSet<String>,
+    synthesized_order: Vec<String>,
     tree: bool,
     positions: HashMap<String, usize>,
 }
@@ -120,6 +126,9 @@ impl CompositeOrientation {
             // boundary membership, a derivation-shaped node being a leaf by definition.
             if is_derivation_shaped(node, &contains_referents) {
                 for (member, input) in classified_port_members(node) {
+                    if !by_id.contains_key(member) && index.synthesized.insert(member.to_owned()) {
+                        index.synthesized_order.push(member.to_owned());
+                    }
                     index.claim(member, &node.id, input);
                 }
             }
@@ -193,36 +202,49 @@ impl CompositeOrientation {
     /// canonical drivers whose edges touch a non-root boundary — the drivers whose lowered lists
     /// rule Gx orders by target `@graph` position.
     ///
-    /// # Errors
-    /// Returns [`DiagCode::DirectionMismatch`] when lowering would erase an unorientable edge from
-    /// an active non-root boundary source that no surviving source can reach.
+    /// The third return value is the first diagnostic for an active relation that canonical
+    /// lowering would erase. The caller emits it only after the bounded boundary walk succeeds, so
+    /// resource-limit diagnostics retain precedence.
     pub(super) fn canonical_connections<'a>(
         &self,
         doc: &'a CxfDocument,
         by_id: &HashMap<&str, &Node>,
         root: &str,
         specialization: &Specialization,
-    ) -> Result<CanonicalConnections<'a>, Diagnostic> {
+    ) -> CanonicalConnections<'a> {
         let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut crossed = HashSet::new();
-        let mut unorientable_sources = Vec::new();
+        let mut deferred_diagnostic = None;
         let mut stored: HashMap<(&str, &str), Verdict> = HashMap::new();
         for node in &doc.graph {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
                     self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
-                if self.is_elided_boundary_source(&node.id)
-                    && !specialization.is_inactive(&node.id)
-                    && !specialization.is_inactive(authored_target)
-                    && matches!(
-                        verdict,
-                        Verdict::SwapBlocked
-                            | Verdict::Contradictory
-                            | Verdict::Unknown
-                            | Verdict::Untouched
-                    )
+                let relation_is_erased = self.is_elided_boundary_source(&node.id)
+                    || (self.is_elided_boundary_source(authored_target)
+                        && by_id.contains_key(authored_target));
+                if !specialization.is_inactive(&node.id)
+                    && relation_is_erased
+                    && deferred_diagnostic.is_none()
                 {
-                    unorientable_sources.push((node.id.as_str(), verdict));
+                    deferred_diagnostic = if specialization.is_inactive(authored_target) {
+                        Some(Diagnostic::error(
+                            DiagCode::InactiveConditionalNode,
+                            "connection targets an inactive conditional node",
+                        ))
+                    } else {
+                        match verdict {
+                            Verdict::Contradictory => Some(Diagnostic::error(
+                                DiagCode::DirectionMismatch,
+                                "boundary connection has contradictory endpoint directions",
+                            )),
+                            Verdict::SwapBlocked | Verdict::Unknown => Some(Diagnostic::error(
+                                DiagCode::DirectionMismatch,
+                                "boundary connection direction cannot be derived",
+                            )),
+                            Verdict::Keep | Verdict::Swap | Verdict::Untouched => None,
+                        }
+                    };
                 }
                 if self.is_non_root_boundary(&node.id, root)
                     || self.is_non_root_boundary(authored_target, root)
@@ -240,42 +262,7 @@ impl CompositeOrientation {
                 stored.insert(pair, verdict);
             }
         }
-        let mut reachable_boundaries = HashSet::new();
-        let mut pending = Vec::new();
-        for (&source, targets) in &out {
-            if !self.is_elided_boundary_source(source)
-                && by_id.contains_key(source)
-                && !specialization.is_inactive(source)
-            {
-                pending.extend(targets.iter().copied());
-            }
-        }
-        while let Some(target) = pending.pop() {
-            if !self.is_elided_boundary_source(target)
-                || specialization.is_inactive(target)
-                || !reachable_boundaries.insert(target)
-            {
-                continue;
-            }
-            if by_id.contains_key(target)
-                && let Some(targets) = out.get(target)
-            {
-                pending.extend(targets.iter().copied());
-            }
-        }
-        if let Some((source, verdict)) = unorientable_sources
-            .into_iter()
-            .find(|(source, _)| !reachable_boundaries.contains(source))
-        {
-            let message = if verdict == Verdict::Contradictory {
-                "non-root boundary source connection has contradictory endpoint directions"
-            } else {
-                "non-root boundary source connection direction cannot be derived"
-            };
-            return Err(Diagnostic::error(DiagCode::DirectionMismatch, message)
-                .with_subject(source.to_owned()));
-        }
-        Ok((out, crossed))
+        (out, crossed, deferred_diagnostic)
     }
 
     fn canonical_pair<'a>(
@@ -302,7 +289,9 @@ impl CompositeOrientation {
         };
         match (source_polarity, target_polarity) {
             (Polarity::Source, Polarity::Sink) => authored(source, target, Verdict::Keep),
-            (Polarity::Sink, Polarity::Source) if by_id.contains_key(target) => {
+            (Polarity::Sink, Polarity::Source)
+                if by_id.contains_key(target) || self.synthesized.contains(target) =>
+            {
                 (target, source, Verdict::Swap)
             }
             (Polarity::Sink, Polarity::Source) => authored(source, target, Verdict::SwapBlocked),
@@ -372,6 +361,11 @@ impl CompositeOrientation {
             || (self.outputs.contains(iri) && !self.top_outputs.contains(iri))
     }
 
+    /// Node-less derived connector sources in owner and class-signature order.
+    pub(super) fn synthesized_sources(&self) -> impl Iterator<Item = &str> {
+        self.synthesized_order.iter().map(String::as_str)
+    }
+
     /// Original `@graph` position of a node, with unknown targets ordered last.
     pub(super) fn position(&self, iri: &str) -> usize {
         self.positions.get(iri).copied().unwrap_or(usize::MAX)
@@ -422,7 +416,6 @@ mod tests {
         let index = CompositeOrientation::new(&doc, &by_id, "root", &specialization);
         index
             .canonical_connections(&doc, &by_id, "root", &specialization)
-            .expect("fixture connections orient")
             .0
             .into_iter()
             .map(|(source, targets)| {
@@ -494,9 +487,7 @@ mod tests {
             .collect();
         let specialization = Specialization::default();
         let index = CompositeOrientation::new(&doc, &by_id, "root", &specialization);
-        let (adjacency, _) = index
-            .canonical_connections(&doc, &by_id, "root", &specialization)
-            .expect("fixture connections orient");
+        let (adjacency, _, _) = index.canonical_connections(&doc, &by_id, "root", &specialization);
         assert_eq!(adjacency.get("sub.u"), Some(&vec!["first.u", "second.u"]));
     }
 
@@ -527,9 +518,8 @@ mod tests {
         let specialization = Specialization::default();
         let first_index =
             CompositeOrientation::new(&first_doc, &first_by_id, "root", &specialization);
-        let (first, _) = first_index
-            .canonical_connections(&first_doc, &first_by_id, "root", &specialization)
-            .expect("first fixture connections orient");
+        let (first, _, _) =
+            first_index.canonical_connections(&first_doc, &first_by_id, "root", &specialization);
         for node in value["@graph"].as_array_mut().expect("@graph") {
             let id = node["@id"].as_str().expect("@id").to_owned();
             node.as_object_mut()
@@ -552,9 +542,8 @@ mod tests {
             .collect();
         let second_index =
             CompositeOrientation::new(&second_doc, &second_by_id, "root", &specialization);
-        let (second, _) = second_index
-            .canonical_connections(&second_doc, &second_by_id, "root", &specialization)
-            .expect("second fixture connections orient");
+        let (second, _, _) =
+            second_index.canonical_connections(&second_doc, &second_by_id, "root", &specialization);
         assert_eq!(second, first);
     }
 }
