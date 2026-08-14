@@ -288,13 +288,20 @@ impl CompositeOrientation {
                             "boundary connection has contradictory endpoint directions",
                         ));
                     }
-                    Verdict::SwapBlocked | Verdict::Unknown => {
+                    Verdict::SwapBlocked
+                        if source_is_erased && reached_boundaries.contains(node.id.as_str()) => {}
+                    Verdict::Unknown
+                        if source_is_erased
+                            && reached_boundaries.contains(node.id.as_str())
+                            && (!self.is_elided_boundary_source(authored_target)
+                                || !by_id.contains_key(authored_target)) => {}
+                    Verdict::SwapBlocked | Verdict::Unknown | Verdict::Untouched => {
                         return Some(Diagnostic::error(
                             DiagCode::DirectionMismatch,
                             "boundary connection direction cannot be derived",
                         ));
                     }
-                    Verdict::Keep | Verdict::Swap | Verdict::Untouched => {}
+                    Verdict::Keep | Verdict::Swap => {}
                 }
             }
         }
@@ -400,6 +407,11 @@ impl CompositeOrientation {
     /// Node-less derived connector sources in owner and class-signature order.
     pub(super) fn synthesized_sources(&self) -> impl Iterator<Item = &str> {
         self.synthesized_order.iter().map(String::as_str)
+    }
+
+    /// Whether `iri` is a node-less output identity synthesized from an instance interface.
+    pub(super) fn is_synthesized_source(&self, iri: &str) -> bool {
+        self.synthesized.contains(iri)
     }
 
     /// Original `@graph` position of a node, with unknown targets ordered last.

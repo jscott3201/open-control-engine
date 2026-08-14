@@ -306,10 +306,10 @@ limits. It checks an active-path cycle or missing boundary node before the hop l
 shapes retain their `UnresolvedReference` outcome at the boundary. The target-examination budget
 counts inactive, terminal, dangling, and cycle-revisit targets before classification; it prevents a
 shallow branching graph from expanding without bound even when every path is short. The aggregate
-byte budget bounds repeated long target IRIs before the completed target lists are cloned.
-Resource-limit diagnostics omit the attempted target subject to avoid an additional untrusted IRI
-copy at refusal. Deferred diagnostics, including the inactive-target variant, also omit their
-subject.
+byte budget also charges an authored target that orientation turns into a synthesized canonical
+driver, before the completed target lists are cloned. Resource-limit diagnostics omit the attempted
+target subject to avoid an additional untrusted IRI copy at refusal. Deferred diagnostics,
+including the inactive-target variant, also omit their subject.
 
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:

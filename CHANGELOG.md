@@ -498,8 +498,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   the bounded walk when boundary elision would otherwise erase it, whether the boundary is its
   authored source or target. Active boundary-source relations to inactive targets remain loud.
   Listed node-less and omitted padded outputs can drive through a re-anchored boundary edge. These
-  deferred diagnostics omit attacker-controlled subjects, and boundary resource errors retain
-  precedence. These limits are engine acceptance bounds, not CDL semantics.
+  synthesized drivers remain charged as authored targets under the byte bound. Deferred diagnostics
+  omit attacker-controlled subjects, and boundary resource errors retain precedence. These limits
+  are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
   completed AST, and again in `eval()`. Composite nesting is capped at 64.

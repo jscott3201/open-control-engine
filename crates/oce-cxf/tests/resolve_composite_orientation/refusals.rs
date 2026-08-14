@@ -339,6 +339,101 @@ fn missing_target_of_unreachable_boundary_source_remains_loud() {
     );
 }
 
+/// Conflicted ownership cannot hide an active edge authored from an elided boundary identity.
+#[test]
+fn conflicted_ownership_on_elided_source_remains_loud() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    node_mut(&mut document, ".subB")["S231:hasInput"] = json!([
+        { "@id": format!("{model}.subB.u") },
+        { "@id": format!("{model}.subA.y") }
+    ]);
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    clear_targets(&mut document, ".subA.gain.y");
+    clear_targets(&mut document, ".subB.gain.y");
+    set_absolute_targets(&mut document, ".subA.y", &[&format!("{model}.subB.gain.y")]);
+    let diagnostics = import(&document).expect_err("conflicted boundary source must reject");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::DirectionMismatch,
+            "boundary connection direction cannot be derived",
+        )]
+    );
+}
+
+fn reached_malformed_boundary_document(target: &str) -> Value {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&format!("{model}.subA.gain.u"), &format!("{model}.subB.u")],
+    );
+    set_absolute_targets(
+        &mut document,
+        ".subB.u",
+        &[&format!("{model}.subB.gain.u"), target],
+    );
+    document
+}
+
+/// A reached underivable target survives lowering for the ordinary subject-bearing refusal.
+#[test]
+fn reached_unknown_boundary_relation_reports_once() {
+    let target = "http://example.org#siblings.subB.gain";
+    let diagnostics = import(&reached_malformed_boundary_document(target))
+        .expect_err("non-connector target must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::UnresolvedReference,
+                "boundary-input target not found",
+            )
+            .with_subject(target.to_owned())
+        ]
+    );
+}
+
+/// A reached swap-blocked target survives lowering for the ordinary unresolved-reference refusal.
+#[test]
+fn reached_swap_blocked_boundary_relation_reports_once() {
+    let target = "http://example.org#siblings.subA.y";
+    let mut document = reached_malformed_boundary_document(target);
+    clear_targets(&mut document, ".subA.gain.y");
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .retain(|node| node["@id"].as_str() != Some(target));
+    let diagnostics = import(&document).expect_err("missing canonical source must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::UnresolvedReference,
+                "boundary-input target not found",
+            )
+            .with_subject(target.to_owned())
+        ]
+    );
+}
+
 /// A reverse spelling whose missing canonical source is not synthesized must remain loud when its
 /// authored boundary source would otherwise be removed.
 #[test]
@@ -556,6 +651,34 @@ fn synthesized_output_can_drive_through_nested_boundary() {
                 && target.starts_with("http://example.org#derived_output.post:")
         }));
     }
+}
+
+/// A node-less synthesized driver still charges its authored target IRI against the byte budget.
+#[test]
+fn synthesized_output_remains_resource_bounded() {
+    let mut document = derived_output_document(false, false);
+    let owner = format!("http://example.org#{}", "x".repeat(8_388_608));
+    let parameter = format!("{owner}.k");
+    let output = format!("{owner}.y");
+    node_mut(&mut document, ".sub")["S231:containsBlock"] = json!({ "@id": owner });
+    node_mut(&mut document, ".sub.con.k")["@id"] = json!(parameter);
+    let instance = node_mut(&mut document, ".sub.con");
+    instance["@id"] = json!(owner);
+    instance["S231:hasInstance"] = json!([{ "@id": parameter }]);
+    set_absolute_targets(
+        &mut document,
+        ".sub.y",
+        &[&output, "http://example.org#derived_output.post.u"],
+    );
+    let diagnostics = import(&document).expect_err("oversized synthesized output must reject");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "composite boundary resolution exceeds the supported aggregate target IRI byte count \
+             (8388608)",
+        )]
+    );
 }
 
 /// Authored connections precede listed and padded synthesized-driver sidecars in block order.

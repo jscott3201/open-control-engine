@@ -435,6 +435,9 @@ fn rewrite_connections(
         if specialization.is_inactive(source) {
             continue;
         }
+        if boundary.is_synthesized_source(source) {
+            budget.examine_bytes(source)?;
+        }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
             continue;
         }
@@ -504,7 +507,13 @@ impl BoundaryBudget {
                 ),
             ));
         }
-        if target.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
+        self.examine_bytes(target)?;
+        self.examined_targets += 1;
+        Ok(())
+    }
+
+    fn examine_bytes(&mut self, iri: &str) -> Result<(), Diagnostic> {
+        if iri.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
             return Err(Diagnostic::error(
                 DiagCode::MalformedDocument,
                 format!(
@@ -513,8 +522,7 @@ impl BoundaryBudget {
                 ),
             ));
         }
-        self.examined_targets += 1;
-        self.examined_target_bytes += target.len();
+        self.examined_target_bytes += iri.len();
         Ok(())
     }
 }
