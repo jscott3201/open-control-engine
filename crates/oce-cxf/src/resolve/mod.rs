@@ -521,7 +521,7 @@ pub(crate) fn resolve(
     let boundary_types =
         pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
     let mut inactive_connection_sources = HashSet::new();
-    let mut missing_connection_sources = HashSet::new();
+    let mut reported_missing_endpoints = HashSet::new();
     for (source, target) in lowered.connection_edges() {
         if specialization.is_inactive(source) {
             if inactive_connection_sources.insert(source) {
@@ -671,13 +671,14 @@ pub(crate) fn resolve(
                     }
                     connectors[to.0 as usize].iri = Some(Arc::from(source));
                 }
-                None => diags.push(
+                None if reported_missing_endpoints.insert(target) => diags.push(
                     Diagnostic::error(
                         DiagCode::UnresolvedReference,
                         "boundary-input target not found",
                     )
                     .with_subject(target.to_owned()),
                 ),
+                None => {}
             }
             continue;
         }
@@ -719,13 +720,14 @@ pub(crate) fn resolve(
                         .entry(target.to_owned())
                         .or_insert(from);
                 }
-                None => diags.push(
+                None if reported_missing_endpoints.insert(source) => diags.push(
                     Diagnostic::error(
                         DiagCode::UnresolvedReference,
                         "boundary-output source not found",
                     )
                     .with_subject(source.to_owned()),
                 ),
+                None => {}
             }
             continue;
         }
@@ -735,7 +737,7 @@ pub(crate) fn resolve(
         ) {
             (Some(from), Some(to)) => connections.push(Connection { from, to }),
             (from, to) => {
-                if from.is_none() && missing_connection_sources.insert(source) {
+                if from.is_none() && reported_missing_endpoints.insert(source) {
                     diags.push(
                         Diagnostic::error(
                             DiagCode::UnresolvedReference,

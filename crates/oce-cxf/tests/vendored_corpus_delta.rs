@@ -22,9 +22,9 @@
 //!   the enumeration-only `Types/*.jsonld` documents remain);
 //! - `non-subset-construct` 81 → 111: +30 `composite/vector-port-instance`, the scalar-only
 //!   refusal on the three documents whose classes publish no port names;
-//! - `unresolved-reference` 2,816 → 222: repeated missing connection sources contribute once per
-//!   source; every surviving subject sits on the 18 `class-not-found` or 30 vector-port instances,
-//!   which derive no interface;
+//! - `unresolved-reference` 2,816 → 214: repeated missing endpoints contribute once per endpoint;
+//!   every surviving subject sits on the 18 `class-not-found` or 30 vector-port instances, which
+//!   derive no interface;
 //! - `single-assignment` 0 → 57 (declared INCREASE): 31 undriven + 8 multiply-driven derived
 //!   inputs, plus 18 multiply-driven declared boundary outputs — the `_spec/18` R19-16
 //!   migration off the wrong `unresolved-reference` code, `refuse_multiply_driven` assessing

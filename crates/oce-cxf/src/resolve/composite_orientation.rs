@@ -16,9 +16,9 @@
 //!   lowering would erase an active unorientable edge, its diagnostic is deferred until after the
 //!   bounded boundary walk. Active boundary-source edges to inactive targets similarly preserve
 //!   the ordinary inactive-node refusal.
-//! - Duplicate suppression: forward+reverse restatements of ONE relation collapse (a canonical
-//!   pair repeats and either sighting swapped); two authored copies of the same edge are NOT
-//!   collapsed — a genuine double-drive stays visible to the single-assignment check.
+//! - Duplicate suppression: one forward and one reverse statement of the same relation collapse.
+//!   Two authored copies in the same direction are not collapsed, so a genuine double-drive stays
+//!   visible to the single-assignment check.
 
 use std::collections::{HashMap, HashSet};
 
@@ -217,10 +217,9 @@ impl CompositeOrientation {
                     crossed.insert(source);
                 }
                 let pair = (source, target);
-                if stored
-                    .get(&pair)
-                    .is_some_and(|previous| verdict == Verdict::Swap || *previous == Verdict::Swap)
-                {
+                if stored.get(&pair).is_some_and(|previous| {
+                    (verdict == Verdict::Swap) != (*previous == Verdict::Swap)
+                }) {
                     continue;
                 }
                 out.entry(source).or_default().push(target);
@@ -541,8 +540,8 @@ mod tests {
     }
 
     #[test]
-    fn two_reverse_spellings_collapse_to_one() {
-        assert_eq!(pair_count(&adjacency(&[], &["sub.u", "sub.u"])), 1);
+    fn two_reverse_spellings_are_both_preserved() {
+        assert_eq!(pair_count(&adjacency(&[], &["sub.u", "sub.u"])), 2);
     }
 
     #[test]

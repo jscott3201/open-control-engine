@@ -188,6 +188,29 @@ fn synthesized_output_can_drive_through_nested_boundary() {
     }
 }
 
+/// Repeating one reverse-spelled synthesized relation remains a visible duplicate drive.
+#[test]
+fn synthesized_reverse_duplicates_remain_loud() {
+    let mut document = derived_output_document(false, false);
+    let output = "http://example.org#derived_output.sub.con.y";
+    set_absolute_targets(
+        &mut document,
+        ".sub.y",
+        &[output, output, "http://example.org#derived_output.post.u"],
+    );
+    let diagnostics = import(&document).expect_err("duplicate synthesized relation must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::SingleAssignment,
+                "input is multiply driven (in-degree 2)",
+            )
+            .with_subject("http://example.org#derived_output.post.u".to_owned())
+        ]
+    );
+}
+
 /// A node-less synthesized driver still charges its authored target IRI against the byte budget.
 #[test]
 fn synthesized_output_remains_resource_bounded() {
@@ -271,9 +294,14 @@ fn synthesized_output_relation_bytes_are_aggregated() {
     );
 }
 
-/// Exact-limit fanout from a derivation-skipped source emits one copied missing-source subject.
-#[test]
-fn skipped_synthesized_source_fanout_reports_source_once() {
+#[derive(Clone, Copy)]
+enum FanoutTarget {
+    LeafInput,
+    BoundaryInput,
+    BoundaryOutput,
+}
+
+fn assert_skipped_synthesized_fanout(target_kind: FanoutTarget, expected_message: &str) {
     let mut document = derived_output_document(false, false);
     let owner = format!("http://example.org#{}.con", "x".repeat(65_536));
     let parameter = format!("{owner}.k");
@@ -287,11 +315,37 @@ fn skipped_synthesized_source_fanout_reports_source_once() {
         { "@id": output },
         { "@id": output }
     ]);
+    let target = match target_kind {
+        FanoutTarget::LeafInput => "http://example.org#derived_output.post.u",
+        FanoutTarget::BoundaryInput => {
+            node_mut(&mut document, "#derived_output")["S231:hasInput"] =
+                json!({ "@id": "http://example.org#derived_output.u" });
+            document["@graph"]
+                .as_array_mut()
+                .expect("@graph")
+                .push(json!({
+                    "@id": "http://example.org#derived_output.u",
+                    "@type": "S231:RealInput",
+                    "S231:isOfDataType": { "@id": "S231:Real" }
+                }));
+            "http://example.org#derived_output.u"
+        }
+        FanoutTarget::BoundaryOutput => {
+            node_mut(&mut document, "#derived_output")["S231:hasOutput"] =
+                json!({ "@id": "http://example.org#derived_output.y" });
+            document["@graph"]
+                .as_array_mut()
+                .expect("@graph")
+                .push(json!({
+                    "@id": "http://example.org#derived_output.y",
+                    "@type": "S231:RealOutput",
+                    "S231:isOfDataType": { "@id": "S231:Real" }
+                }));
+            "http://example.org#derived_output.y"
+        }
+    };
     let mut targets = vec![json!({ "@id": output })];
-    targets.extend(std::iter::repeat_n(
-        json!({ "@id": "http://example.org#derived_output.post.u" }),
-        65_535,
-    ));
+    targets.extend(std::iter::repeat_n(json!({ "@id": target }), 65_535));
     node_mut(&mut document, ".sub.y")["S231:isConnectedTo"] = Value::Array(targets);
 
     let diagnostics = import(&document).expect_err("skipped synthesized source must reject");
@@ -299,7 +353,7 @@ fn skipped_synthesized_source_fanout_reports_source_once() {
         .iter()
         .filter(|diagnostic| {
             diagnostic.code == DiagCode::UnresolvedReference
-                && diagnostic.message == "connection source not found"
+                && diagnostic.message == expected_message
         })
         .collect::<Vec<_>>();
     assert_eq!(missing_sources.len(), 1, "{diagnostics:?}");
@@ -308,6 +362,30 @@ fn skipped_synthesized_source_fanout_reports_source_once() {
         !diagnostics
             .iter()
             .any(|diagnostic| diagnostic.code == DiagCode::MalformedDocument)
+    );
+}
+
+/// Exact-limit ordinary fanout copies a derivation-skipped source subject once.
+#[test]
+fn skipped_synthesized_source_fanout_reports_source_once() {
+    assert_skipped_synthesized_fanout(FanoutTarget::LeafInput, "connection source not found");
+}
+
+/// Exact-limit boundary-input fanout copies a derivation-skipped endpoint subject once.
+#[test]
+fn skipped_synthesized_source_to_boundary_input_reports_once() {
+    assert_skipped_synthesized_fanout(
+        FanoutTarget::BoundaryInput,
+        "boundary-input target not found",
+    );
+}
+
+/// Exact-limit boundary-output fanout copies a derivation-skipped endpoint subject once.
+#[test]
+fn skipped_synthesized_source_to_boundary_output_reports_once() {
+    assert_skipped_synthesized_fanout(
+        FanoutTarget::BoundaryOutput,
+        "boundary-output source not found",
     );
 }
 

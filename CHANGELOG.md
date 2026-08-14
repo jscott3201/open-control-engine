@@ -500,8 +500,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   Listed node-less and omitted padded outputs can drive through a re-anchored boundary edge. These
   synthesized drivers remain charged as authored targets under the byte bound. Deferred diagnostics
   omit attacker-controlled subjects, and boundary resource errors retain precedence. Expanded edges
-  from one missing source emit one unresolved-source diagnostic, preventing fanout from multiplying
-  the same subject allocation. These limits are engine acceptance bounds, not CDL semantics.
+  that repeat one missing endpoint emit one unresolved-reference diagnostic across ordinary and
+  boundary-specific orientation, preventing fanout from multiplying the same subject allocation.
+  These limits are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
   completed AST, and again in `eval()`. Composite nesting is capped at 64.
