@@ -8,6 +8,8 @@ use serde_json::{Value, json};
 mod bless;
 mod render;
 
+#[path = "resolve_composite_orientation/multiplicity.rs"]
+mod multiplicity;
 #[path = "resolve_composite_orientation/refusals.rs"]
 mod refusals;
 #[path = "resolve_composite_orientation/synthesized.rs"]

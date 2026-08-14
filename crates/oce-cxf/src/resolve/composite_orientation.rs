@@ -95,6 +95,9 @@ impl CompositeOrientation {
             if specialization.is_inactive(&node.id) {
                 continue;
             }
+            if node.id != root && !reachable_members.contains(node.id.as_str()) {
+                continue;
+            }
             let composite = is_runtime_composite(node);
             if composite {
                 index.composites.insert(node.id.clone());
@@ -120,8 +123,7 @@ impl CompositeOrientation {
             // Listed and padded members claim the same leaf ownership used by later derivation.
             if is_derivation_shaped(node, &contains_referents) {
                 for (member, input) in orientation_port_members(node) {
-                    if reachable_members.contains(node.id.as_str())
-                        && !by_id.contains_key(member.as_str())
+                    if !by_id.contains_key(member.as_str())
                         && index.synthesized.insert(member.clone())
                     {
                         index.synthesized_order.push(member.clone());
@@ -129,20 +131,22 @@ impl CompositeOrientation {
                     index.claim(&member, &node.id, input);
                 }
             }
-            for child in node.contains_block.iter().map(|child| child.id.as_str()) {
-                if specialization.is_inactive(child) {
-                    continue;
-                }
-                if let Some(previous) = index.parents.insert(child.to_owned(), node.id.clone())
-                    && previous != node.id
-                {
-                    index.tree = false;
-                }
-                if by_id
-                    .get(child)
-                    .is_some_and(|child_node| is_runtime_composite(child_node))
-                {
-                    index.composites.insert(child.to_owned());
+            if composite {
+                for child in node.contains_block.iter().map(|child| child.id.as_str()) {
+                    if specialization.is_inactive(child) {
+                        continue;
+                    }
+                    if let Some(previous) = index.parents.insert(child.to_owned(), node.id.clone())
+                        && previous != node.id
+                    {
+                        index.tree = false;
+                    }
+                    if by_id
+                        .get(child)
+                        .is_some_and(|child_node| is_runtime_composite(child_node))
+                    {
+                        index.composites.insert(child.to_owned());
+                    }
                 }
             }
         }

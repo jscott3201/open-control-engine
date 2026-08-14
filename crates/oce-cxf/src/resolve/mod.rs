@@ -510,7 +510,7 @@ pub(crate) fn resolve(
     // Mutates connectors[].iri for the elided boundary-input child.
     let mut connections: Vec<Connection> = Vec::new();
     let mut external_inputs: Vec<ConnectorId> = Vec::new();
-    let mut boundary_input_sources: HashMap<ConnectorId, String> = HashMap::new();
+    let mut boundary_input_assignments = boundary_inputs::AssignmentTracker::default();
     let mut pass_through_pairs: Vec<(String, String)> = Vec::new();
     let mut seen_pass_through_pairs: HashSet<(String, String)> = HashSet::new();
     let mut boundary_output_drivers: HashMap<String, HashSet<String>> = HashMap::new();
@@ -635,19 +635,8 @@ pub(crate) fn resolve(
                     );
                 }
                 Some(to) => {
-                    if let Some(existing) = boundary_input_sources.get(&to) {
-                        if existing != source {
-                            diags.push(
-                                Diagnostic::error(
-                                    DiagCode::SingleAssignment,
-                                    "input is driven by distinct boundary inputs",
-                                )
-                                .with_subject(target.to_owned()),
-                            );
-                            continue;
-                        }
-                    } else {
-                        boundary_input_sources.insert(to, source.to_owned());
+                    if !boundary_input_assignments.record(to, source, target) {
+                        continue;
                     }
                     // This elision path bypasses Step 10, so it must also compare the boundary
                     // input's type with the child input's type here.
@@ -758,6 +747,8 @@ pub(crate) fn resolve(
             }
         }
     }
+
+    boundary_input_assignments.emit_diagnostics(&mut diags);
 
     // Declared-interface checks (`boundary_outputs`): refuse a declared output whose IRI
     // shadows an existing connector identity, refuse one with multiple distinct drivers, and

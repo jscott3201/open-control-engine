@@ -14,6 +14,60 @@ use crate::export_pass_through::is_pass_through_class;
 use super::attrs::connector_attrs;
 use super::instance_params::Inst;
 
+struct Assignment {
+    source: String,
+    target: String,
+    count: usize,
+    has_distinct_sources: bool,
+}
+
+/// Assignment cardinality for child inputs reached through top-composite boundary inputs.
+#[derive(Default)]
+pub(super) struct AssignmentTracker {
+    by_target: HashMap<ConnectorId, Assignment>,
+}
+
+impl AssignmentTracker {
+    /// Record an assignment and return whether it is the first assignment to the child input.
+    pub(super) fn record(&mut self, target_id: ConnectorId, source: &str, target: &str) -> bool {
+        match self.by_target.entry(target_id) {
+            std::collections::hash_map::Entry::Occupied(mut entry) => {
+                let assignment = entry.get_mut();
+                assignment.count += 1;
+                assignment.has_distinct_sources |= assignment.source != source;
+                false
+            }
+            std::collections::hash_map::Entry::Vacant(entry) => {
+                entry.insert(Assignment {
+                    source: source.to_owned(),
+                    target: target.to_owned(),
+                    count: 1,
+                    has_distinct_sources: false,
+                });
+                true
+            }
+        }
+    }
+
+    /// Emit one refusal for each child input reached more than once.
+    pub(super) fn emit_diagnostics(self, diags: &mut Vec<Diagnostic>) {
+        for assignment in self.by_target.into_values() {
+            if assignment.count <= 1 {
+                continue;
+            }
+            let message = if assignment.has_distinct_sources {
+                "input is driven by distinct boundary inputs".to_owned()
+            } else {
+                format!("input is multiply driven (in-degree {})", assignment.count)
+            };
+            diags.push(
+                Diagnostic::error(DiagCode::SingleAssignment, message)
+                    .with_subject(assignment.target),
+            );
+        }
+    }
+}
+
 /// Refuse a root input IRI that is also owned by an instance or one of its members.
 ///
 /// Export emits root declarations, blocks, parameters, and child ports as separate nodes. Sharing

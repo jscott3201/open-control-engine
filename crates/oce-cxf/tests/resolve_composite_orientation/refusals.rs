@@ -570,6 +570,49 @@ fn protected_derivation_owner_cannot_hide_boundary_relation() {
     }));
 }
 
+/// A connector node under a registered leaf is not part of the flattened endpoint population.
+#[test]
+fn node_bearing_protected_endpoint_cannot_hide_boundary_relation() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    let protected = format!("{model}.subB.gain.protected");
+    node_mut(&mut document, ".subB.gain")["S231:containsBlock"] = json!({ "@id": protected });
+    let protected_input = format!("{protected}.u");
+    set_absolute_targets(&mut document, ".subB.u", &[&protected_input]);
+    document["@graph"].as_array_mut().expect("@graph").extend([
+        json!({
+            "@id": protected,
+            "@type": "S231:Block",
+            "S231:hasInput": { "@id": protected_input }
+        }),
+        json!({
+            "@id": protected_input,
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+    ]);
+    let diagnostics = import(&document).expect_err("protected endpoint relation must reject");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::DirectionMismatch,
+            "boundary connection direction cannot be derived",
+        )]
+    );
+}
+
 fn reached_malformed_boundary_document(target: &str) -> Value {
     let mut document = sibling_document();
     let model = "http://example.org#siblings";
