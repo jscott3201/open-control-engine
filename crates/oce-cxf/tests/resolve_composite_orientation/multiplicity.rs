@@ -30,3 +30,23 @@ fn repeated_boundary_input_target_is_multiply_driven() {
         ]
     );
 }
+
+/// Assertions from both endpoints describe one root-boundary assignment.
+#[test]
+fn opposite_endpoint_spellings_collapse_once() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    let target = format!("{model}.subA.gain.u");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&target, &format!("{model}.subB.gain.u")],
+    );
+    set_absolute_targets(&mut document, ".subA.gain.u", &[&format!("{model}.u")]);
+    let graph = import(&document).expect("opposite spellings describe one assignment");
+    assert_eq!(graph.external_inputs.len(), 2);
+}

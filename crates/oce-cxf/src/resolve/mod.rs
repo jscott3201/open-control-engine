@@ -522,6 +522,14 @@ pub(crate) fn resolve(
         pass_through::derive_boundary_types(doc, &boundary_in, &boundary_out, &mut diags);
     let mut inactive_connection_sources = HashSet::new();
     let mut reported_missing_endpoints = HashSet::new();
+    let mut relation_multiplicity = connection_orientation::RelationMultiplicity::new(
+        lowered.connection_edges(),
+        &boundary_in,
+        &boundary_out,
+        &conn_of_iri,
+        &connectors,
+        &specialization,
+    );
     for (source, target) in lowered.connection_edges() {
         if specialization.is_inactive(source) {
             if inactive_connection_sources.insert(source) {
@@ -555,6 +563,9 @@ pub(crate) fn resolve(
             &conn_of_iri,
             &connectors,
         );
+        if !relation_multiplicity.retain(source, target) {
+            continue;
+        }
         if boundary_in.contains(source) && boundary_in.contains(target) {
             diags.push(
                 Diagnostic::error(
