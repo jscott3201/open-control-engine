@@ -439,6 +439,7 @@ struct BoundaryBudget {
 
 impl BoundaryBudget {
     fn examine(&mut self, target: &str) -> Result<(), Diagnostic> {
+        // Limit diagnostics omit the untrusted target because copying it would bypass the bound.
         if self.examined_targets >= MAX_COMPOSITE_BOUNDARY_TARGETS {
             return Err(Diagnostic::error(
                 DiagCode::MalformedDocument,
@@ -446,8 +447,7 @@ impl BoundaryBudget {
                     "composite boundary resolution exceeds the supported target examination count \
                      ({MAX_COMPOSITE_BOUNDARY_TARGETS})"
                 ),
-            )
-            .with_subject(target.to_owned()));
+            ));
         }
         if target.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
             return Err(Diagnostic::error(
@@ -456,8 +456,7 @@ impl BoundaryBudget {
                     "composite boundary resolution exceeds the supported aggregate target IRI \
                      byte count ({MAX_COMPOSITE_BOUNDARY_TARGET_BYTES})"
                 ),
-            )
-            .with_subject(target.to_owned()));
+            ));
         }
         self.examined_targets += 1;
         self.examined_target_bytes += target.len();
@@ -547,14 +546,14 @@ fn resolve_target<'a, 'b>(
             continue;
         }
         if active_path.len() >= MAX_COMPOSITE_BOUNDARY_HOPS {
+            // Keep the refusal path bounded for the same reason as BoundaryBudget::examine.
             return Err(Diagnostic::error(
                 DiagCode::MalformedDocument,
                 format!(
                     "composite boundary resolution exceeds the supported isConnectedTo hop count \
                      ({MAX_COMPOSITE_BOUNDARY_HOPS})"
                 ),
-            )
-            .with_subject(target.to_owned()));
+            ));
         }
 
         active_path.insert(target);
@@ -611,10 +610,7 @@ mod tests {
             .examine("http://example.org#over-limit")
             .expect_err("the attempted target beyond the limit must reject");
         assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
-        assert_eq!(
-            diagnostic.subject.as_deref(),
-            Some("http://example.org#over-limit")
-        );
+        assert_eq!(diagnostic.subject, None);
         assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
     }
 
@@ -629,7 +625,7 @@ mod tests {
             .examine("y")
             .expect_err("the attempted byte beyond the limit must reject");
         assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
-        assert_eq!(diagnostic.subject.as_deref(), Some("y"));
+        assert_eq!(diagnostic.subject, None);
         assert_eq!(
             budget.examined_target_bytes,
             MAX_COMPOSITE_BOUNDARY_TARGET_BYTES
