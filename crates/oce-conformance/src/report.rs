@@ -61,10 +61,10 @@ pub struct ConformanceRun<'a> {
 /// Drive `run` and assemble its ordered Tier 0–4 [`ConformanceReport`].
 ///
 /// This never turns a harness/configuration fault into a conformance verdict: only a `shall`-level
-/// load failure ([`DriverError::Engine`]) becomes a failed Tier 0 (with Tiers 1–4 `Skipped`, since
+/// load failure ([`DriverError::Load`]) becomes a failed Tier 0 (with Tiers 1–4 `Skipped`, since
 /// nothing executed). Every other driver error (bad tolerance config, malformed reference CSV, no
-/// mapped outputs, an unmasked zero-compare) is a caller/harness bug and is returned as `Err` — it
-/// is not a statement about the model's conformance.
+/// mapped outputs, a post-load engine failure, an unmasked zero-compare) is returned as `Err`; it is
+/// not a statement about the model's conformance.
 ///
 /// # Errors
 /// Returns any non-load [`DriverError`] from driving the Tier 4 run or the Tier 2 regression run.
@@ -87,7 +87,7 @@ pub fn assemble_report(run: &ConformanceRun<'_>) -> Result<ConformanceReport, Dr
                 "full-sequence funnel comparison vs the Tier-A reference oracle",
             ));
         }
-        Err(DriverError::Engine(err)) => {
+        Err(DriverError::Load(err)) => {
             tiers.push(tier0_load_failed(&err));
             tiers.push(tier1_skipped());
             tiers.push(TierReport::skipped(
