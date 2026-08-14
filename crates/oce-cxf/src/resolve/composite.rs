@@ -376,7 +376,7 @@ fn rewrite_connections(
     boundary: &CompositeOrientation,
 ) -> Result<HashMap<String, Vec<String>>, Diagnostic> {
     let (canonical, crossed_drivers) =
-        boundary.canonical_connections(doc, by_id, root, specialization);
+        boundary.canonical_connections(doc, by_id, root, specialization)?;
     let mut deferred = Vec::new();
     let walk = BoundaryWalk {
         by_id,

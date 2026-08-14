@@ -290,11 +290,14 @@ driver. This is an orientation rule over the existing connector and containment 
 runtime model. Edges whose roles cannot be derived — a dangling or non-connector peer, a port
 claimed by two owners, non-tree containment — as well as same-polarity (contradictory) pairs and
 reverse spellings whose canonical driver has no node in the document, are left exactly as
-authored and reject under the existing Rule 6 diagnostics. Re-anchoring never invents, removes,
-or deduplicates a relation: an input driven twice still rejects. Authoring the same relation from
-both endpoints collapses when either spelling required re-anchoring. In particular, both
-directions between one composite's input and output denote one pass-through relation, not a
-boundary cycle.
+authored and reject under the existing Rule 6 diagnostics when their source survives lowering. An
+unreachable, active non-root boundary source rejects during orientation when its edge cannot be
+kept or swapped; lowering would otherwise erase the relation with that source. Reachable boundary
+sources remain available to the bounded boundary walk and generic diagnostics. Inactive relations
+neither trigger this refusal nor make a boundary source reachable. Re-anchoring never invents or
+silently removes a relation: an input driven twice still rejects. Authoring the same relation from
+both endpoints collapses when either spelling required re-anchoring. In particular, both directions
+between one composite's input and output denote one pass-through relation, not a boundary cycle.
 
 The boundary walk preserves canonical target order and duplicate multiplicity below its resource
 limits. It checks an active-path cycle or missing boundary node before the hop limit, so those
