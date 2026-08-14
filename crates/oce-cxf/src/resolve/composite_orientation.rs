@@ -397,8 +397,7 @@ impl CompositeOrientation {
         if specialization.is_inactive(source) || specialization.is_inactive(target) {
             return authored(source, target, Verdict::Untouched);
         }
-        let scoped =
-            self.is_non_root_boundary(source, root) || self.is_non_root_boundary(target, root);
+        let scoped = self.is_boundary(source) || self.is_boundary(target);
         if !scoped {
             return authored(source, target, Verdict::Untouched);
         }
@@ -475,6 +474,10 @@ impl CompositeOrientation {
                 Some(Role::BoundaryInput(owner) | Role::BoundaryOutput(owner)) if owner != root
             )
         })
+    }
+
+    fn is_boundary(&self, iri: &str) -> bool {
+        self.inputs.contains(iri) || self.outputs.contains(iri)
     }
 
     fn is_elided_boundary_source(&self, iri: &str) -> bool {

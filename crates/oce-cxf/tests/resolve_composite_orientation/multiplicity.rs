@@ -76,3 +76,32 @@ fn opposite_leaf_spellings_remain_multiply_driven() {
         ]
     );
 }
+
+/// A direct reverse relation stays distinct from a boundary path with the same flat endpoints.
+#[test]
+fn direct_relation_does_not_collapse_expanded_boundary_path() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    let target = format!("{model}.subA.gain.u");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&format!("{model}.subA.u"), &format!("{model}.subB.gain.u")],
+    );
+    set_absolute_targets(&mut document, ".subA.gain.u", &[&format!("{model}.u")]);
+    let diagnostics = import(&document).expect_err("distinct boundary paths must remain visible");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::SingleAssignment,
+                "input is multiply driven (in-degree 2)",
+            )
+            .with_subject(target)
+        ]
+    );
+}
