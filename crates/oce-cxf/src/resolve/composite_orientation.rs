@@ -27,7 +27,7 @@ use oce_diag::{DiagCode, Diagnostic};
 
 use super::composite::is_runtime_composite;
 use super::instance_interface::{
-    classified_port_members, contains_block_referents, is_derivation_shaped,
+    contains_block_referents, is_derivation_shaped, orientation_port_members,
 };
 use super::specialize::Specialization;
 
@@ -120,16 +120,15 @@ impl CompositeOrientation {
                     }
                 }
             }
-            // A derivation-shaped node's port-classified members claim leaf ownership the
-            // same way its authored lists would (`_spec/19` R19-14): `hasInstance` encodes no
-            // side, so the side comes from the class's declared name lists — never composite
-            // boundary membership, a derivation-shaped node being a leaf by definition.
+            // Listed and padded members claim the same leaf ownership used by later derivation.
             if is_derivation_shaped(node, &contains_referents) {
-                for (member, input) in classified_port_members(node) {
-                    if !by_id.contains_key(member) && index.synthesized.insert(member.to_owned()) {
-                        index.synthesized_order.push(member.to_owned());
+                for (member, input) in orientation_port_members(node) {
+                    if !by_id.contains_key(member.as_str())
+                        && index.synthesized.insert(member.clone())
+                    {
+                        index.synthesized_order.push(member.clone());
                     }
-                    index.claim(member, &node.id, input);
+                    index.claim(&member, &node.id, input);
                 }
             }
             for child in node.contains_block.iter().map(|child| child.id.as_str()) {
@@ -220,14 +219,17 @@ impl CompositeOrientation {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
                     self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
-                let relation_is_erased = self.is_elided_boundary_source(&node.id)
-                    || (self.is_elided_boundary_source(authored_target)
+                let source_is_erased = self.is_elided_boundary_source(&node.id);
+                let target_is_inactive = specialization.is_inactive(authored_target);
+                let relation_is_erased = source_is_erased
+                    || (!target_is_inactive
+                        && self.is_elided_boundary_source(authored_target)
                         && by_id.contains_key(authored_target));
                 if !specialization.is_inactive(&node.id)
                     && relation_is_erased
                     && deferred_diagnostic.is_none()
                 {
-                    deferred_diagnostic = if specialization.is_inactive(authored_target) {
+                    deferred_diagnostic = if target_is_inactive {
                         Some(Diagnostic::error(
                             DiagCode::InactiveConditionalNode,
                             "connection targets an inactive conditional node",

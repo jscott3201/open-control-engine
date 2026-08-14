@@ -518,10 +518,7 @@ enum BoundaryFrame<'a> {
     },
 }
 
-fn requires_boundary_walk(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
-    if walk.specialization.is_inactive(target) {
-        return false;
-    }
+fn is_elided_boundary(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
     (walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target))
         || (walk.boundary.outputs.contains(target) && !walk.boundary.top_outputs.contains(target))
 }
@@ -532,7 +529,7 @@ fn resolve_authored_target<'a, 'b>(
     budget: &mut BoundaryBudget,
     out: &mut Vec<&'b str>,
 ) -> Result<(), Diagnostic> {
-    if requires_boundary_walk(target, walk) {
+    if is_elided_boundary(target, walk) {
         resolve_target(target, walk, budget, out)
     } else {
         out.push(target);
@@ -580,7 +577,7 @@ fn resolve_target<'a, 'b>(
             out.push(target);
             continue;
         }
-        if !requires_boundary_walk(target, walk) {
+        if !is_elided_boundary(target, walk) {
             out.push(target);
             continue;
         }

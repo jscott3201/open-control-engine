@@ -116,6 +116,125 @@ fn inactive_target_of_elided_boundary_source_remains_loud() {
     );
 }
 
+fn inactive_boundary_target_document(target: &str, repeats: usize) -> Value {
+    let model = "http://example.org#inactive_boundary_target";
+    let targets = std::iter::repeat_n(json!({ "@id": target }), repeats).collect::<Vec<_>>();
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": [
+            {
+                "@id": model,
+                "@type": "S231:Block",
+                "S231:containsBlock": [
+                    { "@id": format!("{model}.src") },
+                    { "@id": format!("{model}.sub") }
+                ]
+            },
+            {
+                "@id": format!("{model}.src"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": { "@id": format!("{model}.src.k") },
+                "S231:hasOutput": { "@id": format!("{model}.src.y") }
+            },
+            {
+                "@id": format!("{model}.src.k"),
+                "@type": "S231:Parameter",
+                "S231:value": 1
+            },
+            {
+                "@id": format!("{model}.src.y"),
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:isConnectedTo": targets
+            },
+            {
+                "@id": format!("{model}.sub"),
+                "@type": "S231:Block",
+                "S231:containsBlock": { "@id": format!("{model}.sub.keep") },
+                "S231:hasInput": { "@id": target },
+                "S231:hasParameter": { "@id": format!("{model}.sub.have") }
+            },
+            {
+                "@id": format!("{model}.sub.have"),
+                "@type": "S231:Parameter",
+                "S231:isOfDataType": { "@id": "S231:Boolean" },
+                "S231:value": false
+            },
+            {
+                "@id": target,
+                "@type": "S231:RealInput",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:isConditionalComponent": true,
+                "S231:conditionalExpression": "have"
+            },
+            {
+                "@id": format!("{model}.sub.keep"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": { "@id": format!("{model}.sub.keep.k") },
+                "S231:hasOutput": { "@id": format!("{model}.sub.keep.y") }
+            },
+            {
+                "@id": format!("{model}.sub.keep.k"),
+                "@type": "S231:Parameter",
+                "S231:value": 1
+            },
+            {
+                "@id": format!("{model}.sub.keep.y"),
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
+            }
+        ]
+    })
+}
+
+/// A surviving source targeting an inactive boundary gets one ordinary subject-bearing refusal.
+#[test]
+fn inactive_boundary_target_is_reported_once() {
+    let target = "http://example.org#inactive_boundary_target.sub.u";
+    let diagnostics = import(&inactive_boundary_target_document(target, 1))
+        .expect_err("inactive boundary target must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::InactiveConditionalNode,
+                "connection targets an inactive conditional node",
+            )
+            .with_subject(target.to_owned())
+        ]
+    );
+}
+
+/// Inactive boundary targets still consume count and byte budgets before activity classification.
+#[test]
+fn inactive_boundary_targets_remain_resource_bounded() {
+    let target = "http://example.org#inactive_boundary_target.sub.u";
+    let count = import(&inactive_boundary_target_document(target, 65_537))
+        .expect_err("inactive target count must reject");
+    assert_eq!(
+        count,
+        vec![Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "composite boundary resolution exceeds the supported target examination count (65536)",
+        )]
+    );
+
+    let oversized = format!(
+        "http://example.org#inactive_boundary_target.sub.u{}",
+        "x".repeat(8_388_608)
+    );
+    let bytes = import(&inactive_boundary_target_document(&oversized, 1))
+        .expect_err("inactive target bytes must reject");
+    assert_eq!(
+        bytes,
+        vec![Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "composite boundary resolution exceeds the supported aggregate target IRI byte count \
+             (8388608)",
+        )]
+    );
+}
+
 /// An underivable edge from an elided boundary source must remain loud without copying its subject.
 #[test]
 fn underivable_boundary_source_edge_rejects_without_subject_copy() {
@@ -175,9 +294,13 @@ fn swap_blocked_elided_source_rejects_without_subject_copy() {
     }));
 }
 
-fn derived_output_document(node_bearing: bool) -> Value {
+fn derived_output_document(node_bearing: bool, listed_output: bool) -> Value {
     let model = "http://example.org#derived_output";
     let output = format!("{model}.sub.con.y");
+    let mut members = vec![json!({ "@id": format!("{model}.sub.con.k") })];
+    if listed_output {
+        members.push(json!({ "@id": output.clone() }));
+    }
     let mut graph = vec![
         json!({
             "@id": model,
@@ -205,10 +328,7 @@ fn derived_output_document(node_bearing: bool) -> Value {
         json!({
             "@id": format!("{model}.sub.con"),
             "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
-            "S231:hasInstance": [
-                { "@id": format!("{model}.sub.con.k") },
-                { "@id": output.clone() }
-            ]
+            "S231:hasInstance": members
         }),
         json!({
             "@id": format!("{model}.sub.con.k"),
@@ -253,13 +373,18 @@ fn derived_output_document(node_bearing: bool) -> Value {
     })
 }
 
-/// A node-less output listed by a derivation-shaped leaf is synthesized later in resolution. Its
-/// reverse-spelled boundary edge must orient the same way as the node-bearing control.
+/// Listed node-less and omitted padded outputs are synthesized later in resolution. Their reverse-
+/// spelled boundary edges must orient the same way as the node-bearing control.
 #[test]
 fn synthesized_output_can_drive_through_nested_boundary() {
-    for node_bearing in [false, true] {
-        let graph = import(&derived_output_document(node_bearing))
-            .unwrap_or_else(|diagnostics| panic!("node_bearing={node_bearing}: {diagnostics:?}"));
+    for (node_bearing, listed_output) in [(false, true), (true, true), (false, false)] {
+        let graph = import(&derived_output_document(node_bearing, listed_output)).unwrap_or_else(
+            |diagnostics| {
+                panic!(
+                    "node_bearing={node_bearing}, listed_output={listed_output}: {diagnostics:?}"
+                )
+            },
+        );
         assert!(rendered_edges(&graph).iter().any(|(source, target)| {
             source.starts_with("http://example.org#derived_output.sub.con:")
                 && target.starts_with("http://example.org#derived_output.post:")

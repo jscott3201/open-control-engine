@@ -295,11 +295,11 @@ survives lowering. If boundary elision would erase an active relation that canno
 swapped, the importer defers a direction diagnostic until the bounded boundary walk succeeds. This
 applies whether the boundary is the authored source or target. An active elided boundary source
 targeting an inactive node similarly retains the ordinary inactive-node refusal. A node-less output
-derived from `hasInstance` can be a canonical driver; its lowered edges follow authored sources in
-derived connector order. Re-anchoring never invents or silently removes a relation: an input driven
-twice still rejects. Authoring the same relation from both endpoints collapses when either spelling
-required re-anchoring. In particular, both directions between one composite's input and output
-denote one pass-through relation, not a boundary cycle.
+listed by `hasInstance`, or padded from an omitted declared output, can be a canonical driver; its
+lowered edges follow authored sources in derived connector order. Re-anchoring never invents or
+silently removes a relation: an input driven twice still rejects. Authoring the same relation from
+both endpoints collapses when either spelling required re-anchoring. In particular, both directions
+between one composite's input and output denote one pass-through relation, not a boundary cycle.
 
 The boundary walk preserves canonical target order and duplicate multiplicity below its resource
 limits. It checks an active-path cycle or missing boundary node before the hop limit, so those
