@@ -262,8 +262,25 @@ impl CompositeOrientation {
                     }
                     continue;
                 }
-                let (_, _, verdict) =
+                let (source, target, verdict) =
                     self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
+                if matches!(verdict, Verdict::Keep | Verdict::Swap | Verdict::Untouched)
+                    && source_is_erased
+                    && !reached_boundaries.contains(node.id.as_str())
+                {
+                    if !by_id.contains_key(source) && !self.synthesized.contains(source) {
+                        return Some(Diagnostic::error(
+                            DiagCode::UnresolvedReference,
+                            "connection source not found",
+                        ));
+                    }
+                    if !by_id.contains_key(target) && !self.synthesized.contains(target) {
+                        return Some(Diagnostic::error(
+                            DiagCode::UnresolvedReference,
+                            "connection target not found",
+                        ));
+                    }
+                }
                 match verdict {
                     Verdict::Contradictory => {
                         return Some(Diagnostic::error(

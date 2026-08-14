@@ -305,6 +305,40 @@ fn underivable_boundary_source_edge_rejects_without_subject_copy() {
     }));
 }
 
+/// A missing target behind an unreachable boundary source must remain an unresolved reference.
+#[test]
+fn missing_target_of_unreachable_boundary_source_remains_loud() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    clear_targets(&mut document, ".subA.gain.y");
+    set_absolute_targets(&mut document, ".subA.y", &[&format!("{model}.subB.u")]);
+    let missing = format!("{model}.subB.u");
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .retain(|node| node["@id"].as_str() != Some(missing.as_str()));
+    let diagnostics = import(&document).expect_err("missing boundary target must reject");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::UnresolvedReference,
+            "connection target not found",
+        )]
+    );
+}
+
 /// A reverse spelling whose missing canonical source is not synthesized must remain loud when its
 /// authored boundary source would otherwise be removed.
 #[test]
