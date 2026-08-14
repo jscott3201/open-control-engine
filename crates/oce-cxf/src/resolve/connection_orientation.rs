@@ -27,6 +27,13 @@ impl<'a> RelationMultiplicity<'a> {
             if specialization.is_inactive(source) || specialization.is_inactive(target) {
                 continue;
             }
+            if !boundary_in.contains(source)
+                && !boundary_in.contains(target)
+                && !boundary_out.contains(source)
+                && !boundary_out.contains(target)
+            {
+                continue;
+            }
             let oriented = orient_edge(
                 source,
                 target,
@@ -54,8 +61,11 @@ impl<'a> RelationMultiplicity<'a> {
     /// Retain the earliest occurrences up to the canonical pair's required multiplicity.
     pub(super) fn retain(&mut self, source: &'a str, target: &'a str) -> bool {
         let pair = (source, target);
+        let Some(desired) = self.desired.get(&pair).copied() else {
+            return true;
+        };
         let emitted = self.emitted.entry(pair).or_default();
-        if *emitted >= self.desired.get(&pair).copied().unwrap_or(1) {
+        if *emitted >= desired {
             return false;
         }
         *emitted += 1;

@@ -50,3 +50,29 @@ fn opposite_endpoint_spellings_collapse_once() {
     let graph = import(&document).expect("opposite spellings describe one assignment");
     assert_eq!(graph.external_inputs.len(), 2);
 }
+
+/// Ordinary leaf restatements remain duplicate assignments rather than boundary closure.
+#[test]
+fn opposite_leaf_spellings_remain_multiply_driven() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    let source = format!("{model}.subA.gain.y");
+    let target = format!("{model}.subB.gain.u");
+    set_absolute_targets(&mut document, ".subA.gain.y", &[&target]);
+    set_absolute_targets(&mut document, ".subB.gain.u", &[&source]);
+    let diagnostics = import(&document).expect_err("ordinary restatement must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::SingleAssignment,
+                "input is multiply driven (in-degree 2)",
+            )
+            .with_subject(target)
+        ]
+    );
+}
