@@ -491,10 +491,11 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
   examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
   hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
-  partial graph is built; resource-limit diagnostics omit the attempted target subject rather than
-  copy attacker-controlled IRI bytes. Direct leaf wiring is unchanged. The walk remains path-local
-  and preserves canonical order and duplicate multiplicity, so multiple drives remain visible to
-  single-assignment validation. These limits are engine acceptance bounds, not CDL semantics.
+  partial graph is built; resource-limit diagnostics omit the attempted target subject to avoid an
+  additional attacker-controlled IRI copy at refusal. Direct leaf wiring is unchanged. The walk
+  remains path-local and preserves canonical order and duplicate multiplicity, so multiple drives
+  remain visible to single-assignment validation. These limits are engine acceptance bounds, not
+  CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
   completed AST, and again in `eval()`. Composite nesting is capped at 64.

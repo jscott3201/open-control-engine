@@ -51,8 +51,8 @@ path may enter 64 non-top boundary nodes, and the complete document may cause 65
 examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next hop,
 examination, or byte returns a `MalformedDocument` diagnostic; the resolver does not build a
 partial flattened graph. Resource-limit diagnostics omit the attempted target subject so refusal
-does not copy an attacker-controlled IRI. Direct leaf wiring does not consume the boundary-work
-budgets.
+does not add another attacker-controlled IRI copy. Direct leaf wiring does not consume the
+boundary-work budgets.
 
 The library does not impose a byte limit before JSON deserialization. A host accepting CXF from an
 untrusted source must still cap document size and resource use before calling the loader. Keep
