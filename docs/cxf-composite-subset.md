@@ -302,6 +302,8 @@ shapes retain their `UnresolvedReference` outcome at the boundary. The target-ex
 counts inactive, terminal, dangling, and cycle-revisit targets before classification; it prevents a
 shallow branching graph from expanding without bound even when every path is short. The aggregate
 byte budget bounds repeated long target IRIs before the completed target lists are cloned.
+Resource-limit diagnostics omit the attempted target subject to avoid an additional untrusted IRI
+copy at refusal.
 
 What an emitter must NOT expect to survive import: composite nodes as blocks, boundary connector
 hops, nesting depth, or the authored bytes. The import-parity boundary is flat by contract:

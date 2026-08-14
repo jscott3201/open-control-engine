@@ -430,13 +430,10 @@ fn boundary_hops_accept_the_limit_and_reject_the_attempted_next_hop() {
     )));
     assert_eq!(
         diags,
-        vec![
-            Diagnostic::error(
-                DiagCode::MalformedDocument,
-                "composite boundary resolution exceeds the supported isConnectedTo hop count (64)",
-            )
-            .with_subject(boundary_iri(BOUNDARY_HOP_LIMIT))
-        ]
+        vec![Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "composite boundary resolution exceeds the supported isConnectedTo hop count (64)",
+        )]
     );
 }
 
@@ -446,13 +443,10 @@ fn shallow_boundary_dag_rejects_the_attempted_target_past_the_work_limit() {
     // budget therefore rejects boundary 1 in the second source walk, before graph construction or
     // complete path materialization.
     let document = boundary_chain(15, 2, 2, 0, false);
-    let expected = vec![
-        Diagnostic::error(
-            DiagCode::MalformedDocument,
-            "composite boundary resolution exceeds the supported target examination count (65536)",
-        )
-        .with_subject(boundary_iri(1)),
-    ];
+    let expected = vec![Diagnostic::error(
+        DiagCode::MalformedDocument,
+        "composite boundary resolution exceeds the supported target examination count (65536)",
+    )];
     let first = diagnostics(on_small_stack(document.clone()));
     let second = diagnostics(on_small_stack(document));
     assert_eq!(first, expected);
@@ -464,11 +458,10 @@ fn shallow_boundary_dag_rejects_the_attempted_target_past_the_work_limit() {
 fn expanded_target_bytes_reject_before_the_count_limit() {
     let padding = 256;
     let document = boundary_chain(15, 2, 1, padding, false);
-    let terminal = format!("{ROOT}.gain.u{}", "x".repeat(padding));
     let diags = diagnostics(on_small_stack(document));
     assert_eq!(diags.len(), 1, "{diags:?}");
     assert_eq!(diags[0].code, DiagCode::MalformedDocument);
-    assert_eq!(diags[0].subject.as_deref(), Some(terminal.as_str()));
+    assert_eq!(diags[0].subject, None);
     assert_eq!(
         diags[0].message,
         "composite boundary resolution exceeds the supported aggregate target IRI byte count \
