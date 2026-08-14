@@ -55,11 +55,7 @@ enum Verdict {
     Untouched,
 }
 
-type CanonicalConnections<'a> = (
-    HashMap<&'a str, Vec<&'a str>>,
-    HashSet<&'a str>,
-    Option<Diagnostic>,
-);
+type CanonicalConnections<'a> = (HashMap<&'a str, Vec<&'a str>>, HashSet<&'a str>);
 
 /// Port-role and containment index for one document: composite membership, boundary-port sets,
 /// per-port ownership claims, `@graph` positions, and the transitive `containsBlock` closure the
@@ -201,9 +197,6 @@ impl CompositeOrientation {
     /// canonical drivers whose edges touch a non-root boundary — the drivers whose lowered lists
     /// rule Gx orders by target `@graph` position.
     ///
-    /// The third return value is the first diagnostic for an active relation that canonical
-    /// lowering would erase. The caller emits it only after the bounded boundary walk succeeds, so
-    /// resource-limit diagnostics retain precedence.
     pub(super) fn canonical_connections<'a>(
         &self,
         doc: &'a CxfDocument,
@@ -213,41 +206,11 @@ impl CompositeOrientation {
     ) -> CanonicalConnections<'a> {
         let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut crossed = HashSet::new();
-        let mut deferred_diagnostic = None;
         let mut stored: HashMap<(&str, &str), Verdict> = HashMap::new();
         for node in &doc.graph {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
                     self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
-                let source_is_erased = self.is_elided_boundary_source(&node.id);
-                let target_is_inactive = specialization.is_inactive(authored_target);
-                let relation_is_erased = source_is_erased
-                    || (!target_is_inactive
-                        && self.is_elided_boundary_source(authored_target)
-                        && by_id.contains_key(authored_target));
-                if !specialization.is_inactive(&node.id)
-                    && relation_is_erased
-                    && deferred_diagnostic.is_none()
-                {
-                    deferred_diagnostic = if target_is_inactive {
-                        Some(Diagnostic::error(
-                            DiagCode::InactiveConditionalNode,
-                            "connection targets an inactive conditional node",
-                        ))
-                    } else {
-                        match verdict {
-                            Verdict::Contradictory => Some(Diagnostic::error(
-                                DiagCode::DirectionMismatch,
-                                "boundary connection has contradictory endpoint directions",
-                            )),
-                            Verdict::SwapBlocked | Verdict::Unknown => Some(Diagnostic::error(
-                                DiagCode::DirectionMismatch,
-                                "boundary connection direction cannot be derived",
-                            )),
-                            Verdict::Keep | Verdict::Swap | Verdict::Untouched => None,
-                        }
-                    };
-                }
                 if self.is_non_root_boundary(&node.id, root)
                     || self.is_non_root_boundary(authored_target, root)
                 {
@@ -264,7 +227,61 @@ impl CompositeOrientation {
                 stored.insert(pair, verdict);
             }
         }
-        (out, crossed, deferred_diagnostic)
+        (out, crossed)
+    }
+
+    /// First active relation that lowering erased without a later generic diagnostic.
+    pub(super) fn erased_relation_diagnostic(
+        &self,
+        doc: &CxfDocument,
+        by_id: &HashMap<&str, &Node>,
+        root: &str,
+        specialization: &Specialization,
+        reached_boundaries: &HashSet<&str>,
+    ) -> Option<Diagnostic> {
+        for node in &doc.graph {
+            if specialization.is_inactive(&node.id) {
+                continue;
+            }
+            for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
+                let source_is_erased = self.is_elided_boundary_source(&node.id);
+                let target_is_inactive = specialization.is_inactive(authored_target);
+                let relation_is_erased = source_is_erased
+                    || (!target_is_inactive
+                        && self.is_elided_boundary_source(authored_target)
+                        && by_id.contains_key(authored_target));
+                if !relation_is_erased {
+                    continue;
+                }
+                if target_is_inactive {
+                    if source_is_erased && !reached_boundaries.contains(node.id.as_str()) {
+                        return Some(Diagnostic::error(
+                            DiagCode::InactiveConditionalNode,
+                            "connection targets an inactive conditional node",
+                        ));
+                    }
+                    continue;
+                }
+                let (_, _, verdict) =
+                    self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
+                match verdict {
+                    Verdict::Contradictory => {
+                        return Some(Diagnostic::error(
+                            DiagCode::DirectionMismatch,
+                            "boundary connection has contradictory endpoint directions",
+                        ));
+                    }
+                    Verdict::SwapBlocked | Verdict::Unknown => {
+                        return Some(Diagnostic::error(
+                            DiagCode::DirectionMismatch,
+                            "boundary connection direction cannot be derived",
+                        ));
+                    }
+                    Verdict::Keep | Verdict::Swap | Verdict::Untouched => {}
+                }
+            }
+        }
+        None
     }
 
     fn canonical_pair<'a>(
@@ -489,7 +506,7 @@ mod tests {
             .collect();
         let specialization = Specialization::default();
         let index = CompositeOrientation::new(&doc, &by_id, "root", &specialization);
-        let (adjacency, _, _) = index.canonical_connections(&doc, &by_id, "root", &specialization);
+        let (adjacency, _) = index.canonical_connections(&doc, &by_id, "root", &specialization);
         assert_eq!(adjacency.get("sub.u"), Some(&vec!["first.u", "second.u"]));
     }
 
@@ -520,7 +537,7 @@ mod tests {
         let specialization = Specialization::default();
         let first_index =
             CompositeOrientation::new(&first_doc, &first_by_id, "root", &specialization);
-        let (first, _, _) =
+        let (first, _) =
             first_index.canonical_connections(&first_doc, &first_by_id, "root", &specialization);
         for node in value["@graph"].as_array_mut().expect("@graph") {
             let id = node["@id"].as_str().expect("@id").to_owned();
@@ -544,7 +561,7 @@ mod tests {
             .collect();
         let second_index =
             CompositeOrientation::new(&second_doc, &second_by_id, "root", &specialization);
-        let (second, _, _) =
+        let (second, _) =
             second_index.canonical_connections(&second_doc, &second_by_id, "root", &specialization);
         assert_eq!(second, first);
     }

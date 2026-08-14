@@ -5,6 +5,9 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
+mod bless;
+mod render;
+
 #[path = "resolve_composite_orientation/refusals.rs"]
 mod refusals;
 

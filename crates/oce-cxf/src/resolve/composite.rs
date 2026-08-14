@@ -412,7 +412,7 @@ fn rewrite_connections(
     specialization: &Specialization,
     boundary: &CompositeOrientation,
 ) -> Result<RewrittenConnections, Diagnostic> {
-    let (canonical, crossed_drivers, deferred_diagnostic) =
+    let (canonical, crossed_drivers) =
         boundary.canonical_connections(doc, by_id, root, specialization);
     let mut deferred = Vec::new();
     let walk = BoundaryWalk {
@@ -422,6 +422,7 @@ fn rewrite_connections(
         boundary,
     };
     let mut budget = BoundaryBudget::default();
+    let mut reached_boundaries = HashSet::new();
     for source in doc
         .graph
         .iter()
@@ -442,7 +443,13 @@ fn rewrite_connections(
         }
         let mut targets = Vec::new();
         for &target in authored_targets {
-            resolve_authored_target(target, &walk, &mut budget, &mut targets)?;
+            resolve_authored_target(
+                target,
+                &walk,
+                &mut budget,
+                &mut reached_boundaries,
+                &mut targets,
+            )?;
         }
         // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
         // already collapsed in the canonical map, so any surviving duplicate is a genuine
@@ -454,6 +461,8 @@ fn rewrite_connections(
             deferred.push((source, targets));
         }
     }
+    let deferred_diagnostic =
+        boundary.erased_relation_diagnostic(doc, by_id, root, specialization, &reached_boundaries);
     Ok((
         deferred
             .into_iter()
@@ -527,10 +536,11 @@ fn resolve_authored_target<'a, 'b>(
     target: &'b str,
     walk: &BoundaryWalk<'a, 'b>,
     budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
     out: &mut Vec<&'b str>,
 ) -> Result<(), Diagnostic> {
     if is_elided_boundary(target, walk) {
-        resolve_target(target, walk, budget, out)
+        resolve_target(target, walk, budget, reached_boundaries, out)
     } else {
         out.push(target);
         Ok(())
@@ -542,6 +552,7 @@ fn resolve_target<'a, 'b>(
     target: &'b str,
     walk: &BoundaryWalk<'a, 'b>,
     budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
     out: &mut Vec<&'b str>,
 ) -> Result<(), Diagnostic> {
     let mut active_path: HashSet<&'b str> = HashSet::new();
@@ -599,6 +610,7 @@ fn resolve_target<'a, 'b>(
             ));
         }
 
+        reached_boundaries.insert(target);
         active_path.insert(target);
         frames.push(BoundaryFrame::Children {
             boundary: target,
@@ -692,8 +704,15 @@ mod tests {
             examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES,
         };
         let mut out = Vec::new();
-        resolve_authored_target("http://example.org#leaf.u", &walk, &mut budget, &mut out)
-            .expect("ordinary wiring is outside boundary budgets");
+        let mut reached_boundaries = HashSet::new();
+        resolve_authored_target(
+            "http://example.org#leaf.u",
+            &walk,
+            &mut budget,
+            &mut reached_boundaries,
+            &mut out,
+        )
+        .expect("ordinary wiring is outside boundary budgets");
         assert_eq!(out, ["http://example.org#leaf.u"]);
         assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
         assert_eq!(

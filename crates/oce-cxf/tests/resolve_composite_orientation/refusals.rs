@@ -116,6 +116,50 @@ fn inactive_target_of_elided_boundary_source_remains_loud() {
     );
 }
 
+/// A reached boundary source leaves its inactive target for the ordinary subject-bearing refusal.
+#[test]
+fn reached_boundary_source_reports_inactive_target_once() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&format!("{model}.subA.gain.u"), &format!("{model}.subB.u")],
+    );
+    set_absolute_targets(&mut document, ".subB.u", &[&format!("{model}.subB.gain.y")]);
+    clear_targets(&mut document, ".subB.gain.y");
+    node_mut(&mut document, ".subB")["S231:hasParameter"] =
+        json!({ "@id": format!("{model}.subB.have") });
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .push(json!({
+            "@id": format!("{model}.subB.have"),
+            "@type": "S231:Parameter",
+            "S231:isOfDataType": { "@id": "S231:Boolean" },
+            "S231:value": false
+        }));
+    let inactive = node_mut(&mut document, ".subB.gain");
+    inactive["S231:isConditionalComponent"] = json!(true);
+    inactive["S231:conditionalExpression"] = json!("have");
+    let target = format!("{model}.subB.gain.y");
+    let diagnostics = import(&document).expect_err("inactive target must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::InactiveConditionalNode,
+                "connection targets an inactive conditional node",
+            )
+            .with_subject(target)
+        ]
+    );
+}
+
 fn inactive_boundary_target_document(target: &str, repeats: usize) -> Value {
     let model = "http://example.org#inactive_boundary_target";
     let targets = std::iter::repeat_n(json!({ "@id": target }), repeats).collect::<Vec<_>>();
@@ -373,6 +417,94 @@ fn derived_output_document(node_bearing: bool, listed_output: bool) -> Value {
     })
 }
 
+fn replace_iri_prefix(value: &mut Value, replacement: &str) {
+    const ORIGINAL: &str = "http://example.org#derived_output";
+    match value {
+        Value::Array(values) => {
+            for value in values {
+                replace_iri_prefix(value, replacement);
+            }
+        }
+        Value::Object(fields) => {
+            for value in fields.values_mut() {
+                replace_iri_prefix(value, replacement);
+            }
+        }
+        Value::String(text) if text.starts_with(ORIGINAL) => {
+            *text = format!("{replacement}{}", &text[ORIGINAL.len()..]);
+        }
+        _ => {}
+    }
+}
+
+fn sidecar_order_document() -> Value {
+    let model = "http://example.org#derived_sidecar_order";
+    let mut graph = vec![json!({
+        "@id": model,
+        "@type": "S231:Block",
+        "S231:containsBlock": [
+            { "@id": format!("{model}.listed.sub") },
+            { "@id": format!("{model}.listed.post") },
+            { "@id": format!("{model}.padded.sub") },
+            { "@id": format!("{model}.padded.post") },
+            { "@id": format!("{model}.direct") },
+            { "@id": format!("{model}.directPost") }
+        ]
+    })];
+    for (name, listed) in [("listed", true), ("padded", false)] {
+        let mut document = derived_output_document(false, listed);
+        replace_iri_prefix(&mut document, &format!("{model}.{name}"));
+        let mut nodes = document["@graph"].as_array().expect("@graph").clone();
+        nodes.remove(0);
+        graph.extend(nodes);
+    }
+    graph.extend([
+        json!({
+            "@id": format!("{model}.direct"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+            "S231:hasParameter": { "@id": format!("{model}.direct.k") },
+            "S231:hasOutput": { "@id": format!("{model}.direct.y") }
+        }),
+        json!({
+            "@id": format!("{model}.direct.k"),
+            "@type": "S231:Parameter",
+            "S231:value": 2.0
+        }),
+        json!({
+            "@id": format!("{model}.direct.y"),
+            "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:isConnectedTo": { "@id": format!("{model}.directPost.u") }
+        }),
+        json!({
+            "@id": format!("{model}.directPost"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+            "S231:hasParameter": { "@id": format!("{model}.directPost.k") },
+            "S231:hasInput": { "@id": format!("{model}.directPost.u") },
+            "S231:hasOutput": { "@id": format!("{model}.directPost.y") }
+        }),
+        json!({
+            "@id": format!("{model}.directPost.k"),
+            "@type": "S231:Parameter",
+            "S231:value": 1.0
+        }),
+        json!({
+            "@id": format!("{model}.directPost.u"),
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+        json!({
+            "@id": format!("{model}.directPost.y"),
+            "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+    ]);
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": graph
+    })
+}
+
 /// Listed node-less and omitted padded outputs are synthesized later in resolution. Their reverse-
 /// spelled boundary edges must orient the same way as the node-bearing control.
 #[test]
@@ -390,4 +522,25 @@ fn synthesized_output_can_drive_through_nested_boundary() {
                 && target.starts_with("http://example.org#derived_output.post:")
         }));
     }
+}
+
+/// Authored connections precede listed and padded synthesized-driver sidecars in block order.
+#[test]
+fn synthesized_sidecar_order_is_bit_exact_and_repeatable() {
+    let document = sidecar_order_document();
+    let first = super::render::render(&import(&document).expect("sidecar fixture imports"));
+    let second = super::render::render(&import(&document).expect("repeated sidecar import"));
+    assert_eq!(
+        first, second,
+        "repeated import changed the ModelGraph bytes"
+    );
+
+    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/golden/derived_boundary_sidecar.modelgraph.txt");
+    if super::bless::enabled() {
+        std::fs::write(path, &first).expect("write sidecar golden");
+        return;
+    }
+    let expected = std::fs::read_to_string(path).expect("sidecar golden missing");
+    assert_eq!(first, expected, "synthesized sidecar golden diverged");
 }
