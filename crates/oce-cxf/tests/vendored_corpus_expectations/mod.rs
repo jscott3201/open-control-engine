@@ -40,9 +40,9 @@ pub(crate) const EXPECTED: &[DocExpectation] = &[
             ("conditional-guard-unknown-parameter", "error", 19),
             ("grounding-failed", "error", 6),
             ("undriven-boundary-output", "warning", 7),
-            ("unresolved-reference", "error", 83),
+            ("unresolved-reference", "error", 69),
         ],
-        duplicate_triples: 16,
+        duplicate_triples: 2,
     },
     DocExpectation {
         rel: "Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Enable.jsonld",
@@ -222,9 +222,9 @@ pub(crate) const EXPECTED: &[DocExpectation] = &[
             ("conditional-guard-unknown-parameter", "error", 8),
             ("grounding-failed", "error", 8),
             ("undriven-boundary-output", "warning", 13),
-            ("unresolved-reference", "error", 65),
+            ("unresolved-reference", "error", 64),
         ],
-        duplicate_triples: 1,
+        duplicate_triples: 0,
     },
     DocExpectation {
         rel: "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Subsequences/ActiveAirFlow.jsonld",
@@ -344,13 +344,13 @@ pub(crate) const AGGREGATE: CorpusAggregate = CorpusAggregate {
         ("non-subset-construct", "error", 111),
         ("single-assignment", "error", 57),
         ("undriven-boundary-output", "warning", 27),
-        ("unresolved-reference", "error", 214),
+        ("unresolved-reference", "error", 199),
     ],
     unresolved_reference_messages: &[
         ("boundary-input target not found", 65),
         ("boundary-output source not found", 25),
         ("connection source not found", 58),
-        ("connection target not found", 66),
+        ("connection target not found", 51),
     ],
     inactive_conditional_messages: &[
         ("connection targets an inactive conditional node", 12),
@@ -359,9 +359,6 @@ pub(crate) const AGGREGATE: CorpusAggregate = CorpusAggregate {
             32,
         ),
     ],
-    duplicates_by_code: &[
-        ("conditional-guard-unknown-parameter", 85),
-        ("unresolved-reference", 15),
-    ],
-    duplicates_total: 100,
+    duplicates_by_code: &[("conditional-guard-unknown-parameter", 85)],
+    duplicates_total: 85,
 };

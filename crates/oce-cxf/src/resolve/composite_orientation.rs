@@ -206,7 +206,8 @@ impl CompositeOrientation {
     ) -> CanonicalConnections<'a> {
         let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut crossed = HashSet::new();
-        let mut stored: HashMap<(&str, &str), Verdict> = HashMap::new();
+        let mut records = Vec::new();
+        let mut counts: HashMap<(&str, &str), (usize, usize)> = HashMap::new();
         for node in &doc.graph {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
@@ -217,13 +218,26 @@ impl CompositeOrientation {
                     crossed.insert(source);
                 }
                 let pair = (source, target);
-                if stored.get(&pair).is_some_and(|previous| {
-                    (verdict == Verdict::Swap) != (*previous == Verdict::Swap)
-                }) {
-                    continue;
+                let count = counts.entry(pair).or_default();
+                if verdict == Verdict::Swap {
+                    count.1 += 1;
+                } else {
+                    count.0 += 1;
                 }
+                records.push((source, target));
+            }
+        }
+        let mut emitted: HashMap<(&str, &str), usize> = HashMap::new();
+        for (source, target) in records {
+            let pair = (source, target);
+            let desired = counts
+                .get(&pair)
+                .map(|(authored, swapped)| (*authored).max(*swapped))
+                .unwrap_or(0);
+            let emitted = emitted.entry(pair).or_default();
+            if *emitted < desired {
                 out.entry(source).or_default().push(target);
-                stored.insert(pair, verdict);
+                *emitted += 1;
             }
         }
         (out, crossed)
@@ -479,7 +493,11 @@ mod tests {
     use super::*;
     use serde_json::Value;
 
-    fn adjacency(forward: &[&str], reverse: &[&str]) -> HashMap<String, Vec<String>> {
+    fn adjacency_in_order(
+        forward: &[&str],
+        reverse: &[&str],
+        reverse_first: bool,
+    ) -> HashMap<String, Vec<String>> {
         let mut value = serde_json::json!({
             "@context": { "S231": "http://data.ashrae.org/S231P#" },
             "@graph": [
@@ -504,6 +522,9 @@ mod tests {
         };
         value["@graph"][3]["S231:isConnectedTo"] = targets(forward);
         value["@graph"][4]["S231:isConnectedTo"] = targets(reverse);
+        if reverse_first {
+            value["@graph"].as_array_mut().expect("@graph").swap(3, 4);
+        }
         let doc: CxfDocument = serde_json::from_value(value).expect("document");
         let by_id: HashMap<&str, &Node> = doc
             .graph
@@ -523,6 +544,10 @@ mod tests {
                 )
             })
             .collect()
+    }
+
+    fn adjacency(forward: &[&str], reverse: &[&str]) -> HashMap<String, Vec<String>> {
+        adjacency_in_order(forward, reverse, false)
     }
 
     fn pair_count(adjacency: &HashMap<String, Vec<String>>) -> usize {
@@ -552,6 +577,19 @@ mod tests {
     #[test]
     fn two_forward_then_reverse_preserves_the_forward_pair() {
         assert_eq!(pair_count(&adjacency(&["leaf.u", "leaf.u"], &["sub.u"])), 2);
+    }
+
+    #[test]
+    fn one_forward_then_two_reverse_preserves_two_relations() {
+        assert_eq!(pair_count(&adjacency(&["leaf.u"], &["sub.u", "sub.u"])), 2);
+    }
+
+    #[test]
+    fn one_reverse_then_two_forward_preserves_two_relations() {
+        assert_eq!(
+            pair_count(&adjacency_in_order(&["leaf.u", "leaf.u"], &["sub.u"], true,)),
+            2
+        );
     }
 
     #[test]

@@ -746,7 +746,7 @@ pub(crate) fn resolve(
                         .with_subject(source.to_owned()),
                     );
                 }
-                if to.is_none() {
+                if to.is_none() && reported_missing_endpoints.insert(target) {
                     diags.push(
                         Diagnostic::error(
                             DiagCode::UnresolvedReference,

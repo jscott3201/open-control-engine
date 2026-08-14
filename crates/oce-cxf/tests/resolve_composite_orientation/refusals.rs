@@ -334,6 +334,37 @@ fn inactive_boundary_targets_remain_resource_bounded() {
     );
 }
 
+/// Exact-limit expansion reports one copied subject for a repeated ordinary missing target.
+#[test]
+fn expanded_missing_target_reports_once() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    let missing = format!("{model}.missing");
+    clear_targets(&mut document, ".subB.gain.y");
+    node_mut(&mut document, ".subA.y")["S231:isConnectedTo"] =
+        Value::Array(std::iter::repeat_n(json!({ "@id": missing }), 65_535).collect());
+    let diagnostics = import(&document).expect_err("missing target must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(DiagCode::UnresolvedReference, "connection target not found",)
+                .with_subject(missing)
+        ]
+    );
+}
+
 /// An underivable edge from an elided boundary source must remain loud without copying its subject.
 #[test]
 fn underivable_boundary_source_edge_rejects_without_subject_copy() {

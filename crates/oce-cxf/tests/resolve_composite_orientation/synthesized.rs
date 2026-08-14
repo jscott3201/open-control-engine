@@ -211,6 +211,38 @@ fn synthesized_reverse_duplicates_remain_loud() {
     );
 }
 
+/// One forward restatement cancels only one of two reverse-spelled copies.
+#[test]
+fn forward_with_two_reverse_spellings_retains_duplicate_drive() {
+    let mut document = derived_output_document(true, true);
+    let output = "http://example.org#derived_output.sub.con.y";
+    set_absolute_targets(
+        &mut document,
+        ".sub.y",
+        &[output, output, "http://example.org#derived_output.post.u"],
+    );
+    let graph = document["@graph"].as_array_mut().expect("@graph");
+    let position = graph
+        .iter()
+        .position(|node| node["@id"].as_str() == Some(output))
+        .expect("node-bearing output");
+    let mut output_node = graph.remove(position);
+    output_node["S231:isConnectedTo"] = json!({ "@id": "http://example.org#derived_output.sub.y" });
+    graph.insert(2, output_node);
+
+    let diagnostics = import(&document).expect_err("unmatched reverse copy must reject");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::SingleAssignment,
+                "input is multiply driven (in-degree 2)",
+            )
+            .with_subject("http://example.org#derived_output.post.u".to_owned())
+        ]
+    );
+}
+
 /// A node-less synthesized driver still charges its authored target IRI against the byte budget.
 #[test]
 fn synthesized_output_remains_resource_bounded() {
