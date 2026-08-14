@@ -6,9 +6,9 @@
 //! same run the determinism suite exercises). Tiers 1 and 3 are `Skipped` for a single-sequence run.
 //! The negatives prove the report actually fails when a tier should fail — it is not a tautology.
 
-use oce_api::Value;
+use oce_api::{OcError, Value};
 use oce_conformance::{
-    CombiTimeTable, ComparisonMode, ConformanceRun, ConformanceTier, DriveCadence,
+    CombiTimeTable, ComparisonMode, ConformanceRun, ConformanceTier, DriveCadence, DriverError,
     DriverInputReplay, DriverOptions, PointEnd, PointMapEntry, ReferenceSpec, RunInputs,
     Tier2Source, TierStatus, ValueKind, VerifyConfig, assemble_report,
 };
@@ -436,6 +436,35 @@ fn unloadable_model_fails_tier0_and_skips_the_rest() {
         );
     }
     assert!(!report.passed(), "a load failure must fail the report");
+}
+
+#[test]
+fn post_load_engine_failure_is_not_a_tier_zero_verdict() {
+    let tier4_ref = tier_a_reference();
+    let options = DriverOptions {
+        cadence: DriveCadence::EventAligned {
+            instants: vec![0.0, SAMPLE_STEP, SAMPLE_STEP / 2.0],
+        },
+        input_replay: DriverInputReplay::ReferenceTable,
+        comparison: ComparisonMode::Funnel,
+    };
+    let err = assemble_report(&ConformanceRun {
+        cxf: ECONOMIZER_ENABLE.as_bytes(),
+        tier4: RunInputs {
+            config: &tier4_config(),
+            reference: &tier4_ref,
+            options: &options,
+        },
+        tier2: Tier2Source::Skipped,
+    })
+    .expect_err("a post-load time regression must remain a driver error");
+
+    assert!(matches!(
+        err,
+        DriverError::Engine(OcError::TimeRegression { now, prev })
+            if now.to_bits() == (SAMPLE_STEP / 2.0).to_bits()
+                && prev.to_bits() == SAMPLE_STEP.to_bits()
+    ));
 }
 
 fn status(report: &oce_conformance::ConformanceReport, tier: ConformanceTier) -> TierStatus {
