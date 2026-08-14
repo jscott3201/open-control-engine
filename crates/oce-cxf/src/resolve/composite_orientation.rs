@@ -244,6 +244,7 @@ impl CompositeOrientation {
     }
 
     /// First active relation that lowering erased without a later generic diagnostic.
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn erased_relation_diagnostic(
         &self,
         doc: &CxfDocument,
@@ -252,6 +253,7 @@ impl CompositeOrientation {
         root: &str,
         specialization: &Specialization,
         reached_boundaries: &HashSet<&str>,
+        preserved_missing_endpoints: &HashSet<&str>,
     ) -> Option<Diagnostic> {
         for node in &doc.graph {
             if specialization.is_inactive(&node.id) {
@@ -282,13 +284,19 @@ impl CompositeOrientation {
                     && source_is_erased
                     && !reached_boundaries.contains(node.id.as_str())
                 {
-                    if !by_id.contains_key(source) && !self.synthesized.contains(source) {
+                    if !by_id.contains_key(source)
+                        && !self.synthesized.contains(source)
+                        && !preserved_missing_endpoints.contains(source)
+                    {
                         return Some(Diagnostic::error(
                             DiagCode::UnresolvedReference,
                             "connection source not found",
                         ));
                     }
-                    if !by_id.contains_key(target) && !self.synthesized.contains(target) {
+                    if !by_id.contains_key(target)
+                        && !self.synthesized.contains(target)
+                        && !preserved_missing_endpoints.contains(target)
+                    {
                         return Some(Diagnostic::error(
                             DiagCode::UnresolvedReference,
                             "connection target not found",

@@ -466,6 +466,13 @@ fn rewrite_connections(
             deferred.push((source, targets));
         }
     }
+    let preserved_missing_endpoints = deferred
+        .iter()
+        .flat_map(|(source, targets)| std::iter::once(*source).chain(targets.iter().copied()))
+        .filter(|endpoint| {
+            !by_id.contains_key(endpoint) && !boundary.is_synthesized_source(endpoint)
+        })
+        .collect();
     let deferred_diagnostic = boundary.erased_relation_diagnostic(
         doc,
         by_id,
@@ -473,6 +480,7 @@ fn rewrite_connections(
         root,
         specialization,
         &reached_boundaries,
+        &preserved_missing_endpoints,
     );
     Ok((
         deferred

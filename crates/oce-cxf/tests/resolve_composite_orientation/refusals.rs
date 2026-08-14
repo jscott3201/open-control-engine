@@ -425,6 +425,40 @@ fn missing_target_of_unreachable_boundary_source_remains_loud() {
     );
 }
 
+/// A surviving edge owns the one diagnostic for a missing endpoint also named by an erased edge.
+#[test]
+fn preserved_missing_target_suppresses_deferred_duplicate() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    let missing = format!("{model}.subB.missing");
+    node_mut(&mut document, ".subB")["S231:hasInput"] = json!([
+        { "@id": format!("{model}.subB.u") },
+        { "@id": missing }
+    ]);
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    set_absolute_targets(&mut document, ".subA.gain.y", &[&missing]);
+    set_absolute_targets(&mut document, ".subA.y", &[&missing]);
+    let diagnostics = import(&document).expect_err("missing target must reject once");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(DiagCode::UnresolvedReference, "connection target not found",)
+                .with_subject(missing)
+        ]
+    );
+}
+
 /// Conflicted ownership cannot hide an active edge authored from an elided boundary identity.
 #[test]
 fn conflicted_ownership_on_elided_source_remains_loud() {
