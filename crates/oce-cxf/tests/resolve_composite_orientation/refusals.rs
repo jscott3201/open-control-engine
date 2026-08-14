@@ -47,7 +47,11 @@ fn contradictory_reached_boundary_edge_cannot_flatten_into_valid_fanout() {
     set_absolute_targets(
         &mut document,
         ".subA.u",
-        &[&format!("{model}.subA.gain.u"), &format!("{model}.subB.u")],
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
     );
     let diagnostics = import(&document).expect_err("contradictory reached edge must reject");
     assert!(diagnostics.iter().any(|diagnostic| {
@@ -384,11 +388,13 @@ fn underivable_boundary_source_edge_rejects_without_subject_copy() {
     );
     set_absolute_targets(&mut document, ".subB.u", &[&format!("{model}.subB.gain")]);
     let diagnostics = import(&document).expect_err("underivable boundary edge must reject");
-    assert!(diagnostics.iter().any(|diagnostic| {
-        diagnostic.code == DiagCode::DirectionMismatch
-            && diagnostic.message == "boundary connection direction cannot be derived"
-            && diagnostic.subject.is_none()
-    }));
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::DirectionMismatch,
+            "boundary connection direction cannot be derived",
+        )]
+    );
 }
 
 /// A missing target behind an unreachable boundary source must remain an unresolved reference.
@@ -491,6 +497,77 @@ fn conflicted_ownership_on_elided_source_remains_loud() {
             "boundary connection direction cannot be derived",
         )]
     );
+}
+
+/// A reached boundary cannot hide a conflicted boundary target with no continuation.
+#[test]
+fn reached_conflicted_boundary_target_remains_loud() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    node_mut(&mut document, ".subB")["S231:hasInput"] = json!([
+        { "@id": format!("{model}.subB.u") },
+        { "@id": format!("{model}.subA.y") }
+    ]);
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&format!("{model}.subA.gain.u"), &format!("{model}.subB.u")],
+    );
+    clear_targets(&mut document, ".subA.gain.y");
+    set_absolute_targets(&mut document, ".subB.u", &[&format!("{model}.subA.y")]);
+    let diagnostics = import(&document).expect_err("conflicted empty boundary must reject");
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == DiagCode::DirectionMismatch
+            && diagnostic.message == "boundary connection direction cannot be derived"
+            && diagnostic.subject.is_none()
+    }));
+}
+
+/// A padded output is synthesized only when its owner reaches the derivation domain.
+#[test]
+fn protected_derivation_owner_cannot_hide_boundary_relation() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    clear_targets(&mut document, ".subB.u");
+    let ghost = format!("{model}.subA.gain.protected");
+    node_mut(&mut document, ".subA.gain")["S231:containsBlock"] = json!({ "@id": ghost });
+    let ghost_output = format!("{ghost}.y");
+    set_absolute_targets(&mut document, ".subB.u", &[&ghost_output]);
+    document["@graph"].as_array_mut().expect("@graph").extend([
+        json!({
+            "@id": ghost,
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+            "S231:hasInstance": { "@id": format!("{ghost}.k") }
+        }),
+        json!({
+            "@id": format!("{ghost}.k"),
+            "@type": "S231:Parameter",
+            "S231:value": 1
+        }),
+    ]);
+    let diagnostics = import(&document).expect_err("protected output relation must reject");
+    assert!(diagnostics.iter().any(|diagnostic| {
+        diagnostic.code == DiagCode::UnresolvedReference
+            && diagnostic.message == "boundary-input target not found"
+            && diagnostic.subject.as_deref() == Some(ghost_output.as_str())
+    }));
 }
 
 fn reached_malformed_boundary_document(target: &str) -> Value {

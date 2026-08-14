@@ -89,6 +89,7 @@ impl CompositeOrientation {
             ..Self::default()
         };
         let contains_referents = contains_block_referents(doc);
+        let reachable_members = reachable_containment_members(by_id, root, specialization);
         for (position, node) in doc.graph.iter().enumerate() {
             index.positions.insert(node.id.clone(), position);
             if specialization.is_inactive(&node.id) {
@@ -119,7 +120,8 @@ impl CompositeOrientation {
             // Listed and padded members claim the same leaf ownership used by later derivation.
             if is_derivation_shaped(node, &contains_referents) {
                 for (member, input) in orientation_port_members(node) {
-                    if !by_id.contains_key(member.as_str())
+                    if reachable_members.contains(node.id.as_str())
+                        && !by_id.contains_key(member.as_str())
                         && index.synthesized.insert(member.clone())
                     {
                         index.synthesized_order.push(member.clone());
@@ -490,6 +492,32 @@ impl CompositeOrientation {
     pub(super) fn position(&self, iri: &str) -> usize {
         self.positions.get(iri).copied().unwrap_or(usize::MAX)
     }
+}
+
+fn reachable_containment_members<'a>(
+    by_id: &HashMap<&'a str, &'a Node>,
+    root: &'a str,
+    specialization: &Specialization,
+) -> HashSet<&'a str> {
+    let mut reachable = HashSet::new();
+    let mut pending = vec![root];
+    while let Some(parent) = pending.pop() {
+        let Some(node) = by_id.get(parent) else {
+            continue;
+        };
+        for child in node.contains_block.iter().map(|child| child.id.as_str()) {
+            if specialization.is_inactive(child) || !reachable.insert(child) {
+                continue;
+            }
+            if by_id
+                .get(child)
+                .is_some_and(|node| is_runtime_composite(node))
+            {
+                pending.push(child);
+            }
+        }
+    }
+    reachable
 }
 
 fn authored<'a>(source: &'a str, target: &'a str, verdict: Verdict) -> (&'a str, &'a str, Verdict) {
