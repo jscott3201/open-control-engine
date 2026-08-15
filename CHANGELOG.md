@@ -9,9 +9,9 @@ read in full.
 An entry is expected from every PR that changes behaviour, the public surface, or a published
 claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
 what mattered, so no check can derive one, and a check that merely required *some* text would pass
-on a placeholder. It has therefore fallen behind four times: #215 recovered 64 commits, #228
-recovered seven PRs, #259 recovered ten, and #264 recovered one PR and one missing citation before
-the next promotion.
+on a placeholder. It has therefore fallen behind five times: #215 recovered 64 commits, #228
+recovered seven PRs, #259 recovered ten, #264 recovered one PR and one missing citation, and #302
+recovered #301 before the next promotion.
 
 The third recovery discredits the check the second one wrote down here. That check was
 `git log main..development -- CHANGELOG.md`, on the reading that returning nothing means the
