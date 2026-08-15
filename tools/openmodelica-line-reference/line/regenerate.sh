@@ -41,6 +41,35 @@ test ! -e "$OUTPUT"
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
+sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
+check_hash() { test "$(sha256 "$2")" = "$1"; }
+test -z "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)"
+SOURCE_REVISION=$(git -C "$REPO_ROOT" rev-parse HEAD)
+LINE_PILOT_SHA=$(sha256 "$SCRIPT_DIR/LinePilot.mo")
+LINE_FLAG_PILOT_SHA=$(sha256 "$SCRIPT_DIR/LineFlagPilot.mo")
+RUNNER_SHA=$(sha256 "$SCRIPT_DIR/runner.sh")
+REGENERATE_SHA=$(sha256 "$SCRIPT_DIR/regenerate.sh")
+CANONICALIZER_SOURCE="$REPO_ROOT/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
+CANONICALIZER_SHA=$(sha256 "$CANONICALIZER_SOURCE")
+TOOL_MAIN_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/src/main.rs")
+TOOL_CARGO_TOML_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml")
+TOOL_CARGO_LOCK_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock")
+ARCHITECTURE_GENERATOR_SHA=$(sha256 "$SCRIPT_DIR/generate_architecture.py")
+ARCHITECTURE_VERIFIER_SHA=$(sha256 "$SCRIPT_DIR/verify_evidence.py")
+check_generator_inputs() {
+  test "$(git -C "$REPO_ROOT" rev-parse HEAD)" = "$SOURCE_REVISION"
+  test -z "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)"
+  check_hash "$LINE_PILOT_SHA" "$SCRIPT_DIR/LinePilot.mo"
+  check_hash "$LINE_FLAG_PILOT_SHA" "$SCRIPT_DIR/LineFlagPilot.mo"
+  check_hash "$RUNNER_SHA" "$SCRIPT_DIR/runner.sh"
+  check_hash "$REGENERATE_SHA" "$SCRIPT_DIR/regenerate.sh"
+  check_hash "$CANONICALIZER_SHA" "$CANONICALIZER_SOURCE"
+  check_hash "$TOOL_MAIN_SHA" "$REPO_ROOT/tools/openmodelica-line-reference/src/main.rs"
+  check_hash "$TOOL_CARGO_TOML_SHA" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml"
+  check_hash "$TOOL_CARGO_LOCK_SHA" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock"
+  check_hash "$ARCHITECTURE_GENERATOR_SHA" "$SCRIPT_DIR/generate_architecture.py"
+  check_hash "$ARCHITECTURE_VERIFIER_SHA" "$SCRIPT_DIR/verify_evidence.py"
+}
 test "$(sh "$SCRIPT_DIR/deadline_test.sh")" = 'deadline accounting test passed'
 test "$(sh "$SCRIPT_DIR/output_publish_test.sh")" = 'output publication test passed'
 test "$(sh "$SCRIPT_DIR/container_cleanup_test.sh")" = 'container cleanup test passed'
@@ -91,9 +120,20 @@ RUN_LABEL=${OUTPUT_TOKEN#.}
 RUN_A_CONTAINER="$RUN_LABEL-run-a"
 RUN_B_CONTAINER="$RUN_LABEL-run-b"
 CONTROL_CONTAINER="$RUN_LABEL-flag-control"
-mkdir "$STAGING/sources" "$STAGING/sources/buildings" "$STAGING/sources/modelica" "$STAGING/repositories"
+mkdir "$STAGING/sources" "$STAGING/sources/buildings" "$STAGING/sources/modelica" "$STAGING/repositories" "$STAGING/reference" "$STAGING/tool-repo"
+mkdir -p "$STAGING/tool-repo/tools/openmodelica-line-reference/src" "$STAGING/tool-repo/crates/oce-cxf/tests/open_modelica_line_reference"
+cp "$SCRIPT_DIR/LinePilot.mo" "$SCRIPT_DIR/LineFlagPilot.mo" "$SCRIPT_DIR/runner.sh" "$STAGING/reference/"
+cp "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock" "$STAGING/tool-repo/tools/openmodelica-line-reference/"
+cp "$REPO_ROOT/tools/openmodelica-line-reference/src/main.rs" "$STAGING/tool-repo/tools/openmodelica-line-reference/src/main.rs"
+cp "$CANONICALIZER_SOURCE" "$STAGING/tool-repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
+check_hash "$LINE_PILOT_SHA" "$STAGING/reference/LinePilot.mo"
+check_hash "$LINE_FLAG_PILOT_SHA" "$STAGING/reference/LineFlagPilot.mo"
+check_hash "$RUNNER_SHA" "$STAGING/reference/runner.sh"
+check_hash "$CANONICALIZER_SHA" "$STAGING/tool-repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
+check_hash "$TOOL_MAIN_SHA" "$STAGING/tool-repo/tools/openmodelica-line-reference/src/main.rs"
+check_hash "$TOOL_CARGO_TOML_SHA" "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml"
+check_hash "$TOOL_CARGO_LOCK_SHA" "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.lock"
 
-check_hash() { test "$(shasum -a 256 "$2" | cut -d' ' -f1)" = "$1"; }
 python3 "$SCRIPT_DIR/materialize_oci.py" "$SCRIPT_DIR/image-index.json" "$STAGING/index.raw.json" "${INDEX#sha256:}"
 python3 "$SCRIPT_DIR/materialize_oci.py" "$SCRIPT_DIR/image-manifest-$ARCHITECTURE.json" "$STAGING/manifest.raw.json" "${MANIFEST#sha256:}"
 grep -q "\"architecture\": \"$ARCHITECTURE\"" "$SCRIPT_DIR/image-index.json"
@@ -149,6 +189,17 @@ run_model() {
     printf 'modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git\n'
     printf 'modelica_commit=%s\n' "$MODELICA_COMMIT"
     printf 'modelica_tree=%s\n' "$MODELICA_TREE"
+    printf 'repository_revision=%s\n' "$SOURCE_REVISION"
+    printf 'line_pilot_sha256=%s\n' "$LINE_PILOT_SHA"
+    printf 'line_flag_pilot_sha256=%s\n' "$LINE_FLAG_PILOT_SHA"
+    printf 'runner_sha256=%s\n' "$RUNNER_SHA"
+    printf 'regenerate_sha256=%s\n' "$REGENERATE_SHA"
+    printf 'canonicalizer_sha256=%s\n' "$CANONICALIZER_SHA"
+    printf 'tool_main_sha256=%s\n' "$TOOL_MAIN_SHA"
+    printf 'tool_cargo_toml_sha256=%s\n' "$TOOL_CARGO_TOML_SHA"
+    printf 'tool_cargo_lock_sha256=%s\n' "$TOOL_CARGO_LOCK_SHA"
+    printf 'architecture_generator_sha256=%s\n' "$ARCHITECTURE_GENERATOR_SHA"
+    printf 'architecture_verifier_sha256=%s\n' "$ARCHITECTURE_VERIFIER_SHA"
     printf 'source_materialization=git_archive_exact_committed_bytes\n'
     printf 'buildings_package_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59\n'
     printf 'line_source_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5\n'
@@ -168,7 +219,7 @@ run_model() {
     --ulimit fsize=67108864:67108864 -e HOME=/tmp/home -e TMPDIR=/tmp -e MODELICAPATH= \
     -e MODEL="$model" -e OUTPUT_DIRECTORY_TOKEN="$token" \
     --mount "type=bind,src=$STAGING/sources,dst=/sources,readonly" \
-    --mount "type=bind,src=$SCRIPT_DIR,dst=/reference,readonly" "$IMAGE" /reference/runner.sh >/dev/null
+    --mount "type=bind,src=$STAGING/reference,dst=/reference,readonly" "$IMAGE" /reference/runner.sh >/dev/null
   ACTIVE_CID=$(cat "$ACTIVE_CID_FILE"); valid_container_id "$ACTIVE_CID"
   while :; do
     if ! deadline_refresh; then run_timed 5 docker kill "$ACTIVE_CID" >/dev/null 2>&1 || true; return 1; fi
@@ -199,9 +250,9 @@ run_model fresh-run-b Line "$RUN_B_CONTAINER" "$OUTPUT/run-b"
 run_model fresh-flag-control FlagControl "$CONTROL_CONTAINER" "$OUTPUT/flag-control"
 cmp "$OUTPUT/run-a/LinePilot_res.csv" "$OUTPUT/run-b/LinePilot_res.csv"
 if cmp -s "$OUTPUT/run-a/LinePilot_res.csv" "$OUTPUT/flag-control/LinePilot_res.csv"; then printf '%s\n' 'flag control did not mutate raw output' >&2; exit 1; fi
-CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
+CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
   canonicalize "$OUTPUT/run-a/LinePilot_res.csv" "$OUTPUT/line.canonical.csv" openmodelica_reals_line
-CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
+CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
   canonicalize "$OUTPUT/flag-control/LinePilot_res.csv" "$OUTPUT/flag-control.canonical.csv" openmodelica_reals_line_flag_control
 mv "$OUTPUT/run-a/LinePilot_res.csv" "$OUTPUT/line-run-a.raw.csv"
 mv "$OUTPUT/run-b/LinePilot_res.csv" "$OUTPUT/line-run-b.raw.csv"
@@ -213,9 +264,9 @@ mv "$STAGING/manifest.raw.json" "$OUTPUT/image-manifest.json"
 
 MUTATION=$(mktemp -d "$STAGING/mutation.XXXXXX")
 mkdir -p "$MUTATION/repo/tools/openmodelica-line-reference/src" "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference"
-cp "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock" "$MUTATION/repo/tools/openmodelica-line-reference/"
-cp "$REPO_ROOT/tools/openmodelica-line-reference/src/main.rs" "$MUTATION/repo/tools/openmodelica-line-reference/src/main.rs"
-CANONICALIZER="$REPO_ROOT/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
+cp "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.lock" "$MUTATION/repo/tools/openmodelica-line-reference/"
+cp "$STAGING/tool-repo/tools/openmodelica-line-reference/src/main.rs" "$MUTATION/repo/tools/openmodelica-line-reference/src/main.rs"
+CANONICALIZER="$STAGING/tool-repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
 cp "$CANONICALIZER" "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
 perl -0pi -e 's/            \*rows\.last_mut\(\)\.expect\("equal-time group exists"\) = row;\n//' "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
 CARGO_TARGET_DIR="$STAGING/mutant-target" cargo run --manifest-path "$MUTATION/repo/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
@@ -246,8 +297,9 @@ restoration_result=PASS
 restored_canonicalizer_sha256=$CANONICALIZER_SHA
 EOF
 
+check_generator_inputs
+python3 "$SCRIPT_DIR/generate_architecture.py" "$OUTPUT" "$ARCHITECTURE" "$REPO_ROOT"
 python3 "$PUBLISH_HELPER" cleanup "$STAGING" "$STAGING_DEVICE" "$STAGING_INODE"; STAGING=
-python3 "$SCRIPT_DIR/generate_architecture.py" "$OUTPUT" "$ARCHITECTURE"
 python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT" "$REPO_ROOT" "$ARCHITECTURE"
 trap '' HUP INT TERM
 python3 "$PUBLISH_HELPER" publish "$OUTPUT" "$OUTPUT_DEVICE" "$OUTPUT_INODE" "$OUTPUT_PARENT_DEVICE" "$OUTPUT_PARENT_INODE" "$OUTPUT_DESTINATION"

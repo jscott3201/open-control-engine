@@ -178,7 +178,8 @@ platform manifests and configs under the shared OCI index. Its canonical bytes m
 architectures. Four closed views drive the public facade at the emitted timestamp bits and compare
 OpenModelica and engine outputs against an independent 40-cell expected-bit table. A compiled
 keep-first projection, an external limit-flag change, a swapped output mapping, and four arithmetic
-mutants fail at pinned rows. This proves only the fixed finite matrix; raw cross-architecture bytes,
+reference mutants fail through the facade comparator at pinned rows. This proves only the fixed
+finite matrix; raw cross-architecture bytes,
 other Line inputs, non-finite values, signed zero, subnormals, and solver behavior remain outside it.
 
 All three regeneration paths disable container networking. The retained Line workflow is manual

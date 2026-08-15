@@ -3,24 +3,7 @@
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::io::Read as _;
-#[cfg(unix)]
-use std::os::unix::fs::OpenOptionsExt as _;
-use std::path::Path;
-
-#[cfg(any(target_os = "linux", target_os = "android"))]
-const SAFE_OPEN_FLAGS: i32 = 0x0002_0000 | 0x0000_0800;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-const SAFE_OPEN_FLAGS: i32 = 0x0000_0100 | 0x0000_0004;
-#[cfg(all(
-    unix,
-    not(any(
-        target_os = "linux",
-        target_os = "android",
-        target_os = "macos",
-        target_os = "ios"
-    ))
-))]
-compile_error!("Line evidence file reads support Linux, Android, macOS, and iOS Unix targets");
+use std::path::{Component, Path};
 
 pub(crate) const MAX_FILE_BYTES: usize = 1024 * 1024;
 pub(crate) const MAX_ROWS: usize = 4096;
@@ -101,43 +84,112 @@ pub(crate) fn canonicalize_path(
 }
 
 pub(crate) fn read_bounded_path(input: &Path) -> Result<Vec<u8>, CanonicalizerError> {
-    let metadata = std::fs::symlink_metadata(input)
+    #[cfg(unix)]
+    let mut file = open_descriptor_relative(input)?;
+    #[cfg(not(unix))]
+    let mut file = open_checked_non_unix(input)?;
+    let metadata = file
+        .metadata()
         .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?;
-    if metadata.file_type().is_symlink() || !metadata.is_file() {
+    if !metadata.is_file() {
         return Err(CanonicalizerError::new(
             ErrorCode::Io,
-            "input must be a regular non-symlink file",
+            "opened input is not a regular file",
         ));
     }
     let size = usize::try_from(metadata.len()).unwrap_or(usize::MAX);
     if size > MAX_FILE_BYTES {
         return Err(size_error(size));
     }
-    let mut options = std::fs::OpenOptions::new();
-    options.read(true);
-    #[cfg(unix)]
-    options.custom_flags(SAFE_OPEN_FLAGS);
-    let file = options
-        .open(input)
-        .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?;
-    if !file
-        .metadata()
-        .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?
-        .is_file()
-    {
-        return Err(CanonicalizerError::new(
-            ErrorCode::Io,
-            "opened input is not a regular file",
-        ));
-    }
     let mut bytes = Vec::with_capacity(size);
-    file.take((MAX_FILE_BYTES + 1) as u64)
+    file.by_ref()
+        .take((MAX_FILE_BYTES + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?;
     if bytes.len() > MAX_FILE_BYTES {
         return Err(size_error(bytes.len()));
     }
     Ok(bytes)
+}
+
+#[cfg(unix)]
+fn open_descriptor_relative(input: &Path) -> Result<std::fs::File, CanonicalizerError> {
+    use rustix::fs::{Mode, OFlags, open, openat};
+
+    fn open_component(
+        directory: &std::os::fd::OwnedFd,
+        name: &std::ffi::OsStr,
+        flags: OFlags,
+    ) -> Result<std::os::fd::OwnedFd, CanonicalizerError> {
+        openat(directory, name, flags, Mode::empty())
+            .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))
+    }
+
+    let mut components = input.components().peekable();
+    let mut directory = if input.is_absolute() {
+        if !matches!(components.next(), Some(Component::RootDir)) {
+            return Err(CanonicalizerError::new(
+                ErrorCode::Io,
+                "absolute input has no root component",
+            ));
+        }
+        open(
+            "/",
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )
+    } else {
+        open(
+            ".",
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+            Mode::empty(),
+        )
+    }
+    .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?;
+
+    while let Some(component) = components.next() {
+        let Component::Normal(name) = component else {
+            return Err(CanonicalizerError::new(
+                ErrorCode::Io,
+                "input path contains an unsupported component",
+            ));
+        };
+        if components.peek().is_none() {
+            let descriptor = open_component(
+                &directory,
+                name,
+                OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+            )?;
+            return Ok(std::fs::File::from(descriptor));
+        }
+        directory = open_component(
+            &directory,
+            name,
+            OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+        )?;
+    }
+    Err(CanonicalizerError::new(
+        ErrorCode::Io,
+        "input path has no final component",
+    ))
+}
+
+#[cfg(not(unix))]
+fn open_checked_non_unix(input: &Path) -> Result<std::fs::File, CanonicalizerError> {
+    let mut current = std::path::PathBuf::new();
+    for component in input.components() {
+        current.push(component);
+        let metadata = std::fs::symlink_metadata(&current)
+            .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))?;
+        if metadata.file_type().is_symlink() {
+            return Err(CanonicalizerError::new(
+                ErrorCode::Io,
+                "input path contains a symlink component",
+            ));
+        }
+    }
+    std::fs::File::open(input)
+        .map_err(|error| CanonicalizerError::new(ErrorCode::Io, error.to_string()))
 }
 
 pub(crate) fn canonicalize_bytes(

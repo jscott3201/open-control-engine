@@ -319,16 +319,17 @@ pub(crate) fn evaluate(mode: Mode, reference: &CombiTimeTable) -> ModeOutcome {
     }
 }
 
-pub(crate) fn first_mutant_mismatch(mutant: fn(Mode, f64) -> f64) -> (Mode, usize) {
-    let inputs = [-4.0, -4.0, -2.0, -2.0, 0.0, 0.0, 2.0, 2.0, 4.0, 4.0];
-    for mode in [Mode::Both, Mode::Below, Mode::Above, Mode::Unlimited] {
-        for (row, input) in inputs.iter().copied().enumerate() {
-            if mutant(mode, input).to_bits() != EXPECTED[mode.index()][row] {
-                return (mode, row);
-            }
-        }
+pub(crate) fn mutated_reference(
+    source: &CombiTimeTable,
+    mode: Mode,
+    mutant: fn(Mode, f64) -> f64,
+) -> Result<CombiTimeTable, String> {
+    let mut reference = view(source, mode, mode.source_column())?;
+    for row in reference.data.chunks_exact_mut(reference.n_cols) {
+        let input = row[5];
+        row[6] = mutant(mode, input);
     }
-    panic!("mutant survived the independent expected table")
+    Ok(reference)
 }
 
 fn result_with_x(x: f64, omit_intercept: bool) -> f64 {

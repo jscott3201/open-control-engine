@@ -458,9 +458,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   amd64 hosts, and their strict keep-last canonical outputs match exactly. The public facade runs
   four closed views at the emitted event instants with zero tolerances and no warnings; both
   implementations are checked against an independent expected-bit table. Projection, external
-  flag, output mapping, and arithmetic mutations fail at pinned rows. The result covers only this
-  finite matrix: global Tier 3 stays skipped, with no arbitrary Real, sequence, solver, general
-  tolerance, or cross-architecture raw-byte claim.
+  flag, output mapping, and arithmetic reference mutations fail through the facade comparator at
+  pinned rows. The result covers only this finite matrix: global Tier 3 stays skipped, with no
+  arbitrary Real, sequence, solver, general tolerance, or cross-architecture raw-byte claim.
 - **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).
   `DriverError::Load` identifies failure at `Engine::load_cxf`, and only that variant becomes a
   failed Tier 0 static-load report. Facade failures after a successful load remain driver errors

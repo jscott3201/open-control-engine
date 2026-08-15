@@ -47,6 +47,8 @@ jobs:
         run: >-
           docker pull --platform "$PLATFORM" "$IMAGE" &&
           docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' | grep -Fq "\"$IMAGE\""
+      - name: Materialize pinned Rust dependencies on the host
+        run: cargo fetch --manifest-path tools/openmodelica-line-reference/Cargo.toml --locked
       - name: Regenerate with offline containers
         env:
           BUILDINGS: ${{ runner.temp }}/modelica-buildings

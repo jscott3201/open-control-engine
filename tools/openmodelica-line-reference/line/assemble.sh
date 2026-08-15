@@ -12,6 +12,10 @@ test ! -e "$DESTINATION"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
 PUBLISH_HELPER="$SCRIPT_DIR/output_publish.py"
+cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked --quiet -- \
+  verify-architecture-canonical "$ARM"
+cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked --quiet -- \
+  verify-architecture-canonical "$AMD"
 python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$ARM" "$REPO_ROOT" arm64
 python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$AMD" "$REPO_ROOT" amd64
 

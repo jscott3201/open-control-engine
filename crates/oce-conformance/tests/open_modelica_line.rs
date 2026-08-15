@@ -106,23 +106,72 @@ fn swapped_below_and_above_mapping_fails_at_the_below_range_row() {
 }
 
 #[test]
-fn arithmetic_mutants_are_killed_in_distinct_mode_regions() {
-    assert_eq!(
-        scoped::first_mutant_mismatch(scoped::always_clamp),
-        (scoped::Mode::Below, 8)
-    );
-    assert_eq!(
-        scoped::first_mutant_mismatch(scoped::never_clamp),
-        (scoped::Mode::Both, 0)
-    );
-    assert_eq!(
-        scoped::first_mutant_mismatch(scoped::swapped_flags),
-        (scoped::Mode::Below, 0)
-    );
-    assert_eq!(
-        scoped::first_mutant_mismatch(scoped::omitted_intercept),
-        (scoped::Mode::Both, 0)
-    );
+fn arithmetic_reference_mutants_turn_the_facade_comparator_red() {
+    let canonical = scoped::canonical().unwrap();
+    for (name, mode, mutant, row, reference_bits, engine_bits) in [
+        (
+            "always clamp",
+            scoped::Mode::Below,
+            scoped::always_clamp as fn(scoped::Mode, f64) -> f64,
+            8,
+            3.25_f64.to_bits(),
+            4.25_f64.to_bits(),
+        ),
+        (
+            "never clamp",
+            scoped::Mode::Both,
+            scoped::never_clamp,
+            0,
+            0.25_f64.to_bits(),
+            1.25_f64.to_bits(),
+        ),
+        (
+            "swapped flags",
+            scoped::Mode::Below,
+            scoped::swapped_flags,
+            0,
+            0.25_f64.to_bits(),
+            1.25_f64.to_bits(),
+        ),
+        (
+            "omitted intercept",
+            scoped::Mode::Both,
+            scoped::omitted_intercept,
+            0,
+            (-1.0_f64).to_bits(),
+            1.25_f64.to_bits(),
+        ),
+    ] {
+        let reference = scoped::mutated_reference(&canonical, mode, mutant).unwrap();
+        for (canonical_row, mutant_row) in canonical
+            .data
+            .chunks_exact(canonical.n_cols)
+            .zip(reference.data.chunks_exact(reference.n_cols))
+        {
+            assert_eq!(
+                canonical_row[..6]
+                    .iter()
+                    .map(|value| value.to_bits())
+                    .collect::<Vec<_>>(),
+                mutant_row[..6]
+                    .iter()
+                    .map(|value| value.to_bits())
+                    .collect::<Vec<_>>(),
+                "{name} changed time or input bits"
+            );
+        }
+        let outcome = scoped::evaluate(mode, &reference);
+        assert_eq!(outcome.engine_bits, scoped::EXPECTED[mode_index(mode)]);
+        let ComparisonResult::Exact(exact) = outcome.comparison else {
+            panic!("{name} comparison must be exact");
+        };
+        assert!(!exact.passed, "{name}");
+        let mismatch = exact.first_mismatch.unwrap();
+        assert_eq!(mismatch.index, row, "{name}");
+        assert_eq!(mismatch.x.to_bits(), scoped::TIME_BITS[row], "{name}");
+        assert_eq!(mismatch.expected.to_bits(), reference_bits, "{name}");
+        assert_eq!(mismatch.actual.to_bits(), engine_bits, "{name}");
+    }
 }
 
 fn mode_index(mode: scoped::Mode) -> usize {

@@ -128,6 +128,8 @@ pub(super) struct Architecture {
     pub(super) container_architecture: String,
     pub(super) platform_manifest_digest: String,
     pub(super) config_digest: String,
+    pub(super) repository_revision: String,
+    pub(super) generator_inputs: GeneratorInputs,
     pub(super) omc_version: String,
     pub(super) gcc_version: String,
     pub(super) binutils_version: String,
@@ -138,6 +140,21 @@ pub(super) struct Architecture {
     pub(super) canonical_sha256: String,
     pub(super) flag_control_canonical_sha256: String,
     pub(super) runs: Vec<Run>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(super) struct GeneratorInputs {
+    pub(super) line_pilot_sha256: String,
+    pub(super) line_flag_pilot_sha256: String,
+    pub(super) runner_sha256: String,
+    pub(super) regenerate_sha256: String,
+    pub(super) canonicalizer_sha256: String,
+    pub(super) tool_main_sha256: String,
+    pub(super) tool_cargo_toml_sha256: String,
+    pub(super) tool_cargo_lock_sha256: String,
+    pub(super) architecture_generator_sha256: String,
+    pub(super) architecture_verifier_sha256: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]

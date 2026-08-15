@@ -31,8 +31,17 @@ fn run(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
         );
         return Ok(());
     }
+    if command == "verify-architecture-canonical" {
+        let directory = arguments.next().ok_or("missing architecture evidence path")?;
+        if arguments.next().is_some() {
+            return Err("unexpected trailing argument".into());
+        }
+        verify_architecture_canonical(Path::new(&directory))?;
+        println!("strict canonical boundary passed");
+        return Ok(());
+    }
     if !matches!(command.as_str(), "canonicalize" | "canonicalize-inspect") {
-        return Err("usage: oce-openmodelica-line-reference canonicalize[-inspect] INPUT OUTPUT TABLE_NAME [METADATA] | schedule-mismatches INPUT".into());
+        return Err("usage: oce-openmodelica-line-reference canonicalize[-inspect] INPUT OUTPUT TABLE_NAME [METADATA] | schedule-mismatches INPUT | verify-architecture-canonical DIRECTORY".into());
     }
     let input = arguments.next().ok_or("missing input path")?;
     let output = arguments.next().ok_or("missing output path")?;
@@ -62,6 +71,39 @@ fn run(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
             )
             .as_bytes(),
         )?;
+    }
+    Ok(())
+}
+
+fn verify_architecture_canonical(directory: &Path) -> Result<(), String> {
+    let retained = canonicalizer::read_bounded_path(&directory.join("line.canonical.csv"))
+        .map_err(|error| error.to_string())?;
+    let control = canonicalizer::read_bounded_path(&directory.join("flag-control.canonical.csv"))
+        .map_err(|error| error.to_string())?;
+    for bytes in [&retained, &control] {
+        if bytes.contains(&b'\r') || !bytes.ends_with(b"\n") {
+            return Err("retained canonical output must use LF records and a final LF".into());
+        }
+    }
+    for raw in ["line-run-a.raw.csv", "line-run-b.raw.csv"] {
+        let reproduced = canonicalizer::canonicalize_path(
+            &directory.join(raw),
+            "openmodelica_reals_line",
+        )
+        .map_err(|error| format!("{raw}: {error}"))?;
+        if reproduced.bytes != retained {
+            return Err(format!(
+                "{raw} does not reproduce retained strict canonical bytes"
+            ));
+        }
+    }
+    let reproduced = canonicalizer::canonicalize_path(
+        &directory.join("flag-control.raw.csv"),
+        "openmodelica_reals_line_flag_control",
+    )
+    .map_err(|error| format!("flag-control.raw.csv: {error}"))?;
+    if reproduced.bytes != control {
+        return Err("flag-control.raw.csv does not reproduce retained strict canonical bytes".into());
     }
     Ok(())
 }

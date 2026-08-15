@@ -23,12 +23,45 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
             return Err(format!("artifact digest mismatch: {}", artifact.path));
         }
     }
+    validate_native_provenance(manifest)?;
     validate_runs(manifest, &root)?;
     validate_wrappers(manifest, &root)?;
     validate_oci(manifest, &root)?;
     validate_projection_records(manifest, &root)?;
     validate_cross_architecture(manifest, &root)?;
     validate_tool_contract(manifest, &root)
+}
+
+fn validate_native_provenance(manifest: &Manifest) -> Result<(), String> {
+    for architecture in &manifest.architectures {
+        let inputs = &architecture.generator_inputs;
+        for (actual, role) in [
+            (&inputs.line_pilot_sha256, "wrapper_model"),
+            (&inputs.line_flag_pilot_sha256, "flag_control_wrapper_model"),
+            (&inputs.runner_sha256, "runner_script"),
+            (&inputs.regenerate_sha256, "regeneration_script"),
+            (&inputs.canonicalizer_sha256, "canonicalizer_source"),
+            (&inputs.tool_main_sha256, "tool_main_source"),
+            (&inputs.tool_cargo_toml_sha256, "tool_cargo_toml"),
+            (&inputs.tool_cargo_lock_sha256, "tool_cargo_lock"),
+            (
+                &inputs.architecture_generator_sha256,
+                "architecture_generator_script",
+            ),
+            (
+                &inputs.architecture_verifier_sha256,
+                "evidence_validator_script",
+            ),
+        ] {
+            if actual != &artifact(manifest, role).sha256 {
+                return Err(format!(
+                    "{} native provenance does not bind {role}",
+                    architecture.name
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_role_path(artifact: &Artifact) -> Result<(), String> {
@@ -156,6 +189,65 @@ fn validate_run_log(
             architecture.platform_manifest_digest.as_str(),
         ),
         ("image_config_digest", architecture.config_digest.as_str()),
+        (
+            "repository_revision",
+            architecture.repository_revision.as_str(),
+        ),
+        (
+            "line_pilot_sha256",
+            architecture.generator_inputs.line_pilot_sha256.as_str(),
+        ),
+        (
+            "line_flag_pilot_sha256",
+            architecture
+                .generator_inputs
+                .line_flag_pilot_sha256
+                .as_str(),
+        ),
+        (
+            "runner_sha256",
+            architecture.generator_inputs.runner_sha256.as_str(),
+        ),
+        (
+            "regenerate_sha256",
+            architecture.generator_inputs.regenerate_sha256.as_str(),
+        ),
+        (
+            "canonicalizer_sha256",
+            architecture.generator_inputs.canonicalizer_sha256.as_str(),
+        ),
+        (
+            "tool_main_sha256",
+            architecture.generator_inputs.tool_main_sha256.as_str(),
+        ),
+        (
+            "tool_cargo_toml_sha256",
+            architecture
+                .generator_inputs
+                .tool_cargo_toml_sha256
+                .as_str(),
+        ),
+        (
+            "tool_cargo_lock_sha256",
+            architecture
+                .generator_inputs
+                .tool_cargo_lock_sha256
+                .as_str(),
+        ),
+        (
+            "architecture_generator_sha256",
+            architecture
+                .generator_inputs
+                .architecture_generator_sha256
+                .as_str(),
+        ),
+        (
+            "architecture_verifier_sha256",
+            architecture
+                .generator_inputs
+                .architecture_verifier_sha256
+                .as_str(),
+        ),
         ("pull_policy", "never"),
         ("output_directory_token", token),
         ("selected_model", model),

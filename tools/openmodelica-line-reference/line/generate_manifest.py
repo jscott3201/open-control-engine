@@ -79,6 +79,8 @@ def architecture(name):
         "container_architecture": record["container_architecture"],
         "platform_manifest_digest": record["platform_manifest_digest"],
         "config_digest": record["config_digest"],
+        "repository_revision": record["repository_revision"],
+        "generator_inputs": record["generator_inputs"],
         "omc_version": "OpenModelica 1.25.1",
         "gcc_version": "11.4.0",
         "binutils_version": "2.38",

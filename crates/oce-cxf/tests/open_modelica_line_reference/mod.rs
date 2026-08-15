@@ -1,5 +1,7 @@
 //! Per-PR validation for the scoped two-architecture OpenModelica Line evidence.
 
+#[cfg(unix)]
+mod assembly_boundary_tests;
 pub(crate) mod canonicalizer;
 mod expectations;
 mod manifest;
@@ -283,7 +285,7 @@ fn scoped_test_and_tool_add_no_public_surface_or_workspace_dependency() {
     let tool =
         std::fs::read_to_string(root.join("tools/openmodelica-line-reference/Cargo.toml")).unwrap();
     assert!(tool.contains("[workspace]"));
-    assert!(!tool.contains("[dependencies]"));
+    assert!(tool.contains("rustix"));
     assert!(
         !root
             .join("tools/openmodelica-line-reference/build.rs")

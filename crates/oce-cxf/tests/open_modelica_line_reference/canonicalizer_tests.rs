@@ -178,13 +178,22 @@ fn path_reader_rejects_symlinks_directories_devices_and_fifos() {
     use std::os::unix::fs::symlink;
 
     let directory = unique_temp_dir("oce-line-canonicalizer-path");
-    let regular = directory.join("regular.csv");
+    let real_parent = directory.join("real");
+    let linked_parent = directory.join("linked");
+    std::fs::create_dir(&real_parent).unwrap();
+    let regular = real_parent.join("regular.csv");
     let link = directory.join("link.csv");
     let fifo = directory.join("input.fifo");
     std::fs::write(&regular, valid()).unwrap();
     assert_eq!(canonicalize_path(&regular, "line").unwrap().rows.len(), 2);
+    symlink(&real_parent, &linked_parent).unwrap();
     symlink(&regular, &link).unwrap();
-    for path in [&link, &directory, Path::new("/dev/null")] {
+    for path in [
+        &linked_parent.join("regular.csv"),
+        &link,
+        &directory,
+        Path::new("/dev/null"),
+    ] {
         assert_eq!(read_bounded_path(path).unwrap_err().code, ErrorCode::Io);
     }
     assert!(

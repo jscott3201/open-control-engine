@@ -332,6 +332,11 @@ fn validate_architectures(value: &Manifest) -> Result<(), String> {
             "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
             "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
         ),
+    )?;
+    require(
+        value.architectures[0].repository_revision == value.architectures[1].repository_revision
+            && value.architectures[0].generator_inputs == value.architectures[1].generator_inputs,
+        "cross-architecture generator provenance",
     )
 }
 
@@ -386,6 +391,21 @@ fn validate_architecture(
         ),
     ] {
         exact(actual, expected, field)?;
+    }
+    revision(&value.repository_revision)?;
+    for digest_value in [
+        &value.generator_inputs.line_pilot_sha256,
+        &value.generator_inputs.line_flag_pilot_sha256,
+        &value.generator_inputs.runner_sha256,
+        &value.generator_inputs.regenerate_sha256,
+        &value.generator_inputs.canonicalizer_sha256,
+        &value.generator_inputs.tool_main_sha256,
+        &value.generator_inputs.tool_cargo_toml_sha256,
+        &value.generator_inputs.tool_cargo_lock_sha256,
+        &value.generator_inputs.architecture_generator_sha256,
+        &value.generator_inputs.architecture_verifier_sha256,
+    ] {
+        digest(digest_value)?;
     }
     require(value.runs.len() == 2, "run count")?;
     for (run, id, token) in [
@@ -537,6 +557,15 @@ fn digest(value: &str) -> Result<(), String> {
                 .bytes()
                 .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
         "invalid SHA-256",
+    )
+}
+fn revision(value: &str) -> Result<(), String> {
+    require(
+        value.len() == 40
+            && value
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte)),
+        "invalid repository revision",
     )
 }
 fn require(condition: bool, detail: &str) -> Result<(), String> {

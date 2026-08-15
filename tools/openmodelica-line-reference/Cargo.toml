@@ -9,3 +9,6 @@ name = "oce-openmodelica-line-reference"
 path = "src/main.rs"
 
 [workspace]
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.4", features = ["fs"] }

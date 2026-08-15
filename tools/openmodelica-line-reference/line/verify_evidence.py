@@ -10,6 +10,7 @@ import os
 import pathlib
 import stat
 import struct
+import subprocess
 import sys
 import tempfile
 from typing import Any, NoReturn
@@ -41,6 +42,18 @@ ARCH_FILES = {
     "architecture.json", "line.canonical.csv", "line-run-a.raw.csv", "line-run-b.raw.csv",
     "run-a.log", "run-b.log", "flag-control.canonical.csv", "flag-control.raw.csv",
     "flag-control.log", "projection-mutation.log", "image-index.json", "image-manifest.json",
+}
+GENERATOR_INPUT_PATHS = {
+    "line_pilot_sha256": "tools/openmodelica-line-reference/line/LinePilot.mo",
+    "line_flag_pilot_sha256": "tools/openmodelica-line-reference/line/LineFlagPilot.mo",
+    "runner_sha256": "tools/openmodelica-line-reference/line/runner.sh",
+    "regenerate_sha256": "tools/openmodelica-line-reference/line/regenerate.sh",
+    "canonicalizer_sha256": "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs",
+    "tool_main_sha256": "tools/openmodelica-line-reference/src/main.rs",
+    "tool_cargo_toml_sha256": "tools/openmodelica-line-reference/Cargo.toml",
+    "tool_cargo_lock_sha256": "tools/openmodelica-line-reference/Cargo.lock",
+    "architecture_generator_sha256": "tools/openmodelica-line-reference/line/generate_architecture.py",
+    "architecture_verifier_sha256": "tools/openmodelica-line-reference/line/verify_evidence.py",
 }
 
 
@@ -216,7 +229,7 @@ def one_log_value(body, key, expected):
         fail(f"log must contain exactly one {key}={expected}; found {values}")
 
 
-def log_contract(path, architecture, token, model, raw_digest):
+def log_contract(path, architecture, token, model, raw_digest, revision, generator_inputs):
     body = text(path)
     platform, host, server, container, manifest, config = ARCH[architecture]
     required = {
@@ -227,6 +240,7 @@ def log_contract(path, architecture, token, model, raw_digest):
         "buildings_commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "buildings_tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
         "modelica_remote": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git",
         "modelica_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "modelica_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+        "repository_revision": revision,
         "source_materialization": "git_archive_exact_committed_bytes",
         "buildings_package_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
         "line_source_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
@@ -245,6 +259,7 @@ def log_contract(path, architecture, token, model, raw_digest):
         "time_table_source": "/sources/modelica/Modelica/Blocks/Sources.mo", "Modelica": "4.1.0",
         "Buildings": "14.0.0", "omc_warning_count": "0", "raw_sha256": raw_digest, "runner_complete": "1",
     }
+    required.update(generator_inputs)
     command = f"docker run --pull=never --platform {platform} --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro"
     required["docker_command"] = command
     for key, expected in required.items():
@@ -303,16 +318,41 @@ def validate_projection(path, raw_digest, canonicalizer_digest):
         fail("projection mutation record")
 
 
+def strict_canonical_boundary(directory, root):
+    command = [
+        "cargo", "run", "--manifest-path",
+        str(root / "tools/openmodelica-line-reference/Cargo.toml"),
+        "--offline", "--locked", "--quiet", "--",
+        "verify-architecture-canonical", str(directory),
+    ]
+    environment = os.environ.copy()
+    environment["CARGO_NET_OFFLINE"] = "true"
+    result = subprocess.run(command, cwd=root, env=environment, capture_output=True, text=True)
+    if result.returncode != 0 or result.stdout != "strict canonical boundary passed\n":
+        fail(f"strict Rust canonical boundary: {result.stderr.strip()}")
+
+
 def validate_architecture(directory, root, architecture):
     directory, root = safe_directory(directory, "architecture evidence"), safe_directory(root, "repository root")
     if {entry.name for entry in os.scandir(directory)} != ARCH_FILES:
         fail("architecture evidence entries are not closed")
     record = json_file(directory / "architecture.json")
-    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
+    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_inputs", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
     closed(record, fields, "architecture record")
     expected = ARCH[architecture]
-    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"]] != ["oce-openmodelica-line-native-architecture-v1", architecture, *expected]:
+    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"]] != ["oce-openmodelica-line-native-architecture-v2", architecture, *expected]:
         fail("architecture literals")
+    revision = record["repository_revision"]
+    if not isinstance(revision, str) or len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
+        fail("architecture repository revision")
+    closed(record["generator_inputs"], GENERATOR_INPUT_PATHS, "architecture generator inputs")
+    expected_inputs = {
+        key: hashlib.sha256(artifact_bytes(directory, root, path)).hexdigest()
+        for key, path in GENERATOR_INPUT_PATHS.items()
+    }
+    if record["generator_inputs"] != expected_inputs:
+        fail("native generator inputs do not match assembly repository bytes")
+    strict_canonical_boundary(directory, root)
     for name, key in [("line-run-a.raw.csv", "raw_run_a_sha256"), ("line-run-b.raw.csv", "raw_run_b_sha256"), ("flag-control.raw.csv", "flag_control_raw_sha256"), ("line.canonical.csv", "canonical_sha256"), ("flag-control.canonical.csv", "flag_control_canonical_sha256")]:
         if sha(directory / name) != record[key]:
             fail(f"architecture digest binding for {name}")
@@ -338,7 +378,7 @@ def validate_architecture(directory, root, architecture):
     if differences != [8, 9] or control_projected[8][7] != OUTPUT_BITS["yBoth"][8]:
         fail("external flag control did not fail at the pinned above-range rows")
     for name, token, model, digest in [("run-a.log", "fresh-run-a", "Line", record["raw_run_a_sha256"]), ("run-b.log", "fresh-run-b", "Line", record["raw_run_b_sha256"]), ("flag-control.log", "fresh-flag-control", "FlagControl", record["flag_control_raw_sha256"])]:
-        log_contract(directory / name, architecture, token, model, digest)
+        log_contract(directory / name, architecture, token, model, digest, revision, expected_inputs)
     validate_oci(directory, architecture)
     validate_wrappers(root)
     validate_projection(directory / "projection-mutation.log", record["raw_run_a_sha256"], sha(root / "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"))
@@ -348,6 +388,59 @@ def validate_architecture(directory, root, architecture):
 def valid_relative(path):
     pure = pathlib.PurePosixPath(path)
     return bool(path) and len(path) <= 512 and not pure.is_absolute() and all(part not in ("", ".", "..") and not part.endswith((" ", ".")) for part in pure.parts) and not any(char in path for char in "\\:*?")
+
+
+def expected_artifact_roles():
+    fixture = "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/"
+    roles = [
+        ("image_index_json", fixture + "image-index.json"),
+        ("cross_architecture_log", fixture + "cross-architecture.log"),
+    ]
+    files = [
+        ("architecture_record", "architecture.json"),
+        ("canonical_csv", "line.canonical.csv"),
+        ("raw_run_a_csv", "line-run-a.raw.csv"),
+        ("raw_run_b_csv", "line-run-b.raw.csv"),
+        ("run_a_log", "run-a.log"),
+        ("run_b_log", "run-b.log"),
+        ("flag_control_canonical_csv", "flag-control.canonical.csv"),
+        ("flag_control_raw_csv", "flag-control.raw.csv"),
+        ("flag_control_log", "flag-control.log"),
+        ("projection_mutation_log", "projection-mutation.log"),
+        ("architecture_image_index_json", "image-index.json"),
+        ("platform_image_manifest_json", "image-manifest.json"),
+    ]
+    for architecture in ["arm64", "amd64"]:
+        roles.extend(
+            (f"{architecture}_{role}", f"{fixture}{architecture}/{file}")
+            for role, file in files
+        )
+    tracked = [
+        ("canonicalizer_source", "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"),
+        ("tool_cargo_lock", "tools/openmodelica-line-reference/Cargo.lock"),
+        ("tool_cargo_toml", "tools/openmodelica-line-reference/Cargo.toml"),
+        ("tool_main_source", "tools/openmodelica-line-reference/src/main.rs"),
+        ("wrapper_model", "tools/openmodelica-line-reference/line/LinePilot.mo"),
+        ("flag_control_wrapper_model", "tools/openmodelica-line-reference/line/LineFlagPilot.mo"),
+        ("runner_script", "tools/openmodelica-line-reference/line/runner.sh"),
+        ("regeneration_script", "tools/openmodelica-line-reference/line/regenerate.sh"),
+        ("assembly_script", "tools/openmodelica-line-reference/line/assemble.sh"),
+        ("manifest_generator_script", "tools/openmodelica-line-reference/line/generate_manifest.py"),
+        ("architecture_generator_script", "tools/openmodelica-line-reference/line/generate_architecture.py"),
+        ("evidence_validator_script", "tools/openmodelica-line-reference/line/verify_evidence.py"),
+        ("oci_materializer_script", "tools/openmodelica-line-reference/line/materialize_oci.py"),
+        ("deadline_script", "tools/openmodelica-line-reference/line/deadline.sh"),
+        ("deadline_test_script", "tools/openmodelica-line-reference/line/deadline_test.sh"),
+        ("output_publish_script", "tools/openmodelica-line-reference/line/output_publish.py"),
+        ("output_publish_test_script", "tools/openmodelica-line-reference/line/output_publish_test.sh"),
+        ("container_cleanup_script", "tools/openmodelica-line-reference/line/container_cleanup.sh"),
+        ("container_cleanup_test_script", "tools/openmodelica-line-reference/line/container_cleanup_test.sh"),
+        ("oci_index_source", "tools/openmodelica-line-reference/line/image-index.json"),
+        ("arm64_manifest_source", "tools/openmodelica-line-reference/line/image-manifest-arm64.json"),
+        ("amd64_manifest_source", "tools/openmodelica-line-reference/line/image-manifest-amd64.json"),
+        ("evidence_workflow", ".github/workflows/openmodelica-line-evidence.yml"),
+    ]
+    return roles + tracked
 
 
 def artifact_bytes(output, root, relative):
@@ -377,6 +470,48 @@ def artifact_bytes(output, root, relative):
         os.close(directory)
 
 
+def expected_architecture_manifest(output, name, record):
+    return {
+        "name": name,
+        "platform": record["platform"],
+        "host_architecture": record["host_architecture"],
+        "docker_server_architecture": record["docker_server_architecture"],
+        "container_architecture": record["container_architecture"],
+        "platform_manifest_digest": record["platform_manifest_digest"],
+        "config_digest": record["config_digest"],
+        "repository_revision": record["repository_revision"],
+        "generator_inputs": record["generator_inputs"],
+        "omc_version": "OpenModelica 1.25.1",
+        "gcc_version": "11.4.0",
+        "binutils_version": "2.38",
+        "glibc_version": "2.35",
+        "raw_run_a_sha256": record["raw_run_a_sha256"],
+        "raw_run_b_sha256": record["raw_run_b_sha256"],
+        "flag_control_raw_sha256": record["flag_control_raw_sha256"],
+        "canonical_sha256": record["canonical_sha256"],
+        "flag_control_canonical_sha256": record["flag_control_canonical_sha256"],
+        "runs": [
+            {"id": "run-a", "output_directory_token": "fresh-run-a", "log_sha256": sha(output / name / "run-a.log"), "raw_sha256": record["raw_run_a_sha256"]},
+            {"id": "run-b", "output_directory_token": "fresh-run-b", "log_sha256": sha(output / name / "run-b.log"), "raw_sha256": record["raw_run_b_sha256"]},
+        ],
+    }
+
+
+def expected_sources():
+    return [
+        {"name": "buildings", "repository": "https://github.com/lbl-srg/modelica-buildings.git", "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09", "package": "Buildings", "version": "14.0.0", "files": [
+            {"path": "Buildings/package.mo", "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"},
+            {"path": "Buildings/Controls/OBC/CDL/Reals/Line.mo", "sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"},
+        ]},
+        {"name": "modelica", "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git", "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f", "package": "Modelica", "version": "4.1.0", "files": [
+            {"path": "Complex.mo", "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"},
+            {"path": "Modelica/package.mo", "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"},
+            {"path": "Modelica/Blocks/Sources.mo", "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"},
+            {"path": "ModelicaServices/package.mo", "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"},
+        ]},
+    ]
+
+
 def validate_final(output, root):
     output, root = safe_directory(output, "assembled evidence"), safe_directory(root, "repository root")
     if {entry.name for entry in os.scandir(output)} != {"manifest.json", "image-index.json", "cross-architecture.log", "arm64", "amd64"}:
@@ -385,31 +520,99 @@ def validate_final(output, root):
     closed(manifest, ["format", "scope", "image", "sources", "simulation", "projection", "expected_output_bits", "architectures", "semantic_control", "cross_architecture", "artifacts", "regeneration"], "manifest")
     if manifest["format"] != "oce-openmodelica-line-external-run-v1":
         fail("unsupported manifest format")
-    if manifest["scope"] != {"class": "CDL.Reals.Line", "scenario": "four_limit_modes_five_dyadic_regions", "inputs": ["x1", "f1", "x2", "f2", "u"], "outputs": ["yBoth", "yBelow", "yAbove", "yUnlimited"], "comparison": "exact_finite_f64_bits", "global_tier3_status": "skipped"}:
+    expected_scope = {"class": "CDL.Reals.Line", "scenario": "four_limit_modes_five_dyadic_regions", "inputs": ["x1", "f1", "x2", "f2", "u"], "outputs": ["yBoth", "yBelow", "yAbove", "yUnlimited"], "comparison": "exact_finite_f64_bits", "global_tier3_status": "skipped"}
+    if manifest["scope"] != expected_scope:
         fail("unsupported scope")
     artifacts = manifest["artifacts"]
-    if not isinstance(artifacts, list) or len(artifacts) != len({item.get("role") for item in artifacts}) or len(artifacts) != len({item.get("path") for item in artifacts}):
-        fail("artifact role/path reuse")
-    for item in artifacts:
+    roles = expected_artifact_roles()
+    if not isinstance(artifacts, list) or len(artifacts) != len(roles):
+        fail("artifact closure count")
+    for item, expected_role_path in zip(artifacts, roles):
         closed(item, ["role", "path", "sha256"], "artifact")
-        if not valid_relative(item["path"]) or len(item["sha256"]) != 64:
+        if (item["role"], item["path"]) != expected_role_path:
+            fail("unknown or misplaced artifact role/path")
+        if not valid_relative(item["path"]) or not isinstance(item["sha256"], str) or len(item["sha256"]) != 64 or any(char not in "0123456789abcdef" for char in item["sha256"]):
             fail("invalid artifact literal")
         if hashlib.sha256(artifact_bytes(output, root, item["path"])).hexdigest() != item["sha256"]:
             fail(f"artifact digest mismatch: {item['path']}")
+
+    expected_image = {
+        "repository": "openmodelica/openmodelica",
+        "tag": "v1.25.1-minimal",
+        "index_digest": INDEX,
+        "platforms": [
+            {"platform": ARCH[name][0], "manifest_digest": ARCH[name][4], "config_digest": ARCH[name][5]}
+            for name in ["arm64", "amd64"]
+        ],
+    }
+    expected_simulation = {
+        "method": "dassl", "start_time": "0", "stop_time": "300", "number_of_intervals": 5,
+        "tolerance": "1e-9", "output_format": "csv",
+        "variable_filter": "^(x1|f1|x2|f2|u|yBoth|yBelow|yAbove|yUnlimited)$",
+        "simflags": "", "event_emission": True, "raw_header": HEADER,
+    }
+    expected_projection_record = {
+        "columns": COLUMNS,
+        "grouping": "contiguous_equal_f64_bits", "selection": "last", "normalize_times": False,
+        "raw_rows": 15, "canonical_rows": 10, "group_sizes": GROUPS,
+        "canonical_time_bits": TIME_BITS,
+        "canonical_input_bits": {
+            "x1": ["c000000000000000"] * 10,
+            "f1": ["3ff4000000000000"] * 10,
+            "x2": ["4000000000000000"] * 10,
+            "f2": ["400a000000000000"] * 10,
+            "u": U_BITS,
+        },
+    }
+    expected_semantic_control = {
+        "mutation": "yBelow limitAbove false to true", "first_mismatch_row": 8,
+        "first_mismatch_time_bits": TIME_BITS[8], "expected_comparison": "exact_mismatch",
+        "mismatch_rows": [8, 9],
+    }
+    expected_regeneration = {
+        "entrypoint": "tools/openmodelica-line-reference/line/regenerate.sh",
+        "assembly_entrypoint": "tools/openmodelica-line-reference/line/assemble.sh",
+        "evidence_workflow": ".github/workflows/openmodelica-line-evidence.yml",
+        "network": "none_during_container_execution", "pull": "never",
+        "platforms": ["linux/arm64", "linux/amd64"], "source_materialization": "git_archive",
+        "source_mounts": "read_only", "container_root": "read_only", "container_user": "non_root",
+        "capabilities": "none", "no_new_privileges": True, "device_mounts": 0,
+        "docker_socket_mounted": False, "timeout_seconds": 120, "cpus": "4",
+        "memory_bytes": 2147483648, "memory_swap_bytes": 2147483648, "pids_limit": 256,
+        "tmpfs_bytes": 268435456, "per_file_bytes": 67108864,
+        "output_directory_bytes": 268435456,
+    }
+    for field, expected in [
+        ("image", expected_image),
+        ("sources", expected_sources()),
+        ("simulation", expected_simulation),
+        ("projection", expected_projection_record),
+        ("expected_output_bits", OUTPUT_BITS),
+        ("semantic_control", expected_semantic_control),
+        ("regeneration", expected_regeneration),
+    ]:
+        if manifest[field] != expected:
+            fail(f"unsupported or open {field} record")
+
     arm, arm_rows = validate_architecture(output / "arm64", root, "arm64")
     amd, amd_rows = validate_architecture(output / "amd64", root, "amd64")
+    if arm["repository_revision"] != amd["repository_revision"] or arm["generator_inputs"] != amd["generator_inputs"]:
+        fail("native architectures used different generator revisions or inputs")
     if arm_rows != amd_rows or read_bounded(output / "arm64/line.canonical.csv") != read_bounded(output / "amd64/line.canonical.csv"):
         fail("cross-architecture canonical bytes differ")
     canonical_sha = sha(output / "arm64/line.canonical.csv")
     expected_cross = ["comparison=canonical bytes", f"arm64_sha256={canonical_sha}", f"amd64_sha256={canonical_sha}", "result=PASS"]
     if text(output / "cross-architecture.log").splitlines() != expected_cross:
         fail("cross-architecture record")
-    if manifest["expected_output_bits"] != OUTPUT_BITS:
-        fail("independent output-bit table")
-    if manifest["cross_architecture"] != {"comparison": "canonical_bytes", "arm64_sha256": canonical_sha, "amd64_sha256": canonical_sha, "result": "pass"}:
+    expected_cross_record = {"comparison": "canonical_bytes", "arm64_sha256": canonical_sha, "amd64_sha256": canonical_sha, "result": "pass"}
+    if manifest["cross_architecture"] != expected_cross_record:
         fail("cross-architecture manifest record")
-    if [item["raw_run_a_sha256"] for item in manifest["architectures"]] != [arm["raw_run_a_sha256"], amd["raw_run_a_sha256"]]:
-        fail("manifest architecture records are not bound to evidence")
+    expected_architectures = [
+        expected_architecture_manifest(output, "arm64", arm),
+        expected_architecture_manifest(output, "amd64", amd),
+    ]
+    if manifest["architectures"] != expected_architectures:
+        fail("manifest architecture records are open or not bound to native evidence")
 
 
 def main(arguments):

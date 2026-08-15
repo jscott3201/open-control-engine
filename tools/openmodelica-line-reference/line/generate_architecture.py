@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import stat
+import subprocess
 import sys
 
 MAX_FILE = 1024 * 1024
@@ -41,8 +42,11 @@ def one_value(path, key):
     return values[0]
 
 
+if len(sys.argv) != 4:
+    raise SystemExit("usage: generate_architecture.py OUTPUT ARCHITECTURE REPOSITORY_ROOT")
 output = pathlib.Path(sys.argv[1])
 architecture = sys.argv[2]
+root = pathlib.Path(sys.argv[3])
 facts = {
     "arm64": {
         "platform": "linux/arm64",
@@ -61,12 +65,45 @@ facts = {
         "config": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
     },
 }[architecture]
-run_a = output / "run-a.log"
+logs = [output / name for name in ["run-a.log", "run-b.log", "flag-control.log"]]
+run_a = logs[0]
 for key, expected in [("host_architecture", facts["host"]), ("docker_server_architecture", facts["server"]), ("container_architecture", facts["container"])]:
     if one_value(run_a, key) != expected:
         raise ValueError(f"observed {key} does not match native architecture")
+revision = subprocess.run(
+    ["git", "-C", root, "rev-parse", "HEAD"],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout.strip()
+if subprocess.run(
+    ["git", "-C", root, "status", "--porcelain", "--untracked-files=no"],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout:
+    raise ValueError("repository tracked files changed during native generation")
+inputs = {
+    "line_pilot_sha256": root / "tools/openmodelica-line-reference/line/LinePilot.mo",
+    "line_flag_pilot_sha256": root / "tools/openmodelica-line-reference/line/LineFlagPilot.mo",
+    "runner_sha256": root / "tools/openmodelica-line-reference/line/runner.sh",
+    "regenerate_sha256": root / "tools/openmodelica-line-reference/line/regenerate.sh",
+    "canonicalizer_sha256": root / "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs",
+    "tool_main_sha256": root / "tools/openmodelica-line-reference/src/main.rs",
+    "tool_cargo_toml_sha256": root / "tools/openmodelica-line-reference/Cargo.toml",
+    "tool_cargo_lock_sha256": root / "tools/openmodelica-line-reference/Cargo.lock",
+    "architecture_generator_sha256": root / "tools/openmodelica-line-reference/line/generate_architecture.py",
+    "architecture_verifier_sha256": root / "tools/openmodelica-line-reference/line/verify_evidence.py",
+}
+recorded_inputs = {key: sha(path) for key, path in inputs.items()}
+for log in logs:
+    if one_value(log, "repository_revision") != revision:
+        raise ValueError("native log source revision does not match the executing repository")
+    for key, expected in recorded_inputs.items():
+        if one_value(log, key) != expected:
+            raise ValueError(f"native log {key} does not match the executing repository")
 payload = {
-    "format": "oce-openmodelica-line-native-architecture-v1",
+    "format": "oce-openmodelica-line-native-architecture-v2",
     "architecture": architecture,
     "platform": facts["platform"],
     "host_architecture": facts["host"],
@@ -74,6 +111,8 @@ payload = {
     "container_architecture": facts["container"],
     "platform_manifest_digest": facts["manifest"],
     "config_digest": facts["config"],
+    "repository_revision": revision,
+    "generator_inputs": recorded_inputs,
     "raw_run_a_sha256": sha(output / "line-run-a.raw.csv"),
     "raw_run_b_sha256": sha(output / "line-run-b.raw.csv"),
     "flag_control_raw_sha256": sha(output / "flag-control.raw.csv"),
