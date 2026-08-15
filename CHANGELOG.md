@@ -9,9 +9,10 @@ read in full.
 An entry is expected from every PR that changes behaviour, the public surface, or a published
 claim — added in that PR, not batched later. Nothing enforces this: an entry is a judgement about
 what mattered, so no check can derive one, and a check that merely required *some* text would pass
-on a placeholder. It has therefore fallen behind four times: #215 recovered 64 commits, #228
-recovered seven PRs, #259 recovered ten, and #264 recovered one PR and one missing citation before
-the next promotion.
+on a placeholder. It has therefore fallen behind seven times: #215 recovered 64 commits, #228
+recovered seven PRs, #259 recovered ten, #264 recovered one PR and one missing citation, #287
+recovered one missing record and two missing citations, #288 recovered #287, and #302 recovered
+#288, #296, #300, and #301 before the next promotion.
 
 The third recovery discredits the check the second one wrote down here. That check was
 `git log main..development -- CHANGELOG.md`, on the reading that returning nothing means the
@@ -217,6 +218,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **HostTick v1 names and pins the engine's existing transition profile** (#301). Every successful
+  `Engine::tick` call advances state exactly once, including repeated timestamps; the evaluator
+  performs no hidden same-time event iteration or convergence search. `CDL.Logical.Pre` emits its
+  call-entry memory and latches current input for the next successful call. Facade tests pin
+  initialization, equal-time transitions, non-convergent feedback, host output views, and snapshot
+  continuation. Verification accounting now separates 390 source-semantics signal references from
+  20 exact HostTick-profile references across three `Pre`-dependent G36 fixtures. Neither those
+  profile references nor the `Pre` tests claim Modelica/OpenModelica same-time event equivalence.
 - **Engine state can be checkpointed, persisted, and restored**
   (#283, fixes [issue #143](https://github.com/jscott3201/open-control-engine/issues/143)).
   `EngineCheckpoint` is an
@@ -432,6 +441,11 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   clear-only reset and lost clear priority on a simultaneous input rise. This is scoped Tier-3
   evidence for one stateful Boolean schedule;
   global Tier 3 remains skipped, with no sequence-wide, numeric, or cross-architecture claim.
+- **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).
+  `DriverError::Load` identifies failure at `Engine::load_cxf`, and only that variant becomes a
+  failed Tier 0 static-load report. Facade failures after a successful load remain driver errors
+  instead of being recast as conformance verdicts. Tests pin both malformed CXF and an executed
+  time-regression failure.
 - **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
   repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
   zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
@@ -487,8 +501,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Hardening
 
-- **Composite boundary lowering is iterative and resource-bounded** (#290, #298, #299). A path may enter at most 64
-  non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
+- **Composite boundary lowering is iterative and resource-bounded** (#290, #298, #299, #300). A
+  path may enter at most 64 non-top `isConnectedTo` boundary nodes, and one document may cause at
+  most 65,536 target
   examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
   hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
   partial graph is built; resource-limit diagnostics omit the attempted target subject to avoid an
@@ -502,6 +517,8 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   omit attacker-controlled subjects, and boundary resource errors retain precedence. Expanded edges
   that repeat one missing endpoint emit one unresolved-reference diagnostic across ordinary and
   boundary-specific orientation, preventing fanout from multiplying the same subject allocation.
+  The composite-nesting refusal runs before orientation indexes are built and stops pre-lowering,
+  so an over-depth graph cannot trigger the prior quadratic ancestor work.
   These limits are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
