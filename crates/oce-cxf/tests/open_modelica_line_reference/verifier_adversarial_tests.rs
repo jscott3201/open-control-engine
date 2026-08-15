@@ -79,7 +79,12 @@ fn digest_correct_canonical_output_tamper_still_fails_raw_reproduction() {
         Path::new("arm64"),
     ]);
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("raw keep-last projection"));
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("does not reproduce retained strict canonical bytes"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 #[test]
@@ -236,7 +241,11 @@ fn verifier_rejects_symlink_and_fifo_without_blocking() {
         Path::new("arm64"),
     ]);
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("regular file"));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("strict Rust canonical boundary"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     std::fs::remove_file(&canonical).unwrap();
     std::fs::copy(&target, &canonical).unwrap();
@@ -256,7 +265,11 @@ fn verifier_rejects_symlink_and_fifo_without_blocking() {
         Path::new("arm64"),
     ]);
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("regular file"));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("regular file"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 pub(super) struct ClaimedTempDir {

@@ -258,6 +258,19 @@
       "container_architecture": "aarch64",
       "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
       "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
+      "repository_revision": "d16b3bc08fe29a399e32bfbb5366f823e0b0b0ae",
+      "generator_inputs": {
+        "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
+        "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
+        "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
+        "regenerate_sha256": "193c46f4985995129f384375c2d499964ba42c07874bff439cab2f28fc13c0ea",
+        "canonicalizer_sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f",
+        "tool_main_sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1",
+        "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
+        "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
+        "architecture_generator_sha256": "bbe38db1fce101cbc6651d36a264782b8c712f7f9532b5ceb525ff6c86f54c34",
+        "architecture_verifier_sha256": "415a88c91313005fc51d7f29ac807d6f3d13716cf7081e7542c82b12dead6f9c"
+      },
       "omc_version": "OpenModelica 1.25.1",
       "gcc_version": "11.4.0",
       "binutils_version": "2.38",
@@ -271,13 +284,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "39adae83f4170482cbdcad6f3f2d5214deb3be8be32c7f422c65a102f379f318",
+          "log_sha256": "f68ce7ced25365274b042dda732cab7c4259c341bf2e8a6590b7271a4bac5039",
           "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "90a4e77143eb6904a35070cd01baf27fcd5ff0b56c064484ad0612e1fcda0134",
+          "log_sha256": "0cd7085903f9ff4c1ebd4416cc9a877a6c16875025e6ea6c9633c130f84f5ef8",
           "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
         }
       ]
@@ -290,6 +303,19 @@
       "container_architecture": "x86_64",
       "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
       "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
+      "repository_revision": "d16b3bc08fe29a399e32bfbb5366f823e0b0b0ae",
+      "generator_inputs": {
+        "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
+        "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
+        "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
+        "regenerate_sha256": "193c46f4985995129f384375c2d499964ba42c07874bff439cab2f28fc13c0ea",
+        "canonicalizer_sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f",
+        "tool_main_sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1",
+        "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
+        "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
+        "architecture_generator_sha256": "bbe38db1fce101cbc6651d36a264782b8c712f7f9532b5ceb525ff6c86f54c34",
+        "architecture_verifier_sha256": "415a88c91313005fc51d7f29ac807d6f3d13716cf7081e7542c82b12dead6f9c"
+      },
       "omc_version": "OpenModelica 1.25.1",
       "gcc_version": "11.4.0",
       "binutils_version": "2.38",
@@ -303,13 +329,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "c2a71e34c3170eea4695134c28cdc9b18b08bdf21ecd9d52b90be94511b7ffff",
+          "log_sha256": "94ed1c6f8145ca6b2900acf57962ae477bdc1de7198973277d2889861b84b15e",
           "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "6d2ba72a4881db7517567c5208a2993055bb3093bd748d253fe2aba417069fb8",
+          "log_sha256": "45c6f39170e0d2dbb44f74d08f64a9d2f91cd7f8af8956e44c7736bd54cc0be6",
           "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
         }
       ]
@@ -345,7 +371,7 @@
     {
       "role": "arm64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/architecture.json",
-      "sha256": "93122e4dc90b4f1147621908169ddb696fbda8eae6bf998b09a8fec6f6ac559c"
+      "sha256": "435dac9f984635730b262ac0b84b8e48dbc23ceee0002fb5a5b55e65560c07db"
     },
     {
       "role": "arm64_canonical_csv",
@@ -365,12 +391,12 @@
     {
       "role": "arm64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/run-a.log",
-      "sha256": "39adae83f4170482cbdcad6f3f2d5214deb3be8be32c7f422c65a102f379f318"
+      "sha256": "f68ce7ced25365274b042dda732cab7c4259c341bf2e8a6590b7271a4bac5039"
     },
     {
       "role": "arm64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/run-b.log",
-      "sha256": "90a4e77143eb6904a35070cd01baf27fcd5ff0b56c064484ad0612e1fcda0134"
+      "sha256": "0cd7085903f9ff4c1ebd4416cc9a877a6c16875025e6ea6c9633c130f84f5ef8"
     },
     {
       "role": "arm64_flag_control_canonical_csv",
@@ -385,12 +411,12 @@
     {
       "role": "arm64_flag_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/flag-control.log",
-      "sha256": "1d903e19af94f57974f00f99c53a9262b14e7a85fec8af97e5b8e48afbe26d6b"
+      "sha256": "0aa0b072f5e83869c4c2f4a00d3b0dd6feb3af7c33c2a9c1e690d0b5188bf894"
     },
     {
       "role": "arm64_projection_mutation_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/projection-mutation.log",
-      "sha256": "45f4e6464c5f2715e228e81b359c748f21c5f237a7c7770b92a4a199fce0b41d"
+      "sha256": "de90f0e6aa247c93c4b79b35827bcdc02f9b178ea55bab3cbb33d0148e766445"
     },
     {
       "role": "arm64_architecture_image_index_json",
@@ -405,7 +431,7 @@
     {
       "role": "amd64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/architecture.json",
-      "sha256": "b14efad39d24895eb78869523ab491a5927a9479f62a96b27c5872bfacbe5219"
+      "sha256": "ed738fe94f5105ec3feba5e07682dcf4f1af780370bace4d199f967d3b30aebf"
     },
     {
       "role": "amd64_canonical_csv",
@@ -425,12 +451,12 @@
     {
       "role": "amd64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/run-a.log",
-      "sha256": "c2a71e34c3170eea4695134c28cdc9b18b08bdf21ecd9d52b90be94511b7ffff"
+      "sha256": "94ed1c6f8145ca6b2900acf57962ae477bdc1de7198973277d2889861b84b15e"
     },
     {
       "role": "amd64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/run-b.log",
-      "sha256": "6d2ba72a4881db7517567c5208a2993055bb3093bd748d253fe2aba417069fb8"
+      "sha256": "45c6f39170e0d2dbb44f74d08f64a9d2f91cd7f8af8956e44c7736bd54cc0be6"
     },
     {
       "role": "amd64_flag_control_canonical_csv",
@@ -445,12 +471,12 @@
     {
       "role": "amd64_flag_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/flag-control.log",
-      "sha256": "aab6af6f413410547bf5e69b067a23ea5c301cf423f08b8d75a8aaf7472435d6"
+      "sha256": "68cba0aa172775038ff6fb00c1c821044960ffb88e7029aa870283c91ddcfa5d"
     },
     {
       "role": "amd64_projection_mutation_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/projection-mutation.log",
-      "sha256": "45f4e6464c5f2715e228e81b359c748f21c5f237a7c7770b92a4a199fce0b41d"
+      "sha256": "de90f0e6aa247c93c4b79b35827bcdc02f9b178ea55bab3cbb33d0148e766445"
     },
     {
       "role": "amd64_architecture_image_index_json",
@@ -465,22 +491,22 @@
     {
       "role": "canonicalizer_source",
       "path": "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs",
-      "sha256": "5a08c172a782bb0eede1c912f6ae66bf87de9cee50174a157a28c6e6989f5eff"
+      "sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f"
     },
     {
       "role": "tool_cargo_lock",
       "path": "tools/openmodelica-line-reference/Cargo.lock",
-      "sha256": "2b2415f005946aec754b88d68936d9dde7e5f6899b8977ea607b52bb4a03ea23"
+      "sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853"
     },
     {
       "role": "tool_cargo_toml",
       "path": "tools/openmodelica-line-reference/Cargo.toml",
-      "sha256": "13bb9a8a43a6f256bbf7b4fc41b1ee3c03980d89c0a69d5111cc90fbb6624b21"
+      "sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267"
     },
     {
       "role": "tool_main_source",
       "path": "tools/openmodelica-line-reference/src/main.rs",
-      "sha256": "4b9d45f1c18715ae8ab12aa7bb7682429485a058904906d2e48c6fdd3efcf642"
+      "sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1"
     },
     {
       "role": "wrapper_model",
@@ -500,27 +526,27 @@
     {
       "role": "regeneration_script",
       "path": "tools/openmodelica-line-reference/line/regenerate.sh",
-      "sha256": "a9e4fc5b7bd460b41d6bd0fe83c896ea1a08017c0500194d404937d793c77525"
+      "sha256": "193c46f4985995129f384375c2d499964ba42c07874bff439cab2f28fc13c0ea"
     },
     {
       "role": "assembly_script",
       "path": "tools/openmodelica-line-reference/line/assemble.sh",
-      "sha256": "1f4860c6c4306606b5dc9057d38db1fb5ce6df7fac6ec9ae63b36c18cdabe234"
+      "sha256": "88d949a867d6501467b07117576099772cfa9b8892f0662f9ee08d9e9d0b377e"
     },
     {
       "role": "manifest_generator_script",
       "path": "tools/openmodelica-line-reference/line/generate_manifest.py",
-      "sha256": "f54ed8f8bf4bf7fd049f80318fb94d0444673fd8ff15461375e9eaaba529cb4a"
+      "sha256": "5a3e6c9c709802ff7415493ec122f07bd88c1bee24e1e840bf6ce307998a1997"
     },
     {
       "role": "architecture_generator_script",
       "path": "tools/openmodelica-line-reference/line/generate_architecture.py",
-      "sha256": "6cdec74b5256aa5b4c101e62ba5ae34cf38f3a807dd6eb45d11f1db7a58aca85"
+      "sha256": "bbe38db1fce101cbc6651d36a264782b8c712f7f9532b5ceb525ff6c86f54c34"
     },
     {
       "role": "evidence_validator_script",
       "path": "tools/openmodelica-line-reference/line/verify_evidence.py",
-      "sha256": "ae61153f7bab936cca86f6c14be235b060b5bac14b8defe986001ad9570f0732"
+      "sha256": "415a88c91313005fc51d7f29ac807d6f3d13716cf7081e7542c82b12dead6f9c"
     },
     {
       "role": "oci_materializer_script",
@@ -575,7 +601,7 @@
     {
       "role": "evidence_workflow",
       "path": ".github/workflows/openmodelica-line-evidence.yml",
-      "sha256": "be2d1e7d36dd19979581b29adce65c00c1442af21f0ed393ea39cfdb3bf2d7fe"
+      "sha256": "077cf3922319bf6a0d13eda470a1dbc7f66f55c422f1a46b63eda418cbe16e06"
     }
   ],
   "regeneration": {

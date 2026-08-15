@@ -12,6 +12,17 @@ buildings_tree=a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09
 modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git
 modelica_commit=7a4bf7de77a3986e8eb1e88cbb515d646f78f834
 modelica_tree=43d7d8fc1a991358e9e5e91976e27cdc4280173f
+repository_revision=d16b3bc08fe29a399e32bfbb5366f823e0b0b0ae
+line_pilot_sha256=db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e
+line_flag_pilot_sha256=cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6
+runner_sha256=cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa
+regenerate_sha256=193c46f4985995129f384375c2d499964ba42c07874bff439cab2f28fc13c0ea
+canonicalizer_sha256=75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f
+tool_main_sha256=51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1
+tool_cargo_toml_sha256=2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267
+tool_cargo_lock_sha256=0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853
+architecture_generator_sha256=bbe38db1fce101cbc6651d36a264782b8c712f7f9532b5ceb525ff6c86f54c34
+architecture_verifier_sha256=415a88c91313005fc51d7f29ac807d6f3d13716cf7081e7542c82b12dead6f9c
 source_materialization=git_archive_exact_committed_bytes
 buildings_package_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59
 line_source_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5
@@ -60,13 +71,13 @@ record SimulationResult
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.22273858400000002,
-    timeBackend = 0.011005368000000001,
-    timeSimCode = 0.003022088,
-    timeTemplates = 0.004231016000000001,
-    timeCompile = 0.5863986320000001,
-    timeSimulation = 0.0101142,
-    timeTotal = 0.837621536
+    timeFrontend = 0.218478272,
+    timeBackend = 0.0108772,
+    timeSimCode = 0.002995904,
+    timeTemplates = 0.003999304,
+    timeCompile = 0.557600608,
+    timeSimulation = 0.01022896,
+    timeTotal = 0.804290744
 end SimulationResult;
 
 

@@ -1,5 +1,5 @@
 {
-  "format": "oce-openmodelica-line-native-architecture-v1",
+  "format": "oce-openmodelica-line-native-architecture-v2",
   "architecture": "arm64",
   "platform": "linux/arm64",
   "host_architecture": "arm64",
@@ -7,6 +7,19 @@
   "container_architecture": "aarch64",
   "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
   "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
+  "repository_revision": "d16b3bc08fe29a399e32bfbb5366f823e0b0b0ae",
+  "generator_inputs": {
+    "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
+    "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
+    "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
+    "regenerate_sha256": "193c46f4985995129f384375c2d499964ba42c07874bff439cab2f28fc13c0ea",
+    "canonicalizer_sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f",
+    "tool_main_sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1",
+    "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
+    "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
+    "architecture_generator_sha256": "bbe38db1fce101cbc6651d36a264782b8c712f7f9532b5ceb525ff6c86f54c34",
+    "architecture_verifier_sha256": "415a88c91313005fc51d7f29ac807d6f3d13716cf7081e7542c82b12dead6f9c"
+  },
   "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
   "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
   "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
