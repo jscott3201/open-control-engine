@@ -217,6 +217,14 @@ and a gate that accepted any text would restore exactly the false assurance desc
 
 ### Host facade
 
+- **HostTick v1 names and pins the engine's existing transition profile** (#301). Every successful
+  `Engine::tick` call advances state exactly once, including repeated timestamps; the evaluator
+  performs no hidden same-time event iteration or convergence search. `CDL.Logical.Pre` emits its
+  call-entry memory and latches current input for the next successful call. Facade tests pin
+  initialization, equal-time transitions, non-convergent feedback, host output views, and snapshot
+  continuation. Verification accounting now separates 390 source-semantics signal references from
+  20 exact HostTick-profile references across three `Pre`-dependent G36 fixtures. Neither those
+  profile references nor the `Pre` tests claim Modelica/OpenModelica same-time event equivalence.
 - **Engine state can be checkpointed, persisted, and restored**
   (#283, fixes [issue #143](https://github.com/jscott3201/open-control-engine/issues/143)).
   `EngineCheckpoint` is an
