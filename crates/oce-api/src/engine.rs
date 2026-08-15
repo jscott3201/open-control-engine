@@ -138,6 +138,7 @@ impl<S: Store> Engine<S> {
     /// not in the registry or semantic resolution fails; [`OcError::Build`] if the graph has an
     /// algebraic loop; [`OcError::Store`] if the store's `recover`/`save_model` fails. Never panics
     /// on host input covered by the validation seam (R-ERR-1).
+    #[cfg(test)]
     pub(crate) fn build_model_in_memory(
         &mut self,
         model: ModelGraph,
@@ -145,45 +146,64 @@ impl<S: Store> Engine<S> {
     ) -> Result<(), OcError> {
         // Defense in depth for every in-crate caller: `oce-graph` assumes a validated graph and keeps
         // the tick/build arenas lean, so malformed hand-built graphs stop here as typed diagnostics.
-        let _validate_warnings = oce_validate::validate(&model)?;
-        // Resolve every block instance to its native impl up front — an unknown class is a typed
-        // load error, never a panic (R-IMPL-2 / R-ERR-1).
-        let blocks = instantiate_blocks(&model)?;
-        // BUILD (off the tick): schedule + state. `?` on `compile` maps `BuildError` → `OcError`.
-        let schedule = compile(&model, &blocks)?;
-        let state = allocate_state(&model, &blocks);
-        let outputs = Outputs::build(&model, &state);
-        let io = IoInventory::build_at_load(&model);
-        // Minted eagerly, from the same inventory the engine keeps: reload invalidation is
-        // structural (a new `io` always ships a new batch), never remembered.
-        let durable_batch = DurableOutputBatch::build_at_load(&io);
-        let params = ParamTable::build_at_load(&model);
-        let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
-            detail: format!("semantic resolution failed: {err}"),
-        })?;
-        let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
-        let semantic_warnings = semantics.diagnostics;
-        // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
-        self.store.recover()?;
-        self.store.save_model(&resolved_model)?;
-        let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
-        self.model = Arc::new(model);
-        self.blocks = blocks;
-        self.schedule = schedule;
-        self.state = state;
-        self.outputs = outputs;
-        self.io = io;
-        self.durable_batch = durable_batch;
-        self.params = params;
-        self.mode = RunMode::Running;
-        self.params_dirty = false;
-        self.prev_t = None;
-        self.model_id = resolved_model.model_id;
-        self.semantic_warnings = semantic_warnings;
-        self.store_inputs = store_inputs;
-        self.loaded = true;
-        self.durable_restore_ready = true;
-        Ok(())
+        let validate_warnings = oce_validate::validate(&model)?;
+        self.build_validated_model_in_memory(model, model_iri, validate_warnings)
+            .map(|_| ())
+    }
+
+    /// Build a graph that has already passed the structural gate, preserving prior diagnostics if a
+    /// later registry, schedule, semantic, projection, or store stage fails.
+    fn build_validated_model_in_memory(
+        &mut self,
+        model: ModelGraph,
+        model_iri: Option<&str>,
+        mut diagnostics: Vec<oce_diag::Diagnostic>,
+    ) -> Result<Vec<oce_diag::Diagnostic>, OcError> {
+        let result: Result<(), OcError> = (|| {
+            // Resolve every block instance to its native impl up front — an unknown class is a typed
+            // load error, never a panic (R-IMPL-2 / R-ERR-1).
+            let blocks = instantiate_blocks(&model)?;
+            // BUILD (off the tick): schedule + state. `?` on `compile` maps `BuildError` → `OcError`.
+            let schedule = compile(&model, &blocks)?;
+            let state = allocate_state(&model, &blocks);
+            let outputs = Outputs::build(&model, &state);
+            let io = IoInventory::build_at_load(&model);
+            // Minted eagerly, from the same inventory the engine keeps: reload invalidation is
+            // structural (a new `io` always ships a new batch), never remembered.
+            let durable_batch = DurableOutputBatch::build_at_load(&io);
+            let params = ParamTable::build_at_load(&model);
+            let semantics = oce_semantics::resolve(&model).map_err(|err| OcError::Load {
+                detail: format!("semantic resolution failed: {err}"),
+            })?;
+            diagnostics.extend(semantics.diagnostics.iter().cloned());
+            let resolved_model = project_resolved_model(&model, &semantics, model_iri)?;
+            let semantic_warnings = semantics.diagnostics;
+            // Open the store's durability lifecycle before the first tick (no-op for `MemStore`).
+            self.store.recover()?;
+            self.store.save_model(&resolved_model)?;
+            let store_inputs = resolve_store_inputs(self.store.as_ref(), &io)?;
+            self.model = Arc::new(model);
+            self.blocks = blocks;
+            self.schedule = schedule;
+            self.state = state;
+            self.outputs = outputs;
+            self.io = io;
+            self.durable_batch = durable_batch;
+            self.params = params;
+            self.mode = RunMode::Running;
+            self.params_dirty = false;
+            self.prev_t = None;
+            self.model_id = resolved_model.model_id;
+            self.semantic_warnings = semantic_warnings;
+            self.store_inputs = store_inputs;
+            self.loaded = true;
+            self.durable_restore_ready = true;
+            Ok(())
+        })();
+        match result {
+            Ok(()) => Ok(diagnostics),
+            Err(error) => Err(error.with_load_context(diagnostics)),
+        }
     }
 
     /// Primary v1 ingest (D2: CXF JSON-LD only). Runs the Group A pipeline (`oce-cxf` resolve →
@@ -195,31 +215,38 @@ impl<S: Store> Engine<S> {
     /// # Errors
     /// Returns [`OcError`] on any ingest/validation/build/store failure (never panics; R-ERR-1):
     /// [`OcError::Cxf`], [`OcError::Flatten`], [`OcError::Validate`], [`OcError::Build`],
-    /// [`OcError::Load`], or [`OcError::Store`].
+    /// [`OcError::Load`], or [`OcError::Store`]. If a completed stage returned diagnostics before a
+    /// later failure, [`OcError::LoadContext`] retains them and exposes the terminal variant through
+    /// [`std::error::Error::source`].
     pub fn load_cxf(&mut self, bytes: &[u8]) -> Result<LoadReport, OcError> {
         // 1. Resolve CXF → flat, ground ModelGraph (+ warning-only report; errors are Err here).
         let (model, report) = oce_cxf::import_cxf(bytes, &oce_cxf::ResolveOptions::default())?;
         let model_iri = report.model_iri.clone();
+        let mut diagnostics = report.diagnostics;
         // 2. Flatten (scalar identity; array-parameter normalization is resolver-owned).
-        let mut model = oce_flatten::flatten(model)?;
+        let mut model = match oce_flatten::flatten(model) {
+            Ok(model) => model,
+            Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
+        };
         // 3. Deep gate: §7.10 unification (mutates the graph to propagate one-sided units), then
         //    the structural/type rules. A shall-violation propagates as OcError::Validate.
-        let validate_warnings = oce_validate::unify_and_validate(&mut model)?;
-        // 4. Shared BUILD tail: registry → schedule → state → outputs → io → params → store.recover.
-        //    This intentionally re-runs pure `validate`: `load_cxf` needs `unify_and_validate` above to
-        //    capture warnings after §7.10 propagation, while the shared tail must defend every caller
-        //    against malformed hand-built graphs before `oce-graph` indexes raw arenas.
-        self.build_model_in_memory(model, model_iri.as_deref())?;
+        match oce_validate::unify_attributes(&mut model) {
+            Ok(warnings) => diagnostics.extend(warnings),
+            Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
+        }
+        match oce_validate::validate(&model) {
+            Ok(warnings) => diagnostics.extend(warnings),
+            Err(error) => return Err(OcError::from(error).with_load_context(diagnostics)),
+        }
+        // 4. The explicit gate above authorizes the validated tail. Hand-built callers still use
+        //    `build_model_in_memory`, which validates defensively before entering this helper.
+        let warnings =
+            self.build_validated_model_in_memory(model, model_iri.as_deref(), diagnostics)?;
         let stateful_blocks = self
             .blocks
             .iter()
             .filter(|b| b.kind() == BlockKind::Stateful)
             .count();
-        // One uniform `oce-diag` stream (AD-4): resolver `should`-warnings first, then the deep
-        // gate's — each already internally sorted; no global re-sort across the seam.
-        let mut warnings = report.diagnostics;
-        warnings.extend(validate_warnings);
-        warnings.extend(self.semantic_warnings.clone());
         Ok(LoadReport {
             model_id: self.model_id.clone(),
             warnings,
@@ -321,8 +348,8 @@ impl<S: Store> Engine<S> {
 }
 
 /// Instantiate every block instance from the `oce-blocks` registry. This lookup + `make` loop is
-/// shared by [`Engine::build_model_in_memory`] and `Engine::resume`, so load and tune-at-rest
-/// refolds cannot drift. An unknown `class_iri` is a typed [`OcError::Load`], never a panic.
+/// shared by the validated load tail and `Engine::resume`, so load and tune-at-rest refolds cannot
+/// drift. An unknown `class_iri` is a typed [`OcError::Load`], never a panic.
 pub(crate) fn instantiate_blocks(model: &ModelGraph) -> Result<Vec<Box<dyn Block>>, OcError> {
     let mut blocks: Vec<Box<dyn Block>> = Vec::with_capacity(model.blocks.len());
     for blk in &model.blocks {
@@ -451,242 +478,5 @@ pub(crate) fn out_connector_paths(model: &ModelGraph) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use oce_model::{BlockId, Connector, EnumClassId};
-    use oce_store::{
-        Durable, EquipmentDto, ModelStore, PointListRow, PointStatus, PointStore, PointWrite,
-        RelationDto, ResolvedModel, RetrievalHit, SemanticPayloadDto, SemanticQuery, SemanticStore,
-        StoreResult, TemplatePointReq,
-    };
-
-    use super::*;
-
-    const PATH: &str = "test:input";
-
-    fn sample(value: OcValue) -> PointSample {
-        PointSample {
-            value,
-            status: PointStatus::Fault,
-            at_unix_nanos: 42,
-        }
-    }
-
-    fn assert_input_type(result: Result<Value, OcError>) {
-        match result {
-            Err(OcError::InputType(path)) => assert_eq!(path, PATH),
-            other => panic!("expected InputType for {PATH}, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn sample_to_value_accepts_native_signal_carriers_and_string_helper_path() {
-        match sample_to_value(sample(OcValue::Real(1.25)), ValueType::Real, PATH).unwrap() {
-            Value::Real(v) => assert_eq!(v.to_bits(), 1.25f64.to_bits()),
-            other => panic!("expected real value, got {other:?}"),
-        }
-        match sample_to_value(sample(OcValue::Int(7)), ValueType::Integer, PATH).unwrap() {
-            Value::Integer(v) => assert_eq!(v, 7),
-            other => panic!("expected integer value, got {other:?}"),
-        }
-        match sample_to_value(sample(OcValue::Bool(true)), ValueType::Boolean, PATH).unwrap() {
-            Value::Boolean(v) => assert!(v),
-            other => panic!("expected boolean value, got {other:?}"),
-        }
-        match sample_to_value(
-            sample(OcValue::String("metadata".to_owned())),
-            ValueType::String,
-            PATH,
-        )
-        .unwrap()
-        {
-            Value::String(v) => assert_eq!(&*v, "metadata"),
-            other => panic!("expected string value, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn sample_to_value_accepts_positive_integer_enum_ordinals() {
-        let class = EnumClassId(9);
-        match sample_to_value(sample(OcValue::Int(3)), ValueType::Enum(class), PATH).unwrap() {
-            Value::Enum {
-                class: actual_class,
-                ordinal,
-            } => {
-                assert_eq!(actual_class, class);
-                assert_eq!(ordinal, 3);
-            }
-            other => panic!("expected enum value, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn sample_to_value_rejects_invalid_integer_enum_ordinals() {
-        let class = EnumClassId(9);
-        for ordinal in [0, -1, i64::from(u32::MAX) + 1] {
-            assert_input_type(sample_to_value(
-                sample(OcValue::Int(ordinal)),
-                ValueType::Enum(class),
-                PATH,
-            ));
-        }
-    }
-
-    #[test]
-    fn sample_to_value_rejects_type_mismatch_pairs() {
-        let class = EnumClassId(4);
-        let cases = [
-            (OcValue::Real(1.0), ValueType::Integer),
-            (OcValue::Real(1.0), ValueType::Boolean),
-            (OcValue::Real(1.0), ValueType::String),
-            (OcValue::Real(1.0), ValueType::Enum(class)),
-            (OcValue::Int(1), ValueType::Real),
-            (OcValue::Int(1), ValueType::Boolean),
-            (OcValue::Int(1), ValueType::String),
-            (OcValue::Bool(true), ValueType::Real),
-            (OcValue::Bool(true), ValueType::Integer),
-            (OcValue::Bool(true), ValueType::String),
-            (OcValue::Bool(true), ValueType::Enum(class)),
-            (OcValue::String("value".to_owned()), ValueType::Real),
-            (OcValue::String("value".to_owned()), ValueType::Integer),
-            (OcValue::String("value".to_owned()), ValueType::Boolean),
-            (OcValue::String("value".to_owned()), ValueType::Enum(class)),
-        ];
-
-        for (value, want) in cases {
-            assert_input_type(sample_to_value(sample(value), want, PATH));
-        }
-    }
-
-    #[test]
-    fn sample_to_value_rejects_native_enum_and_decimal_store_carriers() {
-        let class = EnumClassId(4);
-        let wants = [
-            ValueType::Real,
-            ValueType::Integer,
-            ValueType::Boolean,
-            ValueType::String,
-            ValueType::Enum(class),
-        ];
-        for want in wants {
-            assert_input_type(sample_to_value(
-                sample(OcValue::Enum {
-                    type_iri: "CDL.Types.SimpleController".to_owned(),
-                    literal: "PI".to_owned(),
-                }),
-                want,
-                PATH,
-            ));
-            assert_input_type(sample_to_value(
-                sample(OcValue::Decimal("1.25".to_owned())),
-                want,
-                PATH,
-            ));
-        }
-    }
-
-    #[test]
-    fn resolve_store_inputs_rejects_mismatched_handle_count() {
-        let store = MismatchedHandleStore::default();
-        let mut model = ModelGraph::new();
-        model.connectors.push(
-            Connector::new(ConnectorId(0), BlockId(0), Dir::In, ValueType::Real, 0).with_iri(PATH),
-        );
-        let io = IoInventory::build_at_load(&model);
-
-        let err = resolve_store_inputs(&store, &io).unwrap_err();
-        match err {
-            OcError::Store(StoreError::Validation(detail)) => {
-                assert!(detail.contains("0 handles for 1 input points"));
-            }
-            other => panic!("expected StoreError::Validation, got {other:?}"),
-        }
-    }
-
-    #[derive(Default)]
-    struct MismatchedHandleStore {
-        inner: MemStore,
-    }
-
-    impl ModelStore for MismatchedHandleStore {
-        fn save_model(&self, model: &ResolvedModel) -> StoreResult<()> {
-            self.inner.save_model(model)
-        }
-
-        fn load_model(&self, model_id: &DomainKey) -> StoreResult<ResolvedModel> {
-            self.inner.load_model(model_id)
-        }
-
-        fn list_models(&self) -> StoreResult<Vec<DomainKey>> {
-            self.inner.list_models()
-        }
-
-        fn delete_model(&self, model_id: &DomainKey) -> StoreResult<()> {
-            self.inner.delete_model(model_id)
-        }
-    }
-
-    impl PointStore for MismatchedHandleStore {
-        fn resolve_points(&self, keys: &[DomainKey]) -> StoreResult<Vec<PointHandle>> {
-            let _ = self.inner.resolve_points(keys)?;
-            Ok(Vec::new())
-        }
-
-        fn snapshot(&self) -> StoreResult<Box<dyn PointSnapshot>> {
-            self.inner.snapshot()
-        }
-
-        fn write_points(&self, batch: &[PointWrite]) -> StoreResult<usize> {
-            self.inner.write_points(batch)
-        }
-    }
-
-    impl SemanticStore for MismatchedHandleStore {
-        fn upsert_equipment(&self, eq: &EquipmentDto) -> StoreResult<()> {
-            self.inner.upsert_equipment(eq)
-        }
-
-        fn add_relation(&self, rel: &RelationDto) -> StoreResult<()> {
-            self.inner.add_relation(rel)
-        }
-
-        fn put_semantic_payload(&self, p: &SemanticPayloadDto) -> StoreResult<()> {
-            self.inner.put_semantic_payload(p)
-        }
-
-        fn get_semantic_payloads(
-            &self,
-            subject: &DomainKey,
-        ) -> StoreResult<Vec<SemanticPayloadDto>> {
-            self.inner.get_semantic_payloads(subject)
-        }
-
-        fn point_list(&self, controlled_device: Option<&str>) -> StoreResult<Vec<PointListRow>> {
-            self.inner.point_list(controlled_device)
-        }
-
-        fn retrieve(&self, q: &SemanticQuery) -> StoreResult<Vec<RetrievalHit>> {
-            self.inner.retrieve(q)
-        }
-
-        fn match_template(
-            &self,
-            required_points: &[TemplatePointReq],
-        ) -> StoreResult<Vec<DomainKey>> {
-            self.inner.match_template(required_points)
-        }
-    }
-
-    impl Durable for MismatchedHandleStore {
-        fn commit(&self) -> StoreResult<()> {
-            self.inner.commit()
-        }
-
-        fn flush(&self) -> StoreResult<()> {
-            self.inner.flush()
-        }
-
-        fn recover(&self) -> StoreResult<()> {
-            self.inner.recover()
-        }
-    }
-}
+#[path = "engine_tests.rs"]
+mod tests;

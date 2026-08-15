@@ -257,8 +257,18 @@ and a gate that accepted any text would restore exactly the false assurance desc
   diagnostic-bearing variants are built only from a non-empty vector. `DiagCode` is deliberately
   still not re-exported: `code.as_str()` already resolves without naming the type, and the enum is
   `#[non_exhaustive]`, so matching it exhaustively is impossible anyway. Two gaps found alongside it
-  are tracked rather than folded in — #261 (resolver warnings discarded when a later stage fails)
-  and #262 (a composite rejection's rule id is reachable only as a message-text prefix).
+  were filed separately rather than folded in — #261 (resolver warnings discarded when a later
+  stage fails, fixed below) and #262 (a composite rejection's rule id is reachable only as a
+  message-text prefix).
+- **Failed loads retain diagnostics from completed stages** (#292, fixes #261). `Engine::load_cxf` now
+  carries resolver, validation, and semantic diagnostics across a later validation, build, or store
+  failure in an opaque `OcError::LoadContext`. The allocation-free `OcError::all_diagnostics()`
+  iterator returns prior-stage diagnostics followed by the terminal stream without cloning the
+  terminal payload; `diagnostics()` keeps its existing terminal-error semantics. `Display` remains
+  the terminal message and `Error::source()` exposes the terminal `OcError`. Loads with no prior
+  diagnostics retain their original top-level variant. `oce-conformance` keeps contextual
+  diagnostics on the failed Tier 0 report without allowing warning-only context to downgrade a
+  build or store failure to an advisory.
 - **`simulate` is a run restart, and was not one** (#257, fixes #256). It cleared the run clock and
   nothing else, so a reused engine started a horizon from the state words the previous run left
   behind, falsifying the method's own rustdoc and R-SIM-2. Entry now re-seeds those words. The
@@ -413,6 +423,15 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   mutation controls. This is scoped Tier-3 evidence for one stateless Boolean class. The global
   Tier-3 report remains skipped, and the result says nothing about sequences, stateful behavior,
   numeric tolerances, or cross-architecture OMC identity.
+- **One stateful OpenModelica differential now exists for `CDL.Logical.Toggle`** (#295).
+  Two sandboxed native-arm64 OMC 1.25.1 runs produced byte-identical event traces for an initially
+  true input, repeated rises, clear-only reset, simultaneous rise with clear priority, and clear
+  release. The facade runs at the exact emitted timestamp bits and is checked against an independent
+  recurrence. A one-token Latch substitution, a live keep-first projection mutation, and four
+  independently accumulated wrong recurrences fail at pinned rows. Separate controls catch a missed
+  clear-only reset and lost clear priority on a simultaneous input rise. This is scoped Tier-3
+  evidence for one stateful Boolean schedule;
+  global Tier 3 remains skipped, with no sequence-wide, numeric, or cross-architecture claim.
 - **Nextest policy is versioned and shared across codegen modes** (#267). CI pins 0.9.143 and the
   repository config refuses older runners. Debug, release-codegen, and public-API profiles inherit
   zero retries, timeout and leak failures, and Jenkins-format JUnit reports; CI uploads the reports
@@ -468,11 +487,25 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Hardening
 
+- **Composite boundary lowering is iterative and resource-bounded** (#290, #298, #299). A path may enter at most 64
+  non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
+  examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
+  hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
+  partial graph is built; resource-limit diagnostics omit the attempted target subject to avoid an
+  additional attacker-controlled IRI copy at refusal. Direct leaf wiring is unchanged. The walk
+  remains path-local and preserves canonical order and duplicate multiplicity, so multiple drives
+  remain visible to single-assignment validation. An active unorientable relation now rejects after
+  the bounded walk when boundary elision would otherwise erase it, whether the boundary is its
+  authored source or target. Active boundary-source relations to inactive targets remain loud.
+  Listed node-less and omitted padded outputs can drive through a re-anchored boundary edge. These
+  synthesized drivers remain charged as authored targets under the byte bound. Deferred diagnostics
+  omit attacker-controlled subjects, and boundary resource errors retain precedence. Expanded edges
+  that repeat one missing endpoint emit one unresolved-reference diagnostic across ordinary and
+  boundary-specific orientation, preventing fanout from multiplying the same subject allocation.
+  These limits are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
-  completed AST, and again in `eval()`. Composite nesting is capped at 64. One gap remains,
-  stated rather than assumed: composite boundary resolution recurses per `isConnectedTo` hop
-  and is not depth-bounded.
+  completed AST, and again in `eval()`. Composite nesting is capped at 64.
 - **Environment-variable switches use truthiness, not presence** (#206, #210, #211, #213).
   `OCE_BLESS`, `UPDATE_EXPECT` and `OCE_SKIP_HOOKS` each treated `0` as "on", so setting one
   to zero armed golden regeneration or disabled the git hooks. Empty, `0` and `false` now

@@ -146,9 +146,10 @@ Stating this plainly is more useful than a feature list.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
-- **Its external-reference evidence is one Boolean block, not broad engine coverage.**
-  `CDL.Logical.Nand` has one exhaustive OpenModelica case. No sequence, stateful behavior, or numeric
-  tolerance has been checked that way, and the global Tier-3 report remains skipped —
+- **Its external-reference evidence is two Boolean cases, not broad engine coverage.**
+  `CDL.Logical.Nand` has one exhaustive case, and `CDL.Logical.Toggle` has one stateful event-schedule
+  case. No sequence or numeric tolerance has been checked that way, and the global Tier-3 report
+  remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
@@ -203,7 +204,8 @@ sequence goldens among them — and the 21 transcendental, psychrometric, and so
 are compared under a documented 1e-12 aligned-tolerance band.
 
 Two global report tiers are **not wired**, and no sequence here has been executed against an external
-Modelica / Buildings toolchain. The separate OpenModelica case covers only exhaustive Boolean Nand.
+Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive Boolean Nand
+and one stateful Boolean Toggle schedule.
 
 **[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
 it cannot, and which checks are not running.

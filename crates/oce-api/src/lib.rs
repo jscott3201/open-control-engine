@@ -56,7 +56,7 @@ mod topology;
 mod watch;
 
 pub use engine::Engine;
-pub use error::{OcError, OcResult};
+pub use error::{LoadErrorContext, OcError, OcResult};
 pub use export::{ContentIdError, ExportReport};
 pub use io::{
     IoClass, IoInventory, IoSummary, PhysicalKind, PointDirection, PointInfo, PointValueType,

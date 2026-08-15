@@ -9,25 +9,29 @@
 //!   fixed (input SOURCE, output SINK); a non-root boundary input is a SOURCE toward its own
 //!   composite interior (peer located in, or strictly inside, the owner) and a SINK outside it;
 //!   a non-root boundary output is the mirror image.
-//! - Verdicts: (SOURCE, SINK) keeps the authored direction; (SINK, SOURCE) swaps — unless the
-//!   canonical source has no `@graph` node (swap-blocked, left authored so `UnresolvedReference`
-//!   survives); same-polarity pairs are contradictory and left authored; edges with an
-//!   underivable endpoint (dangling or non-connector peer, conflicted ownership, non-tree
-//!   containment) or an inactive endpoint are left authored. Left-authored edges reject under
-//!   the existing generic diagnostics — this pass never invents or removes a relation.
-//! - Duplicate suppression: forward+reverse restatements of ONE relation collapse (a canonical
-//!   pair repeats and either sighting swapped); two authored copies of the same edge are NOT
-//!   collapsed — a genuine double-drive stays visible to the single-assignment check.
+//! - Verdicts: (SOURCE, SINK) keeps the authored direction; (SINK, SOURCE) swaps unless the
+//!   canonical source has neither an `@graph` node nor a synthesized connector identity; same-
+//!   polarity pairs are contradictory. Edges with an underivable endpoint (dangling or
+//!   non-connector peer, conflicted ownership, non-tree containment) cannot be oriented. If
+//!   lowering would erase an active unorientable edge, its diagnostic is deferred until after the
+//!   bounded boundary walk. Active boundary-source edges to inactive targets similarly preserve
+//!   the ordinary inactive-node refusal.
+//! - Duplicate suppression: one forward and one reverse statement of the same relation collapse.
+//!   Two authored copies in the same direction are not collapsed, so a genuine double-drive stays
+//!   visible to the single-assignment check.
 
 use std::collections::{HashMap, HashSet};
 
 use crate::dto::{CxfDocument, Node};
+use oce_diag::{DiagCode, Diagnostic};
 
 use super::composite::is_runtime_composite;
 use super::instance_interface::{
-    classified_port_members, contains_block_referents, is_derivation_shaped,
+    contains_block_referents, is_derivation_shaped, orientation_port_members,
 };
 use super::specialize::Specialization;
+
+mod diagnostics;
 
 #[derive(Clone, Debug)]
 enum Role {
@@ -53,6 +57,8 @@ enum Verdict {
     Untouched,
 }
 
+type CanonicalConnections<'a> = (HashMap<&'a str, Vec<&'a str>>, HashSet<&'a str>);
+
 /// Port-role and containment index for one document: composite membership, boundary-port sets,
 /// per-port ownership claims, `@graph` positions, and the transitive `containsBlock` closure the
 /// polarity test reads. Built once per import, before lowering.
@@ -66,6 +72,8 @@ pub(super) struct CompositeOrientation {
     owners: HashMap<String, Option<(String, bool)>>,
     roles: HashMap<String, Option<Role>>,
     parents: HashMap<String, String>,
+    synthesized: HashSet<String>,
+    synthesized_order: Vec<String>,
     tree: bool,
     positions: HashMap<String, usize>,
 }
@@ -83,9 +91,13 @@ impl CompositeOrientation {
             ..Self::default()
         };
         let contains_referents = contains_block_referents(doc);
+        let reachable_members = reachable_containment_members(by_id, root, specialization);
         for (position, node) in doc.graph.iter().enumerate() {
             index.positions.insert(node.id.clone(), position);
             if specialization.is_inactive(&node.id) {
+                continue;
+            }
+            if node.id != root && !reachable_members.contains(node.id.as_str()) {
                 continue;
             }
             let composite = is_runtime_composite(node);
@@ -110,29 +122,33 @@ impl CompositeOrientation {
                     }
                 }
             }
-            // A derivation-shaped node's port-classified members claim leaf ownership the
-            // same way its authored lists would (`_spec/19` R19-14): `hasInstance` encodes no
-            // side, so the side comes from the class's declared name lists — never composite
-            // boundary membership, a derivation-shaped node being a leaf by definition.
+            // Listed and padded members claim the same leaf ownership used by later derivation.
             if is_derivation_shaped(node, &contains_referents) {
-                for (member, input) in classified_port_members(node) {
-                    index.claim(member, &node.id, input);
+                for (member, input) in orientation_port_members(node) {
+                    if !by_id.contains_key(member.as_str())
+                        && index.synthesized.insert(member.clone())
+                    {
+                        index.synthesized_order.push(member.clone());
+                    }
+                    index.claim(&member, &node.id, input);
                 }
             }
-            for child in node.contains_block.iter().map(|child| child.id.as_str()) {
-                if specialization.is_inactive(child) {
-                    continue;
-                }
-                if let Some(previous) = index.parents.insert(child.to_owned(), node.id.clone())
-                    && previous != node.id
-                {
-                    index.tree = false;
-                }
-                if by_id
-                    .get(child)
-                    .is_some_and(|child_node| is_runtime_composite(child_node))
-                {
-                    index.composites.insert(child.to_owned());
+            if composite {
+                for child in node.contains_block.iter().map(|child| child.id.as_str()) {
+                    if specialization.is_inactive(child) {
+                        continue;
+                    }
+                    if let Some(previous) = index.parents.insert(child.to_owned(), node.id.clone())
+                        && previous != node.id
+                    {
+                        index.tree = false;
+                    }
+                    if by_id
+                        .get(child)
+                        .is_some_and(|child_node| is_runtime_composite(child_node))
+                    {
+                        index.composites.insert(child.to_owned());
+                    }
                 }
             }
         }
@@ -188,16 +204,18 @@ impl CompositeOrientation {
     /// either sighting swapped) while keeping authored duplicate copies. Also returns the set of
     /// canonical drivers whose edges touch a non-root boundary — the drivers whose lowered lists
     /// rule Gx orders by target `@graph` position.
-    pub(super) fn canonical_connections(
+    ///
+    pub(super) fn canonical_connections<'a>(
         &self,
-        doc: &CxfDocument,
+        doc: &'a CxfDocument,
         by_id: &HashMap<&str, &Node>,
         root: &str,
         specialization: &Specialization,
-    ) -> (HashMap<String, Vec<String>>, HashSet<String>) {
-        let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    ) -> CanonicalConnections<'a> {
+        let mut out: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut crossed = HashSet::new();
-        let mut stored: HashMap<(String, String), Verdict> = HashMap::new();
+        let mut records = Vec::new();
+        let mut counts: HashMap<(&str, &str), (usize, usize)> = HashMap::new();
         for node in &doc.graph {
             for authored_target in node.is_connected_to.iter().map(|target| target.id.as_str()) {
                 let (source, target, verdict) =
@@ -205,35 +223,56 @@ impl CompositeOrientation {
                 if self.is_non_root_boundary(&node.id, root)
                     || self.is_non_root_boundary(authored_target, root)
                 {
-                    crossed.insert(source.clone());
+                    crossed.insert(source);
                 }
-                let pair = (source.clone(), target.clone());
-                if stored
-                    .get(&pair)
-                    .is_some_and(|previous| verdict == Verdict::Swap || *previous == Verdict::Swap)
-                {
-                    continue;
+                let pair = (source, target);
+                let count = counts.entry(pair).or_default();
+                if verdict == Verdict::Swap {
+                    count.1 += 1;
+                } else {
+                    count.0 += 1;
                 }
+                records.push((source, target));
+            }
+        }
+        let mut emitted: HashMap<(&str, &str), usize> = HashMap::new();
+        for (source, target) in records {
+            let pair = (source, target);
+            let desired = counts
+                .get(&pair)
+                .map(|(authored, swapped)| (*authored).max(*swapped))
+                .unwrap_or(0);
+            let emitted = emitted.entry(pair).or_default();
+            if *emitted < desired {
                 out.entry(source).or_default().push(target);
-                stored.insert(pair, verdict);
+                *emitted += 1;
             }
         }
         (out, crossed)
     }
 
-    fn canonical_pair(
+    fn flat_polarity(&self, port: &str, root: &str) -> Option<Polarity> {
+        match self.roles.get(port)?.as_ref()? {
+            Role::LeafOutput => Some(Polarity::Source),
+            Role::LeafInput => Some(Polarity::Sink),
+            Role::BoundaryInput(owner) if owner == root => Some(Polarity::Source),
+            Role::BoundaryOutput(owner) if owner == root => Some(Polarity::Sink),
+            Role::BoundaryInput(_) | Role::BoundaryOutput(_) => None,
+        }
+    }
+
+    fn canonical_pair<'a>(
         &self,
-        source: &str,
-        target: &str,
+        source: &'a str,
+        target: &'a str,
         by_id: &HashMap<&str, &Node>,
         root: &str,
         specialization: &Specialization,
-    ) -> (String, String, Verdict) {
+    ) -> (&'a str, &'a str, Verdict) {
         if specialization.is_inactive(source) || specialization.is_inactive(target) {
             return authored(source, target, Verdict::Untouched);
         }
-        let scoped =
-            self.is_non_root_boundary(source, root) || self.is_non_root_boundary(target, root);
+        let scoped = self.is_boundary(source) || self.is_boundary(target);
         if !scoped {
             return authored(source, target, Verdict::Untouched);
         }
@@ -245,8 +284,10 @@ impl CompositeOrientation {
         };
         match (source_polarity, target_polarity) {
             (Polarity::Source, Polarity::Sink) => authored(source, target, Verdict::Keep),
-            (Polarity::Sink, Polarity::Source) if by_id.contains_key(target) => {
-                (target.to_owned(), source.to_owned(), Verdict::Swap)
+            (Polarity::Sink, Polarity::Source)
+                if by_id.contains_key(target) || self.synthesized.contains(target) =>
+            {
+                (target, source, Verdict::Swap)
             }
             (Polarity::Sink, Polarity::Source) => authored(source, target, Verdict::SwapBlocked),
             _ => authored(source, target, Verdict::Contradictory),
@@ -310,14 +351,59 @@ impl CompositeOrientation {
         })
     }
 
+    fn is_boundary(&self, iri: &str) -> bool {
+        self.inputs.contains(iri) || self.outputs.contains(iri)
+    }
+
+    fn is_elided_boundary_source(&self, iri: &str) -> bool {
+        (self.inputs.contains(iri) && !self.top_inputs.contains(iri))
+            || (self.outputs.contains(iri) && !self.top_outputs.contains(iri))
+    }
+
+    /// Node-less derived connector sources in owner and class-signature order.
+    pub(super) fn synthesized_sources(&self) -> impl Iterator<Item = &str> {
+        self.synthesized_order.iter().map(String::as_str)
+    }
+
+    /// Whether `iri` is a node-less output identity synthesized from an instance interface.
+    pub(super) fn is_synthesized_source(&self, iri: &str) -> bool {
+        self.synthesized.contains(iri)
+    }
+
     /// Original `@graph` position of a node, with unknown targets ordered last.
     pub(super) fn position(&self, iri: &str) -> usize {
         self.positions.get(iri).copied().unwrap_or(usize::MAX)
     }
 }
 
-fn authored(source: &str, target: &str, verdict: Verdict) -> (String, String, Verdict) {
-    (source.to_owned(), target.to_owned(), verdict)
+fn reachable_containment_members<'a>(
+    by_id: &HashMap<&'a str, &'a Node>,
+    root: &'a str,
+    specialization: &Specialization,
+) -> HashSet<&'a str> {
+    let mut reachable = HashSet::new();
+    let mut pending = vec![root];
+    while let Some(parent) = pending.pop() {
+        let Some(node) = by_id.get(parent) else {
+            continue;
+        };
+        for child in node.contains_block.iter().map(|child| child.id.as_str()) {
+            if specialization.is_inactive(child) || !reachable.insert(child) {
+                continue;
+            }
+            if by_id
+                .get(child)
+                .is_some_and(|node| is_runtime_composite(node))
+            {
+                pending.push(child);
+            }
+        }
+    }
+    reachable
+}
+
+fn authored<'a>(source: &'a str, target: &'a str, verdict: Verdict) -> (&'a str, &'a str, Verdict) {
+    (source, target, verdict)
 }
 
 #[cfg(test)]
@@ -325,7 +411,11 @@ mod tests {
     use super::*;
     use serde_json::Value;
 
-    fn adjacency(forward: &[&str], reverse: &[&str]) -> HashMap<String, Vec<String>> {
+    fn adjacency_in_order(
+        forward: &[&str],
+        reverse: &[&str],
+        reverse_first: bool,
+    ) -> HashMap<String, Vec<String>> {
         let mut value = serde_json::json!({
             "@context": { "S231": "http://data.ashrae.org/S231P#" },
             "@graph": [
@@ -350,6 +440,9 @@ mod tests {
         };
         value["@graph"][3]["S231:isConnectedTo"] = targets(forward);
         value["@graph"][4]["S231:isConnectedTo"] = targets(reverse);
+        if reverse_first {
+            value["@graph"].as_array_mut().expect("@graph").swap(3, 4);
+        }
         let doc: CxfDocument = serde_json::from_value(value).expect("document");
         let by_id: HashMap<&str, &Node> = doc
             .graph
@@ -361,6 +454,18 @@ mod tests {
         index
             .canonical_connections(&doc, &by_id, "root", &specialization)
             .0
+            .into_iter()
+            .map(|(source, targets)| {
+                (
+                    source.to_owned(),
+                    targets.into_iter().map(str::to_owned).collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn adjacency(forward: &[&str], reverse: &[&str]) -> HashMap<String, Vec<String>> {
+        adjacency_in_order(forward, reverse, false)
     }
 
     fn pair_count(adjacency: &HashMap<String, Vec<String>>) -> usize {
@@ -378,8 +483,8 @@ mod tests {
     }
 
     #[test]
-    fn two_reverse_spellings_collapse_to_one() {
-        assert_eq!(pair_count(&adjacency(&[], &["sub.u", "sub.u"])), 1);
+    fn two_reverse_spellings_are_both_preserved() {
+        assert_eq!(pair_count(&adjacency(&[], &["sub.u", "sub.u"])), 2);
     }
 
     #[test]
@@ -390,6 +495,19 @@ mod tests {
     #[test]
     fn two_forward_then_reverse_preserves_the_forward_pair() {
         assert_eq!(pair_count(&adjacency(&["leaf.u", "leaf.u"], &["sub.u"])), 2);
+    }
+
+    #[test]
+    fn one_forward_then_two_reverse_preserves_two_relations() {
+        assert_eq!(pair_count(&adjacency(&["leaf.u"], &["sub.u", "sub.u"])), 2);
+    }
+
+    #[test]
+    fn one_reverse_then_two_forward_preserves_two_relations() {
+        assert_eq!(
+            pair_count(&adjacency_in_order(&["leaf.u", "leaf.u"], &["sub.u"], true,)),
+            2
+        );
     }
 
     #[test]
@@ -424,10 +542,7 @@ mod tests {
         let specialization = Specialization::default();
         let index = CompositeOrientation::new(&doc, &by_id, "root", &specialization);
         let (adjacency, _) = index.canonical_connections(&doc, &by_id, "root", &specialization);
-        assert_eq!(
-            adjacency.get("sub.u"),
-            Some(&vec!["first.u".to_owned(), "second.u".to_owned()])
-        );
+        assert_eq!(adjacency.get("sub.u"), Some(&vec!["first.u", "second.u"]));
     }
 
     #[test]
@@ -464,7 +579,7 @@ mod tests {
             node.as_object_mut()
                 .expect("node")
                 .remove("S231:isConnectedTo");
-            if let Some(targets) = first.get(&id) {
+            if let Some(targets) = first.get(id.as_str()) {
                 node["S231:isConnectedTo"] = Value::Array(
                     targets
                         .iter()

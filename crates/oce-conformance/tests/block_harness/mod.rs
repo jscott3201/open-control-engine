@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use oce_conformance::{
-    CombiTimeTable, ComparisonMode, ComparisonResult, DriverOptions, OutputPattern,
+    CombiTimeTable, ComparisonMode, ComparisonResult, DriveCadence, DriverOptions, OutputPattern,
     PartialTolerances, PointEnd, PointMapEntry, ReferenceSpec, Tolerances, VerifyConfig,
     drive_trace_with_options, escape_regex,
 };
@@ -259,6 +259,26 @@ pub(crate) fn drive_case_with_external_reference(
 ) -> oce_conformance::DriverRun {
     let cxf = build_cxf(case);
     drive_case(case, sequence, &cxf, reference)
+}
+
+pub(crate) fn drive_case_with_external_reference_at_instants(
+    case: &BlockCase,
+    sequence: &str,
+    reference: &CombiTimeTable,
+    instants: Vec<f64>,
+) -> oce_conformance::DriverRun {
+    let cxf = build_cxf(case);
+    drive_trace_with_options(
+        cxf.as_bytes(),
+        &config(case, sequence, zero_tolerances()),
+        reference,
+        &DriverOptions {
+            cadence: DriveCadence::EventAligned { instants },
+            comparison: ComparisonMode::Exact,
+            ..DriverOptions::default()
+        },
+    )
+    .unwrap_or_else(|error| panic!("{} explicit event drive failed: {error:?}", case.slug))
 }
 
 fn drive_case_with_mode(

@@ -34,11 +34,10 @@ fn load(src: &str) -> Result<LoadReport, OcError> {
     eng.load_cxf(src.as_bytes())
 }
 
-/// The error-severity `DiagCode`s an `OcError` carries — across both the resolver (`OcError::Cxf`)
-/// and the deep-gate (`OcError::Validate`) seams, the two paths a load rejection can take.
+/// The error-severity `DiagCode`s an `OcError` carries across resolver, deep-gate, and contextual
+/// failed-load seams.
 fn error_codes(e: &OcError) -> Vec<DiagCode> {
-    e.diagnostics()
-        .iter()
+    e.all_diagnostics()
         .filter(|d| d.is_error())
         .map(|d| d.code)
         .collect()
@@ -48,8 +47,7 @@ fn error_codes(e: &OcError) -> Vec<DiagCode> {
 /// order the pipeline returns them. Comparing this (not just the code set) is what actually pins the
 /// determinism contract: a reordering, a changed subject, or a changed message all show up here.
 fn error_signature(e: &OcError) -> Vec<(DiagCode, Option<String>, String)> {
-    e.diagnostics()
-        .iter()
+    e.all_diagnostics()
         .filter(|d| d.is_error())
         .map(|d| {
             (

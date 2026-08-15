@@ -377,6 +377,17 @@ fn driver_errors_surface_facade_unknown_point_before_any_silent_trace() {
 }
 
 #[test]
+fn model_load_failure_has_distinct_stage() {
+    let err = drive_trace(
+        b"{ not a valid CXF document",
+        &config(),
+        &uniform_reference(),
+    )
+    .expect_err("malformed CXF must fail while loading the model");
+    assert!(matches!(err, DriverError::Load(OcError::Cxf(_))));
+}
+
+#[test]
 fn driver_errors_surface_uniform_bad_step_and_csv_deferred() {
     let reference = uniform_reference();
     let config = config();

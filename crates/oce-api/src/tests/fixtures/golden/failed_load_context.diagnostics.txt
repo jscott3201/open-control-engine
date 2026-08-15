@@ -1,0 +1,3 @@
+warning|analog-coerced-to-real|http://example.org#U.con.y|Analog connector coerced to Real
+warning|analog-coerced-to-real|http://example.org#U.add.u1|Analog connector coerced to Real
+error|unit-quantity-mismatch|http://example.org#U.con.y|connected cluster members declare conflicting unit values ["K", "degC"]; §7.10 (R13.1) requires agreement

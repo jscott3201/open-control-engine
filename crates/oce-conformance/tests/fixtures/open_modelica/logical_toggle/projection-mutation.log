@@ -1,0 +1,17 @@
+projection_mutation=contiguous equal-time selection changed from last to first
+working_tree_modified=false
+mutated_compile=PASS
+mutated_input=toggle-run-a.raw.csv
+mutated_input_sha256=cf9333debedf335ae28103b6bcc70229ac78afba4d99701a51d1771d9a3e6641
+mutated_raw_rows=34
+mutated_canonical_rows=22
+mutated_group_sizes=1,2,1,2,1,2,1,2,1,2,1,2,2,1,2,1,2,2,1,2,1,2
+mutated_canonical_time_bits=0000000000000000,403e000000001dff,404e000000000000,4056800000000780,405e000000000000,4062c000000003c1,4066800000000000,406a4000000003c1,406e000000000000,4070e000000001e0,4072c00000000000,4073600000000320,4075e000000002d0,4076800000000000,40786000000003c1,407a400000000000,407ae00000000320,407c2000000003c1,407e000000000000,407fe000000003c1,4080e00000000000,4082c00000000000
+mutated_schedule_result=FAIL
+mutated_schedule_mismatch_rows=1,3,5,7,9,11,12,14,16,17,19
+mutated_schedule_first_mismatch_row=1
+mutated_schedule_first_mismatch_time_bits=403e000000001dff
+mutated_grouping_result=PASS
+mutated_timestamp_bits_result=PASS
+restoration_result=PASS
+restored_canonicalizer_sha256=acb2296bd4861544856794215287f3b98dc1c13c32c501c5fa26305d4f78919b

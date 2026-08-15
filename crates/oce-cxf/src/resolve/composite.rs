@@ -19,12 +19,44 @@ use super::specialize::Specialization;
 /// bounds the recursive lowering walk well below the measured stack-exhaustion threshold.
 const MAX_COMPOSITE_NESTING_DEPTH: usize = 64;
 
-/// A CXF document lowered to the existing single-root, flat-child resolver shape.
+/// Maximum non-top boundary nodes one rewritten connection path may enter.
+const MAX_COMPOSITE_BOUNDARY_HOPS: usize = 64;
+
+/// Maximum rewrite targets examined across one document's boundary traversal.
+const MAX_COMPOSITE_BOUNDARY_TARGETS: usize = 65_536;
+
+/// Maximum aggregate target-IRI bytes examined across one document's boundary traversal.
+const MAX_COMPOSITE_BOUNDARY_TARGET_BYTES: usize = 8 * 1024 * 1024;
+
+/// A CXF document lowered to the existing single-root, flat-child resolver shape, with a sidecar
+/// for canonical connections whose source is a node-less derived connector.
 #[derive(Clone, Debug)]
 pub(super) struct LoweredCxf {
     pub(super) doc: CxfDocument,
     pub(super) root_iri: Option<String>,
     pub(super) inherited_scope: HashMap<String, Vec<(Arc<str>, EvalResult)>>,
+    pub(super) synthesized_connections: Vec<(String, Vec<String>)>,
+    pub(super) boundary_traversal_failed: bool,
+}
+
+impl LoweredCxf {
+    /// Authored edges followed by node-less derived-source edges in block-2 order.
+    pub(super) fn connection_edges(&self) -> impl Iterator<Item = (&str, &str)> {
+        let authored = self.doc.graph.iter().flat_map(|node| {
+            node.is_connected_to
+                .iter()
+                .map(move |target| (node.id.as_str(), target.id.as_str()))
+        });
+        let synthesized = self
+            .synthesized_connections
+            .iter()
+            .flat_map(|(source, targets)| {
+                targets
+                    .iter()
+                    .map(move |target| (source.as_str(), target.as_str()))
+            });
+        authored.chain(synthesized)
+    }
 }
 
 /// Lower the supported nested-composite subset before dense block/connector ids are assigned.
@@ -49,17 +81,18 @@ pub(super) fn lower(
             doc: lowered,
             root_iri: None,
             inherited_scope,
+            synthesized_connections: Vec::new(),
+            boundary_traversal_failed: false,
         };
     };
     let root_iri = Some(root.to_owned());
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
     let mut leaf_order = Vec::new();
     let mut stack = HashSet::new();
     let mut path = Vec::new();
-    collect_leaves(
+    let nesting_exceeded = collect_leaves(
         root,
         1,
         Vec::new(),
@@ -73,8 +106,42 @@ pub(super) fn lower(
         &mut evaluated_chains,
     );
     withheld.emit_unvisited(&evaluated_chains, diags);
+    if nesting_exceeded {
+        return LoweredCxf {
+            doc: lowered,
+            root_iri,
+            inherited_scope,
+            synthesized_connections: Vec::new(),
+            boundary_traversal_failed: true,
+        };
+    }
 
-    let rewritten = rewrite_connections(doc, by_id, root, specialization, &boundary);
+    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
+    let (mut rewritten, deferred_diagnostic) =
+        match rewrite_connections(doc, by_id, root, specialization, &boundary) {
+            Ok(rewritten) => rewritten,
+            Err(diagnostic) => {
+                diags.push(diagnostic);
+                return LoweredCxf {
+                    doc: lowered,
+                    root_iri,
+                    inherited_scope,
+                    synthesized_connections: Vec::new(),
+                    boundary_traversal_failed: true,
+                };
+            }
+        };
+    if let Some(diagnostic) = deferred_diagnostic {
+        diags.push(diagnostic);
+    }
+    let synthesized_connections = boundary
+        .synthesized_sources()
+        .filter_map(|source| {
+            rewritten
+                .remove(source)
+                .map(|targets| (source.to_owned(), targets))
+        })
+        .collect();
     for node in &mut lowered.graph {
         let id = node.id.as_str();
         if id == root {
@@ -91,6 +158,8 @@ pub(super) fn lower(
         doc: lowered,
         root_iri,
         inherited_scope,
+        synthesized_connections,
+        boundary_traversal_failed: false,
     }
 }
 
@@ -221,7 +290,8 @@ fn unsupported_modelica_key(key: &str) -> bool {
 
 /// Depth-first `containsBlock` flattening. `stack` gives O(1) cycle membership; `path` mirrors it
 /// as the ordered traversal spine so a detected cycle can name every participant in path order.
-/// Both are pushed/popped together — `stack` and `path` always hold the same ids.
+/// Both are pushed/popped together — `stack` and `path` always hold the same ids. A `true` result
+/// stops pre-lowering after the first depth refusal, before orientation indexes the hostile graph.
 #[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     composite_id: &str,
@@ -235,7 +305,7 @@ fn collect_leaves(
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
     evaluated_chains: &mut HashSet<String>,
-) {
+) -> bool {
     if depth > MAX_COMPOSITE_NESTING_DEPTH {
         diags.push(
             Diagnostic::error(
@@ -247,7 +317,7 @@ fn collect_leaves(
             )
             .with_subject(composite_id.to_owned()),
         );
-        return;
+        return true;
     }
     if !stack.insert(composite_id.to_owned()) {
         // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
@@ -270,7 +340,7 @@ fn collect_leaves(
             )
             .with_subject(composite_id.to_owned()),
         );
-        return;
+        return false;
     }
     path.push(composite_id.to_owned());
     let Some(composite) = by_id.get(composite_id).copied() else {
@@ -280,7 +350,7 @@ fn collect_leaves(
         );
         stack.remove(composite_id);
         path.pop();
-        return;
+        return false;
     };
     evaluated_chains.insert(composite_id.to_owned());
     let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
@@ -299,7 +369,7 @@ fn collect_leaves(
             continue;
         };
         if is_runtime_composite(node) {
-            collect_leaves(
+            if collect_leaves(
                 child,
                 depth + 1,
                 scope.clone(),
@@ -311,7 +381,11 @@ fn collect_leaves(
                 leaf_order,
                 inherited_scope,
                 evaluated_chains,
-            );
+            ) {
+                stack.remove(composite_id);
+                path.pop();
+                return true;
+            }
         } else {
             leaf_order.push(child.to_owned());
             inherited_scope.insert(child.to_owned(), scope.clone());
@@ -319,6 +393,7 @@ fn collect_leaves(
     }
     stack.remove(composite_id);
     path.pop();
+    false
 }
 
 /// Extend the inherited scope chain with the composite's own declarations through the shared
@@ -351,23 +426,34 @@ fn rewrite_connections(
     root: &str,
     specialization: &Specialization,
     boundary: &CompositeOrientation,
-) -> HashMap<String, Vec<String>> {
+) -> Result<RewrittenConnections, Diagnostic> {
     let (canonical, crossed_drivers) =
         boundary.canonical_connections(doc, by_id, root, specialization);
-    let mut out: HashMap<String, Vec<String>> = HashMap::new();
+    let mut deferred = Vec::new();
     let walk = BoundaryWalk {
         by_id,
         canonical: &canonical,
         specialization,
         boundary,
     };
-    for node in &doc.graph {
-        let source = node.id.as_str();
+    let mut budget = BoundaryBudget::default();
+    let mut reached_boundaries = HashSet::new();
+    for source in doc
+        .graph
+        .iter()
+        .map(|node| node.id.as_str())
+        .chain(boundary.synthesized_sources())
+    {
         let Some(authored_targets) = canonical.get(source) else {
             continue;
         };
         if specialization.is_inactive(source) {
             continue;
+        }
+        if boundary.is_synthesized_source(source) {
+            for _ in authored_targets {
+                budget.examine_bytes(source)?;
+            }
         }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
             continue;
@@ -376,8 +462,14 @@ fn rewrite_connections(
             continue;
         }
         let mut targets = Vec::new();
-        for target in authored_targets {
-            resolve_target(target, &walk, &mut HashSet::new(), &mut targets);
+        for &target in authored_targets {
+            resolve_authored_target(
+                target,
+                &walk,
+                &mut budget,
+                &mut reached_boundaries,
+                &mut targets,
+            )?;
         }
         // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
         // already collapsed in the canonical map, so any surviving duplicate is a genuine
@@ -386,67 +478,185 @@ fn rewrite_connections(
             targets.sort_by_key(|target| boundary.position(target));
         }
         if !targets.is_empty() {
-            out.entry(source.to_owned()).or_default().extend(targets);
+            deferred.push((source, targets));
         }
     }
-    out
+    let preserved_missing_endpoints = deferred
+        .iter()
+        .flat_map(|(source, targets)| std::iter::once(*source).chain(targets.iter().copied()))
+        .filter(|endpoint| {
+            !by_id.contains_key(endpoint) && !boundary.is_synthesized_source(endpoint)
+        })
+        .collect();
+    let deferred_diagnostic = boundary.erased_relation_diagnostic(
+        doc,
+        by_id,
+        &canonical,
+        root,
+        specialization,
+        &reached_boundaries,
+        &preserved_missing_endpoints,
+    );
+    Ok((
+        deferred
+            .into_iter()
+            .map(|(source, targets)| {
+                (
+                    source.to_owned(),
+                    targets.into_iter().map(str::to_owned).collect(),
+                )
+            })
+            .collect(),
+        deferred_diagnostic,
+    ))
 }
 
-struct BoundaryWalk<'a> {
+type RewrittenConnections = (HashMap<String, Vec<String>>, Option<Diagnostic>);
+
+struct BoundaryWalk<'a, 'b> {
     by_id: &'a HashMap<&'a str, &'a Node>,
-    canonical: &'a HashMap<String, Vec<String>>,
+    canonical: &'b HashMap<&'b str, Vec<&'b str>>,
     specialization: &'a Specialization,
     boundary: &'a CompositeOrientation,
 }
 
-/// Resolve one rewritten target.
-fn resolve_target(
-    target: &str,
-    walk: &BoundaryWalk<'_>,
-    seen: &mut HashSet<String>,
-    out: &mut Vec<String>,
-) {
-    if walk.specialization.is_inactive(target) {
-        out.push(target.to_owned());
-        return;
-    }
-    if walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target) {
-        follow_boundary(target, walk, seen, out);
-        return;
-    }
-    if walk.boundary.outputs.contains(target) {
-        if walk.boundary.top_outputs.contains(target) {
-            out.push(target.to_owned());
-        } else {
-            follow_boundary(target, walk, seen, out);
-        }
-        return;
-    }
-    out.push(target.to_owned());
+#[derive(Default)]
+struct BoundaryBudget {
+    examined_targets: usize,
+    examined_target_bytes: usize,
 }
 
-/// Walk through a non-top composite boundary node.
-fn follow_boundary(
-    boundary_iri: &str,
-    walk: &BoundaryWalk<'_>,
-    seen: &mut HashSet<String>,
-    out: &mut Vec<String>,
-) {
-    if !seen.insert(boundary_iri.to_owned()) {
-        // Preserve authored boundary-cycle visibility by sending the revisited non-top IRI to the
-        // resolver's ordinary dangling-reference diagnostic.
-        out.push(boundary_iri.to_owned());
-        return;
+impl BoundaryBudget {
+    fn examine(&mut self, target: &str) -> Result<(), Diagnostic> {
+        // Limit diagnostics omit the untrusted target because copying it would bypass the bound.
+        if self.examined_targets >= MAX_COMPOSITE_BOUNDARY_TARGETS {
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported target examination count \
+                     ({MAX_COMPOSITE_BOUNDARY_TARGETS})"
+                ),
+            ));
+        }
+        self.examine_bytes(target)?;
+        self.examined_targets += 1;
+        Ok(())
     }
-    if !walk.by_id.contains_key(boundary_iri) {
-        out.push(boundary_iri.to_owned());
-        seen.remove(boundary_iri);
-        return;
+
+    fn examine_bytes(&mut self, iri: &str) -> Result<(), Diagnostic> {
+        if iri.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported aggregate target IRI \
+                     byte count ({MAX_COMPOSITE_BOUNDARY_TARGET_BYTES})"
+                ),
+            ));
+        }
+        self.examined_target_bytes += iri.len();
+        Ok(())
     }
-    for target in walk.canonical.get(boundary_iri).into_iter().flatten() {
-        resolve_target(target, walk, seen, out);
+}
+
+enum BoundaryFrame<'a> {
+    Target(&'a str),
+    Children {
+        boundary: &'a str,
+        next_child: usize,
+    },
+}
+
+fn is_elided_boundary(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
+    (walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target))
+        || (walk.boundary.outputs.contains(target) && !walk.boundary.top_outputs.contains(target))
+}
+
+fn resolve_authored_target<'a, 'b>(
+    target: &'b str,
+    walk: &BoundaryWalk<'a, 'b>,
+    budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
+    out: &mut Vec<&'b str>,
+) -> Result<(), Diagnostic> {
+    if is_elided_boundary(target, walk) {
+        resolve_target(target, walk, budget, reached_boundaries, out)
+    } else {
+        out.push(target);
+        Ok(())
     }
-    seen.remove(boundary_iri);
+}
+
+/// Resolve one target with path-local cycle state and ordered depth-first expansion.
+fn resolve_target<'a, 'b>(
+    target: &'b str,
+    walk: &BoundaryWalk<'a, 'b>,
+    budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
+    out: &mut Vec<&'b str>,
+) -> Result<(), Diagnostic> {
+    let mut active_path: HashSet<&'b str> = HashSet::new();
+    let mut frames = vec![BoundaryFrame::Target(target)];
+    while let Some(frame) = frames.pop() {
+        let BoundaryFrame::Target(target) = frame else {
+            let BoundaryFrame::Children {
+                boundary,
+                next_child,
+            } = frame
+            else {
+                unreachable!();
+            };
+            let Some(child) = walk
+                .canonical
+                .get(boundary)
+                .and_then(|children| children.get(next_child))
+                .copied()
+            else {
+                active_path.remove(boundary);
+                continue;
+            };
+            frames.push(BoundaryFrame::Children {
+                boundary,
+                next_child: next_child + 1,
+            });
+            frames.push(BoundaryFrame::Target(child));
+            continue;
+        };
+
+        budget.examine(target)?;
+        if walk.specialization.is_inactive(target) {
+            out.push(target);
+            continue;
+        }
+        if !is_elided_boundary(target, walk) {
+            out.push(target);
+            continue;
+        }
+
+        // Preserve authored boundary-cycle and missing-node visibility before applying the resource
+        // bound: both continue through the resolver's ordinary dangling-reference diagnostic.
+        if active_path.contains(target) || !walk.by_id.contains_key(target) {
+            out.push(target);
+            continue;
+        }
+        if active_path.len() >= MAX_COMPOSITE_BOUNDARY_HOPS {
+            // Keep the refusal path bounded for the same reason as BoundaryBudget::examine.
+            return Err(Diagnostic::error(
+                DiagCode::MalformedDocument,
+                format!(
+                    "composite boundary resolution exceeds the supported isConnectedTo hop count \
+                     ({MAX_COMPOSITE_BOUNDARY_HOPS})"
+                ),
+            ));
+        }
+
+        reached_boundaries.insert(target);
+        active_path.insert(target);
+        frames.push(BoundaryFrame::Children {
+            boundary: target,
+            next_child: 0,
+        });
+    }
+    Ok(())
 }
 
 fn refs(ids: Vec<String>) -> OneOrMany<IriRef> {
@@ -480,5 +690,73 @@ mod tests {
         }))
         .expect("test node");
         assert!(!is_runtime_composite(&node));
+    }
+
+    #[test]
+    fn boundary_target_budget_accepts_the_limit_and_refuses_before_overflow() {
+        let mut budget = BoundaryBudget {
+            examined_targets: MAX_COMPOSITE_BOUNDARY_TARGETS - 1,
+            examined_target_bytes: 0,
+        };
+        assert!(budget.examine("http://example.org#at-limit").is_ok());
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+        let diagnostic = budget
+            .examine("http://example.org#over-limit")
+            .expect_err("the attempted target beyond the limit must reject");
+        assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
+        assert_eq!(diagnostic.subject, None);
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+    }
+
+    #[test]
+    fn boundary_target_byte_budget_accepts_the_limit_and_refuses_before_overflow() {
+        let mut budget = BoundaryBudget {
+            examined_targets: 0,
+            examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - 1,
+        };
+        assert!(budget.examine("x").is_ok());
+        let diagnostic = budget
+            .examine("y")
+            .expect_err("the attempted byte beyond the limit must reject");
+        assert_eq!(diagnostic.code, DiagCode::MalformedDocument);
+        assert_eq!(diagnostic.subject, None);
+        assert_eq!(
+            budget.examined_target_bytes,
+            MAX_COMPOSITE_BOUNDARY_TARGET_BYTES
+        );
+    }
+
+    #[test]
+    fn ordinary_direct_target_does_not_consume_boundary_budget() {
+        let by_id = HashMap::new();
+        let canonical = HashMap::new();
+        let specialization = Specialization::default();
+        let boundary = CompositeOrientation::default();
+        let walk = BoundaryWalk {
+            by_id: &by_id,
+            canonical: &canonical,
+            specialization: &specialization,
+            boundary: &boundary,
+        };
+        let mut budget = BoundaryBudget {
+            examined_targets: MAX_COMPOSITE_BOUNDARY_TARGETS,
+            examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES,
+        };
+        let mut out = Vec::new();
+        let mut reached_boundaries = HashSet::new();
+        resolve_authored_target(
+            "http://example.org#leaf.u",
+            &walk,
+            &mut budget,
+            &mut reached_boundaries,
+            &mut out,
+        )
+        .expect("ordinary wiring is outside boundary budgets");
+        assert_eq!(out, ["http://example.org#leaf.u"]);
+        assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
+        assert_eq!(
+            budget.examined_target_bytes,
+            MAX_COMPOSITE_BOUNDARY_TARGET_BYTES
+        );
     }
 }

@@ -13,11 +13,11 @@ A sample is converted from its value regardless of `PointStatus`. `Fault`, `Stal
 and `Override` all stage exactly like `Ok`.
 
 The conversion function destructures the sample and discards both quality fields:
-`crates/oce-api/src/engine.rs:381-386` binds `status: _` and `at_unix_nanos: _`, then dispatches
+`crates/oce-api/src/engine.rs:443-448` binds `status: _` and `at_unix_nanos: _`, then dispatches
 purely on the value and the target type. The five statuses are defined at
 `crates/oce-store/src/lib.rs:81-92`; nothing in the engine reads them. The behavior is pinned by
 `store_backed_input_staging_is_status_agnostic`
-(`crates/oce-api/src/tests/store_backed_inputs.rs:75`), which ticks the same fixture once per status
+(`crates/oce-api/src/tests/store_backed_inputs.rs:88`), which ticks the same fixture once per status
 and asserts identical staging.
 
 This is a design decision, not an oversight — point quality is metadata for the application and BMS
@@ -32,10 +32,10 @@ proceeds. There is no diagnostic. Before the first sample ever arrives, that hel
 type's `zero_value()` — so an input that has never been written reads as `0`, `0.0` or `false`, not
 as "unknown".
 
-The hold is explicit: `crates/oce-api/src/engine.rs:356-360` continues past a missing sample with
+The hold is explicit: `crates/oce-api/src/engine.rs:417-420` continues past a missing sample with
 the comment "Deliberate hold-last: no store sample means no overwrite of the current state value",
-and the policy is documented at `engine.rs:336-342`. `missing_store_sample_holds_prior_input_value`
-(`crates/oce-api/src/tests/store_backed_inputs.rs:99`) pins it.
+and the policy is documented at `engine.rs:396-402`. `missing_store_sample_holds_prior_input_value`
+(`crates/oce-api/src/tests/store_backed_inputs.rs:112`) pins it.
 
 **A dead sensor and a steady sensor are indistinguishable to the engine, forever.** Nothing in the
 engine will ever notice that a point stopped updating.
@@ -231,41 +231,35 @@ Point histories persisted under the earlier positional `conn#<N>` keys are dispo
 migratable: an index is not traceable to an authored connector after the document that produced it
 changes.
 
-## The one hardening gap
-
-Stated plainly, because the alternative is that you assume it is handled.
+## Ingest resource bounds
 
 | Bound | Limit | Defined at | Behavior when exceeded |
 | --- | --- | --- | --- |
-| Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs:125` | typed `NestingTooDeep` error |
-| Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs:132` | typed `ExpressionTooLarge` error |
-| Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs:22`, checked at `:231` | `MalformedDocument` diagnostic |
-| Composite **boundary resolution** (`isConnectedTo` hops) | **none** | `crates/oce-cxf/src/resolve/composite.rs:427-474` | **unbounded recursion** |
+| Expression parse and AST nesting | 64 | `crates/oce-expr/src/lib.rs` | typed `NestingTooDeep` error |
+| Expression size | 4096 nodes | `crates/oce-expr/src/lib.rs` | typed `ExpressionTooLarge` error |
+| Composite **nesting** (`containsBlock` lowering) | 64 | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
+| Composite boundary path | 64 non-top `isConnectedTo` hops | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
+| Composite boundary work | 65,536 target examinations and 8 MiB of aggregate target-IRI bytes per document | `crates/oce-cxf/src/resolve/composite.rs` | `MalformedDocument` diagnostic |
 
-The last row is the gap, and the distinction between the last two rows is the part to get right.
-Composite *nesting* — how deeply composites contain other composites — is bounded at 64 and rejects
-cleanly. Composite *boundary resolution* is a different walk: `resolve_target` and `follow_boundary`
-are mutually recursive and take one stack frame per `isConnectedTo` hop, with no depth counter. A
-`seen` set (`composite.rs:459-464`) catches authored cycles and routes them to the ordinary
-dangling-reference diagnostic, so a cycle terminates. A long *acyclic* chain of boundary connectors
-does not: it recurses once per hop until the stack is exhausted.
-
-The gap is in `oce-cxf`, not `oce-expr`. The expression bounds are real and typed; they do not cover
-this. The repo states the gap here, in `architecture.md`, and in `../TESTING.md:40-43` rather than
-leaving it to be discovered.
+Composite nesting and boundary traversal are different walks and have separate limits. Boundary
+traversal is iterative, so an accepted path does not consume one call-stack frame per hop. Its work
+budgets also bound shallow fan-out and repeated long IRIs that a depth limit alone would miss.
+Direct leaf wiring is outside those budgets. Below the limits the walk keeps target order and
+duplicate paths intact for single-assignment validation.
 
 ## Treat untrusted CXF as untrusted input
 
 A CXF document is a program. Loading one from a source you do not control is running code you did
-not write, through a resolver with one known unbounded recursion. If you must:
+not write. If you must:
 
-- Bound document size and connector-chain length before handing bytes to the loader.
-- Load in a process or thread whose loss you can absorb, with a stack you have sized deliberately.
+- Bound document size before handing bytes to the loader; JSON deserialization has no engine-level
+  byte cap.
+- Load in a process or thread whose loss you can absorb when your threat model requires isolation.
 - Never load an untrusted document in the same process that is actively commanding equipment.
 
-The rest of the ingest path is bounded and returns typed diagnostics rather than panicking, and
+The structural ingest paths above are bounded and return typed diagnostics rather than panicking.
 `../TESTING.md` requires new ingest code to assert the specific `DiagCode` or error variant rather
-than "an error occurred". That standard is why this one gap is written down instead of assumed away.
+than "an error occurred."
 
 The tests cited on this page live in `oce-api` and run per PR on x86_64 and arm64 under debug and
 release codegen. The full workspace and doctests still wait for the release gate. See

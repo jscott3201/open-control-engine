@@ -93,11 +93,12 @@ always taken after a 20,000-tick warmup, which is exactly the discipline the loa
 
 **Observation — load throughput is flat.** 144–169 MiB/s across a 29× size range, through the whole
 `load_cxf` pipeline: `import_cxf` (JSON-LD parse **and** resolve to a flat ground ModelGraph),
-`flatten`, `unify_and_validate` (§7.10 unification, which mutates the graph), then the build tail
-(registry, schedule, state, outputs, io, params, store recovery). That is not a JSON parse, so a
-plain parser MB/s intuition does not apply. Note the build tail deliberately re-runs pure
-`validate` — see `crates/oce-api/src/engine.rs:190-192` for why — so validation happens twice per
-load.
+`flatten`, §7.10 attribute unification, structural validation, then the build tail (registry,
+schedule, state, outputs, io, params, store recovery). That is not a JSON parse, so a plain parser
+MB/s intuition does not apply. The measured revision re-ran pure validation in the build tail.
+Current `load_cxf` validates once before entering `build_validated_model_in_memory`
+(`crates/oce-api/src/engine.rs:231-244`), so this historical table includes work the current path no
+longer performs.
 
 **Observation — cost is linear in block count.** Across a 28× size range the per-block cost holds
 at roughly 11 ns (11.3 / 11.9 / 10.6 / 11.8 ns for the four largest). `vav_single_zone` is the

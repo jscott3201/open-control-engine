@@ -4,9 +4,17 @@ use oce_cxf::{CxfError, ResolveOptions, ValidationReport, import_cxf};
 use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
+use std::fmt::Write as _;
 
 const ROOT: &str = "http://example.org#top";
 const COMPOSITE_DEPTH_LIMIT: usize = 64;
+const BOUNDARY_HOP_LIMIT: usize = 64;
+const BOUNDARY_TARGET_LIMIT: usize = 65_536;
+const BOUNDARY_TARGET_BYTE_LIMIT: usize = 8 * 1024 * 1024;
+const BOUNDARY_DIAGNOSTIC_GOLDEN: &str =
+    include_str!("fixtures/golden/boundary_traversal_limits.diagnostics.txt");
+const BOUNDARY_ACCEPTED_GOLDEN: &str =
+    include_str!("fixtures/golden/boundary_traversal_accepted.txt");
 const CONDITIONAL_GUARD_TERMS: usize = 2000;
 const _: () = assert!(2 * CONDITIONAL_GUARD_TERMS - 1 < oce_expr::MAX_EXPR_NODES);
 
@@ -99,6 +107,177 @@ fn active_composite_chain(length: usize) -> Value {
         "@context": { "S231": "http://data.ashrae.org/S231P#" },
         "@graph": graph
     })
+}
+
+fn boundary_iri(index: usize) -> String {
+    let suffix = if index.is_multiple_of(2) { "u" } else { "y" };
+    format!("{ROOT}.sub{}.{suffix}", index / 2)
+}
+
+fn boundary_chain(
+    hops: usize,
+    fanout: usize,
+    entries: usize,
+    terminal_padding: usize,
+    close_cycle: bool,
+) -> Value {
+    assert!(hops > 0);
+    assert!(fanout > 0);
+    assert!(entries > 0);
+    let composite_count = hops.div_ceil(2);
+    let terminal = format!("{ROOT}.gain.u{}", "x".repeat(terminal_padding));
+    let mut children = vec![json!({ "@id": format!("{ROOT}.gain") })];
+    children
+        .extend((0..composite_count).map(|index| json!({ "@id": format!("{ROOT}.sub{index}") })));
+    children.extend((0..entries).map(|index| json!({ "@id": format!("{ROOT}.src{index}") })));
+    let mut graph = vec![
+        json!({
+            "@id": ROOT,
+            "@type": "S231:Block",
+            "S231:containsBlock": children
+        }),
+        json!({
+            "@id": format!("{ROOT}.gain"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.MultiplyByParameter",
+            "S231:hasParameter": { "@id": format!("{ROOT}.gain.k") },
+            "S231:hasInput": { "@id": terminal.clone() },
+            "S231:hasOutput": { "@id": format!("{ROOT}.gain.y") }
+        }),
+        json!({ "@id": format!("{ROOT}.gain.k"), "S231:value": 1 }),
+        json!({
+            "@id": terminal,
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+        json!({
+            "@id": format!("{ROOT}.gain.y"),
+            "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+    ];
+    for index in 0..entries {
+        graph.extend([
+            json!({
+                "@id": format!("{ROOT}.src{index}"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": { "@id": format!("{ROOT}.src{index}.k") },
+                "S231:hasOutput": { "@id": format!("{ROOT}.src{index}.y") }
+            }),
+            json!({ "@id": format!("{ROOT}.src{index}.k"), "S231:value": 1 }),
+            json!({
+                "@id": format!("{ROOT}.src{index}.y"),
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" },
+                "S231:isConnectedTo": { "@id": boundary_iri(0) }
+            }),
+        ]);
+    }
+    for index in 0..composite_count {
+        let composite = format!("{ROOT}.sub{index}");
+        graph.extend([
+            json!({
+                "@id": composite,
+                "@type": "S231:Block",
+                "S231:containsBlock": { "@id": format!("{composite}.keep") },
+                "S231:hasInput": { "@id": format!("{composite}.u") },
+                "S231:hasOutput": { "@id": format!("{composite}.y") }
+            }),
+            json!({
+                "@id": format!("{composite}.u"),
+                "@type": "S231:RealInput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
+            }),
+            json!({
+                "@id": format!("{composite}.y"),
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
+            }),
+            json!({
+                "@id": format!("{composite}.keep"),
+                "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+                "S231:hasParameter": { "@id": format!("{composite}.keep.k") },
+                "S231:hasOutput": { "@id": format!("{composite}.keep.y") }
+            }),
+            json!({ "@id": format!("{composite}.keep.k"), "S231:value": 1 }),
+            json!({
+                "@id": format!("{composite}.keep.y"),
+                "@type": "S231:RealOutput",
+                "S231:isOfDataType": { "@id": "S231:Real" }
+            }),
+        ]);
+    }
+    for index in 0..hops {
+        let target = if index + 1 < hops {
+            boundary_iri(index + 1)
+        } else if close_cycle {
+            boundary_iri(0)
+        } else {
+            terminal.clone()
+        };
+        let targets = std::iter::repeat_n(json!({ "@id": target }), fanout).collect::<Vec<_>>();
+        let node = graph
+            .iter_mut()
+            .find(|node| node["@id"].as_str() == Some(boundary_iri(index).as_str()))
+            .expect("chain boundary node");
+        node["S231:isConnectedTo"] = if fanout == 1 {
+            targets.into_iter().next().expect("one target")
+        } else {
+            Value::Array(targets)
+        };
+    }
+    json!({
+        "@context": { "S231": "http://data.ashrae.org/S231P#" },
+        "@graph": graph
+    })
+}
+
+fn add_unreachable_boundary_contradiction(document: &mut Value, hops: usize) {
+    let source_composite = hops.div_ceil(2) - 1;
+    assert!(source_composite > 0);
+    let source = format!("{ROOT}.sub{source_composite}.y");
+    let target = format!("{ROOT}.sub{}.y", source_composite - 1);
+    let node = document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .iter_mut()
+        .find(|node| node["@id"].as_str() == Some(source.as_str()))
+        .expect("unused boundary output");
+    node["S231:isConnectedTo"] = json!({ "@id": target });
+}
+
+fn render_diagnostics(diags: &[Diagnostic]) -> String {
+    let mut rendered = String::new();
+    for diag in diags {
+        writeln!(
+            rendered,
+            "{}|{}|{}|{}",
+            diag.severity.as_str(),
+            diag.code.as_str(),
+            diag.subject.as_deref().unwrap_or("<none>"),
+            diag.message
+        )
+        .expect("write diagnostic");
+    }
+    rendered
+}
+
+fn render_boundary_graph(graph: &ModelGraph) -> String {
+    let mut rendered = String::new();
+    writeln!(rendered, "blocks={}", graph.blocks.len()).expect("write blocks");
+    writeln!(rendered, "connectors={}", graph.connectors.len()).expect("write connectors");
+    writeln!(rendered, "connections={}", graph.connections.len()).expect("write connections");
+    for connection in &graph.connections {
+        let source = graph.connectors[connection.from.0 as usize]
+            .iri
+            .as_deref()
+            .unwrap_or("<none>");
+        let target = graph.connectors[connection.to.0 as usize]
+            .iri
+            .as_deref()
+            .unwrap_or("<none>");
+        writeln!(rendered, "{source} -> {target}").expect("write connection");
+    }
+    rendered
 }
 
 fn constant_document(value: String) -> Value {
@@ -246,6 +425,183 @@ fn composite_nesting_accepts_the_limit_and_rejects_one_past() {
     assert_eq!(
         diags[0].message,
         "composite/nesting-too-deep: containsBlock nesting exceeds the supported depth (64)"
+    );
+}
+
+#[test]
+fn nesting_refusal_precedes_erased_boundary_orientation() {
+    let mut document = active_composite_chain(COMPOSITE_DEPTH_LIMIT + 1);
+    let nested = format!("{ROOT}.n1");
+    let boundary = format!("{nested}.u");
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .iter_mut()
+        .find(|node| node["@id"].as_str() == Some(nested.as_str()))
+        .expect("nested composite")["S231:hasInput"] = json!({ "@id": boundary });
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .push(json!({
+            "@id": boundary,
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:isConnectedTo": { "@id": nested }
+        }));
+
+    assert_eq!(
+        diagnostics(import(&document)),
+        vec![
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                "composite/nesting-too-deep: containsBlock nesting exceeds the supported depth \
+                 (64)",
+            )
+            .with_subject(format!("{ROOT}.n64"))
+        ]
+    );
+}
+
+#[test]
+fn boundary_hops_accept_the_limit_and_reject_the_attempted_next_hop() {
+    let accepted = on_small_stack(boundary_chain(BOUNDARY_HOP_LIMIT, 1, 1, 0, false));
+    let (graph, report) = accepted.expect("the exact hop limit must import");
+    assert!(report.is_empty(), "{report:?}");
+    assert_eq!(render_boundary_graph(&graph), BOUNDARY_ACCEPTED_GOLDEN);
+
+    let diags = diagnostics(on_small_stack(boundary_chain(
+        BOUNDARY_HOP_LIMIT + 1,
+        1,
+        1,
+        0,
+        false,
+    )));
+    assert_eq!(
+        diags,
+        vec![Diagnostic::error(
+            DiagCode::MalformedDocument,
+            "composite boundary resolution exceeds the supported isConnectedTo hop count (64)",
+        )]
+    );
+}
+
+#[test]
+fn shallow_boundary_dag_rejects_the_attempted_target_past_the_work_limit() {
+    // One 15-hop source walk examines 65,535 duplicate-preserving targets. The document-wide
+    // budget therefore rejects boundary 1 in the second source walk, before graph construction or
+    // complete path materialization.
+    let document = boundary_chain(15, 2, 2, 0, false);
+    let expected = vec![Diagnostic::error(
+        DiagCode::MalformedDocument,
+        "composite boundary resolution exceeds the supported target examination count (65536)",
+    )];
+    let first = diagnostics(on_small_stack(document.clone()));
+    let second = diagnostics(on_small_stack(document));
+    assert_eq!(first, expected);
+    assert_eq!(second, expected);
+    assert_eq!(BOUNDARY_TARGET_LIMIT, 65_536);
+}
+
+#[test]
+fn expanded_target_bytes_reject_before_the_count_limit() {
+    let padding = 256;
+    let document = boundary_chain(15, 2, 1, padding, false);
+    let diags = diagnostics(on_small_stack(document));
+    assert_eq!(diags.len(), 1, "{diags:?}");
+    assert_eq!(diags[0].code, DiagCode::MalformedDocument);
+    assert_eq!(diags[0].subject, None);
+    assert_eq!(
+        diags[0].message,
+        "composite boundary resolution exceeds the supported aggregate target IRI byte count \
+         (8388608)"
+    );
+    assert_eq!(BOUNDARY_TARGET_BYTE_LIMIT, 8_388_608);
+}
+
+#[test]
+fn boundary_resource_limits_precede_deferred_orientation_diagnostics() {
+    let mut hop = boundary_chain(BOUNDARY_HOP_LIMIT + 1, 1, 1, 0, false);
+    add_unreachable_boundary_contradiction(&mut hop, BOUNDARY_HOP_LIMIT + 1);
+    let mut targets = boundary_chain(15, 2, 2, 0, false);
+    add_unreachable_boundary_contradiction(&mut targets, 15);
+    let mut bytes = boundary_chain(15, 2, 1, 256, false);
+    add_unreachable_boundary_contradiction(&mut bytes, 15);
+
+    for (document, message) in [
+        (
+            hop,
+            "composite boundary resolution exceeds the supported isConnectedTo hop count (64)",
+        ),
+        (
+            targets,
+            "composite boundary resolution exceeds the supported target examination count (65536)",
+        ),
+        (
+            bytes,
+            "composite boundary resolution exceeds the supported aggregate target IRI byte count \
+             (8388608)",
+        ),
+    ] {
+        assert_eq!(
+            diagnostics(on_small_stack(document)),
+            vec![Diagnostic::error(DiagCode::MalformedDocument, message)]
+        );
+    }
+}
+
+#[test]
+fn boundary_cycle_revisit_precedes_the_hop_limit() {
+    let diags = diagnostics(on_small_stack(boundary_chain(
+        BOUNDARY_HOP_LIMIT,
+        1,
+        1,
+        0,
+        true,
+    )));
+    assert!(diags.iter().any(|diag| {
+        diag.code == DiagCode::UnresolvedReference
+            && diag.subject.as_deref() == Some(boundary_iri(0).as_str())
+    }));
+    assert!(
+        diags
+            .iter()
+            .all(|diag| { !diag.message.contains("supported isConnectedTo hop count") })
+    );
+}
+
+#[test]
+fn missing_boundary_at_the_hop_limit_keeps_unresolved_reference_precedence() {
+    let mut document = boundary_chain(BOUNDARY_HOP_LIMIT + 1, 1, 1, 0, false);
+    let missing = boundary_iri(BOUNDARY_HOP_LIMIT);
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .retain(|node| node["@id"].as_str() != Some(missing.as_str()));
+    let diags = diagnostics(on_small_stack(document));
+    assert!(diags.iter().any(|diag| {
+        diag.code == DiagCode::UnresolvedReference
+            && diag.subject.as_deref() == Some(missing.as_str())
+    }));
+    assert!(
+        diags
+            .iter()
+            .all(|diag| { !diag.message.contains("supported isConnectedTo hop count") })
+    );
+}
+
+#[test]
+fn resource_rejections_match_the_checked_in_diagnostic_golden() {
+    let hop = diagnostics(on_small_stack(boundary_chain(
+        BOUNDARY_HOP_LIMIT + 1,
+        1,
+        1,
+        0,
+        false,
+    )));
+    let work = diagnostics(on_small_stack(boundary_chain(15, 2, 2, 0, false)));
+    assert_eq!(
+        render_diagnostics(&[hop[0].clone(), work[0].clone()]),
+        BOUNDARY_DIAGNOSTIC_GOLDEN
     );
 }
 

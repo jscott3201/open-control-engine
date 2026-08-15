@@ -37,11 +37,11 @@ Enumerate the input domain and hit every boundary and degenerate case:
   `MAX_COMPOSITE_NESTING_DEPTH`, returning `MalformedDocument`. These limits intentionally
   narrow acceptance: expressions whose parse nesting exceeds 64 guarded entries (measured at 31
   nested parenthesis/brace/call levels or 62 unary signs), expressions deeper than 64 AST nodes or
-  larger than 4096 AST nodes, and composites deeper than 64 are rejected even if a
-  shallower/smaller input of the same shape is accepted. One known gap, so state it rather than
-  assume it: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
-  depth-bounded. Assert the *specific* `DiagCode` / error variant, not merely "an error occurred."
-  Fuzz-grade hostility is the expectation within the bounded ingest paths.
+  larger than 4096 AST nodes, composites deeper than 64, boundary paths beyond 64 non-top hops,
+  and boundary walks beyond 65,536 target examinations or 8 MiB of aggregate target-IRI bytes are
+  rejected even if a smaller input of the same shape is accepted. Assert the *specific* `DiagCode`
+  / error variant, not merely "an error occurred." Fuzz-grade hostility is the expectation within
+  the bounded ingest paths.
 
 > **Why this is non-negotiable — the C1 lesson.** In M1-PR-1 the expression evaluator passed 22
 > tests and all CI gates while silently corrupting integer comparisons above 2^53 (relational
@@ -129,13 +129,14 @@ The register is evidence only: membership does not change discrepancies, compari
 tier status, goldens, or test results. Its initial revision is empty because no current clean-room
 Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
-The separate OpenModelica evidence set executes one exhaustive finite-domain case:
-`CDL.Logical.Nand/all_boolean_input_pairs_evented`, under exact Boolean comparison against OMC
-1.25.1 and the pinned Buildings and MSL sources. The light-gated sentinel validates the committed
-raw output, keep-last projection, schedule, repeat-run records, OCI identities, and mutation
-controls; Docker does not run in CI. This is scoped Tier-3 evidence for that case only. The global
-Tier-3 report remains `Skipped`; no stateful, numeric, sequence-wide, or cross-architecture OMC
-claim follows from it.
+The separate OpenModelica evidence profiles execute two exact Boolean cases against OMC 1.25.1 and
+the pinned Buildings and MSL sources: exhaustive
+`CDL.Logical.Nand/all_boolean_input_pairs_evented`, and the stateful
+`CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule. The light-gated
+sentinel validates committed raw output, keep-last projection, schedules, repeat-run records, OCI
+identities, and mutation controls; Docker does not run in CI. These are scoped Tier-3 results for
+the two named cases only. The global Tier-3 report remains `Skipped`; no numeric, sequence-wide, or
+cross-architecture OMC claim follows from them.
 
 ### 4. Determinism goldens — same input, bit-identical output, every time
 
@@ -161,9 +162,8 @@ A PR is **not done** until, for every unit of behavior it adds or changes:
 3. An oracle cross-check where a reference result exists.
 4. A determinism check where the code ingests, orders, or executes.
 5. Every error path asserts a **specific** typed variant / `DiagCode`. Expression parsing,
-   evaluation, and composite lowering reject over-limit depth/size with typed outcomes. One known
-   gap remains: composite boundary resolution recurses per `isConnectedTo` hop and is not yet
-   depth-bounded.
+   evaluation, composite nesting, and boundary lowering reject over-limit depth, size, or work with
+   typed outcomes.
 
 Reviewers reject PRs that add behavior with only happy-path tests. "I couldn't think of an edge
 case" is itself a finding to resolve, not a pass.

@@ -202,7 +202,9 @@ pub enum DriverError {
     Config(ConfigError),
     /// CSV/table encoding rejected the run.
     Csv(CsvError),
-    /// Frozen facade operation failed.
+    /// Loading the model through the frozen facade failed.
+    Load(OcError),
+    /// A frozen facade operation failed after the model loaded.
     Engine(OcError),
     /// The reference table has no usable column names.
     MissingColumnNames,
@@ -242,6 +244,7 @@ impl fmt::Display for DriverError {
         match self {
             DriverError::Config(err) => write!(f, "{err}"),
             DriverError::Csv(err) => write!(f, "{err}"),
+            DriverError::Load(err) => write!(f, "{err}"),
             DriverError::Engine(err) => write!(f, "{err}"),
             DriverError::MissingColumnNames => {
                 write!(f, "reference table must include a # columns: header")
@@ -278,6 +281,7 @@ impl Error for DriverError {
         match self {
             DriverError::Config(err) => Some(err),
             DriverError::Csv(err) => Some(err),
+            DriverError::Load(err) => Some(err),
             DriverError::Engine(err) => Some(err),
             DriverError::MissingColumnNames
             | DriverError::EmptyReference
@@ -336,7 +340,7 @@ pub fn drive_trace_with_options(
     validate_reference_shape(reference)?;
 
     let mut engine = Engine::in_memory();
-    let load_report = engine.load_cxf(cxf)?;
+    let load_report = engine.load_cxf(cxf).map_err(DriverError::Load)?;
     // Fixed verification origin keeps negative model-time fixtures representable without a clock.
     engine.set_realtime_epoch_unix_nanos(1_700_000_000_000_000_000);
 
