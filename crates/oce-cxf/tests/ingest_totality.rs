@@ -429,6 +429,40 @@ fn composite_nesting_accepts_the_limit_and_rejects_one_past() {
 }
 
 #[test]
+fn nesting_refusal_precedes_erased_boundary_orientation() {
+    let mut document = active_composite_chain(COMPOSITE_DEPTH_LIMIT + 1);
+    let nested = format!("{ROOT}.n1");
+    let boundary = format!("{nested}.u");
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .iter_mut()
+        .find(|node| node["@id"].as_str() == Some(nested.as_str()))
+        .expect("nested composite")["S231:hasInput"] = json!({ "@id": boundary });
+    document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .push(json!({
+            "@id": boundary,
+            "@type": "S231:RealInput",
+            "S231:isOfDataType": { "@id": "S231:Real" },
+            "S231:isConnectedTo": { "@id": nested }
+        }));
+
+    assert_eq!(
+        diagnostics(import(&document)),
+        vec![
+            Diagnostic::error(
+                DiagCode::MalformedDocument,
+                "composite/nesting-too-deep: containsBlock nesting exceeds the supported depth \
+                 (64)",
+            )
+            .with_subject(format!("{ROOT}.n64"))
+        ]
+    );
+}
+
+#[test]
 fn boundary_hops_accept_the_limit_and_reject_the_attempted_next_hop() {
     let accepted = on_small_stack(boundary_chain(BOUNDARY_HOP_LIMIT, 1, 1, 0, false));
     let (graph, report) = accepted.expect("the exact hop limit must import");
