@@ -20,7 +20,7 @@ use super::{
     THERMAL_ZONES_CONTROL_LOOPS, THERMAL_ZONES_ZONE_STATES, TRIM_AND_RESPOND_HAVE_HOL_FALSE, VAV,
 };
 
-/// Pinned Buildings source revision used by every G36 Tier-A sequence oracle.
+/// Pinned Buildings source revision used by every G36 Tier-A sequence reference.
 pub(super) const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// Return the canonical upstream Buildings source paths for a registered sequence.

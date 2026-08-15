@@ -1,14 +1,14 @@
-//! golden-gen — Tier-A oracle generator.
+//! golden-gen — Tier-A source and execution-profile reference generator.
 //!
-//! Emits closed-form CDL reference goldens as Modelica `CombiTimeTable` CSV under
+//! Emits source-derived or explicitly profiled goldens as Modelica `CombiTimeTable` CSV under
 //! `tools/golden-gen/goldens/<class_path>/<signal>.csv`, a sibling `<signal>.prov.json` per golden,
 //! one per-block `reference.csv` containing `time`, machine-readable inputs, and all outputs, and
 //! a crate-root `oracle.lock` toolchain/version pin skeleton.
 //!
-//! ANTI-TAUTOLOGY: reference math is re-derived from `_spec/03`, `_spec/02`, `_spec/01`,
-//! `_spec/07` (format only), and CDL §7.x. Some exact oracles share a pinned math kernel or
-//! restate the documented recurrence used by the engine. This crate has ZERO dependency on
-//! `oce-blocks` (the implementation under test) and never reads it.
+//! ANTI-TAUTOLOGY: reference math is re-derived from the applicable CDL / Buildings sources and
+//! specs or from an explicitly named execution profile. Some exact references share a pinned math
+//! kernel or restate the documented recurrence used by the engine. This crate has ZERO dependency
+//! on `oce-blocks` (the implementation under test) and never reads it.
 
 mod csv;
 mod discrete_sources;
@@ -728,7 +728,7 @@ fn oracle_lock() -> String {
             "field_separator = \" \"\n",
             "rust_toolchain = \"<PIN: see rust-toolchain.toml>\"\n",
             "ryu_version = \"1.0\"\n",
-            "source = \"closed-form CDL spec derivation; depends_on_oce_blocks = false\"\n",
+            "source = \"CDL / Buildings source semantics or declared execution profile; depends_on_oce_blocks = false\"\n",
         ),
         generator = GENERATOR_VERSION,
     )

@@ -1,8 +1,7 @@
-//! Oracle data model: the spec-derived value kinds and the in-memory description of one golden.
+//! Data model for source-derived and execution-profile reference goldens.
 //!
-//! All math that fills these structures lives in the family modules (`reals`, `logical`,
-//! `integers_conversions`, `discrete_sources`). Each family re-derives its reference series ONLY
-//! from `_spec/03`, `_spec/02`, `_spec/01`, and CDL §7.x — never from `oce-blocks`.
+//! The family modules derive each series from the applicable CDL source/spec or named execution
+//! profile, never from `oce-blocks`.
 
 /// Scalar signal kind, matching the conformance `ValueKind` encoding contract (`_spec/07` §9.3).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
