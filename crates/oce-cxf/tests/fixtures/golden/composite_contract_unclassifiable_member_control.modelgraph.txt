@@ -1,12 +1,13 @@
 blocks: 1
-  B0 decl=0 class=CDL.Reals.Sources.Ramp instance_iri=Some("http://example.org#cc.unclassifiable_member_control.ramp")
+  B0 decl=0 class=CDL.Reals.Sources.Sin instance_iri=Some("http://example.org#M.sin")
     inputs=[] outputs=[0]
-    param height=Real(0x4000000000000000)
-    param duration=Real(0x4024000000000000)
+    param amplitude=Real(0x4000000000000000)
+    param freqHz=Real(0x4024000000000000)
+    param phase=Real(0x0000000000000000)
     param offset=Real(0x0000000000000000)
     param startTime=Real(0x0000000000000000)
 connectors: 1
-  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#cc.unclassifiable_member_control.ramp.y")
+  C0 block=B0 dir=Out type=Real decl=0 iri=Some("http://example.org#M.sin.y")
 connections: 0
 external_inputs: []
 boundary_outputs: 0

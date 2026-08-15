@@ -684,6 +684,37 @@ fn inactive_leaf_parameter_routes_ground_byte_identically() {
     );
 }
 
+#[test]
+fn unclassifiable_member_control_changes_only_one_nodeless_member_name() {
+    const ACCEPTED_MEMBER: &str = "http://example.org#M.sin.y";
+    const REJECTED_MEMBER: &str = "http://example.org#M.sin.zzz";
+
+    let accepted = read_fixture("accepted/unclassifiable_member_control.jsonld");
+    let rejected = read_fixture("rejected/unsupported_instance_member.jsonld");
+    let member_count = |source: &str| {
+        let document: serde_json::Value = serde_json::from_str(source).expect("valid fixture JSON");
+        document["@graph"]
+            .as_array()
+            .expect("fixture graph")
+            .iter()
+            .find(|node| node["@id"] == "http://example.org#M.sin")
+            .expect("Sin instance")["S231:hasInstance"]
+            .as_array()
+            .expect("member array")
+            .len()
+    };
+
+    assert_eq!(member_count(&accepted), 6, "accepted member count");
+    assert_eq!(member_count(&rejected), 6, "rejected member count");
+    assert_eq!(accepted.matches(ACCEPTED_MEMBER).count(), 1);
+    assert_eq!(rejected.matches(REJECTED_MEMBER).count(), 1);
+    assert_eq!(
+        accepted.replacen(ACCEPTED_MEMBER, REJECTED_MEMBER, 1),
+        rejected,
+        "the control pair must differ only by the final node-less member name"
+    );
+}
+
 // ---- README index -----------------------------------------------------------------------------
 
 #[test]
