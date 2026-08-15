@@ -2,7 +2,8 @@
 
 use super::*;
 
-const HEADER: &str = "\"time\",\"f1\",\"f2\",\"u\",\"x1\",\"x2\",\"yAbove\",\"yBelow\",\"yBoth\",\"yUnlimited\"\n";
+const HEADER: &str =
+    "\"time\",\"f1\",\"f2\",\"u\",\"x1\",\"x2\",\"yAbove\",\"yBelow\",\"yBoth\",\"yUnlimited\"\n";
 const ROW: &str = "0,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n";
 
 fn valid() -> Vec<u8> {
@@ -25,12 +26,37 @@ fn valid_event_group_keeps_the_post_event_row_and_reorders_columns() {
 #[test]
 fn raw_header_identity_width_and_quoting_are_closed() {
     for (input, code) in [
-        (format!("{}{}", HEADER.replace("\"time\"", "time"), ROW), ErrorCode::HeaderIdentity),
-        (format!("{}{}", HEADER.replace("\"f1\",\"f2\"", "\"f2\",\"f1\""), ROW), ErrorCode::HeaderIdentity),
-        (format!("{}{}", HEADER.replace("\"yUnlimited\"", "\"yUnlimited\",\"z\""), ROW), ErrorCode::HeaderIdentity),
-        (format!("{HEADER}0,1.25,3.25,-4,-2,2,0.25,1.25,1.25\n"), ErrorCode::Shape),
+        (
+            format!("{}{}", HEADER.replace("\"time\"", "time"), ROW),
+            ErrorCode::HeaderIdentity,
+        ),
+        (
+            format!(
+                "{}{}",
+                HEADER.replace("\"f1\",\"f2\"", "\"f2\",\"f1\""),
+                ROW
+            ),
+            ErrorCode::HeaderIdentity,
+        ),
+        (
+            format!(
+                "{}{}",
+                HEADER.replace("\"yUnlimited\"", "\"yUnlimited\",\"z\""),
+                ROW
+            ),
+            ErrorCode::HeaderIdentity,
+        ),
+        (
+            format!("{HEADER}0,1.25,3.25,-4,-2,2,0.25,1.25,1.25\n"),
+            ErrorCode::Shape,
+        ),
     ] {
-        assert_eq!(canonicalize_bytes(input.as_bytes(), "line").unwrap_err().code, code);
+        assert_eq!(
+            canonicalize_bytes(input.as_bytes(), "line")
+                .unwrap_err()
+                .code,
+            code
+        );
     }
 }
 
@@ -42,7 +68,9 @@ fn every_non_finite_column_is_rejected() {
             cells[column] = token;
             let input = format!("{HEADER}{}\n", cells.join(","));
             assert_eq!(
-                canonicalize_bytes(input.as_bytes(), "line").unwrap_err().code,
+                canonicalize_bytes(input.as_bytes(), "line")
+                    .unwrap_err()
+                    .code,
                 ErrorCode::CellType,
                 "column {column} token {token}"
             );
@@ -53,13 +81,32 @@ fn every_non_finite_column_is_rejected() {
 #[test]
 fn malformed_cells_times_and_names_fail_with_typed_codes() {
     for (input, code) in [
-        (format!("{HEADER}0,1.25,3.25,\"-4\",-2,2,0.25,1.25,1.25,0.25\n"), ErrorCode::CellType),
-        (format!("{HEADER}1,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n{ROW}"), ErrorCode::TimeOrder),
-        (format!("{HEADER}{ROW}1,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n0,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n"), ErrorCode::TimeOrder),
-        (format!("{}{}", HEADER.replace('\n', "\r\n"), ROW), ErrorCode::CsvSyntax),
+        (
+            format!("{HEADER}0,1.25,3.25,\"-4\",-2,2,0.25,1.25,1.25,0.25\n"),
+            ErrorCode::CellType,
+        ),
+        (
+            format!("{HEADER}1,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n{ROW}"),
+            ErrorCode::TimeOrder,
+        ),
+        (
+            format!(
+                "{HEADER}{ROW}1,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n0,1.25,3.25,-4,-2,2,0.25,1.25,1.25,0.25\n"
+            ),
+            ErrorCode::TimeOrder,
+        ),
+        (
+            format!("{}{}", HEADER.replace('\n', "\r\n"), ROW),
+            ErrorCode::CsvSyntax,
+        ),
         (format!("{HEADER}{}", ROW.trim_end()), ErrorCode::CsvSyntax),
     ] {
-        assert_eq!(canonicalize_bytes(input.as_bytes(), "line").unwrap_err().code, code);
+        assert_eq!(
+            canonicalize_bytes(input.as_bytes(), "line")
+                .unwrap_err()
+                .code,
+            code
+        );
     }
     assert_eq!(
         canonicalize_bytes(&valid(), "not-a-name").unwrap_err().code,
@@ -103,13 +150,17 @@ fn configured_bounds_reject_their_first_out_of_range_value() {
     let long_cell = "1".repeat(MAX_CELL_BYTES + 1);
     let input = format!("{HEADER}0,{long_cell},3.25,-4,-2,2,0.25,1.25,1.25,0.25\n");
     assert_eq!(
-        canonicalize_bytes(input.as_bytes(), "line").unwrap_err().code,
+        canonicalize_bytes(input.as_bytes(), "line")
+            .unwrap_err()
+            .code,
         ErrorCode::CellType
     );
 
     let long_line = format!("{HEADER}{}\n", "0".repeat(MAX_LINE_BYTES + 1));
     assert_eq!(
-        canonicalize_bytes(long_line.as_bytes(), "line").unwrap_err().code,
+        canonicalize_bytes(long_line.as_bytes(), "line")
+            .unwrap_err()
+            .code,
         ErrorCode::CsvSyntax
     );
     assert_eq!(
@@ -136,7 +187,13 @@ fn path_reader_rejects_symlinks_directories_devices_and_fifos() {
     for path in [&link, &directory, Path::new("/dev/null")] {
         assert_eq!(read_bounded_path(path).unwrap_err().code, ErrorCode::Io);
     }
-    assert!(std::process::Command::new("mkfifo").arg(&fifo).status().unwrap().success());
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap()
+            .success()
+    );
     assert_eq!(read_bounded_path(&fifo).unwrap_err().code, ErrorCode::Io);
     std::fs::remove_dir_all(directory).unwrap();
 }

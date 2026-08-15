@@ -159,10 +159,12 @@ code-dependency firewall — are described in [`../README.md`](../README.md) and
 
 The load-bearing limitation, stated plainly: **no sequence here has been executed against an
 external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
-`CDL.Logical.Nand` Boolean case and one stateful `CDL.Logical.Toggle` event schedule, but no numeric
-tolerance or broader sequence behavior. `CDL.Logical.Pre` is explicitly excluded from an
-expected-green OpenModelica differential under HostTick v1. The global Tier-3 report remains
-skipped, and no number on this page stands in for that deferred coverage.
+`CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` event schedule, and one finite
+`CDL.Reals.Line` matrix with exact binary64 operations. The Line result does not cover arbitrary
+Real inputs, general tolerances, solver behavior, or broader sequence behavior. `CDL.Logical.Pre`
+is explicitly excluded from an expected-green OpenModelica differential under HostTick v1. The
+global Tier-3 report remains skipped, and no number on this page stands in for that deferred
+coverage.
 
 For what happens when you export a loaded sequence back out to CXF, see
 [`cxf-round-trip.md`](cxf-round-trip.md).

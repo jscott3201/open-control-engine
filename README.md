@@ -146,10 +146,11 @@ Stating this plainly is more useful than a feature list.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
   arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
-- **Its external-reference evidence is two Boolean cases, not broad engine coverage.**
-  `CDL.Logical.Nand` has one exhaustive case, and `CDL.Logical.Toggle` has one stateful event-schedule
-  case. No sequence or numeric tolerance has been checked that way, and the global Tier-3 report
-  remains skipped —
+- **Its external-reference evidence is three cases, not broad engine coverage.**
+  `CDL.Logical.Nand` has one exhaustive Boolean case, `CDL.Logical.Toggle` has one stateful Boolean
+  event schedule, and `CDL.Reals.Line` has one finite matrix covering four limit modes and five
+  input regions. No sequence or general numeric tolerance has been checked that way, and the global
+  Tier-3 report remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
   [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::tick` call advances
@@ -209,8 +210,8 @@ code-dependency firewall. Of the 410 signal goldens, 390 check CDL / Buildings s
 psychrometric, and solar Real goldens use a documented 1e-12 aligned-tolerance band.
 
 Two global report tiers are **not wired**, and no sequence here has been executed against an external
-Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive Boolean Nand
-and one stateful Boolean Toggle schedule.
+Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive Boolean Nand,
+one stateful Boolean Toggle schedule, and one finite exact-bit Line matrix.
 
 **[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
 it cannot, and which checks are not running.

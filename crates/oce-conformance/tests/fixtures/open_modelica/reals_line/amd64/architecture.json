@@ -1,0 +1,15 @@
+{
+  "format": "oce-openmodelica-line-native-architecture-v1",
+  "architecture": "amd64",
+  "platform": "linux/amd64",
+  "host_architecture": "amd64",
+  "docker_server_architecture": "x86_64",
+  "container_architecture": "x86_64",
+  "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
+  "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
+  "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+  "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+  "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
+  "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+  "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04"
+}

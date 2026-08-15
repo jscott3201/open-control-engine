@@ -131,14 +131,15 @@ The register is evidence only: membership does not change discrepancies, compari
 tier status, goldens, or test results. Its initial revision is empty because no current clean-room
 Nand discrepancy reproduces. A private test reader validates the closed schema and local evidence
 digests; the existing `oce-cxf` `fixture_structural_oracle` binary runs the bounded per-PR sentinel.
-The separate OpenModelica evidence profiles execute two exact Boolean cases against OMC 1.25.1 and
-the pinned Buildings and MSL sources: exhaustive
-`CDL.Logical.Nand/all_boolean_input_pairs_evented`, and the stateful
-`CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule. The light-gated
+The separate OpenModelica evidence profiles execute three cases against OMC 1.25.1 and the pinned
+Buildings and MSL sources: exhaustive `CDL.Logical.Nand/all_boolean_input_pairs_evented`, the
+stateful `CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` schedule, and
+`CDL.Reals.Line/four_limit_modes_five_dyadic_regions`. The Line claim is one finite matrix whose
+operations are exact in binary64; it is not an arbitrary Real or tolerance result. The light-gated
 sentinel validates committed raw output, keep-last projection, schedules, repeat-run records, OCI
-identities, and mutation controls; Docker does not run in CI. These are scoped Tier-3 results for
-the two named cases only. The global Tier-3 report remains `Skipped`; no numeric, sequence-wide, or
-cross-architecture OMC claim follows from them.
+identities, cross-architecture Line canonical equality, and mutation controls; Docker does not run
+in normal CI. These are scoped Tier-3 results for the three named cases only. The global Tier-3
+report remains `Skipped`; no sequence-wide, solver, or cross-architecture raw-byte claim follows.
 
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
 differs from the fixed HostTick v1 projection, which advances once per HostTick transition.

@@ -3,13 +3,6 @@
 name: OpenModelica Line evidence
 
 on:
-  pull_request:
-    branches: [development]
-    types: [opened, synchronize, reopened]
-    paths:
-      - '.github/workflows/openmodelica-line-evidence.yml'
-      - 'tools/openmodelica-line-reference/**'
-      - 'crates/oce-cxf/tests/open_modelica_line_reference/**'
   workflow_dispatch:
 
 permissions:

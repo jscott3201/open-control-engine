@@ -11,6 +11,7 @@ import pathlib
 import stat
 import struct
 import sys
+import tempfile
 from typing import Any, NoReturn
 
 MAX_FILE = 1024 * 1024
@@ -108,6 +109,12 @@ def bits(value):
 
 def safe_directory(path, name):
     path = pathlib.Path(path).absolute()
+    lexical_temp = pathlib.Path(tempfile.gettempdir()).absolute()
+    resolved_temp = lexical_temp.resolve()
+    try:
+        path = resolved_temp / path.relative_to(lexical_temp)
+    except ValueError:
+        pass
     current = pathlib.Path(path.anchor)
     for part in path.parts[1:]:
         current /= part

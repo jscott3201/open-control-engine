@@ -1,0 +1,608 @@
+{
+  "format": "oce-openmodelica-line-external-run-v1",
+  "scope": {
+    "class": "CDL.Reals.Line",
+    "scenario": "four_limit_modes_five_dyadic_regions",
+    "inputs": [
+      "x1",
+      "f1",
+      "x2",
+      "f2",
+      "u"
+    ],
+    "outputs": [
+      "yBoth",
+      "yBelow",
+      "yAbove",
+      "yUnlimited"
+    ],
+    "comparison": "exact_finite_f64_bits",
+    "global_tier3_status": "skipped"
+  },
+  "image": {
+    "repository": "openmodelica/openmodelica",
+    "tag": "v1.25.1-minimal",
+    "index_digest": "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
+    "platforms": [
+      {
+        "platform": "linux/arm64",
+        "manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
+        "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666"
+      },
+      {
+        "platform": "linux/amd64",
+        "manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
+        "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "name": "buildings",
+      "repository": "https://github.com/lbl-srg/modelica-buildings.git",
+      "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365",
+      "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
+      "package": "Buildings",
+      "version": "14.0.0",
+      "files": [
+        {
+          "path": "Buildings/package.mo",
+          "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"
+        },
+        {
+          "path": "Buildings/Controls/OBC/CDL/Reals/Line.mo",
+          "sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"
+        }
+      ]
+    },
+    {
+      "name": "modelica",
+      "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git",
+      "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834",
+      "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
+      "package": "Modelica",
+      "version": "4.1.0",
+      "files": [
+        {
+          "path": "Complex.mo",
+          "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"
+        },
+        {
+          "path": "Modelica/package.mo",
+          "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+        },
+        {
+          "path": "Modelica/Blocks/Sources.mo",
+          "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"
+        },
+        {
+          "path": "ModelicaServices/package.mo",
+          "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"
+        }
+      ]
+    }
+  ],
+  "simulation": {
+    "method": "dassl",
+    "start_time": "0",
+    "stop_time": "300",
+    "number_of_intervals": 5,
+    "tolerance": "1e-9",
+    "output_format": "csv",
+    "variable_filter": "^(x1|f1|x2|f2|u|yBoth|yBelow|yAbove|yUnlimited)$",
+    "simflags": "",
+    "event_emission": true,
+    "raw_header": "\"time\",\"f1\",\"f2\",\"u\",\"x1\",\"x2\",\"yAbove\",\"yBelow\",\"yBoth\",\"yUnlimited\""
+  },
+  "projection": {
+    "columns": [
+      "time",
+      "x1",
+      "f1",
+      "x2",
+      "f2",
+      "u",
+      "yBoth",
+      "yBelow",
+      "yAbove",
+      "yUnlimited"
+    ],
+    "grouping": "contiguous_equal_f64_bits",
+    "selection": "last",
+    "normalize_times": false,
+    "raw_rows": 15,
+    "canonical_rows": 10,
+    "group_sizes": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+    ],
+    "canonical_time_bits": [
+      "0000000000000000",
+      "404e000000000000",
+      "404e000000000eff",
+      "405e000000000000",
+      "405e000000000781",
+      "4066800000000000",
+      "40668000000003c1",
+      "406e000000000000",
+      "406e0000000003c1",
+      "4072c00000000000"
+    ],
+    "canonical_input_bits": {
+      "x1": [
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "c000000000000000"
+      ],
+      "f1": [
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000",
+        "3ff4000000000000"
+      ],
+      "x2": [
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4000000000000000"
+      ],
+      "f2": [
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000",
+        "400a000000000000"
+      ],
+      "u": [
+        "c010000000000000",
+        "c010000000000000",
+        "c000000000000000",
+        "c000000000000000",
+        "0000000000000000",
+        "0000000000000000",
+        "4000000000000000",
+        "4000000000000000",
+        "4010000000000000",
+        "4010000000000000"
+      ]
+    }
+  },
+  "expected_output_bits": {
+    "yBoth": [
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "4002000000000000",
+      "4002000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "400a000000000000"
+    ],
+    "yBelow": [
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "4002000000000000",
+      "4002000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "4011000000000000",
+      "4011000000000000"
+    ],
+    "yAbove": [
+      "3fd0000000000000",
+      "3fd0000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "4002000000000000",
+      "4002000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "400a000000000000"
+    ],
+    "yUnlimited": [
+      "3fd0000000000000",
+      "3fd0000000000000",
+      "3ff4000000000000",
+      "3ff4000000000000",
+      "4002000000000000",
+      "4002000000000000",
+      "400a000000000000",
+      "400a000000000000",
+      "4011000000000000",
+      "4011000000000000"
+    ]
+  },
+  "architectures": [
+    {
+      "name": "arm64",
+      "platform": "linux/arm64",
+      "host_architecture": "arm64",
+      "docker_server_architecture": "aarch64",
+      "container_architecture": "aarch64",
+      "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
+      "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
+      "omc_version": "OpenModelica 1.25.1",
+      "gcc_version": "11.4.0",
+      "binutils_version": "2.38",
+      "glibc_version": "2.35",
+      "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+      "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+      "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
+      "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+      "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04",
+      "runs": [
+        {
+          "id": "run-a",
+          "output_directory_token": "fresh-run-a",
+          "log_sha256": "39adae83f4170482cbdcad6f3f2d5214deb3be8be32c7f422c65a102f379f318",
+          "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+        },
+        {
+          "id": "run-b",
+          "output_directory_token": "fresh-run-b",
+          "log_sha256": "90a4e77143eb6904a35070cd01baf27fcd5ff0b56c064484ad0612e1fcda0134",
+          "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+        }
+      ]
+    },
+    {
+      "name": "amd64",
+      "platform": "linux/amd64",
+      "host_architecture": "amd64",
+      "docker_server_architecture": "x86_64",
+      "container_architecture": "x86_64",
+      "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
+      "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
+      "omc_version": "OpenModelica 1.25.1",
+      "gcc_version": "11.4.0",
+      "binutils_version": "2.38",
+      "glibc_version": "2.35",
+      "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+      "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+      "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
+      "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+      "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04",
+      "runs": [
+        {
+          "id": "run-a",
+          "output_directory_token": "fresh-run-a",
+          "log_sha256": "c2a71e34c3170eea4695134c28cdc9b18b08bdf21ecd9d52b90be94511b7ffff",
+          "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+        },
+        {
+          "id": "run-b",
+          "output_directory_token": "fresh-run-b",
+          "log_sha256": "6d2ba72a4881db7517567c5208a2993055bb3093bd748d253fe2aba417069fb8",
+          "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+        }
+      ]
+    }
+  ],
+  "semantic_control": {
+    "mutation": "yBelow limitAbove false to true",
+    "first_mismatch_row": 8,
+    "first_mismatch_time_bits": "406e0000000003c1",
+    "expected_comparison": "exact_mismatch",
+    "mismatch_rows": [
+      8,
+      9
+    ]
+  },
+  "cross_architecture": {
+    "comparison": "canonical_bytes",
+    "arm64_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+    "amd64_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+    "result": "pass"
+  },
+  "artifacts": [
+    {
+      "role": "image_index_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/image-index.json",
+      "sha256": "79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"
+    },
+    {
+      "role": "cross_architecture_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/cross-architecture.log",
+      "sha256": "c4fe583f1fc0f05f360e9a31214fd6d12ad4c0a28a6e20ac3090f407077fecba"
+    },
+    {
+      "role": "arm64_architecture_record",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/architecture.json",
+      "sha256": "93122e4dc90b4f1147621908169ddb696fbda8eae6bf998b09a8fec6f6ac559c"
+    },
+    {
+      "role": "arm64_canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/line.canonical.csv",
+      "sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22"
+    },
+    {
+      "role": "arm64_raw_run_a_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/line-run-a.raw.csv",
+      "sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "role": "arm64_raw_run_b_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/line-run-b.raw.csv",
+      "sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "role": "arm64_run_a_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/run-a.log",
+      "sha256": "39adae83f4170482cbdcad6f3f2d5214deb3be8be32c7f422c65a102f379f318"
+    },
+    {
+      "role": "arm64_run_b_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/run-b.log",
+      "sha256": "90a4e77143eb6904a35070cd01baf27fcd5ff0b56c064484ad0612e1fcda0134"
+    },
+    {
+      "role": "arm64_flag_control_canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/flag-control.canonical.csv",
+      "sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04"
+    },
+    {
+      "role": "arm64_flag_control_raw_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/flag-control.raw.csv",
+      "sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925"
+    },
+    {
+      "role": "arm64_flag_control_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/flag-control.log",
+      "sha256": "1d903e19af94f57974f00f99c53a9262b14e7a85fec8af97e5b8e48afbe26d6b"
+    },
+    {
+      "role": "arm64_projection_mutation_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/projection-mutation.log",
+      "sha256": "45f4e6464c5f2715e228e81b359c748f21c5f237a7c7770b92a4a199fce0b41d"
+    },
+    {
+      "role": "arm64_architecture_image_index_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/image-index.json",
+      "sha256": "79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"
+    },
+    {
+      "role": "arm64_platform_image_manifest_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/image-manifest.json",
+      "sha256": "39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4"
+    },
+    {
+      "role": "amd64_architecture_record",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/architecture.json",
+      "sha256": "b14efad39d24895eb78869523ab491a5927a9479f62a96b27c5872bfacbe5219"
+    },
+    {
+      "role": "amd64_canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/line.canonical.csv",
+      "sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22"
+    },
+    {
+      "role": "amd64_raw_run_a_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/line-run-a.raw.csv",
+      "sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "role": "amd64_raw_run_b_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/line-run-b.raw.csv",
+      "sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "role": "amd64_run_a_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/run-a.log",
+      "sha256": "c2a71e34c3170eea4695134c28cdc9b18b08bdf21ecd9d52b90be94511b7ffff"
+    },
+    {
+      "role": "amd64_run_b_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/run-b.log",
+      "sha256": "6d2ba72a4881db7517567c5208a2993055bb3093bd748d253fe2aba417069fb8"
+    },
+    {
+      "role": "amd64_flag_control_canonical_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/flag-control.canonical.csv",
+      "sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04"
+    },
+    {
+      "role": "amd64_flag_control_raw_csv",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/flag-control.raw.csv",
+      "sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925"
+    },
+    {
+      "role": "amd64_flag_control_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/flag-control.log",
+      "sha256": "aab6af6f413410547bf5e69b067a23ea5c301cf423f08b8d75a8aaf7472435d6"
+    },
+    {
+      "role": "amd64_projection_mutation_log",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/projection-mutation.log",
+      "sha256": "45f4e6464c5f2715e228e81b359c748f21c5f237a7c7770b92a4a199fce0b41d"
+    },
+    {
+      "role": "amd64_architecture_image_index_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/image-index.json",
+      "sha256": "79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"
+    },
+    {
+      "role": "amd64_platform_image_manifest_json",
+      "path": "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/amd64/image-manifest.json",
+      "sha256": "92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11"
+    },
+    {
+      "role": "canonicalizer_source",
+      "path": "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs",
+      "sha256": "5a08c172a782bb0eede1c912f6ae66bf87de9cee50174a157a28c6e6989f5eff"
+    },
+    {
+      "role": "tool_cargo_lock",
+      "path": "tools/openmodelica-line-reference/Cargo.lock",
+      "sha256": "2b2415f005946aec754b88d68936d9dde7e5f6899b8977ea607b52bb4a03ea23"
+    },
+    {
+      "role": "tool_cargo_toml",
+      "path": "tools/openmodelica-line-reference/Cargo.toml",
+      "sha256": "13bb9a8a43a6f256bbf7b4fc41b1ee3c03980d89c0a69d5111cc90fbb6624b21"
+    },
+    {
+      "role": "tool_main_source",
+      "path": "tools/openmodelica-line-reference/src/main.rs",
+      "sha256": "4b9d45f1c18715ae8ab12aa7bb7682429485a058904906d2e48c6fdd3efcf642"
+    },
+    {
+      "role": "wrapper_model",
+      "path": "tools/openmodelica-line-reference/line/LinePilot.mo",
+      "sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e"
+    },
+    {
+      "role": "flag_control_wrapper_model",
+      "path": "tools/openmodelica-line-reference/line/LineFlagPilot.mo",
+      "sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6"
+    },
+    {
+      "role": "runner_script",
+      "path": "tools/openmodelica-line-reference/line/runner.sh",
+      "sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa"
+    },
+    {
+      "role": "regeneration_script",
+      "path": "tools/openmodelica-line-reference/line/regenerate.sh",
+      "sha256": "a9e4fc5b7bd460b41d6bd0fe83c896ea1a08017c0500194d404937d793c77525"
+    },
+    {
+      "role": "assembly_script",
+      "path": "tools/openmodelica-line-reference/line/assemble.sh",
+      "sha256": "1f4860c6c4306606b5dc9057d38db1fb5ce6df7fac6ec9ae63b36c18cdabe234"
+    },
+    {
+      "role": "manifest_generator_script",
+      "path": "tools/openmodelica-line-reference/line/generate_manifest.py",
+      "sha256": "f54ed8f8bf4bf7fd049f80318fb94d0444673fd8ff15461375e9eaaba529cb4a"
+    },
+    {
+      "role": "architecture_generator_script",
+      "path": "tools/openmodelica-line-reference/line/generate_architecture.py",
+      "sha256": "6cdec74b5256aa5b4c101e62ba5ae34cf38f3a807dd6eb45d11f1db7a58aca85"
+    },
+    {
+      "role": "evidence_validator_script",
+      "path": "tools/openmodelica-line-reference/line/verify_evidence.py",
+      "sha256": "ae61153f7bab936cca86f6c14be235b060b5bac14b8defe986001ad9570f0732"
+    },
+    {
+      "role": "oci_materializer_script",
+      "path": "tools/openmodelica-line-reference/line/materialize_oci.py",
+      "sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d"
+    },
+    {
+      "role": "deadline_script",
+      "path": "tools/openmodelica-line-reference/line/deadline.sh",
+      "sha256": "ccedf17f714ab54b6589a20f0a463c8a04760bae026e21e769f551437f89c800"
+    },
+    {
+      "role": "deadline_test_script",
+      "path": "tools/openmodelica-line-reference/line/deadline_test.sh",
+      "sha256": "a2c7b440f11216815d1b99c4041cacaf1dea16ad283ea8b745d24f6955d2e54d"
+    },
+    {
+      "role": "output_publish_script",
+      "path": "tools/openmodelica-line-reference/line/output_publish.py",
+      "sha256": "feb0b998155260da8b89038dd8eb9466353ae019f13b58dc8f554d2404e73811"
+    },
+    {
+      "role": "output_publish_test_script",
+      "path": "tools/openmodelica-line-reference/line/output_publish_test.sh",
+      "sha256": "ec457bba0555fde468b3aad47ef737f71847c6537ce196780a2da7637b64f3d6"
+    },
+    {
+      "role": "container_cleanup_script",
+      "path": "tools/openmodelica-line-reference/line/container_cleanup.sh",
+      "sha256": "63cc0d8b319d9107c0cfb610d5bfbde18071a50f4e160f86b8baf9e590e9bf23"
+    },
+    {
+      "role": "container_cleanup_test_script",
+      "path": "tools/openmodelica-line-reference/line/container_cleanup_test.sh",
+      "sha256": "8e1216d771c042158102796adb913e1f7f33fc2b114339f42c0a529c5a917346"
+    },
+    {
+      "role": "oci_index_source",
+      "path": "tools/openmodelica-line-reference/line/image-index.json",
+      "sha256": "37ddcdcc0ac248ecc8abc81e31fda079ea85992112d5c28496606159b4904678"
+    },
+    {
+      "role": "arm64_manifest_source",
+      "path": "tools/openmodelica-line-reference/line/image-manifest-arm64.json",
+      "sha256": "cc7135cee4138377c0403dc9c8c400d85bb576ac783f3ac667f65dcdfe1f7d4e"
+    },
+    {
+      "role": "amd64_manifest_source",
+      "path": "tools/openmodelica-line-reference/line/image-manifest-amd64.json",
+      "sha256": "e42cbf56db455eae63a38b960fb25914dfb1b9a221575118c527a145cc134848"
+    },
+    {
+      "role": "evidence_workflow",
+      "path": ".github/workflows/openmodelica-line-evidence.yml",
+      "sha256": "be2d1e7d36dd19979581b29adce65c00c1442af21f0ed393ea39cfdb3bf2d7fe"
+    }
+  ],
+  "regeneration": {
+    "entrypoint": "tools/openmodelica-line-reference/line/regenerate.sh",
+    "assembly_entrypoint": "tools/openmodelica-line-reference/line/assemble.sh",
+    "evidence_workflow": ".github/workflows/openmodelica-line-evidence.yml",
+    "network": "none_during_container_execution",
+    "pull": "never",
+    "platforms": [
+      "linux/arm64",
+      "linux/amd64"
+    ],
+    "source_materialization": "git_archive",
+    "source_mounts": "read_only",
+    "container_root": "read_only",
+    "container_user": "non_root",
+    "capabilities": "none",
+    "no_new_privileges": true,
+    "device_mounts": 0,
+    "docker_socket_mounted": false,
+    "timeout_seconds": 120,
+    "cpus": "4",
+    "memory_bytes": 2147483648,
+    "memory_swap_bytes": 2147483648,
+    "pids_limit": 256,
+    "tmpfs_bytes": 268435456,
+    "per_file_bytes": 67108864,
+    "output_directory_bytes": 268435456
+  }
+}
