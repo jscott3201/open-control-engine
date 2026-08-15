@@ -1,0 +1,71 @@
+{
+  "@context": {
+    "S231": "http://data.ashrae.org/S231P#",
+    "base": "http://example.org#"
+  },
+  "@graph": [
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding",
+      "@type": "S231:Block",
+      "S231:label": "inactive_parameter_member_grounding",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inactive_parameter_member_grounding.flag"
+      },
+      "S231:containsBlock": [
+        {
+          "@id": "http://example.org#cc.inactive_parameter_member_grounding.cond"
+        },
+        {
+          "@id": "http://example.org#cc.inactive_parameter_member_grounding.con"
+        }
+      ]
+    },
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding.flag",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Boolean"
+      },
+      "S231:value": false
+    },
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding.cond",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Logical.Not",
+      "S231:label": "cond",
+      "S231:isConditionalComponent": true,
+      "S231:conditionalExpression": "flag",
+      "S231:hasInput": {
+        "@id": "http://example.org#cc.inactive_parameter_member_grounding.con.k"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding.con",
+      "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+      "S231:label": "con",
+      "S231:hasParameter": {
+        "@id": "http://example.org#cc.inactive_parameter_member_grounding.con.k"
+      },
+      "S231:hasInstance": {
+        "@id": "http://example.org#cc.inactive_parameter_member_grounding.con.y"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding.con.k",
+      "@type": "S231:Parameter",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      },
+      "S231:value": {
+        "@value": "7.0",
+        "@type": "http://www.w3.org/2001/XMLSchema#double"
+      }
+    },
+    {
+      "@id": "http://example.org#cc.inactive_parameter_member_grounding.con.y",
+      "@type": "S231:RealOutput",
+      "S231:isOfDataType": {
+        "@id": "S231:Real"
+      }
+    }
+  ]
+}

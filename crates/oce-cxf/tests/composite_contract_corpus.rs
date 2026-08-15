@@ -668,6 +668,22 @@ fn inactive_member_pair_rejects_identically_across_dialects() {
     );
 }
 
+#[test]
+fn inactive_leaf_parameter_routes_ground_byte_identically() {
+    // R19-3 mirrors the existing leaf-parameter path: activity filters neither an ordinary
+    // `hasParameter` declaration nor a classified `hasInstance` parameter member. The fixtures
+    // share every identity and differ only in the route that supplies `k`.
+    assert_eq!(
+        render(&import_ok(&read_fixture(
+            "accepted/inactive_parameter_declaration_grounding.jsonld"
+        ))),
+        render(&import_ok(&read_fixture(
+            "accepted/inactive_parameter_member_grounding.jsonld"
+        ))),
+        "ordinary and classified inactive leaf parameters must ground identically"
+    );
+}
+
 // ---- README index -----------------------------------------------------------------------------
 
 #[test]
