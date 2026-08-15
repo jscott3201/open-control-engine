@@ -53,7 +53,7 @@ jobs:
           PLATFORM: ${{ matrix.platform }}
         run: >-
           docker pull --platform "$PLATFORM" "$IMAGE" &&
-          test "$(docker image inspect "$IMAGE" --format '{{.Descriptor.digest}}')" = sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864
+          docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' | grep -Fq "\"$IMAGE\""
       - name: Regenerate with offline containers
         env:
           BUILDINGS: ${{ runner.temp }}/modelica-buildings

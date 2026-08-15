@@ -100,7 +100,7 @@ grep -q "\"architecture\": \"$ARCHITECTURE\"" "$SCRIPT_DIR/image-index.json"
 grep -q "$MANIFEST" "$SCRIPT_DIR/image-index.json"
 grep -q "$CONFIG" "$SCRIPT_DIR/image-manifest-$ARCHITECTURE.json"
 test "$(run_timed 10 docker info --format '{{.Architecture}}')" = "$DOCKER_ARCHITECTURE"
-test "$(run_timed 10 docker image inspect "$IMAGE" --format '{{.Descriptor.digest}}')" = "$INDEX"
+run_timed 10 docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' | grep -Fq "\"$IMAGE\""
 test "$(run_timed 10 docker image inspect "$IMAGE" --format '{{.Architecture}}')" = "$ARCHITECTURE"
 test "$(run_timed 10 docker image inspect "$IMAGE" --format '{{.Os}}')" = linux
 run_timed 120 docker run --rm --pull=never --platform "$PLATFORM" --network none --read-only \
