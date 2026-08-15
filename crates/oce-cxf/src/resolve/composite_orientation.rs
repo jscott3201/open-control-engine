@@ -292,23 +292,26 @@ impl CompositeOrientation {
                 ) && source_is_erased
                     && !reached_boundaries.contains(node.id.as_str())
                 {
-                    if !by_id.contains_key(source)
-                        && !self.synthesized.contains(source)
-                        && !preserved_missing_endpoints.contains(source)
-                    {
+                    let missing_source =
+                        !by_id.contains_key(source) && !self.synthesized.contains(source);
+                    let missing_target =
+                        !by_id.contains_key(target) && !self.synthesized.contains(target);
+                    if missing_source && !preserved_missing_endpoints.contains(source) {
                         return Some(Diagnostic::error(
                             DiagCode::UnresolvedReference,
                             "connection source not found",
                         ));
                     }
-                    if !by_id.contains_key(target)
-                        && !self.synthesized.contains(target)
-                        && !preserved_missing_endpoints.contains(target)
-                    {
+                    if missing_target && !preserved_missing_endpoints.contains(target) {
                         return Some(Diagnostic::error(
                             DiagCode::UnresolvedReference,
                             "connection target not found",
                         ));
+                    }
+                    if (missing_source && preserved_missing_endpoints.contains(source))
+                        || (missing_target && preserved_missing_endpoints.contains(target))
+                    {
+                        continue;
                     }
                 }
                 match verdict {

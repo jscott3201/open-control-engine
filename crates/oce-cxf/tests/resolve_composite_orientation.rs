@@ -6,6 +6,8 @@ use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
 mod bless;
+#[path = "resolve_composite_orientation/diagnostics.rs"]
+mod diagnostics;
 mod render;
 
 #[path = "resolve_composite_orientation/multiplicity.rs"]
