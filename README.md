@@ -197,7 +197,7 @@ Full layer-by-layer detail, the crate map, and the platform and MSRV policy are 
 
 ## How it is verified
 
-Five different things in this repository are called "tests", and they prove different things.
+Six evidence layers in this repository are called "tests", and they prove different things.
 One of them proves nothing about correctness at all — the 46 fixture goldens are **engine
 self-output**, a determinism snapshot that catches drift, not wrongness.
 
