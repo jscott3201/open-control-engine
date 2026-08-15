@@ -694,26 +694,45 @@ fn unclassifiable_member_control_changes_only_one_nodeless_member_name() {
     let shape = |source: &str| {
         let document: serde_json::Value = serde_json::from_str(source).expect("valid fixture JSON");
         let graph = document["@graph"].as_array().expect("fixture graph");
-        let context = document["@context"].as_object().expect("fixture context");
+        let context_maps = match &document["@context"] {
+            serde_json::Value::Object(map) => vec![map],
+            serde_json::Value::Array(entries) => entries
+                .iter()
+                .map(|entry| entry.as_object().expect("inline context map"))
+                .collect(),
+            _ => panic!("fixture context must be inline"),
+        };
+        let context: std::collections::BTreeMap<&str, &str> = context_maps
+            .into_iter()
+            .flat_map(|map| map.iter())
+            .filter(|(term, _)| !term.starts_with('@'))
+            .map(|(term, value)| (term.as_str(), value.as_str().expect("context IRI")))
+            .collect();
+        let expand_id = |id: &str| {
+            if let Some(expanded) = context.get(id) {
+                return (*expanded).to_owned();
+            }
+            let Some((prefix, suffix)) = id.split_once(':') else {
+                return id.to_owned();
+            };
+            if suffix.starts_with("//") {
+                return id.to_owned();
+            }
+            context
+                .get(prefix)
+                .map_or_else(|| id.to_owned(), |base| format!("{base}{suffix}"))
+        };
         let graph_ids: std::collections::BTreeSet<String> = graph
             .iter()
             .map(|node| node["@id"].as_str().expect("graph node id"))
-            .map(|id| {
-                if let Some(expanded) = context.get(id).and_then(serde_json::Value::as_str) {
-                    return expanded.to_owned();
-                }
-                let Some((prefix, suffix)) = id.split_once(':') else {
-                    return id.to_owned();
-                };
-                context
-                    .get(prefix)
-                    .and_then(serde_json::Value::as_str)
-                    .map_or_else(|| id.to_owned(), |base| format!("{base}{suffix}"))
-            })
+            .map(expand_id)
             .collect();
         let member_count = graph
             .iter()
-            .find(|node| node["@id"] == "http://example.org#M.sin")
+            .find(|node| {
+                expand_id(node["@id"].as_str().expect("graph node id"))
+                    == "http://example.org#M.sin"
+            })
             .expect("Sin instance")["S231:hasInstance"]
             .as_array()
             .expect("member array")
