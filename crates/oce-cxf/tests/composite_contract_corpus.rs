@@ -699,6 +699,9 @@ fn unclassifiable_member_control_changes_only_one_nodeless_member_name() {
             .iter()
             .map(|node| node["@id"].as_str().expect("graph node id"))
             .map(|id| {
+                if let Some(expanded) = context.get(id).and_then(serde_json::Value::as_str) {
+                    return expanded.to_owned();
+                }
                 let Some((prefix, suffix)) = id.split_once(':') else {
                     return id.to_owned();
                 };
