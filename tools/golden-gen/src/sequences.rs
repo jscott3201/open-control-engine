@@ -1,7 +1,8 @@
 //! G36 whole-sequence Tier-A references for the derivable sequence outputs.
 //!
 //! These references are hand-derived from the G36 fixture topology plus CDL / Buildings block
-//! semantics. They intentionally do not depend on, import, or inspect any `oce-*` crate.
+//! semantics or an explicitly named execution profile. They intentionally do not depend on,
+//! import, or inspect any `oce-*` crate.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 
