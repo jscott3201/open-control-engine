@@ -431,6 +431,35 @@ fn missing_target_of_unreachable_boundary_source_remains_loud() {
     );
 }
 
+/// An absent endpoint without an indexed role remains unresolved rather than underivable.
+#[test]
+fn unclassified_missing_target_of_erased_source_remains_unresolved() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[
+            &format!("{model}.subA.gain.u"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    clear_targets(&mut document, ".subA.gain.y");
+    set_absolute_targets(&mut document, ".subA.y", &[&format!("{model}.missing")]);
+    let diagnostics = import(&document).expect_err("missing endpoint must remain unresolved");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::UnresolvedReference,
+            "connection target not found",
+        )]
+    );
+}
+
 /// A surviving edge owns the one diagnostic for a missing endpoint also named by an erased edge.
 #[test]
 fn preserved_missing_target_suppresses_deferred_duplicate() {

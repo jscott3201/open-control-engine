@@ -286,8 +286,10 @@ impl CompositeOrientation {
                 }
                 let (source, target, verdict) =
                     self.canonical_pair(&node.id, authored_target, by_id, root, specialization);
-                if matches!(verdict, Verdict::Keep | Verdict::Swap | Verdict::Untouched)
-                    && source_is_erased
+                if matches!(
+                    verdict,
+                    Verdict::Keep | Verdict::Swap | Verdict::Unknown | Verdict::Untouched
+                ) && source_is_erased
                     && !reached_boundaries.contains(node.id.as_str())
                 {
                     if !by_id.contains_key(source)
