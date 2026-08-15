@@ -53,9 +53,12 @@ false guard makes the node — and, recursively, its inputs, outputs, parameters
 contained blocks — **inactive**. Everything else is active.
 
 Rules 3, 4, 5, and 7 operate on active nodes only: inactive children are not traversed (their
-whole subtree drops out of the leaf order), inactive parameters are not grounded — an inactive
-array-valued parameter does **not** reject — and banned Modelica keys or `S231:isReplaceable` on
-an inactive node are tolerated. Root classification (rule 2) does not consult activity.
+whole subtree drops out of the leaf order), and inactive parameter or constant declarations are
+not grounded — an inactive array-valued parameter does **not** reject. The exception is a
+parameter member classified from an active derivation-shaped leaf's `S231:hasInstance` list:
+activity filters derived ports, not classified parameter members, so a node-bearing member still
+grounds the leaf's class parameter. Banned Modelica keys or `S231:isReplaceable` on an inactive
+node are tolerated. Root classification (rule 2) does not consult activity.
 Connections are not exempt: an active connection into or out of an inactive node rejects with
 the generic `inactive-conditional-node` diagnostic — prune conditional structure so inactive
 nodes take their connections with them.
