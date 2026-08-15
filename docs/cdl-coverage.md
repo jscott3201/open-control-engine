@@ -112,6 +112,17 @@ elaboration — parameter propagation, expression folding, conditional-instance 
 (`crates/oce-flatten/src/lib.rs:2-20`). If your sequence exists only as `.mo`, something upstream has
 to produce CXF first.
 
+## `CDL.Logical.Pre` uses HostTick v1
+
+Registry support for `CDL.Logical.Pre` means the engine accepts its interface and executes the fixed
+[HostTick v1 profile](execution-profile.md). It does not mean exact Modelica event-iteration
+equivalence. `Pre` emits `pre_u_start` on its first successful host tick, then emits the input from
+the preceding successful tick. Repeated calls at one timestamp are separate state transitions.
+
+The scheduler treats `Pre` as a feedthrough cut and accepts a feedback loop without proving that the
+corresponding Modelica event iteration converges. This semantic projection applies to any fixture
+containing `Pre`; fixture support and deterministic output do not broaden the conformance claim.
+
 ## 47 fixture documents is not 47 sequences
 
 `crates/oce-conformance/tests/fixtures/golden/g36_traces/` holds 46 `.csv` traces and 46 matching
@@ -146,8 +157,9 @@ code-dependency firewall — are described in [`../README.md`](../README.md) and
 The load-bearing limitation, stated plainly: **no sequence here has been executed against an
 external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
 `CDL.Logical.Nand` Boolean case and one stateful `CDL.Logical.Toggle` event schedule, but no numeric
-tolerance or broader sequence behavior. The global Tier-3 report remains skipped, and no number on
-this page stands in for that deferred coverage.
+tolerance or broader sequence behavior. `CDL.Logical.Pre` is explicitly excluded from an
+expected-green OpenModelica differential under HostTick v1. The global Tier-3 report remains
+skipped, and no number on this page stands in for that deferred coverage.
 
 For what happens when you export a loaded sequence back out to CXF, see
 [`cxf-round-trip.md`](cxf-round-trip.md).

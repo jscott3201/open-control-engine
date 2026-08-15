@@ -138,6 +138,12 @@ identities, and mutation controls; Docker does not run in CI. These are scoped T
 the two named cases only. The global Tier-3 report remains `Skipped`; no numeric, sequence-wide, or
 cross-architecture OMC claim follows from them.
 
+`CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
+differs from the fixed HostTick v1 projection, which advances once per HostTick transition.
+`crates/oce-api/src/tests/pre_execution_profile_tests.rs` pins that engine contract, including equal
+timestamps, non-convergent feedback, host observations, and snapshot continuation. Those tests are
+not an independent Modelica oracle.
+
 ### 4. Determinism goldens — same input, bit-identical output, every time
 
 Determinism is a *testable property*, not an assumption. For anything that ingests, orders, or

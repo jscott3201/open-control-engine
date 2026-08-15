@@ -259,6 +259,11 @@ impl<S: Store> Engine<S> {
     /// Advance to absolute model time `t_now` (seconds; finite, monotonic non-decreasing), evaluate
     /// one tick of the frozen schedule, and refresh the [`Outputs`] snapshot. The host owns cadence.
     ///
+    /// This is the fixed **HostTick v1** execution profile. Every successful call advances state
+    /// exactly once, including when `t_now` equals the preceding value. The engine performs no
+    /// Modelica same-time event iteration. `CDL.Logical.Pre` consequently emits its call-entry
+    /// memory and latches current input for the next successful call.
+    ///
     /// # Errors
     /// [`OcError::NonFiniteTime`] if `t_now` is NaN or infinite; [`OcError::TimeRegression`] if
     /// `t_now` is less than the previous tick's time (CDL §7.16 monotonic time);

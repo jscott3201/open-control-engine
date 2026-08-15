@@ -21,8 +21,9 @@ fn chain_schedule_is_declaration_order() {
 }
 
 #[test]
-fn pre_breaks_the_feedback_loop() {
-    // source → add.u1 ; pre.out → add.u2 ; add.out → pre.in. Pre (feeds=false) cuts the loop.
+fn pre_cut_accepts_feedback_without_fixed_point_analysis() {
+    // HostTick v1 accepts this from feedthrough shape alone. It does not prove that a corresponding
+    // Modelica event-iteration network has a fixed point.
     let mut b = ModelBuilder::default();
     let (source, _, src_out) = b.block("CDL.Reals.Sources.Constant", 0, 1, false, false);
     let (add, add_in, add_out) = b.block("CDL.Reals.Add", 2, 1, true, false);
@@ -31,7 +32,7 @@ fn pre_breaks_the_feedback_loop() {
     b.connect(pre_out[0], add_in[1]);
     b.connect(add_out[0], pre_in[0]);
 
-    let sched = compile(&b.model, &b.blocks).expect("Pre cuts the loop → acyclic");
+    let sched = compile(&b.model, &b.blocks).expect("Pre cuts the feedthrough loop");
     assert_eq!(sched.order.len(), 3);
     let mut uniq = sched.order.clone();
     uniq.sort_unstable();

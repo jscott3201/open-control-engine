@@ -6,6 +6,10 @@
 //! block-side, though a diagnostics sink may allocate while recording them. Do not read "the tick
 //! never allocates" as a whole-engine guarantee.
 //!
+//! **HostTick v1.** Every `eval_tick` call is one state transition, even if a facade caller repeats
+//! the model timestamp. The evaluator does not perform Modelica same-time event iteration or
+//! convergence checks. `CDL.Logical.Pre` is therefore one-transition memory in this profile.
+//!
 //! **Two passes per tick (binding correction to the §9 sketch).** Pass 1 *emits*: every block
 //! produces all its outputs atomically (`[A]` via `step_algebraic`, `[S]` via `emit_from_state`
 //! from **prior** state). Pass 2 *updates* `[S]` state via `update_state`. The update pass is
@@ -115,10 +119,12 @@ fn gather(blk: &BlockInstance, schedule: &Schedule, values: &[Value], scratch: &
     }
 }
 
-/// TICK: evaluate exactly one tick at absolute model time `t_now` (seconds, monotonic
-/// non-decreasing). Host-driven external inputs must already be staged into `state.values`. The hot
-/// path is allocation/IO/hashing/store-free (`01` §9). See the module docs for the two-pass
-/// (emit-then-separately-update) ordering and why it is required.
+/// Evaluate exactly one HostTick v1 transition at absolute model time `t_now` in seconds.
+/// Host-driven external inputs must already be staged into `state.values`. Calling this function
+/// again with the same `t_now` performs another transition; it is not an internal event iteration.
+/// The hot path is allocation/IO/hashing/store-free (`01` §9). See the module docs for the two-pass
+/// (emit-then-separately-update) ordering and why it is required. This function does not panic when
+/// BUILD's validated model, schedule, block, and state-layout invariants hold.
 pub fn eval_tick(ctx: &mut EvalContext, t_now: f64) {
     let model = ctx.model;
     let schedule = ctx.schedule;

@@ -266,9 +266,10 @@ pub(crate) fn edge(u: &[bool], pre_u_start: bool) -> Vec<bool> {
     out
 }
 
-/// Mirror `CDL.Logical.Pre`: emit the previous tick's Boolean input.
+/// Derive the HostTick v1 projection of `CDL.Logical.Pre`: emit the previous call's Boolean input.
 ///
-/// `pre_u_start` is emitted on the first row and the current input becomes the next row's output.
+/// This is not an oracle for Modelica same-time event iteration. `pre_u_start` is emitted on the
+/// first row and the current input becomes the next row's output.
 pub(crate) fn pre(u: &[bool], pre_u_start: bool) -> Vec<bool> {
     let mut previous = pre_u_start;
     let mut out = Vec::with_capacity(u.len());

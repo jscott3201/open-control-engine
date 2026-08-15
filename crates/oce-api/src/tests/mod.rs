@@ -10,6 +10,7 @@ mod load_build_tick;
 mod output_columns_tests;
 mod outputs_lookup_tests;
 mod params_tests;
+mod pre_execution_profile_tests;
 mod projection_tests;
 mod realtime_write_back_tests;
 mod sim_tests;

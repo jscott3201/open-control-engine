@@ -10,9 +10,10 @@ use crate::{Engine, OcError};
 impl<S: Store> Engine<S> {
     /// Reads selected output point values in caller order.
     ///
-    /// Reads are post-tick: after `tick(t)` returns, this method returns exactly tick `t`'s values.
-    /// Torn reads are impossible because `tick` takes `&mut self` and [`Engine`] is not `Clone`, so
-    /// there is a single writer.
+    /// Reads are post-tick: after `tick(t)` returns, this method returns that completed HostTick v1
+    /// call's values. A later successful call at the same `t` is a new state transition and replaces
+    /// the visible output snapshot. Torn reads are impossible because `tick` takes `&mut self` and
+    /// [`Engine`] is not `Clone`, so there is a single writer.
     ///
     /// Keys name either of two identity spaces: every **output connector path** (the authored
     /// `@id` of the connector's host-visible identity node), and every **driven root-declared

@@ -591,11 +591,12 @@ impl<S: Store> Engine<S> {
     /// [`Engine::set_realtime_epoch_unix_nanos`]. Returns any tripped `Assert` diagnostics.
     ///
     /// # Errors
-    /// Propagates [`Engine::tick`]'s time guards ([`OcError::NonFiniteTime`] /
-    /// [`OcError::TimeRegression`]) and [`OcError::Store`] from the batched write.
-    /// [`OcError::RealtimeEpochUnset`] is returned before ticking when the host has not configured
-    /// an epoch. [`OcError::RealtimeInstantUnrepresentable`] is returned before ticking when the
-    /// epoch plus `t_now` seconds is not exactly representable as a `u64` UNIX-nanosecond instant.
+    /// After real-time instant validation, propagates [`Engine::tick`]'s remaining time and input
+    /// staging errors, plus [`OcError::Store`] from the batched write. [`OcError::RealtimeEpochUnset`]
+    /// is returned before ticking when the host has not configured an epoch.
+    /// [`OcError::RealtimeInstantUnrepresentable`] is returned before ticking when `t_now` is
+    /// non-finite or when adding its nearest-nanosecond offset to the epoch falls outside the `u64`
+    /// UNIX-nanosecond range.
     /// A failed store write leaves the completed tick in effect: model time and outputs have already
     /// advanced and are not rolled back. Never panics.
     pub fn step_realtime(&mut self, t_now: f64) -> Result<StepReport, OcError> {
@@ -644,9 +645,11 @@ impl<S: Store> Engine<S> {
         Ok(())
     }
 
-    /// Read an output value by point path after a tick (host-facing). `point` is an output
-    /// connector path or a root-declared boundary-output IRI; the declared spelling is a read
-    /// alias for its driving connector's slot, so both keys return bit-equal values.
+    /// Read an output value by point path. After a tick, the value is from the most recently
+    /// completed HostTick v1 call, including when multiple calls used the same model timestamp.
+    /// `point` is an output connector path or a root-declared boundary-output IRI; the declared
+    /// spelling is a read alias for its driving connector's slot, so both keys return bit-equal
+    /// values.
     ///
     /// # Errors
     /// [`OcError::UnknownPoint`] if `point` resolves to no output point. Never panics

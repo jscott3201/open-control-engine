@@ -52,6 +52,10 @@ rejection, algebraic-loop rejection, and topological sorting all run once per lo
 a frozen schedule over flat arrays, and TICK walks it: no graph traversal, no hashing, no store
 access in the graph evaluator.
 
+The current runtime is the fixed [HostTick v1 execution profile](execution-profile.md): every
+successful facade tick evaluates this schedule once and advances state once, including at a repeated
+timestamp. It does not implement Modelica same-time event iteration for `CDL.Logical.Pre`.
+
 ## Embeddability posture
 
 The engine is, by design:

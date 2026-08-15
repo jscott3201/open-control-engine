@@ -151,6 +151,10 @@ Stating this plainly is more useful than a feature list.
   case. No sequence or numeric tolerance has been checked that way, and the global Tier-3 report
   remains skipped —
   [read the full accounting](docs/verification-evidence.md).
+- **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
+  [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::tick` call advances
+  `Pre` once, including repeated calls at the same timestamp. Exact Modelica/OpenModelica `Pre`
+  equivalence is outside the conformance claim.
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
   `set_param` is accepted; ticks, real-time steps, and simulations continue if the host calls them.

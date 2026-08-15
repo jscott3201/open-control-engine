@@ -14,6 +14,11 @@ all four two-input Boolean states; the Toggle case covers one exact stateful eve
 initially true input, repeated rises, and clear priority. The global Tier-3 report remains skipped;
 no sequence-wide, numeric, or cross-architecture OpenModelica claim follows from these cases.
 
+`CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
+[HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
+same-time Modelica event iteration. The profile is covered by exact engine contract tests, not
+by an OpenModelica oracle, and no broader stateful conformance claim follows from it.
+
 ---
 
 ## What can tell this engine it is wrong?
@@ -270,15 +275,17 @@ The five without a per-block oracle, and why:
 | Class | Status |
 | --- | --- |
 | `CDL.Logical.Nor` | indirect G36-sequence evidence only |
-| `CDL.Logical.Pre` | indirect G36-sequence evidence only |
+| `CDL.Logical.Pre` | HostTick v1 contract tests plus indirect G36 evidence; no Modelica event-iteration oracle |
 | `CDL.Logical.Sources.Constant` | indirect G36-sequence evidence only |
 | `CDL.Reals.MovingAverage` | indirect G36-sequence evidence only |
 | `CDL.Utilities.Assert` | has no output port; a diagnostics-channel golden is filed, not built |
 
 "Indirect G36-sequence evidence" means the class is exercised inside sequences whose outputs are
 oracle-compared, so a gross error would likely surface — but nothing pins that class's behavior in
-isolation, and no per-class edge cases are covered by an oracle. Which classes exist and what
-"supported" means for sequences is in [CDL coverage](cdl-coverage.md).
+isolation against Modelica semantics. `Pre` is the exception to the edge-case part of that row: its
+HostTick profile has direct facade tests, but those tests are not an independent correctness oracle.
+Which classes exist and what "supported" means for sequences is in
+[CDL coverage](cdl-coverage.md).
 
 ---
 
