@@ -80,31 +80,50 @@ pub(super) fn is_derivation_shaped(node: &Node, contains_referents: &HashSet<&st
         && !node.has_instance.is_empty()
 }
 
-/// A derivation-shaped node's members classified as ports of its class, for the pre-lowering
+/// A derivation-shaped node's listed and padded connector identities for the pre-lowering
 /// [`CompositeOrientation`](super::composite_orientation::CompositeOrientation) ownership index
-/// (R19-14): `(member IRI, is_input)` per member whose `local_name` is a declared port name.
-/// Classes publishing no port names contribute nothing (they are refused on the derivation
-/// path), and non-port members claim no ownership.
-pub(super) fn classified_port_members(node: &Node) -> Vec<(&str, bool)> {
+/// (R19-7/R19-14), in class-signature input-then-output order. Classes publishing no port names
+/// contribute nothing, and non-port members claim no ownership.
+pub(super) fn orientation_port_members(node: &Node) -> Vec<(String, bool)> {
     let Some(names) = first_type(node)
         .map(crate::bridge::class_path_of)
         .and_then(oce_blocks::port_names::port_names)
     else {
         return Vec::new();
     };
-    node.has_instance
+    let mut classified = node
+        .has_instance
         .iter()
         .map(|r| r.id.as_str())
         .filter_map(|member| {
             let name = local_name(member);
-            if names.inputs.contains(&name) {
-                Some((member, true))
-            } else if names.outputs.contains(&name) {
-                Some((member, false))
+            if let Some(position) = names.inputs.iter().position(|candidate| *candidate == name) {
+                Some((member.to_owned(), true, position))
             } else {
-                None
+                names
+                    .outputs
+                    .iter()
+                    .position(|candidate| *candidate == name)
+                    .map(|position| (member.to_owned(), false, names.inputs.len() + position))
             }
         })
+        .collect::<Vec<_>>();
+    for (position, name) in names.outputs.iter().enumerate() {
+        if !classified
+            .iter()
+            .any(|(_, input, slot)| !input && *slot == names.inputs.len() + position)
+        {
+            classified.push((
+                format!("{}.{}", node.id, name),
+                false,
+                names.inputs.len() + position,
+            ));
+        }
+    }
+    classified.sort_by_key(|(_, _, position)| *position);
+    classified
+        .into_iter()
+        .map(|(member, input, _)| (member, input))
         .collect()
 }
 

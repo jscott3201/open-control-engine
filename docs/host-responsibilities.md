@@ -13,11 +13,11 @@ A sample is converted from its value regardless of `PointStatus`. `Fault`, `Stal
 and `Override` all stage exactly like `Ok`.
 
 The conversion function destructures the sample and discards both quality fields:
-`crates/oce-api/src/engine.rs:381-386` binds `status: _` and `at_unix_nanos: _`, then dispatches
+`crates/oce-api/src/engine.rs:443-448` binds `status: _` and `at_unix_nanos: _`, then dispatches
 purely on the value and the target type. The five statuses are defined at
 `crates/oce-store/src/lib.rs:81-92`; nothing in the engine reads them. The behavior is pinned by
 `store_backed_input_staging_is_status_agnostic`
-(`crates/oce-api/src/tests/store_backed_inputs.rs:75`), which ticks the same fixture once per status
+(`crates/oce-api/src/tests/store_backed_inputs.rs:88`), which ticks the same fixture once per status
 and asserts identical staging.
 
 This is a design decision, not an oversight — point quality is metadata for the application and BMS
@@ -32,10 +32,10 @@ proceeds. There is no diagnostic. Before the first sample ever arrives, that hel
 type's `zero_value()` — so an input that has never been written reads as `0`, `0.0` or `false`, not
 as "unknown".
 
-The hold is explicit: `crates/oce-api/src/engine.rs:356-360` continues past a missing sample with
+The hold is explicit: `crates/oce-api/src/engine.rs:417-420` continues past a missing sample with
 the comment "Deliberate hold-last: no store sample means no overwrite of the current state value",
-and the policy is documented at `engine.rs:336-342`. `missing_store_sample_holds_prior_input_value`
-(`crates/oce-api/src/tests/store_backed_inputs.rs:99`) pins it.
+and the policy is documented at `engine.rs:396-402`. `missing_store_sample_holds_prior_input_value`
+(`crates/oce-api/src/tests/store_backed_inputs.rs:112`) pins it.
 
 **A dead sensor and a steady sensor are indistinguishable to the engine, forever.** Nothing in the
 engine will ever notice that a point stopped updating.

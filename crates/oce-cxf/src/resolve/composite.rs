@@ -28,13 +28,35 @@ const MAX_COMPOSITE_BOUNDARY_TARGETS: usize = 65_536;
 /// Maximum aggregate target-IRI bytes examined across one document's boundary traversal.
 const MAX_COMPOSITE_BOUNDARY_TARGET_BYTES: usize = 8 * 1024 * 1024;
 
-/// A CXF document lowered to the existing single-root, flat-child resolver shape.
+/// A CXF document lowered to the existing single-root, flat-child resolver shape, with a sidecar
+/// for canonical connections whose source is a node-less derived connector.
 #[derive(Clone, Debug)]
 pub(super) struct LoweredCxf {
     pub(super) doc: CxfDocument,
     pub(super) root_iri: Option<String>,
     pub(super) inherited_scope: HashMap<String, Vec<(Arc<str>, EvalResult)>>,
+    pub(super) synthesized_connections: Vec<(String, Vec<String>)>,
     pub(super) boundary_traversal_failed: bool,
+}
+
+impl LoweredCxf {
+    /// Authored edges followed by node-less derived-source edges in block-2 order.
+    pub(super) fn connection_edges(&self) -> impl Iterator<Item = (&str, &str)> {
+        let authored = self.doc.graph.iter().flat_map(|node| {
+            node.is_connected_to
+                .iter()
+                .map(move |target| (node.id.as_str(), target.id.as_str()))
+        });
+        let synthesized = self
+            .synthesized_connections
+            .iter()
+            .flat_map(|(source, targets)| {
+                targets
+                    .iter()
+                    .map(move |target| (source.as_str(), target.as_str()))
+            });
+        authored.chain(synthesized)
+    }
 }
 
 /// Lower the supported nested-composite subset before dense block/connector ids are assigned.
@@ -59,6 +81,7 @@ pub(super) fn lower(
             doc: lowered,
             root_iri: None,
             inherited_scope,
+            synthesized_connections: Vec::new(),
             boundary_traversal_failed: false,
         };
     };
@@ -85,18 +108,31 @@ pub(super) fn lower(
     );
     withheld.emit_unvisited(&evaluated_chains, diags);
 
-    let rewritten = match rewrite_connections(doc, by_id, root, specialization, &boundary) {
-        Ok(rewritten) => rewritten,
-        Err(diagnostic) => {
-            diags.push(diagnostic);
-            return LoweredCxf {
-                doc: lowered,
-                root_iri,
-                inherited_scope,
-                boundary_traversal_failed: true,
-            };
-        }
-    };
+    let (mut rewritten, deferred_diagnostic) =
+        match rewrite_connections(doc, by_id, root, specialization, &boundary) {
+            Ok(rewritten) => rewritten,
+            Err(diagnostic) => {
+                diags.push(diagnostic);
+                return LoweredCxf {
+                    doc: lowered,
+                    root_iri,
+                    inherited_scope,
+                    synthesized_connections: Vec::new(),
+                    boundary_traversal_failed: true,
+                };
+            }
+        };
+    if let Some(diagnostic) = deferred_diagnostic {
+        diags.push(diagnostic);
+    }
+    let synthesized_connections = boundary
+        .synthesized_sources()
+        .filter_map(|source| {
+            rewritten
+                .remove(source)
+                .map(|targets| (source.to_owned(), targets))
+        })
+        .collect();
     for node in &mut lowered.graph {
         let id = node.id.as_str();
         if id == root {
@@ -113,6 +149,7 @@ pub(super) fn lower(
         doc: lowered,
         root_iri,
         inherited_scope,
+        synthesized_connections,
         boundary_traversal_failed: false,
     }
 }
@@ -374,7 +411,7 @@ fn rewrite_connections(
     root: &str,
     specialization: &Specialization,
     boundary: &CompositeOrientation,
-) -> Result<HashMap<String, Vec<String>>, Diagnostic> {
+) -> Result<RewrittenConnections, Diagnostic> {
     let (canonical, crossed_drivers) =
         boundary.canonical_connections(doc, by_id, root, specialization);
     let mut deferred = Vec::new();
@@ -385,13 +422,23 @@ fn rewrite_connections(
         boundary,
     };
     let mut budget = BoundaryBudget::default();
-    for node in &doc.graph {
-        let source = node.id.as_str();
+    let mut reached_boundaries = HashSet::new();
+    for source in doc
+        .graph
+        .iter()
+        .map(|node| node.id.as_str())
+        .chain(boundary.synthesized_sources())
+    {
         let Some(authored_targets) = canonical.get(source) else {
             continue;
         };
         if specialization.is_inactive(source) {
             continue;
+        }
+        if boundary.is_synthesized_source(source) {
+            for _ in authored_targets {
+                budget.examine_bytes(source)?;
+            }
         }
         if boundary.inputs.contains(source) && !boundary.top_inputs.contains(source) {
             continue;
@@ -401,7 +448,13 @@ fn rewrite_connections(
         }
         let mut targets = Vec::new();
         for &target in authored_targets {
-            resolve_authored_target(target, &walk, &mut budget, &mut targets)?;
+            resolve_authored_target(
+                target,
+                &walk,
+                &mut budget,
+                &mut reached_boundaries,
+                &mut targets,
+            )?;
         }
         // Lowered lists are NEVER deduplicated: forward+reverse restatements of one relation are
         // already collapsed in the canonical map, so any surviving duplicate is a genuine
@@ -413,16 +466,37 @@ fn rewrite_connections(
             deferred.push((source, targets));
         }
     }
-    Ok(deferred
-        .into_iter()
-        .map(|(source, targets)| {
-            (
-                source.to_owned(),
-                targets.into_iter().map(str::to_owned).collect(),
-            )
+    let preserved_missing_endpoints = deferred
+        .iter()
+        .flat_map(|(source, targets)| std::iter::once(*source).chain(targets.iter().copied()))
+        .filter(|endpoint| {
+            !by_id.contains_key(endpoint) && !boundary.is_synthesized_source(endpoint)
         })
-        .collect())
+        .collect();
+    let deferred_diagnostic = boundary.erased_relation_diagnostic(
+        doc,
+        by_id,
+        &canonical,
+        root,
+        specialization,
+        &reached_boundaries,
+        &preserved_missing_endpoints,
+    );
+    Ok((
+        deferred
+            .into_iter()
+            .map(|(source, targets)| {
+                (
+                    source.to_owned(),
+                    targets.into_iter().map(str::to_owned).collect(),
+                )
+            })
+            .collect(),
+        deferred_diagnostic,
+    ))
 }
+
+type RewrittenConnections = (HashMap<String, Vec<String>>, Option<Diagnostic>);
 
 struct BoundaryWalk<'a, 'b> {
     by_id: &'a HashMap<&'a str, &'a Node>,
@@ -449,7 +523,13 @@ impl BoundaryBudget {
                 ),
             ));
         }
-        if target.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
+        self.examine_bytes(target)?;
+        self.examined_targets += 1;
+        Ok(())
+    }
+
+    fn examine_bytes(&mut self, iri: &str) -> Result<(), Diagnostic> {
+        if iri.len() > MAX_COMPOSITE_BOUNDARY_TARGET_BYTES - self.examined_target_bytes {
             return Err(Diagnostic::error(
                 DiagCode::MalformedDocument,
                 format!(
@@ -458,8 +538,7 @@ impl BoundaryBudget {
                 ),
             ));
         }
-        self.examined_targets += 1;
-        self.examined_target_bytes += target.len();
+        self.examined_target_bytes += iri.len();
         Ok(())
     }
 }
@@ -472,10 +551,7 @@ enum BoundaryFrame<'a> {
     },
 }
 
-fn requires_boundary_walk(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
-    if walk.specialization.is_inactive(target) {
-        return false;
-    }
+fn is_elided_boundary(target: &str, walk: &BoundaryWalk<'_, '_>) -> bool {
     (walk.boundary.inputs.contains(target) && !walk.boundary.top_inputs.contains(target))
         || (walk.boundary.outputs.contains(target) && !walk.boundary.top_outputs.contains(target))
 }
@@ -484,10 +560,11 @@ fn resolve_authored_target<'a, 'b>(
     target: &'b str,
     walk: &BoundaryWalk<'a, 'b>,
     budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
     out: &mut Vec<&'b str>,
 ) -> Result<(), Diagnostic> {
-    if requires_boundary_walk(target, walk) {
-        resolve_target(target, walk, budget, out)
+    if is_elided_boundary(target, walk) {
+        resolve_target(target, walk, budget, reached_boundaries, out)
     } else {
         out.push(target);
         Ok(())
@@ -499,6 +576,7 @@ fn resolve_target<'a, 'b>(
     target: &'b str,
     walk: &BoundaryWalk<'a, 'b>,
     budget: &mut BoundaryBudget,
+    reached_boundaries: &mut HashSet<&'b str>,
     out: &mut Vec<&'b str>,
 ) -> Result<(), Diagnostic> {
     let mut active_path: HashSet<&'b str> = HashSet::new();
@@ -534,7 +612,7 @@ fn resolve_target<'a, 'b>(
             out.push(target);
             continue;
         }
-        if !requires_boundary_walk(target, walk) {
+        if !is_elided_boundary(target, walk) {
             out.push(target);
             continue;
         }
@@ -556,6 +634,7 @@ fn resolve_target<'a, 'b>(
             ));
         }
 
+        reached_boundaries.insert(target);
         active_path.insert(target);
         frames.push(BoundaryFrame::Children {
             boundary: target,
@@ -649,8 +728,15 @@ mod tests {
             examined_target_bytes: MAX_COMPOSITE_BOUNDARY_TARGET_BYTES,
         };
         let mut out = Vec::new();
-        resolve_authored_target("http://example.org#leaf.u", &walk, &mut budget, &mut out)
-            .expect("ordinary wiring is outside boundary budgets");
+        let mut reached_boundaries = HashSet::new();
+        resolve_authored_target(
+            "http://example.org#leaf.u",
+            &walk,
+            &mut budget,
+            &mut reached_boundaries,
+            &mut out,
+        )
+        .expect("ordinary wiring is outside boundary budgets");
         assert_eq!(out, ["http://example.org#leaf.u"]);
         assert_eq!(budget.examined_targets, MAX_COMPOSITE_BOUNDARY_TARGETS);
         assert_eq!(

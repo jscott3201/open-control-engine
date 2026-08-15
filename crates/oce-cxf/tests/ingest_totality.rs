@@ -231,6 +231,20 @@ fn boundary_chain(
     })
 }
 
+fn add_unreachable_boundary_contradiction(document: &mut Value, hops: usize) {
+    let source_composite = hops.div_ceil(2) - 1;
+    assert!(source_composite > 0);
+    let source = format!("{ROOT}.sub{source_composite}.y");
+    let target = format!("{ROOT}.sub{}.y", source_composite - 1);
+    let node = document["@graph"]
+        .as_array_mut()
+        .expect("@graph")
+        .iter_mut()
+        .find(|node| node["@id"].as_str() == Some(source.as_str()))
+        .expect("unused boundary output");
+    node["S231:isConnectedTo"] = json!({ "@id": target });
+}
+
 fn render_diagnostics(diags: &[Diagnostic]) -> String {
     let mut rendered = String::new();
     for diag in diags {
@@ -468,6 +482,37 @@ fn expanded_target_bytes_reject_before_the_count_limit() {
          (8388608)"
     );
     assert_eq!(BOUNDARY_TARGET_BYTE_LIMIT, 8_388_608);
+}
+
+#[test]
+fn boundary_resource_limits_precede_deferred_orientation_diagnostics() {
+    let mut hop = boundary_chain(BOUNDARY_HOP_LIMIT + 1, 1, 1, 0, false);
+    add_unreachable_boundary_contradiction(&mut hop, BOUNDARY_HOP_LIMIT + 1);
+    let mut targets = boundary_chain(15, 2, 2, 0, false);
+    add_unreachable_boundary_contradiction(&mut targets, 15);
+    let mut bytes = boundary_chain(15, 2, 1, 256, false);
+    add_unreachable_boundary_contradiction(&mut bytes, 15);
+
+    for (document, message) in [
+        (
+            hop,
+            "composite boundary resolution exceeds the supported isConnectedTo hop count (64)",
+        ),
+        (
+            targets,
+            "composite boundary resolution exceeds the supported target examination count (65536)",
+        ),
+        (
+            bytes,
+            "composite boundary resolution exceeds the supported aggregate target IRI byte count \
+             (8388608)",
+        ),
+    ] {
+        assert_eq!(
+            diagnostics(on_small_stack(document)),
+            vec![Diagnostic::error(DiagCode::MalformedDocument, message)]
+        );
+    }
 }
 
 #[test]

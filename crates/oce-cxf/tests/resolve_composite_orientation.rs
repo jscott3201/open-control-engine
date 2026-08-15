@@ -5,6 +5,18 @@ use oce_diag::{DiagCode, Diagnostic};
 use oce_model::ModelGraph;
 use serde_json::{Value, json};
 
+mod bless;
+#[path = "resolve_composite_orientation/diagnostics.rs"]
+mod diagnostics;
+mod render;
+
+#[path = "resolve_composite_orientation/multiplicity.rs"]
+mod multiplicity;
+#[path = "resolve_composite_orientation/refusals.rs"]
+mod refusals;
+#[path = "resolve_composite_orientation/synthesized.rs"]
+mod synthesized;
+
 const FIXTURE: &str = include_str!("fixtures/nested_composite.jsonld");
 const BASE: &str = "http://example.org#g36.profile.nested_composite";
 
@@ -466,28 +478,7 @@ fn sibling_document() -> Value {
     })
 }
 
-/// A sibling boundary input-to-input pair has contradictory polarity. It remains authored and
-/// rejects loudly; the current generic `SingleAssignment` cause is intentionally accepted.
-#[test]
-fn contradictory_sibling_inputs_still_reject() {
-    let mut document = sibling_document();
-    let model = "http://example.org#siblings";
-    set_absolute_targets(
-        &mut document,
-        ".subB.u",
-        &[&format!("{model}.subA.u"), &format!("{model}.subB.gain.u")],
-    );
-    let diagnostics = import(&document).expect_err("input-to-input siblings reject");
-    assert!(
-        diagnostics
-            .iter()
-            .any(|diagnostic| diagnostic.code == DiagCode::SingleAssignment),
-        "{diagnostics:?}"
-    );
-}
-
-/// A sibling boundary output-to-output pair has contradictory polarity. It remains authored and
-/// rejects loudly; the current generic `SingleAssignment` cause is intentionally accepted.
+/// An entered sibling boundary output-to-output pair remains visible to generic validation.
 #[test]
 fn contradictory_sibling_outputs_still_reject() {
     let mut document = sibling_document();

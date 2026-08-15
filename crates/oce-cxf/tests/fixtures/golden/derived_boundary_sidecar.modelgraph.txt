@@ -1,0 +1,43 @@
+blocks: 6
+  B0 decl=0 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#derived_sidecar_order.listed.sub.con")
+    inputs=[] outputs=["ConnectorId(7)"]
+    param k=Real(0x3ff0000000000000)
+  B1 decl=1 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#derived_sidecar_order.listed.post")
+    inputs=["ConnectorId(0)"] outputs=["ConnectorId(1)"]
+    param k=Real(0x3ff0000000000000)
+  B2 decl=2 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#derived_sidecar_order.padded.sub.con")
+    inputs=[] outputs=["ConnectorId(8)"]
+    param k=Real(0x3ff0000000000000)
+  B3 decl=3 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#derived_sidecar_order.padded.post")
+    inputs=["ConnectorId(2)"] outputs=["ConnectorId(3)"]
+    param k=Real(0x3ff0000000000000)
+  B4 decl=4 class=CDL.Reals.Sources.Constant instance_iri=Some("http://example.org#derived_sidecar_order.direct")
+    inputs=[] outputs=["ConnectorId(4)"]
+    param k=Real(0x4000000000000000)
+  B5 decl=5 class=CDL.Reals.MultiplyByParameter instance_iri=Some("http://example.org#derived_sidecar_order.directPost")
+    inputs=["ConnectorId(5)"] outputs=["ConnectorId(6)"]
+    param k=Real(0x3ff0000000000000)
+connectors: 9
+  C0 block=B1 dir=In type=Real decl=0 iri=Some("http://example.org#derived_sidecar_order.listed.post.u")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C1 block=B1 dir=Out type=Real decl=1 iri=Some("http://example.org#derived_sidecar_order.listed.post.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C2 block=B3 dir=In type=Real decl=2 iri=Some("http://example.org#derived_sidecar_order.padded.post.u")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C3 block=B3 dir=Out type=Real decl=3 iri=Some("http://example.org#derived_sidecar_order.padded.post.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C4 block=B4 dir=Out type=Real decl=4 iri=Some("http://example.org#derived_sidecar_order.direct.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C5 block=B5 dir=In type=Real decl=5 iri=Some("http://example.org#derived_sidecar_order.directPost.u")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C6 block=B5 dir=Out type=Real decl=6 iri=Some("http://example.org#derived_sidecar_order.directPost.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C7 block=B0 dir=Out type=Real decl=7 iri=Some("http://example.org#derived_sidecar_order.listed.sub.con.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+  C8 block=B2 dir=Out type=Real decl=8 iri=Some("http://example.org#derived_sidecar_order.padded.sub.con.y")
+    attrs=Real(unit=None quantity=None display_unit=None min=- max=- nominal=- unbounded=None)
+connections: 3
+  C4 -> C5
+  C7 -> C0
+  C8 -> C2
+external_inputs: []

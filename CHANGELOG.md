@@ -487,15 +487,22 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
 
 ### Hardening
 
-- **Composite boundary lowering is iterative and resource-bounded** (#290, #298). A path may enter at most 64
+- **Composite boundary lowering is iterative and resource-bounded** (#290, #298, #299). A path may enter at most 64
   non-top `isConnectedTo` boundary nodes, and one document may cause at most 65,536 target
   examinations or 8 MiB of aggregate target-IRI bytes within boundary walks. Attempting the next
   hop, examination, or byte returns a deterministic `malformed-document` diagnostic before a
   partial graph is built; resource-limit diagnostics omit the attempted target subject to avoid an
   additional attacker-controlled IRI copy at refusal. Direct leaf wiring is unchanged. The walk
   remains path-local and preserves canonical order and duplicate multiplicity, so multiple drives
-  remain visible to single-assignment validation. These limits are engine acceptance bounds, not
-  CDL semantics.
+  remain visible to single-assignment validation. An active unorientable relation now rejects after
+  the bounded walk when boundary elision would otherwise erase it, whether the boundary is its
+  authored source or target. Active boundary-source relations to inactive targets remain loud.
+  Listed node-less and omitted padded outputs can drive through a re-anchored boundary edge. These
+  synthesized drivers remain charged as authored targets under the byte bound. Deferred diagnostics
+  omit attacker-controlled subjects, and boundary resource errors retain precedence. Expanded edges
+  that repeat one missing endpoint emit one unresolved-reference diagnostic across ordinary and
+  boundary-specific orientation, preventing fanout from multiplying the same subject allocation.
+  These limits are engine acceptance bounds, not CDL semantics.
 - **Ingest recursion and AST growth are bounded with typed diagnostics** (#194). Expression
   nesting is capped at 64 and AST size at 4096 nodes, enforced at parser entry, again on the
   completed AST, and again in `eval()`. Composite nesting is capped at 64.
