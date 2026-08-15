@@ -227,6 +227,7 @@ repository is the newer copy.
 | Page | For |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Layers, the §7.17 seam, the crate map, platform and MSRV |
+| [Execution profile](docs/execution-profile.md) | HostTick semantics and the `CDL.Logical.Pre` conformance boundary |
 | [Verification and evidence](docs/verification-evidence.md) | What has been proven, and what has not |
 | [CDL coverage](docs/cdl-coverage.md) | Which classes and sequences run, and what "supported" means |
 | [CXF round trip](docs/cxf-round-trip.md) | Export guarantees, and where it silently drops things |
