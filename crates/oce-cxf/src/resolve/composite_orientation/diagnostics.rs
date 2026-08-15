@@ -102,19 +102,37 @@ impl CompositeOrientation {
                         if source_is_erased && reached_boundaries.contains(node.id.as_str()) => {}
                     Verdict::Unknown
                         if !source_is_erased
+                            && match self.flat_polarity(&node.id, root) {
+                                Some(polarity) => self.expansion_reaches_generic_refusal(
+                                    authored_target,
+                                    Some(polarity),
+                                    canonical,
+                                    by_id,
+                                    root,
+                                    specialization,
+                                ),
+                                None if !self.roles.contains_key(node.id.as_str()) => self
+                                    .expansion_reaches_generic_refusal(
+                                        authored_target,
+                                        None,
+                                        canonical,
+                                        by_id,
+                                        root,
+                                        specialization,
+                                    ),
+                                None => false,
+                            } => {}
+                    Verdict::Unknown
+                        if source_is_erased
+                            && reached_boundaries.contains(node.id.as_str())
                             && self.expansion_reaches_generic_refusal(
                                 authored_target,
-                                None,
+                                Some(Polarity::Source),
                                 canonical,
                                 by_id,
                                 root,
                                 specialization,
                             ) => {}
-                    Verdict::Unknown
-                        if source_is_erased
-                            && reached_boundaries.contains(node.id.as_str())
-                            && (!self.is_elided_boundary_source(authored_target)
-                                || !by_id.contains_key(authored_target)) => {}
                     Verdict::SwapBlocked | Verdict::Unknown | Verdict::Untouched => {
                         return Some(Diagnostic::error(
                             DiagCode::DirectionMismatch,
@@ -176,9 +194,13 @@ impl CompositeOrientation {
                 return true;
             }
             if !self.is_elided_boundary_source(target) {
-                return self
+                if self
                     .flat_polarity(target, root)
-                    .is_none_or(|polarity| required_polarity.is_none_or(|want| want == polarity));
+                    .is_none_or(|polarity| required_polarity.is_none_or(|want| want == polarity))
+                {
+                    return true;
+                }
+                continue;
             }
             if active_path.contains(target) || !by_id.contains_key(target) {
                 return true;

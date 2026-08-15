@@ -146,3 +146,96 @@ fn reached_missing_target_reports_only_unresolved() {
         ]
     );
 }
+
+/// A reached ownership conflict cannot disappear into a valid flattened connection.
+#[test]
+fn reached_conflicted_input_keeps_deferred_direction_error() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    node_mut(&mut document, ".subB")["S231:hasInput"] = json!([
+        { "@id": format!("{model}.subB.u") },
+        { "@id": format!("{model}.subA.u") }
+    ]);
+    set_absolute_targets(
+        &mut document,
+        ".u",
+        &[&format!("{model}.subA.u"), &format!("{model}.subB.u")],
+    );
+    let diagnostics = import(&document).expect_err("conflicted ownership must reject");
+    assert_eq!(
+        diagnostics,
+        vec![Diagnostic::error(
+            DiagCode::DirectionMismatch,
+            "boundary connection direction cannot be derived",
+        )]
+    );
+}
+
+/// A nonmatching fanout arm cannot hide a later refusal owned by flat validation.
+#[test]
+fn mixed_polarity_target_fanout_has_only_flat_direction_error() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(&mut document, ".subA.gain.u", &[&format!("{model}.subB.u")]);
+    node_mut(&mut document, ".subB")["S231:containsBlock"] = json!([
+        { "@id": format!("{model}.subB.out") },
+        { "@id": format!("{model}.subB.gain") }
+    ]);
+    document["@graph"].as_array_mut().expect("@graph").extend([
+        json!({
+            "@id": format!("{model}.subB.out"),
+            "@type": "http://example.org#Buildings.Controls.OBC.CDL.Reals.Sources.Constant",
+            "S231:hasParameter": { "@id": format!("{model}.subB.out.k") },
+            "S231:hasOutput": { "@id": format!("{model}.subB.out.y") }
+        }),
+        json!({
+            "@id": format!("{model}.subB.out.k"),
+            "@type": "S231:Parameter",
+            "S231:value": 1
+        }),
+        json!({
+            "@id": format!("{model}.subB.out.y"),
+            "@type": "S231:RealOutput",
+            "S231:isOfDataType": { "@id": "S231:Real" }
+        }),
+    ]);
+    set_absolute_targets(
+        &mut document,
+        ".subB.u",
+        &[
+            &format!("{model}.subB.out.y"),
+            &format!("{model}.subB.gain.u"),
+        ],
+    );
+    let expected = vec![
+        Diagnostic::error(
+            DiagCode::DirectionMismatch,
+            "connection is not output→input",
+        )
+        .with_subject(format!("{model}.u")),
+    ];
+    assert_eq!(
+        import(&document).expect_err("mixed target fanout must reject a flat edge"),
+        expected
+    );
+    set_absolute_targets(
+        &mut document,
+        ".subB.u",
+        &[
+            &format!("{model}.subB.gain.u"),
+            &format!("{model}.subB.out.y"),
+        ],
+    );
+    assert_eq!(
+        import(&document).expect_err("reordered mixed fanout must reject the same flat edge"),
+        expected
+    );
+}
