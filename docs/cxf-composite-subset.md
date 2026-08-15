@@ -255,10 +255,8 @@ plus 44 vendored modelica-json translations), all 103 crate documents are byte-i
 import outcome under the rule; 12 vendored documents — every one still refusing on unrelated
 grounds — shed 48 `grounding-failed` diagnostics in exactly the two ruled classes (forward
 sibling references now grounding, and specialization-pass generic machinery going
-non-emitting), with zero new diagnostics anywhere. The tree now holds 197 documents (153 crate
-plus 44 vendored; the growth is the conformance fixtures the declaration-scope and
-`hasInstance`-interface rules added). The wider reach
-exists off-corpus.
+non-emitting), with zero new diagnostics anywhere. The tree now holds 204 documents (160 crate
+plus 44 vendored). The wider reach exists off-corpus.
 
 ```json
 { "@id": "…#M", "@type": "S231:Block",
