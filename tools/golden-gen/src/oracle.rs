@@ -95,13 +95,13 @@ pub struct Golden {
     pub kind: ValueKind,
     /// Time samples in seconds (non-decreasing), parallel to `samples`.
     pub time: Vec<f64>,
-    /// Reference samples (closed-form spec math), parallel to `time`.
+    /// Reference samples, parallel to `time`.
     pub samples: Vec<Sample>,
     /// Input columns that produced this output, parallel to `time`.
     pub inputs: Vec<InputSeries>,
     /// Human description of the input trace / parameters (for provenance).
     pub input_desc: String,
-    /// Short statement of the closed-form rule used (for provenance).
+    /// Short statement of the source or profile rule used for provenance.
     pub rule_desc: String,
     /// Extra provenance fields for scenario-specific audit notes.
     pub extra_provenance: Vec<(&'static str, String)>,

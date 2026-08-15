@@ -56,7 +56,7 @@ fn main() {
     let crate_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let goldens_root = crate_root.join("goldens");
 
-    // Re-derive every golden (closed-form spec math).
+    // Derive every source or profile reference without engine code.
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
     goldens.extend(reals_scalar_arithmetic::goldens());
