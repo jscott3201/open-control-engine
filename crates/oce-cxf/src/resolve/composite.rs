@@ -89,11 +89,10 @@ pub(super) fn lower(
 
     reject_unsupported_constructs(doc, specialization, diags);
 
-    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
     let mut leaf_order = Vec::new();
     let mut stack = HashSet::new();
     let mut path = Vec::new();
-    collect_leaves(
+    let nesting_exceeded = collect_leaves(
         root,
         1,
         Vec::new(),
@@ -107,7 +106,17 @@ pub(super) fn lower(
         &mut evaluated_chains,
     );
     withheld.emit_unvisited(&evaluated_chains, diags);
+    if nesting_exceeded {
+        return LoweredCxf {
+            doc: lowered,
+            root_iri,
+            inherited_scope,
+            synthesized_connections: Vec::new(),
+            boundary_traversal_failed: true,
+        };
+    }
 
+    let boundary = CompositeOrientation::new(doc, by_id, root, specialization);
     let (mut rewritten, deferred_diagnostic) =
         match rewrite_connections(doc, by_id, root, specialization, &boundary) {
             Ok(rewritten) => rewritten,
@@ -281,7 +290,8 @@ fn unsupported_modelica_key(key: &str) -> bool {
 
 /// Depth-first `containsBlock` flattening. `stack` gives O(1) cycle membership; `path` mirrors it
 /// as the ordered traversal spine so a detected cycle can name every participant in path order.
-/// Both are pushed/popped together — `stack` and `path` always hold the same ids.
+/// Both are pushed/popped together — `stack` and `path` always hold the same ids. A `true` result
+/// stops pre-lowering after the first depth refusal, before orientation indexes the hostile graph.
 #[allow(clippy::too_many_arguments)]
 fn collect_leaves(
     composite_id: &str,
@@ -295,7 +305,7 @@ fn collect_leaves(
     leaf_order: &mut Vec<String>,
     inherited_scope: &mut HashMap<String, Vec<(Arc<str>, EvalResult)>>,
     evaluated_chains: &mut HashSet<String>,
-) {
+) -> bool {
     if depth > MAX_COMPOSITE_NESTING_DEPTH {
         diags.push(
             Diagnostic::error(
@@ -307,7 +317,7 @@ fn collect_leaves(
             )
             .with_subject(composite_id.to_owned()),
         );
-        return;
+        return true;
     }
     if !stack.insert(composite_id.to_owned()) {
         // Reconstruct the cycle from the re-entered id's position on the traversal spine onward,
@@ -330,7 +340,7 @@ fn collect_leaves(
             )
             .with_subject(composite_id.to_owned()),
         );
-        return;
+        return false;
     }
     path.push(composite_id.to_owned());
     let Some(composite) = by_id.get(composite_id).copied() else {
@@ -340,7 +350,7 @@ fn collect_leaves(
         );
         stack.remove(composite_id);
         path.pop();
-        return;
+        return false;
     };
     evaluated_chains.insert(composite_id.to_owned());
     let scope = composite_scope(composite, parent_scope, by_id, specialization, diags);
@@ -359,7 +369,7 @@ fn collect_leaves(
             continue;
         };
         if is_runtime_composite(node) {
-            collect_leaves(
+            if collect_leaves(
                 child,
                 depth + 1,
                 scope.clone(),
@@ -371,7 +381,11 @@ fn collect_leaves(
                 leaf_order,
                 inherited_scope,
                 evaluated_chains,
-            );
+            ) {
+                stack.remove(composite_id);
+                path.pop();
+                return true;
+            }
         } else {
             leaf_order.push(child.to_owned());
             inherited_scope.insert(child.to_owned(), scope.clone());
@@ -379,6 +393,7 @@ fn collect_leaves(
     }
     stack.remove(composite_id);
     path.pop();
+    false
 }
 
 /// Extend the inherited scope chain with the composite's own declarations through the shared
