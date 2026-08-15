@@ -76,9 +76,9 @@ pub(crate) fn rejections() -> Vec<(&'static str, Vec<Diagnostic>)> {
             "rejected/unsupported_instance_member.jsonld",
             vec![error_with_subject(
                 DiagCode::NonSubsetConstruct,
-                "http://example.org#M.ramp.zzz",
+                "http://example.org#M.sin.zzz",
                 "composite/unsupported-instance-member: `zzz` is neither a declared port nor a \
-                 declared parameter of `CDL.Reals.Sources.Ramp`",
+                 declared parameter of `CDL.Reals.Sources.Sin`",
             )],
         ),
         (

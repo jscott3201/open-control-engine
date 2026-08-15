@@ -684,6 +684,95 @@ fn inactive_leaf_parameter_routes_ground_byte_identically() {
     );
 }
 
+#[test]
+fn unclassifiable_member_control_changes_only_one_nodeless_member_name() {
+    const ACCEPTED_MEMBER: &str = "http://example.org#M.sin.y";
+    const REJECTED_MEMBER: &str = "http://example.org#M.sin.zzz";
+
+    let accepted = read_fixture("accepted/unclassifiable_member_control.jsonld");
+    let rejected = read_fixture("rejected/unsupported_instance_member.jsonld");
+    let shape = |source: &str| {
+        let document: serde_json::Value = serde_json::from_str(source).expect("valid fixture JSON");
+        let graph = document["@graph"].as_array().expect("fixture graph");
+        let context_maps = match &document["@context"] {
+            serde_json::Value::Object(map) => vec![map],
+            serde_json::Value::Array(entries) => entries
+                .iter()
+                .map(|entry| entry.as_object().expect("inline context map"))
+                .collect(),
+            _ => panic!("fixture context must be inline"),
+        };
+        let context: std::collections::BTreeMap<&str, &str> = context_maps
+            .into_iter()
+            .flat_map(|map| map.iter())
+            .filter(|(term, _)| !term.starts_with('@'))
+            .map(|(term, value)| (term.as_str(), value.as_str().expect("context IRI")))
+            .collect();
+        let expand_id = |id: &str| {
+            if let Some(expanded) = context.get(id) {
+                return (*expanded).to_owned();
+            }
+            let Some((prefix, suffix)) = id.split_once(':') else {
+                return id.to_owned();
+            };
+            if suffix.starts_with("//") {
+                return id.to_owned();
+            }
+            context
+                .get(prefix)
+                .map_or_else(|| id.to_owned(), |base| format!("{base}{suffix}"))
+        };
+        let graph_ids: std::collections::BTreeSet<String> = graph
+            .iter()
+            .map(|node| node["@id"].as_str().expect("graph node id"))
+            .map(expand_id)
+            .collect();
+        let member_count = graph
+            .iter()
+            .find(|node| {
+                expand_id(node["@id"].as_str().expect("graph node id"))
+                    == "http://example.org#M.sin"
+            })
+            .expect("Sin instance")["S231:hasInstance"]
+            .as_array()
+            .expect("member array")
+            .len();
+        (member_count, graph_ids)
+    };
+
+    let (accepted_count, accepted_nodes) = shape(&accepted);
+    let (rejected_count, rejected_nodes) = shape(&rejected);
+    assert_eq!(accepted_count, 6, "accepted member count");
+    assert_eq!(rejected_count, 6, "rejected member count");
+    assert_eq!(
+        accepted_nodes
+            .iter()
+            .filter(|id| id.starts_with("http://example.org#M.sin."))
+            .count(),
+        5,
+        "accepted node-bearing member count"
+    );
+    assert_eq!(
+        rejected_nodes
+            .iter()
+            .filter(|id| id.starts_with("http://example.org#M.sin."))
+            .count(),
+        5,
+        "rejected node-bearing member count"
+    );
+    for member in [ACCEPTED_MEMBER, REJECTED_MEMBER] {
+        assert!(!accepted_nodes.contains(member), "accepted node {member}");
+        assert!(!rejected_nodes.contains(member), "rejected node {member}");
+    }
+    assert_eq!(accepted.matches(ACCEPTED_MEMBER).count(), 1);
+    assert_eq!(rejected.matches(REJECTED_MEMBER).count(), 1);
+    assert_eq!(
+        accepted.replacen(ACCEPTED_MEMBER, REJECTED_MEMBER, 1),
+        rejected,
+        "the control pair must differ only by the final node-less member name"
+    );
+}
+
 // ---- README index -----------------------------------------------------------------------------
 
 #[test]
