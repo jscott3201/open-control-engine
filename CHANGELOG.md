@@ -156,6 +156,12 @@ and a gate that accepted any text would restore exactly the false assurance desc
   `ConflictingInterfaceDeclaration`. The 44 vendored modelica-json translations gained a
   per-document characterization capture that asserts the corpus size before comparing anything, so
   a document appearing or disappearing fails the test rather than quietly moving the baseline.
+- **Activity does not suppress active leaf parameter bindings** (#303). A false-guarded sibling can
+  mark another leaf's parameter node inactive, but the active leaf still grounds it through either
+  ordinary `S231:hasParameter` or a classified `S231:hasInstance` member. Twin accepted fixtures
+  render byte-identically and pin `CDL.Reals.Sources.Constant.k` to the exact bits for `7.0`;
+  applying the forbidden member filter removes that golden row and makes the public API reject the
+  missing required parameter.
 - **Declared boundary outputs carry and export their authored §7.4.1 attributes** (#245). A root
   `S231:hasOutput` node's `{unit, quantity, displayUnit, min, max}` were dropped *symmetrically* —
   ingest never read them, because a root boundary node is never in `conn_nodes`, and export never

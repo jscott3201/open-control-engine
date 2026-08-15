@@ -52,10 +52,13 @@ the guard is evaluated against the owning composite's own grounded parameters an
 false guard makes the node — and, recursively, its inputs, outputs, parameters, constants, and
 contained blocks — **inactive**. Everything else is active.
 
-Rules 3, 4, 5, and 7 operate on active nodes only: inactive children are not traversed (their
-whole subtree drops out of the leaf order), inactive parameters are not grounded — an inactive
-array-valued parameter does **not** reject — and banned Modelica keys or `S231:isReplaceable` on
-an inactive node are tolerated. Root classification (rule 2) does not consult activity.
+Rules 3, 4, 5, and 7 do not traverse inactive child components, so their whole subtree drops out
+of the leaf order. During lowering, an active composite's own scope excludes parameter or constant
+declarations marked inactive — an inactive array-valued declaration does **not** reject. Leaf
+parameter binding is different: an active leaf grounds its ordinary `S231:hasParameter` and
+`S231:hasConstant` declarations, and its node-bearing classified `S231:hasInstance` parameter
+members, without filtering activity. Banned Modelica keys or `S231:isReplaceable` on an inactive
+node are tolerated. Root classification (rule 2) does not consult activity.
 Connections are not exempt: an active connection into or out of an inactive node rejects with
 the generic `inactive-conditional-node` diagnostic — prune conditional structure so inactive
 nodes take their connections with them.
@@ -252,10 +255,8 @@ plus 44 vendored modelica-json translations), all 103 crate documents are byte-i
 import outcome under the rule; 12 vendored documents — every one still refusing on unrelated
 grounds — shed 48 `grounding-failed` diagnostics in exactly the two ruled classes (forward
 sibling references now grounding, and specialization-pass generic machinery going
-non-emitting), with zero new diagnostics anywhere. The tree now holds 197 documents (153 crate
-plus 44 vendored; the growth is the conformance fixtures the declaration-scope and
-`hasInstance`-interface rules added). The wider reach
-exists off-corpus.
+non-emitting), with zero new diagnostics anywhere. The tree now holds 205 documents (161 crate
+plus 44 vendored). The wider reach exists off-corpus.
 
 ```json
 { "@id": "…#M", "@type": "S231:Block",
