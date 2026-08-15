@@ -289,7 +289,7 @@ fn verifier_rejects_symlink_and_fifo_without_blocking() {
     ]);
     assert!(!output.status.success());
     assert!(
-        String::from_utf8_lossy(&output.stderr).contains("strict Rust canonical boundary"),
+        String::from_utf8_lossy(&output.stderr).contains("unsafe architecture evidence"),
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
