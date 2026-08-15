@@ -325,6 +325,18 @@ impl CompositeOrientation {
                                 root,
                                 specialization,
                             ) => {}
+                    Verdict::Contradictory
+                        if !source_is_erased
+                            && self.flat_polarity(&node.id, root).is_some_and(|polarity| {
+                                self.expansion_reaches_flat_polarity(
+                                    authored_target,
+                                    polarity,
+                                    canonical,
+                                    by_id,
+                                    root,
+                                    specialization,
+                                )
+                            }) => {}
                     Verdict::Contradictory => {
                         return Some(Diagnostic::error(
                             DiagCode::DirectionMismatch,
@@ -359,6 +371,25 @@ impl CompositeOrientation {
         root: &str,
         specialization: &Specialization,
     ) -> bool {
+        self.expansion_reaches_flat_polarity(
+            target,
+            Polarity::Source,
+            canonical,
+            by_id,
+            root,
+            specialization,
+        )
+    }
+
+    fn expansion_reaches_flat_polarity(
+        &self,
+        target: &str,
+        polarity: Polarity,
+        canonical: &HashMap<&str, Vec<&str>>,
+        by_id: &HashMap<&str, &Node>,
+        root: &str,
+        specialization: &Specialization,
+    ) -> bool {
         let mut pending = vec![target];
         let mut seen = HashSet::new();
         while let Some(target) = pending.pop() {
@@ -366,7 +397,7 @@ impl CompositeOrientation {
                 continue;
             }
             if !self.is_elided_boundary_source(target) {
-                if self.flat_polarity(target, root) == Some(Polarity::Source) {
+                if self.flat_polarity(target, root) == Some(polarity) {
                     return true;
                 }
                 continue;

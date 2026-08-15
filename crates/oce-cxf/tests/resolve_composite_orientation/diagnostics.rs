@@ -32,3 +32,26 @@ fn preserved_unclassified_missing_target_reports_only_unresolved() {
         ]
     );
 }
+
+/// A productive target boundary leaves direction refusal to the expanded flat edge.
+#[test]
+fn target_side_contradiction_reports_only_flat_direction_error() {
+    let mut document = sibling_document();
+    let model = "http://example.org#siblings";
+    node_mut(&mut document, "#siblings")
+        .as_object_mut()
+        .expect("root node")
+        .remove("S231:hasOutput");
+    set_absolute_targets(&mut document, ".subA.gain.u", &[&format!("{model}.subB.u")]);
+    let diagnostics = import(&document).expect_err("input-to-input edge must reject once");
+    assert_eq!(
+        diagnostics,
+        vec![
+            Diagnostic::error(
+                DiagCode::DirectionMismatch,
+                "connection is not output→input",
+            )
+            .with_subject(format!("{model}.u"))
+        ]
+    );
+}
