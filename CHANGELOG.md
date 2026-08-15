@@ -162,6 +162,11 @@ and a gate that accepted any text would restore exactly the false assurance desc
   render byte-identically and pin `CDL.Reals.Sources.Constant.k` to the exact bits for `7.0`;
   applying the forbidden member filter removes that golden row and makes the public API reject the
   missing required parameter.
+- **The unclassifiable-member refusal has a count-preserving control** (#304). The accepted and
+  rejected documents are now six-member `CDL.Reals.Sources.Sin` twins whose bytes differ only in
+  the final node-less member name: declared output `y` versus unsupported `zzz`. A relational test
+  pins both member counts and the single member-IRI substitution, so a cardinality-based refusal
+  can no longer masquerade as name classification.
 - **Declared boundary outputs carry and export their authored §7.4.1 attributes** (#245). A root
   `S231:hasOutput` node's `{unit, quantity, displayUnit, min, max}` were dropped *symmetrically* —
   ingest never read them, because a root boundary node is never in `conn_nodes`, and export never
