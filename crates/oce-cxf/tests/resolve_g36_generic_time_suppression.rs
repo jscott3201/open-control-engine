@@ -1,4 +1,4 @@
-//! Source-verified G36 Generic.TimeSuppression composite import tests.
+//! Source-transcribed G36 Generic.TimeSuppression composite import tests.
 //!
 //! Upstream `TimeSuppression.mo` lines 72-74 bind `greThr.h=0.5*dTHys`. The fixture
 //! pre-grounds that expression to `0.125` from the source-default `dTHys=0.25` binding while
@@ -118,7 +118,7 @@ fn block_param<'a>(graph: &'a ModelGraph, instance_suffix: &str, name: &str) -> 
 }
 
 #[test]
-fn source_verified_generic_time_suppression_preserves_topology_and_grounded_bindings() {
+fn source_transcribed_generic_time_suppression_preserves_topology_and_grounded_bindings() {
     let parsed: JsonValue =
         serde_json::from_str(G36_GENERIC_TIME_SUPPRESSION).expect("G36 fixture JSON");
     let top = parsed["@graph"]
@@ -257,6 +257,6 @@ fn generic_time_suppression_modelgraph_is_stable() {
         .expect("golden snapshot missing; regenerate with OCE_BLESS=1");
     assert_eq!(
         actual, expected,
-        "source-verified G36 Generic TimeSuppression ModelGraph diverged from golden"
+        "source-transcribed G36 Generic TimeSuppression ModelGraph diverged from golden"
     );
 }

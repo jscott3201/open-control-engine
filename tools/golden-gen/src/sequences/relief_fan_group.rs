@@ -1,4 +1,8 @@
-//! G36 MultiZone VAV ReliefFanGroup sequence oracle.
+//! G36 MultiZone VAV ReliefFanGroup HostTick v1 profile reference.
+//!
+//! The stage-up and stage-down loops contain `CDL.Logical.Pre`; this recurrence models those blocks
+//! as one-transition HostTick memories. It is independent of `oce-blocks`, but it is not a Modelica
+//! event-iteration oracle.
 
 use crate::oracle::{Golden, InputSeries, ValueKind};
 

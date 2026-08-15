@@ -1,4 +1,4 @@
-//! Per-tick recurrence helpers mirroring CDL elementary-block semantics, shared by the sequence oracles.
+//! Per-tick recurrence helpers for CDL source semantics and named execution-profile projections.
 
 pub(crate) fn buildings_line(x1: f64, f1: f64, x2: f64, f2: f64, u: f64) -> f64 {
     let x_lim = clamp(u, x1, x2);

@@ -1,4 +1,4 @@
-//! G36 CoolingOnly.Controller Tier-A exact and L1 funnel-band conformance.
+//! G36 CoolingOnly.Controller Tier-A HostTick v1 exact and L1 funnel-band profile checks.
 //!
 //! Exact mode covers all ten outputs. Funnel mode routes only the five Real outputs through the
 //! shared near-ULP policy; all five Integer outputs remain Exact-only.
@@ -143,7 +143,7 @@ const REFERENCE_COLUMNS: &[&str] = &[
 ];
 
 #[test]
-fn exact_oracle_compares_every_controller_output_at_every_validation_tick() {
+fn exact_host_tick_profile_compares_every_controller_output_at_every_validation_tick() {
     let reference = CombiTimeTable::read(&reference_path())
         .unwrap_or_else(|error| panic!("CoolingOnly.Controller reference read failed: {error}"));
     assert_eq!(reference.name, "G36_cooling_only_controller_reference");
@@ -333,6 +333,12 @@ fn assert_signal_provenance(reference: &CombiTimeTable) {
         assert_eq!(provenance["tier"], "A");
         assert_eq!(provenance["n_samples"], ROWS);
         assert_eq!(provenance["depends_on_oce_blocks"], false);
+        assert_eq!(provenance["execution_profile"], "HostTick v1");
+        assert!(
+            provenance["source"]
+                .as_str()
+                .is_some_and(|source| source.contains("not a Modelica event-iteration oracle"))
+        );
         assert_eq!(
             provenance["source_files"],
             "Buildings/Controls/OBC/ASHRAE/G36/TerminalUnits/CoolingOnly/Controller.mo"

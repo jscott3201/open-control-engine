@@ -1,4 +1,4 @@
-//! Source-verified ASHRAE G36 ReliefFanGroup through the frozen facade.
+//! ASHRAE G36 ReliefFanGroup HostTick v1 replay through the frozen facade.
 
 use oce_api::{CollectSpec, Engine, InputSource, SimMetrics, SimSpec, Value};
 
@@ -101,7 +101,7 @@ fn load_relief_fan_group() -> Engine {
     let mut engine = Engine::in_memory();
     let report = engine
         .load_cxf(RELIEF_FAN_GROUP.as_bytes())
-        .expect("source-verified G36 ReliefFanGroup fixture loads");
+        .expect("source-transcribed G36 ReliefFanGroup fixture loads");
     assert_eq!(report.block_count, 226);
     assert!(
         report.warnings.is_empty(),

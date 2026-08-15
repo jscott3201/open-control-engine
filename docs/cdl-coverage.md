@@ -122,6 +122,9 @@ the preceding successful tick. Repeated calls at one timestamp are separate stat
 The scheduler treats `Pre` as a feedthrough cut and accepts a feedback loop without proving that the
 corresponding Modelica event iteration converges. This semantic projection applies to any fixture
 containing `Pre`; fixture support and deterministic output do not broaden the conformance claim.
+The Tier-A references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+`ReliefFanGroup` therefore classify their 20 output signals as HostTick v1 profile checks, not
+Modelica source-semantics oracles.
 
 ## 47 fixture documents is not 47 sequences
 

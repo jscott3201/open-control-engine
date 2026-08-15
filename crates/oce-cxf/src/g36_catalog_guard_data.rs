@@ -117,7 +117,7 @@ pub(super) const PROFILE_PARAMETER_GATED: &str =
     include_str!("../tests/fixtures/profile/parameter-gated-connector.jsonld");
 
 pub(super) const EXPECTED_REFERENCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
-pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "315ad188a5abe2b5";
+pub(super) const EXPECTED_CATALOG_FINGERPRINT: &str = "95c0cc723b9b9f93";
 
 pub(super) const EXPECTED_PACKAGE_ORDER_FILES: &[&str] = &[
     "Buildings/Controls/OBC/ASHRAE/G36/package.order",

@@ -107,9 +107,11 @@ OpenModelica. A mismatch never widens a tolerance or re-blesses a golden.
   f64, 18 exact encoded integer, 12 exact 0.0/1.0). The funnel band is an *additive* Real-only
   layer, never the primary comparison — Boolean and Integer outputs are deliberately kept off it
   because the funnel is type-blind (`g36_funnel_band/policy.rs`).
-  Most references are closed-form derivations from CDL / Buildings source semantics; some, like
-  `TimeSuppression`, are explicit per-tick recurrences. The generator is deliberately kept **off
-  the workspace** and **forbidden from depending on `oce-blocks`**; CI enforces that
+  Of the 410 signal goldens, 390 check CDL / Buildings source semantics. The other 20 are exact
+  HostTick v1 profile references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+  `ReliefFanGroup`, whose fixtures contain `CDL.Logical.Pre`; they do not claim Modelica
+  event-iteration equivalence. The generator is deliberately kept **off the workspace** and
+  **forbidden from depending on `oce-blocks`**; CI enforces that
   code-dependency firewall. For classes whose oracle shares a pinned math kernel or restates the
   same documented recurrence, a Tier-A pass is evidence about plumbing and transcription of the
   shared formula, not an independent check of the formula; a mechanical shared-kernel detector
@@ -269,7 +271,7 @@ rather than data a reviewer spot-checks.
 
 By the four pillars above this is not coverage of anything. It matters one level up: **the
 46 catalog fixtures are the inputs to every conformance test in the workspace.** Tier-2 goldens and
-Tier-A oracles are all derived from them, so a transposed catalog fixture fails nothing — it makes
+Tier-A references are all derived from them, so a transposed catalog fixture fails nothing — it makes
 the entire suite validate the wrong sequence, silently and permanently.
 
 Nothing else can see it. The resolver assigns port positions from document array order; the arity

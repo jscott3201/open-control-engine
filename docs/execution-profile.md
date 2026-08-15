@@ -75,3 +75,7 @@ The boundary is pinned through the public facade in
 `crates/oce-api/src/tests/pre_execution_profile_tests.rs`. The tests cover initialization, repeated
 equal-time calls, all host output views, a non-convergent Boolean feedback loop, and snapshot/restore
 continuation.
+
+The Tier-A references for `Generic.TimeSuppression`, `CoolingOnly.Controller`, and
+`ReliefFanGroup` likewise check HostTick v1. Their 20 signal records are independent of
+`oce-blocks`, but they do not claim Modelica `Pre` event-iteration equivalence.

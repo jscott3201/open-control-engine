@@ -395,7 +395,9 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
 
 fn provenance_source(g: &Golden) -> &'static str {
     const SHARED_KERNEL: &str = "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine";
-    if g.class_path == "G36" {
+    if uses_host_tick_pre_profile(g) {
+        "HostTick v1 profile recurrence derived from fixture topology and pinned Buildings sources except CDL.Logical.Pre, which uses the documented one-transition projection; independent of oce-blocks, not a Modelica event-iteration oracle"
+    } else if g.class_path == "G36" {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
     } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
@@ -441,6 +443,12 @@ fn provenance_source(g: &Golden) -> &'static str {
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }
+}
+
+fn uses_host_tick_pre_profile(g: &Golden) -> bool {
+    g.class_path == "G36"
+        && g.scenario
+            .is_some_and(sequences::uses_host_tick_pre_profile)
 }
 
 fn extra_provenance_json(g: &Golden) -> String {
@@ -519,7 +527,13 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         .samples
         .iter()
         .any(|s| matches!(s, Sample::Real(x) if !x.is_finite()));
-    let compare = if g.class_path == "G36" {
+    let compare = if uses_host_tick_pre_profile(g) {
+        match g.kind {
+            ValueKind::Real => "exact G36 HostTick v1 profile f64 trace (Value::bit_eq)",
+            ValueKind::Integer => "exact G36 HostTick v1 profile encoded integer",
+            ValueKind::Boolean => "exact G36 HostTick v1 profile 0.0/1.0",
+        }
+    } else if g.class_path == "G36" {
         match g.kind {
             ValueKind::Real => "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
             ValueKind::Integer => "exact encoded integer",

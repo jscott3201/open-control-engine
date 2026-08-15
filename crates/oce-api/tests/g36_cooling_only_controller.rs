@@ -248,7 +248,7 @@ fn load_controller() -> Engine {
     let mut engine = Engine::in_memory();
     let report = engine
         .load_cxf(FIXTURE.as_bytes())
-        .expect("source-verified G36 CoolingOnly.Controller fixture loads");
+        .expect("source-transcribed G36 CoolingOnly.Controller fixture loads");
     assert_eq!(report.block_count, 213);
     assert!(
         report.warnings.is_empty(),
