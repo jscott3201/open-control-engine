@@ -129,6 +129,7 @@ pub(super) struct Architecture {
     pub(super) platform_manifest_digest: String,
     pub(super) config_digest: String,
     pub(super) repository_revision: String,
+    pub(super) generator_provenance_scope: String,
     pub(super) generator_inputs: GeneratorInputs,
     pub(super) omc_version: String,
     pub(super) gcc_version: String,
@@ -155,6 +156,18 @@ pub(super) struct GeneratorInputs {
     pub(super) tool_cargo_lock_sha256: String,
     pub(super) architecture_generator_sha256: String,
     pub(super) architecture_verifier_sha256: String,
+    pub(super) safe_file_helper_sha256: String,
+    pub(super) evidence_workflow_sha256: String,
+    pub(super) oci_materializer_sha256: String,
+    pub(super) deadline_sha256: String,
+    pub(super) deadline_test_sha256: String,
+    pub(super) container_cleanup_sha256: String,
+    pub(super) container_cleanup_test_sha256: String,
+    pub(super) output_publish_sha256: String,
+    pub(super) output_publish_test_sha256: String,
+    pub(super) oci_index_source_sha256: String,
+    pub(super) arm64_manifest_source_sha256: String,
+    pub(super) amd64_manifest_source_sha256: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]

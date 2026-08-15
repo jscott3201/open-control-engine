@@ -164,6 +164,10 @@ pub(super) fn expected_artifacts() -> Vec<(String, String)> {
             "tools/openmodelica-line-reference/line/verify_evidence.py",
         ),
         (
+            "safe_file_helper_script",
+            "tools/openmodelica-line-reference/line/safe_files.py",
+        ),
+        (
             "oci_materializer_script",
             "tools/openmodelica-line-reference/line/materialize_oci.py",
         ),

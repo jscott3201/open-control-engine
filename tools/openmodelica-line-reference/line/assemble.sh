@@ -12,6 +12,8 @@ test ! -e "$DESTINATION"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
 PUBLISH_HELPER="$SCRIPT_DIR/output_publish.py"
+python3 "$SCRIPT_DIR/verify_evidence.py" precopy "$ARM"
+python3 "$SCRIPT_DIR/verify_evidence.py" precopy "$AMD"
 cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked --quiet -- \
   verify-architecture-canonical "$ARM"
 cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.toml" --offline --locked --quiet -- \
@@ -39,8 +41,10 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 mkdir "$OUTPUT/arm64" "$OUTPUT/amd64"
-FILES='architecture.json line.canonical.csv line-run-a.raw.csv line-run-b.raw.csv run-a.log run-b.log flag-control.canonical.csv flag-control.raw.csv flag-control.log projection-mutation.log image-index.json image-manifest.json'
-for file in $FILES; do cp "$ARM/$file" "$OUTPUT/arm64/$file"; cp "$AMD/$file" "$OUTPUT/amd64/$file"; done
+python3 "$SCRIPT_DIR/verify_evidence.py" copy-architecture "$ARM" "$OUTPUT/arm64"
+python3 "$SCRIPT_DIR/verify_evidence.py" copy-architecture "$AMD" "$OUTPUT/amd64"
+python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT/arm64" "$REPO_ROOT" arm64
+python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT/amd64" "$REPO_ROOT" amd64
 cmp "$OUTPUT/arm64/image-index.json" "$OUTPUT/amd64/image-index.json"
 cp "$OUTPUT/arm64/image-index.json" "$OUTPUT/image-index.json"
 cmp "$OUTPUT/arm64/line.canonical.csv" "$OUTPUT/amd64/line.canonical.csv"

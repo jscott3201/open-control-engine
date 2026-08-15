@@ -5,29 +5,16 @@ import hashlib
 import json
 import os
 import pathlib
-import stat
 import subprocess
 import sys
+
+import safe_files
 
 MAX_FILE = 1024 * 1024
 
 
 def read_bounded(path):
-    path = pathlib.Path(path)
-    before = path.lstat()
-    if path.is_symlink() or not stat.S_ISREG(before.st_mode) or before.st_size > MAX_FILE:
-        raise ValueError("architecture input is not a bounded regular file")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0))
-    try:
-        opened = os.fstat(descriptor)
-        if not stat.S_ISREG(opened.st_mode) or opened.st_size > MAX_FILE:
-            raise ValueError("opened architecture input is not a bounded regular file")
-        data = os.read(descriptor, MAX_FILE + 1)
-        if len(data) > MAX_FILE:
-            raise ValueError("architecture input exceeded its bound")
-        return data
-    finally:
-        os.close(descriptor)
+    return safe_files.read_bounded(path, MAX_FILE)
 
 
 def sha(path):
@@ -94,16 +81,30 @@ inputs = {
     "tool_cargo_lock_sha256": root / "tools/openmodelica-line-reference/Cargo.lock",
     "architecture_generator_sha256": root / "tools/openmodelica-line-reference/line/generate_architecture.py",
     "architecture_verifier_sha256": root / "tools/openmodelica-line-reference/line/verify_evidence.py",
+    "safe_file_helper_sha256": root / "tools/openmodelica-line-reference/line/safe_files.py",
+    "evidence_workflow_sha256": root / ".github/workflows/openmodelica-line-evidence.yml",
+    "oci_materializer_sha256": root / "tools/openmodelica-line-reference/line/materialize_oci.py",
+    "deadline_sha256": root / "tools/openmodelica-line-reference/line/deadline.sh",
+    "deadline_test_sha256": root / "tools/openmodelica-line-reference/line/deadline_test.sh",
+    "container_cleanup_sha256": root / "tools/openmodelica-line-reference/line/container_cleanup.sh",
+    "container_cleanup_test_sha256": root / "tools/openmodelica-line-reference/line/container_cleanup_test.sh",
+    "output_publish_sha256": root / "tools/openmodelica-line-reference/line/output_publish.py",
+    "output_publish_test_sha256": root / "tools/openmodelica-line-reference/line/output_publish_test.sh",
+    "oci_index_source_sha256": root / "tools/openmodelica-line-reference/line/image-index.json",
+    "arm64_manifest_source_sha256": root / "tools/openmodelica-line-reference/line/image-manifest-arm64.json",
+    "amd64_manifest_source_sha256": root / "tools/openmodelica-line-reference/line/image-manifest-amd64.json",
 }
 recorded_inputs = {key: sha(path) for key, path in inputs.items()}
 for log in logs:
     if one_value(log, "repository_revision") != revision:
         raise ValueError("native log source revision does not match the executing repository")
+    if one_value(log, "generator_provenance_scope") != "native_generation_and_publication":
+        raise ValueError("native log has an unsupported generator provenance scope")
     for key, expected in recorded_inputs.items():
         if one_value(log, key) != expected:
             raise ValueError(f"native log {key} does not match the executing repository")
 payload = {
-    "format": "oce-openmodelica-line-native-architecture-v2",
+    "format": "oce-openmodelica-line-native-architecture-v3",
     "architecture": architecture,
     "platform": facts["platform"],
     "host_architecture": facts["host"],
@@ -112,6 +113,7 @@ payload = {
     "platform_manifest_digest": facts["manifest"],
     "config_digest": facts["config"],
     "repository_revision": revision,
+    "generator_provenance_scope": "native_generation_and_publication",
     "generator_inputs": recorded_inputs,
     "raw_run_a_sha256": sha(output / "line-run-a.raw.csv"),
     "raw_run_b_sha256": sha(output / "line-run-b.raw.csv"),

@@ -164,6 +164,20 @@ fn final_verifier_rejects_open_artifact_and_nested_record_escapes() {
             }),
             "unsupported or open simulation record",
         ),
+        (
+            "boolean-as-one",
+            Box::new(|value: &mut serde_json::Value| {
+                value["simulation"]["event_emission"] = serde_json::json!(1);
+            }),
+            "unsupported or open simulation record",
+        ),
+        (
+            "boolean-as-zero",
+            Box::new(|value: &mut serde_json::Value| {
+                value["projection"]["normalize_times"] = serde_json::json!(0);
+            }),
+            "unsupported or open projection record",
+        ),
     ] {
         let temporary = ClaimedTempDir::new(&format!("oce-line-final-{label}"));
         let copied = temporary.path().join("fixture");
@@ -185,7 +199,7 @@ fn final_verifier_rejects_open_artifact_and_nested_record_escapes() {
 }
 
 #[test]
-fn wrapper_change_after_native_generation_breaks_provenance_binding() {
+fn native_input_changes_after_generation_break_provenance_binding() {
     let temporary = ClaimedTempDir::new("oce-line-native-provenance");
     let copied = temporary.path().join("arm64");
     copy_tree(&super::fixture("arm64"), &copied);
@@ -202,6 +216,18 @@ fn wrapper_change_after_native_generation_breaks_provenance_binding() {
         "tools/openmodelica-line-reference/Cargo.lock",
         "tools/openmodelica-line-reference/line/generate_architecture.py",
         "tools/openmodelica-line-reference/line/verify_evidence.py",
+        "tools/openmodelica-line-reference/line/safe_files.py",
+        ".github/workflows/openmodelica-line-evidence.yml",
+        "tools/openmodelica-line-reference/line/materialize_oci.py",
+        "tools/openmodelica-line-reference/line/deadline.sh",
+        "tools/openmodelica-line-reference/line/deadline_test.sh",
+        "tools/openmodelica-line-reference/line/container_cleanup.sh",
+        "tools/openmodelica-line-reference/line/container_cleanup_test.sh",
+        "tools/openmodelica-line-reference/line/output_publish.py",
+        "tools/openmodelica-line-reference/line/output_publish_test.sh",
+        "tools/openmodelica-line-reference/line/image-index.json",
+        "tools/openmodelica-line-reference/line/image-manifest-arm64.json",
+        "tools/openmodelica-line-reference/line/image-manifest-amd64.json",
     ] {
         let destination = root.join(relative);
         std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
@@ -210,7 +236,28 @@ fn wrapper_change_after_native_generation_breaks_provenance_binding() {
     let wrapper = root.join("tools/openmodelica-line-reference/line/LinePilot.mo");
     let mut bytes = std::fs::read(&wrapper).unwrap();
     bytes.extend_from_slice(b"\n// changed after native generation\n");
-    std::fs::write(wrapper, bytes).unwrap();
+    std::fs::write(&wrapper, bytes).unwrap();
+    let output = run(&[
+        Path::new("architecture"),
+        &copied,
+        &root,
+        Path::new("arm64"),
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("native generator inputs do not match assembly repository bytes")
+    );
+
+    std::fs::copy(
+        repository.join("tools/openmodelica-line-reference/line/LinePilot.mo"),
+        &wrapper,
+    )
+    .unwrap();
+    let formerly_omitted = root.join("tools/openmodelica-line-reference/line/deadline.sh");
+    let mut bytes = std::fs::read(&formerly_omitted).unwrap();
+    bytes.extend_from_slice(b"\n# changed after native generation\n");
+    std::fs::write(formerly_omitted, bytes).unwrap();
     let output = run(&[
         Path::new("architecture"),
         &copied,

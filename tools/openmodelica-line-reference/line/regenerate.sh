@@ -56,6 +56,18 @@ TOOL_CARGO_TOML_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo
 TOOL_CARGO_LOCK_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock")
 ARCHITECTURE_GENERATOR_SHA=$(sha256 "$SCRIPT_DIR/generate_architecture.py")
 ARCHITECTURE_VERIFIER_SHA=$(sha256 "$SCRIPT_DIR/verify_evidence.py")
+SAFE_FILE_HELPER_SHA=$(sha256 "$SCRIPT_DIR/safe_files.py")
+EVIDENCE_WORKFLOW_SHA=$(sha256 "$REPO_ROOT/.github/workflows/openmodelica-line-evidence.yml")
+OCI_MATERIALIZER_SHA=$(sha256 "$SCRIPT_DIR/materialize_oci.py")
+DEADLINE_SHA=$(sha256 "$SCRIPT_DIR/deadline.sh")
+DEADLINE_TEST_SHA=$(sha256 "$SCRIPT_DIR/deadline_test.sh")
+CONTAINER_CLEANUP_SHA=$(sha256 "$SCRIPT_DIR/container_cleanup.sh")
+CONTAINER_CLEANUP_TEST_SHA=$(sha256 "$SCRIPT_DIR/container_cleanup_test.sh")
+OUTPUT_PUBLISH_SHA=$(sha256 "$SCRIPT_DIR/output_publish.py")
+OUTPUT_PUBLISH_TEST_SHA=$(sha256 "$SCRIPT_DIR/output_publish_test.sh")
+OCI_INDEX_SOURCE_SHA=$(sha256 "$SCRIPT_DIR/image-index.json")
+ARM64_MANIFEST_SOURCE_SHA=$(sha256 "$SCRIPT_DIR/image-manifest-arm64.json")
+AMD64_MANIFEST_SOURCE_SHA=$(sha256 "$SCRIPT_DIR/image-manifest-amd64.json")
 check_generator_inputs() {
   test "$(git -C "$REPO_ROOT" rev-parse HEAD)" = "$SOURCE_REVISION"
   test -z "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)"
@@ -69,6 +81,18 @@ check_generator_inputs() {
   check_hash "$TOOL_CARGO_LOCK_SHA" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock"
   check_hash "$ARCHITECTURE_GENERATOR_SHA" "$SCRIPT_DIR/generate_architecture.py"
   check_hash "$ARCHITECTURE_VERIFIER_SHA" "$SCRIPT_DIR/verify_evidence.py"
+  check_hash "$SAFE_FILE_HELPER_SHA" "$SCRIPT_DIR/safe_files.py"
+  check_hash "$EVIDENCE_WORKFLOW_SHA" "$REPO_ROOT/.github/workflows/openmodelica-line-evidence.yml"
+  check_hash "$OCI_MATERIALIZER_SHA" "$SCRIPT_DIR/materialize_oci.py"
+  check_hash "$DEADLINE_SHA" "$SCRIPT_DIR/deadline.sh"
+  check_hash "$DEADLINE_TEST_SHA" "$SCRIPT_DIR/deadline_test.sh"
+  check_hash "$CONTAINER_CLEANUP_SHA" "$SCRIPT_DIR/container_cleanup.sh"
+  check_hash "$CONTAINER_CLEANUP_TEST_SHA" "$SCRIPT_DIR/container_cleanup_test.sh"
+  check_hash "$OUTPUT_PUBLISH_SHA" "$SCRIPT_DIR/output_publish.py"
+  check_hash "$OUTPUT_PUBLISH_TEST_SHA" "$SCRIPT_DIR/output_publish_test.sh"
+  check_hash "$OCI_INDEX_SOURCE_SHA" "$SCRIPT_DIR/image-index.json"
+  check_hash "$ARM64_MANIFEST_SOURCE_SHA" "$SCRIPT_DIR/image-manifest-arm64.json"
+  check_hash "$AMD64_MANIFEST_SOURCE_SHA" "$SCRIPT_DIR/image-manifest-amd64.json"
 }
 test "$(sh "$SCRIPT_DIR/deadline_test.sh")" = 'deadline accounting test passed'
 test "$(sh "$SCRIPT_DIR/output_publish_test.sh")" = 'output publication test passed'
@@ -190,6 +214,7 @@ run_model() {
     printf 'modelica_commit=%s\n' "$MODELICA_COMMIT"
     printf 'modelica_tree=%s\n' "$MODELICA_TREE"
     printf 'repository_revision=%s\n' "$SOURCE_REVISION"
+    printf 'generator_provenance_scope=native_generation_and_publication\n'
     printf 'line_pilot_sha256=%s\n' "$LINE_PILOT_SHA"
     printf 'line_flag_pilot_sha256=%s\n' "$LINE_FLAG_PILOT_SHA"
     printf 'runner_sha256=%s\n' "$RUNNER_SHA"
@@ -200,6 +225,18 @@ run_model() {
     printf 'tool_cargo_lock_sha256=%s\n' "$TOOL_CARGO_LOCK_SHA"
     printf 'architecture_generator_sha256=%s\n' "$ARCHITECTURE_GENERATOR_SHA"
     printf 'architecture_verifier_sha256=%s\n' "$ARCHITECTURE_VERIFIER_SHA"
+    printf 'safe_file_helper_sha256=%s\n' "$SAFE_FILE_HELPER_SHA"
+    printf 'evidence_workflow_sha256=%s\n' "$EVIDENCE_WORKFLOW_SHA"
+    printf 'oci_materializer_sha256=%s\n' "$OCI_MATERIALIZER_SHA"
+    printf 'deadline_sha256=%s\n' "$DEADLINE_SHA"
+    printf 'deadline_test_sha256=%s\n' "$DEADLINE_TEST_SHA"
+    printf 'container_cleanup_sha256=%s\n' "$CONTAINER_CLEANUP_SHA"
+    printf 'container_cleanup_test_sha256=%s\n' "$CONTAINER_CLEANUP_TEST_SHA"
+    printf 'output_publish_sha256=%s\n' "$OUTPUT_PUBLISH_SHA"
+    printf 'output_publish_test_sha256=%s\n' "$OUTPUT_PUBLISH_TEST_SHA"
+    printf 'oci_index_source_sha256=%s\n' "$OCI_INDEX_SOURCE_SHA"
+    printf 'arm64_manifest_source_sha256=%s\n' "$ARM64_MANIFEST_SOURCE_SHA"
+    printf 'amd64_manifest_source_sha256=%s\n' "$AMD64_MANIFEST_SOURCE_SHA"
     printf 'source_materialization=git_archive_exact_committed_bytes\n'
     printf 'buildings_package_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59\n'
     printf 'line_source_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5\n'
@@ -301,6 +338,7 @@ check_generator_inputs
 python3 "$SCRIPT_DIR/generate_architecture.py" "$OUTPUT" "$ARCHITECTURE" "$REPO_ROOT"
 python3 "$PUBLISH_HELPER" cleanup "$STAGING" "$STAGING_DEVICE" "$STAGING_INODE"; STAGING=
 python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT" "$REPO_ROOT" "$ARCHITECTURE"
+check_generator_inputs
 trap '' HUP INT TERM
 python3 "$PUBLISH_HELPER" publish "$OUTPUT" "$OUTPUT_DEVICE" "$OUTPUT_INODE" "$OUTPUT_PARENT_DEVICE" "$OUTPUT_PARENT_INODE" "$OUTPUT_DESTINATION"
 OUTPUT_PRIVATE=

@@ -372,6 +372,11 @@ fn validate_architecture(
         (&value.gcc_version, "11.4.0", "architecture.gcc"),
         (&value.binutils_version, "2.38", "architecture.binutils"),
         (&value.glibc_version, "2.35", "architecture.glibc"),
+        (
+            &value.generator_provenance_scope,
+            "native_generation_and_publication",
+            "architecture generator provenance scope",
+        ),
         (&value.raw_run_a_sha256, RAW_SHA, "architecture raw A"),
         (&value.raw_run_b_sha256, RAW_SHA, "architecture raw B"),
         (
@@ -404,6 +409,18 @@ fn validate_architecture(
         &value.generator_inputs.tool_cargo_lock_sha256,
         &value.generator_inputs.architecture_generator_sha256,
         &value.generator_inputs.architecture_verifier_sha256,
+        &value.generator_inputs.safe_file_helper_sha256,
+        &value.generator_inputs.evidence_workflow_sha256,
+        &value.generator_inputs.oci_materializer_sha256,
+        &value.generator_inputs.deadline_sha256,
+        &value.generator_inputs.deadline_test_sha256,
+        &value.generator_inputs.container_cleanup_sha256,
+        &value.generator_inputs.container_cleanup_test_sha256,
+        &value.generator_inputs.output_publish_sha256,
+        &value.generator_inputs.output_publish_test_sha256,
+        &value.generator_inputs.oci_index_source_sha256,
+        &value.generator_inputs.arm64_manifest_source_sha256,
+        &value.generator_inputs.amd64_manifest_source_sha256,
     ] {
         digest(digest_value)?;
     }

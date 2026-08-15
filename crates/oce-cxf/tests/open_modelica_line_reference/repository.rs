@@ -52,6 +52,30 @@ fn validate_native_provenance(manifest: &Manifest) -> Result<(), String> {
                 &inputs.architecture_verifier_sha256,
                 "evidence_validator_script",
             ),
+            (&inputs.safe_file_helper_sha256, "safe_file_helper_script"),
+            (&inputs.evidence_workflow_sha256, "evidence_workflow"),
+            (&inputs.oci_materializer_sha256, "oci_materializer_script"),
+            (&inputs.deadline_sha256, "deadline_script"),
+            (&inputs.deadline_test_sha256, "deadline_test_script"),
+            (&inputs.container_cleanup_sha256, "container_cleanup_script"),
+            (
+                &inputs.container_cleanup_test_sha256,
+                "container_cleanup_test_script",
+            ),
+            (&inputs.output_publish_sha256, "output_publish_script"),
+            (
+                &inputs.output_publish_test_sha256,
+                "output_publish_test_script",
+            ),
+            (&inputs.oci_index_source_sha256, "oci_index_source"),
+            (
+                &inputs.arm64_manifest_source_sha256,
+                "arm64_manifest_source",
+            ),
+            (
+                &inputs.amd64_manifest_source_sha256,
+                "amd64_manifest_source",
+            ),
         ] {
             if actual != &artifact(manifest, role).sha256 {
                 return Err(format!(
@@ -194,6 +218,10 @@ fn validate_run_log(
             architecture.repository_revision.as_str(),
         ),
         (
+            "generator_provenance_scope",
+            architecture.generator_provenance_scope.as_str(),
+        ),
+        (
             "line_pilot_sha256",
             architecture.generator_inputs.line_pilot_sha256.as_str(),
         ),
@@ -246,6 +274,81 @@ fn validate_run_log(
             architecture
                 .generator_inputs
                 .architecture_verifier_sha256
+                .as_str(),
+        ),
+        (
+            "safe_file_helper_sha256",
+            architecture
+                .generator_inputs
+                .safe_file_helper_sha256
+                .as_str(),
+        ),
+        (
+            "evidence_workflow_sha256",
+            architecture
+                .generator_inputs
+                .evidence_workflow_sha256
+                .as_str(),
+        ),
+        (
+            "oci_materializer_sha256",
+            architecture
+                .generator_inputs
+                .oci_materializer_sha256
+                .as_str(),
+        ),
+        (
+            "deadline_sha256",
+            architecture.generator_inputs.deadline_sha256.as_str(),
+        ),
+        (
+            "deadline_test_sha256",
+            architecture.generator_inputs.deadline_test_sha256.as_str(),
+        ),
+        (
+            "container_cleanup_sha256",
+            architecture
+                .generator_inputs
+                .container_cleanup_sha256
+                .as_str(),
+        ),
+        (
+            "container_cleanup_test_sha256",
+            architecture
+                .generator_inputs
+                .container_cleanup_test_sha256
+                .as_str(),
+        ),
+        (
+            "output_publish_sha256",
+            architecture.generator_inputs.output_publish_sha256.as_str(),
+        ),
+        (
+            "output_publish_test_sha256",
+            architecture
+                .generator_inputs
+                .output_publish_test_sha256
+                .as_str(),
+        ),
+        (
+            "oci_index_source_sha256",
+            architecture
+                .generator_inputs
+                .oci_index_source_sha256
+                .as_str(),
+        ),
+        (
+            "arm64_manifest_source_sha256",
+            architecture
+                .generator_inputs
+                .arm64_manifest_source_sha256
+                .as_str(),
+        ),
+        (
+            "amd64_manifest_source_sha256",
+            architecture
+                .generator_inputs
+                .amd64_manifest_source_sha256
                 .as_str(),
         ),
         ("pull_policy", "never"),
@@ -464,6 +567,7 @@ fn validate_cross_architecture(manifest: &Manifest, root: &Path) -> Result<(), S
 
 fn validate_tool_contract(manifest: &Manifest, root: &Path) -> Result<(), String> {
     let regeneration = read_text(root, &artifact(manifest, "regeneration_script").path)?;
+    let assembly = read_text(root, &artifact(manifest, "assembly_script").path)?;
     let runner = read_text(root, &artifact(manifest, "runner_script").path)?;
     let workflow = read_text(root, &artifact(manifest, "evidence_workflow").path)?;
     for required in [
@@ -498,6 +602,16 @@ fn validate_tool_contract(manifest: &Manifest, root: &Path) -> Result<(), String
         || !workflow.contains("workflow_dispatch:")
     {
         return Err("event emission or manual-only workflow contract drifted".into());
+    }
+    for required in [
+        "verify_evidence.py\" precopy",
+        "verify_evidence.py\" copy-architecture",
+        "verify_evidence.py\" architecture \"$OUTPUT/arm64\"",
+        "verify_evidence.py\" architecture \"$OUTPUT/amd64\"",
+    ] {
+        if !assembly.contains(required) {
+            return Err(format!("assembly omits {required}"));
+        }
     }
     Ok(())
 }

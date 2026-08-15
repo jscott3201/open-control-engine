@@ -12,8 +12,9 @@ import stat
 import struct
 import subprocess
 import sys
-import tempfile
 from typing import Any, NoReturn
+
+import safe_files
 
 MAX_FILE = 1024 * 1024
 MAX_MANIFEST = 256 * 1024
@@ -54,6 +55,18 @@ GENERATOR_INPUT_PATHS = {
     "tool_cargo_lock_sha256": "tools/openmodelica-line-reference/Cargo.lock",
     "architecture_generator_sha256": "tools/openmodelica-line-reference/line/generate_architecture.py",
     "architecture_verifier_sha256": "tools/openmodelica-line-reference/line/verify_evidence.py",
+    "safe_file_helper_sha256": "tools/openmodelica-line-reference/line/safe_files.py",
+    "evidence_workflow_sha256": ".github/workflows/openmodelica-line-evidence.yml",
+    "oci_materializer_sha256": "tools/openmodelica-line-reference/line/materialize_oci.py",
+    "deadline_sha256": "tools/openmodelica-line-reference/line/deadline.sh",
+    "deadline_test_sha256": "tools/openmodelica-line-reference/line/deadline_test.sh",
+    "container_cleanup_sha256": "tools/openmodelica-line-reference/line/container_cleanup.sh",
+    "container_cleanup_test_sha256": "tools/openmodelica-line-reference/line/container_cleanup_test.sh",
+    "output_publish_sha256": "tools/openmodelica-line-reference/line/output_publish.py",
+    "output_publish_test_sha256": "tools/openmodelica-line-reference/line/output_publish_test.sh",
+    "oci_index_source_sha256": "tools/openmodelica-line-reference/line/image-index.json",
+    "arm64_manifest_source_sha256": "tools/openmodelica-line-reference/line/image-manifest-arm64.json",
+    "amd64_manifest_source_sha256": "tools/openmodelica-line-reference/line/image-manifest-amd64.json",
 }
 
 
@@ -62,26 +75,10 @@ def fail(detail: str) -> NoReturn:
 
 
 def read_bounded(path: pathlib.Path, limit: int = MAX_FILE) -> bytes:
-    path = pathlib.Path(path)
-    before = path.lstat()
-    if path.is_symlink() or not stat.S_ISREG(before.st_mode) or before.st_size > limit:
-        fail(f"not a bounded regular file: {path}")
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0))
     try:
-        opened = os.fstat(descriptor)
-        if not stat.S_ISREG(opened.st_mode) or opened.st_size > limit:
-            fail(f"opened input is not a bounded regular file: {path}")
-        chunks, total = [], 0
-        while True:
-            chunk = os.read(descriptor, min(65536, limit + 1 - total))
-            if not chunk:
-                break
-            chunks.append(chunk); total += len(chunk)
-            if total > limit:
-                fail(f"input exceeded its bound: {path}")
-        return b"".join(chunks)
-    finally:
-        os.close(descriptor)
+        return safe_files.read_bounded(path, limit)
+    except ValueError as error:
+        fail(str(error))
 
 
 def text(path: pathlib.Path, limit: int = MAX_FILE) -> str:
@@ -122,20 +119,11 @@ def bits(value):
 
 def safe_directory(path, name):
     path = pathlib.Path(path).absolute()
-    lexical_temp = pathlib.Path(tempfile.gettempdir()).absolute()
-    resolved_temp = lexical_temp.resolve()
     try:
-        path = resolved_temp / path.relative_to(lexical_temp)
-    except ValueError:
-        pass
-    current = pathlib.Path(path.anchor)
-    for part in path.parts[1:]:
-        current /= part
-        metadata = current.lstat()
-        if current.is_symlink():
-            fail(f"{name} contains a symlink component")
-    if not stat.S_ISDIR(path.lstat().st_mode):
-        fail(f"{name} is not a directory")
+        descriptor = safe_files.open_directory(path)
+        os.close(descriptor)
+    except (OSError, ValueError) as error:
+        fail(f"invalid {name}: {error}")
     return path
 
 
@@ -241,6 +229,7 @@ def log_contract(path, architecture, token, model, raw_digest, revision, generat
         "modelica_remote": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git",
         "modelica_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "modelica_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
         "repository_revision": revision,
+        "generator_provenance_scope": "native_generation_and_publication",
         "source_materialization": "git_archive_exact_committed_bytes",
         "buildings_package_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
         "line_source_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
@@ -334,13 +323,15 @@ def strict_canonical_boundary(directory, root):
 
 def validate_architecture(directory, root, architecture):
     directory, root = safe_directory(directory, "architecture evidence"), safe_directory(root, "repository root")
-    if {entry.name for entry in os.scandir(directory)} != ARCH_FILES:
-        fail("architecture evidence entries are not closed")
+    try:
+        safe_files.read_closed_directory(directory, ARCH_FILES, MAX_FILE)
+    except (OSError, ValueError) as error:
+        fail(f"unsafe architecture evidence: {error}")
     record = json_file(directory / "architecture.json")
-    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_inputs", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
+    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
     closed(record, fields, "architecture record")
     expected = ARCH[architecture]
-    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"]] != ["oce-openmodelica-line-native-architecture-v2", architecture, *expected]:
+    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-line-native-architecture-v3", architecture, *expected, "native_generation_and_publication"]:
         fail("architecture literals")
     revision = record["repository_revision"]
     if not isinstance(revision, str) or len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
@@ -428,6 +419,7 @@ def expected_artifact_roles():
         ("manifest_generator_script", "tools/openmodelica-line-reference/line/generate_manifest.py"),
         ("architecture_generator_script", "tools/openmodelica-line-reference/line/generate_architecture.py"),
         ("evidence_validator_script", "tools/openmodelica-line-reference/line/verify_evidence.py"),
+        ("safe_file_helper_script", "tools/openmodelica-line-reference/line/safe_files.py"),
         ("oci_materializer_script", "tools/openmodelica-line-reference/line/materialize_oci.py"),
         ("deadline_script", "tools/openmodelica-line-reference/line/deadline.sh"),
         ("deadline_test_script", "tools/openmodelica-line-reference/line/deadline_test.sh"),
@@ -480,6 +472,7 @@ def expected_architecture_manifest(output, name, record):
         "platform_manifest_digest": record["platform_manifest_digest"],
         "config_digest": record["config_digest"],
         "repository_revision": record["repository_revision"],
+        "generator_provenance_scope": record["generator_provenance_scope"],
         "generator_inputs": record["generator_inputs"],
         "omc_version": "OpenModelica 1.25.1",
         "gcc_version": "11.4.0",
@@ -521,7 +514,7 @@ def validate_final(output, root):
     if manifest["format"] != "oce-openmodelica-line-external-run-v1":
         fail("unsupported manifest format")
     expected_scope = {"class": "CDL.Reals.Line", "scenario": "four_limit_modes_five_dyadic_regions", "inputs": ["x1", "f1", "x2", "f2", "u"], "outputs": ["yBoth", "yBelow", "yAbove", "yUnlimited"], "comparison": "exact_finite_f64_bits", "global_tier3_status": "skipped"}
-    if manifest["scope"] != expected_scope:
+    if not type_exact_equal(manifest["scope"], expected_scope):
         fail("unsupported scope")
     artifacts = manifest["artifacts"]
     roles = expected_artifact_roles()
@@ -591,7 +584,7 @@ def validate_final(output, root):
         ("semantic_control", expected_semantic_control),
         ("regeneration", expected_regeneration),
     ]:
-        if manifest[field] != expected:
+        if not type_exact_equal(manifest[field], expected):
             fail(f"unsupported or open {field} record")
 
     arm, arm_rows = validate_architecture(output / "arm64", root, "arm64")
@@ -605,25 +598,45 @@ def validate_final(output, root):
     if text(output / "cross-architecture.log").splitlines() != expected_cross:
         fail("cross-architecture record")
     expected_cross_record = {"comparison": "canonical_bytes", "arm64_sha256": canonical_sha, "amd64_sha256": canonical_sha, "result": "pass"}
-    if manifest["cross_architecture"] != expected_cross_record:
+    if not type_exact_equal(manifest["cross_architecture"], expected_cross_record):
         fail("cross-architecture manifest record")
     expected_architectures = [
         expected_architecture_manifest(output, "arm64", arm),
         expected_architecture_manifest(output, "amd64", amd),
     ]
-    if manifest["architectures"] != expected_architectures:
+    if not type_exact_equal(manifest["architectures"], expected_architectures):
         fail("manifest architecture records are open or not bound to native evidence")
 
 
+def type_exact_equal(actual, expected):
+    if type(actual) is not type(expected):
+        return False
+    if isinstance(expected, dict):
+        return set(actual) == set(expected) and all(
+            type_exact_equal(actual[key], value) for key, value in expected.items()
+        )
+    if isinstance(expected, list):
+        return len(actual) == len(expected) and all(
+            type_exact_equal(left, right) for left, right in zip(actual, expected)
+        )
+    return actual == expected
+
+
 def main(arguments):
-    if len(arguments) == 4 and arguments[0] == "architecture":
+    if len(arguments) == 2 and arguments[0] == "precopy":
+        safe_files.read_closed_directory(arguments[1], ARCH_FILES, MAX_FILE)
+        print("Line architecture pre-copy validation passed")
+    elif len(arguments) == 3 and arguments[0] == "copy-architecture":
+        safe_files.copy_closed_directory(arguments[1], arguments[2], ARCH_FILES, MAX_FILE)
+        print("Line architecture bounded copy passed")
+    elif len(arguments) == 4 and arguments[0] == "architecture":
         validate_architecture(arguments[1], arguments[2], arguments[3])
         print(f"Line {arguments[3]} architecture evidence verification passed")
     elif len(arguments) == 3 and arguments[0] == "final":
         validate_final(arguments[1], arguments[2])
         print("Line assembled evidence verification passed")
     else:
-        print("usage: verify_evidence.py architecture EVIDENCE REPOSITORY_ROOT ARCH | final EVIDENCE REPOSITORY_ROOT", file=sys.stderr)
+        print("usage: verify_evidence.py precopy EVIDENCE | copy-architecture SOURCE DESTINATION | architecture EVIDENCE REPOSITORY_ROOT ARCH | final EVIDENCE REPOSITORY_ROOT", file=sys.stderr)
         raise SystemExit(2)
 
 

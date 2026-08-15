@@ -177,10 +177,17 @@ Line retains two repeat-identical native runs on each of `linux/arm64` and `linu
 platform manifests and configs under the shared OCI index. Its canonical bytes match across the two
 architectures. Four closed views drive the public facade at the emitted timestamp bits and compare
 OpenModelica and engine outputs against an independent 40-cell expected-bit table. A compiled
-keep-first projection, an external limit-flag change, a swapped output mapping, and four arithmetic
-reference mutants fail through the facade comparator at pinned rows. This proves only the fixed
-finite matrix; raw cross-architecture bytes,
+keep-first projection fails the independent canonical input-schedule oracle at pinned event rows;
+it is not a facade-comparator control, and this stateless block can remain green when given
+internally consistent pre-event rows. The external limit-flag change, swapped output mapping, and
+four arithmetic reference mutants fail through the facade comparator at pinned rows. This proves
+only the fixed finite matrix; raw cross-architecture bytes,
 other Line inputs, non-finite values, signed zero, subnormals, and solver behavior remain outside it.
+
+Each native architecture record binds every checkout file used through native artifact publication,
+including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer tool inputs. Assembly
+and final-manifest generation happen after native publication, so their scripts are bound by the
+final artifact manifest rather than represented as native generator inputs.
 
 All three regeneration paths disable container networking. The retained Line workflow is manual
 only after evidence capture; normal CI validates committed evidence and does not run Docker. No

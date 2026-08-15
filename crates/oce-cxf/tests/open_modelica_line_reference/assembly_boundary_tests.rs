@@ -1,6 +1,8 @@
 //! Process-level counterexamples for the strict assembly canonicalization boundary.
 
 use super::verifier_adversarial_tests::{ClaimedTempDir, copy_tree};
+use std::process::Stdio;
+use std::time::{Duration, Instant};
 
 fn assert_strict_boundary_rejects(label: &str, mutate: impl FnOnce(&mut Vec<u8>), expected: &str) {
     let temporary = ClaimedTempDir::new(&format!("oce-line-assembly-{label}"));
@@ -71,4 +73,46 @@ fn missing_final_lf_is_refused_before_assembly() {
         },
         "CsvSyntax",
     );
+}
+
+#[test]
+fn fifo_input_fails_before_copy_without_blocking() {
+    let temporary = ClaimedTempDir::new("oce-line-assembly-fifo");
+    let copied = temporary.path().join("arm64");
+    copy_tree(&super::fixture("arm64"), &copied);
+    let log = copied.join("run-a.log");
+    std::fs::remove_file(&log).unwrap();
+    assert!(
+        std::process::Command::new("mkfifo")
+            .arg(&log)
+            .status()
+            .unwrap()
+            .success()
+    );
+    let root = super::repository_root();
+    let destination = temporary.path().join("assembled");
+    let mut child = std::process::Command::new("sh")
+        .arg(root.join("tools/openmodelica-line-reference/line/assemble.sh"))
+        .arg(&copied)
+        .arg(super::fixture("amd64"))
+        .arg(&destination)
+        .current_dir(root)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            break status;
+        }
+        if started.elapsed() > Duration::from_secs(5) {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("assembly blocked on a FIFO input");
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    assert!(!status.success());
+    assert!(!destination.exists());
 }
