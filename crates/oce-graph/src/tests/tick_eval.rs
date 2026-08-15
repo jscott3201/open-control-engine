@@ -188,8 +188,9 @@ fn tick_loop_breaker_scheduled_before_its_producer() {
 }
 
 #[test]
-fn tick_pre_boolean_toggle_loop() {
-    // pre.out → not.in ; not.out → pre.in. Pre cuts the loop; seed false → output toggles.
+fn pre_cut_feedback_advances_without_event_iteration() {
+    // This loop has no same-time Boolean fixed point. HostTick v1 accepts it and advances once per
+    // call, including repeated calls at one timestamp.
     let mut b = ModelBuilder::default();
     let (_pre, pre_in, pre_out) = b.block_real(make(
         "CDL.Logical.Pre",
@@ -203,7 +204,7 @@ fn tick_pre_boolean_toggle_loop() {
     let mut state = allocate_state(&b.model, &b.blocks);
     let expected = [false, true, false, true];
     for (k, exp) in expected.iter().enumerate() {
-        tick_once(&b.model, &sched, &b.blocks, &mut state, k as f64);
+        tick_once(&b.model, &sched, &b.blocks, &mut state, 0.0);
         let got = &state.values[pre_out[0].0 as usize];
         assert!(
             got.bit_eq(&Value::Boolean(*exp)),

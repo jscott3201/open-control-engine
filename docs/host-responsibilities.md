@@ -84,6 +84,19 @@ explicitly range-checked, so a non-finite or out-of-range instant fails with
 
 Supply time from a source you trust to be monotonic. The engine cannot detect a clock that jumped.
 
+## One call is one HostTick transition
+
+The engine uses the fixed [HostTick v1 execution profile](execution-profile.md). Every successful
+`tick(t_now)` call advances state once, even when `t_now` equals the previous timestamp. Equal time
+means zero elapsed time to timers and integrators; it does not make the call observational. In
+particular, `CDL.Logical.Pre` emits its stored Boolean and latches current input once per call.
+
+Do not call `tick` repeatedly at one timestamp to imitate Modelica event iteration. The engine does
+not search for a fixed point, and every stateful block updates on each call. A `Pre`-cut Boolean loop
+that cannot converge under Modelica may continue changing on every tick call without a diagnostic.
+After each call, `tick`'s return value, `outputs`, `get_output`, and `watch` expose that completed
+call's values only.
+
 Do not interleave horizon simulation with real-time stepping if you rely on the monotonic-time
 guard across that boundary. After preflight succeeds, `simulate` deliberately clears the prior tick
 time, so a following `step_realtime` cannot detect regression relative to a real-time step that
@@ -164,6 +177,10 @@ real-time UNIX epoch, backend point history, point status or timestamps, backend
 or host safety policy. The current connector image, including staged input values, is part of the
 snapshot. Restore the other state outside the engine. Use `EngineCheckpoint` instead when branching
 or rewinding within one process; it is opaque and has no persistence format.
+
+For `CDL.Logical.Pre`, a snapshot preserves both the currently visible output connector and the
+Boolean memory that will be emitted on the next HostTick call. Restore does not evaluate the block.
+A call at the restored timestamp advances it again.
 
 ## Lifecycle names are not equipment controls
 

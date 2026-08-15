@@ -8,6 +8,7 @@ front door; these pages are the detail behind it.
 | Page | Read it when you want to know |
 | --- | --- |
 | [Architecture](architecture.md) | How the engine is layered, where the CDL §7.17 seam sits, what each of the 17 crates owns, and the platform and MSRV policy |
+| [Execution profile](execution-profile.md) | Why each host tick is one state transition, and where `CDL.Logical.Pre` differs from Modelica same-time event iteration |
 | [Verification and evidence](verification-evidence.md) | What has actually been proven about this engine, what has not, and which checks are deliberately not running |
 | [CDL coverage](cdl-coverage.md) | Whether *your* sequence runs — which classes and G36 sequences are supported, and what "supported" is defined to mean |
 | [CXF round trip](cxf-round-trip.md) | What export guarantees, and the conditions under which it silently drops part of your model |
@@ -28,8 +29,8 @@ front door; these pages are the detail behind it.
 
 ## Two pages worth reading even if you are only evaluating
 
-**[Verification and evidence](verification-evidence.md)** is the honest accounting. Five
-different things in this repository are called "tests" and they prove different things — one of
+**[Verification and evidence](verification-evidence.md)** is the honest accounting. Six evidence
+layers in this repository are called "tests" and they prove different things — one of
 them proves nothing about correctness at all. That page says which is which, names the two global
 report tiers that are not wired, and bounds the separate two-case OpenModelica evidence.
 

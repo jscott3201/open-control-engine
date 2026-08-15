@@ -1,14 +1,14 @@
-//! golden-gen — Tier-A oracle generator.
+//! golden-gen — Tier-A source and execution-profile reference generator.
 //!
-//! Emits closed-form CDL reference goldens as Modelica `CombiTimeTable` CSV under
+//! Emits source-derived or explicitly profiled goldens as Modelica `CombiTimeTable` CSV under
 //! `tools/golden-gen/goldens/<class_path>/<signal>.csv`, a sibling `<signal>.prov.json` per golden,
 //! one per-block `reference.csv` containing `time`, machine-readable inputs, and all outputs, and
 //! a crate-root `oracle.lock` toolchain/version pin skeleton.
 //!
-//! ANTI-TAUTOLOGY: reference math is re-derived from `_spec/03`, `_spec/02`, `_spec/01`,
-//! `_spec/07` (format only), and CDL §7.x. Some exact oracles share a pinned math kernel or
-//! restate the documented recurrence used by the engine. This crate has ZERO dependency on
-//! `oce-blocks` (the implementation under test) and never reads it.
+//! ANTI-TAUTOLOGY: reference math is re-derived from the applicable CDL / Buildings sources and
+//! specs or from an explicitly named execution profile. Some exact references share a pinned math
+//! kernel or restate the documented recurrence used by the engine. This crate has ZERO dependency
+//! on `oce-blocks` (the implementation under test) and never reads it.
 
 mod csv;
 mod discrete_sources;
@@ -56,7 +56,7 @@ fn main() {
     let crate_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let goldens_root = crate_root.join("goldens");
 
-    // Re-derive every golden (closed-form spec math).
+    // Derive every source or profile reference without engine code.
     let mut goldens: Vec<Golden> = Vec::new();
     goldens.extend(reals::goldens());
     goldens.extend(reals_scalar_arithmetic::goldens());
@@ -395,7 +395,9 @@ fn reference_columns(group: &[&Golden]) -> Vec<String> {
 
 fn provenance_source(g: &Golden) -> &'static str {
     const SHARED_KERNEL: &str = "closed-form from Buildings CDL sources; re-derivation from Buildings CDL sources sharing the pinned libm kernel / documented recurrence with the engine";
-    if g.class_path == "G36" {
+    if uses_host_tick_pre_profile(g) {
+        "HostTick v1 profile recurrence derived from fixture topology and pinned Buildings sources except CDL.Logical.Pre, which uses the documented one-transition projection; independent of oce-blocks, not a Modelica event-iteration oracle"
+    } else if g.class_path == "G36" {
         "hand-derived G36 sequence reference from fixture topology plus CDL / Buildings .mo semantics; independent re-derivation"
     } else if matches!(g.class_path, "CDL.Reals.PID" | "CDL.Reals.PIDWithReset") {
         "closed-form from _spec/03 R-REALS-2 plus Buildings CDL.Reals.PID.mo/PIDWithReset.mo wiring; independent re-derivation"
@@ -441,6 +443,12 @@ fn provenance_source(g: &Golden) -> &'static str {
     } else {
         "closed-form from CDL spec (_spec/03,02,01; CDL §7.x); independent re-derivation"
     }
+}
+
+fn uses_host_tick_pre_profile(g: &Golden) -> bool {
+    g.class_path == "G36"
+        && g.scenario
+            .is_some_and(sequences::uses_host_tick_pre_profile)
 }
 
 fn extra_provenance_json(g: &Golden) -> String {
@@ -519,7 +527,13 @@ fn prov_json(g: &Golden, group: &[&Golden]) -> String {
         .samples
         .iter()
         .any(|s| matches!(s, Sample::Real(x) if !x.is_finite()));
-    let compare = if g.class_path == "G36" {
+    let compare = if uses_host_tick_pre_profile(g) {
+        match g.kind {
+            ValueKind::Real => "exact G36 HostTick v1 profile f64 trace (Value::bit_eq)",
+            ValueKind::Integer => "exact G36 HostTick v1 profile encoded integer",
+            ValueKind::Boolean => "exact G36 HostTick v1 profile 0.0/1.0",
+        }
+    } else if g.class_path == "G36" {
         match g.kind {
             ValueKind::Real => "exact G36 Tier-A sequence f64 trace (Value::bit_eq)",
             ValueKind::Integer => "exact encoded integer",
@@ -714,7 +728,7 @@ fn oracle_lock() -> String {
             "field_separator = \" \"\n",
             "rust_toolchain = \"<PIN: see rust-toolchain.toml>\"\n",
             "ryu_version = \"1.0\"\n",
-            "source = \"closed-form CDL spec derivation; depends_on_oce_blocks = false\"\n",
+            "source = \"CDL / Buildings source semantics or declared execution profile; depends_on_oce_blocks = false\"\n",
         ),
         generator = GENERATOR_VERSION,
     )

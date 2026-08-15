@@ -1,10 +1,9 @@
-//! G36 Generic.TimeSuppression source-verified sequence oracle.
+//! G36 Generic.TimeSuppression HostTick v1 profile reference.
 //!
-//! This per-tick recurrence is independently derived from pinned `TimeSuppression.mo`. It models
-//! the 120-second sample grid, startup mask, triggered raw-input capture, suppression timer, and the
-//! deliberate one-tick `Pre` break in the latch-clear loop. The schedule makes TS1's expiry-tick
-//! setpoint change observable: the active latch is still true on that tick, so no new edge occurs
-//! and the captured suppression window does not restart.
+//! This recurrence is independent of `oce-blocks` and grounded in pinned `TimeSuppression.mo`,
+//! except that `CDL.Logical.Pre` follows the documented HostTick projection rather than Modelica
+//! same-time event iteration. It models the 120-second sample grid, startup mask, triggered
+//! raw-input capture, suppression timer, and one-transition `Pre` break in the latch-clear loop.
 //!
 //! The source expression `greThr.h=0.5*dTHys` at lines 72-74 is pre-grounded to `0.125` for
 //! `dTHys=0.25`. The only golden output is Boolean and is therefore compared exactly.
@@ -85,7 +84,7 @@ fn schedule() -> Vec<Row> {
         .collect()
 }
 
-/// Build the independent Tier-A Boolean golden for Generic.TimeSuppression.
+/// Build the Tier-A HostTick v1 Boolean profile reference for Generic.TimeSuppression.
 ///
 /// Time is in seconds and temperatures are in Kelvin. The 60-second, 91-row schedule covers
 /// TS1-TS8: the Pre lag, sample-grid latency, startup masking, hysteresis, short/capped suppression
@@ -104,7 +103,7 @@ pub(super) fn goldens() -> Vec<Golden> {
         time,
         after_suppression.into_iter().map(b).collect(),
         "TimeSuppression: 60-second TS1-TS8 schedule with aligned/misaligned changes, startup mask, hysteresis hold/release, short/exact/capped windows, and expiry collisions",
-        "TimeSuppression.mo lines 124-193: 120-second Sampler/UnitDelay change detection drives latch/edge raw-input capture; min(540*abs(TSet-TZon),1800) is compared strictly with Timer.y, and Pre delays latch clear by one tick",
+        "TimeSuppression.mo lines 124-193 under HostTick v1: 120-second Sampler/UnitDelay change detection drives latch/edge raw-input capture; min(540*abs(TSet-TZon),1800) is compared strictly with Timer.y, and Pre delays latch clear by one HostTick transition",
         inputs,
     )]
 }

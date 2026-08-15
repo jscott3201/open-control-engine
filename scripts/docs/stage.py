@@ -182,6 +182,7 @@ def write_generated_chapters(stage: Path, quickstart: str) -> None:
 
 - [Documentation map](docs/README.md)
 - [Architecture](docs/architecture.md)
+- [Execution profile](docs/execution-profile.md)
 - [Verification and evidence](docs/verification-evidence.md)
 - [CDL coverage](docs/cdl-coverage.md)
 - [CXF round trip](docs/cxf-round-trip.md)

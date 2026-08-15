@@ -1,8 +1,9 @@
-//! Independent whole-controller oracle for G36 CoolingOnly.Controller.
+//! HostTick v1 whole-controller reference for G36 CoolingOnly.Controller.
 //!
-//! The transfer function composes all eight configured child graphs directly. It never calls a
-//! lane oracle or reads a committed lane golden. Source sine waves are evaluated only here during
-//! generation; runtime tests replay the frozen CSV bytes.
+//! The transfer function composes all eight configured child graphs without `oce-blocks` or a
+//! committed golden. Its nested TimeSuppression child uses the HostTick projection of
+//! `CDL.Logical.Pre`, so this is not a Modelica event-iteration oracle. Source sine waves are
+//! evaluated only during generation; runtime tests replay the frozen CSV bytes.
 
 use crate::oracle::{Golden, InputSeries, Sample, ValueKind};
 

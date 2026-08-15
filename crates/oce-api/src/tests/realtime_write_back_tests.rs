@@ -57,6 +57,20 @@ fn assert_memstore_samples(engine: &Engine, timestamp: u64) {
     );
 }
 
+fn assert_memstore_has_no_output_samples(engine: &Engine) {
+    let snapshot = engine.store().snapshot().unwrap();
+    let columns = engine.io.durable_columns();
+    assert_eq!(columns.len(), PROJECTED_OUTPUTS);
+    for (path, _) in columns {
+        assert!(
+            snapshot
+                .read_by_key(&DomainKey::new(path.clone()))
+                .is_none(),
+            "unexpected sample for {path}"
+        );
+    }
+}
+
 #[test]
 fn realtime_steps_commit_post_tick_projected_values_at_exact_host_instants() {
     let mut engine = Engine::in_memory();
@@ -112,6 +126,21 @@ fn host_epoch_is_required_and_exact_mapping_handles_signed_model_time() {
         }
     }
 
+    for time in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+        let mut engine = Engine::in_memory();
+        engine
+            .build_model_in_memory(build_realtime_output_model(), None)
+            .unwrap();
+        engine.set_realtime_epoch_unix_nanos(EPOCH);
+        assert!(matches!(
+            engine.step_realtime(time),
+            Err(OcError::RealtimeInstantUnrepresentable {
+                epoch_unix_nanos: EPOCH,
+                t_now
+            }) if t_now.to_bits() == time.to_bits()
+        ));
+    }
+
     let mut before_epoch = Engine::in_memory();
     before_epoch
         .build_model_in_memory(build_realtime_output_model(), None)
@@ -124,6 +153,52 @@ fn host_epoch_is_required_and_exact_mapping_handles_signed_model_time() {
             t_now: -5.0
         })
     ));
+}
+
+#[test]
+fn unrepresentable_realtime_instant_does_not_tick_or_write() {
+    let mut engine = Engine::in_memory();
+    engine
+        .build_model_in_memory(build_realtime_output_model(), None)
+        .unwrap();
+    engine.tick(1.0).unwrap();
+    engine.set_realtime_epoch_unix_nanos(EPOCH);
+
+    let values = engine.state.values.clone();
+    let words = engine.state.words.clone();
+    let state_t = engine.state.t.to_bits();
+    let prev_t = engine.prev_t.map(f64::to_bits);
+    let outputs = engine.outputs().to_map();
+    assert_memstore_has_no_output_samples(&engine);
+
+    let time = 20_000_000_000.0;
+    assert!(matches!(
+        engine.step_realtime(time),
+        Err(OcError::RealtimeInstantUnrepresentable {
+            epoch_unix_nanos: EPOCH,
+            t_now
+        }) if t_now == time
+    ));
+
+    assert_eq!(engine.state.values.len(), values.len());
+    assert!(
+        engine
+            .state
+            .values
+            .iter()
+            .zip(&values)
+            .all(|(left, right)| left.bit_eq(right))
+    );
+    assert_eq!(engine.state.words, words);
+    assert_eq!(engine.state.t.to_bits(), state_t);
+    assert_eq!(engine.prev_t.map(f64::to_bits), prev_t);
+    assert_eq!(engine.outputs().len(), outputs.len());
+    assert!(engine.outputs().to_map().iter().zip(&outputs).all(
+        |((left_path, left), (right_path, right))| {
+            left_path == right_path && left.bit_eq(right)
+        }
+    ));
+    assert_memstore_has_no_output_samples(&engine);
 }
 
 #[derive(Clone, Copy)]

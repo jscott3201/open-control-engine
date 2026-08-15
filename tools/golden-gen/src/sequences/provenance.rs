@@ -20,7 +20,7 @@ use super::{
     THERMAL_ZONES_CONTROL_LOOPS, THERMAL_ZONES_ZONE_STATES, TRIM_AND_RESPOND_HAVE_HOL_FALSE, VAV,
 };
 
-/// Pinned Buildings source revision used by every G36 Tier-A sequence oracle.
+/// Pinned Buildings source revision used by every G36 Tier-A sequence reference.
 pub(super) const SOURCE_COMMIT: &str = "a131864e4c4df22ebcd52bb8da439de0087ac365";
 
 /// Return the canonical upstream Buildings source paths for a registered sequence.
@@ -93,7 +93,7 @@ pub(super) fn source_files(sequence: &str) -> &'static str {
     }
 }
 
-/// Return the review status of the fixture backing a registered sequence oracle.
+/// Return the review status of the fixture backing a registered sequence reference.
 ///
 /// # Panics
 /// Panics when `sequence` is not one of the registered G36 scenarios.
@@ -110,7 +110,6 @@ pub(super) fn fixture_status(sequence: &str) -> &'static str {
         | OUTDOOR_AIRFLOW_TITLE24_SUMZONE
         | RELIEF_DAMPER
         | RELIEF_FAN
-        | RELIEF_FAN_GROUP
         | RETURN_FAN_AIRFLOW
         | RETURN_FAN_DIRECT_PRESSURE
         | ECONOMIZER_ENABLE
@@ -132,17 +131,18 @@ pub(super) fn fixture_status(sequence: &str) -> &'static str {
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_2
         | AIR_ECONOMIZER_HIGH_LIMITS_TITLE24_DIFFERENTIAL_OFFSET_3
         | FREEZE_PROTECTION
-        | TIME_SUPPRESSION
         | THERMAL_ZONES_CONTROL_LOOPS
         | THERMAL_ZONES_ZONE_STATES
         | ASHRAE62_1_SETPOINTS
         | COOLING_ONLY_ACTIVE_AIR_FLOW
         | COOLING_ONLY_ALARMS
-        | COOLING_ONLY_CONTROLLER
         | COOLING_ONLY_DAMPERS
         | COOLING_ONLY_SYSTEM_REQUESTS
         | REHEAT_OVERRIDES => {
             "supported-runtime-sequence source-verified composite"
+        }
+        TIME_SUPPRESSION | COOLING_ONLY_CONTROLLER | RELIEF_FAN_GROUP => {
+            "supported-runtime-sequence HostTick-v1-profile composite"
         }
         SAT | ECON | VAV => "supported-fixture-only source-reviewed fragment",
         _ => unreachable!("unknown G36 sequence {sequence}"),

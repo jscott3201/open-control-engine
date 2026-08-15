@@ -1,8 +1,7 @@
-//! Source-verified ASHRAE G36 Generic.TimeSuppression through the frozen facade.
+//! ASHRAE G36 Generic.TimeSuppression HostTick v1 replay through the frozen facade.
 //!
-//! The replay uses the independent 60-second Tier-A schedule and collects the single Boolean
-//! `yAftSup` output exactly. Two fresh engines must produce identical schedules and bit-equal
-//! traces.
+//! The replay uses the implementation-independent 60-second HostTick profile schedule and collects
+//! the single Boolean `yAftSup` output exactly. It does not check Modelica `Pre` event iteration.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -119,7 +118,7 @@ fn load_time_suppression() -> Engine {
     let mut engine = Engine::in_memory();
     let report = engine
         .load_cxf(TIME_SUPPRESSION.as_bytes())
-        .expect("source-verified G36 Generic TimeSuppression fixture loads");
+        .expect("source-transcribed G36 Generic TimeSuppression fixture loads");
     assert_eq!(report.block_count, 24);
     assert!(
         report.warnings.is_empty(),
