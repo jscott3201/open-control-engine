@@ -691,21 +691,57 @@ fn unclassifiable_member_control_changes_only_one_nodeless_member_name() {
 
     let accepted = read_fixture("accepted/unclassifiable_member_control.jsonld");
     let rejected = read_fixture("rejected/unsupported_instance_member.jsonld");
-    let member_count = |source: &str| {
+    let shape = |source: &str| {
         let document: serde_json::Value = serde_json::from_str(source).expect("valid fixture JSON");
-        document["@graph"]
-            .as_array()
-            .expect("fixture graph")
+        let graph = document["@graph"].as_array().expect("fixture graph");
+        let context = document["@context"].as_object().expect("fixture context");
+        let graph_ids: std::collections::BTreeSet<String> = graph
+            .iter()
+            .map(|node| node["@id"].as_str().expect("graph node id"))
+            .map(|id| {
+                let Some((prefix, suffix)) = id.split_once(':') else {
+                    return id.to_owned();
+                };
+                context
+                    .get(prefix)
+                    .and_then(serde_json::Value::as_str)
+                    .map_or_else(|| id.to_owned(), |base| format!("{base}{suffix}"))
+            })
+            .collect();
+        let member_count = graph
             .iter()
             .find(|node| node["@id"] == "http://example.org#M.sin")
             .expect("Sin instance")["S231:hasInstance"]
             .as_array()
             .expect("member array")
-            .len()
+            .len();
+        (member_count, graph_ids)
     };
 
-    assert_eq!(member_count(&accepted), 6, "accepted member count");
-    assert_eq!(member_count(&rejected), 6, "rejected member count");
+    let (accepted_count, accepted_nodes) = shape(&accepted);
+    let (rejected_count, rejected_nodes) = shape(&rejected);
+    assert_eq!(accepted_count, 6, "accepted member count");
+    assert_eq!(rejected_count, 6, "rejected member count");
+    assert_eq!(
+        accepted_nodes
+            .iter()
+            .filter(|id| id.starts_with("http://example.org#M.sin."))
+            .count(),
+        5,
+        "accepted node-bearing member count"
+    );
+    assert_eq!(
+        rejected_nodes
+            .iter()
+            .filter(|id| id.starts_with("http://example.org#M.sin."))
+            .count(),
+        5,
+        "rejected node-bearing member count"
+    );
+    for member in [ACCEPTED_MEMBER, REJECTED_MEMBER] {
+        assert!(!accepted_nodes.contains(member), "accepted node {member}");
+        assert!(!rejected_nodes.contains(member), "rejected node {member}");
+    }
     assert_eq!(accepted.matches(ACCEPTED_MEMBER).count(), 1);
     assert_eq!(rejected.matches(REJECTED_MEMBER).count(), 1);
     assert_eq!(
