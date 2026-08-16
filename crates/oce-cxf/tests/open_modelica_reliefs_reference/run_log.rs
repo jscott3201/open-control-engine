@@ -330,19 +330,7 @@ fn expected_metadata(
 }
 
 fn source_files_json(architecture: &Architecture) -> Result<String, String> {
-    let records = architecture
-        .source_files
-        .iter()
-        .map(|file| {
-            BTreeMap::from([
-                ("committed_sha256", file.committed_sha256.as_str()),
-                ("materialized_sha256", file.materialized_sha256.as_str()),
-                ("path", file.path.as_str()),
-                ("source", file.source.as_str()),
-            ])
-        })
-        .collect::<Vec<_>>();
-    serde_json::to_string(&records).map_err(|error| error.to_string())
+    serde_json::to_string(&architecture.source_files).map_err(|error| error.to_string())
 }
 
 fn add_generator_inputs(values: &mut BTreeMap<String, String>, input: &GeneratorInputs) {

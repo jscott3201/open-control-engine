@@ -364,7 +364,7 @@
       "container_architecture": "aarch64",
       "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
       "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
-      "repository_revision": "8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd",
+      "repository_revision": "3d16cf2052ae92ebd90c3cad20ac987e8411148c",
       "generator_provenance_scope": "native_generation_and_publication",
       "generator_inputs": {
         "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
@@ -377,10 +377,10 @@
         "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
         "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
         "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
-        "architecture_verifier_sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212",
+        "architecture_verifier_sha256": "87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465",
         "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
         "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
-        "evidence_workflow_sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610",
+        "evidence_workflow_sha256": "9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2",
         "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
         "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
         "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
@@ -632,13 +632,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "a2b8187e3e9283d3cbb7c7957ba25fcbd0af65bef241ed989adb8f9869c1ca5f",
+          "log_sha256": "d72443d0f05c443543e401c6d294693bcd766e672116102d3ca2b2719bf32d89",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "969639db6737da66c22ac0780e9ddd1c5482be2d8247249b0fee64811413d81d",
+          "log_sha256": "7ad4e195bee6de40740264e7cd79de7adca115d483e3edb136c8f89130d1f17e",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         }
       ],
@@ -651,7 +651,7 @@
       "container_architecture": "x86_64",
       "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
       "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
-      "repository_revision": "8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd",
+      "repository_revision": "3d16cf2052ae92ebd90c3cad20ac987e8411148c",
       "generator_provenance_scope": "native_generation_and_publication",
       "generator_inputs": {
         "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
@@ -664,10 +664,10 @@
         "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
         "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
         "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
-        "architecture_verifier_sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212",
+        "architecture_verifier_sha256": "87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465",
         "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
         "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
-        "evidence_workflow_sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610",
+        "evidence_workflow_sha256": "9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2",
         "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
         "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
         "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
@@ -919,13 +919,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "ac5081ef39b9fb3343098add5536bdc9d4879c692b8cddad7aaeeeed1e7b2aa4",
+          "log_sha256": "48883c8d66fdb1628ff590f761d9d59ad698cc8595f84d7f2c4d93fc91cfb5c5",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "6b8a86cec0518b18e13b24e8baaea1a958397ea908b0ab4b2a5f7163ef54454f",
+          "log_sha256": "2d4daf81184a927979c7b24c0b359303401c3ce11143f40e803573f40e8774d2",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         }
       ],
@@ -981,7 +981,7 @@
     {
       "role": "arm64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/architecture.json",
-      "sha256": "bf4de6fd270733c87ebc8b1564b12364011043934910b4107a429cc4069da88f"
+      "sha256": "c82a4f6e3f9a590d22a92e502b9242103d15fc70d50ac7586737446e67e8cf9a"
     },
     {
       "role": "arm64_canonical_csv",
@@ -1001,12 +1001,12 @@
     {
       "role": "arm64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/run-a.log",
-      "sha256": "a2b8187e3e9283d3cbb7c7957ba25fcbd0af65bef241ed989adb8f9869c1ca5f"
+      "sha256": "d72443d0f05c443543e401c6d294693bcd766e672116102d3ca2b2719bf32d89"
     },
     {
       "role": "arm64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/run-b.log",
-      "sha256": "969639db6737da66c22ac0780e9ddd1c5482be2d8247249b0fee64811413d81d"
+      "sha256": "7ad4e195bee6de40740264e7cd79de7adca115d483e3edb136c8f89130d1f17e"
     },
     {
       "role": "arm64_parameter_control_canonical_csv",
@@ -1021,7 +1021,7 @@
     {
       "role": "arm64_parameter_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/parameter-control.log",
-      "sha256": "d285c13ff9fecb05c6b3ce6d69fadb077bff6ee79766affc3725a8951a4a9600"
+      "sha256": "3e0280ded6bb8ac581b40dfc69236451fbf67cb084c6bbcbf16e0c80964fcd81"
     },
     {
       "role": "arm64_final_clamp_canonical_csv",
@@ -1036,7 +1036,7 @@
     {
       "role": "arm64_final_clamp_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/final-clamp.log",
-      "sha256": "36e3b07e2b705f590e75ae5ce806a85e380427182bb0eeda7b86d6be18a30736"
+      "sha256": "b475f31cd93648c5d4e13ee64629c1efcaed8154c614f2920141a0c494c63997"
     },
     {
       "role": "arm64_projection_mutation_log",
@@ -1066,7 +1066,7 @@
     {
       "role": "amd64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/architecture.json",
-      "sha256": "4912a50b830c4cec464789bb8165994969bc6000aab63972e98661033621196e"
+      "sha256": "b8bd672eb78233fd54c6917384fc17779e6e537bff4d8be974ffff1bc9ec0af6"
     },
     {
       "role": "amd64_canonical_csv",
@@ -1086,12 +1086,12 @@
     {
       "role": "amd64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/run-a.log",
-      "sha256": "ac5081ef39b9fb3343098add5536bdc9d4879c692b8cddad7aaeeeed1e7b2aa4"
+      "sha256": "48883c8d66fdb1628ff590f761d9d59ad698cc8595f84d7f2c4d93fc91cfb5c5"
     },
     {
       "role": "amd64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/run-b.log",
-      "sha256": "6b8a86cec0518b18e13b24e8baaea1a958397ea908b0ab4b2a5f7163ef54454f"
+      "sha256": "2d4daf81184a927979c7b24c0b359303401c3ce11143f40e803573f40e8774d2"
     },
     {
       "role": "amd64_parameter_control_canonical_csv",
@@ -1106,7 +1106,7 @@
     {
       "role": "amd64_parameter_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/parameter-control.log",
-      "sha256": "0dd89eba99ac40c120936e8a14c488482060e7f160603c25a1aae267b75b99cc"
+      "sha256": "8346ef7af29fef096e874ec90e29ebb6a1e6511732a9cc28fe5451a6529cbc8f"
     },
     {
       "role": "amd64_final_clamp_canonical_csv",
@@ -1121,7 +1121,7 @@
     {
       "role": "amd64_final_clamp_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/final-clamp.log",
-      "sha256": "4d41069b4308d424e97000e327037a0f38f37660a70097760092bee14f349f3e"
+      "sha256": "74dd796b74ab7ebf05d3b160b5750df96cee94ef9ba899fe0816d1e1d24c8212"
     },
     {
       "role": "amd64_projection_mutation_log",
@@ -1156,7 +1156,7 @@
     {
       "role": "generation_revision_contract",
       "path": "crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json",
-      "sha256": "af7d19798ee53c0127652a5f078b39c2f9784be55a78c44810bec617fcff4652"
+      "sha256": "b5abcca6e088ca0bf6af52fdcd3e8da773e8b9fee59e92b0ed4b79f522650e78"
     },
     {
       "role": "tool_cargo_lock",
@@ -1201,12 +1201,17 @@
     {
       "role": "assembly_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/assemble.sh",
-      "sha256": "db2cd0036cb6ea3db5c792988d79fe99a073b4179a085e26e309d1f341d09d17"
+      "sha256": "80f4eef2c89b7e9328987118940ce993b91f13a9f5f6efb11c85ca851fd7edfc"
+    },
+    {
+      "role": "candidate_assembly_test_script",
+      "path": "tools/openmodelica-reliefs-reference/reliefs/candidate_assembly_test.sh",
+      "sha256": "09f027880ed4d9e5d53f6dc34f41f52fee461c020f9ed686df467736f05a8298"
     },
     {
       "role": "manifest_generator_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/generate_manifest.py",
-      "sha256": "8afca7cd0cc09a48d47ca21539b253a37693d8a6607c8878da011036c826e141"
+      "sha256": "f4df50bd093d8627a1a0d6fec248920e3e010ddd97a9a5064fb4eca489c7e298"
     },
     {
       "role": "architecture_generator_script",
@@ -1216,7 +1221,7 @@
     {
       "role": "evidence_validator_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py",
-      "sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212"
+      "sha256": "87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465"
     },
     {
       "role": "projection_validator_script",
@@ -1281,7 +1286,7 @@
     {
       "role": "evidence_workflow",
       "path": ".github/workflows/openmodelica-reliefs-evidence.yml",
-      "sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610"
+      "sha256": "9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2"
     }
   ],
   "regeneration": {

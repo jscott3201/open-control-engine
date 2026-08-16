@@ -260,11 +260,12 @@ fn retained_validation_survives_squash_without_git_metadata() {
     assert!(!temporary_root.join(".git").exists());
     repository::validate(&manifest, &temporary_root)
         .expect("retained bytes validate without revision history");
+    let retained_root = temporary_root.canonicalize().unwrap();
     let python = std::process::Command::new("python3")
         .arg(source_root.join("tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py"))
         .arg("final")
-        .arg(temporary_root.join("crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs"))
-        .arg(&temporary_root)
+        .arg(retained_root.join("crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs"))
+        .arg(&retained_root)
         .env("PYTHONDONTWRITEBYTECODE", "1")
         .env("CARGO_NET_OFFLINE", "true")
         .output()
@@ -391,7 +392,7 @@ fn malformed_manifest_fails_closed_at_schema_literals_types_and_bounds() {
                 .as_bytes()
         )
         .unwrap_err()
-        .contains("contract revision")
+        .contains("contract commit")
     );
 }
 

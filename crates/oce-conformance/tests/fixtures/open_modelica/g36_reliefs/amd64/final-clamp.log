@@ -12,7 +12,7 @@ buildings_tree=a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09
 modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git
 modelica_commit=7a4bf7de77a3986e8eb1e88cbb515d646f78f834
 modelica_tree=43d7d8fc1a991358e9e5e91976e27cdc4280173f
-repository_revision=8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd
+repository_revision=3d16cf2052ae92ebd90c3cad20ac987e8411148c
 generator_provenance_scope=native_generation_and_publication
 rustc_release=1.97.1
 rustc_commit_hash=8bab26f4f68e0e26f0bb7960be334d5b520ea452
@@ -34,10 +34,10 @@ tool_main_sha256=ebd795c2b9daab0b9104d03f3939c007347032376bf9496e2e55f3264cf8cb3
 tool_cargo_toml_sha256=cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05
 tool_cargo_lock_sha256=238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5
 architecture_generator_sha256=e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724
-architecture_verifier_sha256=c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212
+architecture_verifier_sha256=87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465
 projection_verifier_sha256=a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0
 safe_file_helper_sha256=8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d
-evidence_workflow_sha256=9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610
+evidence_workflow_sha256=9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2
 oci_materializer_sha256=5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d
 deadline_sha256=84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a
 deadline_test_sha256=c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b
@@ -110,17 +110,17 @@ record SimulationResult
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.311342785,
-    timeBackend = 0.010489012,
-    timeSimCode = 0.002734619,
-    timeTemplates = 0.004951382000000001,
-    timeCompile = 0.935055295,
-    timeSimulation = 0.014990809,
-    timeTotal = 1.279673575
+    timeFrontend = 0.27843347099999993,
+    timeBackend = 0.010222866,
+    timeSimCode = 0.002828623,
+    timeTemplates = 0.00640017,
+    timeCompile = 1.073777903,
+    timeSimulation = 0.014566926000000001,
+    timeTotal = 1.386329114
 end SimulationResult;
 
 
-observed_cgroup_peak_bytes=1559670784
+observed_cgroup_peak_bytes=1557377024
 omc_warning_count=0
 output_directory_kib=596
 raw_sha256=012a8a7040aa869ff99292216f7ad62fe92dc63dc02de4e43a45f727bf2c4a90

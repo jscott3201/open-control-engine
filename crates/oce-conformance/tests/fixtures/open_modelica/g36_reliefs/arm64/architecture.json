@@ -7,7 +7,7 @@
   "container_architecture": "aarch64",
   "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
   "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
-  "repository_revision": "8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd",
+  "repository_revision": "3d16cf2052ae92ebd90c3cad20ac987e8411148c",
   "generator_provenance_scope": "native_generation_and_publication",
   "generator_inputs": {
     "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
@@ -20,10 +20,10 @@
     "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
     "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
     "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
-    "architecture_verifier_sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212",
+    "architecture_verifier_sha256": "87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465",
     "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
     "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
-    "evidence_workflow_sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610",
+    "evidence_workflow_sha256": "9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2",
     "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
     "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
     "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
@@ -275,13 +275,13 @@
     {
       "id": "run-a",
       "output_directory_token": "fresh-run-a",
-      "log_sha256": "a2b8187e3e9283d3cbb7c7957ba25fcbd0af65bef241ed989adb8f9869c1ca5f",
+      "log_sha256": "d72443d0f05c443543e401c6d294693bcd766e672116102d3ca2b2719bf32d89",
       "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
     },
     {
       "id": "run-b",
       "output_directory_token": "fresh-run-b",
-      "log_sha256": "969639db6737da66c22ac0780e9ddd1c5482be2d8247249b0fee64811413d81d",
+      "log_sha256": "7ad4e195bee6de40740264e7cd79de7adca115d483e3edb136c8f89130d1f17e",
       "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
     }
   ]

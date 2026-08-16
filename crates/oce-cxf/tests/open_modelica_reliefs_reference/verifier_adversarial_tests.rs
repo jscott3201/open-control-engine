@@ -403,6 +403,7 @@ fn retained_native_outputs_enter_candidate_assembly_without_docker() {
         .join("tools/openmodelica-reliefs-reference/reliefs/candidate_assembly_test.sh");
     let output = std::process::Command::new("sh")
         .arg(script)
+        .env("TMPDIR", std::env::temp_dir().canonicalize().unwrap())
         .output()
         .unwrap();
     assert!(

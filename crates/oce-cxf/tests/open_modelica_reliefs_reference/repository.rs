@@ -473,7 +473,7 @@ mod tests {
             &architecture.raw_run_a_sha256,
         )
         .unwrap_err();
-        assert!(error.contains("success") || error.contains("failure"));
+        assert!(error.contains("SimulationResult values"));
         assert!(hostile.contains("runner_complete=1"));
     }
 
