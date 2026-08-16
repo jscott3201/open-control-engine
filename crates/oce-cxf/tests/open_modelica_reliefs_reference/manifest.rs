@@ -252,7 +252,11 @@ fn validate_projection(value: &Manifest) -> Result<(), String> {
         TIME_BITS,
         "projection times",
     )?;
-    require(projection.raw_time_bits.len() == 21, "raw timestamp count")?;
+    exact_slice(
+        &projection.raw_time_bits,
+        RAW_TIME_BITS,
+        "raw timestamp bits",
+    )?;
     for (actual, expected, name) in [
         (
             &projection.canonical_input_bits.u_t_sup,
@@ -353,6 +357,12 @@ fn validate_architecture(
     require(
         value.projection_mutation.control == "explicit_keep_first"
             && value.projection_mutation.selected_source_rows == [0, 4, 7, 10, 13, 16, 19]
+            && value
+                .projection_mutation
+                .selected_time_bits
+                .iter()
+                .map(String::as_str)
+                .eq(KEEP_FIRST_TIME_BITS.iter().copied())
             && value.projection_mutation.expected_source_rows == [0, 3, 6, 9, 12, 15, 18],
         "projection mutation identity",
     )?;

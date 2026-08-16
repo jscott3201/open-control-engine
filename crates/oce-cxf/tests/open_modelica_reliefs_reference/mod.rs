@@ -136,6 +136,16 @@ fn parameter_final_clamp_and_projection_controls_are_live_on_both_architectures(
         .unwrap();
         assert_ne!(keep_first.bytes, main.bytes);
         assert_eq!(
+            keep_first.bytes,
+            safe_read::read(
+                &root,
+                &fixture_relative(&format!(
+                    "{architecture}/projection-keep-first.canonical.csv"
+                )),
+            )
+            .unwrap()
+        );
+        assert_eq!(
             keep_first
                 .rows
                 .iter()
@@ -150,7 +160,26 @@ fn parameter_final_clamp_and_projection_controls_are_live_on_both_architectures(
             "{architecture}/projection-keep-first.metadata"
         )))
         .unwrap();
-        assert!(metadata.contains("selected_source_rows=0,4,7,10,13,16,19\n"));
+        let one = |key: &str| {
+            let prefix = format!("{key}=");
+            let values = metadata
+                .lines()
+                .filter_map(|line| line.strip_prefix(&prefix))
+                .collect::<Vec<_>>();
+            assert_eq!(values.len(), 1, "metadata key {key}");
+            values[0]
+        };
+        assert_eq!(one("selection"), "first");
+        assert_eq!(one("raw_rows"), "21");
+        assert_eq!(one("grouped_rows"), "14");
+        assert_eq!(one("canonical_rows"), "7");
+        assert_eq!(one("group_sizes"), "1,1,2,1,2,1,2,1,2,1,2,1,2,2");
+        assert_eq!(one("selected_source_rows"), "0,4,7,10,13,16,19");
+        assert_eq!(one("raw_time_bits"), expectations::RAW_TIME_BITS.join(","));
+        assert_eq!(
+            one("selected_time_bits"),
+            expectations::KEEP_FIRST_TIME_BITS.join(",")
+        );
     }
 }
 
@@ -312,6 +341,28 @@ fn package_lists_include_reliefs_evidence_and_exclude_the_tool() {
         }
         assert!(!listing.contains("tools/openmodelica-reliefs-reference"));
     }
+}
+
+#[test]
+fn scoped_evidence_adds_no_report_or_public_runtime_surface() {
+    let root = repository_root();
+    let test =
+        std::fs::read_to_string(root.join("crates/oce-conformance/tests/open_modelica_reliefs.rs"))
+            .unwrap();
+    for forbidden in [
+        "known_divergence",
+        "TierReport",
+        "ConformanceReport",
+        "assemble_report",
+    ] {
+        assert!(!test.contains(forbidden));
+    }
+    assert!(!test.lines().any(|line| line.starts_with("pub ")));
+    let public_surface =
+        std::fs::read_to_string(root.join("crates/oce-conformance/src/lib.rs")).unwrap();
+    assert!(!public_surface.contains("open_modelica_reliefs"));
+    let workspace = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
+    assert!(!workspace.contains("tools/openmodelica-reliefs-reference"));
 }
 
 #[cfg(unix)]

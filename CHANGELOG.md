@@ -468,6 +468,17 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   Raw repeat identity is per architecture; only canonical output is compared across architectures.
   The result covers only this finite matrix: global Tier 3 stays skipped, with no arbitrary Real,
   sequence, solver, general tolerance, or cross-architecture raw-byte claim.
+- **One composed G36 leaf now has scoped OpenModelica evidence** (#307). The pinned Buildings
+  `Reliefs` class runs one seven-state dyadic input schedule with source-default parameters on native
+  arm64 and amd64 hosts. Repeat raw runs are identical within each architecture, and strict
+  keep-last canonical bytes match across architectures. The public facade compares all 14
+  `yOutDam` and `yRetDam` cells exactly at the emitted timestamp bits; topology checks preserve the
+  declared root identities while binding them to the internal Min and Max drivers. Controls cover a
+  parameter-only mutation, swapped and nonexistent roots, explicit keep-first projection, and both
+  final overwrite paths. The retained manifest binds the source cone, OCI graph, host artifact
+  toolchain, sandbox limits, cgroup peak measurement, and native logs. This remains one composed
+  leaf at one parameterization and schedule: global Tier 3 stays skipped, with no broader class,
+  solver, tolerance, or cross-architecture raw-byte claim.
 - **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).
   `DriverError::Load` identifies failure at `Engine::load_cxf`, and only that variant becomes a
   failed Tier 0 static-load report. Facade failures after a successful load remain driver errors
