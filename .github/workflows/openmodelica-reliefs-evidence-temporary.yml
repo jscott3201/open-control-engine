@@ -1,0 +1,78 @@
+# Branch-only transport for candidate artifacts from the ratified generation revision.
+name: Temporary OpenModelica Reliefs candidate evidence
+
+on:
+  push:
+    branches: [issue-307-openmodelica-reliefs]
+
+permissions:
+  contents: read
+
+jobs:
+  native-evidence:
+    name: native ${{ matrix.architecture }} candidate
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - architecture: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.7'
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: Materialize pinned source commits on the host
+        env:
+          BUILDINGS: ${{ runner.temp }}/modelica-buildings
+          MODELICA: ${{ runner.temp }}/modelica-standard-library
+        run: >-
+          git clone --no-checkout https://github.com/lbl-srg/modelica-buildings.git "$BUILDINGS" &&
+          git -C "$BUILDINGS" checkout --detach a131864e4c4df22ebcd52bb8da439de0087ac365 &&
+          test "$(git -C "$BUILDINGS" rev-parse 'HEAD^{tree}')" = a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09 &&
+          git clone --no-checkout https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git "$MODELICA" &&
+          git -C "$MODELICA" checkout --detach 7a4bf7de77a3986e8eb1e88cbb515d646f78f834 &&
+          test "$(git -C "$MODELICA" rev-parse 'HEAD^{tree}')" = 43d7d8fc1a991358e9e5e91976e27cdc4280173f
+      - name: Materialize the immutable platform image
+        env:
+          IMAGE: openmodelica/openmodelica@sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864
+          PLATFORM: ${{ matrix.platform }}
+        run: >-
+          docker pull --platform "$PLATFORM" "$IMAGE" &&
+          docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' | grep -Fq "\"$IMAGE\""
+      - name: Materialize pinned Rust dependencies on the host
+        run: cargo fetch --manifest-path tools/openmodelica-reliefs-reference/Cargo.toml --locked
+      - name: Generate candidate with offline containers
+        env:
+          BUILDINGS: ${{ runner.temp }}/modelica-buildings
+          MODELICA: ${{ runner.temp }}/modelica-standard-library
+          EVIDENCE: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
+          CARGO_TARGET_DIR: ${{ runner.temp }}/reliefs-cargo-target
+        run: sh tools/openmodelica-reliefs-reference/reliefs/regenerate.sh "$BUILDINGS" "$MODELICA" "$EVIDENCE"
+      - name: Verify candidate to be uploaded
+        env:
+          EVIDENCE: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
+        run: >-
+          python3 -B tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py architecture-checkout "$EVIDENCE" . "${{ matrix.architecture }}" &&
+          cargo run --manifest-path tools/openmodelica-reliefs-reference/Cargo.toml --locked -- verify-architecture-canonical "$EVIDENCE" &&
+          test -z "$(git status --short --ignored -- tools/openmodelica-reliefs-reference/reliefs/__pycache__)" &&
+          git diff --exit-code &&
+          test -z "$(git status --porcelain)"
+      - name: Upload verified candidate native evidence
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: openmodelica-reliefs-${{ matrix.architecture }}
+          path: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
+          if-no-files-found: error
+          retention-days: 14
