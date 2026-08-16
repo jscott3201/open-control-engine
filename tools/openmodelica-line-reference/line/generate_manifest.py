@@ -82,10 +82,12 @@ def architecture(name):
         "repository_revision": record["repository_revision"],
         "generator_provenance_scope": record["generator_provenance_scope"],
         "generator_inputs": record["generator_inputs"],
-        "omc_version": "OpenModelica 1.25.1",
-        "gcc_version": "11.4.0",
-        "binutils_version": "2.38",
-        "glibc_version": "2.35",
+        "artifact_toolchain": record["artifact_toolchain"],
+        "source_materialization": record["source_materialization"],
+        "omc_version": record["omc_version"],
+        "gcc_version": record["gcc_version"],
+        "binutils_version": record["binutils_version"],
+        "glibc_version": record["glibc_version"],
         "raw_run_a_sha256": record["raw_run_a_sha256"],
         "raw_run_b_sha256": record["raw_run_b_sha256"],
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
@@ -154,6 +156,12 @@ outputs = {
     "yAbove": ["3fd0000000000000"] * 2 + ["3ff4000000000000"] * 2 + ["4002000000000000"] * 2 + ["400a000000000000"] * 4,
     "yUnlimited": ["3fd0000000000000"] * 2 + ["3ff4000000000000"] * 2 + ["4002000000000000"] * 2 + ["400a000000000000"] * 2 + ["4011000000000000"] * 2,
 }
+
+
+def source_file(path, digest):
+    return {"path": path, "committed_sha256": digest, "materialized_sha256": digest}
+
+
 arm, amd = architecture("arm64"), architecture("amd64")
 canonical_sha = arm["canonical_sha256"]
 manifest = {
@@ -161,8 +169,8 @@ manifest = {
     "scope": {"class": "CDL.Reals.Line", "scenario": "four_limit_modes_five_dyadic_regions", "inputs": ["x1", "f1", "x2", "f2", "u"], "outputs": ["yBoth", "yBelow", "yAbove", "yUnlimited"], "comparison": "exact_finite_f64_bits", "global_tier3_status": "skipped"},
     "image": {"repository": "openmodelica/openmodelica", "tag": "v1.25.1-minimal", "index_digest": "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864", "platforms": [{"platform": item["platform"], "manifest_digest": item["platform_manifest_digest"], "config_digest": item["config_digest"]} for item in [arm, amd]]},
     "sources": [
-        {"name": "buildings", "repository": "https://github.com/lbl-srg/modelica-buildings.git", "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09", "package": "Buildings", "version": "14.0.0", "files": [{"path": "Buildings/package.mo", "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"}, {"path": "Buildings/Controls/OBC/CDL/Reals/Line.mo", "sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"}]},
-        {"name": "modelica", "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git", "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f", "package": "Modelica", "version": "4.1.0", "files": [{"path": "Complex.mo", "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"}, {"path": "Modelica/package.mo", "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"}, {"path": "Modelica/Blocks/Sources.mo", "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"}, {"path": "ModelicaServices/package.mo", "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"}]},
+        {"name": "buildings", "repository": "https://github.com/lbl-srg/modelica-buildings.git", "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09", "package": "Buildings", "version": "14.0.0", "materialization": "git_archive_without_local_attribute_override", "transforms": [], "files": [source_file("Buildings/package.mo", "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"), source_file("Buildings/Controls/OBC/CDL/Reals/Line.mo", "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5")]},
+        {"name": "modelica", "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git", "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f", "package": "Modelica", "version": "4.1.0", "materialization": "git_archive_with_pinned_modelica_export_subst", "transforms": [{"path": "Modelica/package.mo", "rule": "Modelica/package.mo -export-subst"}], "files": [source_file("Complex.mo", "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"), source_file("Modelica/package.mo", "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"), source_file("Modelica/Blocks/Sources.mo", "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"), source_file("ModelicaServices/package.mo", "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb")]},
     ],
     "simulation": {"method": "dassl", "start_time": "0", "stop_time": "300", "number_of_intervals": 5, "tolerance": "1e-9", "output_format": "csv", "variable_filter": "^(x1|f1|x2|f2|u|yBoth|yBelow|yAbove|yUnlimited)$", "simflags": "", "event_emission": True, "raw_header": '"time","f1","f2","u","x1","x2","yAbove","yBelow","yBoth","yUnlimited"'},
     "projection": {"columns": ["time", "x1", "f1", "x2", "f2", "u", "yBoth", "yBelow", "yAbove", "yUnlimited"], "grouping": "contiguous_equal_f64_bits", "selection": "last", "normalize_times": False, "raw_rows": 15, "canonical_rows": 10, "group_sizes": [1, 1, 2, 1, 2, 1, 2, 1, 2, 2], "canonical_time_bits": time_bits, "canonical_input_bits": {"x1": ["c000000000000000"] * 10, "f1": ["3ff4000000000000"] * 10, "x2": ["4000000000000000"] * 10, "f2": ["400a000000000000"] * 10, "u": u_bits}},
@@ -171,7 +179,7 @@ manifest = {
     "semantic_control": {"mutation": "yBelow limitAbove false to true", "first_mismatch_row": 8, "first_mismatch_time_bits": time_bits[8], "expected_comparison": "exact_mismatch", "mismatch_rows": [8, 9]},
     "cross_architecture": {"comparison": "canonical_bytes", "arm64_sha256": canonical_sha, "amd64_sha256": canonical_sha, "result": "pass"},
     "artifacts": [{"role": role, "path": path, "sha256": sha(file)} for role, path, file in roles],
-    "regeneration": {"entrypoint": TOOL + "line/regenerate.sh", "assembly_entrypoint": TOOL + "line/assemble.sh", "evidence_workflow": ".github/workflows/openmodelica-line-evidence.yml", "network": "none_during_container_execution", "pull": "never", "platforms": ["linux/arm64", "linux/amd64"], "source_materialization": "git_archive", "source_mounts": "read_only", "container_root": "read_only", "container_user": "non_root", "capabilities": "none", "no_new_privileges": True, "device_mounts": 0, "docker_socket_mounted": False, "timeout_seconds": 120, "cpus": "4", "memory_bytes": 2147483648, "memory_swap_bytes": 2147483648, "pids_limit": 256, "tmpfs_bytes": 268435456, "per_file_bytes": 67108864, "output_directory_bytes": 268435456},
+    "regeneration": {"entrypoint": TOOL + "line/regenerate.sh", "assembly_entrypoint": TOOL + "line/assemble.sh", "evidence_workflow": ".github/workflows/openmodelica-line-evidence.yml", "network": "none_during_container_execution", "pull": "never", "platforms": ["linux/arm64", "linux/amd64"], "source_materialization": "git_archive_with_pinned_modelica_export_subst", "source_mounts": "read_only", "container_root": "read_only", "container_user": "non_root", "capabilities": "none", "no_new_privileges": True, "device_mounts": 0, "docker_socket_mounted": False, "timeout_seconds": 120, "cpus": "4", "memory_bytes": 2147483648, "memory_swap_bytes": 2147483648, "pids_limit": 256, "tmpfs_bytes": 268435456, "per_file_bytes": 67108864, "output_directory_bytes": 268435456},
 }
 payload = (json.dumps(manifest, indent=2) + "\n").encode()
 descriptor = os.open(output / "manifest.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)

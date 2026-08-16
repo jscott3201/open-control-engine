@@ -140,6 +140,7 @@ fn validate_sources(value: &Manifest) -> Result<(), String> {
                 "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09",
                 "Buildings",
                 "14.0.0",
+                "git_archive_without_local_attribute_override",
             ),
         ),
         (
@@ -151,6 +152,7 @@ fn validate_sources(value: &Manifest) -> Result<(), String> {
                 "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
                 "Modelica",
                 "4.1.0",
+                "git_archive_with_pinned_modelica_export_subst",
             ),
         ),
     ] {
@@ -160,7 +162,30 @@ fn validate_sources(value: &Manifest) -> Result<(), String> {
         exact(&source.tree, expected.3, "source.tree")?;
         exact(&source.package, expected.4, "source.package")?;
         exact(&source.version, expected.5, "source.version")?;
+        exact(
+            &source.materialization,
+            expected.6,
+            "source.materialization",
+        )?;
     }
+    require(
+        buildings.transforms.is_empty(),
+        "Buildings source transforms",
+    )?;
+    require(
+        modelica.transforms.len() == 1,
+        "Modelica source transform count",
+    )?;
+    exact(
+        &modelica.transforms[0].path,
+        "Modelica/package.mo",
+        "Modelica transform path",
+    )?;
+    exact(
+        &modelica.transforms[0].rule,
+        "Modelica/package.mo -export-subst",
+        "Modelica transform rule",
+    )?;
     let files = [
         (
             "Buildings/package.mo",
@@ -193,7 +218,16 @@ fn validate_sources(value: &Manifest) -> Result<(), String> {
     )?;
     for (file, expected) in buildings.files.iter().chain(&modelica.files).zip(files) {
         exact(&file.path, expected.0, "source file path")?;
-        exact(&file.sha256, expected.1, "source file digest")?;
+        exact(
+            &file.committed_sha256,
+            expected.1,
+            "source file committed digest",
+        )?;
+        exact(
+            &file.materialized_sha256,
+            expected.1,
+            "source file materialized digest",
+        )?;
     }
     Ok(())
 }
@@ -335,8 +369,23 @@ fn validate_architectures(value: &Manifest) -> Result<(), String> {
     )?;
     require(
         value.architectures[0].repository_revision == value.architectures[1].repository_revision
-            && value.architectures[0].generator_inputs == value.architectures[1].generator_inputs,
+            && value.architectures[0].generator_inputs == value.architectures[1].generator_inputs
+            && value.architectures[0].source_materialization
+                == value.architectures[1].source_materialization,
         "cross-architecture generator provenance",
+    )?;
+    let arm_toolchain = &value.architectures[0].artifact_toolchain;
+    let amd_toolchain = &value.architectures[1].artifact_toolchain;
+    require(
+        arm_toolchain.rustc_release == amd_toolchain.rustc_release
+            && arm_toolchain.rustc_commit_hash == amd_toolchain.rustc_commit_hash
+            && arm_toolchain.rustc_commit_date == amd_toolchain.rustc_commit_date
+            && arm_toolchain.rustc_llvm_version == amd_toolchain.rustc_llvm_version
+            && arm_toolchain.cargo_release == amd_toolchain.cargo_release
+            && arm_toolchain.cargo_commit_hash == amd_toolchain.cargo_commit_hash
+            && arm_toolchain.cargo_commit_date == amd_toolchain.cargo_commit_date
+            && arm_toolchain.python_version == amd_toolchain.python_version,
+        "cross-architecture artifact toolchain",
     )
 }
 
@@ -377,26 +426,28 @@ fn validate_architecture(
             "native_generation_and_publication",
             "architecture generator provenance scope",
         ),
-        (&value.raw_run_a_sha256, RAW_SHA, "architecture raw A"),
-        (&value.raw_run_b_sha256, RAW_SHA, "architecture raw B"),
-        (
-            &value.flag_control_raw_sha256,
-            CONTROL_SHA,
-            "architecture control raw",
-        ),
         (
             &value.canonical_sha256,
             CANONICAL_SHA,
             "architecture canonical",
         ),
-        (
-            &value.flag_control_canonical_sha256,
-            CONTROL_CANONICAL_SHA,
-            "architecture control canonical",
-        ),
     ] {
         exact(actual, expected, field)?;
     }
+    for value in [
+        &value.raw_run_a_sha256,
+        &value.raw_run_b_sha256,
+        &value.flag_control_raw_sha256,
+        &value.flag_control_canonical_sha256,
+    ] {
+        digest(value)?;
+    }
+    require(
+        value.raw_run_a_sha256 == value.raw_run_b_sha256,
+        "same-architecture repeat raw digest",
+    )?;
+    validate_artifact_toolchain(value, expected.0)?;
+    validate_source_materialization(value)?;
     revision(&value.repository_revision)?;
     for digest_value in [
         &value.generator_inputs.line_pilot_sha256,
@@ -432,9 +483,63 @@ fn validate_architecture(
         exact(&run.id, id, "run.id")?;
         exact(&run.output_directory_token, token, "run.token")?;
         digest(&run.log_sha256)?;
-        exact(&run.raw_sha256, RAW_SHA, "run.raw_sha256")?;
+        exact(&run.raw_sha256, &value.raw_run_a_sha256, "run.raw_sha256")?;
     }
     Ok(())
+}
+
+fn validate_artifact_toolchain(value: &Architecture, architecture: &str) -> Result<(), String> {
+    let toolchain = &value.artifact_toolchain;
+    let host = if architecture == "arm64" {
+        "aarch64-unknown-linux-gnu"
+    } else {
+        "x86_64-unknown-linux-gnu"
+    };
+    for (actual, expected, field) in [
+        (&toolchain.rustc_release, "1.97.1", "rustc release"),
+        (
+            &toolchain.rustc_commit_hash,
+            "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+            "rustc commit",
+        ),
+        (&toolchain.rustc_commit_date, "2026-07-14", "rustc date"),
+        (&toolchain.rustc_host, host, "rustc host"),
+        (&toolchain.rustc_llvm_version, "22.1.6", "rustc LLVM"),
+        (&toolchain.cargo_release, "1.97.1", "cargo release"),
+        (
+            &toolchain.cargo_commit_hash,
+            "c980f4866141969fab6254a680546a277789d6f0",
+            "cargo commit",
+        ),
+        (&toolchain.cargo_commit_date, "2026-06-30", "cargo date"),
+        (&toolchain.cargo_host, host, "cargo host"),
+        (&toolchain.python_version, "Python 3.13.7", "Python version"),
+    ] {
+        exact(actual, expected, field)?;
+    }
+    Ok(())
+}
+
+fn validate_source_materialization(value: &Architecture) -> Result<(), String> {
+    let source = &value.source_materialization;
+    require(
+        source.source_materialization == "git_archive_with_pinned_modelica_export_subst"
+            && source.buildings_materialization == "git_archive_without_local_attribute_override"
+            && source.modelica_transform_path == "Modelica/package.mo"
+            && source.modelica_transform_rule == "Modelica/package.mo -export-subst"
+            && source.buildings_package_committed_sha256
+                == "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"
+            && source.buildings_package_materialized_sha256
+                == source.buildings_package_committed_sha256
+            && source.line_source_committed_sha256
+                == "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"
+            && source.line_source_materialized_sha256 == source.line_source_committed_sha256
+            && source.modelica_package_committed_sha256
+                == "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+            && source.modelica_package_materialized_sha256
+                == source.modelica_package_committed_sha256,
+        "source materialization identity",
+    )
 }
 
 fn validate_controls(value: &Manifest) -> Result<(), String> {
@@ -502,7 +607,7 @@ fn validate_regeneration(value: &Manifest) -> Result<(), String> {
         (&regeneration.pull, "never", "regeneration.pull"),
         (
             &regeneration.source_materialization,
-            "git_archive",
+            "git_archive_with_pinned_modelica_export_subst",
             "regeneration.materialization",
         ),
         (

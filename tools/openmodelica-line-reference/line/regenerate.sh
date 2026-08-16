@@ -9,6 +9,8 @@ BUILDINGS_COMMIT='a131864e4c4df22ebcd52bb8da439de0087ac365'
 BUILDINGS_TREE='a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09'
 MODELICA_COMMIT='7a4bf7de77a3986e8eb1e88cbb515d646f78f834'
 MODELICA_TREE='43d7d8fc1a991358e9e5e91976e27cdc4280173f'
+MODELICA_PACKAGE_COMMITTED_SHA='c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191'
+MODELICA_PACKAGE_MATERIALIZED_SHA='c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191'
 
 if [ "$#" -ne 3 ]; then
   printf '%s\n' 'usage: regenerate.sh BUILDINGS_CHECKOUT MODELICA_CHECKOUT FRESH_OUTPUT_DIRECTORY' >&2
@@ -45,6 +47,30 @@ sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
 check_hash() { test "$(sha256 "$2")" = "$1"; }
 test -z "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=no)"
 SOURCE_REVISION=$(git -C "$REPO_ROOT" rev-parse HEAD)
+RUSTC_VERBOSE=$(rustc --version --verbose)
+RUSTC_RELEASE=$(printf '%s\n' "$RUSTC_VERBOSE" | sed -n 's/^release: //p')
+RUSTC_COMMIT_HASH=$(printf '%s\n' "$RUSTC_VERBOSE" | sed -n 's/^commit-hash: //p')
+RUSTC_COMMIT_DATE=$(printf '%s\n' "$RUSTC_VERBOSE" | sed -n 's/^commit-date: //p')
+RUSTC_HOST=$(printf '%s\n' "$RUSTC_VERBOSE" | sed -n 's/^host: //p')
+RUSTC_LLVM_VERSION=$(printf '%s\n' "$RUSTC_VERBOSE" | sed -n 's/^LLVM version: //p')
+CARGO_VERBOSE=$(cargo --version --verbose)
+CARGO_RELEASE=$(printf '%s\n' "$CARGO_VERBOSE" | sed -n 's/^release: //p')
+CARGO_COMMIT_HASH=$(printf '%s\n' "$CARGO_VERBOSE" | sed -n 's/^commit-hash: //p')
+CARGO_COMMIT_DATE=$(printf '%s\n' "$CARGO_VERBOSE" | sed -n 's/^commit-date: //p')
+CARGO_HOST=$(printf '%s\n' "$CARGO_VERBOSE" | sed -n 's/^host: //p')
+PYTHON_VERSION=$(python3 --version)
+test "$RUSTC_RELEASE" = '1.97.1'
+test "$RUSTC_COMMIT_HASH" = '8bab26f4f68e0e26f0bb7960be334d5b520ea452'
+test "$RUSTC_COMMIT_DATE" = '2026-07-14'
+test "$RUSTC_LLVM_VERSION" = '22.1.6'
+test "$CARGO_RELEASE" = '1.97.1'
+test "$CARGO_COMMIT_HASH" = 'c980f4866141969fab6254a680546a277789d6f0'
+test "$CARGO_COMMIT_DATE" = '2026-06-30'
+test "$PYTHON_VERSION" = 'Python 3.13.7'
+case "$ARCHITECTURE" in
+  arm64) test "$RUSTC_HOST" = 'aarch64-unknown-linux-gnu'; test "$CARGO_HOST" = 'aarch64-unknown-linux-gnu' ;;
+  amd64) test "$RUSTC_HOST" = 'x86_64-unknown-linux-gnu'; test "$CARGO_HOST" = 'x86_64-unknown-linux-gnu' ;;
+esac
 LINE_PILOT_SHA=$(sha256 "$SCRIPT_DIR/LinePilot.mo")
 LINE_FLAG_PILOT_SHA=$(sha256 "$SCRIPT_DIR/LineFlagPilot.mo")
 RUNNER_SHA=$(sha256 "$SCRIPT_DIR/runner.sh")
@@ -185,11 +211,22 @@ verify_source() {
   if [ "$name" = modelica ]; then printf '%s\n' 'Modelica/package.mo -export-subst' > "$archive_repository/info/attributes"; fi
   git -C "$archive_repository" archive --worktree-attributes --format=tar "$commit" | tar -xf - -C "$destination"
 }
+check_committed_source() {
+  checkout=$1; commit=$2; path=$3; expected=$4
+  actual=$(git -C "$checkout" show "$commit:$path" | shasum -a 256 | cut -d' ' -f1)
+  test "$actual" = "$expected"
+}
+check_committed_source "$BUILDINGS" "$BUILDINGS_COMMIT" Buildings/package.mo f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59
+check_committed_source "$BUILDINGS" "$BUILDINGS_COMMIT" Buildings/Controls/OBC/CDL/Reals/Line.mo 85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5
+check_committed_source "$MODELICA" "$MODELICA_COMMIT" Modelica/package.mo "$MODELICA_PACKAGE_COMMITTED_SHA"
+check_committed_source "$MODELICA" "$MODELICA_COMMIT" Modelica/Blocks/Sources.mo 565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3
+check_committed_source "$MODELICA" "$MODELICA_COMMIT" ModelicaServices/package.mo 7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb
+check_committed_source "$MODELICA" "$MODELICA_COMMIT" Complex.mo 9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f
 verify_source "$BUILDINGS" 'https://github.com/lbl-srg/modelica-buildings.git' "$BUILDINGS_COMMIT" "$BUILDINGS_TREE" "$STAGING/sources/buildings" buildings
 verify_source "$MODELICA" 'https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git' "$MODELICA_COMMIT" "$MODELICA_TREE" "$STAGING/sources/modelica" modelica
 check_hash f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59 "$STAGING/sources/buildings/Buildings/package.mo"
 check_hash 85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5 "$STAGING/sources/buildings/Buildings/Controls/OBC/CDL/Reals/Line.mo"
-check_hash c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191 "$STAGING/sources/modelica/Modelica/package.mo"
+check_hash "$MODELICA_PACKAGE_MATERIALIZED_SHA" "$STAGING/sources/modelica/Modelica/package.mo"
 check_hash 565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3 "$STAGING/sources/modelica/Modelica/Blocks/Sources.mo"
 check_hash 7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb "$STAGING/sources/modelica/ModelicaServices/package.mo"
 check_hash 9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f "$STAGING/sources/modelica/Complex.mo"
@@ -215,6 +252,16 @@ run_model() {
     printf 'modelica_tree=%s\n' "$MODELICA_TREE"
     printf 'repository_revision=%s\n' "$SOURCE_REVISION"
     printf 'generator_provenance_scope=native_generation_and_publication\n'
+    printf 'rustc_release=%s\n' "$RUSTC_RELEASE"
+    printf 'rustc_commit_hash=%s\n' "$RUSTC_COMMIT_HASH"
+    printf 'rustc_commit_date=%s\n' "$RUSTC_COMMIT_DATE"
+    printf 'rustc_host=%s\n' "$RUSTC_HOST"
+    printf 'rustc_llvm_version=%s\n' "$RUSTC_LLVM_VERSION"
+    printf 'cargo_release=%s\n' "$CARGO_RELEASE"
+    printf 'cargo_commit_hash=%s\n' "$CARGO_COMMIT_HASH"
+    printf 'cargo_commit_date=%s\n' "$CARGO_COMMIT_DATE"
+    printf 'cargo_host=%s\n' "$CARGO_HOST"
+    printf 'python_version=%s\n' "$PYTHON_VERSION"
     printf 'line_pilot_sha256=%s\n' "$LINE_PILOT_SHA"
     printf 'line_flag_pilot_sha256=%s\n' "$LINE_FLAG_PILOT_SHA"
     printf 'runner_sha256=%s\n' "$RUNNER_SHA"
@@ -237,13 +284,22 @@ run_model() {
     printf 'oci_index_source_sha256=%s\n' "$OCI_INDEX_SOURCE_SHA"
     printf 'arm64_manifest_source_sha256=%s\n' "$ARM64_MANIFEST_SOURCE_SHA"
     printf 'amd64_manifest_source_sha256=%s\n' "$AMD64_MANIFEST_SOURCE_SHA"
-    printf 'source_materialization=git_archive_exact_committed_bytes\n'
-    printf 'buildings_package_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59\n'
-    printf 'line_source_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5\n'
-    printf 'modelica_package_sha256=c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191\n'
-    printf 'sources_source_sha256=565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3\n'
-    printf 'modelica_services_sha256=7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb\n'
-    printf 'complex_sha256=9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f\n'
+    printf 'source_materialization=git_archive_with_pinned_modelica_export_subst\n'
+    printf 'buildings_materialization=git_archive_without_local_attribute_override\n'
+    printf 'modelica_transform_path=Modelica/package.mo\n'
+    printf 'modelica_transform_rule=Modelica/package.mo -export-subst\n'
+    printf 'buildings_package_committed_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59\n'
+    printf 'buildings_package_materialized_sha256=f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59\n'
+    printf 'line_source_committed_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5\n'
+    printf 'line_source_materialized_sha256=85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5\n'
+    printf 'modelica_package_committed_sha256=%s\n' "$MODELICA_PACKAGE_COMMITTED_SHA"
+    printf 'modelica_package_materialized_sha256=%s\n' "$MODELICA_PACKAGE_MATERIALIZED_SHA"
+    printf 'sources_source_committed_sha256=565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3\n'
+    printf 'sources_source_materialized_sha256=565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3\n'
+    printf 'modelica_services_committed_sha256=7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb\n'
+    printf 'modelica_services_materialized_sha256=7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb\n'
+    printf 'complex_committed_sha256=9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f\n'
+    printf 'complex_materialized_sha256=9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f\n'
     printf 'docker_command=docker run --pull=never --platform %s --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro\n' "$PLATFORM"
   } > "$log"
   runner_log="$directory/runner.log"

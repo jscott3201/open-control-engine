@@ -1,12 +1,7 @@
 //! Fixed bit tables, identities, and artifact-role closure for Line evidence.
 
-pub(super) const RAW_SHA: &str = "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984";
-pub(super) const CONTROL_SHA: &str =
-    "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925";
 pub(super) const CANONICAL_SHA: &str =
     "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22";
-pub(super) const CONTROL_CANONICAL_SHA: &str =
-    "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04";
 pub(super) const TIME_BITS: &[&str] = &[
     "0000000000000000",
     "404e000000000000",

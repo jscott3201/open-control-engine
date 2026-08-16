@@ -189,14 +189,23 @@ including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer t
 and final-manifest generation happen after native publication, so their scripts are bound by the
 final artifact manifest rather than represented as native generator inputs.
 
+The Line workflow installs Rust 1.97.1 and Python 3.13.7 for host-side artifact processing and
+records compiler, Cargo, Python, and architecture identities in each native log. MSL materialization
+uses `git archive` with the explicit `Modelica/package.mo -export-subst` attribute override. For the
+pinned source, both the committed and materialized `Modelica/package.mo` SHA-256 values are
+`c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191`; separate fields preserve the
+boundary even though the bytes are equal. Buildings uses no local attribute override, and its
+committed and materialized file hashes are also recorded separately.
+
 All three regeneration paths disable container networking. The retained Line workflow is manual
 only after evidence capture; normal CI validates committed evidence and does not run Docker. No
 Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These three cases cannot make
 the engine-wide report pass.
 
-Regeneration assumes a trusted host account, checkout, Docker client, and executable search path.
-The recorded sandbox limits the OpenModelica container; it does not defend against another process
-running as the invoking user.
+Regeneration assumes a trusted host account, checkout, Docker client, Git and shell tools, and
+executable search path. Rust and Python artifact tools are pinned and recorded; that does not turn
+the rest of the host into sandbox inputs. The recorded sandbox limits the OpenModelica container;
+it does not defend against another process running as the invoking user.
 
 ---
 

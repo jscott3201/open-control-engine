@@ -6,7 +6,7 @@ use std::path::Path;
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
-use super::expectations::{CANONICAL_SHA, CONTROL_SHA, RAW_SHA};
+use super::expectations::CANONICAL_SHA;
 use super::safe_read;
 use super::schema::{Artifact, Manifest};
 
@@ -23,6 +23,7 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
             return Err(format!("artifact digest mismatch: {}", artifact.path));
         }
     }
+    super::native_records::validate(manifest, &root)?;
     validate_native_provenance(manifest)?;
     validate_runs(manifest, &root)?;
     validate_wrappers(manifest, &root)?;
@@ -151,7 +152,7 @@ fn validate_runs(manifest: &Manifest, root: &Path) -> Result<(), String> {
             ),
         ] {
             let log = artifact(manifest, &role);
-            if run.log_sha256 != log.sha256 || run.raw_sha256 != RAW_SHA {
+            if run.log_sha256 != log.sha256 || run.raw_sha256 != architecture.raw_run_a_sha256 {
                 return Err("run record is not bound to its retained artifacts".into());
             }
             validate_run_log(
@@ -159,22 +160,30 @@ fn validate_runs(manifest: &Manifest, root: &Path) -> Result<(), String> {
                 architecture,
                 token,
                 "Line",
-                RAW_SHA,
+                &architecture.raw_run_a_sha256,
                 expected.1,
                 expected.2,
             )?;
         }
         let raw_a = artifact(manifest, &format!("{prefix}_raw_run_a_csv"));
         let raw_b = artifact(manifest, &format!("{prefix}_raw_run_b_csv"));
-        if raw_a.sha256 != RAW_SHA
-            || raw_b.sha256 != RAW_SHA
+        if raw_a.sha256 != architecture.raw_run_a_sha256
+            || raw_b.sha256 != architecture.raw_run_b_sha256
+            || architecture.raw_run_a_sha256 != architecture.raw_run_b_sha256
             || safe_read::read(root, &raw_a.path)? != safe_read::read(root, &raw_b.path)?
         {
             return Err(format!("{prefix} repeat raw runs differ"));
         }
         let control = artifact(manifest, &format!("{prefix}_flag_control_raw_csv"));
-        if control.sha256 != CONTROL_SHA {
+        if control.sha256 != architecture.flag_control_raw_sha256 {
             return Err("flag-control raw digest drifted".into());
+        }
+        if artifact(manifest, &format!("{prefix}_canonical_csv")).sha256
+            != architecture.canonical_sha256
+            || artifact(manifest, &format!("{prefix}_flag_control_canonical_csv")).sha256
+                != architecture.flag_control_canonical_sha256
+        {
+            return Err("canonical artifact digest is not bound to its architecture".into());
         }
         validate_run_log(
             &read_text(
@@ -184,7 +193,7 @@ fn validate_runs(manifest: &Manifest, root: &Path) -> Result<(), String> {
             architecture,
             "fresh-flag-control",
             "FlagControl",
-            CONTROL_SHA,
+            &architecture.flag_control_raw_sha256,
             expected.1,
             expected.2,
         )?;
@@ -201,6 +210,7 @@ fn validate_run_log(
     container: &str,
     host: &str,
 ) -> Result<(), String> {
+    super::run_log_contract::validate(text, architecture)?;
     for (key, expected) in [
         ("host_architecture", host),
         ("docker_server_architecture", container),
@@ -521,26 +531,31 @@ fn validate_oci(manifest: &Manifest, root: &Path) -> Result<(), String> {
 
 fn validate_projection_records(manifest: &Manifest, root: &Path) -> Result<(), String> {
     let canonicalizer = artifact(manifest, "canonicalizer_source");
-    let expected = [
-        "projection_mutation=contiguous equal-time selection changed from last to first".to_string(),
-        "working_tree_modified=false".into(), "mutated_compile=PASS".into(),
-        "mutated_input=line-run-a.raw.csv".into(), format!("mutated_input_sha256={RAW_SHA}"),
-        "mutated_raw_rows=15".into(), "mutated_canonical_rows=10".into(),
-        "mutated_group_sizes=1,1,2,1,2,1,2,1,2,2".into(),
-        "mutated_canonical_time_bits=0000000000000000,404e000000000000,404e000000000eff,405e000000000000,405e000000000781,4066800000000000,40668000000003c1,406e000000000000,406e0000000003c1,4072c00000000000".into(),
-        "mutated_schedule_result=FAIL".into(), "mutated_schedule_mismatch_rows=2,4,6,8".into(),
-        "mutated_schedule_first_mismatch_row=2".into(), "mutated_schedule_first_mismatch_time_bits=404e000000000eff".into(),
-        "mutated_grouping_result=PASS".into(), "mutated_timestamp_bits_result=PASS".into(),
-        "restoration_result=PASS".into(), format!("restored_canonicalizer_sha256={}", canonicalizer.sha256),
-    ];
-    for architecture in ["arm64", "amd64"] {
+    for architecture in &manifest.architectures {
+        let expected = [
+            "projection_mutation=contiguous equal-time selection changed from last to first".to_string(),
+            "working_tree_modified=false".into(), "mutated_compile=PASS".into(),
+            "mutated_input=line-run-a.raw.csv".into(), format!("mutated_input_sha256={}", architecture.raw_run_a_sha256),
+            "mutated_raw_rows=15".into(), "mutated_canonical_rows=10".into(),
+            "mutated_group_sizes=1,1,2,1,2,1,2,1,2,2".into(),
+            "mutated_canonical_time_bits=0000000000000000,404e000000000000,404e000000000eff,405e000000000000,405e000000000781,4066800000000000,40668000000003c1,406e000000000000,406e0000000003c1,4072c00000000000".into(),
+            "mutated_schedule_result=FAIL".into(), "mutated_schedule_mismatch_rows=2,4,6,8".into(),
+            "mutated_schedule_first_mismatch_row=2".into(), "mutated_schedule_first_mismatch_time_bits=404e000000000eff".into(),
+            "mutated_grouping_result=PASS".into(), "mutated_timestamp_bits_result=PASS".into(),
+            "restoration_result=PASS".into(), format!("restored_canonicalizer_sha256={}", canonicalizer.sha256),
+        ];
         let text = read_text(
             root,
-            &artifact(manifest, &format!("{architecture}_projection_mutation_log")).path,
+            &artifact(
+                manifest,
+                &format!("{}_projection_mutation_log", architecture.name),
+            )
+            .path,
         )?;
         if text.lines().ne(expected.iter().map(String::as_str)) {
             return Err(format!(
-                "{architecture} projection-mutation evidence drifted"
+                "{} projection-mutation evidence drifted",
+                architecture.name
             ));
         }
     }

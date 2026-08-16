@@ -461,6 +461,9 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   fails the independent canonical input-schedule oracle; it is not a facade-comparator control, and
   consistent pre-event rows can remain green for this stateless block. External flag, output
   mapping, and arithmetic reference mutations fail through the facade comparator at pinned rows.
+  Native records bind pinned Rust/Python artifact tools and distinguish committed source bytes from
+  materialized `git archive` bytes, including the explicit Modelica package attribute override.
+  Raw repeat identity is per architecture; only canonical output is compared across architectures.
   The result covers only this finite matrix: global Tier 3 stays skipped, with no arbitrary Real,
   sequence, solver, general tolerance, or cross-architecture raw-byte claim.
 - **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).

@@ -113,6 +113,34 @@ def closed(value, keys, name):
         fail(f"{name} fields are not closed")
 
 
+def expected_artifact_toolchain(architecture):
+    host = "aarch64-unknown-linux-gnu" if architecture == "arm64" else "x86_64-unknown-linux-gnu"
+    return {
+        "rustc_release": "1.97.1",
+        "rustc_commit_hash": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+        "rustc_commit_date": "2026-07-14", "rustc_host": host,
+        "rustc_llvm_version": "22.1.6", "cargo_release": "1.97.1",
+        "cargo_commit_hash": "c980f4866141969fab6254a680546a277789d6f0",
+        "cargo_commit_date": "2026-06-30", "cargo_host": host,
+        "python_version": "Python 3.13.7",
+    }
+
+
+def expected_source_materialization():
+    return {
+        "source_materialization": "git_archive_with_pinned_modelica_export_subst",
+        "buildings_materialization": "git_archive_without_local_attribute_override",
+        "modelica_transform_path": "Modelica/package.mo",
+        "modelica_transform_rule": "Modelica/package.mo -export-subst",
+        "buildings_package_committed_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+        "buildings_package_materialized_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+        "line_source_committed_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+        "line_source_materialized_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+        "modelica_package_committed_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
+        "modelica_package_materialized_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
+    }
+
+
 def bits(value):
     return f"{struct.unpack('>Q', struct.pack('>d', value))[0]:016x}"
 
@@ -230,13 +258,12 @@ def log_contract(path, architecture, token, model, raw_digest, revision, generat
         "modelica_commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "modelica_tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f",
         "repository_revision": revision,
         "generator_provenance_scope": "native_generation_and_publication",
-        "source_materialization": "git_archive_exact_committed_bytes",
-        "buildings_package_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
-        "line_source_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
-        "modelica_package_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
-        "sources_source_sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3",
-        "modelica_services_sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb",
-        "complex_sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f",
+        "sources_source_committed_sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3",
+        "sources_source_materialized_sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3",
+        "modelica_services_committed_sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb",
+        "modelica_services_materialized_sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb",
+        "complex_committed_sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f",
+        "complex_materialized_sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f",
         "output_directory_token": token, "selected_model": model, "container_architecture": container,
         "modelica_path": "", "root_write_probe": "read-only", "source_write_probe": "read-only",
         "reference_write_probe": "read-only", "network_route_lines": "1", "cgroup_memory_max": "2147483648",
@@ -249,6 +276,8 @@ def log_contract(path, architecture, token, model, raw_digest, revision, generat
         "Buildings": "14.0.0", "omc_warning_count": "0", "raw_sha256": raw_digest, "runner_complete": "1",
     }
     required.update(generator_inputs)
+    required.update(expected_artifact_toolchain(architecture))
+    required.update(expected_source_materialization())
     command = f"docker run --pull=never --platform {platform} --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro"
     required["docker_command"] = command
     for key, expected in required.items():
@@ -328,10 +357,10 @@ def validate_architecture(directory, root, architecture):
     except (OSError, ValueError) as error:
         fail(f"unsafe architecture evidence: {error}")
     record = json_file(directory / "architecture.json")
-    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
+    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "artifact_toolchain", "source_materialization", "omc_version", "gcc_version", "binutils_version", "glibc_version", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
     closed(record, fields, "architecture record")
     expected = ARCH[architecture]
-    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-line-native-architecture-v3", architecture, *expected, "native_generation_and_publication"]:
+    if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-line-native-architecture-v4", architecture, *expected, "native_generation_and_publication"]:
         fail("architecture literals")
     revision = record["repository_revision"]
     if not isinstance(revision, str) or len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision):
@@ -343,6 +372,12 @@ def validate_architecture(directory, root, architecture):
     }
     if record["generator_inputs"] != expected_inputs:
         fail("native generator inputs do not match assembly repository bytes")
+    if not type_exact_equal(record["artifact_toolchain"], expected_artifact_toolchain(architecture)):
+        fail("native artifact toolchain identity")
+    if not type_exact_equal(record["source_materialization"], expected_source_materialization()):
+        fail("native source materialization identity")
+    if [record["omc_version"], record["gcc_version"], record["binutils_version"], record["glibc_version"]] != ["OpenModelica 1.25.1", "11.4.0", "2.38", "2.35"]:
+        fail("native container toolchain identity")
     strict_canonical_boundary(directory, root)
     for name, key in [("line-run-a.raw.csv", "raw_run_a_sha256"), ("line-run-b.raw.csv", "raw_run_b_sha256"), ("flag-control.raw.csv", "flag_control_raw_sha256"), ("line.canonical.csv", "canonical_sha256"), ("flag-control.canonical.csv", "flag_control_canonical_sha256")]:
         if sha(directory / name) != record[key]:
@@ -474,10 +509,12 @@ def expected_architecture_manifest(output, name, record):
         "repository_revision": record["repository_revision"],
         "generator_provenance_scope": record["generator_provenance_scope"],
         "generator_inputs": record["generator_inputs"],
-        "omc_version": "OpenModelica 1.25.1",
-        "gcc_version": "11.4.0",
-        "binutils_version": "2.38",
-        "glibc_version": "2.35",
+        "artifact_toolchain": record["artifact_toolchain"],
+        "source_materialization": record["source_materialization"],
+        "omc_version": record["omc_version"],
+        "gcc_version": record["gcc_version"],
+        "binutils_version": record["binutils_version"],
+        "glibc_version": record["glibc_version"],
         "raw_run_a_sha256": record["raw_run_a_sha256"],
         "raw_run_b_sha256": record["raw_run_b_sha256"],
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
@@ -491,16 +528,19 @@ def expected_architecture_manifest(output, name, record):
 
 
 def expected_sources():
+    source_file = lambda path, digest: {
+        "path": path, "committed_sha256": digest, "materialized_sha256": digest,
+    }
     return [
-        {"name": "buildings", "repository": "https://github.com/lbl-srg/modelica-buildings.git", "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09", "package": "Buildings", "version": "14.0.0", "files": [
-            {"path": "Buildings/package.mo", "sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"},
-            {"path": "Buildings/Controls/OBC/CDL/Reals/Line.mo", "sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"},
+        {"name": "buildings", "repository": "https://github.com/lbl-srg/modelica-buildings.git", "commit": "a131864e4c4df22ebcd52bb8da439de0087ac365", "tree": "a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09", "package": "Buildings", "version": "14.0.0", "materialization": "git_archive_without_local_attribute_override", "transforms": [], "files": [
+            source_file("Buildings/package.mo", "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"),
+            source_file("Buildings/Controls/OBC/CDL/Reals/Line.mo", "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"),
         ]},
-        {"name": "modelica", "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git", "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f", "package": "Modelica", "version": "4.1.0", "files": [
-            {"path": "Complex.mo", "sha256": "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"},
-            {"path": "Modelica/package.mo", "sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"},
-            {"path": "Modelica/Blocks/Sources.mo", "sha256": "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"},
-            {"path": "ModelicaServices/package.mo", "sha256": "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"},
+        {"name": "modelica", "repository": "https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git", "commit": "7a4bf7de77a3986e8eb1e88cbb515d646f78f834", "tree": "43d7d8fc1a991358e9e5e91976e27cdc4280173f", "package": "Modelica", "version": "4.1.0", "materialization": "git_archive_with_pinned_modelica_export_subst", "transforms": [{"path": "Modelica/package.mo", "rule": "Modelica/package.mo -export-subst"}], "files": [
+            source_file("Complex.mo", "9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"),
+            source_file("Modelica/package.mo", "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"),
+            source_file("Modelica/Blocks/Sources.mo", "565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"),
+            source_file("ModelicaServices/package.mo", "7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"),
         ]},
     ]
 
@@ -567,7 +607,8 @@ def validate_final(output, root):
         "assembly_entrypoint": "tools/openmodelica-line-reference/line/assemble.sh",
         "evidence_workflow": ".github/workflows/openmodelica-line-evidence.yml",
         "network": "none_during_container_execution", "pull": "never",
-        "platforms": ["linux/arm64", "linux/amd64"], "source_materialization": "git_archive",
+        "platforms": ["linux/arm64", "linux/amd64"],
+        "source_materialization": "git_archive_with_pinned_modelica_export_subst",
         "source_mounts": "read_only", "container_root": "read_only", "container_user": "non_root",
         "capabilities": "none", "no_new_privileges": True, "device_mounts": 0,
         "docker_socket_mounted": False, "timeout_seconds": 120, "cpus": "4",
@@ -591,6 +632,13 @@ def validate_final(output, root):
     amd, amd_rows = validate_architecture(output / "amd64", root, "amd64")
     if arm["repository_revision"] != amd["repository_revision"] or arm["generator_inputs"] != amd["generator_inputs"]:
         fail("native architectures used different generator revisions or inputs")
+    shared_toolchain = lambda value: {
+        key: item for key, item in value.items() if key not in {"rustc_host", "cargo_host"}
+    }
+    if shared_toolchain(arm["artifact_toolchain"]) != shared_toolchain(amd["artifact_toolchain"]):
+        fail("native architectures used different artifact toolchain releases")
+    if arm["source_materialization"] != amd["source_materialization"]:
+        fail("native architectures used different source materialization")
     if arm_rows != amd_rows or read_bounded(output / "arm64/line.canonical.csv") != read_bounded(output / "amd64/line.canonical.csv"):
         fail("cross-architecture canonical bytes differ")
     canonical_sha = sha(output / "arm64/line.canonical.csv")

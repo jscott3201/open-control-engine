@@ -5,7 +5,10 @@ mod assembly_boundary_tests;
 pub(crate) mod canonicalizer;
 mod expectations;
 mod manifest;
+mod manifest_contract_tests;
+mod native_records;
 mod repository;
+mod run_log_contract;
 mod safe_read;
 mod schema;
 #[cfg(unix)]

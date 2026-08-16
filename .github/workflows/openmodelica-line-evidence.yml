@@ -29,6 +29,10 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.7'
+      - uses: dtolnay/rust-toolchain@1.97.1
       - name: Materialize pinned source commits on the host
         env:
           BUILDINGS: ${{ runner.temp }}/modelica-buildings

@@ -56,14 +56,24 @@ pub(super) struct Source {
     pub(super) tree: String,
     pub(super) package: String,
     pub(super) version: String,
+    pub(super) materialization: String,
+    pub(super) transforms: Vec<SourceTransform>,
     pub(super) files: Vec<SourceFile>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SourceTransform {
+    pub(super) path: String,
+    pub(super) rule: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SourceFile {
     pub(super) path: String,
-    pub(super) sha256: String,
+    pub(super) committed_sha256: String,
+    pub(super) materialized_sha256: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -131,6 +141,8 @@ pub(super) struct Architecture {
     pub(super) repository_revision: String,
     pub(super) generator_provenance_scope: String,
     pub(super) generator_inputs: GeneratorInputs,
+    pub(super) artifact_toolchain: ArtifactToolchain,
+    pub(super) source_materialization: SourceMaterialization,
     pub(super) omc_version: String,
     pub(super) gcc_version: String,
     pub(super) binutils_version: String,
@@ -168,6 +180,63 @@ pub(super) struct GeneratorInputs {
     pub(super) oci_index_source_sha256: String,
     pub(super) arm64_manifest_source_sha256: String,
     pub(super) amd64_manifest_source_sha256: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ArtifactToolchain {
+    pub(super) rustc_release: String,
+    pub(super) rustc_commit_hash: String,
+    pub(super) rustc_commit_date: String,
+    pub(super) rustc_host: String,
+    pub(super) rustc_llvm_version: String,
+    pub(super) cargo_release: String,
+    pub(super) cargo_commit_hash: String,
+    pub(super) cargo_commit_date: String,
+    pub(super) cargo_host: String,
+    pub(super) python_version: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SourceMaterialization {
+    pub(super) source_materialization: String,
+    pub(super) buildings_materialization: String,
+    pub(super) modelica_transform_path: String,
+    pub(super) modelica_transform_rule: String,
+    pub(super) buildings_package_committed_sha256: String,
+    pub(super) buildings_package_materialized_sha256: String,
+    pub(super) line_source_committed_sha256: String,
+    pub(super) line_source_materialized_sha256: String,
+    pub(super) modelica_package_committed_sha256: String,
+    pub(super) modelica_package_materialized_sha256: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub(super) struct NativeArchitectureRecord {
+    pub(super) format: String,
+    pub(super) architecture: String,
+    pub(super) platform: String,
+    pub(super) host_architecture: String,
+    pub(super) docker_server_architecture: String,
+    pub(super) container_architecture: String,
+    pub(super) platform_manifest_digest: String,
+    pub(super) config_digest: String,
+    pub(super) repository_revision: String,
+    pub(super) generator_provenance_scope: String,
+    pub(super) generator_inputs: GeneratorInputs,
+    pub(super) artifact_toolchain: ArtifactToolchain,
+    pub(super) source_materialization: SourceMaterialization,
+    pub(super) omc_version: String,
+    pub(super) gcc_version: String,
+    pub(super) binutils_version: String,
+    pub(super) glibc_version: String,
+    pub(super) raw_run_a_sha256: String,
+    pub(super) raw_run_b_sha256: String,
+    pub(super) flag_control_raw_sha256: String,
+    pub(super) canonical_sha256: String,
+    pub(super) flag_control_canonical_sha256: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]

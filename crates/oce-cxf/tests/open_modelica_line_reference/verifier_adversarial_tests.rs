@@ -178,6 +178,33 @@ fn final_verifier_rejects_open_artifact_and_nested_record_escapes() {
             }),
             "unsupported or open projection record",
         ),
+        (
+            "default-export-subst-as-committed",
+            Box::new(|value: &mut serde_json::Value| {
+                value["sources"][1]["files"][1]["committed_sha256"] = serde_json::json!(
+                    "b9fe3f8b6259cf5715906b96b35523c7222259a2b86fff9394bc7703b6e39c8b"
+                );
+            }),
+            "unsupported or open sources record",
+        ),
+        (
+            "changed-python-identity",
+            Box::new(|value: &mut serde_json::Value| {
+                value["architectures"][0]["artifact_toolchain"]["python_version"] =
+                    serde_json::json!("Python 3.13.8");
+            }),
+            "manifest architecture records",
+        ),
+        (
+            "missing-cargo-identity",
+            Box::new(|value: &mut serde_json::Value| {
+                value["architectures"][0]["artifact_toolchain"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("cargo_commit_hash");
+            }),
+            "manifest architecture records",
+        ),
     ] {
         let temporary = ClaimedTempDir::new(&format!("oce-line-final-{label}"));
         let copied = temporary.path().join("fixture");
