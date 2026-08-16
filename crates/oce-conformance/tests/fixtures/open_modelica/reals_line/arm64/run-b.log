@@ -12,7 +12,7 @@ buildings_tree=a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09
 modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git
 modelica_commit=7a4bf7de77a3986e8eb1e88cbb515d646f78f834
 modelica_tree=43d7d8fc1a991358e9e5e91976e27cdc4280173f
-repository_revision=a0570a51a6366b46903dc1c24d7ec131aa6aa6d3
+repository_revision=f072485120bce69277965682fd708d18929a44e7
 generator_provenance_scope=native_generation_and_publication
 rustc_release=1.97.1
 rustc_commit_hash=8bab26f4f68e0e26f0bb7960be334d5b520ea452
@@ -27,13 +27,14 @@ python_version=Python 3.13.7
 line_pilot_sha256=db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e
 line_flag_pilot_sha256=cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6
 runner_sha256=cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa
-regenerate_sha256=1634fd482383e7df9e8738f509dd4cc14017286a27abc68cd3e14ac76ab756b0
-canonicalizer_sha256=75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f
-tool_main_sha256=51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1
+regenerate_sha256=5e08edc6a15846eded8ecfb95787b9495759eb73b1a48ebeca44fa89e67b6a24
+canonicalizer_sha256=66e62c1ce4ade5358f9b3c29056c25006052107e46129a791623cf0b1c862b5b
+tool_main_sha256=25347930953ec2c59ad74618bafadbef1d67fde936a384f01ba72cea9afa2b98
 tool_cargo_toml_sha256=2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267
 tool_cargo_lock_sha256=0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853
-architecture_generator_sha256=ca045c276bd2cea40f68618d27dc9409b62f8c8112d7f09d647c7a4fbbe55fe3
-architecture_verifier_sha256=920dbbe46504ba7a51a56c4990b53e05873d6bbdc56bdc47d7598200891e2d15
+architecture_generator_sha256=2882628cdf87b6af37a32f481e96703c86a2b4d9db9376aa88c2fa6ec00b1049
+architecture_verifier_sha256=bb7a14d0863fa6403456a6d5dac00f5aeaa14a30addddb49b5d83647c68d1f67
+projection_verifier_sha256=2767b6236733aa005f2afb646fdd81b269aaa53338f379ad1090eaa1f5349228
 safe_file_helper_sha256=4ae5436ad45bfe4a42468161e61c8f4bec7b8c26f042b758af029ead84d7f5d4
 evidence_workflow_sha256=f09a45d61d28bb96412445d4fc12f61cf1e1e65a050274835174ea1000992035
 oci_materializer_sha256=5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d
@@ -103,13 +104,13 @@ record SimulationResult
     messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
 LOG_SUCCESS       | info    | The simulation finished successfully.
 ",
-    timeFrontend = 0.225999536,
-    timeBackend = 0.01117716,
-    timeSimCode = 0.003078976,
-    timeTemplates = 0.004479856,
-    timeCompile = 0.60326704,
-    timeSimulation = 0.010251072,
-    timeTotal = 0.858371264
+    timeFrontend = 0.216350128,
+    timeBackend = 0.010797464000000001,
+    timeSimCode = 0.0029254000000000003,
+    timeTemplates = 0.004004704,
+    timeCompile = 0.555368808,
+    timeSimulation = 0.010091584,
+    timeTotal = 0.799645344
 end SimulationResult;
 
 

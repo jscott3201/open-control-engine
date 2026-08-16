@@ -7,19 +7,20 @@
   "container_architecture": "aarch64",
   "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
   "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
-  "repository_revision": "a0570a51a6366b46903dc1c24d7ec131aa6aa6d3",
+  "repository_revision": "f072485120bce69277965682fd708d18929a44e7",
   "generator_provenance_scope": "native_generation_and_publication",
   "generator_inputs": {
     "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
     "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
     "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
-    "regenerate_sha256": "1634fd482383e7df9e8738f509dd4cc14017286a27abc68cd3e14ac76ab756b0",
-    "canonicalizer_sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f",
-    "tool_main_sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1",
+    "regenerate_sha256": "5e08edc6a15846eded8ecfb95787b9495759eb73b1a48ebeca44fa89e67b6a24",
+    "canonicalizer_sha256": "66e62c1ce4ade5358f9b3c29056c25006052107e46129a791623cf0b1c862b5b",
+    "tool_main_sha256": "25347930953ec2c59ad74618bafadbef1d67fde936a384f01ba72cea9afa2b98",
     "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
     "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
-    "architecture_generator_sha256": "ca045c276bd2cea40f68618d27dc9409b62f8c8112d7f09d647c7a4fbbe55fe3",
-    "architecture_verifier_sha256": "920dbbe46504ba7a51a56c4990b53e05873d6bbdc56bdc47d7598200891e2d15",
+    "architecture_generator_sha256": "2882628cdf87b6af37a32f481e96703c86a2b4d9db9376aa88c2fa6ec00b1049",
+    "architecture_verifier_sha256": "bb7a14d0863fa6403456a6d5dac00f5aeaa14a30addddb49b5d83647c68d1f67",
+    "projection_verifier_sha256": "2767b6236733aa005f2afb646fdd81b269aaa53338f379ad1090eaa1f5349228",
     "safe_file_helper_sha256": "4ae5436ad45bfe4a42468161e61c8f4bec7b8c26f042b758af029ead84d7f5d4",
     "evidence_workflow_sha256": "f09a45d61d28bb96412445d4fc12f61cf1e1e65a050274835174ea1000992035",
     "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
@@ -66,17 +67,34 @@
   "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
   "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
   "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04",
+  "projection_mutation": {
+    "control": "explicit_keep_first",
+    "input": "line-run-a.raw.csv",
+    "input_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+    "canonical_output": "projection-keep-first.canonical.csv",
+    "canonical_sha256": "2d8d3469c3e2d661a4fe2f03d742e35af91c0647d11a700648970215843c4714",
+    "metadata": "projection-keep-first.metadata",
+    "metadata_sha256": "30b02a5b8b814a955dbb558eb0011bc75ac51e0c2c6e981d5df0eab252159656",
+    "log": "projection-mutation.log",
+    "log_sha256": "3b5cb8f17043b85838cc50cbc182358b7e95272fcc2b7becadfa466c8cf62fb6",
+    "schedule_mismatch_rows": [
+      2,
+      4,
+      6,
+      8
+    ]
+  },
   "runs": [
     {
       "id": "run-a",
       "output_directory_token": "fresh-run-a",
-      "log_sha256": "1f8ba3de6da06d7710f74d8a3539ec3bbaa173878a58dfb307bf2043b54dc4a2",
+      "log_sha256": "6d1ac556a86d32070454ec27e46b21caf114081370384c15374a19bd8314f391",
       "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
     },
     {
       "id": "run-b",
       "output_directory_token": "fresh-run-b",
-      "log_sha256": "73482895ef645dc22eebdd674ea5b4c2a830b1663453babaff7eb5827eda58bb",
+      "log_sha256": "58c5bebba04ef9c5d5bc83b113479437bedc8d21254ae6edd0c6b2f14eda0aeb",
       "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
     }
   ]
