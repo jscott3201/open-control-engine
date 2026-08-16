@@ -1,5 +1,5 @@
 {
-  "format": "oce-openmodelica-line-native-architecture-v3",
+  "format": "oce-openmodelica-line-native-architecture-v4",
   "architecture": "amd64",
   "platform": "linux/amd64",
   "host_architecture": "amd64",
@@ -7,21 +7,21 @@
   "container_architecture": "x86_64",
   "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
   "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
-  "repository_revision": "cab4a72ca3a6a727c0341f484226f9df677be1b8",
+  "repository_revision": "a0570a51a6366b46903dc1c24d7ec131aa6aa6d3",
   "generator_provenance_scope": "native_generation_and_publication",
   "generator_inputs": {
     "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
     "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
     "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
-    "regenerate_sha256": "95fb41a6339a442456bacab8cd841355927ee2ef42b03cab6a94146c969c3d88",
+    "regenerate_sha256": "1634fd482383e7df9e8738f509dd4cc14017286a27abc68cd3e14ac76ab756b0",
     "canonicalizer_sha256": "75eeffca717205af607b0ab8452f28482188458515d705570ed618046db2094f",
     "tool_main_sha256": "51370006229d6bfce3d5657e85af0eab52bd30f26c8d607b10cd8f544b241ee1",
     "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
     "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
-    "architecture_generator_sha256": "1fbd795e04cd0d790b42024bf998cdf6d269f247e0788bc76728d3135dd6e968",
-    "architecture_verifier_sha256": "44273df7f66c361da61861ae27a4a5ce96a81d4284e0a333d9b3437be0d6b827",
+    "architecture_generator_sha256": "ca045c276bd2cea40f68618d27dc9409b62f8c8112d7f09d647c7a4fbbe55fe3",
+    "architecture_verifier_sha256": "920dbbe46504ba7a51a56c4990b53e05873d6bbdc56bdc47d7598200891e2d15",
     "safe_file_helper_sha256": "4ae5436ad45bfe4a42468161e61c8f4bec7b8c26f042b758af029ead84d7f5d4",
-    "evidence_workflow_sha256": "077cf3922319bf6a0d13eda470a1dbc7f66f55c422f1a46b63eda418cbe16e06",
+    "evidence_workflow_sha256": "f09a45d61d28bb96412445d4fc12f61cf1e1e65a050274835174ea1000992035",
     "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
     "deadline_sha256": "ccedf17f714ab54b6589a20f0a463c8a04760bae026e21e769f551437f89c800",
     "deadline_test_sha256": "a2c7b440f11216815d1b99c4041cacaf1dea16ad283ea8b745d24f6955d2e54d",
@@ -33,9 +33,51 @@
     "arm64_manifest_source_sha256": "cc7135cee4138377c0403dc9c8c400d85bb576ac783f3ac667f65dcdfe1f7d4e",
     "amd64_manifest_source_sha256": "e42cbf56db455eae63a38b960fb25914dfb1b9a221575118c527a145cc134848"
   },
+  "artifact_toolchain": {
+    "rustc_release": "1.97.1",
+    "rustc_commit_hash": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+    "rustc_commit_date": "2026-07-14",
+    "rustc_host": "x86_64-unknown-linux-gnu",
+    "rustc_llvm_version": "22.1.6",
+    "cargo_release": "1.97.1",
+    "cargo_commit_hash": "c980f4866141969fab6254a680546a277789d6f0",
+    "cargo_commit_date": "2026-06-30",
+    "cargo_host": "x86_64-unknown-linux-gnu",
+    "python_version": "Python 3.13.7"
+  },
+  "source_materialization": {
+    "source_materialization": "git_archive_with_pinned_modelica_export_subst",
+    "buildings_materialization": "git_archive_without_local_attribute_override",
+    "modelica_transform_path": "Modelica/package.mo",
+    "modelica_transform_rule": "Modelica/package.mo -export-subst",
+    "buildings_package_committed_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+    "buildings_package_materialized_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+    "line_source_committed_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+    "line_source_materialized_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+    "modelica_package_committed_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
+    "modelica_package_materialized_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+  },
+  "omc_version": "OpenModelica 1.25.1",
+  "gcc_version": "11.4.0",
+  "binutils_version": "2.38",
+  "glibc_version": "2.35",
   "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
   "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
   "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
   "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
-  "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04"
+  "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04",
+  "runs": [
+    {
+      "id": "run-a",
+      "output_directory_token": "fresh-run-a",
+      "log_sha256": "04afd88f4dc24670a1bf7b1d7c0396a062045f31fb1a011040505de31fc6f537",
+      "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "id": "run-b",
+      "output_directory_token": "fresh-run-b",
+      "log_sha256": "a513aab781e977641bdfe069dd3d92033095502c4b0c113223303c5242856e31",
+      "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    }
+  ]
 }
