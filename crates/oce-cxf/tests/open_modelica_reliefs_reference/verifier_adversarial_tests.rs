@@ -39,28 +39,34 @@ fn write_json(path: &Path, value: &serde_json::Value) {
 
 fn rebind_projection(directory: &Path, field: &str, file: &str) {
     let record = directory.join("architecture.json");
-    let mut value: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
-    value["projection_mutation"][field] = format!(
+    let body = std::fs::read_to_string(&record).unwrap();
+    let value: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let old = value["projection_mutation"][field].as_str().unwrap();
+    let new = format!(
         "{:x}",
         Sha256::digest(std::fs::read(directory.join(file)).unwrap())
-    )
-    .into();
-    write_json(&record, &value);
+    );
+    let needle = format!("\"{field}\": \"{old}\"");
+    let replacement = format!("\"{field}\": \"{new}\"");
+    assert_eq!(body.matches(&needle).count(), 1);
+    std::fs::write(record, body.replacen(&needle, &replacement, 1)).unwrap();
 }
 
 fn rebind_run_log(directory: &Path, name: &str, body: String) {
     let log = directory.join(name);
     std::fs::write(&log, body).unwrap();
     let record = directory.join("architecture.json");
-    let mut value: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
     if name == "run-a.log" || name == "run-b.log" {
+        let body = std::fs::read_to_string(&record).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&body).unwrap();
         let index = usize::from(name == "run-b.log");
-        value["runs"][index]["log_sha256"] =
-            format!("{:x}", Sha256::digest(std::fs::read(&log).unwrap())).into();
+        let old = value["runs"][index]["log_sha256"].as_str().unwrap();
+        let new = format!("{:x}", Sha256::digest(std::fs::read(&log).unwrap()));
+        let needle = format!("\"log_sha256\": \"{old}\"");
+        let replacement = format!("\"log_sha256\": \"{new}\"");
+        assert_eq!(body.matches(&needle).count(), 1);
+        std::fs::write(record, body.replacen(&needle, &replacement, 1)).unwrap();
     }
-    write_json(&record, &value);
 }
 
 fn mutate_revision(directory: &Path, revision: &str) {
@@ -87,10 +93,13 @@ fn mutate_revision(directory: &Path, revision: &str) {
         rebind_run_log(directory, name, changed);
     }
     let record = directory.join("architecture.json");
-    let mut value: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
-    value["repository_revision"] = revision.into();
-    write_json(&record, &value);
+    let body = std::fs::read_to_string(&record).unwrap();
+    let value: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let old = value["repository_revision"].as_str().unwrap();
+    let needle = format!("\"repository_revision\": \"{old}\"");
+    let replacement = format!("\"repository_revision\": \"{revision}\"");
+    assert_eq!(body.matches(&needle).count(), 1);
+    std::fs::write(record, body.replacen(&needle, &replacement, 1)).unwrap();
 }
 
 #[test]

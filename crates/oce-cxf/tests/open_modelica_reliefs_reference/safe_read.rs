@@ -58,65 +58,29 @@ pub(super) fn read(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
 #[cfg(windows)]
 pub(super) fn read(root: &Path, relative: &str) -> Result<Vec<u8>, String> {
     use std::os::windows::fs::OpenOptionsExt as _;
-    use std::os::windows::io::AsRawHandle as _;
 
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-    const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x10;
+    const FILE_ATTRIBUTE_REPARSE_POINT: u64 = 0x400;
+    const FILE_ATTRIBUTE_DIRECTORY: u64 = 0x10;
     const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
 
-    #[repr(C)]
-    struct FileTime {
-        low: u32,
-        high: u32,
-    }
-    #[repr(C)]
-    struct ByHandleFileInformation {
-        attributes: u32,
-        creation_time: FileTime,
-        last_access_time: FileTime,
-        last_write_time: FileTime,
-        volume_serial_number: u32,
-        file_size_high: u32,
-        file_size_low: u32,
-        number_of_links: u32,
-        file_index_high: u32,
-        file_index_low: u32,
-    }
-    #[link(name = "kernel32")]
-    unsafe extern "system" {
-        #[link_name = "GetFileInformationByHandle"]
-        fn get_file_information_by_handle(
-            handle: *mut core::ffi::c_void,
-            information: *mut ByHandleFileInformation,
-        ) -> i32;
-    }
-
     #[derive(Clone, Copy)]
     struct HandleInfo {
-        attributes: u32,
-        links: u32,
-        volume: u32,
+        attributes: u64,
+        links: u64,
+        volume: u64,
         index: u64,
         size: u64,
     }
     fn handle_info(file: &std::fs::File) -> Result<HandleInfo, String> {
-        let mut information = core::mem::MaybeUninit::<ByHandleFileInformation>::uninit();
-        // The OS writes the complete C record when the call succeeds.
-        let succeeded = unsafe {
-            get_file_information_by_handle(file.as_raw_handle().cast(), information.as_mut_ptr())
-        };
-        if succeeded == 0 {
-            return Err(std::io::Error::last_os_error().to_string());
-        }
-        // A nonzero result guarantees that every field was initialized.
-        let information = unsafe { information.assume_init() };
+        let information =
+            winapi_util::file::information(file).map_err(|error| error.to_string())?;
         Ok(HandleInfo {
-            attributes: information.attributes,
-            links: information.number_of_links,
-            volume: information.volume_serial_number,
-            index: ((information.file_index_high as u64) << 32) | information.file_index_low as u64,
-            size: ((information.file_size_high as u64) << 32) | information.file_size_low as u64,
+            attributes: information.file_attributes(),
+            links: information.number_of_links(),
+            volume: information.volume_serial_number(),
+            index: information.file_index(),
+            size: information.file_size(),
         })
     }
     fn open_without_following(path: &Path, directory: bool) -> Result<std::fs::File, String> {

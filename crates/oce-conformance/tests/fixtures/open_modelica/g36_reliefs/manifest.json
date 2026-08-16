@@ -364,26 +364,26 @@
       "container_architecture": "aarch64",
       "platform_manifest_digest": "sha256:39e8b9658bb24910b4ffd7b88604a6d3a0bb9bcd08b7dfa7cd4e9910537729e4",
       "config_digest": "sha256:9ad21ddf90a42a39a4c3d784c84fdb6a097721d1a1b8ca2188739ac50de52666",
-      "repository_revision": "31fccf3206b8677c516eecbdd80f1aef7bdd033f",
+      "repository_revision": "8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd",
       "generator_provenance_scope": "native_generation_and_publication",
       "generator_inputs": {
         "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
         "parameter_pilot_sha256": "1d33d47d00fa06697fc9a4af13c2d9193c740bee565de6636b556a115aad2c04",
         "clamp_pilot_sha256": "15ce2c1a3834cdd8e380bc7355812edf9de904f069ff4b66813060d97538a6c6",
         "runner_sha256": "25df1d6119ff177768d3eead13396a3ba4d6eaf0eeaf8f6bdf4f86d4db53988a",
-        "regenerate_sha256": "bfb5c9b0467adccb68f248a9784eacee89c660567e8fd3fc47e521aea3c6340e",
+        "regenerate_sha256": "560323615e9959653348d961fbfcb32d24056fb088a2356a40fef53c4ba7c46a",
         "canonicalizer_sha256": "b2f6a2aac55b65f384ed9da8ddb878e257592bbb732183f9a9b460028b02f479",
         "tool_main_sha256": "ebd795c2b9daab0b9104d03f3939c007347032376bf9496e2e55f3264cf8cb3b",
         "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
         "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
-        "architecture_generator_sha256": "b4767b96a800dc1d61890a9627b7cc16d87ceddd2e89138f4418fc97492d4311",
-        "architecture_verifier_sha256": "6bf6b8739627a423abe12d4a97c32264064a1b4c0731813afdfe84df08bd6226",
+        "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
+        "architecture_verifier_sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212",
         "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
-        "safe_file_helper_sha256": "1a26eab5cffde2c64534d5c557dc3a05d0aff783be33adf81211377373f19c3b",
-        "evidence_workflow_sha256": "66a709b37bc0f4da67a374b2a85507361b2d0e8e920ace4c67c1e6474ed4b2e6",
+        "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
+        "evidence_workflow_sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610",
         "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
-        "deadline_sha256": "b035c78aee239524f6ea79d5f5d61f682438f505154f7625a76b6444d8285760",
-        "deadline_test_sha256": "f7a6115ef3ea163518e2b0de524f87d90668f1f6daaf55d07a1b8da1facd695d",
+        "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
+        "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
         "container_cleanup_sha256": "d1986458072ee6b1267ecc89b3e3e50982f8a77865bdab6b28fbe088a45fc8fd",
         "container_cleanup_test_sha256": "31f293214b6c0820a80256447a18e7cdece6cc641e97d6fdedf6198bba40bd41",
         "output_publish_sha256": "92afe1729987468594c949206bda1e93365d27cc6da8b737a027bfde6b981044",
@@ -632,13 +632,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "a788ca4222a0d277b75d4916f9cb34ddfda6c81e17cf714b3f4cbd47f2a2f01a",
+          "log_sha256": "a2b8187e3e9283d3cbb7c7957ba25fcbd0af65bef241ed989adb8f9869c1ca5f",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "7d15e45edb5f4ed59d9c95d6166e9afd1331e3268f9febc6ebcadb33425e9a6b",
+          "log_sha256": "969639db6737da66c22ac0780e9ddd1c5482be2d8247249b0fee64811413d81d",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         }
       ],
@@ -651,26 +651,26 @@
       "container_architecture": "x86_64",
       "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
       "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
-      "repository_revision": "31fccf3206b8677c516eecbdd80f1aef7bdd033f",
+      "repository_revision": "8b1407d49a4ff41f602d2a85c1c8a50aaf5ae2cd",
       "generator_provenance_scope": "native_generation_and_publication",
       "generator_inputs": {
         "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
         "parameter_pilot_sha256": "1d33d47d00fa06697fc9a4af13c2d9193c740bee565de6636b556a115aad2c04",
         "clamp_pilot_sha256": "15ce2c1a3834cdd8e380bc7355812edf9de904f069ff4b66813060d97538a6c6",
         "runner_sha256": "25df1d6119ff177768d3eead13396a3ba4d6eaf0eeaf8f6bdf4f86d4db53988a",
-        "regenerate_sha256": "bfb5c9b0467adccb68f248a9784eacee89c660567e8fd3fc47e521aea3c6340e",
+        "regenerate_sha256": "560323615e9959653348d961fbfcb32d24056fb088a2356a40fef53c4ba7c46a",
         "canonicalizer_sha256": "b2f6a2aac55b65f384ed9da8ddb878e257592bbb732183f9a9b460028b02f479",
         "tool_main_sha256": "ebd795c2b9daab0b9104d03f3939c007347032376bf9496e2e55f3264cf8cb3b",
         "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
         "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
-        "architecture_generator_sha256": "b4767b96a800dc1d61890a9627b7cc16d87ceddd2e89138f4418fc97492d4311",
-        "architecture_verifier_sha256": "6bf6b8739627a423abe12d4a97c32264064a1b4c0731813afdfe84df08bd6226",
+        "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
+        "architecture_verifier_sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212",
         "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
-        "safe_file_helper_sha256": "1a26eab5cffde2c64534d5c557dc3a05d0aff783be33adf81211377373f19c3b",
-        "evidence_workflow_sha256": "66a709b37bc0f4da67a374b2a85507361b2d0e8e920ace4c67c1e6474ed4b2e6",
+        "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
+        "evidence_workflow_sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610",
         "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
-        "deadline_sha256": "b035c78aee239524f6ea79d5f5d61f682438f505154f7625a76b6444d8285760",
-        "deadline_test_sha256": "f7a6115ef3ea163518e2b0de524f87d90668f1f6daaf55d07a1b8da1facd695d",
+        "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
+        "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
         "container_cleanup_sha256": "d1986458072ee6b1267ecc89b3e3e50982f8a77865bdab6b28fbe088a45fc8fd",
         "container_cleanup_test_sha256": "31f293214b6c0820a80256447a18e7cdece6cc641e97d6fdedf6198bba40bd41",
         "output_publish_sha256": "92afe1729987468594c949206bda1e93365d27cc6da8b737a027bfde6b981044",
@@ -919,13 +919,13 @@
         {
           "id": "run-a",
           "output_directory_token": "fresh-run-a",
-          "log_sha256": "c77e50ac2cdd2b78818b1c7f26a1a9fc2ae53af06ce1765a8eeafc2c8ffa3869",
+          "log_sha256": "ac5081ef39b9fb3343098add5536bdc9d4879c692b8cddad7aaeeeed1e7b2aa4",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         },
         {
           "id": "run-b",
           "output_directory_token": "fresh-run-b",
-          "log_sha256": "31ee1d5df5c41afe1e07040d5756cf645e2b1a3c13ceb553f9691eb518ea9011",
+          "log_sha256": "6b8a86cec0518b18e13b24e8baaea1a958397ea908b0ab4b2a5f7163ef54454f",
           "raw_sha256": "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
         }
       ],
@@ -981,7 +981,7 @@
     {
       "role": "arm64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/architecture.json",
-      "sha256": "66a144298ccbc88774372e09c6de7f4f72260ed2c19e1cde1e04e4a1deb517b1"
+      "sha256": "bf4de6fd270733c87ebc8b1564b12364011043934910b4107a429cc4069da88f"
     },
     {
       "role": "arm64_canonical_csv",
@@ -1001,12 +1001,12 @@
     {
       "role": "arm64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/run-a.log",
-      "sha256": "a788ca4222a0d277b75d4916f9cb34ddfda6c81e17cf714b3f4cbd47f2a2f01a"
+      "sha256": "a2b8187e3e9283d3cbb7c7957ba25fcbd0af65bef241ed989adb8f9869c1ca5f"
     },
     {
       "role": "arm64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/run-b.log",
-      "sha256": "7d15e45edb5f4ed59d9c95d6166e9afd1331e3268f9febc6ebcadb33425e9a6b"
+      "sha256": "969639db6737da66c22ac0780e9ddd1c5482be2d8247249b0fee64811413d81d"
     },
     {
       "role": "arm64_parameter_control_canonical_csv",
@@ -1021,7 +1021,7 @@
     {
       "role": "arm64_parameter_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/parameter-control.log",
-      "sha256": "aae42d43fd16fbfc6dcf6b76cfe72012fa4013977d6765ae602ab7571b8b603b"
+      "sha256": "d285c13ff9fecb05c6b3ce6d69fadb077bff6ee79766affc3725a8951a4a9600"
     },
     {
       "role": "arm64_final_clamp_canonical_csv",
@@ -1036,7 +1036,7 @@
     {
       "role": "arm64_final_clamp_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/arm64/final-clamp.log",
-      "sha256": "69b5b8dcf8443786f8c271b004345e9279e2a15f28f152c6c0cead5bd8bd6f78"
+      "sha256": "36e3b07e2b705f590e75ae5ce806a85e380427182bb0eeda7b86d6be18a30736"
     },
     {
       "role": "arm64_projection_mutation_log",
@@ -1066,7 +1066,7 @@
     {
       "role": "amd64_architecture_record",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/architecture.json",
-      "sha256": "536233ec816ae391191307300671ddc13323c1af51b294254f52b81770729a61"
+      "sha256": "4912a50b830c4cec464789bb8165994969bc6000aab63972e98661033621196e"
     },
     {
       "role": "amd64_canonical_csv",
@@ -1086,12 +1086,12 @@
     {
       "role": "amd64_run_a_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/run-a.log",
-      "sha256": "c77e50ac2cdd2b78818b1c7f26a1a9fc2ae53af06ce1765a8eeafc2c8ffa3869"
+      "sha256": "ac5081ef39b9fb3343098add5536bdc9d4879c692b8cddad7aaeeeed1e7b2aa4"
     },
     {
       "role": "amd64_run_b_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/run-b.log",
-      "sha256": "31ee1d5df5c41afe1e07040d5756cf645e2b1a3c13ceb553f9691eb518ea9011"
+      "sha256": "6b8a86cec0518b18e13b24e8baaea1a958397ea908b0ab4b2a5f7163ef54454f"
     },
     {
       "role": "amd64_parameter_control_canonical_csv",
@@ -1106,7 +1106,7 @@
     {
       "role": "amd64_parameter_control_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/parameter-control.log",
-      "sha256": "82e4a745905f2da774612da7b2c35846c10ce2867ed9ec96c1d428b5b3f725b2"
+      "sha256": "0dd89eba99ac40c120936e8a14c488482060e7f160603c25a1aae267b75b99cc"
     },
     {
       "role": "amd64_final_clamp_canonical_csv",
@@ -1121,7 +1121,7 @@
     {
       "role": "amd64_final_clamp_log",
       "path": "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/amd64/final-clamp.log",
-      "sha256": "6886f455426b2896690f59077e9d282b93654509e79f6aa16a13dd604fc4817f"
+      "sha256": "4d41069b4308d424e97000e327037a0f38f37660a70097760092bee14f349f3e"
     },
     {
       "role": "amd64_projection_mutation_log",
@@ -1152,6 +1152,11 @@
       "role": "canonicalizer_source",
       "path": "crates/oce-cxf/tests/open_modelica_reliefs_reference/canonicalizer.rs",
       "sha256": "b2f6a2aac55b65f384ed9da8ddb878e257592bbb732183f9a9b460028b02f479"
+    },
+    {
+      "role": "generation_revision_contract",
+      "path": "crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json",
+      "sha256": "af7d19798ee53c0127652a5f078b39c2f9784be55a78c44810bec617fcff4652"
     },
     {
       "role": "tool_cargo_lock",
@@ -1191,12 +1196,12 @@
     {
       "role": "regeneration_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/regenerate.sh",
-      "sha256": "bfb5c9b0467adccb68f248a9784eacee89c660567e8fd3fc47e521aea3c6340e"
+      "sha256": "560323615e9959653348d961fbfcb32d24056fb088a2356a40fef53c4ba7c46a"
     },
     {
       "role": "assembly_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/assemble.sh",
-      "sha256": "a0b33e3bff0a403e7a9a2da2c04a0585f17058768f642b7a039802fed1b25158"
+      "sha256": "db2cd0036cb6ea3db5c792988d79fe99a073b4179a085e26e309d1f341d09d17"
     },
     {
       "role": "manifest_generator_script",
@@ -1206,12 +1211,12 @@
     {
       "role": "architecture_generator_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/generate_architecture.py",
-      "sha256": "b4767b96a800dc1d61890a9627b7cc16d87ceddd2e89138f4418fc97492d4311"
+      "sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724"
     },
     {
       "role": "evidence_validator_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py",
-      "sha256": "6bf6b8739627a423abe12d4a97c32264064a1b4c0731813afdfe84df08bd6226"
+      "sha256": "c1eca1db1b9360453ce690f030d05c8a6f952095805873cf05498cdbe4fed212"
     },
     {
       "role": "projection_validator_script",
@@ -1221,7 +1226,7 @@
     {
       "role": "safe_file_helper_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/safe_files.py",
-      "sha256": "1a26eab5cffde2c64534d5c557dc3a05d0aff783be33adf81211377373f19c3b"
+      "sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d"
     },
     {
       "role": "oci_materializer_script",
@@ -1231,12 +1236,12 @@
     {
       "role": "deadline_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/deadline.sh",
-      "sha256": "b035c78aee239524f6ea79d5f5d61f682438f505154f7625a76b6444d8285760"
+      "sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a"
     },
     {
       "role": "deadline_test_script",
       "path": "tools/openmodelica-reliefs-reference/reliefs/deadline_test.sh",
-      "sha256": "f7a6115ef3ea163518e2b0de524f87d90668f1f6daaf55d07a1b8da1facd695d"
+      "sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b"
     },
     {
       "role": "output_publish_script",
@@ -1276,7 +1281,7 @@
     {
       "role": "evidence_workflow",
       "path": ".github/workflows/openmodelica-reliefs-evidence.yml",
-      "sha256": "66a709b37bc0f4da67a374b2a85507361b2d0e8e920ace4c67c1e6474ed4b2e6"
+      "sha256": "9413782124b0e8b53d6296ae50ca13fb5c4da0070bd10b4654ea3bdd9920f610"
     }
   ],
   "regeneration": {
