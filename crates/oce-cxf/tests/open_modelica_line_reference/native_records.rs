@@ -47,6 +47,7 @@ fn validate_one(
         || record.flag_control_raw_sha256 != architecture.flag_control_raw_sha256
         || record.canonical_sha256 != architecture.canonical_sha256
         || record.flag_control_canonical_sha256 != architecture.flag_control_canonical_sha256
+        || record.runs != architecture.runs
     {
         return Err(format!(
             "{} native architecture record does not match final manifest semantics",

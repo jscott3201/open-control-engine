@@ -237,6 +237,7 @@ pub(super) struct NativeArchitectureRecord {
     pub(super) flag_control_raw_sha256: String,
     pub(super) canonical_sha256: String,
     pub(super) flag_control_canonical_sha256: String,
+    pub(super) runs: Vec<Run>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]

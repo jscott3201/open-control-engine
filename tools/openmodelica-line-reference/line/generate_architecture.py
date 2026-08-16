@@ -185,6 +185,18 @@ payload = {
     "flag_control_raw_sha256": sha(output / "flag-control.raw.csv"),
     "canonical_sha256": sha(output / "line.canonical.csv"),
     "flag_control_canonical_sha256": sha(output / "flag-control.canonical.csv"),
+    "runs": [
+        {
+            "id": run_id,
+            "output_directory_token": token,
+            "log_sha256": sha(output / log_name),
+            "raw_sha256": sha(output / raw_name),
+        }
+        for run_id, token, log_name, raw_name in [
+            ("run-a", "fresh-run-a", "run-a.log", "line-run-a.raw.csv"),
+            ("run-b", "fresh-run-b", "run-b.log", "line-run-b.raw.csv"),
+        ]
+    ],
 }
 encoded = (json.dumps(payload, indent=2) + "\n").encode()
 descriptor = os.open(output / "architecture.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)

@@ -357,7 +357,7 @@ def validate_architecture(directory, root, architecture):
     except (OSError, ValueError) as error:
         fail(f"unsafe architecture evidence: {error}")
     record = json_file(directory / "architecture.json")
-    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "artifact_toolchain", "source_materialization", "omc_version", "gcc_version", "binutils_version", "glibc_version", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256"]
+    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "artifact_toolchain", "source_materialization", "omc_version", "gcc_version", "binutils_version", "glibc_version", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256", "runs"]
     closed(record, fields, "architecture record")
     expected = ARCH[architecture]
     if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-line-native-architecture-v4", architecture, *expected, "native_generation_and_publication"]:
@@ -384,6 +384,8 @@ def validate_architecture(directory, root, architecture):
             fail(f"architecture digest binding for {name}")
     if record["raw_run_a_sha256"] != record["raw_run_b_sha256"]:
         fail("native repeat raw digests differ")
+    if not type_exact_equal(record["runs"], expected_runs(directory, record)):
+        fail("native repeat run records")
     if architecture == "arm64" and record["raw_run_a_sha256"] != ARM_RAW:
         fail("arm64 raw digest drifted from the measured spike")
     rows_a, groups = parse_raw(directory / "line-run-a.raw.csv", record["raw_run_a_sha256"])
@@ -520,11 +522,12 @@ def expected_architecture_manifest(output, name, record):
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
         "canonical_sha256": record["canonical_sha256"],
         "flag_control_canonical_sha256": record["flag_control_canonical_sha256"],
-        "runs": [
-            {"id": "run-a", "output_directory_token": "fresh-run-a", "log_sha256": sha(output / name / "run-a.log"), "raw_sha256": record["raw_run_a_sha256"]},
-            {"id": "run-b", "output_directory_token": "fresh-run-b", "log_sha256": sha(output / name / "run-b.log"), "raw_sha256": record["raw_run_b_sha256"]},
-        ],
+        "runs": record["runs"],
     }
+
+
+def expected_runs(base, record):
+    return [{"id": "run-a", "output_directory_token": "fresh-run-a", "log_sha256": sha(base / "run-a.log"), "raw_sha256": record["raw_run_a_sha256"]}, {"id": "run-b", "output_directory_token": "fresh-run-b", "log_sha256": sha(base / "run-b.log"), "raw_sha256": record["raw_run_b_sha256"]}]
 
 
 def expected_sources():

@@ -93,10 +93,7 @@ def architecture(name):
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
         "canonical_sha256": record["canonical_sha256"],
         "flag_control_canonical_sha256": record["flag_control_canonical_sha256"],
-        "runs": [
-            {"id": "run-a", "output_directory_token": "fresh-run-a", "log_sha256": sha(output / name / "run-a.log"), "raw_sha256": record["raw_run_a_sha256"]},
-            {"id": "run-b", "output_directory_token": "fresh-run-b", "log_sha256": sha(output / name / "run-b.log"), "raw_sha256": record["raw_run_b_sha256"]},
-        ],
+        "runs": record["runs"],
     }
 
 
