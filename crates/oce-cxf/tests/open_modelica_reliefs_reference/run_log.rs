@@ -144,7 +144,7 @@ fn bounded_timing(value: &str, nonzero: bool) -> bool {
             .bytes()
             .all(|byte| byte.is_ascii_digit() || b".eE+-".contains(&byte))
         && value.parse::<f64>().is_ok_and(|number| {
-            number.is_finite() && number >= 0.0 && number <= 120.0 && (!nonzero || number > 0.0)
+            number.is_finite() && (0.0..=120.0).contains(&number) && (!nonzero || number > 0.0)
         })
 }
 
