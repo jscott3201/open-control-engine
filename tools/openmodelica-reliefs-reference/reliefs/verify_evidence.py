@@ -33,6 +33,12 @@ SOURCE_ROWS = projection_evidence.KEEP_LAST_SOURCES
 U_T_SUP_BITS = projection_evidence.U_T_SUP_BITS
 CONSTANT_INPUT_BITS = projection_evidence.CONSTANT_INPUT_BITS
 CLAMP_RAW_U_T_SUP_BITS = [value for item in U_T_SUP_BITS for value in [item] * 3]
+CLAMP_CONSTANT_INPUT_BITS = [
+    "3fec000000000000",
+    "3fd0000000000000",
+    "3fe8000000000000",
+    "3fc0000000000000",
+]
 Y_OUT = "3fd0000000000000 3fd0000000000000 3fe2000000000000 3fec000000000000 3fec000000000000 3fec000000000000 3fec000000000000".split()
 Y_RET = "3fe8000000000000 3fe8000000000000 3fe8000000000000 3fe8000000000000 3fdc000000000000 3fc0000000000000 3fc0000000000000".split()
 ARCH = {
@@ -482,13 +488,13 @@ def validate_architecture(directory, root, architecture, contract=None, checkout
     clamp_raw, clamp_groups = parse_raw(directory / "final-clamp.raw.csv", record["final_clamp_raw_sha256"]); clamp_values = project(clamp_groups); clamp = [[bits(value) for value in row[:8]] for row in clamp_values]
     if parse_canonical(directory / "final-clamp.canonical.csv", "openmodelica_g36_reliefs_final_clamp") != clamp: fail("final clamp canonical reproduction")
     expected_clamp_inputs = [
-        [CLAMP_RAW_U_T_SUP_BITS[index], *CONSTANT_INPUT_BITS]
+        [CLAMP_RAW_U_T_SUP_BITS[index], *CLAMP_CONSTANT_INPUT_BITS]
         for index in range(21)
     ]
     if [[bits(value) for value in row[1:6]] for row in clamp_raw] != expected_clamp_inputs:
         fail("final clamp raw input bits")
     expected_selected_clamp = [
-        [TIME_BITS[index], U_T_SUP_BITS[index], *CONSTANT_INPUT_BITS, "3fd0000000000000", "3fe8000000000000"]
+        [TIME_BITS[index], U_T_SUP_BITS[index], *CLAMP_CONSTANT_INPUT_BITS, "3fd0000000000000", "3fe8000000000000"]
         for index in range(7)
     ]
     if clamp != expected_selected_clamp or [row[8] for row in clamp_values] != SOURCE_ROWS:
