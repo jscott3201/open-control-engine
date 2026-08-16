@@ -479,10 +479,13 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   toolchain, sandbox limits, cgroup peak measurement, and native logs. This remains one composed
   leaf at one parameterization and schedule: global Tier 3 stays skipped, with no broader class,
   solver, tolerance, or cross-architecture raw-byte claim.
-  Follow-up hardening binds both architectures to a fixed ancestor generation revision and checks
-  every generator input against that commit. Candidate workflow artifacts are verified before
-  upload and still require independent assembly. Run logs now require unique initialization and
-  simulation success records, reject failure records, and parse a bounded non-root `uid:gid`.
+  Follow-up hardening binds both architectures to a fixed execution-checkout observation, a complete
+  generator-input digest map, and the exact retained input bytes without requiring Git ancestry.
+  The manual workflow verifies both native artifacts, admits them through the documented assembler,
+  and uploads the emitted candidate manifest and contract. Run logs are closed records with one
+  exact `SimulationResult`, bounded timings, fixed metadata, and a terminal completion marker. Rust
+  and Python reject the same provenance fields, and the final-clamp control fixes every raw and
+  selected input tuple before accepting its outputs.
   Deadline polling refreshes before each Docker subprocess, Python entrypoints suppress bytecode,
   and Windows retained-evidence reads reject reparse points, hardlinks, and handle-identity changes.
 - **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).

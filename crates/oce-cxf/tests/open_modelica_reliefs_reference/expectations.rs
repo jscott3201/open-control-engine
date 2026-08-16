@@ -289,6 +289,10 @@ pub(super) fn expected_artifacts() -> Vec<(String, String)> {
             format!("{tool}reliefs/assemble.sh"),
         ),
         (
+            "candidate_assembly_test_script".into(),
+            format!("{tool}reliefs/candidate_assembly_test.sh"),
+        ),
+        (
             "manifest_generator_script".into(),
             format!("{tool}reliefs/generate_manifest.py"),
         ),

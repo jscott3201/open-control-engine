@@ -38,45 +38,11 @@ fn validate_generation_revision(manifest: &Manifest, root: &Path) -> Result<(), 
         root,
         &contract_artifact.path,
     )?)?;
-    if manifest
-        .architectures
-        .iter()
-        .any(|architecture| architecture.repository_revision != contract.revision)
-    {
-        return Err("native record revision is not the ratified generation revision".into());
-    }
-    git_output(
-        root,
-        &[
-            "cat-file",
-            "-e",
-            &format!("{}^{{commit}}", contract.revision),
-        ],
-    )?;
-    let status = std::process::Command::new("git")
-        .args([
-            "-C",
-            root.to_str().ok_or("repository path is not UTF-8")?,
-            "merge-base",
-            "--is-ancestor",
-            &contract.revision,
-            "HEAD",
-        ])
-        .status()
-        .map_err(|error| error.to_string())?;
-    if !status.success() {
-        return Err("generation revision is not an ancestor of the retained checkout".into());
-    }
-    for architecture in &manifest.architectures {
-        for (digest, role) in generator_bindings(&architecture.generator_inputs) {
-            let path = &artifact(manifest, role).path;
-            let committed = git_output(root, &["show", &format!("{}:{path}", contract.revision)])?;
-            if sha256(&committed) != digest {
-                return Err(format!(
-                    "generation revision does not bind generator input {path}"
-                ));
-            }
-        }
+    if manifest.architectures.iter().any(|architecture| {
+        architecture.repository_revision != contract.revision
+            || architecture.generator_inputs != contract.generator_inputs
+    }) {
+        return Err("native record does not match the retained generation contract".into());
     }
     Ok(())
 }
@@ -200,11 +166,6 @@ fn generator_bindings(inputs: &GeneratorInputs) -> [(&str, &str); 24] {
 
 fn validate_run_logs(manifest: &Manifest, root: &Path) -> Result<(), String> {
     for architecture in &manifest.architectures {
-        let (host, machine) = if architecture.name == "arm64" {
-            ("arm64", "aarch64")
-        } else {
-            ("amd64", "x86_64")
-        };
         for (suffix, token, model, raw) in [
             (
                 "run_a_log",
@@ -233,7 +194,14 @@ fn validate_run_logs(manifest: &Manifest, root: &Path) -> Result<(), String> {
         ] {
             let role = format!("{}_{suffix}", architecture.name);
             let text = read_text(root, &artifact(manifest, &role).path)?;
-            validate_run_log(&text, architecture, host, machine, token, model, raw)?;
+            super::run_log::validate(
+                Path::new(&artifact(manifest, &role).path),
+                &text,
+                architecture,
+                token,
+                model,
+                raw,
+            )?;
         }
         for (run, suffix) in architecture.runs.iter().zip(["run_a_log", "run_b_log"]) {
             if run.log_sha256
@@ -260,140 +228,6 @@ fn validate_run_logs(manifest: &Manifest, root: &Path) -> Result<(), String> {
                 != architecture.final_clamp_raw_sha256
         {
             return Err("raw artifact binding drifted".into());
-        }
-    }
-    Ok(())
-}
-
-fn validate_run_log(
-    text: &str,
-    architecture: &Architecture,
-    host: &str,
-    machine: &str,
-    token: &str,
-    model: &str,
-    raw: &str,
-) -> Result<(), String> {
-    for (key, expected) in [
-        ("host_architecture", host),
-        ("docker_server_architecture", machine),
-        ("container_architecture", machine),
-        (
-            "image_index_digest",
-            "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864",
-        ),
-        (
-            "image_platform_manifest_digest",
-            architecture.platform_manifest_digest.as_str(),
-        ),
-        ("image_config_digest", architecture.config_digest.as_str()),
-        (
-            "repository_revision",
-            architecture.repository_revision.as_str(),
-        ),
-        (
-            "generator_provenance_scope",
-            "native_generation_and_publication",
-        ),
-        ("pull_policy", "never"),
-        ("output_directory_token", token),
-        ("selected_model", model),
-        ("modelica_path", ""),
-        ("root_write_probe", "read-only"),
-        ("source_write_probe", "read-only"),
-        ("reference_write_probe", "read-only"),
-        ("network_route_lines", "1"),
-        ("cgroup_memory_max", "2147483648"),
-        ("cgroup_pids_max", "256"),
-        ("cgroup_cpu_max", "400000 100000"),
-        ("omc_version", "OpenModelica 1.25.1"),
-        ("gcc_version", "11.4.0"),
-        ("binutils_version", "2.38"),
-        ("glibc_version", "2.35"),
-        ("Modelica", "4.1.0"),
-        ("Buildings", "14.0.0"),
-        ("omc_warning_count", "0"),
-        ("raw_sha256", raw),
-        ("runner_complete", "1"),
-    ] {
-        require_log_value(text, key, expected)?;
-    }
-    for (digest, role) in generator_bindings(&architecture.generator_inputs) {
-        let key = match role {
-            "wrapper_model" => "reliefs_pilot_sha256",
-            "parameter_control_wrapper_model" => "parameter_pilot_sha256",
-            "final_clamp_wrapper_model" => "clamp_pilot_sha256",
-            "runner_script" => "runner_sha256",
-            "regeneration_script" => "regenerate_sha256",
-            "canonicalizer_source" => "canonicalizer_sha256",
-            "tool_main_source" => "tool_main_sha256",
-            "tool_cargo_toml" => "tool_cargo_toml_sha256",
-            "tool_cargo_lock" => "tool_cargo_lock_sha256",
-            "architecture_generator_script" => "architecture_generator_sha256",
-            "evidence_validator_script" => "architecture_verifier_sha256",
-            "projection_validator_script" => "projection_verifier_sha256",
-            "safe_file_helper_script" => "safe_file_helper_sha256",
-            "evidence_workflow" => "evidence_workflow_sha256",
-            "oci_materializer_script" => "oci_materializer_sha256",
-            "deadline_script" => "deadline_sha256",
-            "deadline_test_script" => "deadline_test_sha256",
-            "container_cleanup_script" => "container_cleanup_sha256",
-            "container_cleanup_test_script" => "container_cleanup_test_sha256",
-            "output_publish_script" => "output_publish_sha256",
-            "output_publish_test_script" => "output_publish_test_sha256",
-            "oci_index_source" => "oci_index_source_sha256",
-            "arm64_manifest_source" => "arm64_manifest_source_sha256",
-            "amd64_manifest_source" => "amd64_manifest_source_sha256",
-            other => other,
-        };
-        require_log_value(text, key, digest)?;
-    }
-    let sources: Vec<super::schema::NativeSourceFile> =
-        serde_json::from_str(unique_log_value(text, "source_files_json")?)
-            .map_err(|error| error.to_string())?;
-    if sources != architecture.source_files {
-        return Err("run log source cone drifted".into());
-    }
-    let identity = unique_log_value(text, "container_identity")?;
-    let (uid, gid) = identity
-        .split_once(':')
-        .ok_or("container identity is not uid:gid")?;
-    if uid.parse::<u32>().map_err(|_| "invalid container uid")? == 0 || gid.parse::<u32>().is_err()
-    {
-        return Err("container identity is root or invalid".into());
-    }
-    let peak = unique_log_value(text, "observed_cgroup_peak_bytes")?
-        .parse::<u64>()
-        .map_err(|_| "invalid cgroup peak")?;
-    if peak == 0 || peak > 2_147_483_648 {
-        return Err("cgroup memory peak is outside the bound".into());
-    }
-    if text
-        .lines()
-        .any(|line| line.to_ascii_lowercase().contains("warning") && line != "omc_warning_count=0")
-    {
-        return Err("OpenModelica warning found".into());
-    }
-    const INITIALIZATION_SUCCESS: &str = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.";
-    const SIMULATION_SUCCESS: &str =
-        "LOG_SUCCESS       | info    | The simulation finished successfully.";
-    if text.matches(INITIALIZATION_SUCCESS).count() != 1
-        || text.matches(SIMULATION_SUCCESS).count() != 1
-    {
-        return Err("OpenModelica success records are missing or repeated".into());
-    }
-    for line in text.lines().map(str::to_ascii_lowercase) {
-        if [
-            "| error",
-            "| fatal",
-            "simulation failed",
-            "initialization failed",
-            "failure",
-        ]
-        .iter()
-        .any(|token| line.contains(token))
-        {
-            return Err("OpenModelica failure record found".into());
         }
     }
     Ok(())
@@ -538,6 +372,8 @@ fn validate_tool_contract(manifest: &Manifest, root: &Path) -> Result<(), String
     if runner.contains("-noEventEmit")
         || workflow.contains("pull_request:")
         || !workflow.contains("workflow_dispatch:")
+        || !workflow.contains("reliefs/assemble.sh")
+        || !workflow.contains("candidate-final")
     {
         return Err("event emission or manual workflow contract drifted".into());
     }
@@ -580,22 +416,6 @@ fn valid_artifact_path(artifact: &Artifact) -> Result<(), String> {
         .ok_or_else(|| format!("artifact role escapes its subtree: {}", artifact.role))
 }
 
-fn unique_log_value<'a>(text: &'a str, key: &str) -> Result<&'a str, String> {
-    let prefix = format!("{key}=");
-    let values = text
-        .lines()
-        .filter_map(|line| line.strip_prefix(&prefix))
-        .collect::<Vec<_>>();
-    match values.as_slice() {
-        [value] => Ok(value),
-        _ => Err(format!("run log must contain exactly one {key}")),
-    }
-}
-fn require_log_value(text: &str, key: &str, expected: &str) -> Result<(), String> {
-    (unique_log_value(text, key)? == expected)
-        .then_some(())
-        .ok_or_else(|| format!("run log has unsupported {key}"))
-}
 fn artifact<'a>(manifest: &'a Manifest, role: &str) -> &'a Artifact {
     manifest
         .artifacts
@@ -614,26 +434,6 @@ fn sha256(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
-}
-
-fn git_output(root: &Path, arguments: &[&str]) -> Result<Vec<u8>, String> {
-    let output = std::process::Command::new("git")
-        .arg("-C")
-        .arg(root)
-        .args(arguments)
-        .output()
-        .map_err(|error| error.to_string())?;
-    if !output.status.success() {
-        return Err(format!(
-            "git {} failed: {}",
-            arguments.join(" "),
-            String::from_utf8_lossy(&output.stderr).trim()
-        ));
-    }
-    if output.stdout.len() > 1024 * 1024 {
-        return Err("git output exceeds the evidence bound".into());
-    }
-    Ok(output.stdout)
 }
 
 #[cfg(test)]
@@ -664,11 +464,10 @@ mod tests {
             "LOG_SUCCESS       | info    | The simulation finished successfully.",
             "LOG_ASSERT        | error   | The simulation failed.",
         );
-        let error = validate_run_log(
+        let error = super::super::run_log::validate(
+            Path::new("run-a.log"),
             &hostile,
             architecture,
-            "arm64",
-            "aarch64",
             "fresh-run-a",
             "Reliefs",
             &architecture.raw_run_a_sha256,
@@ -676,5 +475,45 @@ mod tests {
         .unwrap_err();
         assert!(error.contains("success") || error.contains("failure"));
         assert!(hostile.contains("runner_complete=1"));
+    }
+
+    #[test]
+    fn run_log_rejects_python_required_field_and_structure_mutations() {
+        let manifest = super::super::checked_manifest();
+        let architecture = &manifest.architectures[0];
+        let root = super::super::repository_root();
+        let log = read_text(&root, &artifact(&manifest, "arm64_run_a_log").path).unwrap();
+        let mutations = [
+            log.replace("rustc_release=1.97.1", "rustc_release=false"),
+            log.replace(
+                "buildings_commit=a131864e4c4df22ebcd52bb8da439de0087ac365",
+                "buildings_commit=false",
+            ),
+            log.replace(
+                "source_materialization=git_archive_with_pinned_modelica_export_subst",
+                "source_materialization=false",
+            ),
+            log.replace("\"source\":\"buildings\"", "\"source\":\"false\""),
+            log.replace("--pull=never", "--pull=always"),
+            log.replace("tolerance = 1e-9", "tolerance = 1e-6"),
+            log.replace(
+                "runner_complete=1",
+                "Error: late failure\nrunner_complete=1",
+            ),
+            format!("{log}Error: after completion\n"),
+        ];
+        for hostile in mutations {
+            assert!(
+                super::super::run_log::validate(
+                    Path::new("run-a.log"),
+                    &hostile,
+                    architecture,
+                    "fresh-run-a",
+                    "Reliefs",
+                    &architecture.raw_run_a_sha256,
+                )
+                .is_err()
+            );
+        }
     }
 }

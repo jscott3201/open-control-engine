@@ -193,21 +193,24 @@ first complete five-input tuple change. The facade drives those tuples at the em
 and reads only the declared `yOutDam` and `yRetDam` roots; topology checks bind those roots to the
 internal Min and Max drivers. All 14 output cells are compared exactly against an independent bit
 table. A parameter-only `uOutDamMax` change, swapped root mapping, a nonexistent root, keep-first
-projection, and inconsistent final limits exercise separate failure or overwrite paths. This is one
-composed G36 leaf at one parameterization, with no claim about other G36 classes or parameters.
+projection, and inconsistent final limits exercise separate failure or overwrite paths. The final
+limit control fixes all 21 raw input tuples plus the seven selected tuples, timestamps, and source
+rows before checking the overwritten outputs. This is one composed G36 leaf at one parameterization,
+with no claim about other G36 classes or parameters.
 
 Each native architecture record binds every checkout file used through native artifact publication,
 including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer tool inputs. Assembly
 and final-manifest generation happen after native publication, so their scripts are bound by the
 final artifact manifest rather than represented as native generator inputs.
 
-Reliefs records one immutable generation revision in
-`crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json`. The revision is the
-ancestor commit that produced the candidate native artifacts, not the later commit that retains and
-reviews them. During generation, each record must equal the checkout HEAD. During assembly and
-per-PR validation, both validators require the contract revision and compare every generator input
-with both the recorded digest and the file bytes at that commit. This closes stale or unrelated
-revision substitutions without requiring a self-referential final-head digest.
+Reliefs records one immutable generation contract in
+`crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json`. Its revision is the
+exact checkout observed while the candidate native artifacts ran, not a reachability requirement.
+During generation, each record must equal checkout `HEAD`. The candidate assembler requires both
+native records to share that observation and the complete generator-input digest map, verifies the
+current exact input bytes, and emits the candidate contract and manifest together. Retained
+validation uses those committed bytes and does not inspect Git history. Zero, stale, unrelated, or
+rehash-substituted observations still fail the fixed contract.
 
 The Line and Reliefs workflows install Rust 1.97.1 and Python 3.13.7 for host-side artifact
 processing and record compiler, Cargo, Python, and architecture identities in each native log. MSL
@@ -222,11 +225,13 @@ are manual only after evidence capture; normal CI validates committed evidence a
 Docker. No Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These four cases
 cannot make the engine-wide report pass.
 
-The Reliefs manual workflow produces and verifies one candidate native artifact per architecture.
-Its green status does not say that the committed assembled fixture is fresh. Admission requires the
-fixed generation revision, independent two-architecture assembly, and final retained-graph closure.
-Repository Python entrypoints disable bytecode writes so ignored `__pycache__` files cannot pollute a
-generation checkout. That Python validator is POSIX-only; the equivalent Rust validator remains the
+The Reliefs manual workflow produces and verifies one candidate native artifact per architecture,
+then runs the same two-architecture assembler used for ratification and uploads its candidate
+manifest and contract. Its green status proves that those workflow outputs enter the assembler; it
+does not say that the committed fixture is fresh. Admission still requires committing the emitted
+contract and assembled evidence, followed by retained-graph validation. Repository Python
+entrypoints disable bytecode writes so ignored `__pycache__` files cannot pollute a generation
+checkout. That Python validator is POSIX-only; the equivalent Rust validator remains the
 cross-platform retained-evidence check and uses handle metadata on Windows.
 
 Regeneration assumes a trusted host account, checkout, Docker client, Git and shell tools, and

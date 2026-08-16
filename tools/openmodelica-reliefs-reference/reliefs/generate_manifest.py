@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the closed two-architecture Reliefs manifest from retained files."""
+"""Generate the candidate contract and closed two-architecture manifest."""
 
 import hashlib
 import json
@@ -34,6 +34,27 @@ def native(name):
     return verifier.architecture_manifest(name, record), record
 
 
+arm, arm_record = native("arm64")
+amd, amd_record = native("amd64")
+if (
+    arm_record["repository_revision"] != amd_record["repository_revision"]
+    or arm_record["generator_inputs"] != amd_record["generator_inputs"]
+):
+    verifier.fail("native candidates used different generator identity")
+contract = {
+    "format": verifier.GENERATION_CONTRACT_FORMAT,
+    "revision": arm_record["repository_revision"],
+    "revision_role": verifier.GENERATION_REVISION_ROLE,
+    "generator_inputs": arm_record["generator_inputs"],
+}
+contract_payload = (json.dumps(contract, indent=2) + "\n").encode()
+descriptor = os.open(output / "generation-contract.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+try:
+    os.write(descriptor, contract_payload)
+finally:
+    os.close(descriptor)
+
+
 roles = [
     ("image_index_json", FIXTURE + "image-index.json", output / "image-index.json"),
     ("cross_architecture_log", FIXTURE + "cross-architecture.log", output / "cross-architecture.log"),
@@ -63,10 +84,9 @@ for name in ["arm64", "amd64"]:
         for role, file in architecture_files
     )
 for role, path in verifier.expected_artifact_roles()[len(roles):]:
-    roles.append((role, path, root / path))
+    file = output / "generation-contract.json" if path == verifier.GENERATION_CONTRACT else root / path
+    roles.append((role, path, file))
 
-arm, arm_record = native("arm64")
-amd, _ = native("amd64")
 canonical_sha = arm_record["canonical_sha256"]
 scope, image, simulation, projection, expected_outputs, controls, regeneration, cross = verifier.expected_manifest_records(canonical_sha)
 manifest = {

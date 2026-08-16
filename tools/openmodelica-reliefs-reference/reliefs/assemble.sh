@@ -14,8 +14,7 @@ python3 "$SCRIPT_DIR/verify_evidence.py" precopy "$ARM"
 python3 "$SCRIPT_DIR/verify_evidence.py" precopy "$AMD"
 cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-reliefs-reference/Cargo.toml" --offline --locked --quiet -- verify-architecture-canonical "$ARM"
 cargo run --manifest-path "$REPO_ROOT/tools/openmodelica-reliefs-reference/Cargo.toml" --offline --locked --quiet -- verify-architecture-canonical "$AMD"
-python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$ARM" "$REPO_ROOT" arm64
-python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$AMD" "$REPO_ROOT" amd64
+python3 "$SCRIPT_DIR/verify_evidence.py" candidate-pair "$ARM" "$AMD" "$REPO_ROOT"
 
 OUTPUT_RECORD=$(python3 "$PUBLISH_HELPER" claim "$DESTINATION")
 OUTPUT=$(printf '%s' "$OUTPUT_RECORD" | cut -f1); OUTPUT_DEVICE=$(printf '%s' "$OUTPUT_RECORD" | cut -f2); OUTPUT_INODE=$(printf '%s' "$OUTPUT_RECORD" | cut -f3)
@@ -30,8 +29,7 @@ trap cleanup EXIT; trap 'exit 129' HUP; trap 'exit 130' INT; trap 'exit 143' TER
 mkdir "$OUTPUT/arm64" "$OUTPUT/amd64"
 python3 "$SCRIPT_DIR/verify_evidence.py" copy-architecture "$ARM" "$OUTPUT/arm64"
 python3 "$SCRIPT_DIR/verify_evidence.py" copy-architecture "$AMD" "$OUTPUT/amd64"
-python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT/arm64" "$REPO_ROOT" arm64
-python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT/amd64" "$REPO_ROOT" amd64
+python3 "$SCRIPT_DIR/verify_evidence.py" candidate-pair "$OUTPUT/arm64" "$OUTPUT/amd64" "$REPO_ROOT"
 cmp "$OUTPUT/arm64/image-index.json" "$OUTPUT/amd64/image-index.json"; cp "$OUTPUT/arm64/image-index.json" "$OUTPUT/image-index.json"
 cmp "$OUTPUT/arm64/reliefs.canonical.csv" "$OUTPUT/amd64/reliefs.canonical.csv"
 CANONICAL_SHA=$(shasum -a 256 "$OUTPUT/arm64/reliefs.canonical.csv" | cut -d' ' -f1)
@@ -42,7 +40,7 @@ amd64_sha256=$CANONICAL_SHA
 result=PASS
 EOF
 python3 "$SCRIPT_DIR/generate_manifest.py" "$OUTPUT" "$REPO_ROOT"
-python3 "$SCRIPT_DIR/verify_evidence.py" final "$OUTPUT" "$REPO_ROOT"
+python3 "$SCRIPT_DIR/verify_evidence.py" candidate-final "$OUTPUT" "$REPO_ROOT"
 trap '' HUP INT TERM
 python3 "$PUBLISH_HELPER" publish "$OUTPUT" "$OUTPUT_DEVICE" "$OUTPUT_INODE" "$OUTPUT_PARENT_DEVICE" "$OUTPUT_PARENT_INODE" "$OUTPUT_DESTINATION"
 OUTPUT=; ASSEMBLY_COMPLETE=1

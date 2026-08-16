@@ -4,6 +4,7 @@ pub(crate) mod canonicalizer;
 mod expectations;
 mod manifest;
 mod repository;
+mod run_log;
 mod safe_read;
 mod schema;
 #[cfg(unix)]
@@ -131,10 +132,42 @@ fn parameter_final_clamp_and_projection_controls_are_live_on_both_architectures(
         }
 
         let clamp = read_raw("final-clamp.raw.csv", "clamp");
-        assert!(clamp.raw_rows.iter().all(|row| {
-            row.y_out_dam.to_bits() == 0x3fd0_0000_0000_0000
-                && row.y_ret_dam.to_bits() == 0x3fe8_0000_0000_0000
-        }));
+        let parse = |value: &str| u64::from_str_radix(value, 16).unwrap();
+        for (index, row) in clamp.raw_rows.iter().enumerate() {
+            assert_eq!(row.source_index, index);
+            assert_eq!(
+                row.time.to_bits(),
+                parse(expectations::RAW_TIME_BITS[index])
+            );
+            assert_eq!(
+                row.input_bits(),
+                [
+                    parse(expectations::U_T_SUP_BITS[index / 3]),
+                    0x3fec_0000_0000_0000,
+                    0x3fd0_0000_0000_0000,
+                    0x3fe8_0000_0000_0000,
+                    0x3fc0_0000_0000_0000,
+                ]
+            );
+            assert_eq!(
+                row.output_bits(),
+                [0x3fd0_0000_0000_0000, 0x3fe8_0000_0000_0000]
+            );
+        }
+        for (index, row) in clamp.rows.iter().enumerate() {
+            assert_eq!(row.source_index, [0, 3, 6, 9, 12, 15, 18][index]);
+            assert_eq!(row.time.to_bits(), parse(expectations::TIME_BITS[index]));
+            assert_eq!(
+                row.input_bits(),
+                [
+                    parse(expectations::U_T_SUP_BITS[index]),
+                    0x3fec_0000_0000_0000,
+                    0x3fd0_0000_0000_0000,
+                    0x3fe8_0000_0000_0000,
+                    0x3fc0_0000_0000_0000,
+                ]
+            );
+        }
 
         let keep_first = canonicalizer::canonicalize_path_with_selection(
             &fixture(&format!("{architecture}/reliefs-run-a.raw.csv")),
@@ -196,6 +229,63 @@ fn closed_manifest_digests_native_records_logs_sources_tools_and_oci_graph() {
     let parsed = checked_manifest();
     repository::validate(&parsed, &repository_root()).expect("Reliefs evidence graph validates");
     assert_eq!(parsed, checked_manifest());
+}
+
+#[cfg(unix)]
+#[test]
+fn retained_validation_survives_squash_without_git_metadata() {
+    let source_root = repository_root();
+    let manifest = checked_manifest();
+    let temporary_root = (0_u32..4096)
+        .find_map(|nonce| {
+            let path = std::env::temp_dir()
+                .join(format!("oce-reliefs-squash-{}-{nonce}", std::process::id()));
+            match std::fs::create_dir(&path) {
+                Ok(()) => Some(path),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => None,
+                Err(error) => panic!("cannot create synthetic checkout: {error}"),
+            }
+        })
+        .expect("synthetic checkout nonce is available");
+    for artifact in &manifest.artifacts {
+        let source = source_root.join(&artifact.path);
+        let destination = temporary_root.join(&artifact.path);
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        std::fs::copy(source, destination).unwrap();
+    }
+    let manifest_path = fixture_relative("manifest.json");
+    let destination = temporary_root.join(&manifest_path);
+    std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+    std::fs::copy(source_root.join(&manifest_path), destination).unwrap();
+    assert!(!temporary_root.join(".git").exists());
+    repository::validate(&manifest, &temporary_root)
+        .expect("retained bytes validate without revision history");
+    let python = std::process::Command::new("python3")
+        .arg(source_root.join("tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py"))
+        .arg("final")
+        .arg(temporary_root.join("crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs"))
+        .arg(&temporary_root)
+        .env("PYTHONDONTWRITEBYTECODE", "1")
+        .env("CARGO_NET_OFFLINE", "true")
+        .output()
+        .unwrap();
+    assert!(
+        python.status.success(),
+        "{}",
+        String::from_utf8_lossy(&python.stderr)
+    );
+
+    let mut unrelated_revision = manifest.clone();
+    unrelated_revision.architectures[0].repository_revision =
+        "f9e4ba93e39c6be8b4118d77c52a8a6ed1c88abb".into();
+    assert!(repository::validate(&unrelated_revision, &temporary_root).is_err());
+    std::fs::write(
+        temporary_root.join("tools/openmodelica-reliefs-reference/reliefs/ReliefsPilot.mo"),
+        b"mutated generator input\n",
+    )
+    .unwrap();
+    assert!(repository::validate(&manifest, &temporary_root).is_err());
+    std::fs::remove_dir_all(temporary_root).unwrap();
 }
 
 #[cfg(unix)]
@@ -301,7 +391,7 @@ fn malformed_manifest_fails_closed_at_schema_literals_types_and_bounds() {
                 .as_bytes()
         )
         .unwrap_err()
-        .contains("contract commit")
+        .contains("contract revision")
     );
 }
 

@@ -1,5 +1,5 @@
-# Manual generation of candidate native artifacts for independent two-architecture assembly.
-# A green job verifies its upload, not freshness of the committed assembled fixture.
+# Manual generation and assembly of candidate evidence. This workflow does not
+# ratify or update the committed fixture.
 name: OpenModelica Reliefs evidence
 
 on:
@@ -76,5 +76,46 @@ jobs:
         with:
           name: openmodelica-reliefs-${{ matrix.architecture }}
           path: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
+          if-no-files-found: error
+          retention-days: 14
+
+  assemble-candidate:
+    name: assemble native candidates
+    needs: native-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13.7'
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - name: Materialize pinned Rust dependencies on the host
+        run: cargo fetch --manifest-path tools/openmodelica-reliefs-reference/Cargo.toml --locked
+      - name: Download arm64 candidate
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: openmodelica-reliefs-arm64
+          path: ${{ runner.temp }}/reliefs-arm64
+      - name: Download amd64 candidate
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: openmodelica-reliefs-amd64
+          path: ${{ runner.temp }}/reliefs-amd64
+      - name: Assemble the uploaded native candidates
+        run: >-
+          sh tools/openmodelica-reliefs-reference/reliefs/assemble.sh
+          "${{ runner.temp }}/reliefs-arm64"
+          "${{ runner.temp }}/reliefs-amd64"
+          "${{ runner.temp }}/reliefs-assembled" &&
+          python3 -B tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py
+          candidate-final "${{ runner.temp }}/reliefs-assembled" .
+      - name: Upload assembled candidate evidence
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: openmodelica-reliefs-assembled-candidate
+          path: ${{ runner.temp }}/reliefs-assembled
           if-no-files-found: error
           retention-days: 14

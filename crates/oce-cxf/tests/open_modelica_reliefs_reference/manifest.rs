@@ -15,9 +15,8 @@ pub(super) fn parse_generation_contract(
     let contract: GenerationRevisionContract =
         serde_json::from_slice(input).map_err(|error| error.to_string())?;
     require(
-        contract.format == "oce-openmodelica-reliefs-generation-revision-v1"
-            && contract.relationship
-                == "candidate_native_artifact_producer_and_ancestor_of_retained_head",
+        contract.format == "oce-openmodelica-reliefs-generation-contract-v2"
+            && contract.revision_role == "execution_checkout_observation",
         "generation revision contract literals",
     )?;
     revision(&contract.revision)?;
@@ -25,7 +24,39 @@ pub(super) fn parse_generation_contract(
         contract.revision != "0".repeat(40),
         "generation revision contract commit",
     )?;
+    for value in generator_input_digests(&contract.generator_inputs) {
+        digest(value)?;
+    }
     Ok(contract)
+}
+
+fn generator_input_digests(input: &super::schema::GeneratorInputs) -> [&str; 24] {
+    [
+        &input.reliefs_pilot_sha256,
+        &input.parameter_pilot_sha256,
+        &input.clamp_pilot_sha256,
+        &input.runner_sha256,
+        &input.regenerate_sha256,
+        &input.canonicalizer_sha256,
+        &input.tool_main_sha256,
+        &input.tool_cargo_toml_sha256,
+        &input.tool_cargo_lock_sha256,
+        &input.architecture_generator_sha256,
+        &input.architecture_verifier_sha256,
+        &input.projection_verifier_sha256,
+        &input.safe_file_helper_sha256,
+        &input.evidence_workflow_sha256,
+        &input.oci_materializer_sha256,
+        &input.deadline_sha256,
+        &input.deadline_test_sha256,
+        &input.container_cleanup_sha256,
+        &input.container_cleanup_test_sha256,
+        &input.output_publish_sha256,
+        &input.output_publish_test_sha256,
+        &input.oci_index_source_sha256,
+        &input.arm64_manifest_source_sha256,
+        &input.amd64_manifest_source_sha256,
+    ]
 }
 
 pub(super) fn parse(input: &[u8], generation_revision: &str) -> Result<Manifest, String> {
@@ -396,7 +427,38 @@ fn validate_architecture(
             && value.projection_mutation.expected_source_rows == [0, 3, 6, 9, 12, 15, 18],
         "projection mutation identity",
     )?;
+    validate_native_sources(value)?;
     validate_toolchain(value, name)
+}
+
+fn validate_native_sources(value: &Architecture) -> Result<(), String> {
+    let materialization = &value.source_materialization;
+    require(
+        materialization.source_materialization == "git_archive_with_pinned_modelica_export_subst"
+            && materialization.buildings_materialization
+                == "git_archive_without_local_attribute_override"
+            && materialization.modelica_transform_path == "Modelica/package.mo"
+            && materialization.modelica_transform_rule == "Modelica/package.mo -export-subst"
+            && materialization.modelica_package_committed_sha256
+                == "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+            && materialization.modelica_package_materialized_sha256
+                == "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
+        "native source materialization",
+    )?;
+    require(
+        value.source_files.len() == SOURCE_FILES.len()
+            && value
+                .source_files
+                .iter()
+                .zip(SOURCE_FILES)
+                .all(|(actual, expected)| {
+                    actual.source == expected.0
+                        && actual.path == expected.1
+                        && actual.committed_sha256 == expected.2
+                        && actual.materialized_sha256 == expected.2
+                }),
+        "native source cone",
+    )
 }
 
 fn architecture_digests(value: &Architecture) -> Vec<&str> {

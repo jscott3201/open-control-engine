@@ -211,7 +211,7 @@ fn rehashed_failure_log_and_malformed_container_identities_are_rejected() {
                     "LOG_ASSERT        | error   | The simulation failed.",
                 )
             }) as Box<dyn Fn(String) -> String>,
-            "OpenModelica success records",
+            "SimulationResult values",
         ),
         (
             "missing-separator",
@@ -269,11 +269,151 @@ fn fully_rehashed_zero_and_unrelated_generation_revisions_are_rejected() {
         ]);
         assert!(!output.status.success(), "{revision}");
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("ratified generation revision"),
+            String::from_utf8_lossy(&output.stderr).contains("revision")
+                || String::from_utf8_lossy(&output.stderr).contains("generation contract"),
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+#[test]
+fn rehashed_unknown_terminal_and_simulation_records_fail_closed() {
+    let mutations = [
+        Box::new(|body: String| {
+            body.replace(
+                "runner_complete=1",
+                "Error: late failure\nrunner_complete=1",
+            )
+        }) as Box<dyn Fn(String) -> String>,
+        Box::new(|body: String| format!("{body}Error: after completion\n")),
+        Box::new(|body: String| body.replace("record SimulationResult", "record OtherResult")),
+        Box::new(|body: String| {
+            body.replace(
+                "The simulation finished successfully.",
+                "The simulation returned success with altered messages.",
+            )
+        }),
+    ];
+    for (index, mutation) in mutations.into_iter().enumerate() {
+        let temporary = ClaimedTempDir::new(&format!("oce-reliefs-closed-log-{index}"));
+        let copied = temporary.path().join("arm64");
+        copy_tree(&super::fixture("arm64"), &copied);
+        let body = std::fs::read_to_string(copied.join("run-a.log")).unwrap();
+        rebind_run_log(&copied, "run-a.log", mutation(body));
+        let output = run(&[
+            Path::new("architecture-candidate"),
+            &copied,
+            &super::repository_root(),
+            Path::new("arm64"),
+        ]);
+        assert!(!output.status.success(), "mutation {index}");
+    }
+}
+
+#[test]
+fn fully_rehashed_wrong_final_clamp_inputs_are_rejected() {
+    let temporary = ClaimedTempDir::new("oce-reliefs-final-clamp-input");
+    let copied = temporary.path().join("amd64");
+    copy_tree(&super::fixture("amd64"), &copied);
+
+    let raw_path = copied.join("final-clamp.raw.csv");
+    let raw = std::fs::read_to_string(&raw_path).unwrap();
+    let raw = raw
+        .lines()
+        .enumerate()
+        .map(|(index, line)| {
+            if index == 0 {
+                line.to_owned()
+            } else {
+                let mut cells = line.split(',').collect::<Vec<_>>();
+                cells[5] = [
+                    "-0.75", "-0.375", "-0.0625", "0.0625", "0.1875", "0.375", "0.75",
+                ][(index - 1) / 3];
+                cells.join(",")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
+    std::fs::write(&raw_path, raw).unwrap();
+
+    let canonical_path = copied.join("final-clamp.canonical.csv");
+    let canonical = std::fs::read_to_string(&canonical_path).unwrap();
+    let canonical = canonical
+        .lines()
+        .enumerate()
+        .map(|(index, line)| {
+            if index < 3 {
+                line.to_owned()
+            } else {
+                let mut cells = line.split(' ').collect::<Vec<_>>();
+                cells[1] = [
+                    "-0.75", "-0.375", "-0.0625", "0.0625", "0.1875", "0.375", "0.75",
+                ][index - 3];
+                cells.join(" ")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+        + "\n";
+    std::fs::write(&canonical_path, canonical).unwrap();
+
+    let raw_digest = format!("{:x}", Sha256::digest(std::fs::read(&raw_path).unwrap()));
+    let log_path = copied.join("final-clamp.log");
+    let log = std::fs::read_to_string(&log_path).unwrap();
+    let old_raw = log
+        .lines()
+        .find_map(|line| line.strip_prefix("raw_sha256="))
+        .unwrap();
+    rebind_run_log(
+        &copied,
+        "final-clamp.log",
+        log.replacen(old_raw, &raw_digest, 1),
+    );
+
+    let record_path = copied.join("architecture.json");
+    let mut record: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&record_path).unwrap()).unwrap();
+    record["final_clamp_raw_sha256"] = raw_digest.into();
+    record["final_clamp_canonical_sha256"] = format!(
+        "{:x}",
+        Sha256::digest(std::fs::read(&canonical_path).unwrap())
+    )
+    .into();
+    write_json(&record_path, &record);
+
+    let output = run(&[
+        Path::new("architecture-candidate"),
+        &copied,
+        &super::repository_root(),
+        Path::new("amd64"),
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("final clamp raw input bits"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn retained_native_outputs_enter_candidate_assembly_without_docker() {
+    let script = super::repository_root()
+        .join("tools/openmodelica-reliefs-reference/reliefs/candidate_assembly_test.sh");
+    let output = std::process::Command::new("sh")
+        .arg(script)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout)
+            .contains("Reliefs Docker-free candidate assembly regression passed")
+    );
 }
 
 #[test]

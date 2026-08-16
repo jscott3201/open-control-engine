@@ -1,13 +1,14 @@
 //! Closed JSON schema for the retained Reliefs evidence graph.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub(super) struct GenerationRevisionContract {
     pub(super) format: String,
     pub(super) revision: String,
-    pub(super) relationship: String,
+    pub(super) revision_role: String,
+    pub(super) generator_inputs: GeneratorInputs,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
@@ -241,7 +242,7 @@ pub(super) struct SourceMaterialization {
     pub(super) modelica_package_materialized_sha256: String,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct NativeSourceFile {
     pub(super) source: String,

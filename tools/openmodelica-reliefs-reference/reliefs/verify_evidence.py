@@ -19,6 +19,8 @@ import safe_files
 MAX_FILE = 1024 * 1024
 MAX_MANIFEST = 256 * 1024
 GENERATION_CONTRACT = "crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json"
+GENERATION_CONTRACT_FORMAT = "oce-openmodelica-reliefs-generation-contract-v2"
+GENERATION_REVISION_ROLE = "execution_checkout_observation"
 INDEX = "sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864"
 ARM_RAW = "0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046"
 ARM_CLAMP_RAW = "012a8a7040aa869ff99292216f7ad62fe92dc63dc02de4e43a45f727bf2c4a90"
@@ -30,6 +32,7 @@ GROUPS = projection_evidence.GROUP_SIZES
 SOURCE_ROWS = projection_evidence.KEEP_LAST_SOURCES
 U_T_SUP_BITS = projection_evidence.U_T_SUP_BITS
 CONSTANT_INPUT_BITS = projection_evidence.CONSTANT_INPUT_BITS
+CLAMP_RAW_U_T_SUP_BITS = [value for item in U_T_SUP_BITS for value in [item] * 3]
 Y_OUT = "3fd0000000000000 3fd0000000000000 3fe2000000000000 3fec000000000000 3fec000000000000 3fec000000000000 3fec000000000000".split()
 Y_RET = "3fe8000000000000 3fe8000000000000 3fe8000000000000 3fe8000000000000 3fdc000000000000 3fc0000000000000 3fc0000000000000".split()
 ARCH = {
@@ -251,14 +254,64 @@ def expected_rows():
     return [[TIME_BITS[index], U_T_SUP_BITS[index], *CONSTANT_INPUT_BITS, Y_OUT[index], Y_RET[index]] for index in range(7)]
 
 
-def one_log_value(body, key, expected):
-    values = [line.removeprefix(key + "=") for line in body.splitlines() if line.startswith(key + "=")]
-    if values != [expected]:
-        fail(f"log must contain exactly one {key}={expected}; found {values}")
+def simulation_result(lines, path):
+    start_marker, end_marker = "record SimulationResult", "end SimulationResult;"
+    if lines.count(start_marker) != 1 or lines.count(end_marker) != 1:
+        fail(f"{path.name} SimulationResult closure")
+    start, end = lines.index(start_marker), lines.index(end_marker)
+    if end - start != 13:
+        fail(f"{path.name} SimulationResult shape")
+    options = "    simulationOptions = \"startTime = 0.0, stopTime = 420.0, numberOfIntervals = 7, tolerance = 1e-9, method = 'dassl', fileNamePrefix = 'ReliefsPilot', options = '', outputFormat = 'csv', variableFilter = '^(uTSup|uOutDam_min|uOutDam_max|uRetDam_min|uRetDam_max|yOutDam|yRetDam)$', cflags = '', simflags = ''\","
+    expected = [
+        start_marker,
+        '    resultFile = "/out/ReliefsPilot_res.csv",',
+        options,
+        '    messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.',
+        "LOG_SUCCESS       | info    | The simulation finished successfully.",
+        '\",',
+    ]
+    if lines[start:start + len(expected)] != expected:
+        fail(f"{path.name} SimulationResult values")
+    timings = ["timeFrontend", "timeBackend", "timeSimCode", "timeTemplates", "timeCompile", "timeSimulation", "timeTotal"]
+    for offset, key in enumerate(timings, start + len(expected)):
+        prefix = f"    {key} = "
+        suffix = "" if key == "timeTotal" else ","
+        line = lines[offset]
+        if not line.startswith(prefix) or (suffix and not line.endswith(suffix)):
+            fail(f"{path.name} SimulationResult timing {key}")
+        value = line[len(prefix):len(line) - len(suffix) if suffix else None]
+        allowed = set("0123456789.eE+-")
+        try:
+            parsed = float(value)
+        except ValueError:
+            fail(f"{path.name} SimulationResult timing {key}")
+        if not value or len(value) > 64 or not value.isascii() or value[0] not in "0123456789" or any(character not in allowed for character in value) or not math.isfinite(parsed) or not 0 <= parsed <= 120 or (key == "timeTotal" and parsed <= 0):
+            fail(f"{path.name} SimulationResult timing {key}")
+    return start, end
+
+
+def decimal_field(value, maximum, nonzero=False):
+    return isinstance(value, str) and value and len(value) <= 20 and value.isascii() and value.isdigit() and int(value) <= maximum and (not nonzero or int(value) > 0)
 
 
 def log_contract(path, architecture, token, model, raw_digest, revision, generator_inputs, source_cone):
-    body = text(path); platform, host, server, container, manifest, config = ARCH[architecture]
+    body = text(path)
+    if "\r" in body:
+        fail(f"{path.name} line endings")
+    lines = [line for line in body.splitlines() if line]
+    if not lines or lines[-1] != "runner_complete=1":
+        fail(f"{path.name} terminal completion marker")
+    result_start, result_end = simulation_result(lines, path)
+    metadata_lines = lines[:result_start] + lines[result_end + 1:]
+    observed = {}
+    for line in metadata_lines:
+        if "=" not in line:
+            fail(f"{path.name} unknown log record")
+        key, value = line.split("=", 1)
+        if not key or key in observed:
+            fail(f"{path.name} duplicate or invalid log field {key}")
+        observed[key] = value
+    platform, host, server, container, manifest, config = ARCH[architecture]
     required = {
         "host_architecture": host, "docker_server_architecture": server, "image_index_digest": INDEX,
         "image_platform_manifest_digest": manifest, "image_config_digest": config,
@@ -277,13 +330,13 @@ def log_contract(path, architecture, token, model, raw_digest, revision, generat
     }
     required.update(generator_inputs); required.update(expected_toolchain(architecture)); required.update(expected_materialization())
     required["docker_command"] = f"docker run --pull=never --platform {platform} --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro"
-    for key, expected in required.items():
-        one_log_value(body, key, expected)
-    peak = [line.removeprefix("observed_cgroup_peak_bytes=") for line in body.splitlines() if line.startswith("observed_cgroup_peak_bytes=")]
-    if len(peak) != 1 or not peak[0].isdigit() or not 0 < int(peak[0]) <= 2147483648:
+    dynamic = {key: observed.pop(key, None) for key in ["observed_cgroup_peak_bytes", "container_identity", "output_directory_kib"]}
+    if observed != required:
+        fail(f"{path.name} metadata fields or values are not closed")
+    if not decimal_field(dynamic["observed_cgroup_peak_bytes"], 2147483648, True):
         fail(f"{path.name} cgroup memory peak")
-    identities = [line.removeprefix("container_identity=") for line in body.splitlines() if line.startswith("container_identity=")]
-    identity_parts = identities[0].split(":") if len(identities) == 1 else []
+    identity = dynamic["container_identity"]
+    identity_parts = identity.split(":") if isinstance(identity, str) else []
     if (
         len(identity_parts) != 2
         or any(not part or len(part) > 10 or not part.isascii() or not part.isdigit() for part in identity_parts)
@@ -291,21 +344,8 @@ def log_contract(path, architecture, token, model, raw_digest, revision, generat
         or int(identity_parts[0]) == 0
     ):
         fail(f"{path.name} container identity")
-    size = [line.removeprefix("output_directory_kib=") for line in body.splitlines() if line.startswith("output_directory_kib=")]
-    if len(size) != 1 or not size[0].isdigit() or int(size[0]) * 1024 > 268435456:
+    if not decimal_field(dynamic["output_directory_kib"], 262144):
         fail(f"{path.name} output size")
-    simulation = "simulationOptions = \"startTime = 0.0, stopTime = 420.0, numberOfIntervals = 7, tolerance = 1e-9, method = 'dassl', fileNamePrefix = 'ReliefsPilot', options = '', outputFormat = 'csv', variableFilter = '^(uTSup|uOutDam_min|uOutDam_max|uRetDam_min|uRetDam_max|yOutDam|yRetDam)$', cflags = '', simflags = ''\","
-    if [line.strip() for line in body.splitlines()].count(simulation) != 1:
-        fail(f"{path.name} simulation options")
-    initialization_success = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method."
-    simulation_success = "LOG_SUCCESS       | info    | The simulation finished successfully."
-    if body.count(initialization_success) != 1 or body.count(simulation_success) != 1:
-        fail(f"{path.name} OpenModelica success records")
-    failure_tokens = ("| error", "| fatal", "simulation failed", "initialization failed", "failure")
-    if any(any(token in line.lower() for token in failure_tokens) for line in body.splitlines()):
-        fail(f"{path.name} contains an OpenModelica failure record")
-    if any("warning" in line.lower() and line != "omc_warning_count=0" for line in body.splitlines()):
-        fail(f"{path.name} contains an OpenModelica warning")
 
 
 def validate_wrappers(root):
@@ -336,71 +376,56 @@ def validate_oci(directory, architecture):
         fail("OCI graph")
 
 
-def artifact_bytes(output, root, relative):
+def artifact_bytes(output, root, relative, candidate=False):
     fixture = "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/"
-    base, suffix = (output, relative.removeprefix(fixture)) if relative.startswith(fixture) else (root, relative)
+    if candidate and relative == GENERATION_CONTRACT:
+        base, suffix = output, "generation-contract.json"
+    else:
+        base, suffix = (output, relative.removeprefix(fixture)) if relative.startswith(fixture) else (root, relative)
     try:
         return safe_files.read_relative(base, suffix, MAX_FILE)
     except ValueError as error:
         fail(f"unsafe artifact {relative}: {error}")
 
 
-def git_bytes(root, *arguments):
-    result = subprocess.run(
-        ["git", "-C", str(root), *arguments],
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        fail(
-            f"git {' '.join(arguments)} failed: {result.stderr.decode('utf-8', errors='replace').strip()}"
-        )
-    if len(result.stdout) > MAX_FILE:
-        fail(f"git {' '.join(arguments)} output exceeds the evidence bound")
-    return result.stdout
+def valid_revision(revision):
+    return isinstance(revision, str) and len(revision) == 40 and revision != "0" * 40 and all(character in "0123456789abcdef" for character in revision)
+
+
+def generation_contract_path(path):
+    contract = json_file(path, 8192)
+    closed(contract, ["format", "revision", "revision_role", "generator_inputs"], "generation contract")
+    if (
+        contract["format"] != GENERATION_CONTRACT_FORMAT
+        or contract["revision_role"] != GENERATION_REVISION_ROLE
+    ):
+        fail("generation contract literals")
+    if not valid_revision(contract["revision"]):
+        fail("generation contract revision")
+    closed(contract["generator_inputs"], GENERATOR_INPUT_PATHS, "generation contract inputs")
+    if any(not isinstance(value, str) or len(value) != 64 or any(character not in "0123456789abcdef" for character in value) for value in contract["generator_inputs"].values()):
+        fail("generation contract input digest")
+    return contract
 
 
 def generation_contract(root):
-    contract = json_file(root / GENERATION_CONTRACT, 4096)
-    closed(contract, ["format", "revision", "relationship"], "generation revision contract")
-    if (
-        contract["format"] != "oce-openmodelica-reliefs-generation-revision-v1"
-        or contract["relationship"]
-        != "candidate_native_artifact_producer_and_ancestor_of_retained_head"
-    ):
-        fail("generation revision contract literals")
-    revision = contract["revision"]
-    if (
-        not isinstance(revision, str)
-        or len(revision) != 40
-        or any(character not in "0123456789abcdef" for character in revision)
-        or revision == "0" * 40
-    ):
-        fail("generation revision contract commit")
-    git_bytes(root, "cat-file", "-e", f"{revision}^{{commit}}")
-    head = git_bytes(root, "rev-parse", "HEAD").decode("ascii").strip()
-    ancestor = subprocess.run(
-        ["git", "-C", str(root), "merge-base", "--is-ancestor", revision, head],
-        capture_output=True,
-        check=False,
-    )
-    if ancestor.returncode != 0:
-        fail("generation revision is not an ancestor of the retained checkout")
-    return revision
+    return generation_contract_path(root / GENERATION_CONTRACT)
 
 
-def validate_generation_revision(root, record, expected_revision, checkout):
+def validate_generation_revision(root, record, contract, checkout):
     if checkout:
-        actual = git_bytes(root, "rev-parse", "HEAD").decode("ascii").strip()
+        result = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            fail(f"git rev-parse HEAD failed: {result.stderr.strip()}")
+        actual = result.stdout.strip()
         if record["repository_revision"] != actual:
             fail("native record revision is not the generation checkout HEAD")
         return
-    if record["repository_revision"] != expected_revision:
-        fail("native record revision is not the ratified generation revision")
-    for key, path in GENERATOR_INPUT_PATHS.items():
-        committed = git_bytes(root, "show", f"{expected_revision}:{path}")
-        if hashlib.sha256(committed).hexdigest() != record["generator_inputs"][key]:
-            fail(f"generation revision does not bind generator input {path}")
+    if contract is not None and (
+        record["repository_revision"] != contract["revision"]
+        or record["generator_inputs"] != contract["generator_inputs"]
+    ):
+        fail("native record does not match the retained generation contract")
 
 
 def strict_boundary(directory, root):
@@ -415,7 +440,7 @@ def expected_runs(directory, record):
     return [{"id": "run-a", "output_directory_token": "fresh-run-a", "log_sha256": sha(directory / "run-a.log"), "raw_sha256": record["raw_run_a_sha256"]}, {"id": "run-b", "output_directory_token": "fresh-run-b", "log_sha256": sha(directory / "run-b.log"), "raw_sha256": record["raw_run_b_sha256"]}]
 
 
-def validate_architecture(directory, root, architecture, expected_revision=None, checkout=False):
+def validate_architecture(directory, root, architecture, contract=None, checkout=False, candidate=False):
     directory, root = safe_directory(directory, "architecture evidence"), safe_directory(root, "repository root")
     try: safe_files.read_closed_directory(directory, ARCH_FILES, MAX_FILE)
     except (OSError, ValueError) as error: fail(f"unsafe architecture evidence: {error}")
@@ -425,13 +450,13 @@ def validate_architecture(directory, root, architecture, expected_revision=None,
     if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-reliefs-native-architecture-v4", architecture, *ARCH[architecture], "native_generation_and_publication"]:
         fail("architecture literals")
     revision = record["repository_revision"]
-    if not isinstance(revision, str) or len(revision) != 40 or any(char not in "0123456789abcdef" for char in revision): fail("architecture repository revision")
+    if not valid_revision(revision): fail("architecture repository revision")
     closed(record["generator_inputs"], GENERATOR_INPUT_PATHS, "architecture generator inputs")
     expected_inputs = {key: hashlib.sha256(artifact_bytes(directory, root, path)).hexdigest() for key, path in GENERATOR_INPUT_PATHS.items()}
     if record["generator_inputs"] != expected_inputs: fail("native generator inputs do not match assembly repository bytes")
-    if expected_revision is None and not checkout:
-        expected_revision = generation_contract(root)
-    validate_generation_revision(root, record, expected_revision, checkout)
+    if contract is None and not checkout and not candidate:
+        contract = generation_contract(root)
+    validate_generation_revision(root, record, contract, checkout)
     if not type_exact_equal(record["artifact_toolchain"], expected_toolchain(architecture)): fail("native artifact toolchain identity")
     if not type_exact_equal(record["source_materialization"], expected_materialization()): fail("native source materialization identity")
     if not type_exact_equal(record["source_files"], source_files()): fail("native source cone identity")
@@ -456,6 +481,18 @@ def validate_architecture(directory, root, architecture, expected_revision=None,
     if [row[:6] for row in parameter] != [row[:6] for row in projected] or parameter[2][6] != "3fec000000000000" or projected[2][6] != "3fe2000000000000" or next((i for i, (a, b) in enumerate(zip(projected, parameter)) if a[6:] != b[6:]), None) != 2: fail("parameter control first mismatch")
     clamp_raw, clamp_groups = parse_raw(directory / "final-clamp.raw.csv", record["final_clamp_raw_sha256"]); clamp_values = project(clamp_groups); clamp = [[bits(value) for value in row[:8]] for row in clamp_values]
     if parse_canonical(directory / "final-clamp.canonical.csv", "openmodelica_g36_reliefs_final_clamp") != clamp: fail("final clamp canonical reproduction")
+    expected_clamp_inputs = [
+        [CLAMP_RAW_U_T_SUP_BITS[index], *CONSTANT_INPUT_BITS]
+        for index in range(21)
+    ]
+    if [[bits(value) for value in row[1:6]] for row in clamp_raw] != expected_clamp_inputs:
+        fail("final clamp raw input bits")
+    expected_selected_clamp = [
+        [TIME_BITS[index], U_T_SUP_BITS[index], *CONSTANT_INPUT_BITS, "3fd0000000000000", "3fe8000000000000"]
+        for index in range(7)
+    ]
+    if clamp != expected_selected_clamp or [row[8] for row in clamp_values] != SOURCE_ROWS:
+        fail("final clamp selected tuple or source-row provenance")
     if any(bits(row[6]) != "3fd0000000000000" or bits(row[7]) != "3fe8000000000000" for row in clamp_raw): fail("final clamp did not overwrite every raw output")
     for name, token, model, digest in [("run-a.log", "fresh-run-a", "Reliefs", record["raw_run_a_sha256"]), ("run-b.log", "fresh-run-b", "Reliefs", record["raw_run_b_sha256"]), ("parameter-control.log", "fresh-parameter-control", "ParameterControl", record["parameter_control_raw_sha256"]), ("final-clamp.log", "fresh-final-clamp", "FinalClamp", record["final_clamp_raw_sha256"])]:
         log_contract(directory / name, architecture, token, model, digest, revision, expected_inputs, record["source_files"])
@@ -463,12 +500,22 @@ def validate_architecture(directory, root, architecture, expected_revision=None,
     return record, projected
 
 
+def validate_candidate_pair(arm_directory, amd_directory, root):
+    arm, arm_rows = validate_architecture(arm_directory, root, "arm64", candidate=True)
+    amd, amd_rows = validate_architecture(amd_directory, root, "amd64", candidate=True)
+    if arm["repository_revision"] != amd["repository_revision"] or arm["generator_inputs"] != amd["generator_inputs"] or arm["source_files"] != amd["source_files"]:
+        fail("native candidates used different generator provenance")
+    if arm_rows != amd_rows:
+        fail("native candidate rows differ")
+    return arm, amd
+
+
 def expected_artifact_roles():
     fixture = "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/"; tool = "tools/openmodelica-reliefs-reference/"
     roles = [("image_index_json", fixture + "image-index.json"), ("cross_architecture_log", fixture + "cross-architecture.log")]
     files = [("architecture_record", "architecture.json"), ("canonical_csv", "reliefs.canonical.csv"), ("raw_run_a_csv", "reliefs-run-a.raw.csv"), ("raw_run_b_csv", "reliefs-run-b.raw.csv"), ("run_a_log", "run-a.log"), ("run_b_log", "run-b.log"), ("parameter_control_canonical_csv", "parameter-control.canonical.csv"), ("parameter_control_raw_csv", "parameter-control.raw.csv"), ("parameter_control_log", "parameter-control.log"), ("final_clamp_canonical_csv", "final-clamp.canonical.csv"), ("final_clamp_raw_csv", "final-clamp.raw.csv"), ("final_clamp_log", "final-clamp.log"), ("projection_mutation_log", "projection-mutation.log"), ("projection_keep_first_canonical_csv", "projection-keep-first.canonical.csv"), ("projection_keep_first_metadata", "projection-keep-first.metadata"), ("architecture_image_index_json", "image-index.json"), ("platform_image_manifest_json", "image-manifest.json")]
     for architecture in ["arm64", "amd64"]: roles.extend((f"{architecture}_{role}", f"{fixture}{architecture}/{file}") for role, file in files)
-    tracked = [("canonicalizer_source", "crates/oce-cxf/tests/open_modelica_reliefs_reference/canonicalizer.rs"), ("generation_revision_contract", GENERATION_CONTRACT), ("tool_cargo_lock", tool + "Cargo.lock"), ("tool_cargo_toml", tool + "Cargo.toml"), ("tool_main_source", tool + "src/main.rs"), ("wrapper_model", tool + "reliefs/ReliefsPilot.mo"), ("parameter_control_wrapper_model", tool + "reliefs/ReliefsParameterPilot.mo"), ("final_clamp_wrapper_model", tool + "reliefs/ReliefsClampPilot.mo"), ("runner_script", tool + "reliefs/runner.sh"), ("regeneration_script", tool + "reliefs/regenerate.sh"), ("assembly_script", tool + "reliefs/assemble.sh"), ("manifest_generator_script", tool + "reliefs/generate_manifest.py"), ("architecture_generator_script", tool + "reliefs/generate_architecture.py"), ("evidence_validator_script", tool + "reliefs/verify_evidence.py"), ("projection_validator_script", tool + "reliefs/projection_evidence.py"), ("safe_file_helper_script", tool + "reliefs/safe_files.py"), ("oci_materializer_script", tool + "reliefs/materialize_oci.py"), ("deadline_script", tool + "reliefs/deadline.sh"), ("deadline_test_script", tool + "reliefs/deadline_test.sh"), ("output_publish_script", tool + "reliefs/output_publish.py"), ("output_publish_test_script", tool + "reliefs/output_publish_test.sh"), ("container_cleanup_script", tool + "reliefs/container_cleanup.sh"), ("container_cleanup_test_script", tool + "reliefs/container_cleanup_test.sh"), ("oci_index_source", tool + "reliefs/image-index.json"), ("arm64_manifest_source", tool + "reliefs/image-manifest-arm64.json"), ("amd64_manifest_source", tool + "reliefs/image-manifest-amd64.json"), ("evidence_workflow", ".github/workflows/openmodelica-reliefs-evidence.yml")]
+    tracked = [("canonicalizer_source", "crates/oce-cxf/tests/open_modelica_reliefs_reference/canonicalizer.rs"), ("generation_revision_contract", GENERATION_CONTRACT), ("tool_cargo_lock", tool + "Cargo.lock"), ("tool_cargo_toml", tool + "Cargo.toml"), ("tool_main_source", tool + "src/main.rs"), ("wrapper_model", tool + "reliefs/ReliefsPilot.mo"), ("parameter_control_wrapper_model", tool + "reliefs/ReliefsParameterPilot.mo"), ("final_clamp_wrapper_model", tool + "reliefs/ReliefsClampPilot.mo"), ("runner_script", tool + "reliefs/runner.sh"), ("regeneration_script", tool + "reliefs/regenerate.sh"), ("assembly_script", tool + "reliefs/assemble.sh"), ("candidate_assembly_test_script", tool + "reliefs/candidate_assembly_test.sh"), ("manifest_generator_script", tool + "reliefs/generate_manifest.py"), ("architecture_generator_script", tool + "reliefs/generate_architecture.py"), ("evidence_validator_script", tool + "reliefs/verify_evidence.py"), ("projection_validator_script", tool + "reliefs/projection_evidence.py"), ("safe_file_helper_script", tool + "reliefs/safe_files.py"), ("oci_materializer_script", tool + "reliefs/materialize_oci.py"), ("deadline_script", tool + "reliefs/deadline.sh"), ("deadline_test_script", tool + "reliefs/deadline_test.sh"), ("output_publish_script", tool + "reliefs/output_publish.py"), ("output_publish_test_script", tool + "reliefs/output_publish_test.sh"), ("container_cleanup_script", tool + "reliefs/container_cleanup.sh"), ("container_cleanup_test_script", tool + "reliefs/container_cleanup_test.sh"), ("oci_index_source", tool + "reliefs/image-index.json"), ("arm64_manifest_source", tool + "reliefs/image-manifest-arm64.json"), ("amd64_manifest_source", tool + "reliefs/image-manifest-amd64.json"), ("evidence_workflow", ".github/workflows/openmodelica-reliefs-evidence.yml")]
     return roles + tracked
 
 
@@ -496,9 +543,12 @@ def architecture_manifest(name, record):
     return {key: value for key, value in record.items() if key not in {"format", "architecture"}} | {"name": name}
 
 
-def validate_final(output, root):
+def validate_final(output, root, candidate=False):
     output, root = safe_directory(output, "assembled evidence"), safe_directory(root, "repository root")
-    if {entry.name for entry in os.scandir(output)} != {"manifest.json", "image-index.json", "cross-architecture.log", "arm64", "amd64"}: fail("assembled evidence entries are not closed")
+    entries = {"manifest.json", "image-index.json", "cross-architecture.log", "arm64", "amd64"}
+    if candidate:
+        entries.add("generation-contract.json")
+    if {entry.name for entry in os.scandir(output)} != entries: fail("assembled evidence entries are not closed")
     manifest = json_file(output / "manifest.json", MAX_MANIFEST)
     fields = ["format", "scope", "image", "sources", "simulation", "projection", "expected_output_bits", "architectures", "controls", "cross_architecture", "artifacts", "regeneration"]
     closed(manifest, fields, "manifest")
@@ -508,9 +558,9 @@ def validate_final(output, root):
     for item, expected in zip(artifacts, roles):
         closed(item, ["role", "path", "sha256"], "artifact")
         if (item["role"], item["path"]) != expected: fail("unknown or misplaced artifact role/path")
-        if hashlib.sha256(artifact_bytes(output, root, item["path"])).hexdigest() != item["sha256"]: fail(f"artifact digest mismatch: {item['path']}")
-    expected_revision = generation_contract(root)
-    arm, arm_rows = validate_architecture(output / "arm64", root, "arm64", expected_revision); amd, amd_rows = validate_architecture(output / "amd64", root, "amd64", expected_revision)
+        if hashlib.sha256(artifact_bytes(output, root, item["path"], candidate)).hexdigest() != item["sha256"]: fail(f"artifact digest mismatch: {item['path']}")
+    contract = generation_contract_path(output / "generation-contract.json") if candidate else generation_contract(root)
+    arm, arm_rows = validate_architecture(output / "arm64", root, "arm64", contract); amd, amd_rows = validate_architecture(output / "amd64", root, "amd64", contract)
     if arm["repository_revision"] != amd["repository_revision"] or arm["generator_inputs"] != amd["generator_inputs"] or arm["source_files"] != amd["source_files"]: fail("native architectures used different generator provenance")
     if arm_rows != amd_rows or read_bounded(output / "arm64/reliefs.canonical.csv") != read_bounded(output / "amd64/reliefs.canonical.csv"): fail("cross-architecture canonical bytes differ")
     canonical_sha = sha(output / "arm64/reliefs.canonical.csv"); scope, image, simulation, projection, outputs, controls, regeneration, cross = expected_manifest_records(canonical_sha)
@@ -538,10 +588,16 @@ def main(arguments):
         validate_architecture(arguments[1], arguments[2], arguments[3]); print(f"Reliefs {arguments[3]} architecture evidence verification passed")
     elif len(arguments) == 4 and arguments[0] == "architecture-checkout":
         validate_architecture(arguments[1], arguments[2], arguments[3], checkout=True); print(f"Reliefs {arguments[3]} generation-checkout evidence verification passed")
+    elif len(arguments) == 4 and arguments[0] == "architecture-candidate":
+        validate_architecture(arguments[1], arguments[2], arguments[3], candidate=True); print(f"Reliefs {arguments[3]} candidate evidence verification passed")
+    elif len(arguments) == 4 and arguments[0] == "candidate-pair":
+        validate_candidate_pair(arguments[1], arguments[2], arguments[3]); print("Reliefs native candidate pair verification passed")
     elif len(arguments) == 3 and arguments[0] == "final":
         validate_final(arguments[1], arguments[2]); print("Reliefs assembled evidence verification passed")
+    elif len(arguments) == 3 and arguments[0] == "candidate-final":
+        validate_final(arguments[1], arguments[2], candidate=True); print("Reliefs assembled candidate verification passed")
     else:
-        print("usage: verify_evidence.py precopy EVIDENCE | copy-architecture SOURCE DESTINATION | architecture EVIDENCE REPOSITORY_ROOT ARCH | architecture-checkout EVIDENCE REPOSITORY_ROOT ARCH | final EVIDENCE REPOSITORY_ROOT", file=sys.stderr); raise SystemExit(2)
+        print("usage: verify_evidence.py precopy EVIDENCE | copy-architecture SOURCE DESTINATION | architecture EVIDENCE REPOSITORY_ROOT ARCH | architecture-checkout EVIDENCE REPOSITORY_ROOT ARCH | architecture-candidate EVIDENCE REPOSITORY_ROOT ARCH | candidate-pair ARM64 AMD64 REPOSITORY_ROOT | final EVIDENCE REPOSITORY_ROOT | candidate-final EVIDENCE REPOSITORY_ROOT", file=sys.stderr); raise SystemExit(2)
 
 
 if __name__ == "__main__":

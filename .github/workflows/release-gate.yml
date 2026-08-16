@@ -87,7 +87,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@1.97.1
       # Gate-only nightly for the `cargo public-api` surface snapshots (crates/oce-api/tests/
       # public_api.rs and crates/oce-store/tests/public_api.rs, exit #7). Installed but NOT made the
@@ -341,7 +340,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.CHECKOUT_REF }}
-          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@1.97.1
         with:
           components: clippy, rustfmt
