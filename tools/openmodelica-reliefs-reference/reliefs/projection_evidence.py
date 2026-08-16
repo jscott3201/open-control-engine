@@ -54,7 +54,7 @@ def input_bits(row):
 
 
 def row_bits(row):
-    return [bits(value) for value in row]
+    return [bits(value) for value in row[:8]]
 
 
 def metadata_rows(rows):
