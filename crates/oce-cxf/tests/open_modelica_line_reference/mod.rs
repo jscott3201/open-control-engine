@@ -178,10 +178,12 @@ fn external_flag_control_changes_only_below_mode_at_above_range_rows() {
                 ]
             );
         }
-        assert_eq!(
-            control.rows[8].y_below.to_bits(),
-            u64::from_str_radix(expectations::Y_BOTH[8], 16).unwrap()
-        );
+        for index in [8, 9] {
+            assert_eq!(
+                control.rows[index].y_below.to_bits(),
+                u64::from_str_radix(expectations::Y_BOTH[index], 16).unwrap()
+            );
+        }
     }
 }
 
