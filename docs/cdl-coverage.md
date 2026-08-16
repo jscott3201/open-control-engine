@@ -157,14 +157,14 @@ diff against vendored `modelica-json` translations, and the oracle layer generat
 code-dependency firewall — are described in [`../README.md`](../README.md) and
 [`../TESTING.md`](../TESTING.md).
 
-The load-bearing limitation, stated plainly: **no sequence here has been executed against an
-external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
-`CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` event schedule, and one finite
-`CDL.Reals.Line` matrix with exact binary64 operations. The Line result does not cover arbitrary
-Real inputs, general tolerances, solver behavior, or broader sequence behavior. `CDL.Logical.Pre`
-is explicitly excluded from an expected-green OpenModelica differential under HostTick v1. The
-global Tier-3 report remains skipped, and no number on this page stands in for that deferred
-coverage.
+The load-bearing limitation, stated plainly: **no complete G36 sequence here has been executed against
+an external Modelica / Buildings toolchain.** Scoped OpenModelica evidence covers one exhaustive
+`CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` event schedule, one finite
+`CDL.Reals.Line` matrix with exact binary64 operations, and one seven-state exact-bit case for the
+composed G36 `Reliefs` leaf. The Line and Reliefs results do not cover arbitrary Real inputs,
+general tolerances, solver behavior, or broader G36 behavior. `CDL.Logical.Pre` is explicitly
+excluded from an expected-green OpenModelica differential under HostTick v1. The global Tier-3
+report remains skipped, and no number on this page stands in for that deferred coverage.
 
 For what happens when you export a loaded sequence back out to CXF, see
 [`cxf-round-trip.md`](cxf-round-trip.md).

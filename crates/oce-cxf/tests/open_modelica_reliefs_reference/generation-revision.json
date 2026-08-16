@@ -1,0 +1,31 @@
+{
+  "format": "oce-openmodelica-reliefs-generation-contract-v2",
+  "revision": "3d16cf2052ae92ebd90c3cad20ac987e8411148c",
+  "revision_role": "execution_checkout_observation",
+  "generator_inputs": {
+    "reliefs_pilot_sha256": "aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f",
+    "parameter_pilot_sha256": "1d33d47d00fa06697fc9a4af13c2d9193c740bee565de6636b556a115aad2c04",
+    "clamp_pilot_sha256": "15ce2c1a3834cdd8e380bc7355812edf9de904f069ff4b66813060d97538a6c6",
+    "runner_sha256": "25df1d6119ff177768d3eead13396a3ba4d6eaf0eeaf8f6bdf4f86d4db53988a",
+    "regenerate_sha256": "560323615e9959653348d961fbfcb32d24056fb088a2356a40fef53c4ba7c46a",
+    "canonicalizer_sha256": "b2f6a2aac55b65f384ed9da8ddb878e257592bbb732183f9a9b460028b02f479",
+    "tool_main_sha256": "ebd795c2b9daab0b9104d03f3939c007347032376bf9496e2e55f3264cf8cb3b",
+    "tool_cargo_toml_sha256": "cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05",
+    "tool_cargo_lock_sha256": "238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5",
+    "architecture_generator_sha256": "e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724",
+    "architecture_verifier_sha256": "87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465",
+    "projection_verifier_sha256": "a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0",
+    "safe_file_helper_sha256": "8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d",
+    "evidence_workflow_sha256": "9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2",
+    "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
+    "deadline_sha256": "84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a",
+    "deadline_test_sha256": "c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b",
+    "container_cleanup_sha256": "d1986458072ee6b1267ecc89b3e3e50982f8a77865bdab6b28fbe088a45fc8fd",
+    "container_cleanup_test_sha256": "31f293214b6c0820a80256447a18e7cdece6cc641e97d6fdedf6198bba40bd41",
+    "output_publish_sha256": "92afe1729987468594c949206bda1e93365d27cc6da8b737a027bfde6b981044",
+    "output_publish_test_sha256": "d573b59636b4574de8b5d031f0176acb9e260e1a2787617b0f1633f3325a0984",
+    "oci_index_source_sha256": "37ddcdcc0ac248ecc8abc81e31fda079ea85992112d5c28496606159b4904678",
+    "arm64_manifest_source_sha256": "cc7135cee4138377c0403dc9c8c400d85bb576ac783f3ac667f65dcdfe1f7d4e",
+    "amd64_manifest_source_sha256": "e42cbf56db455eae63a38b960fb25914dfb1b9a221575118c527a145cc134848"
+  }
+}

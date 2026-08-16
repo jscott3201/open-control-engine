@@ -8,13 +8,13 @@ is wrong? Is that thing independent of the system it is judging? And will it tel
 it is not running? This page answers them in that order, and every count on it can be reproduced
 from a clone with `find` and `grep`.
 
-The short version first, because it is the part that matters most: three elementary cases have been
+The short version first, because it is the part that matters most: four named cases have been
 executed through OpenModelica 1.25.1 against pinned Buildings and MSL sources. Nand covers all four
 two-input Boolean states; Toggle covers one exact stateful event schedule with initially true input,
 repeated rises, and clear priority; Line covers four limit modes across five finite input regions.
-Line's selected values make every operation exact in binary64. The global Tier-3 report remains
-skipped; no sequence-wide, arbitrary Real, general tolerance, solver, or cross-architecture raw-byte
-claim follows from these cases.
+Reliefs covers one seven-state exact-bit case for a composed G36 leaf. The global Tier-3 report
+remains skipped; no full-sequence, arbitrary Real, general tolerance, solver, or cross-architecture
+raw-byte claim follows from these cases.
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -35,7 +35,7 @@ visible of them proves nothing about correctness at all.
 | Tier-A HostTick profile references | `tools/golden-gen/goldens/G36/` | 20 signal goldens | Independent implementation of the engine profile; not a Modelica oracle |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
 | Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens (257 bit-exact, 21 aligned-tolerance) | Yes — Tier-A generator is outside the engine workspace |
-| Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 3 named cases: 2 Boolean and 1 finite Real matrix; global report skipped | Yes — pinned OpenModelica and Buildings execution |
+| Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 4 named cases: 2 Boolean, 1 finite Real matrix, and 1 composed G36 leaf; global report skipped | Yes — pinned OpenModelica and Buildings execution |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
 
@@ -166,7 +166,8 @@ skipped on every successful path:
   above — but it compares against re-derived references, not against Buildings executed output, and
   it is not wired into the tier report.
 - **Tier 3** — the global row remains skipped because the report cannot represent partial external
-  coverage (`report.rs:138-143`). The separate Nand, Toggle, and Line tests do not enter the report.
+  coverage (`report.rs:138-143`). The separate Nand, Toggle, Line, and Reliefs tests do not enter the
+  report.
 
 The scoped Nand fixture retains two byte-identical raw OMC runs, one semantic And control, strict
 raw-to-canonical projection, and the exact facade comparison. Toggle retains two byte-identical raw
@@ -186,23 +187,52 @@ mutants fail through the facade comparator at pinned rows. This proves only the 
 raw cross-architecture bytes,
 other Line inputs, non-finite values, signed zero, subnormals, and solver behavior remain outside it.
 
+Reliefs also retains two repeat-identical native runs on each architecture and compares one strict
+keep-last canonical table across them. The seven retained rows are the initial state followed by the
+first complete five-input tuple change. The facade drives those tuples at the emitted timestamp bits
+and reads only the declared `yOutDam` and `yRetDam` roots; topology checks bind those roots to the
+internal Min and Max drivers. All 14 output cells are compared exactly against an independent bit
+table. A parameter-only `uOutDamMax` change, swapped root mapping, a nonexistent root, keep-first
+projection, and inconsistent final limits exercise separate failure or overwrite paths. The final
+limit control fixes all 21 raw input tuples plus the seven selected tuples, timestamps, and source
+rows before checking the overwritten outputs. This is one composed G36 leaf at one parameterization,
+with no claim about other G36 classes or parameters.
+
 Each native architecture record binds every checkout file used through native artifact publication,
 including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer tool inputs. Assembly
 and final-manifest generation happen after native publication, so their scripts are bound by the
 final artifact manifest rather than represented as native generator inputs.
 
-The Line workflow installs Rust 1.97.1 and Python 3.13.7 for host-side artifact processing and
-records compiler, Cargo, Python, and architecture identities in each native log. MSL materialization
-uses `git archive` with the explicit `Modelica/package.mo -export-subst` attribute override. For the
-pinned source, both the committed and materialized `Modelica/package.mo` SHA-256 values are
+Reliefs records one immutable generation contract in
+`crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json`. Its revision is the
+exact checkout observed while the candidate native artifacts ran, not a reachability requirement.
+During generation, each record must equal checkout `HEAD`. The candidate assembler requires both
+native records to share that observation and the complete generator-input digest map, verifies the
+current exact input bytes, and emits the candidate contract and manifest together. Retained
+validation uses those committed bytes and does not inspect Git history. Zero, stale, unrelated, or
+rehash-substituted observations still fail the fixed contract.
+
+The Line and Reliefs workflows install Rust 1.97.1 and Python 3.13.7 for host-side artifact
+processing and record compiler, Cargo, Python, and architecture identities in each native log. MSL
+materialization uses `git archive` with the explicit `Modelica/package.mo -export-subst` attribute
+override. For the pinned source, both the committed and materialized `Modelica/package.mo` SHA-256 values are
 `c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191`; separate fields preserve the
 boundary even though the bytes are equal. Buildings uses no local attribute override, and its
 committed and materialized file hashes are also recorded separately.
 
-All three regeneration paths disable container networking. The retained Line workflow is manual
-only after evidence capture; normal CI validates committed evidence and does not run Docker. No
-Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These three cases cannot make
-the engine-wide report pass.
+All four regeneration paths disable container networking. The retained Line and Reliefs workflows
+are manual only after evidence capture; normal CI validates committed evidence and does not run
+Docker. No Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These four cases
+cannot make the engine-wide report pass.
+
+The Reliefs manual workflow produces and verifies one candidate native artifact per architecture,
+then runs the same two-architecture assembler used for ratification and uploads its candidate
+manifest and contract. Its green status proves that those workflow outputs enter the assembler; it
+does not say that the committed fixture is fresh. Admission still requires committing the emitted
+contract and assembled evidence, followed by retained-graph validation. Repository Python
+entrypoints disable bytecode writes so ignored `__pycache__` files cannot pollute a generation
+checkout. That Python validator is POSIX-only; the equivalent Rust validator remains the
+cross-platform retained-evidence check and uses handle metadata on Windows.
 
 Regeneration assumes a trusted host account, checkout, Docker client, Git and shell tools, and
 executable search path. Rust and Python artifact tools are pinned and recorded; that does not turn
@@ -234,11 +264,12 @@ not author, at a pinned commit whose bytes are gated. It is also the narrowest c
 only, over 31 of 46 fixtures.
 
 **The scoped OpenModelica cases: yes at execution and source boundaries.** A digest-pinned image
-executes the pinned Buildings `Nand`, `Toggle`, and `Line` classes with inputs supplied by MSL
-sources. The wrappers contain no expected output. Each comparison remains a discrepancy detector
-rather than an oracle verdict: analytical evidence comes first in adjudication, and a mismatch
-cannot change a golden, tolerance, or report status. Their scope is four Boolean pairs for Nand, one
-event schedule for Toggle, and one finite four-mode/five-region matrix for Line.
+executes the pinned Buildings `Nand`, `Toggle`, `Line`, and G36 `Reliefs` classes with inputs supplied
+by MSL sources. The wrappers contain no expected output. Each comparison remains a discrepancy
+detector rather than an oracle verdict: analytical evidence comes first in adjudication, and a
+mismatch cannot change a golden, tolerance, or report status. Their scope is four Boolean pairs for
+Nand, one event schedule for Toggle, one finite four-mode/five-region matrix for Line, and one
+seven-state exact-bit case for the composed Reliefs leaf.
 
 One more thing an evaluator should weigh: independence of the oracle does not make the *comparison*
 independent of when it runs. See the next section.
@@ -341,8 +372,8 @@ If you are evaluating this engine, the defensible summary is:
 - Fixture fidelity is bounded structurally against an independent LBL translation of upstream
   sources, per PR, for 31 of 46 fixtures.
 - Agreement with an **executed Buildings implementation** is bounded for one exhaustive
-  `CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` schedule, and one finite
-  `CDL.Reals.Line` matrix. Global Tier 3 remains skipped.
+  `CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` schedule, one finite
+  `CDL.Reals.Line` matrix, and one composed G36 Reliefs leaf. Global Tier 3 remains skipped.
 
 The gate will tell you which broader checks it skipped. The scoped OMC artifacts do not change those
 disclosures.

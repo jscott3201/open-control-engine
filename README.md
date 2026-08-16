@@ -145,12 +145,13 @@ Stating this plainly is more useful than a feature list.
   document hands it. `oce-flatten` is a reserved seam that returns the model unchanged.
 - **It is not general ASHRAE G36 support.** The supported set is explicitly
   *selected-explicit-cxf-variants-supported*: pre-flattened CXF at specific parameterizations, not
-  arbitrary G36 composites. [What "supported" means](docs/cdl-coverage.md).
-- **Its external-reference evidence is three cases, not broad engine coverage.**
+  other G36 composites. [What "supported" means](docs/cdl-coverage.md).
+- **Its external-reference evidence is four cases, not broad engine coverage.**
   `CDL.Logical.Nand` has one exhaustive Boolean case, `CDL.Logical.Toggle` has one stateful Boolean
   event schedule, and `CDL.Reals.Line` has one finite matrix covering four limit modes and five
-  input regions. No sequence or general numeric tolerance has been checked that way, and the global
-  Tier-3 report remains skipped —
+  input regions. One composed G36 Reliefs leaf has a seven-state exact-bit case at its declared
+  outputs. No complete G36 sequence or general numeric tolerance has been checked that way, and the
+  global Tier-3 report remains skipped —
   [read the full accounting](docs/verification-evidence.md).
 - **`CDL.Logical.Pre` is a host-tick delay, not Modelica event iteration.** Under the fixed
   [HostTick v1 profile](docs/execution-profile.md), every successful `Engine::tick` call advances
@@ -209,9 +210,10 @@ code-dependency firewall. Of the 410 signal goldens, 390 check CDL / Buildings s
 389 are compared bit-exactly, including all 132 G36 sequence goldens, and the 21 transcendental,
 psychrometric, and solar Real goldens use a documented 1e-12 aligned-tolerance band.
 
-Two global report tiers are **not wired**, and no sequence here has been executed against an external
-Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive Boolean Nand,
-one stateful Boolean Toggle schedule, and one finite exact-bit Line matrix.
+Two global report tiers are **not wired**, and no complete G36 sequence here has been executed against an
+external Modelica / Buildings toolchain. The separate OpenModelica evidence covers exhaustive
+Boolean Nand, one stateful Boolean Toggle schedule, one finite exact-bit Line matrix, and one
+seven-state exact-bit case for a composed G36 Reliefs leaf.
 
 **[Verification and evidence](docs/verification-evidence.md)** sets out what each layer proves, what
 it cannot, and which checks are not running.

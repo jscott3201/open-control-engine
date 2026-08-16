@@ -1,0 +1,127 @@
+host_architecture=amd64
+docker_server_architecture=x86_64
+image_index_digest=sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864
+image_platform_manifest_digest=sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11
+image_config_digest=sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347
+oci_metadata_validation=raw_digest_and_pinned_graph
+pull_policy=never
+host_timeout_seconds=120
+buildings_remote=https://github.com/lbl-srg/modelica-buildings.git
+buildings_commit=a131864e4c4df22ebcd52bb8da439de0087ac365
+buildings_tree=a2f4b04c59bdaac9c3fb64a7cda8c532a5fcae09
+modelica_remote=https://github.com/OpenModelica/OpenModelica-ModelicaStandardLibrary.git
+modelica_commit=7a4bf7de77a3986e8eb1e88cbb515d646f78f834
+modelica_tree=43d7d8fc1a991358e9e5e91976e27cdc4280173f
+repository_revision=3d16cf2052ae92ebd90c3cad20ac987e8411148c
+generator_provenance_scope=native_generation_and_publication
+rustc_release=1.97.1
+rustc_commit_hash=8bab26f4f68e0e26f0bb7960be334d5b520ea452
+rustc_commit_date=2026-07-14
+rustc_host=x86_64-unknown-linux-gnu
+rustc_llvm_version=22.1.6
+cargo_release=1.97.1
+cargo_commit_hash=c980f4866141969fab6254a680546a277789d6f0
+cargo_commit_date=2026-06-30
+cargo_host=x86_64-unknown-linux-gnu
+python_version=Python 3.13.7
+reliefs_pilot_sha256=aedd537bc7aeda274dbdf48009cc1553904d17496c9748717429e292d0f6a91f
+parameter_pilot_sha256=1d33d47d00fa06697fc9a4af13c2d9193c740bee565de6636b556a115aad2c04
+clamp_pilot_sha256=15ce2c1a3834cdd8e380bc7355812edf9de904f069ff4b66813060d97538a6c6
+runner_sha256=25df1d6119ff177768d3eead13396a3ba4d6eaf0eeaf8f6bdf4f86d4db53988a
+regenerate_sha256=560323615e9959653348d961fbfcb32d24056fb088a2356a40fef53c4ba7c46a
+canonicalizer_sha256=b2f6a2aac55b65f384ed9da8ddb878e257592bbb732183f9a9b460028b02f479
+tool_main_sha256=ebd795c2b9daab0b9104d03f3939c007347032376bf9496e2e55f3264cf8cb3b
+tool_cargo_toml_sha256=cda812a380d00cd9b77a6025c1b426310c57a6d63916edae05d2a2f118c58d05
+tool_cargo_lock_sha256=238f2cfd10f84741ecb954833c7dc4b7a1edfa3ef8c79c1626b5f905049c98b5
+architecture_generator_sha256=e9b1e62b64967aa5264df26a4696ed337aff9526f58d2cba9ffe3166a7a65724
+architecture_verifier_sha256=87ee41b11b8f293f65a085b93ecfae7af6a44e729d10163525ba66025e4d8465
+projection_verifier_sha256=a060b2135bf5c6e5bc53abd5ff521c814ccf83b8ac5f41a09a91250425399cd0
+safe_file_helper_sha256=8cf23afd6e379d4516c57f305cfff82d0599fea5f29d722a50ca68e44314ba4d
+evidence_workflow_sha256=9ca871cc98a9f58cea4ae5fdb850efba46eba5c99a6c48101f302e630fc508e2
+oci_materializer_sha256=5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d
+deadline_sha256=84e3fb94b7c4b332efbb45a01189d19e44bc69936e4831ab6a28cb667740182a
+deadline_test_sha256=c50a443ead5303608b91aa46f906fd20f4232464eb1cc1cec16704a6c10fbc7b
+container_cleanup_sha256=d1986458072ee6b1267ecc89b3e3e50982f8a77865bdab6b28fbe088a45fc8fd
+container_cleanup_test_sha256=31f293214b6c0820a80256447a18e7cdece6cc641e97d6fdedf6198bba40bd41
+output_publish_sha256=92afe1729987468594c949206bda1e93365d27cc6da8b737a027bfde6b981044
+output_publish_test_sha256=d573b59636b4574de8b5d031f0176acb9e260e1a2787617b0f1633f3325a0984
+oci_index_source_sha256=37ddcdcc0ac248ecc8abc81e31fda079ea85992112d5c28496606159b4904678
+arm64_manifest_source_sha256=cc7135cee4138377c0403dc9c8c400d85bb576ac783f3ac667f65dcdfe1f7d4e
+amd64_manifest_source_sha256=e42cbf56db455eae63a38b960fb25914dfb1b9a221575118c527a145cc134848
+source_materialization=git_archive_with_pinned_modelica_export_subst
+buildings_materialization=git_archive_without_local_attribute_override
+modelica_transform_path=Modelica/package.mo
+modelica_transform_rule=Modelica/package.mo -export-subst
+modelica_package_committed_sha256=c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191
+modelica_package_materialized_sha256=c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191
+source_files_json=[{"source":"buildings","path":"Buildings/package.mo","committed_sha256":"f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59","materialized_sha256":"f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59"},{"source":"buildings","path":"Buildings/Controls/package.mo","committed_sha256":"17f0bba8aa51f7051fa43d5cac6dcef1f33ca8f811fd6a6474bd3ed1263f61cd","materialized_sha256":"17f0bba8aa51f7051fa43d5cac6dcef1f33ca8f811fd6a6474bd3ed1263f61cd"},{"source":"buildings","path":"Buildings/Controls/OBC/package.mo","committed_sha256":"a86253df85e5531235ccb81ece569eedac973d8c4eae52be912877e7bd0d321c","materialized_sha256":"a86253df85e5531235ccb81ece569eedac973d8c4eae52be912877e7bd0d321c"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/package.mo","committed_sha256":"88b99ba4667c09e5a23c5ac21c88fe18e39af67c22cc2efc6dbab26db09e8e6b","materialized_sha256":"88b99ba4667c09e5a23c5ac21c88fe18e39af67c22cc2efc6dbab26db09e8e6b"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/package.mo","committed_sha256":"ae1fe5bfca73fd59ad4253aaea5e8c927ce1e1824cdce9790db3a24a20853881","materialized_sha256":"ae1fe5bfca73fd59ad4253aaea5e8c927ce1e1824cdce9790db3a24a20853881"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/package.mo","committed_sha256":"266b09bcb8a3266467c6728ee7a5d9872cdf3dad405af91bac14a697320176a2","materialized_sha256":"266b09bcb8a3266467c6728ee7a5d9872cdf3dad405af91bac14a697320176a2"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/package.mo","committed_sha256":"de4908f31fb15838b54dc41473b82059201ace000c2615ded47a1071dd718560","materialized_sha256":"de4908f31fb15838b54dc41473b82059201ace000c2615ded47a1071dd718560"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/package.mo","committed_sha256":"290c0e49356bc000364b644cac4baf353fc4d4a4ed5c77cb5e1145cdf3ab56e7","materialized_sha256":"290c0e49356bc000364b644cac4baf353fc4d4a4ed5c77cb5e1145cdf3ab56e7"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/package.mo","committed_sha256":"41ee31e3ed5ec6fd88a46447b73a5d5c55cd3cce06a899c25df3aadcba5b3b3b","materialized_sha256":"41ee31e3ed5ec6fd88a46447b73a5d5c55cd3cce06a899c25df3aadcba5b3b3b"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/package.mo","committed_sha256":"adebe030dcdd18a8777558b18e56084ed19546c375f678d083987a4480952216","materialized_sha256":"adebe030dcdd18a8777558b18e56084ed19546c375f678d083987a4480952216"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/package.mo","committed_sha256":"0e2f3d3129ed06fc93655e75fda3597bba6f17f924117bb4b47c5dca7f3c3508","materialized_sha256":"0e2f3d3129ed06fc93655e75fda3597bba6f17f924117bb4b47c5dca7f3c3508"},{"source":"buildings","path":"Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo","committed_sha256":"177fd5f2802bfd29072bc221756dd8846cd05b552f8fdf368a2c87a56593cb41","materialized_sha256":"177fd5f2802bfd29072bc221756dd8846cd05b552f8fdf368a2c87a56593cb41"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/package.mo","committed_sha256":"3ceda191a859e2513c4d3df322bec753ed8df406968cf4354c5488f4dcd79256","materialized_sha256":"3ceda191a859e2513c4d3df322bec753ed8df406968cf4354c5488f4dcd79256"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Interfaces/package.mo","committed_sha256":"a4b3a6831deb68e8209435e2b0f0067d227e3bff2be76845bd2f3690f13c82e4","materialized_sha256":"a4b3a6831deb68e8209435e2b0f0067d227e3bff2be76845bd2f3690f13c82e4"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo","committed_sha256":"0f4afeda8d50035b722a79e6d6b48c86034facd3adcfc7f95e2b15cbd1ddc87a","materialized_sha256":"0f4afeda8d50035b722a79e6d6b48c86034facd3adcfc7f95e2b15cbd1ddc87a"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Interfaces/RealOutput.mo","committed_sha256":"ba27a80bc46bf8b9550655b54a93679f5322b33786cc220daa59f7d39243d98f","materialized_sha256":"ba27a80bc46bf8b9550655b54a93679f5322b33786cc220daa59f7d39243d98f"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/package.mo","committed_sha256":"3b9a58569701c9f7d44347d6304aeb60cea28902332fb16acc15e0fd61e19a8a","materialized_sha256":"3b9a58569701c9f7d44347d6304aeb60cea28902332fb16acc15e0fd61e19a8a"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/Line.mo","committed_sha256":"85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5","materialized_sha256":"85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/Min.mo","committed_sha256":"e5dcf1e50d752365d05e44bc54eb743c116b87de240c1253c2126fcdbcbcbb04","materialized_sha256":"e5dcf1e50d752365d05e44bc54eb743c116b87de240c1253c2126fcdbcbcbb04"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/Max.mo","committed_sha256":"499e5162b21fa776c61065a46c4ba5d646ed887b227adaae93214d97750efca1","materialized_sha256":"499e5162b21fa776c61065a46c4ba5d646ed887b227adaae93214d97750efca1"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/Sources/package.mo","committed_sha256":"373e79eb61b6ace1527a93253ad0a3dfeb520dab0a1b6644dd4b0dd7419c9b20","materialized_sha256":"373e79eb61b6ace1527a93253ad0a3dfeb520dab0a1b6644dd4b0dd7419c9b20"},{"source":"buildings","path":"Buildings/Controls/OBC/CDL/Reals/Sources/Constant.mo","committed_sha256":"f3a131c5c6eb372ea48dec67ed5eb075eef1a485901143a338c4361511eed05e","materialized_sha256":"f3a131c5c6eb372ea48dec67ed5eb075eef1a485901143a338c4361511eed05e"},{"source":"modelica","path":"Complex.mo","committed_sha256":"9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f","materialized_sha256":"9bc7d4b185ddb7b01d966e2d6cc1c8eb06613cb95aedb9b71383a38c9b4e1f0f"},{"source":"modelica","path":"Modelica/package.mo","committed_sha256":"c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191","materialized_sha256":"c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"},{"source":"modelica","path":"Modelica/Blocks/Sources.mo","committed_sha256":"565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3","materialized_sha256":"565331012685bd195bc84712b6af3e3e911d5f59669360ab1a46990f90046aa3"},{"source":"modelica","path":"ModelicaServices/package.mo","committed_sha256":"7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb","materialized_sha256":"7eaa5e818964c81e587693a4228f98698426d3ed04bee57a9e44119164de1bbb"}]
+docker_command=docker run --pull=never --platform linux/amd64 --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user <host-uid>:<host-gid> --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs /tmp:rw,noexec,nosuid,size=256m --tmpfs /out:rw,exec,nosuid,nodev,size=256m --ulimit fsize=67108864:67108864 --mount sources:ro --mount reference:ro
+output_directory_token=fresh-run-b
+selected_model=Reliefs
+container_architecture=x86_64
+container_identity=1001:1001
+modelica_path=
+events_enabled=default_true
+simflags=empty
+root_write_probe=read-only
+source_write_probe=read-only
+reference_write_probe=read-only
+network_route_lines=1
+cgroup_memory_max=2147483648
+cgroup_pids_max=256
+cgroup_cpu_max=400000 100000
+per_file_limit_bytes=67108864
+output_directory_limit_bytes=268435456
+gcc_version=11.4.0
+binutils_version=2.38
+glibc_version=2.35
+omc_version=OpenModelica 1.25.1
+
+
+
+
+
+reliefs_source=/sources/buildings/Buildings/Controls/OBC/ASHRAE/G36/AHUs/MultiZone/VAV/Economizers/Subsequences/Modulations/Reliefs.mo
+
+line_source=/sources/buildings/Buildings/Controls/OBC/CDL/Reals/Line.mo
+
+min_source=/sources/buildings/Buildings/Controls/OBC/CDL/Reals/Min.mo
+
+max_source=/sources/buildings/Buildings/Controls/OBC/CDL/Reals/Max.mo
+
+cdl_constant_source=/sources/buildings/Buildings/Controls/OBC/CDL/Reals/Sources/Constant.mo
+
+real_input_source=/sources/buildings/Buildings/Controls/OBC/CDL/Interfaces/RealInput.mo
+
+real_output_source=/sources/buildings/Buildings/Controls/OBC/CDL/Interfaces/RealOutput.mo
+
+msl_constant_source=/sources/modelica/Modelica/Blocks/Sources.mo
+
+time_table_source=/sources/modelica/Modelica/Blocks/Sources.mo
+
+Modelica=4.1.0
+
+Buildings=14.0.0
+
+
+record SimulationResult
+    resultFile = "/out/ReliefsPilot_res.csv",
+    simulationOptions = "startTime = 0.0, stopTime = 420.0, numberOfIntervals = 7, tolerance = 1e-9, method = 'dassl', fileNamePrefix = 'ReliefsPilot', options = '', outputFormat = 'csv', variableFilter = '^(uTSup|uOutDam_min|uOutDam_max|uRetDam_min|uRetDam_max|yOutDam|yRetDam)$', cflags = '', simflags = ''",
+    messages = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.
+LOG_SUCCESS       | info    | The simulation finished successfully.
+",
+    timeFrontend = 0.26042460100000003,
+    timeBackend = 0.010044134000000001,
+    timeSimCode = 0.0027676090000000003,
+    timeTemplates = 0.005638430000000001,
+    timeCompile = 1.037701574,
+    timeSimulation = 0.014347374000000001,
+    timeTotal = 1.331012036
+end SimulationResult;
+
+
+observed_cgroup_peak_bytes=1572917248
+omc_warning_count=0
+output_directory_kib=596
+raw_sha256=0ade646840638ef01778856188c8aa411f41ac6d8b5316d82aa0b96f617a2046
+runner_complete=1

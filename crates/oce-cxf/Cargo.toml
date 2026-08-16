@@ -30,3 +30,6 @@ sha2 = "0.10"
 
 [target.'cfg(unix)'.dev-dependencies]
 rustix = { workspace = true }
+
+[target.'cfg(windows)'.dev-dependencies]
+winapi-util = "0.1.11"
