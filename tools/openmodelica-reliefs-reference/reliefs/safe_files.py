@@ -46,7 +46,11 @@ def _read_entry(directory, name, limit):
     descriptor = os.open(name, FILE_FLAGS, dir_fd=directory)
     try:
         metadata = os.fstat(descriptor)
-        if not stat.S_ISREG(metadata.st_mode) or metadata.st_size > limit:
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_nlink != 1
+            or metadata.st_size > limit
+        ):
             raise ValueError(f"entry is not a bounded regular file: {name}")
         chunks = []
         total = 0

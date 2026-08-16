@@ -2,7 +2,7 @@
 
 use oce_conformance::{
     CombiTimeTable, ComparisonMode, DriveCadence, DriverInputReplay, DriverOptions, DriverRun,
-    ExactMismatch, PointEnd, PointMapEntry, ReferenceSpec, Tolerances, ValueKind, VerifyConfig,
+    ExactMismatch, PointEnd, PointMapEntry, ReferenceSpec, Tolerances, VerifyConfig,
     drive_trace_with_options,
 };
 
@@ -174,6 +174,3 @@ pub(crate) fn first_mismatch<'a>(run: &'a DriverRun, column: &str) -> &'a ExactM
 }
 
 use oce_conformance::ComparisonResult;
-
-#[allow(dead_code)]
-fn _kind_is_real(_: ValueKind) {}

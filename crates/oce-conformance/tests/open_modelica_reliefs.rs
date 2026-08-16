@@ -110,7 +110,7 @@ fn parameter_mapping_and_declared_path_controls_turn_red_for_pinned_reasons() {
     let error =
         scoped::evaluate(&canonical, [scoped::ROOT_OUTPUTS[0], scoped::MISSING_ROOT]).unwrap_err();
     assert!(matches!(
-        error,
+        &error,
         DriverError::Engine(OcError::UnknownPoint(point)) if point == scoped::MISSING_ROOT
     ));
     assert_eq!(

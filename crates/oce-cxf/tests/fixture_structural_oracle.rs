@@ -51,6 +51,7 @@ mod hooks_truthiness;
 mod known_divergence_register;
 mod open_modelica_line_reference;
 mod open_modelica_reference;
+mod open_modelica_reliefs_reference;
 mod open_modelica_toggle_reference;
 mod structural_oracle;
 mod third_party_manifest;
