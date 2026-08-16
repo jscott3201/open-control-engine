@@ -4,6 +4,9 @@ name: OpenModelica Reliefs evidence
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - reliefs-evidence-transport
 
 permissions:
   contents: read
@@ -31,6 +34,8 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 01b09a077f2791120636a33af24486089e3f2a8c
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13.7'
@@ -88,6 +93,8 @@ jobs:
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: 01b09a077f2791120636a33af24486089e3f2a8c
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13.7'
