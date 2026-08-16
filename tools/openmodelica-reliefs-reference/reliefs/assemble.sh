@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+export PYTHONDONTWRITEBYTECODE=1
 
 if [ "$#" -ne 3 ]; then
   printf '%s\n' 'usage: assemble.sh ARM64_EVIDENCE AMD64_EVIDENCE FRESH_OUTPUT_DIRECTORY' >&2

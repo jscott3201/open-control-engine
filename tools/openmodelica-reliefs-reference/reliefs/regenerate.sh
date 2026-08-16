@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+export PYTHONDONTWRITEBYTECODE=1
 
 IMAGE_REPOSITORY='openmodelica/openmodelica'
 INDEX='sha256:79ddca5f56265f2b5811140589eccd809f7522ec5c553ae631ef606eeb8f9864'
@@ -184,18 +185,18 @@ run_model() {
   deadline_call docker run -d --cidfile "$ACTIVE_CID_FILE" --label "oce.reliefs.run=$RUN_LABEL" --name "$container" --pull=never --platform "$PLATFORM" --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user "$HOST_UID:$HOST_GID" --cpus 4 --memory 2g --memory-swap 2g --pids-limit 256 --tmpfs "/tmp:rw,noexec,nosuid,size=256m,uid=$HOST_UID,gid=$HOST_GID" --tmpfs "/out:rw,exec,nosuid,nodev,size=256m,uid=$HOST_UID,gid=$HOST_GID" --ulimit fsize=67108864:67108864 -e HOME=/tmp/home -e TMPDIR=/tmp -e MODELICAPATH= -e MODEL="$model" -e OUTPUT_DIRECTORY_TOKEN="$token" --mount "type=bind,src=$STAGING/sources,dst=/sources,readonly" --mount "type=bind,src=$STAGING/reference,dst=/reference,readonly" "$IMAGE" sh /reference/runner.sh >/dev/null
   ACTIVE_CID=$(cat "$ACTIVE_CID_FILE"); valid_container_id "$ACTIVE_CID"
   while :; do
-    if ! deadline_refresh; then run_timed 5 docker kill "$ACTIVE_CID" >/dev/null 2>&1 || true; return 1; fi
-    poll_timeout=$DEADLINE_REMAINING; if [ "$poll_timeout" -gt 5 ]; then poll_timeout=5; fi
-    if run_timed "$poll_timeout" docker exec "$ACTIVE_CID" test -f /out/.oce-complete; then poll_status=0; else poll_status=$?; fi
+    if deadline_poll_cycle "$ACTIVE_CID"; then poll_status=0; else poll_status=$?; fi
     if [ "$poll_status" -eq 0 ]; then
       deadline_call docker logs "$ACTIVE_CID" > "$runner_log" 2>&1
-      if ! grep -Fqx "selected_model=$model" "$runner_log" || ! grep -Fqx runner_complete=1 "$runner_log"; then sleep 1; continue; fi
+      if ! grep -Fqx "selected_model=$model" "$runner_log" || ! grep -Fqx runner_complete=1 "$runner_log"; then
+        if ! deadline_pause 1; then run_timed 5 docker kill "$ACTIVE_CID" >/dev/null 2>&1 || true; return 1; fi
+        continue
+      fi
       cat "$runner_log" >> "$log"; rm "$runner_log"; deadline_call docker exec "$ACTIVE_CID" cat /out/ReliefsPilot_res.csv > "$directory/ReliefsPilot_res.csv"
       run_timed 5 docker kill "$ACTIVE_CID" >/dev/null; run_timed 5 docker rm "$ACTIVE_CID" >/dev/null; rm "$ACTIVE_CID_FILE"; ACTIVE_CID_FILE=; ACTIVE_CID=; return 0
     fi
-    if inspect_state=$(run_timed "$poll_timeout" docker inspect "$ACTIVE_CID" --format '{{.State.Running}}'); then inspect_status=0; else inspect_status=$?; fi
-    if [ "$inspect_status" -ne 0 ] || [ "$inspect_state" != true ]; then deadline_call docker logs "$ACTIVE_CID" >> "$log" 2>&1 || true; return 1; fi
-    sleep 1
+    if [ "$poll_status" -eq 124 ]; then run_timed 5 docker kill "$ACTIVE_CID" >/dev/null 2>&1 || true; return 1; fi
+    if [ "$poll_status" -eq 125 ]; then deadline_call docker logs "$ACTIVE_CID" >> "$log" 2>&1 || true; return 1; fi
   done
 }
 
@@ -242,9 +243,10 @@ explicit_keep_first_execution=PASS
 executed_canonicalizer_sha256=$CANONICALIZER_SHA
 EOF
 check_generator_inputs
-python3 "$SCRIPT_DIR/generate_architecture.py" "$OUTPUT" "$ARCHITECTURE" "$REPO_ROOT"
+python3 -B "$SCRIPT_DIR/generate_architecture.py" "$OUTPUT" "$ARCHITECTURE" "$REPO_ROOT"
 python3 "$PUBLISH_HELPER" cleanup "$STAGING" "$STAGING_DEVICE" "$STAGING_INODE"; STAGING=
-python3 "$SCRIPT_DIR/verify_evidence.py" architecture "$OUTPUT" "$REPO_ROOT" "$ARCHITECTURE"
+python3 -B "$SCRIPT_DIR/verify_evidence.py" architecture-checkout "$OUTPUT" "$REPO_ROOT" "$ARCHITECTURE"
+test ! -d "$SCRIPT_DIR/__pycache__"
 check_generator_inputs; trap '' HUP INT TERM
 python3 "$PUBLISH_HELPER" publish "$OUTPUT" "$OUTPUT_DEVICE" "$OUTPUT_INODE" "$OUTPUT_PARENT_DEVICE" "$OUTPUT_PARENT_INODE" "$OUTPUT_DESTINATION"
 OUTPUT_PRIVATE=; REGENERATION_COMPLETE=1

@@ -201,6 +201,14 @@ including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer t
 and final-manifest generation happen after native publication, so their scripts are bound by the
 final artifact manifest rather than represented as native generator inputs.
 
+Reliefs records one immutable generation revision in
+`crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json`. The revision is the
+ancestor commit that produced the candidate native artifacts, not the later commit that retains and
+reviews them. During generation, each record must equal the checkout HEAD. During assembly and
+per-PR validation, both validators require the contract revision and compare every generator input
+with both the recorded digest and the file bytes at that commit. This closes stale or unrelated
+revision substitutions without requiring a self-referential final-head digest.
+
 The Line and Reliefs workflows install Rust 1.97.1 and Python 3.13.7 for host-side artifact
 processing and record compiler, Cargo, Python, and architecture identities in each native log. MSL
 materialization uses `git archive` with the explicit `Modelica/package.mo -export-subst` attribute
@@ -213,6 +221,13 @@ All four regeneration paths disable container networking. The retained Line and 
 are manual only after evidence capture; normal CI validates committed evidence and does not run
 Docker. No Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These four cases
 cannot make the engine-wide report pass.
+
+The Reliefs manual workflow produces and verifies one candidate native artifact per architecture.
+Its green status does not say that the committed assembled fixture is fresh. Admission requires the
+fixed generation revision, independent two-architecture assembly, and final retained-graph closure.
+Repository Python entrypoints disable bytecode writes so ignored `__pycache__` files cannot pollute a
+generation checkout. That Python validator is POSIX-only; the equivalent Rust validator remains the
+cross-platform retained-evidence check and uses handle metadata on Windows.
 
 Regeneration assumes a trusted host account, checkout, Docker client, Git and shell tools, and
 executable search path. Rust and Python artifact tools are pinned and recorded; that does not turn

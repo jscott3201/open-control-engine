@@ -139,6 +139,14 @@ payload = {
         ]
     ],
 }
+checkout_head = subprocess.run(
+    ["git", "-C", root, "rev-parse", "HEAD"],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout.strip()
+if payload["repository_revision"] != checkout_head:
+    raise ValueError("architecture record revision is not the generation checkout HEAD")
 encoded = (json.dumps(payload, indent=2) + "\n").encode()
 descriptor = os.open(output / "architecture.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
 try:

@@ -2,6 +2,8 @@
 
 pub(super) const CANONICAL_SHA: &str =
     "e1112f10ffe14a967cb73f81cd7ceb89edcc2b010627458497855663bdf54b2c";
+pub(super) const GENERATION_CONTRACT_PATH: &str =
+    "crates/oce-cxf/tests/open_modelica_reliefs_reference/generation-revision.json";
 pub(super) const TIME_BITS: &[&str] = &[
     "0000000000000000",
     "404e000000000eff",
@@ -257,6 +259,10 @@ pub(super) fn expected_artifacts() -> Vec<(String, String)> {
         (
             "canonicalizer_source".into(),
             "crates/oce-cxf/tests/open_modelica_reliefs_reference/canonicalizer.rs".into(),
+        ),
+        (
+            "generation_revision_contract".into(),
+            GENERATION_CONTRACT_PATH.into(),
         ),
         ("tool_cargo_lock".into(), format!("{tool}Cargo.lock")),
         ("tool_cargo_toml".into(), format!("{tool}Cargo.toml")),

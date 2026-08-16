@@ -49,6 +49,50 @@ fn rebind_projection(directory: &Path, field: &str, file: &str) {
     write_json(&record, &value);
 }
 
+fn rebind_run_log(directory: &Path, name: &str, body: String) {
+    let log = directory.join(name);
+    std::fs::write(&log, body).unwrap();
+    let record = directory.join("architecture.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
+    if name == "run-a.log" || name == "run-b.log" {
+        let index = usize::from(name == "run-b.log");
+        value["runs"][index]["log_sha256"] =
+            format!("{:x}", Sha256::digest(std::fs::read(&log).unwrap())).into();
+    }
+    write_json(&record, &value);
+}
+
+fn mutate_revision(directory: &Path, revision: &str) {
+    for name in [
+        "run-a.log",
+        "run-b.log",
+        "parameter-control.log",
+        "final-clamp.log",
+    ] {
+        let log = directory.join(name);
+        let body = std::fs::read_to_string(&log).unwrap();
+        let changed = body
+            .lines()
+            .map(|line| {
+                if line.starts_with("repository_revision=") {
+                    format!("repository_revision={revision}")
+                } else {
+                    line.to_owned()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        rebind_run_log(directory, name, changed);
+    }
+    let record = directory.join("architecture.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
+    value["repository_revision"] = revision.into();
+    write_json(&record, &value);
+}
+
 #[test]
 fn malformed_duplicate_unknown_and_type_confused_manifests_fail_closed() {
     for (label, mutate, expected) in [
@@ -145,6 +189,82 @@ fn rehashed_canonical_and_projection_tampering_fail_semantic_reproduction() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn rehashed_failure_log_and_malformed_container_identities_are_rejected() {
+    for (label, mutation, expected) in [
+        (
+            "omc-failure",
+            Box::new(|body: String| {
+                body.replace(
+                    "LOG_SUCCESS       | info    | The simulation finished successfully.",
+                    "LOG_ASSERT        | error   | The simulation failed.",
+                )
+            }) as Box<dyn Fn(String) -> String>,
+            "OpenModelica success records",
+        ),
+        (
+            "missing-separator",
+            Box::new(|body: String| {
+                body.replace("container_identity=1001:1001", "container_identity=1001")
+            }),
+            "container identity",
+        ),
+        (
+            "extra-separator",
+            Box::new(|body: String| {
+                body.replace(
+                    "container_identity=1001:1001",
+                    "container_identity=1001:1001:7",
+                )
+            }),
+            "container identity",
+        ),
+    ] {
+        let temporary = ClaimedTempDir::new(&format!("oce-reliefs-log-{label}"));
+        let copied = temporary.path().join("arm64");
+        copy_tree(&super::fixture("arm64"), &copied);
+        let body = std::fs::read_to_string(copied.join("run-a.log")).unwrap();
+        rebind_run_log(&copied, "run-a.log", mutation(body));
+        let output = run(&[
+            Path::new("architecture"),
+            &copied,
+            &super::repository_root(),
+            Path::new("arm64"),
+        ]);
+        assert!(!output.status.success(), "{label}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(expected),
+            "{label}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}
+
+#[test]
+fn fully_rehashed_zero_and_unrelated_generation_revisions_are_rejected() {
+    for revision in [
+        "0000000000000000000000000000000000000000",
+        "f9e4ba93e39c6be8b4118d77c52a8a6ed1c88abb",
+    ] {
+        let temporary = ClaimedTempDir::new("oce-reliefs-generation-revision");
+        let copied = temporary.path().join("arm64");
+        copy_tree(&super::fixture("arm64"), &copied);
+        mutate_revision(&copied, revision);
+        let output = run(&[
+            Path::new("architecture"),
+            &copied,
+            &super::repository_root(),
+            Path::new("arm64"),
+        ]);
+        assert!(!output.status.success(), "{revision}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("ratified generation revision"),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 #[test]

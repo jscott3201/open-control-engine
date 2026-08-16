@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Descriptor-relative bounded reads and copies for Reliefs evidence files."""
+"""POSIX descriptor-relative reads and copies for Reliefs evidence files."""
 
 import os
 import pathlib
@@ -19,7 +19,15 @@ FILE_FLAGS = (
 )
 
 
+def require_posix():
+    if os.name != "posix":
+        raise ValueError(
+            "the independent Python Reliefs validator is POSIX-only; use the Rust validator on Windows"
+        )
+
+
 def open_directory(path):
+    require_posix()
     path = pathlib.Path(path)
     components = path.parts
     if path.is_absolute():
@@ -72,6 +80,23 @@ def read_bounded(path, limit):
     directory = open_directory(path.parent)
     try:
         return _read_entry(directory, path.name, limit)
+    finally:
+        os.close(directory)
+
+
+def read_relative(root, relative, limit):
+    pure = pathlib.PurePosixPath(relative)
+    if not relative or pure.is_absolute() or any(
+        part in ("", ".", "..") for part in pure.parts
+    ):
+        raise ValueError("invalid descriptor-relative path")
+    directory = open_directory(root)
+    try:
+        for component in pure.parts[:-1]:
+            following = os.open(component, DIRECTORY_FLAGS, dir_fd=directory)
+            os.close(directory)
+            directory = following
+        return _read_entry(directory, pure.parts[-1], limit)
     finally:
         os.close(directory)
 

@@ -28,9 +28,17 @@ fn fixture(name: &str) -> PathBuf {
 }
 
 fn checked_manifest() -> schema::Manifest {
+    let contract = checked_generation_contract();
     let bytes = safe_read::read(&repository_root(), &fixture_relative("manifest.json"))
         .expect("checked Reliefs manifest is bounded");
-    manifest::parse(&bytes).expect("checked Reliefs manifest parses")
+    manifest::parse(&bytes, &contract.revision).expect("checked Reliefs manifest parses")
+}
+
+fn checked_generation_contract() -> schema::GenerationRevisionContract {
+    let bytes = safe_read::read(&repository_root(), expectations::GENERATION_CONTRACT_PATH)
+        .expect("generation revision contract is bounded");
+    manifest::parse_generation_contract(&bytes)
+        .expect("generation revision contract has a closed schema")
 }
 
 #[test]
@@ -190,9 +198,12 @@ fn closed_manifest_digests_native_records_logs_sources_tools_and_oci_graph() {
     assert_eq!(parsed, checked_manifest());
 }
 
+#[cfg(unix)]
 #[test]
 fn independent_python_validator_accepts_the_retained_graph() {
     let root = repository_root();
+    let bytecode = root.join("tools/openmodelica-reliefs-reference/reliefs/__pycache__");
+    assert!(!bytecode.exists());
     let output = std::process::Command::new("python3")
         .args([
             "tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py",
@@ -213,11 +224,13 @@ fn independent_python_validator_accepts_the_retained_graph() {
         output.stdout,
         b"Reliefs assembled evidence verification passed\n"
     );
+    assert!(!bytecode.exists());
 }
 
 #[test]
 fn malformed_manifest_fails_closed_at_schema_literals_types_and_bounds() {
     let original = std::fs::read_to_string(fixture("manifest.json")).unwrap();
+    let generation_revision = checked_generation_contract().revision;
     for (mutated, fragment) in [
         (
             original.replacen("\"format\":", "\"unknown\": true, \"format\":", 1),
@@ -248,11 +261,15 @@ fn malformed_manifest_fails_closed_at_schema_literals_types_and_bounds() {
             "projection rules",
         ),
     ] {
-        let error = manifest::parse(mutated.as_bytes()).unwrap_err();
+        let error = manifest::parse(mutated.as_bytes(), &generation_revision).unwrap_err();
         assert!(error.contains(fragment), "{fragment}: {error}");
     }
     assert_eq!(
-        manifest::parse(&vec![b' '; manifest::MAX_MANIFEST_BYTES + 1]).unwrap_err(),
+        manifest::parse(
+            &vec![b' '; manifest::MAX_MANIFEST_BYTES + 1],
+            &generation_revision,
+        )
+        .unwrap_err(),
         "manifest exceeds 256 KiB"
     );
     let long = original.replacen(
@@ -261,8 +278,30 @@ fn malformed_manifest_fails_closed_at_schema_literals_types_and_bounds() {
         1,
     );
     assert_eq!(
-        manifest::parse(long.as_bytes()).unwrap_err(),
+        manifest::parse(long.as_bytes(), &generation_revision).unwrap_err(),
         "manifest string exceeds 4096 UTF-8 bytes"
+    );
+    let unrelated = original.replacen(
+        &generation_revision,
+        "f9e4ba93e39c6be8b4118d77c52a8a6ed1c88abb",
+        1,
+    );
+    assert!(
+        manifest::parse(unrelated.as_bytes(), &generation_revision)
+            .unwrap_err()
+            .contains("generation revision")
+    );
+    let contract =
+        std::fs::read_to_string(repository_root().join(expectations::GENERATION_CONTRACT_PATH))
+            .unwrap();
+    assert!(
+        manifest::parse_generation_contract(
+            contract
+                .replace(&generation_revision, &"0".repeat(40))
+                .as_bytes()
+        )
+        .unwrap_err()
+        .contains("contract commit")
     );
 }
 
@@ -319,11 +358,14 @@ fn package_lists_include_reliefs_evidence_and_exclude_the_tool() {
         );
         let listing = String::from_utf8(output.stdout).unwrap();
         if package == "oce-cxf" {
-            assert!(
-                listing.lines().any(|line| {
-                    line == "tests/open_modelica_reliefs_reference/canonicalizer.rs"
-                })
-            );
+            for artifact in &parsed.artifacts {
+                if let Some(required) = artifact.path.strip_prefix("crates/oce-cxf/") {
+                    assert!(
+                        listing.lines().any(|line| line == required),
+                        "package omits {required}"
+                    );
+                }
+            }
         } else {
             assert!(
                 listing.lines().any(|line| {
@@ -426,5 +468,23 @@ fn descriptor_reader_rejects_ancestor_symlink_and_final_fifo() {
             .unwrap_err()
             .contains("regular")
     );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_reader_rejects_hardlinks_and_reparse_points() {
+    use std::os::windows::fs::symlink_file;
+
+    let root = std::env::temp_dir().join(format!("oce-reliefs-safe-read-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let regular = root.join("regular");
+    std::fs::write(&regular, b"ok").unwrap();
+    std::fs::hard_link(&regular, root.join("alias")).unwrap();
+    assert!(safe_read::read(&root, "regular").is_err());
+    std::fs::remove_file(root.join("alias")).unwrap();
+    if symlink_file(&regular, root.join("reparse")).is_ok() {
+        assert!(safe_read::read(&root, "reparse").is_err());
+    }
     std::fs::remove_dir_all(root).unwrap();
 }

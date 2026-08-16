@@ -4,6 +4,14 @@ use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
+pub(super) struct GenerationRevisionContract {
+    pub(super) format: String,
+    pub(super) revision: String,
+    pub(super) relationship: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub(super) struct Manifest {
     pub(super) format: String,
     pub(super) scope: Scope,

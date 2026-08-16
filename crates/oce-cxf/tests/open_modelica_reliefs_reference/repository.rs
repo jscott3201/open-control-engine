@@ -22,6 +22,7 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
             return Err(format!("artifact digest mismatch: {}", artifact.path));
         }
     }
+    validate_generation_revision(manifest, &root)?;
     validate_native_records(manifest, &root)?;
     validate_generator_bindings(manifest)?;
     validate_run_logs(manifest, &root)?;
@@ -29,6 +30,55 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
     validate_oci(manifest, &root)?;
     validate_cross_architecture(manifest, &root)?;
     validate_tool_contract(manifest, &root)
+}
+
+fn validate_generation_revision(manifest: &Manifest, root: &Path) -> Result<(), String> {
+    let contract_artifact = artifact(manifest, "generation_revision_contract");
+    let contract = super::manifest::parse_generation_contract(&super::safe_read::read(
+        root,
+        &contract_artifact.path,
+    )?)?;
+    if manifest
+        .architectures
+        .iter()
+        .any(|architecture| architecture.repository_revision != contract.revision)
+    {
+        return Err("native record revision is not the ratified generation revision".into());
+    }
+    git_output(
+        root,
+        &[
+            "cat-file",
+            "-e",
+            &format!("{}^{{commit}}", contract.revision),
+        ],
+    )?;
+    let status = std::process::Command::new("git")
+        .args([
+            "-C",
+            root.to_str().ok_or("repository path is not UTF-8")?,
+            "merge-base",
+            "--is-ancestor",
+            &contract.revision,
+            "HEAD",
+        ])
+        .status()
+        .map_err(|error| error.to_string())?;
+    if !status.success() {
+        return Err("generation revision is not an ancestor of the retained checkout".into());
+    }
+    for architecture in &manifest.architectures {
+        for (digest, role) in generator_bindings(&architecture.generator_inputs) {
+            let path = &artifact(manifest, role).path;
+            let committed = git_output(root, &["show", &format!("{}:{path}", contract.revision)])?;
+            if sha256(&committed) != digest {
+                return Err(format!(
+                    "generation revision does not bind generator input {path}"
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_native_records(manifest: &Manifest, root: &Path) -> Result<(), String> {
@@ -324,6 +374,28 @@ fn validate_run_log(
     {
         return Err("OpenModelica warning found".into());
     }
+    const INITIALIZATION_SUCCESS: &str = "LOG_SUCCESS       | info    | The initialization finished successfully without homotopy method.";
+    const SIMULATION_SUCCESS: &str =
+        "LOG_SUCCESS       | info    | The simulation finished successfully.";
+    if text.matches(INITIALIZATION_SUCCESS).count() != 1
+        || text.matches(SIMULATION_SUCCESS).count() != 1
+    {
+        return Err("OpenModelica success records are missing or repeated".into());
+    }
+    for line in text.lines().map(str::to_ascii_lowercase) {
+        if [
+            "| error",
+            "| fatal",
+            "simulation failed",
+            "initialization failed",
+            "failure",
+        ]
+        .iter()
+        .any(|token| line.contains(token))
+        {
+            return Err("OpenModelica failure record found".into());
+        }
+    }
     Ok(())
 }
 
@@ -487,7 +559,7 @@ fn valid_artifact_path(artifact: &Artifact) -> Result<(), String> {
     }
     let fixture = "crates/oce-conformance/tests/fixtures/open_modelica/g36_reliefs/";
     let allowed = match artifact.role.as_str() {
-        "canonicalizer_source" => {
+        "canonicalizer_source" | "generation_revision_contract" => {
             value.starts_with("crates/oce-cxf/tests/open_modelica_reliefs_reference/")
         }
         "evidence_workflow" => value == ".github/workflows/openmodelica-reliefs-evidence.yml",
@@ -544,6 +616,26 @@ fn sha256(bytes: &[u8]) -> String {
         .collect()
 }
 
+fn git_output(root: &Path, arguments: &[&str]) -> Result<Vec<u8>, String> {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(arguments)
+        .output()
+        .map_err(|error| error.to_string())?;
+    if !output.status.success() {
+        return Err(format!(
+            "git {} failed: {}",
+            arguments.join(" "),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    if output.stdout.len() > 1024 * 1024 {
+        return Err("git output exceeds the evidence bound".into());
+    }
+    Ok(output.stdout)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -560,5 +652,29 @@ mod tests {
             };
             assert!(valid_artifact_path(&artifact).is_err(), "{path:?}");
         }
+    }
+
+    #[test]
+    fn failure_record_cannot_hide_behind_runner_complete() {
+        let manifest = super::super::checked_manifest();
+        let architecture = &manifest.architectures[0];
+        let root = super::super::repository_root();
+        let log = read_text(&root, &artifact(&manifest, "arm64_run_a_log").path).unwrap();
+        let hostile = log.replace(
+            "LOG_SUCCESS       | info    | The simulation finished successfully.",
+            "LOG_ASSERT        | error   | The simulation failed.",
+        );
+        let error = validate_run_log(
+            &hostile,
+            architecture,
+            "arm64",
+            "aarch64",
+            "fresh-run-a",
+            "Reliefs",
+            &architecture.raw_run_a_sha256,
+        )
+        .unwrap_err();
+        assert!(error.contains("success") || error.contains("failure"));
+        assert!(hostile.contains("runner_complete=1"));
     }
 }

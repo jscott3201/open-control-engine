@@ -1,5 +1,5 @@
-# Manual regeneration for the retained two-architecture G36 Reliefs evidence.
-# Containers run offline; source and image materialization happen in separate host steps.
+# Manual generation of candidate native artifacts for independent two-architecture assembly.
+# A green job verifies its upload, not freshness of the committed assembled fixture.
 name: OpenModelica Reliefs evidence
 
 on:
@@ -17,6 +17,8 @@ jobs:
     name: native ${{ matrix.architecture }} evidence
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -53,17 +55,23 @@ jobs:
           docker image inspect "$IMAGE" --format '{{json .RepoDigests}}' | grep -Fq "\"$IMAGE\""
       - name: Materialize pinned Rust dependencies on the host
         run: cargo fetch --manifest-path tools/openmodelica-reliefs-reference/Cargo.toml --locked
-      - name: Regenerate with offline containers
+      - name: Generate candidate artifact with offline containers
         env:
           BUILDINGS: ${{ runner.temp }}/modelica-buildings
           MODELICA: ${{ runner.temp }}/modelica-standard-library
           EVIDENCE: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
           CARGO_TARGET_DIR: ${{ runner.temp }}/reliefs-cargo-target
+        run: sh tools/openmodelica-reliefs-reference/reliefs/regenerate.sh "$BUILDINGS" "$MODELICA" "$EVIDENCE"
+      - name: Verify the candidate artifact to be uploaded
+        env:
+          EVIDENCE: ${{ runner.temp }}/reliefs-${{ matrix.architecture }}
         run: >-
-          sh tools/openmodelica-reliefs-reference/reliefs/regenerate.sh "$BUILDINGS" "$MODELICA" "$EVIDENCE" &&
+          python3 -B tools/openmodelica-reliefs-reference/reliefs/verify_evidence.py architecture-checkout "$EVIDENCE" . "${{ matrix.architecture }}" &&
+          cargo run --manifest-path tools/openmodelica-reliefs-reference/Cargo.toml --locked -- verify-architecture-canonical "$EVIDENCE" &&
+          test -z "$(git status --short --ignored -- tools/openmodelica-reliefs-reference/reliefs/__pycache__)" &&
           git diff --exit-code &&
           test -z "$(git status --porcelain)"
-      - name: Upload bounded native evidence
+      - name: Upload verified candidate native evidence
         uses: actions/upload-artifact@v7.0.1
         with:
           name: openmodelica-reliefs-${{ matrix.architecture }}

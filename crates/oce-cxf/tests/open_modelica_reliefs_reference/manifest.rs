@@ -1,17 +1,40 @@
 //! Bounded parsing and fixed-literal validation for the Reliefs manifest.
 
 use super::expectations::*;
-use super::schema::{Architecture, Manifest};
+use super::schema::{Architecture, GenerationRevisionContract, Manifest};
 
 pub(super) const MAX_MANIFEST_BYTES: usize = 256 * 1024;
 
-pub(super) fn parse(input: &[u8]) -> Result<Manifest, String> {
+pub(super) fn parse_generation_contract(
+    input: &[u8],
+) -> Result<GenerationRevisionContract, String> {
+    if input.len() > 4096 {
+        return Err("generation revision contract exceeds 4096 bytes".into());
+    }
+    scan_json_strings(input)?;
+    let contract: GenerationRevisionContract =
+        serde_json::from_slice(input).map_err(|error| error.to_string())?;
+    require(
+        contract.format == "oce-openmodelica-reliefs-generation-revision-v1"
+            && contract.relationship
+                == "candidate_native_artifact_producer_and_ancestor_of_retained_head",
+        "generation revision contract literals",
+    )?;
+    revision(&contract.revision)?;
+    require(
+        contract.revision != "0".repeat(40),
+        "generation revision contract commit",
+    )?;
+    Ok(contract)
+}
+
+pub(super) fn parse(input: &[u8], generation_revision: &str) -> Result<Manifest, String> {
     if input.len() > MAX_MANIFEST_BYTES {
         return Err("manifest exceeds 256 KiB".into());
     }
     scan_json_strings(input)?;
     let value: Manifest = serde_json::from_slice(input).map_err(|error| error.to_string())?;
-    validate(&value)?;
+    validate(&value, generation_revision)?;
     Ok(value)
 }
 
@@ -43,7 +66,7 @@ fn scan_json_strings(input: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
-fn validate(value: &Manifest) -> Result<(), String> {
+fn validate(value: &Manifest, generation_revision: &str) -> Result<(), String> {
     exact(
         &value.format,
         "oce-openmodelica-reliefs-external-run-v1",
@@ -54,7 +77,7 @@ fn validate(value: &Manifest) -> Result<(), String> {
     validate_sources(value)?;
     validate_simulation(value)?;
     validate_projection(value)?;
-    validate_architectures(value)?;
+    validate_architectures(value, generation_revision)?;
     validate_controls(value)?;
     validate_artifacts(value)?;
     validate_regeneration(value)
@@ -291,7 +314,7 @@ fn validate_projection(value: &Manifest) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_architectures(value: &Manifest) -> Result<(), String> {
+fn validate_architectures(value: &Manifest, generation_revision: &str) -> Result<(), String> {
     require(value.architectures.len() == 2, "architecture count")?;
     validate_architecture(
         &value.architectures[0],
@@ -299,6 +322,7 @@ fn validate_architectures(value: &Manifest) -> Result<(), String> {
         "linux/arm64",
         "arm64",
         "aarch64",
+        generation_revision,
     )?;
     validate_architecture(
         &value.architectures[1],
@@ -306,6 +330,7 @@ fn validate_architectures(value: &Manifest) -> Result<(), String> {
         "linux/amd64",
         "amd64",
         "x86_64",
+        generation_revision,
     )?;
     require(
         value.architectures[0].repository_revision == value.architectures[1].repository_revision
@@ -321,6 +346,7 @@ fn validate_architecture(
     platform: &str,
     host: &str,
     machine: &str,
+    generation_revision: &str,
 ) -> Result<(), String> {
     require(
         value.name == name
@@ -338,6 +364,10 @@ fn validate_architecture(
         "architecture identity",
     )?;
     revision(&value.repository_revision)?;
+    require(
+        value.repository_revision == generation_revision,
+        "architecture generation revision",
+    )?;
     for digest_value in architecture_digests(value) {
         digest(digest_value)?;
     }

@@ -479,6 +479,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   toolchain, sandbox limits, cgroup peak measurement, and native logs. This remains one composed
   leaf at one parameterization and schedule: global Tier 3 stays skipped, with no broader class,
   solver, tolerance, or cross-architecture raw-byte claim.
+  Follow-up hardening binds both architectures to a fixed ancestor generation revision and checks
+  every generator input against that commit. Candidate workflow artifacts are verified before
+  upload and still require independent assembly. Run logs now require unique initialization and
+  simulation success records, reject failure records, and parse a bounded non-root `uid:gid`.
+  Deadline polling refreshes before each Docker subprocess, Python entrypoints suppress bytecode,
+  and Windows retained-evidence reads reject reparse points, hardlinks, and handle-identity changes.
 - **Conformance driver failures preserve the load/runtime boundary** (#296, fixes #291).
   `DriverError::Load` identifies failure at `Engine::load_cxf`, and only that variant becomes a
   failed Tier 0 static-load report. Facade failures after a successful load remain driver errors

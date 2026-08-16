@@ -146,6 +146,14 @@ independently from raw input; Docker does not run in normal CI. These are scoped
 the four named cases only. The global Tier-3 report remains `Skipped`; no full-sequence, solver, or
 cross-architecture raw-byte claim follows.
 
+The Reliefs native records identify one ratified generation revision. That commit produced the
+candidate native artifacts and is an ancestor of the retained evidence commit; it is not the final
+reviewed head. Both validators require the fixed revision, compare every generator input with its
+recorded digest and its bytes at that commit, and reject unrelated revisions. The manual workflow
+verifies each native artifact before upload, but independent assembly and final manifest validation
+are what admit it to the fixture. Its Python validator is POSIX-only. The Rust validator supplies the
+Windows path boundary and rejects reparse points, hardlinks, identity changes, and oversized files.
+
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration
 differs from the fixed HostTick v1 projection, which advances once per HostTick transition.
 `crates/oce-api/src/tests/pre_execution_profile_tests.rs` pins that engine contract, including equal
