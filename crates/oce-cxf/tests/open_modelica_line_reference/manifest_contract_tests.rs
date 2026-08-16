@@ -1,6 +1,7 @@
 //! Counterexamples for architecture-specific raw identities and retained native records.
 
 use sha2::{Digest as _, Sha256};
+use std::path::PathBuf;
 
 use super::verifier_adversarial_tests::ClaimedTempDir;
 
@@ -52,16 +53,62 @@ fn native_record_unknown_field_fails_after_artifact_digest_update() {
     });
 }
 
+#[test]
+fn coordinated_noop_keep_first_rehash_fails_structural_reproduction() {
+    let (_temporary, root, mut manifest) = copied_repository();
+    let base = root.join("crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64");
+    let output = base.join("projection-keep-first.canonical.csv");
+    let bytes = std::fs::read(base.join("line.canonical.csv")).unwrap();
+    std::fs::write(&output, &bytes).unwrap();
+    let digest = sha(&bytes);
+    update_projection_record(&base, "canonical_sha256", &digest, &mut manifest, &root);
+    manifest.architectures[0]
+        .projection_mutation
+        .canonical_sha256 = digest.clone();
+    manifest
+        .artifacts
+        .iter_mut()
+        .find(|artifact| artifact.role == "arm64_projection_keep_first_canonical_csv")
+        .unwrap()
+        .sha256 = digest;
+    let error = super::repository::validate(&manifest, &root).unwrap_err();
+    assert!(
+        error.contains("retained keep-first bytes are not reproducible"),
+        "{error}"
+    );
+}
+
+#[test]
+fn coordinated_mismatch_log_rehash_fails_structural_reproduction() {
+    let (_temporary, root, mut manifest) = copied_repository();
+    let base = root.join("crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64");
+    let log = base.join("projection-mutation.log");
+    let bytes = std::fs::read_to_string(&log)
+        .unwrap()
+        .replace(
+            "mutated_schedule_mismatch_rows=2,4,6,8",
+            "mutated_schedule_mismatch_rows=2",
+        )
+        .into_bytes();
+    std::fs::write(&log, &bytes).unwrap();
+    let digest = sha(&bytes);
+    update_projection_record(&base, "log_sha256", &digest, &mut manifest, &root);
+    manifest.architectures[0].projection_mutation.log_sha256 = digest.clone();
+    manifest
+        .artifacts
+        .iter_mut()
+        .find(|artifact| artifact.role == "arm64_projection_mutation_log")
+        .unwrap()
+        .sha256 = digest;
+    let error = super::repository::validate(&manifest, &root).unwrap_err();
+    assert!(
+        error.contains("execution log is not reproducible"),
+        "{error}"
+    );
+}
+
 fn assert_native_record_mutation_fails(mutate: impl FnOnce(&mut serde_json::Value)) {
-    let temporary = ClaimedTempDir::new("oce-line-native-record");
-    let copied_root = temporary.path().join("repository");
-    let source_root = super::repository_root();
-    let mut manifest = super::checked_manifest();
-    for artifact in &manifest.artifacts {
-        let destination = copied_root.join(&artifact.path);
-        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
-        std::fs::copy(source_root.join(&artifact.path), destination).unwrap();
-    }
+    let (_temporary, copied_root, mut manifest) = copied_repository();
     let record = copied_root.join(
         "crates/oce-conformance/tests/fixtures/open_modelica/reals_line/arm64/architecture.json",
     );
@@ -83,4 +130,43 @@ fn assert_native_record_mutation_fails(mutate: impl FnOnce(&mut serde_json::Valu
         error.contains("native architecture record") || error.contains("unknown field"),
         "{error}"
     );
+}
+
+fn copied_repository() -> (ClaimedTempDir, PathBuf, super::schema::Manifest) {
+    let temporary = ClaimedTempDir::new("oce-line-structural-repository");
+    let copied_root = temporary.path().join("repository");
+    let source_root = super::repository_root();
+    let manifest = super::checked_manifest();
+    for artifact in &manifest.artifacts {
+        let destination = copied_root.join(&artifact.path);
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        std::fs::copy(source_root.join(&artifact.path), destination).unwrap();
+    }
+    (temporary, copied_root, manifest)
+}
+
+fn update_projection_record(
+    base: &std::path::Path,
+    field: &str,
+    digest: &str,
+    manifest: &mut super::schema::Manifest,
+    root: &std::path::Path,
+) {
+    let record = base.join("architecture.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
+    value["projection_mutation"][field] = digest.into();
+    let bytes = encoded(&value);
+    std::fs::write(&record, &bytes).unwrap();
+    manifest
+        .artifacts
+        .iter_mut()
+        .find(|artifact| artifact.role == "arm64_architecture_record")
+        .unwrap()
+        .sha256 = sha(&bytes);
+    assert!(record.starts_with(root));
+}
+
+fn sha(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
 }

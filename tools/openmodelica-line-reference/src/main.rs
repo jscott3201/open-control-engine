@@ -40,13 +40,19 @@ fn run(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
         println!("strict canonical boundary passed");
         return Ok(());
     }
-    if !matches!(command.as_str(), "canonicalize" | "canonicalize-inspect") {
-        return Err("usage: oce-openmodelica-line-reference canonicalize[-inspect] INPUT OUTPUT TABLE_NAME [METADATA] | schedule-mismatches INPUT | verify-architecture-canonical DIRECTORY".into());
+    if !matches!(
+        command.as_str(),
+        "canonicalize" | "canonicalize-inspect" | "canonicalize-first-inspect"
+    ) {
+        return Err("usage: oce-openmodelica-line-reference canonicalize[-inspect] INPUT OUTPUT TABLE_NAME [METADATA] | canonicalize-first-inspect INPUT OUTPUT TABLE_NAME METADATA | schedule-mismatches INPUT | verify-architecture-canonical DIRECTORY".into());
     }
     let input = arguments.next().ok_or("missing input path")?;
     let output = arguments.next().ok_or("missing output path")?;
     let table_name = arguments.next().ok_or("missing table name")?;
-    let metadata = if command == "canonicalize-inspect" {
+    let metadata = if matches!(
+        command.as_str(),
+        "canonicalize-inspect" | "canonicalize-first-inspect"
+    ) {
         Some(arguments.next().ok_or("missing metadata path")?)
     } else {
         None
@@ -54,23 +60,20 @@ fn run(mut arguments: impl Iterator<Item = String>) -> Result<(), String> {
     if arguments.next().is_some() {
         return Err("unexpected trailing argument".into());
     }
-    let canonical = canonicalizer::canonicalize_path(Path::new(&input), &table_name)
-        .map_err(|error| error.to_string())?;
+    let selection = if command == "canonicalize-first-inspect" {
+        canonicalizer::ProjectionSelection::First
+    } else {
+        canonicalizer::ProjectionSelection::Last
+    };
+    let canonical = canonicalizer::canonicalize_path_with_selection(
+        Path::new(&input),
+        &table_name,
+        selection,
+    )
+    .map_err(|error| error.to_string())?;
     write_new(&output, &canonical.bytes)?;
     if let Some(metadata) = metadata {
-        let joined = |values: Vec<String>| values.join(",");
-        write_new(
-            &metadata,
-            format!(
-                "raw_rows={}\ncanonical_rows={}\ngroup_sizes={}\nraw_time_bits={}\ncanonical_time_bits={}\n",
-                canonical.raw_rows.len(),
-                canonical.rows.len(),
-                joined(canonical.group_sizes.iter().map(usize::to_string).collect()),
-                joined(canonical.raw_rows.iter().map(|row| format!("{:016x}", row.time.to_bits())).collect()),
-                joined(canonical.rows.iter().map(|row| format!("{:016x}", row.time.to_bits())).collect()),
-            )
-            .as_bytes(),
-        )?;
+        write_new(&metadata, &inspection_metadata(&canonical, selection))?;
     }
     Ok(())
 }
@@ -105,7 +108,50 @@ fn verify_architecture_canonical(directory: &Path) -> Result<(), String> {
     if reproduced.bytes != control {
         return Err("flag-control.raw.csv does not reproduce retained strict canonical bytes".into());
     }
+    let mutation = canonicalizer::canonicalize_path_with_selection(
+        &directory.join("line-run-a.raw.csv"),
+        "openmodelica_reals_line",
+        canonicalizer::ProjectionSelection::First,
+    )
+    .map_err(|error| format!("keep-first projection: {error}"))?;
+    let retained_mutation = canonicalizer::read_bounded_path(
+        &directory.join("projection-keep-first.canonical.csv"),
+    )
+    .map_err(|error| error.to_string())?;
+    if mutation.bytes != retained_mutation || mutation.bytes == retained {
+        return Err("retained keep-first output is not the executed projection control".into());
+    }
+    let retained_metadata =
+        canonicalizer::read_bounded_path(&directory.join("projection-keep-first.metadata"))
+            .map_err(|error| error.to_string())?;
+    if inspection_metadata(&mutation, canonicalizer::ProjectionSelection::First)
+        != retained_metadata
+    {
+        return Err("retained keep-first inspection metadata is not reproducible".into());
+    }
+    if schedule_mismatches(&directory.join("projection-keep-first.canonical.csv"))?
+        != [2, 4, 6, 8]
+    {
+        return Err("keep-first schedule mismatches are not the pinned event rows".into());
+    }
     Ok(())
+}
+
+fn inspection_metadata(
+    canonical: &canonicalizer::Canonicalization,
+    selection: canonicalizer::ProjectionSelection,
+) -> Vec<u8> {
+    let joined = |values: Vec<String>| values.join(",");
+    format!(
+        "selection={}\nraw_rows={}\ncanonical_rows={}\ngroup_sizes={}\nraw_time_bits={}\ncanonical_time_bits={}\n",
+        if selection == canonicalizer::ProjectionSelection::First { "first" } else { "last" },
+        canonical.raw_rows.len(),
+        canonical.rows.len(),
+        joined(canonical.group_sizes.iter().map(usize::to_string).collect()),
+        joined(canonical.raw_rows.iter().map(|row| format!("{:016x}", row.time.to_bits())).collect()),
+        joined(canonical.rows.iter().map(|row| format!("{:016x}", row.time.to_bits())).collect()),
+    )
+    .into_bytes()
 }
 
 fn schedule_mismatches(path: &Path) -> Result<Vec<usize>, String> {

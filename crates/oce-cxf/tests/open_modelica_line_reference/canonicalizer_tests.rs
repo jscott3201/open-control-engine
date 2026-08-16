@@ -24,6 +24,18 @@ fn valid_event_group_keeps_the_post_event_row_and_reorders_columns() {
 }
 
 #[test]
+fn first_selection_keeps_the_pre_event_row_without_changing_groups() {
+    let input = valid();
+    let last = canonicalize_bytes(&input, "last").unwrap();
+    let first =
+        canonicalize_bytes_with_selection(&input, "first", ProjectionSelection::First).unwrap();
+    assert_eq!(first.raw_rows, last.raw_rows);
+    assert_eq!(first.group_sizes, last.group_sizes);
+    assert_ne!(first.rows, last.rows);
+    assert_eq!(first.rows[1].u.to_bits(), (-4.0_f64).to_bits());
+}
+
+#[test]
 fn raw_header_identity_width_and_quoting_are_closed() {
     for (input, code) in [
         (

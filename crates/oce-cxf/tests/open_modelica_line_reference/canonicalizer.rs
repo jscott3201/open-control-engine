@@ -70,6 +70,12 @@ pub(crate) struct Canonicalization {
     pub(crate) bytes: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ProjectionSelection {
+    First,
+    Last,
+}
+
 #[derive(Clone, Copy)]
 struct Field<'a> {
     value: &'a str,
@@ -81,6 +87,14 @@ pub(crate) fn canonicalize_path(
     table_name: &str,
 ) -> Result<Canonicalization, CanonicalizerError> {
     canonicalize_bytes(&read_bounded_path(input)?, table_name)
+}
+
+pub(crate) fn canonicalize_path_with_selection(
+    input: &Path,
+    table_name: &str,
+    selection: ProjectionSelection,
+) -> Result<Canonicalization, CanonicalizerError> {
+    canonicalize_bytes_with_selection(&read_bounded_path(input)?, table_name, selection)
 }
 
 pub(crate) fn read_bounded_path(input: &Path) -> Result<Vec<u8>, CanonicalizerError> {
@@ -196,6 +210,14 @@ pub(crate) fn canonicalize_bytes(
     input: &[u8],
     table_name: &str,
 ) -> Result<Canonicalization, CanonicalizerError> {
+    canonicalize_bytes_with_selection(input, table_name, ProjectionSelection::Last)
+}
+
+pub(crate) fn canonicalize_bytes_with_selection(
+    input: &[u8],
+    table_name: &str,
+    selection: ProjectionSelection,
+) -> Result<Canonicalization, CanonicalizerError> {
     if input.len() > MAX_FILE_BYTES {
         return Err(size_error(input.len()));
     }
@@ -246,7 +268,7 @@ pub(crate) fn canonicalize_bytes(
         });
     }
     validate_time_order(&rows)?;
-    project(rows, table_name)
+    project(rows, table_name, selection)
 }
 
 fn size_error(size: usize) -> CanonicalizerError {
@@ -444,6 +466,7 @@ fn validate_time_order(rows: &[RealRow]) -> Result<(), CanonicalizerError> {
 fn project(
     raw_rows: Vec<RealRow>,
     table_name: &str,
+    selection: ProjectionSelection,
 ) -> Result<Canonicalization, CanonicalizerError> {
     if table_name.is_empty()
         || table_name.len() > MAX_TABLE_NAME_BYTES
@@ -463,7 +486,9 @@ fn project(
             .last()
             .is_some_and(|prior: &RealRow| prior.time.to_bits() == row.time.to_bits())
         {
-            *rows.last_mut().expect("equal-time group exists") = row;
+            if selection == ProjectionSelection::Last {
+                *rows.last_mut().expect("equal-time group exists") = row;
+            }
             *group_sizes.last_mut().expect("equal-time size exists") += 1;
         } else {
             rows.push(row);

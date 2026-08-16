@@ -82,6 +82,7 @@ TOOL_CARGO_TOML_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo
 TOOL_CARGO_LOCK_SHA=$(sha256 "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock")
 ARCHITECTURE_GENERATOR_SHA=$(sha256 "$SCRIPT_DIR/generate_architecture.py")
 ARCHITECTURE_VERIFIER_SHA=$(sha256 "$SCRIPT_DIR/verify_evidence.py")
+PROJECTION_VERIFIER_SHA=$(sha256 "$SCRIPT_DIR/projection_evidence.py")
 SAFE_FILE_HELPER_SHA=$(sha256 "$SCRIPT_DIR/safe_files.py")
 EVIDENCE_WORKFLOW_SHA=$(sha256 "$REPO_ROOT/.github/workflows/openmodelica-line-evidence.yml")
 OCI_MATERIALIZER_SHA=$(sha256 "$SCRIPT_DIR/materialize_oci.py")
@@ -107,6 +108,7 @@ check_generator_inputs() {
   check_hash "$TOOL_CARGO_LOCK_SHA" "$REPO_ROOT/tools/openmodelica-line-reference/Cargo.lock"
   check_hash "$ARCHITECTURE_GENERATOR_SHA" "$SCRIPT_DIR/generate_architecture.py"
   check_hash "$ARCHITECTURE_VERIFIER_SHA" "$SCRIPT_DIR/verify_evidence.py"
+  check_hash "$PROJECTION_VERIFIER_SHA" "$SCRIPT_DIR/projection_evidence.py"
   check_hash "$SAFE_FILE_HELPER_SHA" "$SCRIPT_DIR/safe_files.py"
   check_hash "$EVIDENCE_WORKFLOW_SHA" "$REPO_ROOT/.github/workflows/openmodelica-line-evidence.yml"
   check_hash "$OCI_MATERIALIZER_SHA" "$SCRIPT_DIR/materialize_oci.py"
@@ -272,6 +274,7 @@ run_model() {
     printf 'tool_cargo_lock_sha256=%s\n' "$TOOL_CARGO_LOCK_SHA"
     printf 'architecture_generator_sha256=%s\n' "$ARCHITECTURE_GENERATOR_SHA"
     printf 'architecture_verifier_sha256=%s\n' "$ARCHITECTURE_VERIFIER_SHA"
+    printf 'projection_verifier_sha256=%s\n' "$PROJECTION_VERIFIER_SHA"
     printf 'safe_file_helper_sha256=%s\n' "$SAFE_FILE_HELPER_SHA"
     printf 'evidence_workflow_sha256=%s\n' "$EVIDENCE_WORKFLOW_SHA"
     printf 'oci_materializer_sha256=%s\n' "$OCI_MATERIALIZER_SHA"
@@ -355,39 +358,44 @@ rmdir "$OUTPUT/run-a" "$OUTPUT/run-b" "$OUTPUT/flag-control"
 mv "$STAGING/index.raw.json" "$OUTPUT/image-index.json"
 mv "$STAGING/manifest.raw.json" "$OUTPUT/image-manifest.json"
 
-MUTATION=$(mktemp -d "$STAGING/mutation.XXXXXX")
-mkdir -p "$MUTATION/repo/tools/openmodelica-line-reference/src" "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference"
-cp "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.lock" "$MUTATION/repo/tools/openmodelica-line-reference/"
-cp "$STAGING/tool-repo/tools/openmodelica-line-reference/src/main.rs" "$MUTATION/repo/tools/openmodelica-line-reference/src/main.rs"
 CANONICALIZER="$STAGING/tool-repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
-cp "$CANONICALIZER" "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
-perl -0pi -e 's/            \*rows\.last_mut\(\)\.expect\("equal-time group exists"\) = row;\n//' "$MUTATION/repo/crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"
-CARGO_TARGET_DIR="$STAGING/mutant-target" cargo run --manifest-path "$MUTATION/repo/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
-  canonicalize-inspect "$OUTPUT/line-run-a.raw.csv" "$MUTATION/keep-first.canonical.csv" openmodelica_reals_line_keep_first "$MUTATION/keep-first.metadata"
-MISMATCHES=$(CARGO_TARGET_DIR="$STAGING/mutant-target" cargo run --manifest-path "$MUTATION/repo/tools/openmodelica-line-reference/Cargo.toml" \
-  --offline --locked --quiet -- schedule-mismatches "$MUTATION/keep-first.canonical.csv")
+CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" --offline --locked -- \
+  canonicalize-first-inspect "$OUTPUT/line-run-a.raw.csv" "$OUTPUT/projection-keep-first.canonical.csv" openmodelica_reals_line "$OUTPUT/projection-keep-first.metadata"
+if cmp -s "$OUTPUT/line.canonical.csv" "$OUTPUT/projection-keep-first.canonical.csv"; then
+  printf '%s\n' 'explicit keep-first projection did not change canonical output' >&2; exit 1
+fi
+MISMATCHES=$(CARGO_TARGET_DIR="$STAGING/cargo-target" cargo run --manifest-path "$STAGING/tool-repo/tools/openmodelica-line-reference/Cargo.toml" \
+  --offline --locked --quiet -- schedule-mismatches "$OUTPUT/projection-keep-first.canonical.csv")
 test "$MISMATCHES" = 'schedule_mismatch_rows=2,4,6,8'
-GROUP_SIZES=$(sed -n 's/^group_sizes=//p' "$MUTATION/keep-first.metadata")
-TIME_BITS=$(sed -n 's/^canonical_time_bits=//p' "$MUTATION/keep-first.metadata")
+GROUP_SIZES=$(sed -n 's/^group_sizes=//p' "$OUTPUT/projection-keep-first.metadata")
+RAW_TIME_BITS=$(sed -n 's/^raw_time_bits=//p' "$OUTPUT/projection-keep-first.metadata")
+TIME_BITS=$(sed -n 's/^canonical_time_bits=//p' "$OUTPUT/projection-keep-first.metadata")
 CANONICALIZER_SHA=$(shasum -a 256 "$CANONICALIZER" | cut -d' ' -f1)
+MUTATION_SHA=$(shasum -a 256 "$OUTPUT/projection-keep-first.canonical.csv" | cut -d' ' -f1)
+METADATA_SHA=$(shasum -a 256 "$OUTPUT/projection-keep-first.metadata" | cut -d' ' -f1)
 cat > "$OUTPUT/projection-mutation.log" <<EOF
 projection_mutation=contiguous equal-time selection changed from last to first
-working_tree_modified=false
-mutated_compile=PASS
+execution_path=canonicalize-first-inspect
 mutated_input=line-run-a.raw.csv
 mutated_input_sha256=$(shasum -a 256 "$OUTPUT/line-run-a.raw.csv" | cut -d' ' -f1)
+mutated_output=projection-keep-first.canonical.csv
+mutated_output_sha256=$MUTATION_SHA
+mutated_metadata=projection-keep-first.metadata
+mutated_metadata_sha256=$METADATA_SHA
 mutated_raw_rows=15
 mutated_canonical_rows=10
 mutated_group_sizes=$GROUP_SIZES
+mutated_raw_time_bits=$RAW_TIME_BITS
 mutated_canonical_time_bits=$TIME_BITS
 mutated_schedule_result=FAIL
 mutated_schedule_mismatch_rows=${MISMATCHES#schedule_mismatch_rows=}
 mutated_schedule_first_mismatch_row=2
 mutated_schedule_first_mismatch_time_bits=404e000000000eff
+mutated_output_differs_from_keep_last=PASS
 mutated_grouping_result=PASS
 mutated_timestamp_bits_result=PASS
-restoration_result=PASS
-restored_canonicalizer_sha256=$CANONICALIZER_SHA
+explicit_keep_first_execution=PASS
+executed_canonicalizer_sha256=$CANONICALIZER_SHA
 EOF
 
 check_generator_inputs

@@ -460,6 +460,7 @@ fn validate_architecture(
         &value.generator_inputs.tool_cargo_lock_sha256,
         &value.generator_inputs.architecture_generator_sha256,
         &value.generator_inputs.architecture_verifier_sha256,
+        &value.generator_inputs.projection_verifier_sha256,
         &value.generator_inputs.safe_file_helper_sha256,
         &value.generator_inputs.evidence_workflow_sha256,
         &value.generator_inputs.oci_materializer_sha256,

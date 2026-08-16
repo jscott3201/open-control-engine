@@ -138,8 +138,9 @@ stateful `CDL.Logical.Toggle/repeated_rises_initial_true_and_clear_priority` sch
 operations are exact in binary64; it is not an arbitrary Real or tolerance result. The light-gated
 sentinel validates committed raw output, keep-last projection, schedules, repeat-run records, OCI
 identities, pinned host artifact-tool identities, committed/materialized source records,
-cross-architecture Line canonical equality, and mutation controls; Docker does not run in normal
-CI. These are scoped Tier-3 results for the three named cases only. The global Tier-3
+cross-architecture Line canonical equality, and mutation controls. Line keep-first output and
+metadata are retained per architecture and independently reproduced from raw input; Docker does not
+run in normal CI. These are scoped Tier-3 results for the three named cases only. The global Tier-3
 report remains `Skipped`; no sequence-wide, solver, or cross-architecture raw-byte claim follows.
 
 `CDL.Logical.Pre` is not an expected-green OpenModelica case. Its upstream same-time event iteration

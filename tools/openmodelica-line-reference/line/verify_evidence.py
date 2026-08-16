@@ -15,6 +15,7 @@ import sys
 from typing import Any, NoReturn
 
 import safe_files
+import projection_evidence
 
 MAX_FILE = 1024 * 1024
 MAX_MANIFEST = 256 * 1024
@@ -43,6 +44,7 @@ ARCH_FILES = {
     "architecture.json", "line.canonical.csv", "line-run-a.raw.csv", "line-run-b.raw.csv",
     "run-a.log", "run-b.log", "flag-control.canonical.csv", "flag-control.raw.csv",
     "flag-control.log", "projection-mutation.log", "image-index.json", "image-manifest.json",
+    "projection-keep-first.canonical.csv", "projection-keep-first.metadata",
 }
 GENERATOR_INPUT_PATHS = {
     "line_pilot_sha256": "tools/openmodelica-line-reference/line/LinePilot.mo",
@@ -55,6 +57,7 @@ GENERATOR_INPUT_PATHS = {
     "tool_cargo_lock_sha256": "tools/openmodelica-line-reference/Cargo.lock",
     "architecture_generator_sha256": "tools/openmodelica-line-reference/line/generate_architecture.py",
     "architecture_verifier_sha256": "tools/openmodelica-line-reference/line/verify_evidence.py",
+    "projection_verifier_sha256": "tools/openmodelica-line-reference/line/projection_evidence.py",
     "safe_file_helper_sha256": "tools/openmodelica-line-reference/line/safe_files.py",
     "evidence_workflow_sha256": ".github/workflows/openmodelica-line-evidence.yml",
     "oci_materializer_sha256": "tools/openmodelica-line-reference/line/materialize_oci.py",
@@ -322,20 +325,6 @@ def validate_oci(directory, architecture):
         fail("OCI graph")
 
 
-def validate_projection(path, raw_digest, canonicalizer_digest):
-    expected = [
-        "projection_mutation=contiguous equal-time selection changed from last to first", "working_tree_modified=false",
-        "mutated_compile=PASS", "mutated_input=line-run-a.raw.csv", f"mutated_input_sha256={raw_digest}",
-        "mutated_raw_rows=15", "mutated_canonical_rows=10", "mutated_group_sizes=1,1,2,1,2,1,2,1,2,2",
-        "mutated_canonical_time_bits=" + ",".join(TIME_BITS), "mutated_schedule_result=FAIL",
-        "mutated_schedule_mismatch_rows=2,4,6,8", "mutated_schedule_first_mismatch_row=2",
-        "mutated_schedule_first_mismatch_time_bits=404e000000000eff", "mutated_grouping_result=PASS",
-        "mutated_timestamp_bits_result=PASS", "restoration_result=PASS", f"restored_canonicalizer_sha256={canonicalizer_digest}",
-    ]
-    if text(path).splitlines() != expected:
-        fail("projection mutation record")
-
-
 def strict_canonical_boundary(directory, root):
     command = [
         "cargo", "run", "--manifest-path",
@@ -357,7 +346,7 @@ def validate_architecture(directory, root, architecture):
     except (OSError, ValueError) as error:
         fail(f"unsafe architecture evidence: {error}")
     record = json_file(directory / "architecture.json")
-    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "artifact_toolchain", "source_materialization", "omc_version", "gcc_version", "binutils_version", "glibc_version", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256", "runs"]
+    fields = ["format", "architecture", "platform", "host_architecture", "docker_server_architecture", "container_architecture", "platform_manifest_digest", "config_digest", "repository_revision", "generator_provenance_scope", "generator_inputs", "artifact_toolchain", "source_materialization", "omc_version", "gcc_version", "binutils_version", "glibc_version", "raw_run_a_sha256", "raw_run_b_sha256", "flag_control_raw_sha256", "canonical_sha256", "flag_control_canonical_sha256", "projection_mutation", "runs"]
     closed(record, fields, "architecture record")
     expected = ARCH[architecture]
     if [record["format"], record["architecture"], record["platform"], record["host_architecture"], record["docker_server_architecture"], record["container_architecture"], record["platform_manifest_digest"], record["config_digest"], record["generator_provenance_scope"]] != ["oce-openmodelica-line-native-architecture-v4", architecture, *expected, "native_generation_and_publication"]:
@@ -397,6 +386,14 @@ def validate_architecture(directory, root, architecture):
     assert_schedule(projected)
     if parse_canonical(directory / "line.canonical.csv", "openmodelica_reals_line") != projected:
         fail("canonical output is not the raw keep-last projection")
+    mutation = projection_evidence.record(directory, record["raw_run_a_sha256"], sha)
+    if not type_exact_equal(record["projection_mutation"], mutation):
+        fail("native projection mutation record")
+    mutation_rows = parse_canonical(directory / mutation["canonical_output"], "openmodelica_reals_line")
+    projection_evidence.validate(rows_a, groups, projected, mutation_rows,
+        text(directory / mutation["metadata"]), text(directory / mutation["log"]),
+        record["raw_run_a_sha256"], mutation["canonical_sha256"], mutation["metadata_sha256"],
+        expected_inputs["canonicalizer_sha256"])
     control_projected = expected_projection(control_groups)
     if parse_canonical(directory / "flag-control.canonical.csv", "openmodelica_reals_line_flag_control") != control_projected:
         fail("flag-control canonical output is not the raw keep-last projection")
@@ -409,7 +406,6 @@ def validate_architecture(directory, root, architecture):
         log_contract(directory / name, architecture, token, model, digest, revision, expected_inputs)
     validate_oci(directory, architecture)
     validate_wrappers(root)
-    validate_projection(directory / "projection-mutation.log", record["raw_run_a_sha256"], sha(root / "crates/oce-cxf/tests/open_modelica_line_reference/canonicalizer.rs"))
     return record, projected
 
 
@@ -435,6 +431,8 @@ def expected_artifact_roles():
         ("flag_control_raw_csv", "flag-control.raw.csv"),
         ("flag_control_log", "flag-control.log"),
         ("projection_mutation_log", "projection-mutation.log"),
+        ("projection_keep_first_canonical_csv", "projection-keep-first.canonical.csv"),
+        ("projection_keep_first_metadata", "projection-keep-first.metadata"),
         ("architecture_image_index_json", "image-index.json"),
         ("platform_image_manifest_json", "image-manifest.json"),
     ]
@@ -456,6 +454,7 @@ def expected_artifact_roles():
         ("manifest_generator_script", "tools/openmodelica-line-reference/line/generate_manifest.py"),
         ("architecture_generator_script", "tools/openmodelica-line-reference/line/generate_architecture.py"),
         ("evidence_validator_script", "tools/openmodelica-line-reference/line/verify_evidence.py"),
+        ("projection_validator_script", "tools/openmodelica-line-reference/line/projection_evidence.py"),
         ("safe_file_helper_script", "tools/openmodelica-line-reference/line/safe_files.py"),
         ("oci_materializer_script", "tools/openmodelica-line-reference/line/materialize_oci.py"),
         ("deadline_script", "tools/openmodelica-line-reference/line/deadline.sh"),
@@ -522,6 +521,7 @@ def expected_architecture_manifest(output, name, record):
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
         "canonical_sha256": record["canonical_sha256"],
         "flag_control_canonical_sha256": record["flag_control_canonical_sha256"],
+        "projection_mutation": record["projection_mutation"],
         "runs": record["runs"],
     }
 

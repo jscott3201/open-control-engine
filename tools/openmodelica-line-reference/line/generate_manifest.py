@@ -93,6 +93,7 @@ def architecture(name):
         "flag_control_raw_sha256": record["flag_control_raw_sha256"],
         "canonical_sha256": record["canonical_sha256"],
         "flag_control_canonical_sha256": record["flag_control_canonical_sha256"],
+        "projection_mutation": record["projection_mutation"],
         "runs": record["runs"],
     }
 
@@ -112,6 +113,8 @@ architecture_files = [
     ("flag_control_raw_csv", "flag-control.raw.csv"),
     ("flag_control_log", "flag-control.log"),
     ("projection_mutation_log", "projection-mutation.log"),
+    ("projection_keep_first_canonical_csv", "projection-keep-first.canonical.csv"),
+    ("projection_keep_first_metadata", "projection-keep-first.metadata"),
     ("architecture_image_index_json", "image-index.json"),
     ("platform_image_manifest_json", "image-manifest.json"),
 ]
@@ -130,6 +133,7 @@ tracked = [
     ("manifest_generator_script", TOOL + "line/generate_manifest.py"),
     ("architecture_generator_script", TOOL + "line/generate_architecture.py"),
     ("evidence_validator_script", TOOL + "line/verify_evidence.py"),
+    ("projection_validator_script", TOOL + "line/projection_evidence.py"),
     ("safe_file_helper_script", TOOL + "line/safe_files.py"),
     ("oci_materializer_script", TOOL + "line/materialize_oci.py"),
     ("deadline_script", TOOL + "line/deadline.sh"),

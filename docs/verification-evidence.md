@@ -176,12 +176,14 @@ instants. Both are native `linux/arm64` cases.
 Line retains two repeat-identical native runs on each of `linux/arm64` and `linux/amd64`, with both
 platform manifests and configs under the shared OCI index. Its canonical bytes match across the two
 architectures. Four closed views drive the public facade at the emitted timestamp bits and compare
-OpenModelica and engine outputs against an independent 40-cell expected-bit table. A compiled
-keep-first projection fails the independent canonical input-schedule oracle at pinned event rows;
-it is not a facade-comparator control, and this stateless block can remain green when given
-internally consistent pre-event rows. The external limit-flag change, swapped output mapping, and
-four arithmetic reference mutants fail through the facade comparator at pinned rows. This proves
-only the fixed finite matrix; raw cross-architecture bytes,
+OpenModelica and engine outputs against an independent 40-cell expected-bit table. Each architecture
+retains keep-first canonical output and inspection metadata. The structural sentinel executes the
+explicit keep-first path again from retained raw input, compares both artifacts byte-for-byte, and
+derives input-schedule mismatches at rows 2, 4, 6, and 8. This projection control is not a
+facade-comparator control, and this stateless block can remain green when given internally consistent
+pre-event rows. The external limit-flag change, swapped output mapping, and four arithmetic reference
+mutants fail through the facade comparator at pinned rows. This proves only the fixed finite matrix;
+raw cross-architecture bytes,
 other Line inputs, non-finite values, signed zero, subnormals, and solver behavior remain outside it.
 
 Each native architecture record binds every checkout file used through native artifact publication,

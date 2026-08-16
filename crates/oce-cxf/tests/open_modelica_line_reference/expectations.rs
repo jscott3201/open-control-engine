@@ -98,6 +98,14 @@ pub(super) fn expected_artifacts() -> Vec<(String, String)> {
         ("flag_control_raw_csv", "flag-control.raw.csv"),
         ("flag_control_log", "flag-control.log"),
         ("projection_mutation_log", "projection-mutation.log"),
+        (
+            "projection_keep_first_canonical_csv",
+            "projection-keep-first.canonical.csv",
+        ),
+        (
+            "projection_keep_first_metadata",
+            "projection-keep-first.metadata",
+        ),
         ("architecture_image_index_json", "image-index.json"),
         ("platform_image_manifest_json", "image-manifest.json"),
     ];
@@ -157,6 +165,10 @@ pub(super) fn expected_artifacts() -> Vec<(String, String)> {
         (
             "evidence_validator_script",
             "tools/openmodelica-line-reference/line/verify_evidence.py",
+        ),
+        (
+            "projection_validator_script",
+            "tools/openmodelica-line-reference/line/projection_evidence.py",
         ),
         (
             "safe_file_helper_script",

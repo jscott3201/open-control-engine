@@ -457,10 +457,12 @@ VentilationZones ASHRAE62_1 Setpoints (#162), and the CoolingOnly Controller (#1
   operations are exact in binary64. Two repeat-identical runs are retained from native arm64 and
   amd64 hosts, and their strict keep-last canonical outputs match exactly. The public facade runs
   four closed views at the emitted event instants with zero tolerances and no warnings; both
-  implementations are checked against an independent expected-bit table. The keep-first projection
-  fails the independent canonical input-schedule oracle; it is not a facade-comparator control, and
-  consistent pre-event rows can remain green for this stateless block. External flag, output
-  mapping, and arithmetic reference mutations fail through the facade comparator at pinned rows.
+  implementations are checked against an independent expected-bit table. Native keep-first output
+  and inspection metadata are retained for each architecture. The structural sentinel executes the
+  explicit keep-first path from raw input, reproduces both artifacts exactly, and derives schedule
+  mismatches at rows 2, 4, 6, and 8. This is not a facade-comparator control; consistent pre-event
+  rows can remain green for this stateless block. External flag, output mapping, and arithmetic
+  reference mutations fail through the facade comparator at pinned rows.
   Native records bind pinned Rust/Python artifact tools and distinguish committed source bytes from
   materialized `git archive` bytes, including the explicit Modelica package attribute override.
   Raw repeat identity is per architecture; only canonical output is compared across architectures.

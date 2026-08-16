@@ -152,6 +152,7 @@ pub(super) struct Architecture {
     pub(super) flag_control_raw_sha256: String,
     pub(super) canonical_sha256: String,
     pub(super) flag_control_canonical_sha256: String,
+    pub(super) projection_mutation: ProjectionMutation,
     pub(super) runs: Vec<Run>,
 }
 
@@ -168,6 +169,7 @@ pub(super) struct GeneratorInputs {
     pub(super) tool_cargo_lock_sha256: String,
     pub(super) architecture_generator_sha256: String,
     pub(super) architecture_verifier_sha256: String,
+    pub(super) projection_verifier_sha256: String,
     pub(super) safe_file_helper_sha256: String,
     pub(super) evidence_workflow_sha256: String,
     pub(super) oci_materializer_sha256: String,
@@ -214,6 +216,21 @@ pub(super) struct SourceMaterialization {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ProjectionMutation {
+    pub(super) control: String,
+    pub(super) input: String,
+    pub(super) input_sha256: String,
+    pub(super) canonical_output: String,
+    pub(super) canonical_sha256: String,
+    pub(super) metadata: String,
+    pub(super) metadata_sha256: String,
+    pub(super) log: String,
+    pub(super) log_sha256: String,
+    pub(super) schedule_mismatch_rows: Vec<u64>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub(super) struct NativeArchitectureRecord {
     pub(super) format: String,
     pub(super) architecture: String,
@@ -237,6 +254,7 @@ pub(super) struct NativeArchitectureRecord {
     pub(super) flag_control_raw_sha256: String,
     pub(super) canonical_sha256: String,
     pub(super) flag_control_canonical_sha256: String,
+    pub(super) projection_mutation: ProjectionMutation,
     pub(super) runs: Vec<Run>,
 }
 

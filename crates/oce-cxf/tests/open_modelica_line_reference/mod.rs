@@ -7,6 +7,7 @@ mod expectations;
 mod manifest;
 mod manifest_contract_tests;
 mod native_records;
+mod projection_records;
 mod repository;
 mod run_log_contract;
 mod safe_read;

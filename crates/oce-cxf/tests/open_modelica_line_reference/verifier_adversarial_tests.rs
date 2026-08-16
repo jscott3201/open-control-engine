@@ -3,6 +3,8 @@
 use std::os::unix::fs::{DirBuilderExt as _, MetadataExt as _, symlink};
 use std::path::{Path, PathBuf};
 
+use sha2::{Digest as _, Sha256};
+
 fn verifier() -> PathBuf {
     super::repository_root().join("tools/openmodelica-line-reference/line/verify_evidence.py")
 }
@@ -35,6 +37,18 @@ fn write_json(path: &Path, value: &serde_json::Value) {
     let mut bytes = serde_json::to_vec_pretty(value).unwrap();
     bytes.push(b'\n');
     std::fs::write(path, bytes).unwrap();
+}
+
+fn update_projection_digest(directory: &Path, field: &str, file: &str) {
+    let record = directory.join("architecture.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&record).unwrap()).unwrap();
+    value["projection_mutation"][field] = format!(
+        "{:x}",
+        Sha256::digest(std::fs::read(directory.join(file)).unwrap())
+    )
+    .into();
+    write_json(&record, &value);
 }
 
 #[test]
@@ -85,6 +99,84 @@ fn digest_correct_canonical_output_tamper_still_fails_raw_reproduction() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn rehashed_noop_keep_first_output_fails_executed_control() {
+    let temporary = ClaimedTempDir::new("oce-line-verifier-noop-projection");
+    let copied = temporary.path().join("arm64");
+    copy_tree(&super::fixture("arm64"), &copied);
+    std::fs::copy(
+        copied.join("line.canonical.csv"),
+        copied.join("projection-keep-first.canonical.csv"),
+    )
+    .unwrap();
+    update_projection_digest(
+        &copied,
+        "canonical_sha256",
+        "projection-keep-first.canonical.csv",
+    );
+    let root = super::repository_root();
+    let output = run(&[
+        Path::new("architecture"),
+        &copied,
+        &root,
+        Path::new("arm64"),
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("executed projection control"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn rehashed_changed_mismatch_log_fails_reproduction() {
+    let temporary = ClaimedTempDir::new("oce-line-verifier-mismatch-log");
+    let copied = temporary.path().join("arm64");
+    copy_tree(&super::fixture("arm64"), &copied);
+    let log = copied.join("projection-mutation.log");
+    let body = std::fs::read_to_string(&log).unwrap().replace(
+        "mutated_schedule_mismatch_rows=2,4,6,8",
+        "mutated_schedule_mismatch_rows=2",
+    );
+    std::fs::write(&log, body).unwrap();
+    update_projection_digest(&copied, "log_sha256", "projection-mutation.log");
+    let root = super::repository_root();
+    let output = run(&[
+        Path::new("architecture"),
+        &copied,
+        &root,
+        Path::new("arm64"),
+    ]);
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("execution log is not reproducible"),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn missing_keep_first_output_or_metadata_fails_closed_copy() {
+    for file in [
+        "projection-keep-first.canonical.csv",
+        "projection-keep-first.metadata",
+    ] {
+        let temporary = ClaimedTempDir::new("oce-line-verifier-missing-projection");
+        let copied = temporary.path().join("arm64");
+        copy_tree(&super::fixture("arm64"), &copied);
+        std::fs::remove_file(copied.join(file)).unwrap();
+        let output = run(&[Path::new("precopy"), &copied]);
+        assert!(!output.status.success(), "{file}");
+        assert!(
+            String::from_utf8_lossy(&output.stderr)
+                .contains("architecture evidence entries are not closed"),
+            "{file}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 #[test]
@@ -243,6 +335,7 @@ fn native_input_changes_after_generation_break_provenance_binding() {
         "tools/openmodelica-line-reference/Cargo.lock",
         "tools/openmodelica-line-reference/line/generate_architecture.py",
         "tools/openmodelica-line-reference/line/verify_evidence.py",
+        "tools/openmodelica-line-reference/line/projection_evidence.py",
         "tools/openmodelica-line-reference/line/safe_files.py",
         ".github/workflows/openmodelica-line-evidence.yml",
         "tools/openmodelica-line-reference/line/materialize_oci.py",

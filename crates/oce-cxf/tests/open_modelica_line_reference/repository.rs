@@ -28,7 +28,7 @@ pub(super) fn validate(manifest: &Manifest, root: &Path) -> Result<(), String> {
     validate_runs(manifest, &root)?;
     validate_wrappers(manifest, &root)?;
     validate_oci(manifest, &root)?;
-    validate_projection_records(manifest, &root)?;
+    super::projection_records::validate(manifest, &root)?;
     validate_cross_architecture(manifest, &root)?;
     validate_tool_contract(manifest, &root)
 }
@@ -52,6 +52,10 @@ fn validate_native_provenance(manifest: &Manifest) -> Result<(), String> {
             (
                 &inputs.architecture_verifier_sha256,
                 "evidence_validator_script",
+            ),
+            (
+                &inputs.projection_verifier_sha256,
+                "projection_validator_script",
             ),
             (&inputs.safe_file_helper_sha256, "safe_file_helper_script"),
             (&inputs.evidence_workflow_sha256, "evidence_workflow"),
@@ -284,6 +288,13 @@ fn validate_run_log(
             architecture
                 .generator_inputs
                 .architecture_verifier_sha256
+                .as_str(),
+        ),
+        (
+            "projection_verifier_sha256",
+            architecture
+                .generator_inputs
+                .projection_verifier_sha256
                 .as_str(),
         ),
         (
@@ -524,39 +535,6 @@ fn validate_oci(manifest: &Manifest, root: &Path) -> Result<(), String> {
                 .map_err(|error| error.to_string())?;
         if platform.config.digest != architecture.config_digest {
             return Err("OCI platform config identity mismatch".into());
-        }
-    }
-    Ok(())
-}
-
-fn validate_projection_records(manifest: &Manifest, root: &Path) -> Result<(), String> {
-    let canonicalizer = artifact(manifest, "canonicalizer_source");
-    for architecture in &manifest.architectures {
-        let expected = [
-            "projection_mutation=contiguous equal-time selection changed from last to first".to_string(),
-            "working_tree_modified=false".into(), "mutated_compile=PASS".into(),
-            "mutated_input=line-run-a.raw.csv".into(), format!("mutated_input_sha256={}", architecture.raw_run_a_sha256),
-            "mutated_raw_rows=15".into(), "mutated_canonical_rows=10".into(),
-            "mutated_group_sizes=1,1,2,1,2,1,2,1,2,2".into(),
-            "mutated_canonical_time_bits=0000000000000000,404e000000000000,404e000000000eff,405e000000000000,405e000000000781,4066800000000000,40668000000003c1,406e000000000000,406e0000000003c1,4072c00000000000".into(),
-            "mutated_schedule_result=FAIL".into(), "mutated_schedule_mismatch_rows=2,4,6,8".into(),
-            "mutated_schedule_first_mismatch_row=2".into(), "mutated_schedule_first_mismatch_time_bits=404e000000000eff".into(),
-            "mutated_grouping_result=PASS".into(), "mutated_timestamp_bits_result=PASS".into(),
-            "restoration_result=PASS".into(), format!("restored_canonicalizer_sha256={}", canonicalizer.sha256),
-        ];
-        let text = read_text(
-            root,
-            &artifact(
-                manifest,
-                &format!("{}_projection_mutation_log", architecture.name),
-            )
-            .path,
-        )?;
-        if text.lines().ne(expected.iter().map(String::as_str)) {
-            return Err(format!(
-                "{} projection-mutation evidence drifted",
-                architecture.name
-            ));
         }
     }
     Ok(())

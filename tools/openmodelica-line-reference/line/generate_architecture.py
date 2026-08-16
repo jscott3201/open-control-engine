@@ -81,6 +81,7 @@ inputs = {
     "tool_cargo_lock_sha256": root / "tools/openmodelica-line-reference/Cargo.lock",
     "architecture_generator_sha256": root / "tools/openmodelica-line-reference/line/generate_architecture.py",
     "architecture_verifier_sha256": root / "tools/openmodelica-line-reference/line/verify_evidence.py",
+    "projection_verifier_sha256": root / "tools/openmodelica-line-reference/line/projection_evidence.py",
     "safe_file_helper_sha256": root / "tools/openmodelica-line-reference/line/safe_files.py",
     "evidence_workflow_sha256": root / ".github/workflows/openmodelica-line-evidence.yml",
     "oci_materializer_sha256": root / "tools/openmodelica-line-reference/line/materialize_oci.py",
@@ -185,6 +186,18 @@ payload = {
     "flag_control_raw_sha256": sha(output / "flag-control.raw.csv"),
     "canonical_sha256": sha(output / "line.canonical.csv"),
     "flag_control_canonical_sha256": sha(output / "flag-control.canonical.csv"),
+    "projection_mutation": {
+        "control": "explicit_keep_first",
+        "input": "line-run-a.raw.csv",
+        "input_sha256": sha(output / "line-run-a.raw.csv"),
+        "canonical_output": "projection-keep-first.canonical.csv",
+        "canonical_sha256": sha(output / "projection-keep-first.canonical.csv"),
+        "metadata": "projection-keep-first.metadata",
+        "metadata_sha256": sha(output / "projection-keep-first.metadata"),
+        "log": "projection-mutation.log",
+        "log_sha256": sha(output / "projection-mutation.log"),
+        "schedule_mismatch_rows": [2, 4, 6, 8],
+    },
     "runs": [
         {
             "id": run_id,
