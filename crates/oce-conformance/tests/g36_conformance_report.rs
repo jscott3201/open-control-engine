@@ -26,6 +26,8 @@ use support::{
 };
 
 mod block_harness;
+#[path = "open_modelica_line/support.rs"]
+mod scoped_open_modelica_line;
 #[path = "open_modelica_nand/support.rs"]
 mod scoped_open_modelica_nand;
 
@@ -344,6 +346,14 @@ fn scoped_openmodelica_case_does_not_change_global_tier_three_status() {
     assert_eq!(status(&before, ConformanceTier::Tier3), TierStatus::Skipped);
     let external = scoped_open_modelica_nand::read_reference("nand.canonical.csv").unwrap();
     assert!(scoped_open_modelica_nand::evaluate(&external).exact_match);
+    let line = scoped_open_modelica_line::canonical().unwrap();
+    for (mode, view) in scoped_open_modelica_line::views(&line).unwrap() {
+        let outcome = scoped_open_modelica_line::evaluate(mode, &view);
+        let oce_conformance::ComparisonResult::Exact(exact) = outcome.comparison else {
+            panic!("scoped Line comparison must remain exact");
+        };
+        assert!(exact.passed);
+    }
     let after = assemble();
     assert_eq!(status(&after, ConformanceTier::Tier3), TierStatus::Skipped);
     assert_eq!(before, after);

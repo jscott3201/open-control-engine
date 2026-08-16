@@ -8,11 +8,13 @@ is wrong? Is that thing independent of the system it is judging? And will it tel
 it is not running? This page answers them in that order, and every count on it can be reproduced
 from a clone with `find` and `grep`.
 
-The short version first, because it is the part that matters most: two elementary cases have been
-executed through OpenModelica 1.25.1 against pinned Buildings and MSL sources. The Nand case covers
-all four two-input Boolean states; the Toggle case covers one exact stateful event schedule with
-initially true input, repeated rises, and clear priority. The global Tier-3 report remains skipped;
-no sequence-wide, numeric, or cross-architecture OpenModelica claim follows from these cases.
+The short version first, because it is the part that matters most: three elementary cases have been
+executed through OpenModelica 1.25.1 against pinned Buildings and MSL sources. Nand covers all four
+two-input Boolean states; Toggle covers one exact stateful event schedule with initially true input,
+repeated rises, and clear priority; Line covers four limit modes across five finite input regions.
+Line's selected values make every operation exact in binary64. The global Tier-3 report remains
+skipped; no sequence-wide, arbitrary Real, general tolerance, solver, or cross-architecture raw-byte
+claim follows from these cases.
 
 `CDL.Logical.Pre` is outside those executed-reference claims. The engine's fixed
 [HostTick v1 profile](execution-profile.md) delays `Pre` by one HostTick transition rather than one
@@ -33,7 +35,7 @@ visible of them proves nothing about correctness at all.
 | Tier-A HostTick profile references | `tools/golden-gen/goldens/G36/` | 20 signal goldens | Independent implementation of the engine profile; not a Modelica oracle |
 | Structural oracle | `third_party/modelica-buildings-cdl/cxf/` | 44 vendored translations; 31 comparable fixtures | Yes — an independent translation of the same upstream source |
 | Tier-1 per-block oracle comparisons | `crates/oce-conformance/tests/per_block_*.rs` | 15 suites; 278 CDL signal goldens (257 bit-exact, 21 aligned-tolerance) | Yes — Tier-A generator is outside the engine workspace |
-| Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/logical_nand/` and `logical_toggle/` | 2 named Boolean cases; global report skipped | Yes — pinned OpenModelica and Buildings execution |
+| Scoped Tier-3 cross-implementation differentials | `crates/oce-conformance/tests/fixtures/open_modelica/` | 3 named cases: 2 Boolean and 1 finite Real matrix; global report skipped | Yes — pinned OpenModelica and Buildings execution |
 
 ### Tier-2 determinism goldens — they catch drift, not wrongness
 
@@ -164,19 +166,48 @@ skipped on every successful path:
   above — but it compares against re-derived references, not against Buildings executed output, and
   it is not wired into the tier report.
 - **Tier 3** — the global row remains skipped because the report cannot represent partial external
-  coverage (`report.rs:138-143`). The separate Nand and Toggle tests do not enter the report.
+  coverage (`report.rs:138-143`). The separate Nand, Toggle, and Line tests do not enter the report.
 
 The scoped Nand fixture retains two byte-identical raw OMC runs, one semantic And control, strict
-raw-to-canonical projection, and the exact facade comparison. The separate Toggle fixture retains
-two byte-identical raw runs, a one-token Latch control, and the same class of projection and facade
-checks at explicit event instants. Both regeneration commands are network-disabled and native
-`linux/arm64`; CI validates committed evidence and never runs Docker. No Dymola, Spawn, FMI, whole
-sequence, Real, or Integer external case exists. Two Boolean cases therefore cannot make the
-engine-wide report pass.
+raw-to-canonical projection, and the exact facade comparison. Toggle retains two byte-identical raw
+runs, a one-token Latch control, and the same class of projection and facade checks at explicit event
+instants. Both are native `linux/arm64` cases.
 
-Regeneration assumes a trusted host account, checkout, Docker client, and executable search path.
-The recorded sandbox limits the OpenModelica container; it does not defend against another process
-running as the invoking user.
+Line retains two repeat-identical native runs on each of `linux/arm64` and `linux/amd64`, with both
+platform manifests and configs under the shared OCI index. Its canonical bytes match across the two
+architectures. Four closed views drive the public facade at the emitted timestamp bits and compare
+OpenModelica and engine outputs against an independent 40-cell expected-bit table. Each architecture
+retains keep-first canonical output and inspection metadata. The structural sentinel executes the
+explicit keep-first path again from retained raw input, compares both artifacts byte-for-byte, and
+derives input-schedule mismatches at rows 2, 4, 6, and 8. This projection control is not a
+facade-comparator control, and this stateless block can remain green when given internally consistent
+pre-event rows. The external limit-flag change, swapped output mapping, and four arithmetic reference
+mutants fail through the facade comparator at pinned rows. This proves only the fixed finite matrix;
+raw cross-architecture bytes,
+other Line inputs, non-finite values, signed zero, subnormals, and solver behavior remain outside it.
+
+Each native architecture record binds every checkout file used through native artifact publication,
+including workflow, sandbox helpers, OCI metadata, wrappers, and canonicalizer tool inputs. Assembly
+and final-manifest generation happen after native publication, so their scripts are bound by the
+final artifact manifest rather than represented as native generator inputs.
+
+The Line workflow installs Rust 1.97.1 and Python 3.13.7 for host-side artifact processing and
+records compiler, Cargo, Python, and architecture identities in each native log. MSL materialization
+uses `git archive` with the explicit `Modelica/package.mo -export-subst` attribute override. For the
+pinned source, both the committed and materialized `Modelica/package.mo` SHA-256 values are
+`c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191`; separate fields preserve the
+boundary even though the bytes are equal. Buildings uses no local attribute override, and its
+committed and materialized file hashes are also recorded separately.
+
+All three regeneration paths disable container networking. The retained Line workflow is manual
+only after evidence capture; normal CI validates committed evidence and does not run Docker. No
+Dymola, Spawn, FMI, whole-sequence, or Integer external case exists. These three cases cannot make
+the engine-wide report pass.
+
+Regeneration assumes a trusted host account, checkout, Docker client, Git and shell tools, and
+executable search path. Rust and Python artifact tools are pinned and recorded; that does not turn
+the rest of the host into sandbox inputs. The recorded sandbox limits the OpenModelica container;
+it does not defend against another process running as the invoking user.
 
 ---
 
@@ -202,12 +233,12 @@ un-audited per class.
 not author, at a pinned commit whose bytes are gated. It is also the narrowest claim: structure
 only, over 31 of 46 fixtures.
 
-**The scoped OpenModelica cases: yes at execution and source boundaries.** A digest-pinned native
-arm64 image executes the pinned Buildings `Nand` and `Toggle` classes with inputs supplied by MSL
-`BooleanTable`. The wrappers contain no expected output. Each comparison remains a discrepancy
-detector rather than an oracle verdict: analytical evidence comes first in adjudication, and a
-mismatch cannot change a golden, tolerance, or report status. Their scope is four Boolean pairs for
-Nand and one event schedule for Toggle.
+**The scoped OpenModelica cases: yes at execution and source boundaries.** A digest-pinned image
+executes the pinned Buildings `Nand`, `Toggle`, and `Line` classes with inputs supplied by MSL
+sources. The wrappers contain no expected output. Each comparison remains a discrepancy detector
+rather than an oracle verdict: analytical evidence comes first in adjudication, and a mismatch
+cannot change a golden, tolerance, or report status. Their scope is four Boolean pairs for Nand, one
+event schedule for Toggle, and one finite four-mode/five-region matrix for Line.
 
 One more thing an evaluator should weigh: independence of the oracle does not make the *comparison*
 independent of when it runs. See the next section.
@@ -310,8 +341,8 @@ If you are evaluating this engine, the defensible summary is:
 - Fixture fidelity is bounded structurally against an independent LBL translation of upstream
   sources, per PR, for 31 of 46 fixtures.
 - Agreement with an **executed Buildings implementation** is bounded for one exhaustive
-  `CDL.Logical.Nand` Boolean case and one stateful `CDL.Logical.Toggle` schedule. Global Tier 3
-  remains skipped.
+  `CDL.Logical.Nand` Boolean case, one stateful `CDL.Logical.Toggle` schedule, and one finite
+  `CDL.Reals.Line` matrix. Global Tier 3 remains skipped.
 
 The gate will tell you which broader checks it skipped. The scoped OMC artifacts do not change those
 disclosures.

@@ -1,0 +1,101 @@
+{
+  "format": "oce-openmodelica-line-native-architecture-v4",
+  "architecture": "amd64",
+  "platform": "linux/amd64",
+  "host_architecture": "amd64",
+  "docker_server_architecture": "x86_64",
+  "container_architecture": "x86_64",
+  "platform_manifest_digest": "sha256:92d0779a01e7d43ed4d5ecb4cfd9754cb259b30673ddb454b5a32e3eb8665f11",
+  "config_digest": "sha256:0c81120bb392de44cab0e9ff6818d0a44afad657d5b401f25e148fa6c26e5347",
+  "repository_revision": "f072485120bce69277965682fd708d18929a44e7",
+  "generator_provenance_scope": "native_generation_and_publication",
+  "generator_inputs": {
+    "line_pilot_sha256": "db76edd2a374a3a3c91900b00c848c7a833b2d2835449b493bf471312c2a621e",
+    "line_flag_pilot_sha256": "cb091f72c0fd36db67e333d44c6dac773782d301ab4ded27f0776e9f5c0b07d6",
+    "runner_sha256": "cba528491e19008f0f3b8d9590c20363cccb56487cbe3129aa58ddc35e8ef2aa",
+    "regenerate_sha256": "5e08edc6a15846eded8ecfb95787b9495759eb73b1a48ebeca44fa89e67b6a24",
+    "canonicalizer_sha256": "66e62c1ce4ade5358f9b3c29056c25006052107e46129a791623cf0b1c862b5b",
+    "tool_main_sha256": "25347930953ec2c59ad74618bafadbef1d67fde936a384f01ba72cea9afa2b98",
+    "tool_cargo_toml_sha256": "2f64ca9486cd70ef7d42cdc71704208d6c497fdc7bd32dff13e85e1af07c7267",
+    "tool_cargo_lock_sha256": "0f59a1b1ad640b0241f04c101ddc5a88a19afeb4617dcfe78963b61337e0f853",
+    "architecture_generator_sha256": "2882628cdf87b6af37a32f481e96703c86a2b4d9db9376aa88c2fa6ec00b1049",
+    "architecture_verifier_sha256": "bb7a14d0863fa6403456a6d5dac00f5aeaa14a30addddb49b5d83647c68d1f67",
+    "projection_verifier_sha256": "2767b6236733aa005f2afb646fdd81b269aaa53338f379ad1090eaa1f5349228",
+    "safe_file_helper_sha256": "4ae5436ad45bfe4a42468161e61c8f4bec7b8c26f042b758af029ead84d7f5d4",
+    "evidence_workflow_sha256": "f09a45d61d28bb96412445d4fc12f61cf1e1e65a050274835174ea1000992035",
+    "oci_materializer_sha256": "5277d9955928cf11f46060c8f4771b38f390e6f900a689a855ad323d71aadd1d",
+    "deadline_sha256": "ccedf17f714ab54b6589a20f0a463c8a04760bae026e21e769f551437f89c800",
+    "deadline_test_sha256": "a2c7b440f11216815d1b99c4041cacaf1dea16ad283ea8b745d24f6955d2e54d",
+    "container_cleanup_sha256": "63cc0d8b319d9107c0cfb610d5bfbde18071a50f4e160f86b8baf9e590e9bf23",
+    "container_cleanup_test_sha256": "8e1216d771c042158102796adb913e1f7f33fc2b114339f42c0a529c5a917346",
+    "output_publish_sha256": "feb0b998155260da8b89038dd8eb9466353ae019f13b58dc8f554d2404e73811",
+    "output_publish_test_sha256": "ec457bba0555fde468b3aad47ef737f71847c6537ce196780a2da7637b64f3d6",
+    "oci_index_source_sha256": "37ddcdcc0ac248ecc8abc81e31fda079ea85992112d5c28496606159b4904678",
+    "arm64_manifest_source_sha256": "cc7135cee4138377c0403dc9c8c400d85bb576ac783f3ac667f65dcdfe1f7d4e",
+    "amd64_manifest_source_sha256": "e42cbf56db455eae63a38b960fb25914dfb1b9a221575118c527a145cc134848"
+  },
+  "artifact_toolchain": {
+    "rustc_release": "1.97.1",
+    "rustc_commit_hash": "8bab26f4f68e0e26f0bb7960be334d5b520ea452",
+    "rustc_commit_date": "2026-07-14",
+    "rustc_host": "x86_64-unknown-linux-gnu",
+    "rustc_llvm_version": "22.1.6",
+    "cargo_release": "1.97.1",
+    "cargo_commit_hash": "c980f4866141969fab6254a680546a277789d6f0",
+    "cargo_commit_date": "2026-06-30",
+    "cargo_host": "x86_64-unknown-linux-gnu",
+    "python_version": "Python 3.13.7"
+  },
+  "source_materialization": {
+    "source_materialization": "git_archive_with_pinned_modelica_export_subst",
+    "buildings_materialization": "git_archive_without_local_attribute_override",
+    "modelica_transform_path": "Modelica/package.mo",
+    "modelica_transform_rule": "Modelica/package.mo -export-subst",
+    "buildings_package_committed_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+    "buildings_package_materialized_sha256": "f830afa369f22734a96440fac58444f4b8db1133fd3b1e337a29d1e6e060ab59",
+    "line_source_committed_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+    "line_source_materialized_sha256": "85db4574432b236834a6fcec63b7713108eb67f90881494021cc25a7608ee7c5",
+    "modelica_package_committed_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191",
+    "modelica_package_materialized_sha256": "c3a060fc29842aaf3b7a565b93dbe80fe29d6a769848e3b077f5101117a65191"
+  },
+  "omc_version": "OpenModelica 1.25.1",
+  "gcc_version": "11.4.0",
+  "binutils_version": "2.38",
+  "glibc_version": "2.35",
+  "raw_run_a_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+  "raw_run_b_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+  "flag_control_raw_sha256": "e5cce191651ce4392d87da30fbab48c86032b7b9cab483ce914c33b45f6b0925",
+  "canonical_sha256": "c6bcc946b3f029efe6bed13c32cb8ed2f558012576d5a900bd3feb56d8845c22",
+  "flag_control_canonical_sha256": "f006653ab32d503622ef8ca90bfc5fd6faeb40f0d4ffe9144d9d9f24e5e54d04",
+  "projection_mutation": {
+    "control": "explicit_keep_first",
+    "input": "line-run-a.raw.csv",
+    "input_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984",
+    "canonical_output": "projection-keep-first.canonical.csv",
+    "canonical_sha256": "2d8d3469c3e2d661a4fe2f03d742e35af91c0647d11a700648970215843c4714",
+    "metadata": "projection-keep-first.metadata",
+    "metadata_sha256": "30b02a5b8b814a955dbb558eb0011bc75ac51e0c2c6e981d5df0eab252159656",
+    "log": "projection-mutation.log",
+    "log_sha256": "3b5cb8f17043b85838cc50cbc182358b7e95272fcc2b7becadfa466c8cf62fb6",
+    "schedule_mismatch_rows": [
+      2,
+      4,
+      6,
+      8
+    ]
+  },
+  "runs": [
+    {
+      "id": "run-a",
+      "output_directory_token": "fresh-run-a",
+      "log_sha256": "4f953c063aa521e382804a278a97fe87ebe295b1a5037231310bb085f8dd23df",
+      "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    },
+    {
+      "id": "run-b",
+      "output_directory_token": "fresh-run-b",
+      "log_sha256": "deea3173807327815322658290a359631166b783283c0ff9267e06be9d26c3d2",
+      "raw_sha256": "52691be2b8ed547f2f4d5c0b3efefb71d7d273bb9e48c43636bddb82b8247984"
+    }
+  ]
+}
