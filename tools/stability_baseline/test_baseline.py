@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import contextlib
 import importlib.util
+import io
 import json
 import pathlib
 import tempfile
@@ -25,6 +27,30 @@ class BaselineTests(unittest.TestCase):
         """Assert that canonical bytes for a mutated document fail closed."""
         with self.assertRaisesRegex(baseline.BaselineError, message or "stability baseline"):
             baseline.check_payload(baseline.render(document))
+
+    def test_python_minimum_accepts_3_11_without_a_diagnostic(self):
+        diagnostic = io.StringIO()
+        with contextlib.redirect_stderr(diagnostic):
+            baseline.require_supported_python((3, 11, 0))
+        self.assertEqual(diagnostic.getvalue(), "")
+
+    def test_python_below_minimum_refuses_with_stable_actionable_diagnostic(self):
+        diagnostic = io.StringIO()
+        with contextlib.redirect_stderr(diagnostic), self.assertRaises(SystemExit) as refusal:
+            baseline.require_supported_python((3, 10, 14))
+        self.assertEqual(refusal.exception.code, 2)
+        self.assertEqual(
+            diagnostic.getvalue(),
+            "error: tools/stability_baseline/baseline.py requires Python 3.11 or newer "
+            "(found 3.10); run it with a Python 3.11+ interpreter.\n",
+        )
+
+    def test_python_version_guard_runs_before_tomllib_import(self):
+        source = MODULE_PATH.read_text(encoding="utf-8")
+        self.assertLess(
+            source.index("require_supported_python(sys.version_info)"),
+            source.index("\nimport tomllib\n"),
+        )
 
     def test_checked_in_artifact_is_the_bit_exact_golden(self):
         payload = baseline.ARTIFACT.read_bytes()

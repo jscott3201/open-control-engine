@@ -49,6 +49,10 @@ and record every active rule applying to `development` and `main`. Issue program
 
 ## Deterministic verification
 
+This verification tool requires **Python 3.11 or newer** for the standard-library `tomllib`
+module. That prerequisite applies only to this documentation/evidence tool; Open Control Engine
+runtime and library consumers do not require Python.
+
 The standard-library-only tool performs no network access and never compares captured refs with
 today's moving branch heads:
 

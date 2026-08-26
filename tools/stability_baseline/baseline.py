@@ -1,7 +1,25 @@
 #!/usr/bin/env python3
 """Render and verify the dated Open Control Engine stability baseline."""
 
-from __future__ import annotations
+import sys
+
+
+MINIMUM_PYTHON = (3, 11)
+
+
+def require_supported_python(version_info):
+    """Refuse unsupported interpreters before importing versioned stdlib modules."""
+    detected = (version_info[0], version_info[1])
+    if detected < MINIMUM_PYTHON:
+        print(
+            "error: tools/stability_baseline/baseline.py requires Python 3.11 or newer "
+            f"(found {detected[0]}.{detected[1]}); run it with a Python 3.11+ interpreter.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
+
+require_supported_python(sys.version_info)
 
 import argparse
 import json
@@ -10,9 +28,8 @@ import pathlib
 import re
 import stat
 import subprocess
-import sys
 import tomllib
-from typing import Any, NoReturn
+from typing import Any, NoReturn, Optional
 
 
 CAPTURE_DATE = "2026-08-26"
@@ -274,7 +291,7 @@ def snapshot() -> dict[str, Any]:
     }
 
 
-def render(document: dict[str, Any] | None = None) -> bytes:
+def render(document: Optional[dict[str, Any]] = None) -> bytes:
     """Serialize a document in the sole canonical byte representation."""
     value = snapshot() if document is None else document
     return (json.dumps(value, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
@@ -612,7 +629,7 @@ def write_artifact(path: pathlib.Path) -> None:
     path.write_bytes(render())
 
 
-def main(arguments: list[str] | None = None) -> int:
+def main(arguments: Optional[list[str]] = None) -> int:
     """Run the deterministic artifact and optional exact-source verifier."""
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group()
