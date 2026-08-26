@@ -9,8 +9,25 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import stage as docs_stage
+
 
 CHECKER = Path(__file__).with_name("check_links.py")
+
+
+class GeneratedNavigationTests(unittest.TestCase):
+    """Exercise the generated mdBook navigation."""
+
+    def test_staged_navigation_includes_tracked_stability_baseline(self) -> None:
+        """The dated stability snapshot is both staged and included as a chapter."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = "- [Stability baseline](docs/stability-baseline.md)"
+            self.assertEqual(summary.splitlines().count(chapter), 1)
+            self.assertTrue((staged / "src" / "docs" / "stability-baseline.md").is_file())
 
 
 class SitePrefixAgreementTests(unittest.TestCase):
