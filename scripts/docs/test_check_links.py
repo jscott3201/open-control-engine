@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -46,6 +47,29 @@ class GeneratedNavigationTests(unittest.TestCase):
                 (docs_stage.repository_root() / "docs" / "public-surface-ledger.json").read_bytes(),
             )
 
+    def test_staged_navigation_includes_package_publication_authority(self) -> None:
+        """The package policy is a chapter and its exhaustive ledger is an asset."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            source = staged / "src" / "docs"
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = (
+                "- [Package, feature, and publication policy]"
+                "(docs/package-publication-policy.md)"
+            )
+            self.assertEqual(summary.splitlines().count(chapter), 1)
+            self.assertTrue((source / "package-publication-policy.md").is_file())
+            self.assertEqual(
+                (source / "package-publication-ledger.json").read_bytes(),
+                (
+                    docs_stage.repository_root()
+                    / "docs"
+                    / "package-publication-ledger.json"
+                ).read_bytes(),
+            )
+
 
 class ContractEvidenceTests(unittest.TestCase):
     """Require qualified test evidence named by the contract to resolve."""
@@ -71,6 +95,18 @@ class ContractEvidenceTests(unittest.TestCase):
                 rf"(?m)^\s*#\[test\]\s*\n\s*fn\s+{re.escape(test)}\s*\(",
                 f"{module}::{test} must resolve to a Rust test",
             )
+
+    def test_package_policy_evidence_paths_resolve(self) -> None:
+        """The package ledger's authority and executable validator are clone-visible."""
+
+        root = docs_stage.repository_root()
+        ledger = json.loads(
+            (root / "docs" / "package-publication-ledger.json").read_text(encoding="utf-8")
+        )
+
+        self.assertTrue((root / ledger["authority"]).is_file())
+        self.assertTrue((root / "scripts" / "package_policy" / "validate.py").is_file())
+        self.assertEqual(len(ledger["packages"]), 17)
 
 
 class SitePrefixAgreementTests(unittest.TestCase):

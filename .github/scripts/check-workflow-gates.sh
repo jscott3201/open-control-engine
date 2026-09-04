@@ -119,6 +119,10 @@ require_pattern "$ci" 'test-check-default-no-db\.sh' 'run default-no-db fixture 
 require_pattern "$ci" 'test-check-golden-gen-anti-tautology\.sh' \
   'run golden-gen firewall fixture tests'
 require_pattern "$ci" 'check-golden-gen-anti-tautology\.sh' 'run golden-gen anti-tautology firewall'
+require_pattern "$ci" 'scripts/package_policy/test_validate\.py' \
+  'run package publication hostile controls'
+require_pattern "$ci" 'scripts/package_policy/validate\.py' \
+  'run metadata-driven package publication contract'
 require_pattern "$ci" 'test-check-stale-crate-status\.sh' 'run stale crate-status fixture tests'
 require_pattern "$ci" 'check-stale-crate-status\.sh' 'run stale crate-status smoke'
 require_pattern "$ci" 'check-workflow-gates\.sh' 'run workflow gate smoke'

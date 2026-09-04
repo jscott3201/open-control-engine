@@ -32,10 +32,11 @@ become its own untested gate.
 
 The script's steps group into: formatting, file-size and secret hygiene; the repository-invariant
 gates (the default build links no database or async runtime; the golden generator cannot bless its
-own output as the oracle); behavior fixtures for those gates, because a gate that cannot fail is not
-a gate; build, clippy and rustdoc under `-D warnings`; supply-chain checks; the determinism subset;
-and two fixture input-hygiene audits. A failing step never aborts the run, so one round trip reports
-every problem instead of the first (`.agents/gate.sh:41-56`).
+own output as the oracle; package, feature, and publication selection is closed); behavior fixtures
+for those gates, because a gate that cannot fail is not a gate; build, clippy and rustdoc under
+`-D warnings`; supply-chain checks; the determinism subset; and two fixture input-hygiene audits. A
+failing step never aborts the run, so one round trip reports every problem instead of the first
+(`.agents/gate.sh:41-56`).
 
 ## Dev-light, release-heavy
 
@@ -63,7 +64,7 @@ Before claiming tests pass, run `bash .agents/gate.sh full` first-hand and read 
 
 ## Draft pull requests run nothing
 
-Not a reduced subset — nothing. All fifteen jobs in `ci.yml` are conditioned on
+Not a reduced subset — nothing. All sixteen jobs in `ci.yml` are conditioned on
 `github.event.pull_request.draft == false || github.event_name == 'workflow_dispatch'`, from
 `ci.yml:55` through `ci.yml:324`. A draft PR with no checks looks a lot like a PR with no failing
 checks. Confirm the checks actually ran.
@@ -167,7 +168,10 @@ per-PR gate does not run them.
 verify only — tag/version match, fmt, clippy, a workspace `cargo test`, and a full
 `cargo publish --dry-run` — with no token and no publish, so a tag can be re-cut safely
 (`release.yml:39-71`). Publishing is a separate manual `workflow_dispatch` into the `release` GitHub
-Environment (`release.yml:73-87`). The crates are not on crates.io yet.
+Environment. Cargo's workspace selection includes the 12 publishable members and skips the five
+members with `publish = false`; the exact split and feature closure are guarded by the
+[package, feature, and publication policy](package-publication-policy.md). No crate is on crates.io
+yet, and actual publication remains deferred pending explicit owner authorization.
 
 Related: [`host-responsibilities.md`](host-responsibilities.md) for what the engine deliberately
 leaves to the embedder, and [`../TESTING.md`](../TESTING.md) for the testing standard a change is

@@ -3,7 +3,9 @@
 This document and [`public-surface-ledger.json`](public-surface-ledger.json) are the normative
 classification contract for the public items captured by the `oce-api` and `oce-store` blessed
 baselines. It classifies the surface that exists; it does not change a Rust signature, runtime
-behavior, or the pre-1.0 compatibility policy.
+behavior, or the pre-1.0 compatibility policy. Package support, `oce-api` feature selections, and
+future registry eligibility are separately governed by the
+[package, feature, and publication policy](package-publication-policy.md).
 
 ## Authority
 
