@@ -82,9 +82,9 @@ the IO inventory. `PointHandle` is confined to the store-backed point-read route
 Simulation output depends on `SimSpec`, parameters, and the entry connector-value image. Store-bound
 inputs additionally depend on samples staged by the adapter at each tick. The shorter two-input
 formulation is valid only when the supplied input source covers every relevant external input, so no
-unwritten entry value can influence the horizon. The executable controls are
-`sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds` and
-`sim_tests::a_fully_driven_spec_reproduces_a_fresh_engine_exactly`.
+unwritten entry value can influence the horizon. The executable control is
+`sim_tests::an_undriven_input_inherits_whatever_the_entry_image_holds`, which checks both the
+undriven entry-image dependency and fully driven fresh-engine equality.
 
 `Engine::state_snapshot` produces engine-owned continuation bytes. The host persists and protects
 those bytes; they do not travel through the typed `PointStore` port. That port carries typed point
@@ -115,7 +115,7 @@ no downstream edit and changes no signature.
 | String IO described as handle-based | `IoInventory::resolve_inputs` and `IoInventory::resolve_output` produce model connector identities; `engine::resolve_store_inputs` is the distinct point-handle route. |
 | A prose list claimed to exhaust the public facade | The two blessed baselines exhaust exact signatures, and the ledger classifies every row. `public_surface_contract` supplies missing/extra/overlap and baseline-drift negative controls. Guards pin selected shapes only. |
 | Python constraints described every Rust signature | `guards.rs` now states its selected-subset scope. Store and schedule signatures remain Rust-visible without becoming Python-wrapped promises. |
-| Repeatability omitted the entry connector image | `Engine::simulate` rustdoc and the two named `sim_tests` controls establish the complete non-store determinant rule and the fully supplied-input special case. |
+| Repeatability omitted the entry connector image | `Engine::simulate` rustdoc and the named `sim_tests` control establish the complete non-store determinant rule and the fully supplied-input special case. |
 | Durable engine bytes were routed through `PointStore` | `Engine::state_snapshot`/`restore_state` own the byte channel; `PointStore` owns typed point samples. `capture_and_restore_call_no_store_method` is the negative behavioral control. |
 
 The contract validator also injects each of these historical claims into an in-memory supported-doc
