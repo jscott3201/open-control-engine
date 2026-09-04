@@ -17,6 +17,7 @@ front door; these pages are the detail behind it.
 | [CI and the gate](ci-and-the-gate.md) | What runs when, and what a green check does and does not prove |
 | [Benchmarks](benchmarks.md) | Measured `Engine::tick()` throughput, recorded per run with the commit and host that produced it |
 | [Stability baseline](stability-baseline.md) | The dated OCE/downstream ref and pin evidence snapshot, its authority limits, and deterministic verifier |
+| [Public surface contract](public-surface-contract.md) | Which `oce-api` and `oce-store` items are stable candidates, conditional, deferred, deprecated, or scheduled for removal, with the [machine-checked ledger](public-surface-ledger.json) |
 
 ## Elsewhere in the repository
 

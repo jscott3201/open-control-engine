@@ -334,6 +334,10 @@ impl<S: Store> Engine<S> {
     }
 
     /// The frozen schedule (for trace tooling / determinism assertions; D6).
+    ///
+    /// This exposes an internal graph type and is retained only for compatibility with existing
+    /// trace tooling. It is classified as implementation leakage for a future coordinated removal;
+    /// new hosts should use output and topology facade views instead.
     #[must_use]
     pub fn schedule(&self) -> &Schedule {
         &self.schedule
@@ -346,6 +350,9 @@ impl<S: Store> Engine<S> {
     }
 
     /// Borrow the wired store backend (e.g. for model round-trips or durability hooks).
+    ///
+    /// This is conditional storage-port surface: the returned backend and every handle it owns keep
+    /// their adapter-specific lifecycle and validity rules.
     #[must_use]
     pub fn store(&self) -> &S {
         &self.store

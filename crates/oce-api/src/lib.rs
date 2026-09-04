@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
-//! `oce-api` — the embeddable host facade for the Open Control Engine
-//! (`08-embeddable-api-and-performance.md`). The single public surface downstream projects link
-//! against. The `open-control-engine` umbrella name is reserved for a future release; nothing is
-//! published to crates.io yet.
+//! `oce-api` — the primary embeddable host facade for the Open Control Engine
+//! (`08-embeddable-api-and-performance.md`). The actively supported `oce-blocks::catalog()` metadata
+//! API is a separate companion surface. The `open-control-engine` umbrella name is reserved for a
+//! future release; nothing is published to crates.io yet.
 //!
 //! # Posture (binding, FRAME §6)
 //!
@@ -12,7 +12,7 @@
 //!
 //! # The store seam
 //!
-//! [`Engine`] is generic over a `Store`, defaulting to `oce_store_mem::MemStore` so the **default
+//! [`Engine`] is generic over an `oce_store::Store`, defaulting to `oce_store_mem::MemStore` so the **default
 //! (and only) build has no database** (D-OWNER-1). The library ships no first-party database and no
 //! DB-gated feature; a durable/queryable backend is an app-side adapter the host wires behind the
 //! `oce-store` port. No store-backend-specific type ever escapes this facade (R-API-8).

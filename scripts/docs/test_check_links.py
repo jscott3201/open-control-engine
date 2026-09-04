@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,48 @@ class GeneratedNavigationTests(unittest.TestCase):
             chapter = "- [Stability baseline](docs/stability-baseline.md)"
             self.assertEqual(summary.splitlines().count(chapter), 1)
             self.assertTrue((staged / "src" / "docs" / "stability-baseline.md").is_file())
+
+    def test_staged_navigation_includes_public_surface_authority(self) -> None:
+        """The contract is a chapter and its machine-readable ledger is an asset."""
+
+        with tempfile.TemporaryDirectory() as temporary:
+            staged, _, _ = docs_stage.stage_book(Path(temporary) / "book", "a" * 40)
+
+            source = staged / "src" / "docs"
+            summary = (staged / "src" / "SUMMARY.md").read_text(encoding="utf-8")
+            chapter = "- [Public surface contract](docs/public-surface-contract.md)"
+            self.assertEqual(summary.splitlines().count(chapter), 1)
+            self.assertTrue((source / "public-surface-contract.md").is_file())
+            self.assertEqual(
+                (source / "public-surface-ledger.json").read_bytes(),
+                (docs_stage.repository_root() / "docs" / "public-surface-ledger.json").read_bytes(),
+            )
+
+
+class ContractEvidenceTests(unittest.TestCase):
+    """Require qualified test evidence named by the contract to resolve."""
+
+    def test_qualified_test_evidence_exists(self) -> None:
+        """Every module-qualified test anchor names an actual Rust test function."""
+
+        root = docs_stage.repository_root()
+        contract = (root / "docs" / "public-surface-contract.md").read_text(encoding="utf-8")
+        anchors = set(
+            re.findall(
+                r"`([a-z][a-z0-9_]*(?:_tests|_adapter))::([a-z][a-z0-9_]*)`",
+                contract,
+            )
+        )
+        self.assertTrue(anchors, "contract must name qualified test evidence")
+        for module, test in sorted(anchors):
+            matches = list((root / "crates").rglob(f"{module}.rs"))
+            self.assertEqual(len(matches), 1, f"{module} must resolve to one source file")
+            source = matches[0].read_text(encoding="utf-8")
+            self.assertRegex(
+                source,
+                rf"(?m)^\s*#\[test\]\s*\n\s*fn\s+{re.escape(test)}\s*\(",
+                f"{module}::{test} must resolve to a Rust test",
+            )
 
 
 class SitePrefixAgreementTests(unittest.TestCase):

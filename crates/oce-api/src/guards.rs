@@ -1,10 +1,11 @@
 //! Compile-time PyO3 binding-shape guards (`10` §3 "Testability of §3").
 //!
-//! The future `oce-py` PyO3 binding wraps this `oce-api` surface, and `10` §3 makes the R-API-PY-1..8
-//! binding-shape constraints normative on the facade. Any drift that would make the surface
-//! un-bindable (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to
-//! Python, a borrowed/lifetime/`&dyn Store` return, a non-`Send` engine) must fail the build here,
-//! with **no PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
+//! The future `oce-py` PyO3 binding wraps a selected `oce-api` subset. The R-API-PY-1..8
+//! binding-shape constraints apply to that wrapped subset and to the selected owned/thread-safe
+//! shapes pinned below; they do not describe every Rust facade signature. Drift in a pinned shape
+//! (a generic that cannot be a `#[pyclass]`, a non-`Clone` type that cannot cross to Python, a
+//! borrowed/lifetime/`&dyn Store` return, or a non-`Send` engine) must fail the build here, with **no
+//! PyO3 dependency**. Every item below is a never-called `fn` whose mere compilation IS the
 //! assertion; `#[allow(dead_code)]` keeps them off the dead-code lint.
 //!
 //! This is a **non-test** module (not `#[cfg(test)]`) on purpose: the per-PR `ci.yml` gate runs

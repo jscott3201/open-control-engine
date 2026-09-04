@@ -41,7 +41,9 @@ them out (`crates/oce-blocks/src/catalog.rs:98-100`).
 deterministic registry order. Each `CatalogEntry` (`crates/oce-blocks/src/catalog.rs:74-101`) carries
 resolved input and output ports in declaration order, the port-naming policy, the static parameter
 rules, the authored parameter defaults, a `width_driven` flag, a conservative `stateful` hint, and
-the `reserved` flag.
+the `reserved` flag. This is an actively supported companion API, not an internal implementation
+detail; its relationship to the primary facade is classified in the
+[public surface contract](public-surface-contract.md).
 
 The defaults are **honest**. `DefaultSource` (`crates/oce-blocks/src/catalog.rs:47-57`) has three
 variants — `Literal`, `Derived { formula }`, and `Required`. A parameter the caller must supply
