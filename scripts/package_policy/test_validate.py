@@ -229,6 +229,66 @@ class PackagePolicyControls(unittest.TestCase):
         with self.assertRaisesRegex(validate.PolicyError, "environment: release"):
             validate.validate_release_workflow(self.ledger, changed)
 
+    def test_checked_in_release_workflow_is_the_positive_control(self) -> None:
+        """The unchanged live workflow satisfies every release guard at job scope."""
+
+        validate.validate_release_workflow(self.ledger, self.workflow)
+
+    def test_release_environment_cannot_move_under_job_env(self) -> None:
+        """A same-value environment token under job env is not an authorization boundary."""
+
+        changed = self.workflow.replace(
+            "    environment: release\n    steps:\n",
+            "    env:\n      environment: release\n    steps:\n",
+            1,
+        )
+        self.assertNotEqual(changed, self.workflow)
+        with self.assertRaisesRegex(validate.PolicyError, "environment: release"):
+            validate.validate_release_workflow(self.ledger, changed)
+
+    def test_manual_guard_cannot_move_under_publish_step(self) -> None:
+        """A step-level manual condition cannot authorize the publish job itself."""
+
+        changed = self.workflow.replace(
+            "    if: github.event_name == 'workflow_dispatch'\n", "", 1
+        )
+        changed = changed.replace(
+            "      - name: cargo publish --workspace\n",
+            "      - name: cargo publish --workspace\n"
+            "        if: github.event_name == 'workflow_dispatch'\n",
+            1,
+        )
+        self.assertNotEqual(changed, self.workflow)
+        with self.assertRaisesRegex(validate.PolicyError, "manual dispatch"):
+            validate.validate_release_workflow(self.ledger, changed)
+
+    def test_verify_dependency_cannot_move_under_job_env(self) -> None:
+        """A nested needs token cannot establish the publish job dependency."""
+
+        changed = self.workflow.replace(
+            "    needs: verify\n",
+            "    env:\n      needs: verify\n",
+            1,
+        )
+        self.assertNotEqual(changed, self.workflow)
+        with self.assertRaisesRegex(validate.PolicyError, "guarded by verify"):
+            validate.validate_release_workflow(self.ledger, changed)
+
+    def test_duplicate_publish_job_guards_are_rejected(self) -> None:
+        """Duplicate protected keys fail instead of inheriting parser-dependent meaning."""
+
+        controls = {
+            "    needs: verify\n": "guarded by verify",
+            "    environment: release\n": "environment: release",
+            "    if: github.event_name == 'workflow_dispatch'\n": "manual dispatch",
+        }
+        for line, message in controls.items():
+            with self.subTest(key=line.strip().partition(":")[0]):
+                changed = self.workflow.replace(line, line * 2, 1)
+                self.assertNotEqual(changed, self.workflow)
+                with self.assertRaisesRegex(validate.PolicyError, message):
+                    validate.validate_release_workflow(self.ledger, changed)
+
 
 if __name__ == "__main__":
     unittest.main()

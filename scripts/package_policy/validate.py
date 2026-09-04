@@ -496,21 +496,41 @@ def validate_unknown_feature_refusal() -> None:
 
 
 def workflow_job(workflow: str, name: str) -> list[str]:
-    """Extract one top-level job body from the repository's fixed YAML style."""
+    """Extract one top-level job body while preserving its YAML indentation."""
 
     lines = workflow.splitlines()
     header = f"  {name}:"
-    try:
-        start = lines.index(header) + 1
-    except ValueError as error:
-        raise PolicyError(f"release workflow is missing job {name}") from error
+    starts = [index for index, line in enumerate(lines) if line == header]
+    if not starts:
+        raise PolicyError(f"release workflow is missing job {name}")
+    if len(starts) != 1:
+        raise PolicyError(f"release workflow has duplicate job {name}")
     body: list[str] = []
-    for line in lines[start:]:
+    for line in lines[starts[0] + 1 :]:
         if re.match(r"^  [^ ]", line):
             break
         if not line.lstrip().startswith("#"):
-            body.append(line.strip())
+            body.append(line)
     return body
+
+
+def require_job_value(
+    body: list[str], key: str, expected: str, violation: str
+) -> None:
+    """Require one exact scalar at a job's own mapping level."""
+
+    pattern = re.compile(rf"^(?P<indent> +){re.escape(key)}:\s*(?P<value>.*?)\s*$")
+    occurrences = [match for line in body if (match := pattern.match(line))]
+    job_values = [
+        match.group("value") for match in occurrences if match.group("indent") == "    "
+    ]
+    if len(job_values) > 1:
+        raise PolicyError(f"{violation} (duplicate job-level {key})")
+    if not job_values:
+        detail = f" (misplaced {key})" if occurrences else ""
+        raise PolicyError(f"{violation}{detail}")
+    if job_values[0] != expected:
+        raise PolicyError(violation)
 
 
 def validate_release_workflow(ledger: dict[str, Any], workflow: str) -> None:
@@ -518,8 +538,10 @@ def validate_release_workflow(ledger: dict[str, Any], workflow: str) -> None:
 
     release = ledger["release_contract"]
     active = [line.strip() for line in workflow.splitlines() if not line.lstrip().startswith("#")]
-    verify = workflow_job(workflow, "verify")
-    publish = workflow_job(workflow, "publish")
+    verify_body = workflow_job(workflow, "verify")
+    publish_body = workflow_job(workflow, "publish")
+    verify = [line.strip() for line in verify_body]
+    publish = [line.strip() for line in publish_body]
     expected_runs = {
         f"run: {release['validator_command']}",
         f"run: {release['dry_run_command']}",
@@ -528,12 +550,24 @@ def validate_release_workflow(ledger: dict[str, Any], workflow: str) -> None:
         raise PolicyError("release verify job does not validate and dry-run the exact workspace selection")
     if f"run: {release['publish_command']}" not in publish:
         raise PolicyError("release publish job does not use the exact workspace selection")
-    if "needs: verify" not in publish:
-        raise PolicyError("release publish job is not guarded by verify")
-    if "environment: release" not in publish:
-        raise PolicyError("release publish job is not bound to environment: release")
-    if f"if: github.event_name == '{release['publish_event']}'" not in publish:
-        raise PolicyError("release publication is not restricted to manual dispatch")
+    require_job_value(
+        publish_body,
+        "needs",
+        "verify",
+        "release publish job is not guarded by verify",
+    )
+    require_job_value(
+        publish_body,
+        "environment",
+        "release",
+        "release publish job is not bound to environment: release",
+    )
+    require_job_value(
+        publish_body,
+        "if",
+        f"github.event_name == '{release['publish_event']}'",
+        "release publication is not restricted to manual dispatch",
+    )
     if "workflow_dispatch:" not in active:
         raise PolicyError("release workflow has no manual dispatch trigger")
     publish_runs = sorted(line for line in active if line.startswith("run: cargo publish"))
