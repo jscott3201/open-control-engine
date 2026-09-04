@@ -25,6 +25,25 @@ PACKAGE_CATEGORIES = (
     "reserved-panic-only",
     "experimental-reserved",
 )
+EXPECTED_PACKAGE_CLASSIFICATIONS = {
+    "oce-api": ("host-facade", True),
+    "oce-bless": ("test-support", False),
+    "oce-blocks": ("transitional-companion", True),
+    "oce-conformance": ("verification-tooling", False),
+    "oce-cxf": ("implementation-dependency", True),
+    "oce-diag": ("implementation-dependency", True),
+    "oce-docs": ("reserved-panic-only", False),
+    "oce-expr": ("implementation-dependency", True),
+    "oce-extension": ("experimental-reserved", False),
+    "oce-flatten": ("implementation-dependency", True),
+    "oce-graph": ("implementation-dependency", True),
+    "oce-model": ("implementation-dependency", True),
+    "oce-reference-wal-adapter": ("private-reference-adapter", False),
+    "oce-semantics": ("implementation-dependency", True),
+    "oce-store": ("conditional-adapter-port", True),
+    "oce-store-mem": ("implementation-dependency", True),
+    "oce-validate": ("implementation-dependency", True),
+}
 PUBLISHABLE_CATEGORIES = frozenset(PACKAGE_CATEGORIES[:4])
 EXPECTED_SELECTIONS = {
     "default": ([], ["default", "mem"]),
@@ -132,6 +151,17 @@ def validate_ledger(ledger: dict[str, Any]) -> dict[str, Any]:
         raise PolicyError("duplicate workspace package classification")
     if package_names != sorted(package_names):
         raise PolicyError("package classifications must be name-sorted")
+    actual_classifications = {
+        item["name"]: (item["category"], item["publish"]) for item in packages
+    }
+    for name in sorted(set(EXPECTED_PACKAGE_CLASSIFICATIONS) | set(actual_classifications)):
+        expected = EXPECTED_PACKAGE_CLASSIFICATIONS.get(name)
+        actual = actual_classifications.get(name)
+        if actual != expected:
+            raise PolicyError(
+                f"owner-approved package mapping drift for {name}: "
+                f"expected={expected!r}, actual={actual!r}"
+            )
 
     feature = ledger["feature_contract"]
     if not isinstance(feature, dict):
@@ -500,6 +530,8 @@ def validate_release_workflow(ledger: dict[str, Any], workflow: str) -> None:
         raise PolicyError("release publish job does not use the exact workspace selection")
     if "needs: verify" not in publish:
         raise PolicyError("release publish job is not guarded by verify")
+    if "environment: release" not in publish:
+        raise PolicyError("release publish job is not bound to environment: release")
     if f"if: github.event_name == '{release['publish_event']}'" not in publish:
         raise PolicyError("release publication is not restricted to manual dispatch")
     if "workflow_dispatch:" not in active:
