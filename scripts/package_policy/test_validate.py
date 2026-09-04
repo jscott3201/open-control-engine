@@ -85,6 +85,24 @@ class PackagePolicyControls(unittest.TestCase):
         self.assertEqual(packages["oce-cxf"]["category"], "implementation-dependency")
         self.assertEqual(packages["oce-blocks"]["category"], "transitional-companion")
 
+    def test_owner_approved_categories_cannot_drift_with_same_publish_bit(self) -> None:
+        """A valid publishable category cannot replace either approved host-facing role."""
+
+        mutations = {
+            "oce-api": "implementation-dependency",
+            "oce-store": "implementation-dependency",
+        }
+        for package, category in mutations.items():
+            with self.subTest(package=package):
+                changed = copy.deepcopy(self.ledger)
+                item = next(entry for entry in changed["packages"] if entry["name"] == package)
+                item["category"] = category
+                with self.assertRaisesRegex(
+                    validate.PolicyError,
+                    f"owner-approved package mapping drift for {package}",
+                ):
+                    validate.validate_ledger(changed)
+
     def test_missing_extra_and_duplicate_member_classifications_are_rejected(self) -> None:
         """Workspace coverage is a one-to-one mapping, never a best-effort list."""
 
@@ -202,6 +220,14 @@ class PackagePolicyControls(unittest.TestCase):
         )
         with self.assertRaisesRegex(validate.PolicyError, "manual dispatch"):
             validate.validate_release_workflow(self.ledger, guard)
+
+    def test_release_environment_boundary_is_required(self) -> None:
+        """Manual dispatch cannot bypass the tracked release environment boundary."""
+
+        changed = self.workflow.replace("    environment: release\n", "", 1)
+        self.assertNotEqual(changed, self.workflow)
+        with self.assertRaisesRegex(validate.PolicyError, "environment: release"):
+            validate.validate_release_workflow(self.ledger, changed)
 
 
 if __name__ == "__main__":
