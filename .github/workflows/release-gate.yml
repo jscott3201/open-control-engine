@@ -30,8 +30,8 @@
 #     `development` also drifts between the last per-PR run and the release cut, and the merge
 #     commit landing on `main` is the shipped artifact — re-validating the exact tip is correct,
 #     not wasteful: fmt, file-size cap, no-secret scan, default-no-db, clippy -D warnings,
-#     workspace build, rustdoc -D warnings, cargo-machete, stale crate-status header lint, and
-#     gate-script behavior fixtures.
+#     workspace build, rustdoc -D warnings, cargo-machete, the package/feature/publication contract,
+#     stale crate-status header lint, and gate-script behavior fixtures.
 #   * cargo-deny runs UNCONDITIONALLY here (no paths-filter gating, unlike ci.yml) and adds
 #     `advisories` — a release warrants a full advisories/bans/licenses/sources sweep.
 #

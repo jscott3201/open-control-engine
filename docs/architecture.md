@@ -120,6 +120,9 @@ them, because nothing re-measures them in CI.
 ## The crate map
 
 Seventeen crates. The dependency direction is acyclic and organized around the seam above.
+Their responsibilities below do not imply equal support or publication status. The normative
+[package, feature, and publication policy](package-publication-policy.md) classifies all 17 and
+separates host support from registry dependency closure.
 
 **Execution core (Group A — no store, no database):**
 
@@ -128,11 +131,11 @@ Seventeen crates. The dependency direction is acyclic and organized around the s
 | `oce-model` | Pure value/connector/instance/connection types; the `Value` enum (Real/Integer/Boolean/String/Enum) and the flattened model graph — the shared executable truth. |
 | `oce-expr` | The CDL §7.7.2 binding-expression parser and evaluator (closed-world, pure). Bounded on structure: input deeper than `MAX_NESTING_DEPTH` (64) or wider than `MAX_EXPR_NODES` (4096) is a typed error, not a stack overflow (`crates/oce-expr/src/lib.rs:125`, `:132`). |
 | `oce-blocks` | The `Block` trait and the native CDL elementary-block library, publicly enumerable at runtime via `catalog()` (`crates/oce-blocks/src/catalog.rs:155`) with ports, parameter rules, and honest parameter defaults per class. |
-| `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs:53`). Full `.mo` flattening is deferred. It is on the `oce-api` path, so the seam is wired even though it does nothing. |
+| `oce-flatten` | **Reserved seam; an identity passthrough today.** `oce-cxf` owns lowering because CXF arrives pre-flattened, so `flatten()` returns the model unchanged (`crates/oce-flatten/src/lib.rs:53`). Full `.mo` flattening is deferred. It is a publishable implementation dependency on the `oce-api` path, not an independently supported package. |
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
-| `oce-semantics` | **Reserved seam; annotation parsing is deferred.** The intended role is vendor-annotation parsing into effective non-computational point/trend/semantic metadata. No `__cdl` / `__CDL` annotation parsing exists today. |
+| `oce-semantics` | **Reserved seam; annotation parsing is deferred.** The intended role is vendor-annotation parsing into effective non-computational point/trend/semantic metadata. No `__cdl` / `__CDL` annotation parsing exists today. It is publishable only as an `oce-api` implementation dependency. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |
 
 **Storage ports (the seam — traits only, no database types):**
@@ -140,29 +143,31 @@ Seventeen crates. The dependency direction is acyclic and organized around the s
 | Crate | Responsibility |
 | --- | --- |
 | `oce-store` | **The seam.** The `ModelStore` / `PointStore` / `SemanticStore` / `Durable` traits plus DTOs, unified by the `Store` supertrait. No database types. |
-| `oce-store-mem` | The default in-memory backend, so the engine runs with no database. |
+| `oce-store-mem` | The default in-memory backend, so the engine runs with no database. It is an unconditional publishable implementation dependency, not independently supported host surface. |
 | `oce-reference-wal-adapter` | **Verification-only, `publish = false`.** A `std::fs` WAL and atomic-snapshot adapter that exists to prove the frozen seam can carry real durability without a first-party database. Not a supported backend. |
 
 **Verification, externals, and the host facade:**
 
 | Crate | Responsibility |
 | --- | --- |
-| `oce-conformance` | The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
+| `oce-conformance` | **Verification-only, `publish = false`.** The funnel-style tolerance-band and golden-trace conformance harness. Standalone: no other crate depends on it. Read [`TESTING.md`](../TESTING.md) for what it does and does not check. |
 | `oce-bless` | **Test-support only, `publish = false`.** The single definition of the repo's environment-variable truthiness policy, so golden-regeneration switches cannot drift apart across crates. |
-| `oce-extension` | **Reserved seam; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:167`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
-| `oce-docs` | **Reserved seam, not implemented.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs:17`). Nothing depends on it. |
+| `oce-extension` | **Experimental/reserved, `publish = false`; nothing consumes it.** The intended role is the FMI / extension-block boundary. No crate depends on it, the CXF resolver has no extension-block branch (an unknown class is a hard `ClassNotFound`), and `DiagCode::MissingFmuPath` (`crates/oce-diag/src/lib.rs:167`) is declared but never constructed. **Do not plan FMI integration against this crate.** |
+| `oce-docs` | **Reserved panic-only seam, `publish = false`.** The sequence-spec and point-list export surface is declared; `point_list_html` panics with `unimplemented!` (`crates/oce-docs/src/lib.rs:17`). Nothing depends on it. |
 | `oce-api` | The primary embeddable host facade: `Engine<S: Store = MemStore>` (`crates/oce-api/src/engine.rs:38`), spanning load, tick, simulate, parameters, IO inventory, key-selected output reads (`watch`), CXF export with content id, and a read-only topology view. The actively supported `oce-blocks::catalog()` metadata API is a separate companion surface; see the [public surface contract](public-surface-contract.md). |
 
 Four of those — `oce-flatten`, `oce-semantics`, `oce-extension`, `oce-docs` — are reserved seams
 rather than working components. They are named here so that nobody plans a feature against a crate
 that does nothing yet.
 
-### One thing that looks like a feature flag and is not
+### The legacy `mem` compatibility spelling
 
-`oce-api` declares `default = ["mem"]` (`crates/oce-api/Cargo.toml:23`), but `mem = []` gates
-nothing and `oce-store-mem` is an unconditional dependency, so disabling default features does not
-remove the in-memory backend. What actually makes `MemStore` the default is the type parameter in
-`Engine<S: Store = MemStore>`. To use a different backend, name it: `Engine<MyAdapter>`.
+`oce-api` declares `default = ["mem"]`, but `mem = []` gates nothing and `oce-store-mem` is an
+unconditional dependency, so disabling default features does not remove the in-memory backend.
+The flag is retained temporarily as a truthful legacy no-op while downstream manifests migrate.
+What actually makes `MemStore` the default is the type parameter in `Engine<S: Store = MemStore>`.
+To use a different backend, name it: `Engine<MyAdapter>`. The complete supported matrix and its
+mechanical closure guard are in the [package policy](package-publication-policy.md).
 
 ## What this engine will never do
 

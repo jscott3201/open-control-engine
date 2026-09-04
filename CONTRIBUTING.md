@@ -12,7 +12,9 @@ the architecture and invariants are the design of record.
   run per-PR — every other crate's tests run on the `development` → `main` release gate. Releases
   batch `development` → `main`. **Publishing is manual:** a `v*` tag push runs the verify job
   only; the publish job is guarded by `github.event_name == 'workflow_dispatch'`, so a tag alone
-  never publishes.
+  never publishes. The 12-publishable/five-private selection and supported `oce-api` feature matrix
+  are governed by the [package publication policy](docs/package-publication-policy.md). No crate is
+  published yet; actual publication remains separately owner-authorized.
 - **Open your PR non-draft.** Every `ci.yml` job is conditioned on
   `github.event.pull_request.draft == false`, so a draft PR runs no gates at all.
 - Keep changes scoped to the crate or subsystem that owns the behavior, and add or update tests
@@ -84,10 +86,11 @@ session). Hook skipping follows the repository truthiness policy: empty, `0`, an
 bash .agents/gate.sh
 ```
 
-That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the
-no-secret scan, the database-free and golden-gen invariant checks, the gate fixtures,
-`cargo machete`, clippy, build, rustdoc, cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr`
-determinism subset in debug and release codegen.
+That runs the per-PR gate in CI's exact command form — formatting, the file-size cap, the no-secret
+scan, the database-free and golden-gen invariant checks, the closed package/feature/publication
+contract and its hostile controls, the gate fixtures, `cargo machete`, clippy, build, rustdoc,
+cargo-deny, and the `oce-api`/`oce-blocks`/`oce-expr` determinism subset in debug and release
+codegen.
 
 CI also runs this script directly, as the `gate (light)` job in `ci.yml` and `gate (full)` in
 `release-gate.yml`. So the commands here gate your PR whether or not each is separately wired as

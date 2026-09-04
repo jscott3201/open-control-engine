@@ -1,0 +1,196 @@
+{
+  "schema": "oce-package-publication-ledger/v1",
+  "authority": "docs/package-publication-policy.md",
+  "publication_state": "deferred-no-crates-published",
+  "package_categories": [
+    "host-facade",
+    "conditional-adapter-port",
+    "transitional-companion",
+    "implementation-dependency",
+    "test-support",
+    "private-reference-adapter",
+    "verification-tooling",
+    "reserved-panic-only",
+    "experimental-reserved"
+  ],
+  "packages": [
+    {
+      "name": "oce-api",
+      "category": "host-facade",
+      "publish": true
+    },
+    {
+      "name": "oce-bless",
+      "category": "test-support",
+      "publish": false
+    },
+    {
+      "name": "oce-blocks",
+      "category": "transitional-companion",
+      "publish": true
+    },
+    {
+      "name": "oce-conformance",
+      "category": "verification-tooling",
+      "publish": false
+    },
+    {
+      "name": "oce-cxf",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-diag",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-docs",
+      "category": "reserved-panic-only",
+      "publish": false
+    },
+    {
+      "name": "oce-expr",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-extension",
+      "category": "experimental-reserved",
+      "publish": false
+    },
+    {
+      "name": "oce-flatten",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-graph",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-model",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-reference-wal-adapter",
+      "category": "private-reference-adapter",
+      "publish": false
+    },
+    {
+      "name": "oce-semantics",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-store",
+      "category": "conditional-adapter-port",
+      "publish": true
+    },
+    {
+      "name": "oce-store-mem",
+      "category": "implementation-dependency",
+      "publish": true
+    },
+    {
+      "name": "oce-validate",
+      "category": "implementation-dependency",
+      "publish": true
+    }
+  ],
+  "feature_contract": {
+    "package": "oce-api",
+    "declared_features": {
+      "default": [
+        "mem"
+      ],
+      "mem": []
+    },
+    "selections": [
+      {
+        "name": "default",
+        "cargo_args": [],
+        "enabled_features": [
+          "default",
+          "mem"
+        ],
+        "classification": "supported"
+      },
+      {
+        "name": "explicit-mem",
+        "cargo_args": [
+          "--no-default-features",
+          "--features",
+          "mem"
+        ],
+        "enabled_features": [
+          "mem"
+        ],
+        "classification": "supported"
+      },
+      {
+        "name": "no-default-features",
+        "cargo_args": [
+          "--no-default-features"
+        ],
+        "enabled_features": [],
+        "classification": "supported"
+      }
+    ],
+    "normal_oce_dependency_closure": [
+      "oce-blocks",
+      "oce-cxf",
+      "oce-diag",
+      "oce-expr",
+      "oce-flatten",
+      "oce-graph",
+      "oce-model",
+      "oce-semantics",
+      "oce-store",
+      "oce-store-mem",
+      "oce-validate"
+    ],
+    "forbidden_normal_dependency_names": [
+      "async-std",
+      "selene-db",
+      "tokio"
+    ]
+  },
+  "release_contract": {
+    "workflow": ".github/workflows/release.yml",
+    "publishable_count": 12,
+    "private_count": 5,
+    "validator_command": "python3 scripts/package_policy/validate.py",
+    "dry_run_command": "cargo publish --workspace --locked --dry-run",
+    "publish_command": "cargo publish --workspace --locked",
+    "publish_event": "workflow_dispatch"
+  },
+  "downstream_constraints": [
+    {
+      "consumer": "Open Control Studio",
+      "direct_packages": [
+        "oce-api",
+        "oce-blocks"
+      ],
+      "constraint": "Retain the explicit legacy mem spelling until its manifest migrates; move catalog access only through a coordinated compatibility change."
+    },
+    {
+      "consumer": "Logic Studio",
+      "direct_packages": [
+        "oce-api",
+        "oce-blocks",
+        "oce-cxf"
+      ],
+      "constraint": "The direct oce-cxf pin is a migration constraint, not an independent support promise; preserve compatibility until facade migration is coordinated."
+    },
+    {
+      "consumer": "Verdant Watch",
+      "direct_packages": [
+        "oce-api"
+      ],
+      "constraint": "Preserve the primary facade contract through the existing pre-1.0 change process."
+    }
+  ]
+}

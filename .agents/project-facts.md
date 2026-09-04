@@ -22,9 +22,10 @@ CI is dev-light and release-heavy, and the split is easy to misread in the
 dangerous direction.
 
 The per-PR gate into `development` runs fmt, clippy, build, rustdoc, the file-size
-cap, the no-secret scan, the database-free check, the golden-gen firewall, the gate
-fixtures, `cargo machete` — and engine tests for **`oce-api`, `oce-blocks`, and `oce-expr`
-only**, via the determinism matrix on x86_64 and arm64 in debug and release codegen.
+cap, the no-secret scan, the database-free check, the golden-gen firewall, the closed
+package/feature/publication contract and its hostile controls, the gate fixtures,
+`cargo machete` — and engine tests for **`oce-api`, `oce-blocks`, and `oce-expr` only**, via the
+determinism matrix on x86_64 and arm64 in debug and release codegen.
 The matrix compares a populated portable engine-state snapshot byte-for-byte across architectures,
 checks portable and target-bound bytes across debug/release codegen, and requires target-bound bytes
 to differ across architectures. The x86_64 job also parses and refuses the arm64 target-bound bytes

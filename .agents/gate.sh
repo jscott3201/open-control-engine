@@ -79,15 +79,17 @@ step 'no-secret scan' bash .github/scripts/check-no-secrets.sh
 # ── Repository invariant gates ───────────────────────────────────────────────
 # The default build linking no database and no async runtime is this repo's
 # central promise; the golden-gen firewall stops a generator from blessing its
-# own output as the oracle.
+# own output as the oracle, and the package contract closes release selection.
 step 'default build links no database' bash .github/scripts/check-default-no-db.sh
 step 'golden-gen anti-tautology firewall' bash .github/scripts/check-golden-gen-anti-tautology.sh
+step 'package, feature, and publication contract' python3 scripts/package_policy/validate.py
 
 # ── Gate behavior fixtures ───────────────────────────────────────────────────
 # The gates are themselves tested. A gate that cannot fail is not a gate, and
 # these fixtures are what keep that from happening silently.
 step 'no-db gate fixtures' bash .github/scripts/test-check-default-no-db.sh
 step 'golden-gen firewall fixtures' bash .github/scripts/test-check-golden-gen-anti-tautology.sh
+step 'package-contract hostile controls' python3 scripts/package_policy/test_validate.py
 step 'stale crate-status fixtures' bash .github/scripts/test-check-stale-crate-status.sh
 step 'stale crate-status smoke' bash .github/scripts/check-stale-crate-status.sh
 step 'gate-script coverage' bash .github/scripts/check-gate-script-coverage.sh

@@ -16,10 +16,12 @@ homepage.workspace = true
 workspace = true
 
 [features]
-# Default build = engine + in-memory store. NO database, NO async runtime (FRAME §6,
-# D-OWNER-1). The `mem` feature is on by default and wires oce-store-mem as the default
-# `Store` backend. The library ships no first-party database and no DB-gated feature;
-# durable backends are app-side adapters the host wires behind the `oce-store` port.
+# Default build = engine + in-memory store. NO database, NO async runtime (D-OWNER-1).
+# `mem` is temporarily retained as a legacy no-op compatibility spelling for downstream
+# manifests. It gates nothing: `oce-store-mem` remains an unconditional normal dependency,
+# including with `--no-default-features`, and `MemStore` remains the default `Store` type.
+# Removal waits for downstream manifest migration. There is no DB-gated feature; durable
+# backends are app-side adapters the host wires behind the `oce-store` port.
 default = ["mem"]
 mem = []
 

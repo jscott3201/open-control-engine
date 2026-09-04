@@ -66,8 +66,9 @@ libm = { version = "0.2.16", default-features = false }
 rustix = { version = "1.1.4", features = ["fs"] }
 
 # --- Internal crates (path + version; centralized so a single edit re-points them). The explicit
-# version (matching workspace.package.version) keeps these from reading as wildcard deps and makes
-# them publish-ready; the path wins for in-workspace builds. ---
+# version (matching workspace.package.version) keeps publishable edges from reading as wildcard
+# deps and makes them registry-ready; the path wins for in-workspace builds. Private workspace roots
+# may also retain a version here, but `publish = false` in their own manifests controls selection. ---
 # EXCEPTION to the version-alongside-path convention documented two lines above. `oce-bless` is
 # `publish = false` and consumed ONLY as a dev-dependency. Cargo strips a dev-dependency from the
 # packaged manifest only when it carries no `version`; with `version = "0.1.0"` present,
