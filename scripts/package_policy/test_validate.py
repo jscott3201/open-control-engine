@@ -61,6 +61,25 @@ class PackagePolicyControls(unittest.TestCase):
             for selection in feature["selections"]
         }
 
+    def with_job_decoy(self, workflow: str, style: str) -> str:
+        """Prepend a top-level scalar containing structurally inert release-job text."""
+
+        release = self.ledger["release_contract"]
+        return (
+            f"decoy: {style}\n"
+            "  jobs:\n"
+            "  verify:\n"
+            f"    run: {release['validator_command']}\n"
+            f"    run: {release['dry_run_command']}\n"
+            "  publish:\n"
+            "    needs: verify\n"
+            f"    if: github.event_name == '{release['publish_event']}'\n"
+            "    environment: release\n"
+            f"    run: {release['publish_command']}\n"
+            "\n"
+            f"{workflow}"
+        )
+
     def test_checked_in_contract_reaches_every_pure_validator(self) -> None:
         """The positive fixture traverses schema, Cargo, feature, and workflow checks."""
 
@@ -233,6 +252,133 @@ class PackagePolicyControls(unittest.TestCase):
         """The unchanged live workflow satisfies every release guard at job scope."""
 
         validate.validate_release_workflow(self.ledger, self.workflow)
+
+    def test_harmless_run_block_styles_remain_accepted(self) -> None:
+        """Supported block styles retain complete but non-publishing script bodies."""
+
+        for style in ("|", "|-", "|+", ">", ">-", ">+"):
+            with self.subTest(style=style):
+                changed = self.workflow.replace(
+                    "        run: |\n          VERSION=",
+                    f"        run: {style}\n          VERSION=",
+                    1,
+                )
+                if style != "|":
+                    self.assertNotEqual(changed, self.workflow)
+                validate.validate_release_workflow(self.ledger, changed)
+
+    def test_top_level_scalar_job_decoys_cannot_supply_real_jobs(self) -> None:
+        """Literal and folded text cannot replace a missing job in the real jobs mapping."""
+
+        real_publish_renamed = self.workflow.replace(
+            "  publish:\n", "  deployment:\n", 1
+        )
+        self.assertNotEqual(real_publish_renamed, self.workflow)
+        for style in ("|", ">-"):
+            with self.subTest(style=style):
+                decoyed_live = self.with_job_decoy(self.workflow, style)
+                validate.validate_release_workflow(self.ledger, decoyed_live)
+
+                attack = self.with_job_decoy(real_publish_renamed, style)
+                with self.assertRaisesRegex(validate.PolicyError, "missing real job publish"):
+                    validate.validate_release_workflow(self.ledger, attack)
+
+    def test_hidden_real_job_keys_cannot_be_satisfied_by_scalar_decoys(self) -> None:
+        """Quoted and aliased semantic job IDs are rejected instead of matched through text."""
+
+        quoted = self.workflow.replace("  verify:\n", '  "verify":\n', 1)
+        quoted = quoted.replace("  publish:\n", "  'publish':\n", 1)
+        aliased = self.workflow.replace("  verify:\n", "  verify_source:\n", 1)
+        aliased = aliased.replace(
+            "  publish:\n", "  verify: *verify_job\n\n  publish:\n", 1
+        )
+        aliased = "verify_job: &verify_job {}\n\n" + aliased
+        for shape, hidden in {"quoted": quoted, "aliased": aliased}.items():
+            with self.subTest(shape=shape):
+                self.assertNotEqual(hidden, self.workflow)
+                attack = self.with_job_decoy(hidden, "|")
+                with self.assertRaisesRegex(validate.PolicyError, "unsupported job"):
+                    validate.validate_release_workflow(self.ledger, attack)
+
+    def test_duplicate_real_job_keys_are_rejected(self) -> None:
+        """A duplicate semantic job ID never inherits YAML-loader-dependent meaning."""
+
+        changed = self.workflow.replace(
+            "  verify:\n",
+            "  verify:\n"
+            "    name: duplicate verify\n"
+            "\n"
+            "  verify:\n",
+            1,
+        )
+        self.assertNotEqual(changed, self.workflow)
+        with self.assertRaisesRegex(validate.PolicyError, "duplicate job verify"):
+            validate.validate_release_workflow(self.ledger, changed)
+
+    def test_tag_triggered_multiline_publish_runs_are_rejected(self) -> None:
+        """A block run in verify cannot gain a publishing path with or without a token."""
+
+        controls = {
+            "literal-without-token": (
+                "",
+                "|",
+                "          cargo publish --workspace --locked\n",
+            ),
+            "folded-with-token": (
+                "        env:\n"
+                "          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}\n",
+                ">-",
+                "          cargo publish --workspace --locked\n",
+            ),
+        }
+        for name, (environment, style, body) in controls.items():
+            with self.subTest(name=name):
+                step = (
+                    "      - name: forbidden tag publication\n"
+                    f"{environment}"
+                    f"        run: {style}\n"
+                    f"{body}"
+                    "\n"
+                )
+                changed = self.workflow.replace(
+                    "      - name: fmt\n", step + "      - name: fmt\n", 1
+                )
+                self.assertNotEqual(changed, self.workflow)
+                with self.assertRaisesRegex(validate.PolicyError, "unapproved cargo publish"):
+                    validate.validate_release_workflow(self.ledger, changed)
+
+    def test_split_publish_invocations_cannot_evade_run_inspection(self) -> None:
+        """Folded, continued, and plain multiline commands all fail closed."""
+
+        controls = {
+            "folded-words": (
+                "        run: >-\n"
+                "          cargo\n"
+                "          publish --workspace --locked\n",
+                "unapproved cargo publish",
+            ),
+            "shell-continuations": (
+                "        run: |\n"
+                "          car\\\n"
+                "          go pub\\\n"
+                "          lish --workspace --locked\n",
+                "unapproved cargo publish",
+            ),
+            "plain-multiline": (
+                "        run: cargo\n"
+                "          publish --workspace --locked\n",
+                "unsupported multiline scalar",
+            ),
+        }
+        for name, (run, message) in controls.items():
+            with self.subTest(name=name):
+                step = "      - name: split publication\n" + run + "\n"
+                changed = self.workflow.replace(
+                    "      - name: fmt\n", step + "      - name: fmt\n", 1
+                )
+                self.assertNotEqual(changed, self.workflow)
+                with self.assertRaisesRegex(validate.PolicyError, message):
+                    validate.validate_release_workflow(self.ledger, changed)
 
     def test_release_environment_cannot_move_under_job_env(self) -> None:
         """A same-value environment token under job env is not an authorization boundary."""
