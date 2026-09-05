@@ -408,6 +408,52 @@ class TraceabilityTests(unittest.TestCase):
         path.symlink_to(self.root / "crates/oce-api/src/engine.rs")
         self.rejects("target: symlink")
 
+    def assert_readme_claim_boundary(self, stale, corrected, historical, error):
+        # Mutate the real public-document fixture, never the live README or API source.
+        path = self.root / "README.md"
+        original = path.read_text()
+        self.assertEqual(original.count(stale) + original.count(corrected), 1)
+        valid = original.replace(stale, corrected)
+        for suffix in ("", historical, historical + historical):
+            positive = valid + "\n" + suffix
+            path.write_text(positive)
+            for _ in range(2):
+                self.assertEqual(self.run_fixture(), GOLDEN)
+                self.assertEqual(path.read_text(), positive, "validation is read-only")
+        for statement in (stale, stale.replace("\n  ", " "), stale.upper()):
+            mutated = valid.replace(corrected, statement)
+            self.assertNotEqual(mutated, valid)
+            path.write_text(mutated)
+            for _ in range(2):
+                self.rejects(error)
+                self.assertEqual(path.read_text(), mutated, "refusal is read-only")
+
+    def test_readme_refuses_callable_removed_loaders_but_accepts_migration_history(self):
+        self.assert_readme_claim_boundary(
+            "- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`\n"
+            "  always return `OcError::Load`; use `load_cxf` for working ingest today.\n",
+            "- **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`\n"
+            "  are no longer callable; prepare supported CXF externally and use `load_cxf`.\n"
+            "  See [facade migration](docs/facade-migration.md) for the pre-release source break.\n",
+            "\n## Migration history\n\n"
+            "- Previously, `load_from_semantic` and `load_modelica` always returned `OcError::Load`.\n"
+            "  Both placeholder signatures have been removed; `load_cxf` remains available.\n",
+            "facade: callable removed loaders in README.md",
+        )
+
+    def test_readme_refuses_public_error_severity_but_accepts_warning_default_history(self):
+        self.assert_readme_claim_boundary(
+            "- **Assertion events are warning-only today.** Although `AssertLevel::Error` is public for surface\n"
+            "  stability, the engine never produces it; hosts must not build escalation logic on that variant.\n",
+            "- **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now\n"
+            "  `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation\n"
+            "  or safety policy. See [facade migration](docs/facade-migration.md).\n",
+            "\n## Migration history\n\n"
+            "- Previously, `AssertLevel::Error` was public but never emitted; its removal intentionally\n"
+            "  changes `AssertLevel::default()` from Error to Warning. No escalation is added.\n",
+            "facade: removed assertion severity advertised as public in README.md",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
