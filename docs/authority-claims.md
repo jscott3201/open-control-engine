@@ -37,28 +37,28 @@ Fast checker: [scripts/authority_claims/check.py](../scripts/authority_claims/ch
 
 ## Delegated owner observations
 
-Packages: **17 members; 12 publishable; 5 private**. Publication state: <code>deferred-no-crates-published</code>.
+Packages: **17 members; 12 publishable; 5 private**. Publication state: <code>deferred&#45;no&#45;crates&#45;published</code>.
 Feature selections: **3**; the shared normal closure is owner-verified, not inferred here.
 
 | Package | Classification | Publishable |
 | --- | --- | --- |
-| <code>oce-api</code> | <code>host-facade</code> | true |
-| <code>oce-bless</code> | <code>test-support</code> | false |
-| <code>oce-blocks</code> | <code>transitional-companion</code> | true |
-| <code>oce-conformance</code> | <code>verification-tooling</code> | false |
-| <code>oce-cxf</code> | <code>implementation-dependency</code> | true |
-| <code>oce-diag</code> | <code>implementation-dependency</code> | true |
-| <code>oce-docs</code> | <code>reserved-panic-only</code> | false |
-| <code>oce-expr</code> | <code>implementation-dependency</code> | true |
-| <code>oce-extension</code> | <code>experimental-reserved</code> | false |
-| <code>oce-flatten</code> | <code>implementation-dependency</code> | true |
-| <code>oce-graph</code> | <code>implementation-dependency</code> | true |
-| <code>oce-model</code> | <code>implementation-dependency</code> | true |
-| <code>oce-reference-wal-adapter</code> | <code>private-reference-adapter</code> | false |
-| <code>oce-semantics</code> | <code>implementation-dependency</code> | true |
-| <code>oce-store</code> | <code>conditional-adapter-port</code> | true |
-| <code>oce-store-mem</code> | <code>implementation-dependency</code> | true |
-| <code>oce-validate</code> | <code>implementation-dependency</code> | true |
+| <code>oce&#45;api</code> | <code>host&#45;facade</code> | true |
+| <code>oce&#45;bless</code> | <code>test&#45;support</code> | false |
+| <code>oce&#45;blocks</code> | <code>transitional&#45;companion</code> | true |
+| <code>oce&#45;conformance</code> | <code>verification&#45;tooling</code> | false |
+| <code>oce&#45;cxf</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;diag</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;docs</code> | <code>reserved&#45;panic&#45;only</code> | false |
+| <code>oce&#45;expr</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;extension</code> | <code>experimental&#45;reserved</code> | false |
+| <code>oce&#45;flatten</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;graph</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;model</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;reference&#45;wal&#45;adapter</code> | <code>private&#45;reference&#45;adapter</code> | false |
+| <code>oce&#45;semantics</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;store</code> | <code>conditional&#45;adapter&#45;port</code> | true |
+| <code>oce&#45;store&#45;mem</code> | <code>implementation&#45;dependency</code> | true |
+| <code>oce&#45;validate</code> | <code>implementation&#45;dependency</code> | true |
 
 | Public baseline | Descriptor rows | SHA-256 (owner descriptor) |
 | --- | --- | --- |
@@ -69,12 +69,12 @@ Exact row assignments remain in the public ledger; statuses below are displayed,
 
 | Group | Status |
 | --- | --- |
-| <code>deferred-surface</code> | <code>unstable/deferred</code> |
-| <code>deprecated-compatibility</code> | <code>deprecated</code> |
-| <code>domain-key-stable</code> | <code>stable-candidate</code> |
-| <code>facade-stable</code> | <code>stable-candidate</code> |
-| <code>schedule-leakage</code> | <code>implementation-leakage-to-remove</code> |
-| <code>storage-port-conditional</code> | <code>conditional</code> |
+| <code>deferred&#45;surface</code> | <code>unstable&#47;deferred</code> |
+| <code>deprecated&#45;compatibility</code> | <code>deprecated</code> |
+| <code>domain&#45;key&#45;stable</code> | <code>stable&#45;candidate</code> |
+| <code>facade&#45;stable</code> | <code>stable&#45;candidate</code> |
+| <code>schedule&#45;leakage</code> | <code>implementation&#45;leakage&#45;to&#45;remove</code> |
+| <code>storage&#45;port&#45;conditional</code> | <code>conditional</code> |
 
 CDL source revision: <code>a131864e4c4df22ebcd52bb8da439de0087ac365</code>; catalog fingerprint: <code>9edead4415592f28</code>.
 This is the existing pinned source identity, not a new numeric catalog revision.
@@ -114,11 +114,11 @@ Thus added/removed/renamed or byte-changed evidence cannot leave the projection 
 
 | Family | Existing evidence | Limit |
 | --- | --- | --- |
-| deferred-capabilities | [docs/public-surface-contract.md](public-surface-contract.md); [docs/cdl-coverage.md](cdl-coverage.md) | <code>Baseline-row classification is delegated above; broader capability deferral remains human-reviewed. No arbitrary Markdown or Rust semantics are parsed.</code> |
-| evidence-quality | [docs/verification-evidence.md](verification-evidence.md); [TESTING.md](../TESTING.md) | <code>Raw record counts and declared dependency metadata do not prove correctness, semantic independence, solver coverage, or semantic subcounts. Shared kernels and profile-specific interpretations require review.</code> |
-| host-tick | [docs/execution-profile.md](execution-profile.md); [crates/oce-api/src/tests/pre_execution_profile_tests.rs](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) | <code>HostTick v1 is a documented semantic contract, not a separately encoded runtime or wire profile identity. Behavioral tests remain the evidence; this checker does not interpret their semantics.</code> |
-| platforms | [docs/architecture.md](architecture.md); [.github/workflows/ci.yml](../.github/workflows/ci.yml) | <code>CI runner labels are execution evidence, not a structured support-promise contract. No supported-target matrix is inferred.</code> |
-| true-hold-extension | [crates/oce-blocks/src/logical_timing.rs](../crates/oce-blocks/src/logical_timing.rs); [crates/oce-blocks/src/port_names.rs](../crates/oce-blocks/src/port_names.rs) | <code>TrueHoldWithReset remains a deliberate local two-input extension with supersession-ambiguous historical annotations. This index records the ambiguity, not a new semantic ruling or a broken compile dependency.</code> |
+| deferred-capabilities | [docs/public-surface-contract.md](public-surface-contract.md); [docs/cdl-coverage.md](cdl-coverage.md) | <code>Baseline&#45;row classification is delegated above&#59; broader capability deferral remains human&#45;reviewed&#46; No arbitrary Markdown or Rust semantics are parsed&#46;</code> |
+| evidence-quality | [docs/verification-evidence.md](verification-evidence.md); [TESTING.md](../TESTING.md) | <code>Raw record counts and declared dependency metadata do not prove correctness&#44; semantic independence&#44; solver coverage&#44; or semantic subcounts&#46; Shared kernels and profile&#45;specific interpretations require review&#46;</code> |
+| host-tick | [docs/execution-profile.md](execution-profile.md); [crates/oce-api/src/tests/pre_execution_profile_tests.rs](../crates/oce-api/src/tests/pre_execution_profile_tests.rs) | <code>HostTick v1 is a documented semantic contract&#44; not a separately encoded runtime or wire profile identity&#46; Behavioral tests remain the evidence&#59; this checker does not interpret their semantics&#46;</code> |
+| platforms | [docs/architecture.md](architecture.md); [.github/workflows/ci.yml](../.github/workflows/ci.yml) | <code>CI runner labels are execution evidence&#44; not a structured support&#45;promise contract&#46; No supported&#45;target matrix is inferred&#46;</code> |
+| true-hold-extension | [crates/oce-blocks/src/logical_timing.rs](../crates/oce-blocks/src/logical_timing.rs); [crates/oce-blocks/src/port_names.rs](../crates/oce-blocks/src/port_names.rs) | <code>TrueHoldWithReset remains a deliberate local two&#45;input extension with supersession&#45;ambiguous historical annotations&#46; This index records the ambiguity&#44; not a new semantic ruling or a broken compile dependency&#46;</code> |
 
 ## Representative supersession map — non-exhaustive
 
@@ -129,11 +129,11 @@ an unresolved question, not permission to select a new owner.
 
 | ID / subject | Historical locator (text only) | Status | Current authority | Superseded by | Reason / responsibility owner |
 | --- | --- | --- | --- | --- | --- |
-| dated-stability / <code>Dated stability snapshot</code> | <code>docs/stability-baseline-2026-08-26.json</code> | historical | [docs/stability-baseline.md](stability-baseline.md) | <code>—</code> | <code>Dated observations are evidence, not current authority; moving refs do not invalidate a historical capture.</code> / <code>Repository maintainers</code> |
-| local-execution-plan / <code>Local execution specifications</code> | <code>_spec/03 and _spec/07 (historical source-comment shorthand)</code> | superseded | [docs/execution-profile.md](execution-profile.md) | <code>—</code> | <code>Tracked execution-profile documentation and behavior tests govern HostTick semantics; historical locators are not clone prerequisites.</code> / <code>Execution maintainers</code> |
-| local-package-plan / <code>Local package planning</code> | <code>_spec/open-control-engine-2026-08-25/CURRENT-BASELINE.md</code> | superseded | [docs/package-publication-policy.md](package-publication-policy.md) | <code>—</code> | <code>The tracked package policy and ledger govern present classification, not the local planning snapshot.</code> / <code>Package policy maintainers</code> |
-| local-public-plan / <code>Local public-surface planning</code> | <code>_spec/open-control-engine-2026-08-25/milestones/M00-authority-and-baseline/</code> | superseded | [docs/public-surface-contract.md](public-surface-contract.md) | <code>—</code> | <code>Tracked public classification and blessed signatures outrank ignored planning inputs.</code> / <code>Public facade maintainers</code> |
-| true-hold-annotation / <code>TrueHoldWithReset source annotations</code> | <code>crates/oce-blocks/src/logical_timing.rs:440-448; crates/oce-blocks/src/port_names.rs:43-52</code> | ambiguous | Unresolved | <code>—</code> | <code>The deliberate local two-input extension and historical specification comments need human adjudication; no authority replacement is selected here.</code> / <code>Block semantics maintainers</code> |
+| dated-stability / <code>Dated stability snapshot</code> | <code>docs&#47;stability&#45;baseline&#45;2026&#45;08&#45;26&#46;json</code> | historical | [docs/stability-baseline.md](stability-baseline.md) | <code>—</code> | <code>Dated observations are evidence&#44; not current authority&#59; moving refs do not invalidate a historical capture&#46;</code> / <code>Repository maintainers</code> |
+| local-execution-plan / <code>Local execution specifications</code> | <code>&#95;spec&#47;03 and &#95;spec&#47;07 &#40;historical source&#45;comment shorthand&#41;</code> | superseded | [docs/execution-profile.md](execution-profile.md) | <code>—</code> | <code>Tracked execution&#45;profile documentation and behavior tests govern HostTick semantics&#59; historical locators are not clone prerequisites&#46;</code> / <code>Execution maintainers</code> |
+| local-package-plan / <code>Local package planning</code> | <code>&#95;spec&#47;open&#45;control&#45;engine&#45;2026&#45;08&#45;25&#47;CURRENT&#45;BASELINE&#46;md</code> | superseded | [docs/package-publication-policy.md](package-publication-policy.md) | <code>—</code> | <code>The tracked package policy and ledger govern present classification&#44; not the local planning snapshot&#46;</code> / <code>Package policy maintainers</code> |
+| local-public-plan / <code>Local public&#45;surface planning</code> | <code>&#95;spec&#47;open&#45;control&#45;engine&#45;2026&#45;08&#45;25&#47;milestones&#47;M00&#45;authority&#45;and&#45;baseline&#47;</code> | superseded | [docs/public-surface-contract.md](public-surface-contract.md) | <code>—</code> | <code>Tracked public classification and blessed signatures outrank ignored planning inputs&#46;</code> / <code>Public facade maintainers</code> |
+| true-hold-annotation / <code>TrueHoldWithReset source annotations</code> | <code>crates&#47;oce&#45;blocks&#47;src&#47;logical&#95;timing&#46;rs&#58;440&#45;448&#59; crates&#47;oce&#45;blocks&#47;src&#47;port&#95;names&#46;rs&#58;43&#45;52</code> | ambiguous | Unresolved | <code>—</code> | <code>The deliberate local two&#45;input extension and historical specification comments need human adjudication&#59; no authority replacement is selected here&#46;</code> / <code>Block semantics maintainers</code> |
 
 ## Updating a legitimate claim
 

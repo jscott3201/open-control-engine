@@ -1,11 +1,19 @@
 """Deterministic, wholly generated human projection. Historical text stays inert."""
 
-import html
+from string import punctuation
 from model import INDEX
 
 
 def code(value):
-    return "<code>" + html.escape(str(value)).replace("|", "&#124;").replace("`", "&#96;") + "</code>"
+    """Keep literal text inert through staging, mdBook helpers, Markdown, and HTML.
+
+    Raw <code> tags do not shield their contents from the earlier parsers. Encode
+    ASCII syntax and line separators in one pass; entities decode only as text,
+    never as another round of Markdown/helpers (including literal input entities).
+    """
+    literal = "".join(f"&#{ord(char)};" if char in punctuation + "\n\r\t" else char
+                      for char in str(value))
+    return "<code>" + literal + "</code>"
 
 
 def link(path):

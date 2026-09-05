@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import html
 import re
 import subprocess
 import sys
@@ -33,7 +34,7 @@ class GeneratedNavigationTests(unittest.TestCase):
             projection = (source / "authority-claims.md").read_text()
             self.assertIn(f"/blob/{revision}/scripts/authority_claims/check.py", projection)
             self.assertNotRegex(projection, r"\]\([^)]*(?:_spec/|_research/)")
-            self.assertIn("<code>_spec/", projection)
+            self.assertIn("<code>_spec/", html.unescape(projection))
 
     def test_staged_navigation_includes_tracked_stability_baseline(self) -> None:
         """The dated stability snapshot is both staged and included as a chapter."""

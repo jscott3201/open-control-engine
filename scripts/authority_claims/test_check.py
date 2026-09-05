@@ -2,9 +2,10 @@
 """Hostile behavioral controls for the aggregate index, not replacement owners."""
 
 import copy
+import html
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import sys
@@ -15,7 +16,41 @@ from unittest.mock import patch
 import check
 from model import BINDINGS, INDEX, OUTPUT, ClaimError, parse, validate
 from observe import ROOT, Repository, corpus, observe
-from render import render
+from render import code, render
+
+sys.path.insert(0, str(ROOT / "scripts/docs"))
+import stage as docs_stage
+
+
+class LiteralTests(unittest.TestCase):
+    def test_literal_encoding_preserves_text_without_exposing_parser_delimiters(self):
+        for literal in ("[history](../_spec/absent.md)", "![image](../_spec/absent.png)",
+                        "{{#include ../../_spec/absent.rs}}", "{{#rustdoc_include absent.rs}}",
+                        "{{#playground absent.rs}}", "{{#playpen absent.rs}}",
+                        "</code><a href='absent'>x</a> &amp; &#91; &#x7b;",
+                        "`**_~|[]{}\\'\"!`\n\r\t Unicode — 中文"):
+            with self.subTest(literal=literal):
+                encoded = code(literal)
+                self.assertEqual(html.unescape(encoded[6:-7]), literal)
+                self.assertNotRegex(encoded[6:-7], r"[\[\]{}`*_~|!\\\n\r\t<>]")
+                self.assertEqual(code(literal), encoded)
+
+    def test_actual_staging_ignores_literal_targets_but_rewrites_authority_links(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "docs").mkdir()
+            (root / "TESTING.md").write_text("current tracked authority fixture\n")
+            staged = root / "docs/authority-claims.md"
+            for literal in ("[history](../_spec/absent.md)", "![image](../_spec/absent.png)",
+                            "{{#include ../../_spec/absent.rs}}"):
+                with self.subTest(literal=literal):
+                    document = code(literal) + "\n[authority](../TESTING.md)\n"
+                    staged.write_text(document)
+                    docs_stage.rewrite_staged_links(root, staged, PurePosixPath(OUTPUT), "a" * 40)
+                    expected = document.replace("../TESTING.md",
+                                                f"{docs_stage.REPOSITORY_URL}/blob/{'a' * 40}/TESTING.md")
+                    self.assertEqual(staged.read_text(), expected)
+                    self.assertFalse((root / "_spec").exists())
 
 
 class IndexTests(unittest.TestCase):
@@ -290,8 +325,8 @@ class SourceTests(unittest.TestCase):
             row["historical_locator"] = locator
         self.write_json(INDEX, index)
         output = render(*observe(self.repo)).decode()
-        self.assertIn("&lt;b&gt;not authority&lt;/b&gt;", output)
-        self.assertIn("&#96;code&#96; &#124;", output)
+        self.assertIn(f"<code>{locator}</code>", html.unescape(output))
+        self.assertNotIn("[promote](https://invalid.example/)", output)
         self.assertFalse((self.root / "_spec").exists())
         self.assertNotIn("href=", output)
 

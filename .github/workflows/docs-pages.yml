@@ -46,6 +46,9 @@ jobs:
       - name: Test documentation checker contracts
         run: python3 scripts/docs/test_check_links.py
 
+      - name: Test authority literals through staging and mdBook
+        run: python3 scripts/docs/test_authority_literals.py --mdbook target/mdbook-bin/mdbook
+
       - name: Check generated authority projection
         run: python3 scripts/authority_claims/check.py --check
 
