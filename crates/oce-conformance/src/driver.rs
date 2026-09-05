@@ -10,7 +10,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
-use std::path::PathBuf;
 
 use oce_api::{
     CollectSpec, Engine, InputSource, OcError, OutputTrace, PointDirection, PointInfo,
@@ -50,16 +49,6 @@ pub enum DriveCadence {
 pub enum DriverInputReplay {
     /// Decode input columns from the reference [`CombiTimeTable`] and stage them with a closure.
     ReferenceTable,
-    /// Pass through the frozen-but-deferred facade CSV input variant.
-    ///
-    /// This exists so callers can prove the facade returns the typed deferred error; normal B3
-    /// conformance replay uses [`DriverInputReplay::ReferenceTable`].
-    FacadeCsv {
-        /// CSV path handed to [`InputSource::Csv`].
-        path: PathBuf,
-        /// `(input point, CSV column index)` bindings handed to [`InputSource::Csv`].
-        bindings: Vec<(String, usize)>,
-    },
 }
 
 /// Driver options for [`drive_trace_with_options`].
@@ -525,10 +514,6 @@ fn run_uniform(
                     .collect()
             }))
         }
-        DriverInputReplay::FacadeCsv { path, bindings } => InputSource::Csv {
-            path: path.clone(),
-            bindings: bindings.clone(),
-        },
     };
     let metrics = engine.simulate(&SimSpec {
         t_start,

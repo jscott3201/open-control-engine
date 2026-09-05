@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 1\n"
-    "Grounding SHA: f8918501586a1b99ed59a2c66ce79abcc58d0135\n"
+    "Document revision: 2\n"
+    "Grounding SHA: d2111beb942e94282ef688f644a56e05e77045dc\n"
     "Requirements: 40\n"
-    "CURRENT: 22\n"
+    "CURRENT: 23\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 13\n"
-    "Future outcomes: 13\n"
+    "FUTURE: 12\n"
+    "Future outcomes: 12\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 1", "Document revision: 0", "metadata:"),
-            ("Document revision: 1", "Document revision: 2", "current revision change record"),
-            ("Document revision: 1", "Document revision: 1\nDocument revision: 1", "metadata:"),
-            ("Grounding SHA: f8918501586a1b99ed59a2c66ce79abcc58d0135", "Grounding SHA: f891850", "metadata:"),
+            ("Document revision: 2", "Document revision: 0", "metadata:"),
+            ("Document revision: 2", "Document revision: 3", "current revision change record"),
+            ("Document revision: 2", "Document revision: 2\nDocument revision: 2", "metadata:"),
+            ("Grounding SHA: d2111beb942e94282ef688f644a56e05e77045dc", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,31 +255,31 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
-        self.change_cell("PC-028", 7,
-                         "test [deferred_load_paths_return_typed_errors_not_panics]"
-                         "(../crates/oce-api/src/tests/frozen_surface.rs#L198-L218)")
+        self.change_cell("PC-029", 7,
+                         "test [retired_facade_symbols_are_absent]"
+                         "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
         self.rejects("future outcome assignment required")
         self.change_cell("PC-006", 7, "source [tick](../crates/oce-api/src/engine.rs#L279-L312)")
         self.rejects("test or future assignment required")
 
     def test_future_assignment_requires_named_local_outcome_and_description(self):
         for value, message in (
-            ("future [later](#facade-quarantine)", "one named future assignment"),
-            ("future [M01-PR02](#facade-schemas)", "missing future description"),
-            ("future [M01-PR02](public-surface-contract.md)", "future outcome must be in this document"),
-            ("future [M01-PR02](#absent)", "missing heading"),
+            ("future [later](#facade-schemas)", "one named future assignment"),
+            ("future [M01-PR03](#bounded-admission-and-replacement)", "missing future description"),
+            ("future [M01-PR03](public-surface-contract.md)", "future outcome must be in this document"),
+            ("future [M01-PR03](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
-                self.change_cell("PC-028", 7, value)
+                self.change_cell("PC-029", 7, value)
                 self.rejects(message)
-        self.write_document(self.document.replace("M01-PR02: Remove or quarantine", "M01-PR09: Remove or quarantine"))
+        self.write_document(self.document.replace("M01-PR03:", "M01-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["facade-quarantine"]
-        self.write_document(self.document.replace(section, "M01-PR02: Later."))
+        section = check.headings(self.document)["facade-schemas"]
+        self.write_document(self.document.replace(section, "M01-PR03: Later."))
         self.rejects("missing future description")
 
     def test_duplicate_and_orphan_future_outcomes_refuse(self):
-        for suffix in ("M01-PR02: Duplicated outcome.", "M09-PR99: Orphan outcome."):
+        for suffix in ("M01-PR03: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
 
@@ -387,6 +387,72 @@ class TraceabilityTests(unittest.TestCase):
                             self.assertEqual(check.main(), 1)
             self.assertEqual("".join(call.args[0] for call in stderr.write.call_args_list),
                              "product contract: FAIL: table: unknown status: PC-006\n")
+
+    def test_fulfilled_outcome_cannot_be_reintroduced_as_an_orphan_assignment(self):
+        self.write_document(self.document + "\nM01-PR02: Retired assignment reintroduced.\n")
+        self.rejects("duplicate or orphan future outcome")
+
+    def test_pending_transition_paths_are_exact_and_still_require_regular_nonignored_files(self):
+        self.assertEqual(check.PENDING, frozenset((
+            "docs/product-contract.md", "scripts/product_contract/check.py",
+            "scripts/product_contract/test_check.py", "docs/facade-migration.md",
+            "crates/oce-api/tests/sim_assertions.rs",
+        )))
+        for path in ("docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs"):
+            with self.subTest(path=path):
+                self.ignored = {path}
+                self.rejects("ignored or unverifiable")
+        self.ignored.clear()
+        path = self.root / "crates/oce-api/tests/sim_assertions.rs"
+        path.unlink()
+        path.symlink_to(self.root / "crates/oce-api/src/engine.rs")
+        self.rejects("target: symlink")
+
+    def assert_readme_claim_boundary(self, stale, corrected, historical, error):
+        # Mutate the real public-document fixture, never the live README or API source.
+        path = self.root / "README.md"
+        original = path.read_text()
+        self.assertEqual(original.count(stale) + original.count(corrected), 1)
+        valid = original.replace(stale, corrected)
+        for suffix in ("", historical, historical + historical):
+            positive = valid + "\n" + suffix
+            path.write_text(positive)
+            for _ in range(2):
+                self.assertEqual(self.run_fixture(), GOLDEN)
+                self.assertEqual(path.read_text(), positive, "validation is read-only")
+        for statement in (stale, stale.replace("\n  ", " "), stale.upper()):
+            mutated = valid.replace(corrected, statement)
+            self.assertNotEqual(mutated, valid)
+            path.write_text(mutated)
+            for _ in range(2):
+                self.rejects(error)
+                self.assertEqual(path.read_text(), mutated, "refusal is read-only")
+
+    def test_readme_refuses_callable_removed_loaders_but_accepts_migration_history(self):
+        self.assert_readme_claim_boundary(
+            "- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`\n"
+            "  always return `OcError::Load`; use `load_cxf` for working ingest today.\n",
+            "- **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`\n"
+            "  are no longer callable; prepare supported CXF externally and use `load_cxf`.\n"
+            "  See [facade migration](docs/facade-migration.md) for the pre-release source break.\n",
+            "\n## Migration history\n\n"
+            "- Previously, `load_from_semantic` and `load_modelica` always returned `OcError::Load`.\n"
+            "  Both placeholder signatures have been removed; `load_cxf` remains available.\n",
+            "facade: callable removed loaders in README.md",
+        )
+
+    def test_readme_refuses_public_error_severity_but_accepts_warning_default_history(self):
+        self.assert_readme_claim_boundary(
+            "- **Assertion events are warning-only today.** Although `AssertLevel::Error` is public for surface\n"
+            "  stability, the engine never produces it; hosts must not build escalation logic on that variant.\n",
+            "- **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now\n"
+            "  `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation\n"
+            "  or safety policy. See [facade migration](docs/facade-migration.md).\n",
+            "\n## Migration history\n\n"
+            "- Previously, `AssertLevel::Error` was public but never emitted; its removal intentionally\n"
+            "  changes `AssertLevel::default()` from Error to Warning. No escalation is added.\n",
+            "facade: removed assertion severity advertised as public in README.md",
+        )
 
 
 if __name__ == "__main__":

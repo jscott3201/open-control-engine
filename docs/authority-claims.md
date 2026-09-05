@@ -62,14 +62,13 @@ Feature selections: **3**; the shared normal closure is owner-verified, not infe
 
 | Public baseline | Descriptor rows | SHA-256 (owner descriptor) |
 | --- | --- | --- |
-| [crates/oce-api/tests/public-api.txt](../crates/oce-api/tests/public-api.txt) | 1408 | <code>c2c276402f2f4035f6f16227e49e6e5ac0bce3b17acd16c2ac508807c25309c7</code> |
+| [crates/oce-api/tests/public-api.txt](../crates/oce-api/tests/public-api.txt) | 1357 | <code>13e01dc0c339c29a4af09f475048b1af1f4a77f0583b0296c52972831e26ffb0</code> |
 | [crates/oce-store/tests/public-api.txt](../crates/oce-store/tests/public-api.txt) | 1230 | <code>78cf5fdbcbd415a4ca3c521501c9c1a9ccca099551839c2fd360edc311fcbafe</code> |
 
 Exact row assignments remain in the public ledger; statuses below are displayed, not re-adjudicated.
 
 | Group | Status |
 | --- | --- |
-| <code>deferred&#45;surface</code> | <code>unstable&#47;deferred</code> |
 | <code>deprecated&#45;compatibility</code> | <code>deprecated</code> |
 | <code>domain&#45;key&#45;stable</code> | <code>stable&#45;candidate</code> |
 | <code>facade&#45;stable</code> | <code>stable&#45;candidate</code> |
@@ -84,7 +83,7 @@ This is the existing pinned source identity, not a new numeric catalog revision.
 | catalog-registry | <code>c52b1c5807e78aaf930f09402717ab7b5f1d98d173452d0cd22bbd6cb0b16336</code> |
 | catalog-source | <code>a8109009c6ffebba52522c2d6f96ac898c926b420a6baec369328c55b40d2702</code> |
 | packages | <code>901e3ad38af0c0d223aeb0624b5bac55398cf4370155a0541301dbb2ebffb74d</code> |
-| public-surface | <code>db5de159cd079f97e7c480b5807e12bbe3c94c41110abaa63681e82b43b0c6dc</code> |
+| public-surface | <code>3f4a5629d3ab7ac15c6cf6444ecfdb43ce057c94ab1adc167a5d8e0139877b3d</code> |
 
 ## Native expected observations
 

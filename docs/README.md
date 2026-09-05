@@ -20,6 +20,7 @@ front door; these pages are the detail behind it.
 | [Benchmarks](benchmarks.md) | Measured `Engine::tick()` throughput, recorded per run with the commit and host that produced it |
 | [Stability baseline](stability-baseline.md) | The dated OCE/downstream ref and pin evidence snapshot, its authority limits, and deterministic verifier |
 | [Public surface contract](public-surface-contract.md) | Which `oce-api` and `oce-store` items are stable candidates, conditional, deferred, deprecated, or scheduled for removal, with the [machine-checked ledger](public-surface-ledger.json) |
+| [Facade migration](facade-migration.md) | Removed pre-release placeholder names, the intentional Warning default change, and preserved working host boundaries |
 | [Package, feature, and publication policy](package-publication-policy.md) | Which of all 17 workspace packages are supported or private, which `oce-api` feature selections are supported, and which 12 packages are eligible for a future release, with the [machine-checked ledger](package-publication-ledger.json) |
 
 ## Elsewhere in the repository

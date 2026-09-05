@@ -196,21 +196,9 @@ fn get_output_on_input_point_is_unknown_point() {
 }
 
 #[test]
-fn deferred_load_paths_return_typed_errors_not_panics() {
-    let mut eng = Engine::in_memory();
-    let q = SemanticQuery::FuzzyText {
-        query: "x".into(),
-        k: 1,
-    };
-    assert!(matches!(
-        eng.load_from_semantic(&TemplateRef::new("tpl:x"), &q),
-        Err(OcError::Load { .. })
-    ));
-    assert!(matches!(
-        eng.load_modelica(std::path::Path::new("/x.mo")),
-        Err(OcError::Load { .. })
-    ));
-    // A device-filtered point list is the deferred §7.7.5 traversal; the in-memory mirror is fine.
+fn device_filtered_inventory_preserves_the_load_typed_refusal() {
+    let eng = Engine::in_memory();
+    // Device filtering is outside the supported profile; the in-memory mirror still works.
     assert!(matches!(
         eng.point_list(Some("AHU-1")),
         Err(OcError::Load { .. })
@@ -531,18 +519,6 @@ fn simulate_rejects_bad_spec_without_panicking() {
         eng.simulate(&sim_spec(3.0, 0.0, 1.0, CollectSpec::None)),
         Err(OcError::TimeRegression { .. })
     ));
-    // CSV InputSource is frozen-as-variant but deferred ⇒ typed Load error.
-    let csv = SimSpec {
-        t_start: 0.0,
-        t_stop: 1.0,
-        step: 1.0,
-        inputs: InputSource::Csv {
-            path: "x.csv".into(),
-            bindings: vec![],
-        },
-        collect: CollectSpec::None,
-    };
-    assert!(matches!(eng.simulate(&csv), Err(OcError::Load { .. })));
     // A Named collect with an unknown output fails fast (no partial trace).
     let bad_named = sim_spec(
         0.0,

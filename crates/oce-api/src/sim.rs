@@ -127,8 +127,8 @@ pub struct SimSpec {
 }
 
 /// Source of staged inputs for each simulation step (`08` §5.1). `None`/`Constant`/`Closure` are
-/// live; `Csv` is frozen-as-variant but deferred behind a typed error. `#[non_exhaustive]` so a
-/// future table-backed variant is additive. NOT `Clone`/`Debug`-derivable (the `Closure` variant
+/// supported. Hosts decode file/table inputs outside the engine and supply values through a closure.
+/// `#[non_exhaustive]` permits future additions. NOT `Clone`/`Debug`-derivable (the `Closure` variant
 /// holds a boxed `Fn`); a manual [`std::fmt::Debug`] prints the variant name only.
 #[non_exhaustive]
 pub enum InputSource {
@@ -139,14 +139,6 @@ pub enum InputSource {
     /// Host closure mapping model time → staged `(point, value)` pairs. `Fn` (not `FnMut`) so it is
     /// callable through the frozen `&SimSpec` borrow; `Send + Sync` so `SimSpec` stays thread-safe.
     Closure(Box<dyn Fn(f64) -> Vec<(String, Value)> + Send + Sync>),
-    /// Deferred: a CombiTimeTable-style CSV of `t, col0, col1, …` bound to named inputs.
-    /// Frozen as a variant now; `simulate` returns a typed [`OcError::Load`] for it.
-    Csv {
-        /// Path to the CSV file.
-        path: std::path::PathBuf,
-        /// `(input point, CSV column index)` bindings.
-        bindings: Vec<(String, usize)>,
-    },
 }
 
 impl std::fmt::Debug for InputSource {
@@ -155,11 +147,6 @@ impl std::fmt::Debug for InputSource {
             InputSource::None => f.write_str("InputSource::None"),
             InputSource::Constant(v) => f.debug_tuple("InputSource::Constant").field(v).finish(),
             InputSource::Closure(_) => f.write_str("InputSource::Closure(<fn>)"),
-            InputSource::Csv { path, bindings } => f
-                .debug_struct("InputSource::Csv")
-                .field("path", path)
-                .field("bindings", bindings)
-                .finish(),
         }
     }
 }
@@ -397,24 +384,24 @@ impl DurableOutputBatch {
 /// Owned `String` fields only (R-API-8).
 #[derive(Clone, Debug)]
 pub struct AssertEvent {
-    /// Dotted instance path of the `Assert` block that tripped.
+    /// Diagnostic source emitted by the block; currently `CDL.Utilities.Assert` (the class path,
+    /// not an instance-path identity).
     pub block: String,
     /// The assertion message (CDL `Assert` `message` parameter).
     pub message: String,
     /// Model time (seconds) at which it tripped.
     pub t: f64,
-    /// Severity, mirroring Modelica `AssertionLevel`.
+    /// Advisory severity; the current collector emits only [`AssertLevel::Warning`].
     pub level: AssertLevel,
 }
 
-/// CDL assertion severity (mirrors Modelica `AssertionLevel`). Default = `Error`.
+/// Supported CDL assertion severity. Default = [`AssertLevel::Warning`].
+/// This is warning-only reporting, not the full Modelica `AssertionLevel` or a safety interlock.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub enum AssertLevel {
     /// Advisory; the run continues.
-    Warning,
-    /// A verification failure (the default).
     #[default]
-    Error,
+    Warning,
 }
 
 #[derive(Default)]
@@ -482,7 +469,7 @@ impl<S: Store> Engine<S> {
     /// those ticks in effect, so `simulate` is not transactional once execution has begun.
     ///
     /// # Errors
-    /// [`OcError::Load`] if `step` is non-finite/`<= 0`, or `inputs` is the deferred `Csv` variant;
+    /// [`OcError::Load`] if `step` is non-finite/`<= 0`;
     /// [`OcError::NonFiniteTime`] if `t_start`/`t_stop` is non-finite; [`OcError::TimeRegression`] if
     /// `t_stop < t_start`; [`OcError::UnknownPoint`] if `CollectSpec::Named` or an input source names
     /// an unknown point; [`OcError::InputType`] if an input value has the wrong type; and
@@ -510,11 +497,6 @@ impl<S: Store> Engine<S> {
                 prev: spec.t_start,
             });
         }
-        if let InputSource::Csv { .. } = &spec.inputs {
-            return Err(OcError::Load {
-                detail: "CSV InputSource is deferred to M2".to_string(),
-            });
-        }
         // Resolve recorded columns ONCE before any tick — an unknown name fails fast with no
         // partial trace and no advanced model state.
         let cols = self.resolve_collect(&spec.collect)?;
@@ -524,7 +506,7 @@ impl<S: Store> Engine<S> {
         let first_t = spec.t_start + 0.0 * spec.step;
         let mut first_closure_inputs = match &spec.inputs {
             InputSource::Closure(f) => Some(self.resolve_input_pairs(&f(first_t))?),
-            InputSource::None | InputSource::Constant(_) | InputSource::Csv { .. } => None,
+            InputSource::None | InputSource::Constant(_) => None,
         };
         let n = (((spec.t_stop - spec.t_start) / spec.step).floor() as i64).max(0) as u64;
         let last_t = spec.t_start + (n as f64) * spec.step;
@@ -744,9 +726,6 @@ impl<S: Store> Engine<S> {
                 }
                 Ok(())
             }
-            InputSource::Csv { .. } => Err(OcError::Load {
-                detail: "CSV InputSource is deferred to M2".to_string(),
-            }),
         }
     }
 

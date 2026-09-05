@@ -55,8 +55,21 @@ remains supported through `Engine::in_memory`.
 `Engine::schedule` is implementation leakage. It stays source- and binary-shape unchanged for now;
 removal requires a later coordinated change with consumers and tests.
 
-The two placeholder loaders, their template/query facade exposure, and `InputSource::Csv` are
-unstable/deferred. `ExportReport::content_id` is deprecated; use
+The placeholder loaders, `TemplateRef`, flat `SemanticQuery` alias, and `InputSource::Csv` have
+been removed, not promoted or placed behind an unstable feature. The conditional
+`oce_api::oce_store::SemanticQuery` namespace remains. `AssertLevel` now contains only `Warning`,
+also its intentional default. See the [migration account](facade-migration.md) for the source break.
+The now-empty deferred-surface group is removed from the ledger; its status vocabulary stays closed
+and unchanged. Compiler controls across all three supported feature selections and baseline
+reintroduction controls guard the removals independently of ledger hashes.
+
+`Engine::point_list(None)` remains a supported own-inventory operation with its existing signature.
+Device filtering (`Some`) is explicitly **outside** the supported profile: it always returns the
+existing typed `OcError::Load` directly, even with a capable custom store. It is not a delegated
+semantic query or an experimental supported feature. The refusal and the None path call no store
+method and preserve the engine; `public_storage_adapter` exercises this boundary.
+
+`ExportReport::content_id` is deprecated; use
 `ExportReport::content_id_complete`. Exact members are recorded by the ledger rather than by a prose
 method list.
 
@@ -107,8 +120,10 @@ Control Studio and Logic Studio use `oce-api` together with `oce-blocks::catalog
 the facade. Consumers read `LoadReport.model_id.as_str()`. No inspected consumer directly imports
 `PointHandle` or calls `Engine::store` or `Engine::schedule`, but absence in that sample does not
 authorize removal. The dated Studio pin evidence remains available in
-[`stability-baseline-2026-08-26.json`](stability-baseline-2026-08-26.json). This reconciliation makes
-no downstream edit and changes no signature.
+[`stability-baseline-2026-08-26.json`](stability-baseline-2026-08-26.json). The earlier reconciliation
+changed no signatures; the subsequent [facade contraction](facade-migration.md) deliberately removes
+selected names without editing downstream sources or pins. Inspected usage is not candidate
+compilation, downstream acceptance or general compatibility certification.
 
 ## Issue #254 reconciliation
 

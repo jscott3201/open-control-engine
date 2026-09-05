@@ -388,7 +388,7 @@ fn model_load_failure_has_distinct_stage() {
 }
 
 #[test]
-fn driver_errors_surface_uniform_bad_step_and_csv_deferred() {
+fn uniform_bad_step_returns_the_typed_engine_stage_error() {
     let reference = uniform_reference();
     let config = config();
     let bad_step = drive_trace_with_options(
@@ -410,26 +410,6 @@ fn driver_errors_surface_uniform_bad_step_and_csv_deferred() {
         bad_step,
         DriverError::Engine(OcError::Load { .. })
     ));
-
-    let csv = drive_trace_with_options(
-        FREE_ADD.as_bytes(),
-        &config,
-        &reference,
-        &DriverOptions {
-            cadence: DriveCadence::Uniform {
-                t_start: 0.0,
-                t_stop: 1.0,
-                step: 1.0,
-            },
-            input_replay: DriverInputReplay::FacadeCsv {
-                path: Path::new("reference.csv").to_path_buf(),
-                bindings: vec![(U1.to_string(), 1)],
-            },
-            comparison: ComparisonMode::Funnel,
-        },
-    )
-    .expect_err("facade Csv input source remains deferred");
-    assert!(matches!(csv, DriverError::Engine(OcError::Load { .. })));
 }
 
 #[test]

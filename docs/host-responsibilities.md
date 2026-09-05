@@ -196,10 +196,16 @@ dirty, `resume` rebuilds blocks, allocates all state again, refreshes outputs, a
 model time. Every stateful block—including integrators, latches, timers, and filters—is re-seeded,
 and monotonic-time history is lost. Plan parameter edits as a new run.
 
-The stable API also contains two loaders that do not work yet: `load_from_semantic` and
-`load_modelica` always return `OcError::Load`. Use `load_cxf` for working ingest. Likewise, the
-public `AssertLevel::Error` variant is never emitted today; the sole assertion collector produces
-`Warning`, so hosts must not depend on receiving `Error` for escalation.
+Executable ingest uses `load_cxf`; the never-working semantic/Modelica loaders have been removed.
+Hosts prepare supported CXF outside the engine. Likewise, hosts decode CSV/table input outside the
+facade and provide `InputSource::Constant` or `Closure` values. `AssertLevel` contains only `Warning`,
+which is now also its default; assertion reports neither escalate nor stop equipment. The collector
+preserves the block's diagnostic source (currently the Assert class path, not an instance identity).
+See [facade migration](facade-migration.md) for the intentional pre-release source/default break.
+
+`point_list(None)` still returns the engine's own effective inventory. Its existing argument remains,
+but device filtering is outside support: every `Some` returns `OcError::Load` directly, without
+querying the store or changing the run. Wiring a capable `SemanticStore` does not enable that filter.
 
 ## CXF point identities are the authored `@id`s
 

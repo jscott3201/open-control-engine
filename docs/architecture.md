@@ -138,7 +138,7 @@ separates host support from registry dependency closure.
 | `oce-validate` | Loader conformance: subset rejection, single-assignment, type and attribute unification, parameter rules. |
 | `oce-graph` | The deterministic scheduler and executor: direct-feedthrough DAG, algebraic-loop rejection, its own Kahn topological sort, the tick loop. |
 | `oce-cxf` | CXF (Control eXchange Format) JSON-LD ↔ model graph, both directions. Composite nesting is bounded at 64. Boundary lowering is iterative and separately bounded at 64 non-top `isConnectedTo` hops per path, 65,536 target examinations, and 8 MiB of aggregate target-IRI bytes per document. The accept/reject contract is written out in [cxf-composite-subset.md](cxf-composite-subset.md). |
-| `oce-semantics` | **Reserved seam; annotation parsing is deferred.** The intended role is vendor-annotation parsing into effective non-computational point/trend/semantic metadata. No `__cdl` / `__CDL` annotation parsing exists today. It is publishable only as an `oce-api` implementation dependency. |
+| `oce-semantics` | **Active effective-point metadata resolver.** Derives metadata from connector attributes, direction, value type and defaults; this is unrelated to the removed semantic-template loader. Raw `__cdl` / `__CDL` annotation parsing remains deferred. It stays a wired, publishable `oce-api` implementation dependency, not an independently supported API. |
 | `oce-diag` | The shared diagnostic vocabulary (`Severity` / `DiagCode` / `Diagnostic`) across the ingest path. Zero dependencies. |
 
 **Storage ports (the seam — traits only, no database types):**

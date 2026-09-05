@@ -163,10 +163,12 @@ Stating this plainly is more useful than a feature list.
 - **It has no Python bindings**, no daemon, no scheduler, and no database.
 - **`halt()` does not stop execution.** It only opens the tune-at-rest window in which
   `set_param` is accepted; ticks, real-time steps, and simulations continue if the host calls them.
-- **Two stable loader signatures are placeholders.** `load_from_semantic` and `load_modelica`
-  always return `OcError::Load`; use `load_cxf` for working ingest today.
-- **Assertion events are warning-only today.** Although `AssertLevel::Error` is public for surface
-  stability, the engine never produces it; hosts must not build escalation logic on that variant.
+- **Deferred loader signatures have been removed.** `load_from_semantic` and `load_modelica`
+  are no longer callable; prepare supported CXF externally and use `load_cxf`.
+  See [facade migration](docs/facade-migration.md) for the pre-release source break.
+- **Assertion events and `AssertLevel` are Warning-only.** `AssertLevel::default()` is now
+  `Warning`; the never-emitted `AssertLevel::Error` variant was removed. This adds no escalation
+  or safety policy. See [facade migration](docs/facade-migration.md).
 
 ---
 

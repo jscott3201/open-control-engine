@@ -2,7 +2,7 @@
 """Check one prescribed Markdown traceability grammar, not product semantics.
 
 Read-only, standard-library only. Existing evidence is tracked and regular; only
-the three explicitly pending product-contract files may be untracked before commit.
+explicitly enumerated contract/transition evidence may be untracked before commit.
 No rendering, generation, blessing, compilation or external URL fetch is performed.
 """
 
@@ -23,7 +23,8 @@ from urllib.parse import urlsplit
 
 DOCUMENT = "docs/product-contract.md"
 PENDING = frozenset((DOCUMENT, "scripts/product_contract/check.py",
-                     "scripts/product_contract/test_check.py"))
+                      "scripts/product_contract/test_check.py",
+                      "docs/facade-migration.md", "crates/oce-api/tests/sim_assertions.rs"))
 POINTERS = ("README.md", "AGENTS.md", "TESTING.md", "docs/architecture.md",
             "docs/host-responsibilities.md", "docs/README.md")
 HEADER = "| ID | Status | Actor | Owner | Requirement | Limitation | Grounding | Evidence |"
@@ -296,12 +297,29 @@ def validate(repository: Repository) -> str:
         expected = posixpath.relpath(DOCUMENT, posixpath.dirname(source) or ".")
         require(expected in destinations, f"pointer: missing product contract in {source}")
         link_target(repository, source, expected)
+        if source == "README.md":
+            validate_readme_facade(pointer_text)
     counts = Counter(row.status for row in rows)
     status_lines = "\n".join(f"{status}: {counts[status]}" for status in STATUSES)
     return (f"product contract: OK\nDocument revision: {revision}\nGrounding SHA: {grounding}\n"
             f"Requirements: {len(rows)}\n{status_lines}\nFuture outcomes: {len(assignments)}\n"
             f"Integration pointers: {len(POINTERS)}\n"
             "Scope: traceability only; semantics and host compliance are not proven.\n")
+
+
+def validate_readme_facade(text: str) -> None:
+    """Reject known obsolete current-claim bullets, not historical API mentions.
+
+    These are narrow lexical sentinels over public guidance, not a semantic proof
+    or a ban on spelling removed names in migration/history accounts.
+    """
+    for bullet in re.findall(r"(?m)^- .+(?:\n[ \t]+.+)*", text):
+        normalized = " ".join(re.sub(r"[`*]", "", bullet).split()).casefold()
+        require(not normalized.startswith("- two stable loader signatures are placeholders."),
+                "facade: callable removed loaders in README.md")
+        require(not normalized.startswith("- assertion events are warning-only today. "
+                                          "although assertlevel::error is public for surface stability"),
+                "facade: removed assertion severity advertised as public in README.md")
 
 
 def main() -> int:
