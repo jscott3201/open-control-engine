@@ -1,0 +1,924 @@
+{
+  "$defs": {
+    "value_kind": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "Real",
+                "Integer",
+                "Boolean",
+                "String"
+              ]
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "class_path": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "Enum"
+            },
+            "members": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "kind",
+            "class_path",
+            "members"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "$id": "urn:oce:catalog:1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "All arrays retain registry/declaration order; object keys lexical; compact UTF-8 JSON plus LF. Default-width ports and conservative statefulness are hints, not resolved instance truth. No units or quantities. Content tag: FNV-1a-128 of ASCII oce:catalog:1 followed by NUL then canonical bytes; catalog:1:fnv1a128:<32 lowercase hex>. Not security or executable compatibility.",
+  "properties": {
+    "entries": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "class_path": {
+            "type": "string"
+          },
+          "inputs": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "Real",
+                    "Integer",
+                    "Boolean"
+                  ]
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "naming": {
+            "enum": [
+              "named",
+              "positional",
+              "width_driven"
+            ]
+          },
+          "outputs": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "Real",
+                    "Integer",
+                    "Boolean"
+                  ]
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "param_defaults": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "oneOf": [
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "bits": {
+                          "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                          "pattern": "^[0-9a-f]{16}$",
+                          "type": "string"
+                        },
+                        "kind": {
+                          "const": "real"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "bits"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "integer"
+                        },
+                        "value": {
+                          "maximum": 9223372036854775807,
+                          "minimum": -9223372036854775808,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "boolean"
+                        },
+                        "value": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "enum"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "formula": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "const": "derived"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "formula"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "kind": {
+                          "const": "required"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "default"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "param_rules": {
+            "items": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "$ref": "#/$defs/value_kind"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "Required"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "kind"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "Structural"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "StructuralArrayElements"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "Boolean"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "Real"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealFinite"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "min": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealGreaterThan"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "min"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "min": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealFiniteGreaterThan"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "min"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "min": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "IntegerGreaterOrEqual"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "min"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "IntegerLessOrEqualConstant"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "len": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "IntegerArrayElements"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "len"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "default_to_index": {
+                      "type": "boolean"
+                    },
+                    "len": {
+                      "type": "string"
+                    },
+                    "len_default": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "max": {
+                      "type": "string"
+                    },
+                    "max_default": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "min": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "rule": {
+                      "const": "IntegerArrayElementsInRange"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "len",
+                    "len_default",
+                    "min",
+                    "max",
+                    "max_default",
+                    "default_to_index"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "len": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealArrayElements"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "len"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "cols": {
+                      "type": "string"
+                    },
+                    "default_cols": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "default_rows": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "rows": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealMatrixElements"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "rows",
+                    "default_rows",
+                    "cols",
+                    "default_cols"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "extrapolation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "period": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "rule": {
+                      "const": "TimeTableMatrix"
+                    },
+                    "time_scale": {
+                      "type": "string"
+                    },
+                    "values": {
+                      "enum": [
+                        "Real",
+                        "Integer",
+                        "Boolean"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "values",
+                    "time_scale",
+                    "period",
+                    "extrapolation"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "TimeTableOffset"
+                    },
+                    "table": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "table"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "len": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "BooleanArrayElements"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "len"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "base": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "string"
+                    },
+                    "default": {
+                      "type": "boolean"
+                    },
+                    "len": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "BooleanArrayTrueCountEquals"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "base",
+                    "len",
+                    "count",
+                    "default"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "members": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "EnumMembers"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "members"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "min": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealGreaterOrEqual"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "min"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "max": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealLessOrEqualConstant"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "name",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "integer": {
+                      "type": "string"
+                    },
+                    "max": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "min": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "real": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealTimesIntegerInclusiveRange"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "real",
+                    "integer",
+                    "min",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "left": {
+                      "type": "string"
+                    },
+                    "max": {
+                      "maximum": 9223372036854775807,
+                      "minimum": -9223372036854775808,
+                      "type": "integer"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "IntegerProductLessOrEqualConstant"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "left",
+                    "right",
+                    "max"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lower": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealLessOrEqual"
+                    },
+                    "upper": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "lower",
+                    "upper"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "lower": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealLessOrEqualWarning"
+                    },
+                    "upper": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "lower",
+                    "upper"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "factor": {
+                      "description": "IEEE-754 binary64 bits, including signed zero and nonfinite payloads.",
+                      "pattern": "^[0-9a-f]{16}$",
+                      "type": "string"
+                    },
+                    "left": {
+                      "type": "string"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealGreaterOrEqualScaledWarning"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "left",
+                    "right",
+                    "factor"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "left": {
+                      "type": "string"
+                    },
+                    "right": {
+                      "type": "string"
+                    },
+                    "rule": {
+                      "const": "RealEqualWarning"
+                    }
+                  },
+                  "required": [
+                    "rule",
+                    "left",
+                    "right"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "type": "array"
+          },
+          "reserved": {
+            "type": "boolean"
+          },
+          "stateful": {
+            "type": "boolean"
+          },
+          "width_driven": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "class_path",
+          "inputs",
+          "outputs",
+          "naming",
+          "param_rules",
+          "param_defaults",
+          "width_driven",
+          "stateful",
+          "reserved"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema_revision": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema_revision",
+    "entries"
+  ],
+  "title": "Facade catalog revision 1",
+  "type": "object"
+}

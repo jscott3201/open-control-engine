@@ -1,0 +1,52 @@
+{
+  "domain": "diagnostics",
+  "ordering": [
+    "stage rank (listed order, 0..11)",
+    "subject category/presence: Absent before Opaque",
+    "exact opaque subject UTF-8 text, including empty",
+    "code UTF-8 string",
+    "severity: Error=0, Warning=1, Info=2"
+  ],
+  "representation": "Rust facade contract description; not a general JSON codec",
+  "revision": 1,
+  "semantics": [
+    "Human messages excluded from machine equality/order; equal keys retain producer-relative tie order and multiplicity.",
+    "Present subjects may be authored, synthetic, class-level or positional; no provenance inferred. Host owns target mapping and truncation.",
+    "Empty diagnostics do not imply success; terminal stage and original error retain diagnostic-free failure context.",
+    "Legacy report vectors and all_diagnostics iteration order remain unchanged."
+  ],
+  "stages": [
+    "Import",
+    "Flatten",
+    "AttributeUnification",
+    "Validation",
+    "Instantiation",
+    "Schedule",
+    "Semantics",
+    "Projection",
+    "StoreRecovery",
+    "StoreSave",
+    "StoreInputs",
+    "Export"
+  ],
+  "types": {
+    "DiagnosticKey": {
+      "code": "extensible String",
+      "severity": "Error | Warning | Info",
+      "stage": "DiagnosticStage rank",
+      "subject": "Absent | Opaque(String), complete producer text"
+    },
+    "DiagnosticReceipt": {
+      "records": "immutable sequence sorted by key; duplicates retained"
+    },
+    "DiagnosticRecord": {
+      "key": "DiagnosticKey",
+      "message": "display-only String"
+    },
+    "OperationFailure": {
+      "diagnostics": "completed and terminal producer evidence",
+      "error": "original OcError with std::error::Error source chain",
+      "stage": "terminal DiagnosticStage"
+    }
+  }
+}

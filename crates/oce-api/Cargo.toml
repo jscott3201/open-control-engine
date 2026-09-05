@@ -39,6 +39,7 @@ oce-semantics = { workspace = true }
 oce-store = { workspace = true }
 oce-store-mem = { workspace = true }
 thiserror = { workspace = true }
+serde_json = { workspace = true }
 
 # Gate-only public-API surface enumeration (R-PUB-3 / exit #7). These are DEV-dependencies — they
 # never enter the shipped library or its dependents. The snapshot test (tests/public_api.rs) runs
@@ -62,4 +63,3 @@ allocation-counter = "0.8.1"
 oce-bless = { workspace = true }
 public-api = { version = "=0.52.1", default-features = false }
 rustdoc-json = "=0.9.10"
-serde_json = { workspace = true }

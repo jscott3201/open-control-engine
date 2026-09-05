@@ -3,6 +3,7 @@
 mod authority_claims_tests;
 mod boundary_alias_tests;
 mod common;
+mod contract_schemas;
 mod diagnostics_access;
 mod durable_output_batch_tests;
 mod frozen_surface;

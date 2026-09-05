@@ -23,6 +23,8 @@ use std::borrow::Cow;
 use oce_model::{ParamTable, Value, ValueType, determinism::canonicalize_real};
 
 mod catalog;
+mod catalog_rules;
+pub use catalog_rules::ParamRuleProjection;
 mod conversions;
 mod discrete;
 mod discrete_sampled;

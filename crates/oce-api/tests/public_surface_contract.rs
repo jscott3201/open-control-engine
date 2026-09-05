@@ -600,17 +600,18 @@ fn an_unclassified_baseline_row_is_rejected() {
 
 #[test]
 fn an_out_of_baseline_row_is_rejected() {
+    let outside = API_BASELINE.lines().count() + 1;
     let ledger = mutate_ledger(|value| {
         value["entries"][0]["ranges"]
             .as_array_mut()
             .expect("ranges")
-            .push(Value::String("1358".to_owned()));
+            .push(Value::String(outside.to_string()));
     });
     assert_eq!(
         validate_ledger(&ledger, &baselines()),
         Err(LedgerError::Extra {
             baseline: "oce-api".to_owned(),
-            line: 1358,
+            line: outside,
         })
     );
 }

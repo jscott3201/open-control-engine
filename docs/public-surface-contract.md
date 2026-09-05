@@ -43,8 +43,9 @@ one rationale while assigning every baseline row exactly once.
 
 `oce-api` is the primary host facade. Its working host operations, owned DTOs, typed errors, value
 types, and state capture/restore shapes are stable candidates except where the ledger says
-otherwise. `oce-blocks::catalog()` is a supported, actively consumed companion surface for block
-metadata. It remains a separate dependency and is outside these two baselines; that separation is
+otherwise. `oce_api::catalog()` supplies independent typed facade metadata and versioned contracts; see
+[facade contracts](facade-contracts.md). `oce-blocks::catalog()` remains a supported, actively
+consumed companion surface for block metadata. It remains a separate dependency and is outside these two baselines; that separation is
 not evidence that the catalog is implementation leakage.
 
 The database-free `oce-store` traits and DTOs are conditional storage-port surface. Hosts may
@@ -90,6 +91,13 @@ Python-facing.
   `PointSnapshot::read_resolved`. A handle is valid only for the same adapter mapping from resolution
   through compatible snapshot reads. It is not durable, global, cross-adapter, cross-reload, or a
   host/equipment control identity.
+
+- **Catalog content tag** identifies all canonical facade metadata bytes within catalog schema
+  revision 1. It is distinct from the existing registry fingerprint and state compatibility key.
+- **Contract descriptor revision** versions one facade domain's shapes/semantics. HostTick's
+  descriptor remains descriptive; it is not a new state-wire or execution-profile selector.
+- **Host build identity** remains consumer-owned and includes the host's source/build/features
+  qualifications; catalog metadata alone cannot establish it.
 
 String host IO (`set_input`, `get_output`, and `watch`) looks up model-local `ConnectorId` values in
 the IO inventory. `PointHandle` is confined to the store-backed point-read route.

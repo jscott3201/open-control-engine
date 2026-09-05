@@ -256,8 +256,9 @@ pub struct SimMetrics {
 /// Result of one real-time / batch verification step (`08` §5.2). `Clone` (a PyO3 binder owns it).
 #[derive(Clone, Debug, Default)]
 pub struct StepReport {
-    /// `Assert`-block trips this step (CDL assertion sinks; 07 verification funnel). Data, never a
-    /// panic.
+    /// All block warnings collected this step, including `CDL.Utilities.Assert` and other
+    /// warning-producing classes. Sources are producer-supplied class-level strings, not guaranteed
+    /// instance identities. False Assert inputs warn on every evaluation; no latch or escalation.
     pub asserts: Vec<AssertEvent>,
     /// Points committed through the store this step (`06` `write_points`).
     pub written: usize,
@@ -384,10 +385,10 @@ impl DurableOutputBatch {
 /// Owned `String` fields only (R-API-8).
 #[derive(Clone, Debug)]
 pub struct AssertEvent {
-    /// Diagnostic source emitted by the block; currently `CDL.Utilities.Assert` (the class path,
-    /// not an instance-path identity).
+    /// Diagnostic source emitted by any warning-producing block, including
+    /// `CDL.Utilities.Assert`; currently class-level, not guaranteed instance identity.
     pub block: String,
-    /// The assertion message (CDL `Assert` `message` parameter).
+    /// Producer display text (`message` parameter for CDL `Assert`).
     pub message: String,
     /// Model time (seconds) at which it tripped.
     pub t: f64,

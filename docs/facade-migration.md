@@ -1,7 +1,8 @@
 # Facade migration
 
-This intentional **pre-release source break** contracts speculative facade shapes; nothing is
-published to crates.io and no stable SemVer or downstream compatibility certification is implied.
+The earlier intentional **pre-release source break** contracted speculative facade shapes. The
+versioned contracts below are additive. Nothing is published to crates.io; no stable SemVer or
+downstream compatibility certification is implied.
 The [public surface contract](public-surface-contract.md) and its exact baseline own classification.
 
 ## Removed names and working alternatives
@@ -67,3 +68,26 @@ the selected retired names. Actual downstream pins are unchanged. Exact-candidat
 and Library verifier fixture compilation is separate pre-delivery qualification, not established by
 that inspection or by the in-repository compiler controls. No downstream acceptance or pin advance
 is claimed here.
+
+## Additive contract adoption
+
+The [versioned facade contracts](facade-contracts.md) add typed `oce_api::catalog()` metadata,
+canonical catalog JSON/content identity and seven packaged shape/semantic descriptors. A new
+consumer can adapt every rule/default/port field using only `oce-api`. Existing `oce-blocks`
+companion users retain their current surface; coordinated removal and downstream pin migration
+remain later work. Existing state/ABI/catalogue fingerprints and HostTick behavior are unchanged.
+
+For producer-stage evidence, opt into `load_cxf_with_receipt` and `export_cxf_with_receipt`.
+Success receipts expose the existing report and independently captured immutable diagnostics;
+`into_parts` permits legacy report mutation without corrupting evidence. Failures expose terminal
+stage, complete returned diagnostics and original `OcError`/standard source context. Compare
+`DiagnosticKey` values for the new machine ordering; retain the old methods when legacy ordering
+is required. Messages are display-only, code strings extensible, subjects opaque or absent, and
+multiplicity preserved. Diagnostic-free failures remain failures without fabricated codes.
+
+Studio continues to own full build/source/features compatibility stamps, catalog display policy,
+truncation and authored-target mapping. OCE's metadata content tag supplies none of those policies.
+No source/pin is advanced in a real consuming repository. Ordinary tick/sim warning behavior,
+realtime failure delivery, existing load/export signatures and constructible legacy reports remain.
+`StepReport.asserts` accurately documents warnings from all native classes, including Assert;
+its Warning-only semantics and repeated-false behavior do not change.

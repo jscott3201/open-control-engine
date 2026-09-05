@@ -104,7 +104,12 @@ def compile_source(source: Path, dependencies: dict[str, Path]) -> subprocess.Co
                "-o", str(source.with_suffix(".rmeta"))]
     for name, library in dependencies.items():
         command.extend(["--extern", f"{name}={library}"])
-    for directory in sorted({library.parent for library in dependencies.values()}):
+    directories = {library.parent for library in dependencies.values()}
+    # A Cargo root rlib lives above deps/. Sole-facade consumers still need the transitive
+    # search directory, without granting additional direct --extern dependencies.
+    directories |= {directory / "deps" for directory in directories
+                    if (directory / "deps").is_dir()}
+    for directory in sorted(directories):
         command.extend(["-L", f"dependency={directory}"])
     return subprocess.run(command, cwd=ROOT, text=True, capture_output=True, timeout=120,
                           check=False)
@@ -129,6 +134,12 @@ def check_selection(selection: str, cases: tuple[Case, ...]) -> list[str]:
         if result.returncode:
             raise ContractError(f"{selection}: same-dependency positive control failed\n{result.stderr}")
         print(f"{selection}: supported same-dependency control PASS", flush=True)
+        catalog_source = directory / "catalog_consumer.rs"
+        catalog_source.write_bytes((ROOT / "crates/oce-api/tests/fixtures/catalog_consumer.rs").read_bytes())
+        result = compile_source(catalog_source, {"oce_api": dependencies["oce_api"]})
+        if result.returncode:
+            raise ContractError(f"{selection}: sole-facade catalog/receipt consumer failed\n{result.stderr}")
+        print(f"{selection}: sole-facade catalog/receipt consumer PASS", flush=True)
         for case in cases:
             source = directory / f"{case.name}.rs"
             source.write_text(f"type Host = oce_api::Engine;\nfn contract() {{\n"

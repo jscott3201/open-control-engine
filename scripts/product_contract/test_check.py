@@ -22,13 +22,13 @@ import check
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = (
     "product contract: OK\n"
-    "Document revision: 2\n"
-    "Grounding SHA: d2111beb942e94282ef688f644a56e05e77045dc\n"
+    "Document revision: 3\n"
+    "Grounding SHA: 97156fddc15e6f12650a060623c9cde84b98ecc9\n"
     "Requirements: 40\n"
-    "CURRENT: 23\n"
+    "CURRENT: 24\n"
     "HOST-OBLIGATION: 5\n"
-    "FUTURE: 12\n"
-    "Future outcomes: 12\n"
+    "FUTURE: 11\n"
+    "Future outcomes: 11\n"
     "Integration pointers: 6\n"
     "Scope: traceability only; semantics and host compliance are not proven.\n"
 )
@@ -203,10 +203,10 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_revision_grounding_and_change_record_are_required(self):
         for old, new, message in (
-            ("Document revision: 2", "Document revision: 0", "metadata:"),
-            ("Document revision: 2", "Document revision: 3", "current revision change record"),
-            ("Document revision: 2", "Document revision: 2\nDocument revision: 2", "metadata:"),
-            ("Grounding SHA: d2111beb942e94282ef688f644a56e05e77045dc", "Grounding SHA: d2111be", "metadata:"),
+            ("Document revision: 3", "Document revision: 0", "metadata:"),
+            ("Document revision: 3", "Document revision: 4", "current revision change record"),
+            ("Document revision: 3", "Document revision: 3\nDocument revision: 3", "metadata:"),
+            ("Grounding SHA: 97156fddc15e6f12650a060623c9cde84b98ecc9", "Grounding SHA: d2111be", "metadata:"),
             ("## Change record", "## History", "change record required"),
         ):
             with self.subTest(new=new):
@@ -255,7 +255,7 @@ class TraceabilityTests(unittest.TestCase):
         self.rejects("test not in range")
 
     def test_future_rows_require_assignments_not_existing_test_promises(self):
-        self.change_cell("PC-029", 7,
+        self.change_cell("PC-030", 7,
                          "test [retired_facade_symbols_are_absent]"
                          "(../crates/oce-api/tests/public_surface_contract.rs#L507-L512)")
         self.rejects("future outcome assignment required")
@@ -264,22 +264,22 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_future_assignment_requires_named_local_outcome_and_description(self):
         for value, message in (
-            ("future [later](#facade-schemas)", "one named future assignment"),
-            ("future [M01-PR03](#bounded-admission-and-replacement)", "missing future description"),
-            ("future [M01-PR03](public-surface-contract.md)", "future outcome must be in this document"),
-            ("future [M01-PR03](#absent)", "missing heading"),
+            ("future [later](#bounded-admission-and-replacement)", "one named future assignment"),
+            ("future [M01-PR04](#complete-frame-contract)", "missing future description"),
+            ("future [M01-PR04](public-surface-contract.md)", "future outcome must be in this document"),
+            ("future [M01-PR04](#absent)", "missing heading"),
         ):
             with self.subTest(value=value):
-                self.change_cell("PC-029", 7, value)
+                self.change_cell("PC-030", 7, value)
                 self.rejects(message)
-        self.write_document(self.document.replace("M01-PR03:", "M01-PR09:"))
+        self.write_document(self.document.replace("M01-PR04:", "M01-PR09:"))
         self.rejects("missing future description")
-        section = check.headings(self.document)["facade-schemas"]
-        self.write_document(self.document.replace(section, "M01-PR03: Later."))
+        section = check.headings(self.document)["bounded-admission-and-replacement"]
+        self.write_document(self.document.replace(section, "M01-PR04: Later."))
         self.rejects("missing future description")
 
     def test_duplicate_and_orphan_future_outcomes_refuse(self):
-        for suffix in ("M01-PR03: Duplicated outcome.", "M09-PR99: Orphan outcome."):
+        for suffix in ("M01-PR04: Duplicated outcome.", "M09-PR99: Orphan outcome."):
             self.write_document(self.document + "\n" + suffix + "\n")
             self.rejects("duplicate or orphan future outcome")
 
